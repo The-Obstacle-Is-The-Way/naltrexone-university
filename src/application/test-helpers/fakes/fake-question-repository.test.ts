@@ -54,19 +54,19 @@ describe('FakeQuestionRepository', () => {
   it('reads a published question as its binding for review, and never an unpublished one', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
     const older = createQuestion({ id: 'q1', stemMd: 'Older' });
-    const archived = createQuestion({ id: 'q2', status: 'archived' });
+    const archived = createQuestion({
+      id: 'q2',
+      slug: 'q-archived',
+      status: 'archived',
+    });
     const repo = new FakeQuestionRepository([current, older, archived]);
     const olderBinding = {
       questionId: 'q1',
       questionRevisionId: older.revisionId,
     };
 
-    await expect(repo.findPublishedByBinding(olderBinding)).resolves.toBe(
-      older,
-    );
-    await expect(
-      repo.findPublishedByBinding(unbound('q2')),
-    ).resolves.toBeNull();
+    await expect(repo.findIdBySlug(archived.slug)).resolves.toBe('q2');
+    await expect(repo.findIdBySlug('no-such-slug')).resolves.toBeNull();
     await expect(
       repo.findPublishedByBindings([
         unbound('q1'),
@@ -85,6 +85,28 @@ describe('FakeQuestionRepository', () => {
         questionRevisionId: crypto.randomUUID(),
       }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+
+  it('reads a bound revision under its question status, as the adapter does', async () => {
+    const current = createQuestion({ id: 'q1', status: 'archived' });
+    const older = createQuestion({
+      id: 'q1',
+      stemMd: 'Older',
+      status: 'published',
+    });
+    const repo = new FakeQuestionRepository([current, older]);
+    const olderBinding = {
+      questionId: 'q1',
+      questionRevisionId: older.revisionId,
+    };
+
+    await expect(repo.findByIdForSession(olderBinding)).resolves.toMatchObject({
+      stemMd: 'Older',
+      status: 'archived',
+    });
+    await expect(repo.findPublishedByBindings([olderBinding])).resolves.toEqual(
+      [],
+    );
   });
 
   it('throws VALIDATION_ERROR when status filters are provided without userId', async () => {

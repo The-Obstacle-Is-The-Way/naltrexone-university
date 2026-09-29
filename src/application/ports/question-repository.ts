@@ -34,21 +34,20 @@ export type QuestionRevisionBinding = {
 export interface QuestionRepository {
   findPublishedById(id: string): Promise<Question | null>;
   findPublishedBySlug(slug: string): Promise<Question | null>;
+
+  /**
+   * Returns a question's id by slug, whatever its status. Only for resolving a
+   * review the caller then proves the learner owns (ADR-021 §3); never for
+   * showing content.
+   */
+  findIdBySlug(slug: string): Promise<string | null>;
   findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
 
   /**
-   * Returns a published question as the revision its binding names, else as
-   * its current revision: what a review of a session item or an earlier
-   * attempt shows (ADR-021).
-   */
-  findPublishedByBinding(
-    binding: QuestionRevisionBinding,
-  ): Promise<Question | null>;
-
-  /**
-   * Returns published questions, in the bindings' order, as
-   * `findPublishedByBinding` does. A question that is not published is omitted
-   * for every binding of it; every other binding yields exactly one question.
+   * Returns published questions, in the bindings' order, each as the revision
+   * its binding names, else as its current revision (ADR-021). A question that
+   * is not published is omitted for every binding of it; every other binding
+   * yields exactly one question.
    */
   findPublishedByBindings(
     bindings: readonly QuestionRevisionBinding[],

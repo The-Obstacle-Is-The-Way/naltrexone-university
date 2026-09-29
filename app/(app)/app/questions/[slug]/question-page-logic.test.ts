@@ -37,6 +37,7 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
     slug: question.slug,
     stemMd: question.stemMd,
     difficulty: question.difficulty,
+    withdrawn: false,
     choices: question.choices.map((c) => ({
       id: c.id,
       label: c.label,
@@ -81,6 +82,38 @@ describe('question-page-logic', () => {
   });
 
   describe('loadQuestion', () => {
+    it.each([
+      [undefined, { slug: 'q-1' }],
+      [
+        { attemptId: 'attempt-1' },
+        { slug: 'q-1', review: { attemptId: 'attempt-1' } },
+      ],
+      [{}, { slug: 'q-1', review: {} }],
+    ])(
+      'asks for the reviewed answer’s revision when reviewing (%j)',
+      async (review, expectedRequest) => {
+        const requests: unknown[] = [];
+
+        await loadQuestion({
+          slug: 'q-1',
+          review,
+          getQuestionBySlugFn: async (request) => {
+            requests.push(request);
+            return ok(createQuestionOutput());
+          },
+          nowMs: () => 1234,
+          setLoadState: () => undefined,
+          setSelectedChoiceId: () => undefined,
+          setSubmitResult: () => undefined,
+          setSubmitRequestToken: () => undefined,
+          setQuestionLoadedAt: () => undefined,
+          setQuestion: () => undefined,
+        });
+
+        expect(requests).toEqual([expectedRequest]);
+      },
+    );
+
     it('loads question and resets state on success', async () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();

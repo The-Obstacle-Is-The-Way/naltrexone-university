@@ -117,8 +117,14 @@ export function canSubmitQuestionAnswer(input: {
   return true;
 }
 
+// ADR-021: a review names the learner's own answer (its attempt or session,
+// or neither for their latest attempt), so the page shows that revision and a
+// withdrawn question stays reviewable by its learner.
+export type QuestionReviewContext = { attemptId?: string; sessionId?: string };
+
 export async function loadQuestion(input: {
   slug: string;
+  review?: QuestionReviewContext | undefined;
   getQuestionBySlugFn: (
     input: unknown,
   ) => Promise<ActionResult<GetQuestionBySlugOutput>>;
@@ -148,7 +154,10 @@ export async function loadQuestion(input: {
   let res: ActionResult<GetQuestionBySlugOutput>;
   try {
     res = await withTimeout(
-      input.getQuestionBySlugFn({ slug: input.slug }),
+      input.getQuestionBySlugFn({
+        slug: input.slug,
+        ...(input.review ? { review: input.review } : {}),
+      }),
       QUESTION_LOAD_TIMEOUT_MS,
     );
   } catch (error) {
@@ -184,6 +193,7 @@ export async function loadQuestion(input: {
 
 export function createLoadQuestionAction(input: {
   slug: string;
+  review?: QuestionReviewContext | undefined;
   startTransition: (fn: () => void) => void;
   getQuestionBySlugFn: (
     input: unknown,

@@ -78,7 +78,6 @@ describe('cached-reads coverage seam', () => {
 
     const first = await repository.findPublishedByBindings(bindings);
     const second = await repository.findPublishedByBindings(bindings);
-    const single = await repository.findPublishedByBinding(olderBinding);
 
     expect(first.map((question) => question.stemMd)).toEqual([
       'Current',
@@ -86,8 +85,34 @@ describe('cached-reads coverage seam', () => {
     ]);
     expect(second).toBe(first);
     expect(rawRepository.findPublishedByBindingsCalls).toHaveLength(1);
-    expect(single?.stemMd).toBe('Older');
     await expect(repository.findPublishedByBindings([])).resolves.toEqual([]);
+  });
+
+  it('deduplicates a slug-to-id lookup within a render', async () => {
+    class CountingQuestionRepository extends FakeQuestionRepository {
+      findIdBySlugCallCount = 0;
+
+      override async findIdBySlug(slug: string) {
+        this.findIdBySlugCallCount += 1;
+        return super.findIdBySlug(slug);
+      }
+    }
+    const rawRepository = new CountingQuestionRepository([
+      createQuestion({
+        id: 'question-1',
+        slug: 'question-1',
+        status: 'archived',
+      }),
+    ]);
+    const repository = createRequestCachedQuestionRepository(rawRepository);
+
+    await expect(repository.findIdBySlug('question-1')).resolves.toBe(
+      'question-1',
+    );
+    await expect(repository.findIdBySlug('question-1')).resolves.toBe(
+      'question-1',
+    );
+    expect(rawRepository.findIdBySlugCallCount).toBe(1);
   });
 
   it('never serves one revision of a session item for another', async () => {

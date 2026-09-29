@@ -431,6 +431,38 @@ describe('GetPreviousAttemptUseCase', () => {
     ]);
   });
 
+  // ADR-021 §3: the learner saw the item but never attempted it.
+  it('reveals nothing for a withdrawn question the learner left unanswered', async () => {
+    const logger = new FakeLogger();
+    const question = createQuestion({
+      id: 'q1',
+      status: 'archived',
+      choices: [createChoice({ questionId: 'q1', isCorrect: true })],
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      questionIds: ['q1'],
+      endedAt: new Date('2026-02-01T12:10:00Z'),
+    });
+
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([question]),
+      logger,
+      new FakePracticeSessionRepository([session]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toBeNull();
+    expect(logger.warnCalls).toEqual([]);
+  });
+
   it('throws INTERNAL_ERROR when session unanswered reveal question has no correct choice', async () => {
     const question = createQuestion({
       id: 'q1',

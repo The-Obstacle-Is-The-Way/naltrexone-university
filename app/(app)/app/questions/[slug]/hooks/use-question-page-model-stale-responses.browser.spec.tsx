@@ -31,6 +31,7 @@ describe('useQuestionPageModel (browser)', () => {
           slug: string;
           stemMd: string;
           difficulty: 'easy';
+          withdrawn: boolean;
           choices: Array<{ id: string; label: string; textMd: string }>;
         }>
       >();
@@ -41,6 +42,7 @@ describe('useQuestionPageModel (browser)', () => {
           slug: string;
           stemMd: string;
           difficulty: 'easy';
+          withdrawn: boolean;
           choices: Array<{ id: string; label: string; textMd: string }>;
         }>
       >();
@@ -80,6 +82,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-2',
         stemMd: 'Stem 2',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -95,6 +98,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -114,6 +118,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug,
         stemMd: `Stem ${slug}`,
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -237,6 +242,7 @@ describe('useQuestionPageModel (browser)', () => {
           slug: 'q-1',
           stemMd: 'Stem 1',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [
             { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           ],
@@ -326,6 +332,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug,
         stemMd: `Stem ${slug}`,
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -403,6 +410,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem 1',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],

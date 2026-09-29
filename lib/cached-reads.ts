@@ -52,6 +52,9 @@ export function createRequestCachedQuestionRepository(
   const findPublishedBySlug = cache(async (slug: string) =>
     questionRepository.findPublishedBySlug(slug),
   );
+  const findIdBySlug = cache(async (slug: string) =>
+    questionRepository.findIdBySlug(slug),
+  );
   const findPublishedByNormalizedIds = cache(async (serializedIds: string) =>
     questionRepository.findPublishedByIds(
       deserializeQuestionIds(serializedIds),
@@ -59,9 +62,6 @@ export function createRequestCachedQuestionRepository(
   );
   const findBySerializedBindingForSession = cache(async (serialized: string) =>
     questionRepository.findByIdForSession(deserializeBinding(serialized)),
-  );
-  const findPublishedBySerializedBinding = cache(async (serialized: string) =>
-    questionRepository.findPublishedByBinding(deserializeBinding(serialized)),
   );
   const findPublishedByBindingList = cache(async (serialized: string) =>
     questionRepository.findPublishedByBindings(deserializeBindings(serialized)),
@@ -73,6 +73,7 @@ export function createRequestCachedQuestionRepository(
   return {
     findPublishedById,
     findPublishedBySlug,
+    findIdBySlug,
     async findPublishedByIds(
       ids: readonly string[],
     ): Promise<readonly Question[]> {
@@ -89,9 +90,6 @@ export function createRequestCachedQuestionRepository(
       return ids
         .map((id) => questionById.get(id))
         .filter((question): question is Question => question !== undefined);
-    },
-    findPublishedByBinding(binding: QuestionRevisionBinding) {
-      return findPublishedBySerializedBinding(serializeBinding(binding));
     },
     // Two attempts can bind one question at different revisions, so results
     // are not mapped back by question id: the exact binding list is the key.
