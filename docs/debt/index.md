@@ -3,18 +3,22 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fourth increment (DEBT-484): the seed changes a question's content only while no incomplete practice session binds its revision. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fourth-increment-the-seed-waits-for-learners-mid-session--2026-09-29).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part one (DEBT-484): the withdrawal notice enters the Pattern Registry as F-11 before any UI uses it. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-one-the-withdrawal-notice-pattern--2026-09-29).
 - **What changes.**
-  - #951's guard counts only graded history, so a learner who had started a session but not yet answered would have seen a rewrite, or a difficulty change, land under them.
-  - The seed now defers any change to a revision an incomplete session binds. It applies every other question, then exits non-zero naming each deferred slug.
-  - Production seeding is a manual operator step, so a deferral cannot block a release.
-- **Proof.** Four real-Postgres cases, all red first; the first showed today's rewrite applied under the active session.
-- **Previous increment.** #1206 (part three, ii) merged as `648a7cc8` with exact-head approval **5348152202**. Its first head's `codecov/patch` gap and CodeRabbit's partial observation were both answered before approval.
-  - It is promoted through #1207 (`478585da`), approved with no findings. The promotion's proof was written into its body at 06:00:25Z, before the merge at 06:00:31Z.
-  - With it, the third increment is complete: every read resolves content through a revision.
-  - Release verified: main CI **36528887613** `test` **06:12:57Z**; Ready **06:02:29.599Z**, held without alias until its check completed; production assigned **06:12:59.981Z**; matching trees; healthy production.
+  - Review views show an S-1 Status notice above the stem.
+  - List rows stay clickable into the review and read `Withdrawn`.
+  - An active session shows the notice in place of `Question not found`.
+  - A question the learner never attempted stays unavailable.
+  - No new surface, token or color pair.
+- **Open decision for the owner: scoring.** An exam item withdrawn mid-session and left unanswered is graded incorrect as omitted. Whether it should be left out of the score is a product and fairness question; the notice makes no claim about scoring.
+- **Also.** Promotion #1209's finding: a real-Postgres case now pins the seed's deferral on its skipped path.
+- **Previous increment.** #1208 (fourth increment) merged as `752b3942` with exact-head approval **5350197608**. Review closed a session-creation race with a `FOR SHARE` read, covered the lock helper's timeout, and fixed a stale register row.
+  - It is promoted through #1209 (`f2fd776c`). The promotion's proof was written into its body at 09:35:19Z, before the merge at 09:35:24Z.
+  - Release verified: main CI **36550150583** `test` **09:48:15Z**; Ready **09:36:51.572Z**, held without alias until its check completed; production assigned **09:48:17.079Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fourth increment: the seed changes a question's content only while no incomplete practice session binds its revision, deferring the question and exiting non-zero otherwise, and session creation reads question rows `FOR SHARE`. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fourth-increment-the-seed-waits-for-learners-mid-session--2026-09-29). The previous increment, #1206 (part three, ii), merged as `648a7cc8` and is promoted through #1207 (`478585da`), completing the third increment. Release verified: main CI **36528887613** `test` **06:12:57Z**; Ready **06:02:29.599Z**, held without alias until its check completed; production assigned **06:12:59.981Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-29 UTC ADR-021 phase 2a, third increment, part three (ii): lists of earlier answers show, filter and sort by the revision each was answered against, and bookmarks show the current revision. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-three-ii-lists-show-the-revision-that-was-answered--2026-09-29). The previous increment, #1204 (part three, i), merged as `b4d4f96d` and is promoted through #1205 (`154c6cec`). Release verified: main CI **36516761538** `test` **03:34:10Z**; Ready **03:22:50.910Z**, held without alias until its check completed; production assigned **03:34:12.699Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 

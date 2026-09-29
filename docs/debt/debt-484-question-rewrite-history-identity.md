@@ -331,6 +331,22 @@ Until phase 2b, a content correction still refreshes revision 1 in place. #951's
   - It now reads the question rows `FOR SHARE`. Session creations still run concurrently, but each waits for, or blocks, a seed transaction's `FOR UPDATE`.
   - A Postgres case holding the seed's lock shows creation waiting; it was red first.
   - **Residual, recorded.** Grading an answer outside a session reads the question before the attempt is written, so a seed refresh landing in that window could bind the attempt to refreshed content. That is the pre-existing #951 race class, not introduced here. Phase 2b removes it: revisions become immutable, so nothing is refreshed in place.
+- **Promotion #1209's finding, fixed in the next feature PR.** The skipped path also mirrors the legacy row into revision 1, so a revision left stale by another writer would be refreshed under an incomplete session. The guard already deferred it, but no case pinned it. One now does: the legacy row matches the seed file, the revision is stale, and an incomplete session binds it; the result is `skipped: 0` and a deferral, with nothing changed. Bypassing the guard on that path fails the case.
+
+## Phase 2a, fifth increment, part one: the withdrawal notice pattern — 2026-09-29
+
+ADR-021 §3 keeps a withdrawn question reviewable by learners who attempted it, as the revision they answered, and marks every such view. The Pattern Registry needs the notice before any UI lands, so this part adds it as F-11, reviewed on its own.
+- **What exists today.** Seven surfaces show an attempted withdrawn question as gone: `[Question no longer available]` rows in History, the Dashboard, the session breakdown and Review & Submit; `Question no longer available.` in post-exam review; and `Question not found` from the question page and in an active session. None says the question was withdrawn, and none lets the learner see what they answered.
+- **F-11, Withdrawal Notice.**
+  - Review views: an S-1 Status notice above the stem, "This question has been withdrawn. You can still review your answer. It no longer appears in new practice." The answer, correct choice and explanation show as answered.
+  - List rows: the row stays clickable into the review, shows the answered revision's stem, and reads `Withdrawn` where the difficulty would be.
+  - Active session: the same notice replaces `Question not found`: "This question was withdrawn after your session began. It can't be answered here. Continue to the next question."
+  - Never attempted, such as a bookmark only: unchanged. The learner never answered it, so its content is not shown.
+  - No new surface, token, opacity value or color pair.
+- **Open decision for the owner: scoring.** An exam item withdrawn mid-session and left unanswered is finalized as omitted, which is graded incorrect. Whether a withdrawn item should instead be left out of the session's score is a product and fairness question, not an engineering one. The notice makes no claim about scoring until it is decided.
+- **Next parts.**
+  - Part two: history and review reads return an attempted withdrawn question as bound, marked withdrawn, only to the learner who attempted it.
+  - Part three: the seven surfaces adopt F-11, and eleven tests pin today's strings.
 
 ## Related
 

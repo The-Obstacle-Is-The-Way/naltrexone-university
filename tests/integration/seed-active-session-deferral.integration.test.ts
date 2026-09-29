@@ -193,6 +193,31 @@ describe('ADR-021 phase 2a: the seed waits for incomplete sessions', () => {
     }
   });
 
+  it('defers, rather than skips, a stale revision whose legacy row already matches the seed', async () => {
+    // Another writer changed the legacy row without refreshing revision 1
+    // (#1209 review). The seed file matches the row, so this is the skipped
+    // path, which still mirrors the row into the revision.
+    const question = await arrangeSeededQuestion('stale');
+    await startSessionWith(question.id);
+    const changedStem = 'A stem another writer changed.';
+    await db
+      .update(schema.questions)
+      .set({ stemMd: changedStem })
+      .where(eq(schema.questions.id, question.id));
+    const before = await revisionSnapshot(question.id);
+
+    const counts = await syncQuestionsFromFiles(db, [
+      source(question.slug, { stem: changedStem }),
+    ]);
+
+    expect(counts).toMatchObject({
+      skipped: 0,
+      updated: 0,
+      deferred: [{ slug: question.slug, sessions: 1 }],
+    });
+    expect(await revisionSnapshot(question.id)).toEqual(before);
+  });
+
   it('still applies the run’s other questions', async () => {
     const waiting = await arrangeSeededQuestion('waiting');
     const free = await arrangeSeededQuestion('free');
