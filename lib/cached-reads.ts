@@ -63,9 +63,6 @@ export function createRequestCachedQuestionRepository(
   const findBySerializedBindingForSession = cache(async (serialized: string) =>
     questionRepository.findByIdForSession(deserializeBinding(serialized)),
   );
-  const findPublishedByBindingList = cache(async (serialized: string) =>
-    questionRepository.findPublishedByBindings(deserializeBindings(serialized)),
-  );
   const findByNormalizedBindingsForSession = cache(async (serialized: string) =>
     questionRepository.findByIdsForSession(deserializeBindings(serialized)),
   );
@@ -90,14 +87,6 @@ export function createRequestCachedQuestionRepository(
       return ids
         .map((id) => questionById.get(id))
         .filter((question): question is Question => question !== undefined);
-    },
-    // Two attempts can bind one question at different revisions, so results
-    // are not mapped back by question id: the exact binding list is the key.
-    findPublishedByBindings(bindings: readonly QuestionRevisionBinding[]) {
-      if (bindings.length === 0) return Promise.resolve([]);
-      return findPublishedByBindingList(
-        JSON.stringify(bindings.map(serializeBinding)),
-      );
     },
     findByIdForSession(item: QuestionRevisionBinding) {
       return findBySerializedBindingForSession(serializeBinding(item));

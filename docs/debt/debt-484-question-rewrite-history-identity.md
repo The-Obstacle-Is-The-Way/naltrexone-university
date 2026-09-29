@@ -436,6 +436,29 @@ The third slice covers the two lists built from the learner's attempts: History'
   - Use-case cases; the helper's cases rewritten for the owned read; a cache case for two bindings of one question; view cases for both rows. All red first.
   - `controllers-history.integration.test.ts` had pinned the old rule: an attempted question unpublished since was listed as unavailable, with a missing-question warning. It now asserts the ADR-021 rule: listed, available and marked withdrawn, with no warning.
 
+## Phase 2a, fifth increment, part five: the session breakdown keeps a withdrawn question — 2026-09-29
+
+The fourth slice covers the session breakdown: the finished session's summary and History's expanded session rows. Both render `GetPracticeSessionReviewUseCase`.
+
+- **Reads.**
+  - The use case reads the learner's own session items through the owned read, whatever their status now.
+  - A withdrawn item is available, and marked `withdrawn`, only when the session has ended and the learner attempted the item (`latestAnsweredAt` set: answered, or finalized as omitted).
+  - Otherwise it stays unavailable, and no longer logs a missing-question warning.
+  - While the session is in progress, a withdrawn item stays unavailable: the same use case serves the navigator and an exam's Review & Submit, which slice 3 covers.
+- **Removed.** No caller reads published questions by binding any more. `findPublishedByBindings` is deleted from the port, the adapter, the fake and the request cache, and so is `fetchSessionQuestionsAsBound`.
+- **UI (Pattern Registry F-11).**
+  - A breakdown row has no difficulty slot. The registry now says such a row shows `Withdrawn` before its result, in the style the row already uses for `Unanswered`.
+  - The row keeps its link (summary and History) or its button (post-exam), which the earlier parts resolve.
+- **Captures.** The local production build, dark, a tutor session with its answered item and its unanswered item both withdrawn, with no horizontal overflow: [summary, desktop](./assets/debt-484/withdrawn-breakdown-summary-dark-1440x900.png), [summary, mobile](./assets/debt-484/withdrawn-breakdown-summary-dark-390x844.png), [History, desktop](./assets/debt-484/withdrawn-breakdown-history-dark-1440x900.png), [History, mobile](./assets/debt-484/withdrawn-breakdown-history-dark-390x844.png).
+  - axe reports nothing on the summary.
+  - On History it reports only the tab links already recorded in BUG-309.
+- **Tests.**
+  - Two real-Postgres cases: an ended session with one answered and one unanswered withdrawn item, and a session still in progress.
+  - Unit cases for each state, red first.
+  - Breakdown view cases for the link and the button forms.
+  - Four mutations of the rule each fail a Postgres case and a unit case: always hide withdrawn items, never hide them, ignore the ended check, ignore the attempted check.
+- **Not yet.** Slice 3: an active session's withdrawn item, and the Review & Submit list.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

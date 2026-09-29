@@ -53,6 +53,7 @@ function createSummaryReviewRow(
 ): GetPracticeSessionReviewOutput['rows'][number] {
   return {
     isAvailable: true,
+    withdrawn: false,
     questionId: fixtureQuestion1Id,
     slug: 'question-1',
     stemMd: 'Question stem',

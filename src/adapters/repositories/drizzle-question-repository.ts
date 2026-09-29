@@ -186,17 +186,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return this.findByBindings(items);
   }
 
-  async findPublishedByBindings(bindings: readonly QuestionRevisionBinding[]) {
-    return this.findByBindings(bindings, eq(questions.status, 'published'));
-  }
-
   // ADR-021 phase 2a: a session item or attempt shows the revision it is bound
   // to, else (a row an older deployment left unbound) the question's current
   // revision, the rule attempts bind by.
-  private async findByBindings(
-    bindings: readonly QuestionRevisionBinding[],
-    statusCondition?: SQL,
-  ) {
+  private async findByBindings(bindings: readonly QuestionRevisionBinding[]) {
     if (bindings.length === 0) return [];
 
     const byId = inArray(
@@ -204,7 +197,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       bindings.map((binding) => binding.questionId),
     );
     const rows = await this.db.query.questions.findMany({
-      where: statusCondition ? and(byId, statusCondition) : byId,
+      where: byId,
       with: questionRelations,
     });
     const boundRevisionIds = [

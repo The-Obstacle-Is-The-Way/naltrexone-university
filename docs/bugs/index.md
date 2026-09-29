@@ -1,9 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-29 — update history moved to monthly files under the register size budget; BUG-308 resolved and archived after its production release on 2026-09-28.
+**Last Updated:** 2026-09-29 — BUG-309 filed (dark-theme small-text contrast, P2); update history moved to monthly files under the register size budget.
 
-**Latest** — 2026-09-28: **BUG-308 (P3) is Resolved and archived.** Once a trial has a saved card, the banner states the renewal instead of asking for one. Billing names the plan and status, says whether the trial renews on a saved card, and confirms the add-card return, and Stripe's setup page visibly displays the learner's email. The fix was #1185, promoted through #1186. The hosted Stripe journey proves each part, and the production release was verified; the receipts are in the [archived record](../_archive/bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md#resolution-2026-09-28). BUG-304 is the only active bug. **Next Bug ID remains BUG-309.**
+**Latest** — 2026-09-29: **BUG-309 (P2) filed: dark-theme small text fails WCAG AA contrast.** The app forces its dark theme. There, `text-destructive` (the "Incorrect" result label and other red text) measures 3.9:1 on cards and 3.5:1 on row fills, and `text-muted-foreground` measures 4.44:1 on the Dashboard's tonal rows, below the 4.5:1 that small informational text needs. axe found them on History and the Dashboard during DEBT-484's part-four captures (#1219); they predate that change. The contrast policy's pointer to BS-042 was stale, because BS-042 is archived as resolved, and now points here. [BUG-309](./bug-309-dark-theme-small-text-contrast.md). BUG-304 and BUG-309 are active. **Next Bug ID is BUG-310.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -26,7 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-309
+**Next Bug ID:** BUG-310
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -457,6 +457,7 @@ Every one of these was confirmed against the other branch's actual live registry
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
+| [BUG-309](./bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text fails WCAG AA contrast | P2 | Open | `text-destructive` ("Incorrect" and other red text) measures 3.5–4.15:1 on every dark surface, and `text-muted-foreground` 4.44:1 on the Dashboard's tonal rows; the fix needs a destructive-text value and a muted-on-row pairing that clear 4.5:1 without breaking `bg-destructive` fills. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

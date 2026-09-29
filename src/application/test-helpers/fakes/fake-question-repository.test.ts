@@ -51,7 +51,7 @@ describe('FakeQuestionRepository', () => {
     ).resolves.toEqual(['q1']);
   });
 
-  it('reads a published question as its binding for review, and never an unpublished one', async () => {
+  it('finds a question id by slug whatever its status, and batches owned bindings in order', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
     const older = createQuestion({ id: 'q1', stemMd: 'Older' });
     const archived = createQuestion({
@@ -68,12 +68,13 @@ describe('FakeQuestionRepository', () => {
     await expect(repo.findIdBySlug(archived.slug)).resolves.toBe('q2');
     await expect(repo.findIdBySlug('no-such-slug')).resolves.toBeNull();
     await expect(
-      repo.findPublishedByBindings([
+      repo.findByIdsForSession([
         unbound('q1'),
         olderBinding,
+        unbound('q-missing'),
         unbound('q2'),
       ]),
-    ).resolves.toEqual([current, older]);
+    ).resolves.toEqual([current, older, archived]);
   });
 
   it('refuses a session item bound to a revision it does not hold', async () => {
@@ -104,9 +105,9 @@ describe('FakeQuestionRepository', () => {
       stemMd: 'Older',
       status: 'archived',
     });
-    await expect(repo.findPublishedByBindings([olderBinding])).resolves.toEqual(
-      [],
-    );
+    await expect(repo.findByIdsForSession([olderBinding])).resolves.toEqual([
+      expect.objectContaining({ stemMd: 'Older', status: 'archived' }),
+    ]);
   });
 
   it('throws VALIDATION_ERROR when status filters are provided without userId', async () => {

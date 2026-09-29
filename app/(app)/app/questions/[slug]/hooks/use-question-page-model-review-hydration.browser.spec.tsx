@@ -314,6 +314,7 @@ describe('useQuestionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',

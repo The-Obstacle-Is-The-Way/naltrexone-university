@@ -67,7 +67,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 ### 3.1 Text
 
 - Informational text MUST meet 4.5:1 (normal text), including: labels, timestamps, metadata, helper text, and inactive navigation items.
-- Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. Current failures are documented in BS-042.
+- Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. BS-042's failures were resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md); current failures, including `text-destructive` text on dark surfaces, are tracked in [BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md).
 - Do not use parent `opacity-*` on containers as a substitute for text styling when descendants contain informational text or UI glyphs. It reduces contrast for everything inside the subtree.
 
 ### 3.2 Non-Text Boundaries

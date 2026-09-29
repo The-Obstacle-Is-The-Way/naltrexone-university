@@ -88,6 +88,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -157,6 +158,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -222,6 +224,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
