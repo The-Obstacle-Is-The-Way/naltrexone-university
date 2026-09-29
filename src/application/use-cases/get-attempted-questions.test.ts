@@ -13,6 +13,39 @@ import {
 import { GetAttemptedQuestionsUseCase } from './get-attempted-questions';
 
 describe('GetAttemptedQuestionsUseCase', () => {
+  it('shows and filters a question by the revision its latest attempt answered (ADR-021)', async () => {
+    const current = createQuestion({
+      id: 'q1',
+      stemMd: 'Current stem',
+      difficulty: 'hard',
+    });
+    const answered = createQuestion({
+      id: 'q1',
+      stemMd: 'Answered stem',
+      difficulty: 'easy',
+    });
+    const questions = [current, answered];
+    const attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q1',
+      questionRevisionId: answered.revisionId,
+    });
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository([attempt], { questions }),
+      new FakeQuestionRepository(questions),
+      new FakeLogger(),
+    );
+    const page = { userId: 'user-1', limit: 10, offset: 0 };
+
+    const easy = await useCase.execute({ ...page, difficulty: 'easy' });
+    const hard = await useCase.execute({ ...page, difficulty: 'hard' });
+
+    expect(easy.rows).toEqual([
+      expect.objectContaining({ stemMd: 'Answered stem', difficulty: 'easy' }),
+    ]);
+    expect(hard.rows).toEqual([]);
+  });
+
   it('returns empty rows when user has no attempts', async () => {
     const useCase = new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([]),

@@ -12,6 +12,7 @@ import {
   createQuestion,
   createTag,
   createUser,
+  currentRevisionIdOf,
 } from './helpers';
 
 const { db, sql } = createIntegrationDb();
@@ -484,11 +485,15 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const tieIncorrectId = '00000000-0000-4000-8000-000000000001';
     const tieCorrectId = 'ffffffff-ffff-4fff-bfff-ffffffffffff';
 
+    // ADR-021: as the app does, each attempt binds its question's revision.
+    const tieRevisionId = await currentRevisionIdOf(db, qTie.id);
+    const incorrectRevisionId = await currentRevisionIdOf(db, qIncorrect.id);
     await db.insert(schema.attempts).values([
       {
         id: tieIncorrectId,
         userId: user.id,
         questionId: qTie.id,
+        questionRevisionId: tieRevisionId,
         practiceSessionId: null,
         selectedChoiceId: qTie.incorrectChoiceId,
         isCorrect: false,
@@ -499,6 +504,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
         id: tieCorrectId,
         userId: user.id,
         questionId: qTie.id,
+        questionRevisionId: tieRevisionId,
         practiceSessionId: null,
         selectedChoiceId: qTie.correctChoiceId,
         isCorrect: true,
@@ -509,6 +515,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
         id: '00000000-0000-4000-8000-000000000002',
         userId: user.id,
         questionId: qIncorrect.id,
+        questionRevisionId: incorrectRevisionId,
         practiceSessionId: null,
         selectedChoiceId: qIncorrect.incorrectChoiceId,
         isCorrect: false,
@@ -528,6 +535,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     expect(attemptedIncorrect).toEqual([
       {
         questionId: qIncorrect.id,
+        questionRevisionId: incorrectRevisionId,
         answeredAt: new Date('2026-02-05T00:00:00.000Z'),
         isCorrect: false,
         sessionId: null,

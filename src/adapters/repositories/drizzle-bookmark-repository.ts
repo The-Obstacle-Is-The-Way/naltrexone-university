@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { bookmarks, questions } from '@/db/schema';
+import { bookmarks, questionRevisions, questions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { BookmarkRepository } from '@/src/application/ports/repositories';
 import type { DrizzleDb } from '../shared/database-types';
@@ -79,8 +79,9 @@ export class DrizzleBookmarkRepository implements BookmarkRepository {
         bookmarkedAt: bookmarks.createdAt,
         publishedQuestionId: questions.id,
         slug: questions.slug,
-        stemMd: questions.stemMd,
-        difficulty: questions.difficulty,
+        // ADR-021: a bookmark binds no revision, so it shows the current one.
+        stemMd: questionRevisions.stemMd,
+        difficulty: questionRevisions.difficulty,
       })
       .from(bookmarks)
       .leftJoin(
@@ -89,6 +90,10 @@ export class DrizzleBookmarkRepository implements BookmarkRepository {
           eq(questions.id, bookmarks.questionId),
           eq(questions.status, 'published'),
         ),
+      )
+      .leftJoin(
+        questionRevisions,
+        eq(questionRevisions.id, questions.currentRevisionId),
       )
       .where(eq(bookmarks.userId, userId))
       .orderBy(desc(bookmarks.createdAt));

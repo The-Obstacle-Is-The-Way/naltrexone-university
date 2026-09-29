@@ -9,6 +9,7 @@ import {
   db,
   insertAttemptAt,
 } from './bug-regression-test-helpers';
+import { currentRevisionIdOf } from './helpers';
 
 describe('BUG-235: Attempted-question history keeps latest visible fallback', () => {
   it('falls back to an older standalone attempt when a newer active-exam attempt is hidden', async () => {
@@ -59,6 +60,7 @@ describe('BUG-235: Attempted-question history keeps latest visible fallback', ()
     expect(activeRows).toEqual([
       {
         questionId: question.id,
+        questionRevisionId: await currentRevisionIdOf(db, question.id),
         answeredAt: olderVisibleAt,
         isCorrect: false,
         sessionId: null,
@@ -79,6 +81,7 @@ describe('BUG-235: Attempted-question history keeps latest visible fallback', ()
     expect(endedRows).toEqual([
       {
         questionId: question.id,
+        questionRevisionId: await currentRevisionIdOf(db, question.id),
         answeredAt: newerActiveExamAt,
         isCorrect: true,
         sessionId: activeExamSession.id,
@@ -149,6 +152,7 @@ describe('BUG-235: Attempted-question history keeps latest visible fallback', ()
     expect(rows).toEqual([
       {
         questionId: question.id,
+        questionRevisionId: await currentRevisionIdOf(db, question.id),
         answeredAt: olderVisibleAt,
         isCorrect: false,
         sessionId: tutorSession.id,
@@ -219,6 +223,7 @@ describe('BUG-235: Attempted-question history keeps latest visible fallback', ()
     expect(rows).toEqual([
       {
         questionId: question.id,
+        questionRevisionId: await currentRevisionIdOf(db, question.id),
         answeredAt: olderVisibleAt,
         isCorrect: false,
         sessionId: endedExamSession.id,
@@ -277,6 +282,7 @@ describe('BUG-235: Attempted-question history keeps latest visible fallback', ()
     expect(endedRows).toEqual([
       {
         questionId: question.id,
+        questionRevisionId: await currentRevisionIdOf(db, question.id),
         answeredAt: activeExamAt,
         isCorrect: true,
         sessionId: activeExamSession.id,

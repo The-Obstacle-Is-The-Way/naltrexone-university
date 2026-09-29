@@ -30,6 +30,8 @@ export type AttemptMostRecentAnsweredAt = {
 
 export type AttemptedQuestionSummary = {
   questionId: string;
+  /** The revision the latest attempt was answered against (ADR-021). */
+  questionRevisionId: string | null;
   answeredAt: Date;
   isCorrect: boolean;
   sessionId: string | null;

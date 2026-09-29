@@ -4,7 +4,10 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import {
+  bindingKey,
+  fetchQuestionsByBinding,
+} from '@/src/application/shared/fetch-questions-by-binding';
 import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
@@ -101,15 +104,18 @@ export class GetUserStatsUseCase {
     );
     const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
-    const questionById = await fetchQuestionsById(
+    // ADR-021: each attempt shows the revision it graded; two attempts of one
+    // question can differ.
+    const byBinding = await fetchQuestionsByBinding(
       this.questions,
-      recentAttempts.map((attempt) => attempt.questionId),
+      recentAttempts,
     );
 
     const recentActivity = enrichWithQuestion({
       rows: recentAttempts,
       getQuestionId: (attempt) => attempt.questionId,
-      questionsById: questionById,
+      questionsById: byBinding,
+      getLookupKey: bindingKey,
       available: (
         attempt,
         question,
