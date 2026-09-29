@@ -22,6 +22,7 @@ const question = {
   slug: 'q1',
   stemMd: 'Question stem',
   difficulty: 'easy' as const,
+  withdrawn: false,
   choices: [
     { id: 'c1', label: 'A', textMd: 'Choice A' },
     { id: 'c2', label: 'B', textMd: 'Choice B' },

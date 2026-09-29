@@ -151,6 +151,15 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findIdBySlug(slug: string) {
+    const [row] = await this.db
+      .select({ id: questions.id })
+      .from(questions)
+      .where(eq(questions.slug, slug))
+      .limit(1);
+    return row?.id ?? null;
+  }
+
   async findPublishedByIds(ids: readonly string[]) {
     if (ids.length === 0) return [];
 
@@ -175,11 +184,6 @@ export class DrizzleQuestionRepository implements QuestionRepository {
 
   async findByIdsForSession(items: readonly QuestionRevisionBinding[]) {
     return this.findByBindings(items);
-  }
-
-  async findPublishedByBinding(binding: QuestionRevisionBinding) {
-    const [question] = await this.findPublishedByBindings([binding]);
-    return question ?? null;
   }
 
   async findPublishedByBindings(bindings: readonly QuestionRevisionBinding[]) {

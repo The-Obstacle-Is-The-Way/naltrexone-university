@@ -103,6 +103,11 @@ export {
   GetPreviousAttemptUseCase,
 } from './get-previous-attempt';
 export {
+  type GetQuestionForViewInput,
+  type GetQuestionForViewOutput,
+  GetQuestionForViewUseCase,
+} from './get-question-for-view';
+export {
   type GetQuestionRatingInput,
   type GetQuestionRatingOutput,
   GetQuestionRatingUseCase,

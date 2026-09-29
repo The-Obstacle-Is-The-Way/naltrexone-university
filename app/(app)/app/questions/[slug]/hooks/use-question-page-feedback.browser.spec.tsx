@@ -27,6 +27,7 @@ function createQuestion(): GetQuestionBySlugOutput {
     slug: 'question-1',
     stemMd: 'Stem',
     difficulty: 'easy',
+    withdrawn: false,
     choices: [],
   };
 }

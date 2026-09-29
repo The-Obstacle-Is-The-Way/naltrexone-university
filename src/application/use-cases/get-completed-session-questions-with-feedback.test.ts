@@ -143,6 +143,47 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
     ]);
   });
 
+  // ADR-021 §3: the learner saw the item but never attempted it.
+  it('keeps a withdrawn question the learner left unanswered unavailable, without a missing-question warning', async () => {
+    const logger = new FakeLogger();
+    const withdrawn = createQuestion({
+      id: 'q1',
+      status: 'archived',
+      choices: [createChoice({ questionId: 'q1', isCorrect: true })],
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'tutor',
+      endedAt: new Date('2026-03-19T12:00:00.000Z'),
+      questionIds: ['q1'],
+    });
+    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([withdrawn]),
+      new FakeAttemptRepository([]),
+      logger,
+    );
+
+    const output = await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+    });
+
+    expect(output.rows).toEqual([
+      {
+        isAvailable: false,
+        questionId: 'q1',
+        order: 1,
+        isAnswered: false,
+        isCorrect: null,
+        isOmitted: false,
+        markedForReview: false,
+      },
+    ]);
+    expect(logger.warnCalls).toEqual([]);
+  });
+
   it('warns on attempt-state correctness divergence while preserving the attempt-preferred output', async () => {
     const fixture = createCorrectnessComparisonFixture({
       attemptIsCorrect: true,

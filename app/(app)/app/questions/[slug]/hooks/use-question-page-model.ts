@@ -125,6 +125,17 @@ export function useQuestionPageModel(
   );
   const normalizedSessionId = normalizedReviewIds.sessionId;
   const normalizedAttemptId = normalizedReviewIds.attemptId;
+  // ADR-021: a review loads the revision of the learner's own answer.
+  const review = useMemo(
+    () =>
+      input.mode === 'review'
+        ? {
+            ...(normalizedAttemptId ? { attemptId: normalizedAttemptId } : {}),
+            ...(normalizedSessionId ? { sessionId: normalizedSessionId } : {}),
+          }
+        : undefined,
+    [input.mode, normalizedAttemptId, normalizedSessionId],
+  );
 
   const loadQuestion = useMemo(
     () => () => {
@@ -135,6 +146,7 @@ export function useQuestionPageModel(
 
       const runLoadQuestion = createLoadQuestionAction({
         slug: input.slug,
+        review,
         startTransition,
         getQuestionBySlugFn: getQuestionBySlug,
         nowMs: Date.now,
@@ -153,7 +165,7 @@ export function useQuestionPageModel(
 
       runLoadQuestion();
     },
-    [input.slug, isMounted],
+    [input.slug, review, isMounted],
   );
 
   useEffect(loadQuestion, [loadQuestion]);

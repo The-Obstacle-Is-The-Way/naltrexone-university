@@ -3,19 +3,22 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part two (DEBT-484): post-exam review keeps a withdrawn question the learner answered, marked with the F-11 notice. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-two-post-exam-review-keeps-a-withdrawn-question--2026-09-29).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part three (DEBT-484): the standalone review page keeps a withdrawn question for the learner who answered it, and in review mode shows the revision that was answered. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-three-the-standalone-review-keeps-a-withdrawn-question--2026-09-29).
 - **What changes.**
-  - Completed-session feedback returns a withdrawn question as the revision the learner answered, marked `withdrawn`.
-  - Post-exam review shows the notice above it, hides bookmark, report and rating, and lets the navigator reach it.
-  - The reads and the UI of each surface ship together, so no view shows a withdrawn question without its notice. The session summary's breakdown moves with the history slice.
-- **Proof.** A real-Postgres case, red first, and two captures of the local production build with zero axe violations.
+  - A new use case resolves the learner's own answer under review: the named attempt, their attempt in a named session (else its item once the session is finished), or their latest attempt. It returns that revision, marked withdrawn when the question is no longer published.
+  - A withdrawn question's content never reaches a learner who did not answer it.
+  - This also closes a latent gap: the page's stem and choices came from the current revision, but its answer came from the revision that was answered.
+  - The page shows the F-11 notice and offers navigation only.
+  - A withdrawn question shows only for an item the learner attempted. That corrects part two, which also showed a finished session's unanswered items once withdrawn (#1214 review).
+- **Proof.** Eleven real-Postgres cases, red first, including six that the content never leaks; twenty-two use-case cases over fakes; break-it proofs for the page model, the view and six use-case branches; two captures of the local production build with zero axe violations. The question fake now reads a bound revision under its question's status, as the adapter does.
 - **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
-- **Previous increment.** #1210 (part one: F-11 and the seed's skipped-path case) merged as `7cbce254` with exact-head approval **5350845123** and no findings.
-  - It is promoted through #1211 (`98fc6b3c`). Its one finding, which read the entry's closing clause as stale, was declined with reasons; the clause below now states it describes the state when written.
-  - The promotion's proof was written into its body at 10:29:57Z, before the merge at 10:30:02Z.
-  - Release verified: main CI **36555950014** `test` **10:42:05Z**; Ready **10:31:31.323Z**, held without alias until its check completed; production assigned **10:42:07.562Z**; matching trees; healthy production.
+- **Previous increment.** #1212 (part two: post-exam review) merged as `fe578a68` with exact-head approval **5351508443** and no findings.
+  - It is promoted through #1213 (`1b0ed206`), approved with no findings. The promotion's proof was written into its body at 11:23:19Z, before the merge at 11:23:23Z.
+  - Release verified: main CI **36561437128** `test` **11:36:32Z**; Ready **11:24:53.478Z**, held without alias until its check completed; production assigned **11:36:34.973Z**; matching trees; healthy production.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fifth increment, part two: post-exam review keeps a withdrawn question the learner answered, marked with the F-11 notice. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-two-post-exam-review-keeps-a-withdrawn-question--2026-09-29). The previous increment, #1210 (part one), merged as `7cbce254` and is promoted through #1211 (`98fc6b3c`). Release verified: main CI **36555950014** `test` **10:42:05Z**; Ready **10:31:31.323Z**, held without alias until its check completed; production assigned **10:42:07.562Z**; matching trees; healthy production. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fifth increment, part one: the withdrawal notice enters the Pattern Registry as F-11, and a real-Postgres case pins the seed's deferral on its skipped path. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-one-the-withdrawal-notice-pattern--2026-09-29). The previous increment, #1208 (fourth increment), merged as `752b3942` and is promoted through #1209 (`f2fd776c`). Release verified: main CI **36550150583** `test` **09:48:15Z**; Ready **09:36:51.572Z**, held without alias until its check completed; production assigned **09:48:17.079Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 

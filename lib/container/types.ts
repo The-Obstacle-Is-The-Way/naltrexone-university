@@ -56,6 +56,7 @@ import type {
   GetPracticeSessionReviewUseCase,
   GetPracticeSessionSummaryUseCase,
   GetPreviousAttemptUseCase,
+  GetQuestionForViewUseCase,
   GetQuestionRatingUseCase,
   GetSessionHistoryUseCase,
   GetUserStatsUseCase,
@@ -157,6 +158,7 @@ export type UseCaseFactories = {
   createSaveExamDraftAnswerUseCase: () => SaveExamDraftAnswerUseCase;
   createGetNextQuestionUseCase: () => GetNextQuestionUseCase;
   createGetPreviousAttemptUseCase: () => GetPreviousAttemptUseCase;
+  createGetQuestionForViewUseCase: () => GetQuestionForViewUseCase;
   createGetQuestionRatingUseCase: () => GetQuestionRatingUseCase;
   createRateQuestionUseCase: () => RateQuestionUseCase;
   createSubmitQuestionReportUseCase: () => SubmitQuestionReportUseCase;

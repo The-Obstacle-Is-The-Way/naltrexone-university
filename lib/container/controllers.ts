@@ -56,7 +56,7 @@ export function createControllerFactories(input: {
       authGateway: gateways.createAuthGateway(),
       logger: primitives.logger,
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      questionRepository: repositories.createQuestionRepository(),
+      getQuestionForViewUseCase: useCases.createGetQuestionForViewUseCase(),
       getPreviousAttemptUseCase: useCases.createGetPreviousAttemptUseCase(),
     }),
     createBillingControllerDeps: () => ({

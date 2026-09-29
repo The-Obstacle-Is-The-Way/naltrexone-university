@@ -68,6 +68,10 @@ export class FakeQuestionRepository implements QuestionRepository {
     return found;
   }
 
+  async findIdBySlug(slug: string): Promise<string | null> {
+    return this.questions.find((q) => q.slug === slug)?.id ?? null;
+  }
+
   async findPublishedByIds(
     ids: readonly string[],
   ): Promise<readonly Question[]> {
@@ -78,13 +82,6 @@ export class FakeQuestionRepository implements QuestionRepository {
         .map((q) => [q.id, q]),
     );
     return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
-  }
-
-  async findPublishedByBinding(
-    binding: QuestionRevisionBinding,
-  ): Promise<Question | null> {
-    const found = this.findByBinding(binding);
-    return found?.status === 'published' ? found : null;
   }
 
   async findPublishedByBindings(
@@ -127,7 +124,10 @@ export class FakeQuestionRepository implements QuestionRepository {
         `Revision ${item.questionRevisionId} is not a revision of question ${item.questionId}`,
       );
     }
-    return bound;
+    // Publication belongs to the question, not to a revision.
+    return bound.status === current.status
+      ? bound
+      : { ...bound, status: current.status };
   }
 
   async listPublishedCandidateIds(

@@ -87,7 +87,23 @@ type ReviewSeed = {
   isOmitted: boolean;
   markedForReview: boolean;
   selectedChoiceId: string | null;
+  /** The learner has an attempt at the item or an answer recorded for it. */
+  attempted: boolean;
 };
+
+function unavailableRow(
+  row: ReviewSeed,
+): CompletedSessionQuestionWithFeedbackRow {
+  return {
+    isAvailable: false,
+    questionId: row.questionId,
+    order: row.order,
+    isAnswered: row.isAnswered,
+    isCorrect: row.isCorrect,
+    isOmitted: row.isOmitted,
+    markedForReview: row.markedForReview,
+  };
+}
 
 function warnOnCorrectnessDivergence(
   logger: Logger,
@@ -134,7 +150,8 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
     }
 
     // The learner's own session items, whatever their status now: a question
-    // withdrawn since stays reviewable, as bound, and is marked (ADR-021 §3).
+    // withdrawn since stays reviewable, as bound and marked, where the learner
+    // attempted it (ADR-021 §3).
     const questionById = await fetchSessionOwnedQuestionsById(
       this.questions,
       session.questionStates,
@@ -188,6 +205,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         isOmitted,
         markedForReview: state.markedForReview,
         selectedChoiceId,
+        attempted: attempt !== undefined || state.latestAnsweredAt !== null,
       });
     }
 
@@ -196,6 +214,11 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       getQuestionId: (row) => row.questionId,
       questionsById: questionById,
       available: (row, question): CompletedSessionQuestionWithFeedbackRow => {
+        // ADR-021 §3: a withdrawn question shows only to a learner who
+        // attempted it; an item left unanswered stays unavailable.
+        if (question.status !== 'published' && !row.attempted) {
+          return unavailableRow(row);
+        }
         const shuffledChoices = buildShuffledChoiceViews(
           question,
           input.userId,
@@ -240,15 +263,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
           })),
         };
       },
-      unavailable: (row): CompletedSessionQuestionWithFeedbackRow => ({
-        isAvailable: false,
-        questionId: row.questionId,
-        order: row.order,
-        isAnswered: row.isAnswered,
-        isCorrect: row.isCorrect,
-        isOmitted: row.isOmitted,
-        markedForReview: row.markedForReview,
-      }),
+      unavailable: unavailableRow,
       logger: this.logger,
       missingQuestionMessage:
         'Completed session feedback references missing question',
