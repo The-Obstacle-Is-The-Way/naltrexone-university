@@ -4,7 +4,7 @@ import type {
   QuestionRepository,
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
-import type { Question } from '@/src/domain/entities';
+import type { Attempt, Question } from '@/src/domain/entities';
 
 export type GetQuestionForViewInput = {
   userId: string;
@@ -86,7 +86,7 @@ export class GetQuestionForViewUseCase {
         userId,
       );
       return attempt?.questionId === questionId
-        ? { binding: attempt, attempted: true }
+        ? this.attemptItem(userId, attempt)
         : null;
     }
     if (review.sessionId) {
@@ -96,7 +96,23 @@ export class GetQuestionForViewUseCase {
       userId,
       questionId,
     );
-    return latest ? { binding: latest, attempted: true } : null;
+    return latest ? this.attemptItem(userId, latest) : null;
+  }
+
+  // As `GetPreviousAttemptUseCase`: an attempt inside an exam still in
+  // progress is not yet an answer to review.
+  private async attemptItem(
+    userId: string,
+    attempt: Attempt,
+  ): Promise<ReviewedItem | null> {
+    if (attempt.practiceSessionId) {
+      const session = await this.sessions.findByIdAndUserId(
+        attempt.practiceSessionId,
+        userId,
+      );
+      if (session?.mode === 'exam' && session.endedAt === null) return null;
+    }
+    return { binding: attempt, attempted: true };
   }
 
   // As `GetPreviousAttemptUseCase` resolves a session review: the learner's
@@ -111,7 +127,7 @@ export class GetQuestionForViewUseCase {
       userId,
       questionId,
     );
-    if (attempt) return { binding: attempt, attempted: true };
+    if (attempt) return this.attemptItem(userId, attempt);
 
     const session = await this.sessions.findByIdAndUserId(sessionId, userId);
     // An active session's unanswered item is not a finished answer to review.

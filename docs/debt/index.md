@@ -3,20 +3,21 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part three (DEBT-484): the standalone review page keeps a withdrawn question for the learner who answered it, and in review mode shows the revision that was answered. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-three-the-standalone-review-keeps-a-withdrawn-question--2026-09-29).
-- **What changes.**
-  - A new use case resolves the learner's own answer under review: the named attempt, their attempt in a named session (else its item once the session is finished), or their latest attempt. It returns that revision, marked withdrawn when the question is no longer published.
-  - A withdrawn question's content never reaches a learner who did not answer it.
-  - This also closes a latent gap: the page's stem and choices came from the current revision, but its answer came from the revision that was answered.
-  - The page shows the F-11 notice and offers navigation only.
-  - A withdrawn question shows only for an item the learner attempted. That corrects part two, which also showed a finished session's unanswered items once withdrawn (#1214 review).
-- **Proof.** Eleven real-Postgres cases, red first, including six that the content never leaks; twenty-two use-case cases over fakes; break-it proofs for the page model, the view and six use-case branches; two captures of the local production build with zero axe violations. The question fake now reads a bound revision under its question's status, as the adapter does.
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part three follow-up (DEBT-484): the standalone review treats an attempt inside an exam still in progress as not yet reviewable, as the answer reveal already does. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-three-follow-up-an-exam-in-progress-is-not-yet-reviewable--2026-09-29).
+- **Why.**
+  - The promotion review of #1214 (on #1215) found that the view bound a revision the reveal refused, but only for a hand-built review URL during the learner's own exam.
+  - No answer was exposed. The fix lives in the use case, not in the shared attempt lookup, which also serves retries and feedback.
+- **Proof.** Four fake-level cases and one real-Postgres case, all red first.
 - **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
-- **Previous increment.** #1212 (part two: post-exam review) merged as `fe578a68` with exact-head approval **5351508443** and no findings.
-  - It is promoted through #1213 (`1b0ed206`), approved with no findings. The promotion's proof was written into its body at 11:23:19Z, before the merge at 11:23:23Z.
-  - Release verified: main CI **36561437128** `test` **11:36:32Z**; Ready **11:24:53.478Z**, held without alias until its check completed; production assigned **11:36:34.973Z**; matching trees; healthy production.
+- **Previous increment.** #1214 (part three) merged as `3bad1222` with exact-head approval **5352676793**. Its two review findings, an unanswered session item and the reveal, were accepted and fixed on that head.
+  - The fix also corrected part two in production: post-exam review had shown a withdrawn item the learner never attempted.
+  - One hosted CI job hit a documentation-audit hook timeout, not an assertion. The cause is documented on #1214; the job passed on its single re-run, and the root cause is queued.
+  - Promoted through #1215 (`d569cd89`). Its one finding is adjudicated above and its thread is resolved. The promotion's proof was written into its body at 13:08:56Z, before the merge at 13:09:01Z.
+  - Release verified: main CI **36573020615** `test` **13:21:46Z**; Ready **13:10:45.962Z**, held without alias until its check completed; production assigned **13:21:50.480Z**; matching trees (`9485ecb7`); healthy production.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fifth increment, part three: the standalone review page keeps a withdrawn question for the learner who attempted it, shows the revision of the learner's own item, and corrects part two's post-exam review, which had shown a withdrawn item the learner never attempted. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-three-the-standalone-review-keeps-a-withdrawn-question--2026-09-29). The previous increment, #1212 (part two), merged as `fe578a68` and is promoted through #1213 (`1b0ed206`). Release verified: main CI **36561437128** `test` **11:36:32Z**; Ready **11:24:53.478Z**, held without alias until its check completed; production assigned **11:36:34.973Z**; matching trees; healthy production. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fifth increment, part two: post-exam review keeps a withdrawn question the learner answered, marked with the F-11 notice. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-two-post-exam-review-keeps-a-withdrawn-question--2026-09-29). The previous increment, #1210 (part one), merged as `7cbce254` and is promoted through #1211 (`98fc6b3c`). Release verified: main CI **36555950014** `test` **10:42:05Z**; Ready **10:31:31.323Z**, held without alias until its check completed; production assigned **10:42:07.562Z**; matching trees; healthy production. **4 Active records; Next Debt ID remains DEBT-489.**
 
