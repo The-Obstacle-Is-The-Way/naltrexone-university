@@ -17,7 +17,7 @@ The trial add-card flow is a card flow from end to end:
 - The app records whether a trial "renews on a saved card" (`src/application/use-cases/check-trial-saved-card.ts`, BUG-308).
 - Billing states the renewal in terms of that card.
 
-But the setup-mode Checkout Session the flow creates (`createTrialPaymentMethodSetupSession` in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`) sets no `payment_method_types`. Stripe therefore offers every method the account's dashboard enables for setup.
+But the setup-mode Checkout Session the flow creates (`createTrialPaymentMethodSetupSession` in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`) sets no `payment_method_types`. Stripe therefore chooses the methods it offers from the account's Dashboard payment-method configuration, limited to those compatible with this setup Session.
 
 Stripe's hosted page in test mode on 2026-09-29 offered Card, Cash App Pay, Klarna and Amazon Pay. The webhook takes whatever payment method the SetupIntent returns (`stripe-webhook-processor.ts`, `stripePaymentMethodId`), with no type check, and that method becomes the trial's renewal method.
 
