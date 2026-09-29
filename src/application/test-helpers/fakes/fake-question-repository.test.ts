@@ -51,6 +51,31 @@ describe('FakeQuestionRepository', () => {
     ).resolves.toEqual(['q1']);
   });
 
+  it('reads a published question as its binding for review, and never an unpublished one', async () => {
+    const current = createQuestion({ id: 'q1', stemMd: 'Current' });
+    const older = createQuestion({ id: 'q1', stemMd: 'Older' });
+    const archived = createQuestion({ id: 'q2', status: 'archived' });
+    const repo = new FakeQuestionRepository([current, older, archived]);
+    const olderBinding = {
+      questionId: 'q1',
+      questionRevisionId: older.revisionId,
+    };
+
+    await expect(repo.findPublishedByBinding(olderBinding)).resolves.toBe(
+      older,
+    );
+    await expect(
+      repo.findPublishedByBinding(unbound('q2')),
+    ).resolves.toBeNull();
+    await expect(
+      repo.findPublishedByBindings([
+        unbound('q1'),
+        olderBinding,
+        unbound('q2'),
+      ]),
+    ).resolves.toEqual([current, older]);
+  });
+
   it('refuses a session item bound to a revision it does not hold', async () => {
     const repo = new FakeQuestionRepository([createQuestion({ id: 'q1' })]);
 

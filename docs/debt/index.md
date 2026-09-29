@@ -3,18 +3,19 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, third increment, part two (DEBT-484): a session shows, grades and records the revision each item was bound to when it began. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-two-a-session-shows-and-grades-its-bound-revision--2026-09-28).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, third increment, part three (i) (DEBT-484): reviewing an earlier session or attempt shows the revision the learner answered, not a newer one. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-three-i-reviews-show-the-revision-that-was-answered--2026-09-29).
 - **What changes.**
-  - A session item carries `questionRevisionId`, and a question carries the `revisionId` whose content it holds. The session lookups take the item, so no caller can drop the binding.
-  - The next-question read, a tutor submission, an exam draft and exam finalization all use the item's revision. A newer revision's choice is refused as not found, not failed as a server error by the `(choice, revision)` key.
-  - The exam-draft controller had spread the whole session item into its strict output schema, so the new field would have failed every draft save. It now names each field the client receives.
-- **Proof.** Six real-Postgres cases with revision 2 made current after the session began, five red first. Four use-case cases on the fakes, and break-it proofs for each use case.
-- **Previous increment.** #1200 (part one) merged as `fcc1f05c` with exact-head approval **5346509422**; its one finding, a vacuous corpus case, is fixed there.
-  - It is promoted through #1201 (`a798ea9d`). The promotion's proof was written into its body at 01:33:54Z, before the merge at 01:33:59Z.
-  - The promotion's one finding was declined, with the reason recorded in DEBT-484: failing every candidate query when any published question lacks a revision would let one bad row stop selection for every learner.
-  - Release verified: main CI **36508512475** `test` **01:46:56Z**; Ready **01:35:28.748Z**, held without alias until its check completed; production assigned **01:46:57.824Z**; matching trees; healthy production.
+  - An attempt carries the revision it graded. A session's review, a completed session's feedback, an earlier attempt and an unanswered item's reveal all read the bound revision: its stem, choices, correct answer and explanation.
+  - Before this, once a question gained a newer revision, a learner reviewing an earlier answer would have seen a correct answer they were never graded against.
+  - The attempt row type now requires the revision, and that caught one query, recent activity, that did not select it.
+- **Proof.** Six real-Postgres cases with the questions revised after the session ended, all red first. Break-it proofs for each use case.
+- **Previous increment.** #1202 (part two) merged as `07af5bb6` with exact-head approval **5346863901** and no findings.
+  - It is promoted through #1203 (`37a075b0`), approved with no findings. The promotion's proof was written into its body at 02:26:41Z, before the merge at 02:26:46Z.
+  - Release verified: main CI **36512628075** `test` **02:40:02Z**; Ready **02:28:05.254Z**, held without alias until its check completed; production assigned **02:40:03.911Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-29 UTC ADR-021 phase 2a, third increment, part two: a session shows, grades and records the revision each item was bound to, and the exam-draft output names its fields so the revision stays internal. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-two-a-session-shows-and-grades-its-bound-revision--2026-09-28). The previous increment, #1200 (part one), merged as `fcc1f05c` and is promoted through #1201 (`a798ea9d`); the promotion's one finding was declined with its reason recorded. Release verified: main CI **36508512475** `test` **01:46:56Z**; Ready **01:35:28.748Z**, held without alias until its check completed; production assigned **01:46:57.824Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-29 UTC ADR-021 phase 2a, third increment, part one: question content and selection read through the question's current revision, and a question with no current revision is refused with `INTERNAL_ERROR`. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-one-question-content-reads-through-the-current-revision--2026-09-28). The previous increment, promotion #1199 (`dc0fcd74`), released #1198's carry-forward and Dependabot #1188 and #1191. Release verified: main CI **36500516846** `test` **00:08:28Z**; Ready **23:59:03.538Z**, held without alias until its check completed; production assigned **00:08:30.390Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 

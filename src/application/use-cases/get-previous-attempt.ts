@@ -110,9 +110,13 @@ export class GetPreviousAttemptUseCase {
       );
       if (!session) return null;
       if (session.endedAt === null) return null;
-      if (!session.questionIds.includes(input.questionId)) return null;
+      const item = session.questionStates.find(
+        (state) => state.questionId === input.questionId,
+      );
+      if (!item) return null;
 
-      const question = await this.questions.findPublishedById(input.questionId);
+      // ADR-021: the revision the item was bound to.
+      const question = await this.questions.findPublishedByBinding(item);
       if (!question) {
         this.logger.warn(
           { questionId: input.questionId, sessionId: input.sessionId },
@@ -166,9 +170,8 @@ export class GetPreviousAttemptUseCase {
 
       const sessionMode = attemptSession?.mode ?? null;
 
-      const question = await this.questions.findPublishedById(
-        attempt.questionId,
-      );
+      // ADR-021: the revision the attempt graded.
+      const question = await this.questions.findPublishedByBinding(attempt);
 
       if (!question) {
         this.logger.warn(
@@ -203,7 +206,7 @@ export class GetPreviousAttemptUseCase {
       };
     }
 
-    const question = await this.questions.findPublishedById(attempt.questionId);
+    const question = await this.questions.findPublishedByBinding(attempt);
 
     if (!question) {
       this.logger.warn(

@@ -2,7 +2,7 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   QuestionFilters,
   QuestionRepository,
-  SessionItemBinding,
+  QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
@@ -38,6 +38,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   private readonly revisions: readonly Question[];
   readonly findPublishedByIdsCalls: string[][] = [];
+  readonly findPublishedByBindingsCalls: string[][] = [];
   readonly findByIdsForSessionCalls: string[][] = [];
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
@@ -79,20 +80,40 @@ export class FakeQuestionRepository implements QuestionRepository {
     return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
   }
 
-  async findByIdForSession(item: SessionItemBinding): Promise<Question | null> {
-    return this.findSessionItem(item);
+  async findPublishedByBinding(
+    binding: QuestionRevisionBinding,
+  ): Promise<Question | null> {
+    const found = this.findByBinding(binding);
+    return found?.status === 'published' ? found : null;
+  }
+
+  async findPublishedByBindings(
+    bindings: readonly QuestionRevisionBinding[],
+  ): Promise<readonly Question[]> {
+    this.findPublishedByBindingsCalls.push(
+      bindings.map((binding) => binding.questionId),
+    );
+    return bindings
+      .map((binding) => this.findByBinding(binding))
+      .filter((q): q is Question => q?.status === 'published');
+  }
+
+  async findByIdForSession(
+    item: QuestionRevisionBinding,
+  ): Promise<Question | null> {
+    return this.findByBinding(item);
   }
 
   async findByIdsForSession(
-    items: readonly SessionItemBinding[],
+    items: readonly QuestionRevisionBinding[],
   ): Promise<readonly Question[]> {
     this.findByIdsForSessionCalls.push(items.map((item) => item.questionId));
     return items
-      .map((item) => this.findSessionItem(item))
+      .map((item) => this.findByBinding(item))
       .filter((q): q is Question => !!q);
   }
 
-  private findSessionItem(item: SessionItemBinding): Question | null {
+  private findByBinding(item: QuestionRevisionBinding): Question | null {
     const current = this.questions.find((q) => q.id === item.questionId);
     if (!current) return null;
     if (item.questionRevisionId === null) return current;

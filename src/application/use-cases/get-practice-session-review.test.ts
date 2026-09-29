@@ -28,6 +28,53 @@ class MismatchedStatePracticeSessionRepository extends FakePracticeSessionReposi
 }
 
 describe('GetPracticeSessionReviewUseCase', () => {
+  it('reviews an item as the revision it was bound to (ADR-021)', async () => {
+    const current = createQuestion({
+      id: 'q1',
+      slug: 'q-1',
+      stemMd: 'Current stem',
+      difficulty: 'hard',
+    });
+    const bound = createQuestion({
+      id: 'q1',
+      slug: 'q-1',
+      stemMd: 'Bound stem',
+      difficulty: 'easy',
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'tutor',
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          questionRevisionId: bound.revisionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([current, bound]),
+      new FakeLogger(),
+    );
+
+    const review = await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+    });
+
+    expect(review.rows[0]).toMatchObject({
+      isAvailable: true,
+      stemMd: 'Bound stem',
+      difficulty: 'easy',
+    });
+  });
+
   it('returns ordered review rows with answered/marked state', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
@@ -535,7 +582,8 @@ describe('GetPracticeSessionReviewUseCase', () => {
     await expect(useCase.execute({ userId, sessionId })).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
     });
-    expect(questions.findPublishedByIdsCalls).toEqual([['q1', 'q2']]);
+    // The review reads the questions the session's items bind (ADR-021).
+    expect(questions.findPublishedByBindingsCalls).toEqual([['q1']]);
     expect(logger.warnCalls).toEqual([]);
   });
 
