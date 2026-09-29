@@ -434,6 +434,7 @@ The third slice covers the two lists built from the learner's attempts: History'
 - **Tests.**
   - Two real-Postgres cases, red first against the published reads: the attempted list, and recent activity with two attempts of one withdrawn question at different revisions.
   - Use-case cases; the helper's cases rewritten for the owned read; a cache case for two bindings of one question; view cases for both rows. All red first.
+  - `controllers-history.integration.test.ts` had pinned the old rule: an attempted question unpublished since was listed as unavailable, with a missing-question warning. It now asserts the ADR-021 rule: listed, available and marked withdrawn, with no warning.
 
 ## Related
 
