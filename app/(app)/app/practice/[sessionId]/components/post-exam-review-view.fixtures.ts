@@ -26,6 +26,7 @@ export function createSummary(
 export function createReviewRow(overrides?: Partial<ReviewRow>): ReviewRow {
   return {
     isAvailable: true,
+    withdrawn: false,
     questionId: 'question-1',
     slug: 'question-1',
     stemMd: 'Question stem',

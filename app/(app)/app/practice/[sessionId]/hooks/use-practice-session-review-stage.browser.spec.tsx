@@ -158,6 +158,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
@@ -170,6 +171,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: fixtureQ2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',
@@ -304,6 +306,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
@@ -325,6 +328,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: fixtureQ2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',

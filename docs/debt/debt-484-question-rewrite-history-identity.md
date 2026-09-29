@@ -348,6 +348,21 @@ ADR-021 §3 keeps a withdrawn question reviewable by learners who attempted it, 
   - Part two: history and review reads return an attempted withdrawn question as bound, marked withdrawn, only to the learner who attempted it.
   - Part three: the seven surfaces adopt F-11, and eleven tests pin today's strings.
 
+## Phase 2a, fifth increment, part two: post-exam review keeps a withdrawn question — 2026-09-29
+
+Parts two and three ship as vertical slices, with the reads and the UI of a surface in the same PR. Changing the reads first would render a withdrawn question as an ordinary row with no notice, which ADR-021 §3 forbids. This first slice covers post-exam review.
+- **Reads.** Completed-session feedback reads the learner's own session items through the owned-session lookup, whatever their status now, and marks each available row `withdrawn` when its question is no longer published. A withdrawn question is returned as the revision the learner answered, with the choices, selection, correct answer and explanation.
+- **UI (Pattern Registry F-11).**
+  - Post-exam review shows the notice above the question: "This question has been withdrawn. You can still review your answer. It no longer appears in new practice."
+  - Bookmark, report and rating stay hidden for it.
+  - The question navigator reaches it, and its label names it withdrawn.
+- **Captures.** Two captures of the local production build in the app's forced dark theme, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](./assets/debt-484/withdrawn-review-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-review-dark-390x844.png). A temporary Playwright script archived a question from a finished exam in the local database and restored it afterwards.
+- **Not yet.** The session summary's breakdown still shows the item as `[Question no longer available]`. Its rows link to the standalone review page, which the history slice changes next, so the breakdown moves with it.
+- **Tests.**
+  - A real-Postgres case, red first: a finished session whose question is archived afterwards returns that question as answered, marked withdrawn.
+  - A use-case case on the fakes, and component cases for the notice's placement and text, the hidden actions and the navigator.
+  - Break-it proofs: marking nothing withdrawn, or reading only published questions, fails the use-case case.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

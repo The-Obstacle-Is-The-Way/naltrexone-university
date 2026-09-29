@@ -6,7 +6,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchSessionQuestionsAsBound } from '@/src/application/shared/fetch-session-questions-as-bound';
+import { fetchSessionOwnedQuestionsById } from '@/src/application/shared/fetch-session-owned-questions-by-id';
 import {
   createPracticeSessionStateMap,
   requirePracticeSessionQuestionState,
@@ -29,6 +29,11 @@ export type CompletedSessionQuestionChoice = {
 
 export type AvailableCompletedSessionQuestionWithFeedbackRow = {
   isAvailable: true;
+  /**
+   * The question was withdrawn after the session (ADR-021 §3). It stays
+   * reviewable here, as answered, and the view marks it (Pattern Registry F-11).
+   */
+  withdrawn: boolean;
   questionId: string;
   slug: string;
   stemMd: string;
@@ -128,9 +133,11 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       );
     }
 
-    const questionById = await fetchSessionQuestionsAsBound(
+    // The learner's own session items, whatever their status now: a question
+    // withdrawn since stays reviewable, as bound, and is marked (ADR-021 §3).
+    const questionById = await fetchSessionOwnedQuestionsById(
       this.questions,
-      session,
+      session.questionStates,
     );
     const attempts = await this.attempts.findBySessionId(
       input.sessionId,
@@ -205,6 +212,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
 
         return {
           isAvailable: true,
+          withdrawn: question.status !== 'published',
           questionId: question.id,
           slug: question.slug,
           stemMd: question.stemMd,
