@@ -87,6 +87,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo,
+        setWithdrawnQuestionId: vi.fn(),
         createRequestSequenceId,
         isLatestRequest,
       });
@@ -102,6 +103,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo,
+        setWithdrawnQuestionId: vi.fn(),
         createRequestSequenceId,
         isLatestRequest,
       });
@@ -185,6 +187,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       expect(setQuestion).toHaveBeenCalledWith(
@@ -215,6 +218,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       expect(getNextQuestionFn).toHaveBeenCalledWith({
@@ -240,6 +244,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       expect(getNextQuestionFn).toHaveBeenCalledWith({
@@ -265,6 +270,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       expect(setQuestion).toHaveBeenCalledWith(null);
@@ -289,6 +295,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo: vi.fn(),
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       expect(setQuestion).toHaveBeenCalledWith(null);
@@ -318,6 +325,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo: vi.fn(),
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       expect(setQuestion).toHaveBeenCalledWith(null);
@@ -350,6 +358,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
+        setWithdrawnQuestionId: vi.fn(),
         isMounted: () => mounted,
       });
 
@@ -382,6 +391,7 @@ describe('practice-session-page-logic', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
+        setWithdrawnQuestionId: vi.fn(),
       });
 
       action();

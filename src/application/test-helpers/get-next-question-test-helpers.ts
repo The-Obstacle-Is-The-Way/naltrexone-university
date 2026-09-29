@@ -12,7 +12,11 @@ import {
 } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import type { QuestionFilters } from '../ports/repositories';
-import { GetNextQuestionUseCase } from '../use-cases/get-next-question';
+import {
+  type GetNextQuestionOutput,
+  GetNextQuestionUseCase,
+  type NextQuestion,
+} from '../use-cases/get-next-question';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -20,6 +24,17 @@ import {
 } from './fakes';
 
 export const USER_ID = 'user-1';
+
+// A read that returned an answerable question (or none), not an item whose
+// question was withdrawn since the session began (ADR-021 §3).
+export function answerableQuestion(
+  output: GetNextQuestionOutput,
+): NextQuestion | null {
+  if (output && 'withdrawn' in output) {
+    throw new Error('Expected an answerable question, got a withdrawn item');
+  }
+  return output;
+}
 export const SESSION_ID = 'session-1';
 export const ANSWERED_AT = new Date('2026-01-31T00:00:00Z');
 export const EMPTY_FILTERS: QuestionFilters = {

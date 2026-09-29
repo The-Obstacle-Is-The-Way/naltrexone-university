@@ -6,6 +6,7 @@ import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-at
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { answerableQuestion } from '@/src/application/test-helpers/get-next-question-test-helpers';
 import { FinalizeExamAnswersUseCase } from '@/src/application/use-cases/finalize-exam-answers';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { SaveExamDraftAnswerUseCase } from '@/src/application/use-cases/save-exam-draft-answer';
@@ -126,11 +127,12 @@ describe('ADR-021 phase 2a: session reads and grading use the bound revision', (
   it('shows a session item as the revision it was bound to', async () => {
     const { question, user, session } = await createSessionThenRevise('tutor');
 
-    const next = await new GetNextQuestionUseCase(
-      questions,
-      attempts,
-      sessions,
-    ).execute({ userId: user.id, sessionId: session.id });
+    const next = answerableQuestion(
+      await new GetNextQuestionUseCase(questions, attempts, sessions).execute({
+        userId: user.id,
+        sessionId: session.id,
+      }),
+    );
 
     expect(next?.stemMd).toBe('# Stem');
     expect(next?.choices.map((choice) => choice.id).sort()).toEqual(
@@ -147,11 +149,12 @@ describe('ADR-021 phase 2a: session reads and grading use the bound revision', (
         eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
       );
 
-    const next = await new GetNextQuestionUseCase(
-      questions,
-      attempts,
-      sessions,
-    ).execute({ userId: user.id, sessionId: session.id });
+    const next = answerableQuestion(
+      await new GetNextQuestionUseCase(questions, attempts, sessions).execute({
+        userId: user.id,
+        sessionId: session.id,
+      }),
+    );
 
     expect(next?.stemMd).toBe('# Revised stem');
     expect(next?.choices.map((choice) => choice.id).sort()).toEqual(

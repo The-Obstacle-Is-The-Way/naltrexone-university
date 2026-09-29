@@ -27,7 +27,10 @@ import { useNotification } from '@/components/ui/notification-provider';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type {
+  GetNextQuestionOutput,
+  NextQuestion,
+} from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UsePracticeSessionQuestionFlowInput = {
@@ -36,7 +39,7 @@ export type UsePracticeSessionQuestionFlowInput = {
   isMounted: () => boolean;
   getNextQuestionFn: (
     input: unknown,
-  ) => Promise<ActionResult<NextQuestion | null>>;
+  ) => Promise<ActionResult<GetNextQuestionOutput>>;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   saveExamDraftAnswerFn: (
     input: unknown,
@@ -60,6 +63,8 @@ export type UsePracticeSessionQuestionFlowOutput = {
   sessionMode: 'tutor' | 'exam' | null;
   loadState: LoadState;
   question: NextQuestion | null;
+  /** The current item when its question was withdrawn since the session began. */
+  withdrawnQuestionId: string | null;
   selectedChoiceId: string | null;
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
@@ -112,6 +117,9 @@ export function usePracticeSessionQuestionFlow(
 
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
+  const [withdrawnQuestionId, setWithdrawnQuestionId] = useState<string | null>(
+    null,
+  );
   const savedExamDraftsRef = useRef<
     Map<string, { selectedChoiceId: string | null; cumulativeMs: number }>
   >(new Map());
@@ -145,6 +153,7 @@ export function usePracticeSessionQuestionFlow(
       setQuestionLoadedAt,
       setQuestion,
       setSessionInfo: applySessionInfo,
+      setWithdrawnQuestionId,
       recoverEndedSessionConflict: input.recoverEndedSessionConflict,
       createRequestSequenceId,
       isLatestRequest,
@@ -227,6 +236,7 @@ export function usePracticeSessionQuestionFlow(
   const resetQuestionState = useCallback(() => {
     setSessionInfo(null);
     setQuestion(null);
+    setWithdrawnQuestionId(null);
     setSubmitResult(null);
     setSelectedChoiceId(null);
     savedExamDraftsRef.current.clear();
@@ -437,6 +447,9 @@ export function usePracticeSessionQuestionFlow(
               captured = result;
             },
             recoverEndedSessionConflict: input.recoverEndedSessionConflict,
+            // ADR-021 §3: a not-found answer reloads the item, which shows the
+            // withdrawal notice if the question was withdrawn while open.
+            reload: loadQuestionConfig,
             createRequestSequenceId,
             isLatestRequest,
             isMounted,
@@ -461,6 +474,7 @@ export function usePracticeSessionQuestionFlow(
       input.recoverEndedSessionConflict,
       isLatestRequest,
       isMounted,
+      loadQuestionConfig,
       question,
       questionLoadedAt,
       submitRequestToken,
@@ -510,6 +524,7 @@ export function usePracticeSessionQuestionFlow(
     setSessionMode,
     loadState,
     question,
+    withdrawnQuestionId,
     selectedChoiceId,
     isAnswered,
     submitResult,
