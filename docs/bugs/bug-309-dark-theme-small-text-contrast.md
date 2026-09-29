@@ -20,7 +20,8 @@ The app forces its dark theme (`forcedTheme="dark"` in `app/layout.tsx`), so the
    - For a learner reviewing their answers, the result label is primary information, not decoration.
 2. **`text-muted-foreground` fails on tonal row fills inside cards.**
    - The dark `--muted-foreground` is `hsl(0 0% 51.5%)` (#838383). It passes on the card (4.9:1) and the page (5.2:1), but measures 4.44:1 on the Dashboard's `bg-foreground/5` rows (dates, "(50%)" figures).
-   - The History tab's inactive trigger measures 4.49:1.
+   - The inactive History tab link (`HistoryTabBar`, a `Link` on the shared `bg-muted` container) sits on the threshold. As rendered it is 4.495:1: the browser paints the 8-bit colours #838383 on #1c1c1c, which axe reports as 4.49:1. The unrounded token values give 4.51:1.
+   - WCAG compares the ratio without rounding, so the rendered value fails by a hair. A muted-text fix for the rows should clear it too.
 
 Expected: all informational text at 4.5:1 or better on the surface it sits on.
 
@@ -28,7 +29,7 @@ Expected: all informational text at 4.5:1 or better on the surface it sits on.
 
 The DEBT-484 part-four captures ran axe 4.10.2 on the local production build of History (questions tab) and the Dashboard at 1440×900 and 390×844 (2026-09-29, PR #1219).
 
-- **History:** 3 `color-contrast` nodes, all "Incorrect" at 3.59:1 (`#dc2828` on `#1b1b1b`), and the inactive tab trigger at 4.49:1.
+- **History:** 4 `color-contrast` nodes in the detailed run: three "Incorrect" labels at 3.59:1 (`#dc2828` on `#1b1b1b`), and the inactive tab link at 4.49:1 as rendered.
 - **Dashboard:** 10 nodes: "Incorrect" at 3.51:1 on `#1d1d1d`, and muted dates and percentages at 4.44:1.
 - **Scope:** none involves the change under review; all predate it.
 
