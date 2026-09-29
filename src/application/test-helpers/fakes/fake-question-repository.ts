@@ -38,7 +38,6 @@ export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   private readonly revisions: readonly Question[];
   readonly findPublishedByIdsCalls: string[][] = [];
-  readonly findPublishedByBindingsCalls: string[][] = [];
   readonly findByIdsForSessionCalls: string[][] = [];
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
@@ -82,17 +81,6 @@ export class FakeQuestionRepository implements QuestionRepository {
         .map((q) => [q.id, q]),
     );
     return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
-  }
-
-  async findPublishedByBindings(
-    bindings: readonly QuestionRevisionBinding[],
-  ): Promise<readonly Question[]> {
-    this.findPublishedByBindingsCalls.push(
-      bindings.map((binding) => binding.questionId),
-    );
-    return bindings
-      .map((binding) => this.findByBinding(binding))
-      .filter((q): q is Question => q?.status === 'published');
   }
 
   async findByIdForSession(

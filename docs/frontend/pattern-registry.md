@@ -897,6 +897,7 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 
 - The row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
 - Its metadata reads `Withdrawn` where an available row shows the difficulty, in the same metadata style.
+- A row with no difficulty slot, such as a session breakdown row, shows `Withdrawn` before its result, in the style the row already uses for its `Unanswered` label (`shrink-0 text-muted-foreground`).
 
 **Active session** (a question withdrawn after the session began) — the same Status notice, in place of the F-3 `Question not found` error card:
 

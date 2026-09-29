@@ -44,16 +44,6 @@ export interface QuestionRepository {
   findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
 
   /**
-   * Returns published questions, in the bindings' order, each as the revision
-   * its binding names, else as its current revision (ADR-021). A question that
-   * is not published is omitted for every binding of it; every other binding
-   * yields exactly one question.
-   */
-  findPublishedByBindings(
-    bindings: readonly QuestionRevisionBinding[],
-  ): Promise<readonly Question[]>;
-
-  /**
    * Returns a session item's or attempt's question regardless of
    * `questions.status`, with the content and choices of the revision it is
    * bound to, else of the question's current revision (a row an older

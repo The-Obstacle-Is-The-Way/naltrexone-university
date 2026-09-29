@@ -79,6 +79,10 @@ export function SessionBreakdownList({
               </span>
             </span>
           )}
+          {/* Pattern Registry F-11: withdrawn since attempted. */}
+          {row.isAvailable && row.withdrawn ? (
+            <span className="shrink-0 text-muted-foreground">Withdrawn</span>
+          ) : null}
           {row.isAnswered || row.isOmitted ? (
             row.isCorrect === true ? (
               <span className="ml-auto shrink-0 text-success">Correct</span>

@@ -35,6 +35,7 @@ describe('QuestionNavigator', () => {
     rows: [
       {
         isAvailable: true,
+        withdrawn: false,
         questionId: fixtureQuestion1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
@@ -47,6 +48,7 @@ describe('QuestionNavigator', () => {
       },
       {
         isAvailable: true,
+        withdrawn: false,
         questionId: fixtureQuestion2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
@@ -248,6 +250,7 @@ describe('ExamReviewView', () => {
     rows: [
       {
         isAvailable: true,
+        withdrawn: false,
         questionId: fixtureQuestion1Id,
         slug: 'q-1',
         stemMd: 'Marked answered question',
@@ -260,6 +263,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: true,
+        withdrawn: false,
         questionId: fixtureQuestion2Id,
         slug: 'q-2',
         stemMd: 'Unmarked answered question',
@@ -272,6 +276,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: true,
+        withdrawn: false,
         questionId: fixtureQuestion3Id,
         slug: 'q-3',
         stemMd: 'Unmarked unanswered question',

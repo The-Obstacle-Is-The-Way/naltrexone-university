@@ -5,7 +5,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchSessionQuestionsAsBound } from '@/src/application/shared/fetch-session-questions-as-bound';
+import { fetchSessionOwnedQuestionsById } from '@/src/application/shared/fetch-session-owned-questions-by-id';
 import {
   createPracticeSessionStateMap,
   getEffectiveSelectedChoiceId,
@@ -21,6 +21,8 @@ export type GetPracticeSessionReviewInput = {
 
 export type AvailablePracticeSessionReviewRow = {
   isAvailable: true;
+  /** Withdrawn since the learner attempted it in this ended session (ADR-021 §3). */
+  withdrawn: boolean;
   questionId: string;
   slug: string;
   stemMd: string;
@@ -55,6 +57,25 @@ export type GetPracticeSessionReviewOutput = {
   rows: PracticeSessionReviewRow[];
 };
 
+function unavailableRow(row: {
+  questionId: string;
+  order: number;
+  isAnswered: boolean;
+  isCorrect: boolean | null;
+  isOmitted: boolean;
+  markedForReview: boolean;
+}): PracticeSessionReviewRow {
+  return {
+    isAvailable: false,
+    questionId: row.questionId,
+    order: row.order,
+    isAnswered: row.isAnswered,
+    isCorrect: row.isCorrect,
+    isOmitted: row.isOmitted,
+    markedForReview: row.markedForReview,
+  };
+}
+
 export class GetPracticeSessionReviewUseCase {
   constructor(
     private readonly sessions: PracticeSessionRepository,
@@ -73,9 +94,12 @@ export class GetPracticeSessionReviewUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
-    const questionById = await fetchSessionQuestionsAsBound(
+    // The learner's own session items as bound, whatever their status now; a
+    // withdrawn one shows only where the learner attempted it and the session
+    // is over (ADR-021 §3).
+    const questionById = await fetchSessionOwnedQuestionsById(
       this.questions,
-      session,
+      session.questionStates,
     );
     const shouldShowCorrectness = sessionShouldShowExplanation(session);
     const stateByQuestionId = createPracticeSessionStateMap(session);
@@ -87,6 +111,7 @@ export class GetPracticeSessionReviewUseCase {
       isCorrect: boolean | null;
       isOmitted: boolean;
       markedForReview: boolean;
+      attempted: boolean;
     };
 
     let answeredCount = 0;
@@ -116,6 +141,7 @@ export class GetPracticeSessionReviewUseCase {
         isCorrect: shouldShowCorrectness ? state.latestIsCorrect : null,
         isOmitted,
         markedForReview: state.markedForReview,
+        attempted: state.latestAnsweredAt !== null,
       });
     }
 
@@ -123,27 +149,26 @@ export class GetPracticeSessionReviewUseCase {
       rows: reviewSeeds,
       getQuestionId: (row) => row.questionId,
       questionsById: questionById,
-      available: (row, question): PracticeSessionReviewRow => ({
-        isAvailable: true,
-        questionId: question.id,
-        slug: question.slug,
-        stemMd: question.stemMd,
-        difficulty: question.difficulty,
-        order: row.order,
-        isAnswered: row.isAnswered,
-        isCorrect: row.isCorrect,
-        isOmitted: row.isOmitted,
-        markedForReview: row.markedForReview,
-      }),
-      unavailable: (row): PracticeSessionReviewRow => ({
-        isAvailable: false,
-        questionId: row.questionId,
-        order: row.order,
-        isAnswered: row.isAnswered,
-        isCorrect: row.isCorrect,
-        isOmitted: row.isOmitted,
-        markedForReview: row.markedForReview,
-      }),
+      available: (row, question): PracticeSessionReviewRow => {
+        const withdrawn = question.status !== 'published';
+        if (withdrawn && !(session.endedAt !== null && row.attempted)) {
+          return unavailableRow(row);
+        }
+        return {
+          isAvailable: true,
+          withdrawn,
+          questionId: question.id,
+          slug: question.slug,
+          stemMd: question.stemMd,
+          difficulty: question.difficulty,
+          order: row.order,
+          isAnswered: row.isAnswered,
+          isCorrect: row.isCorrect,
+          isOmitted: row.isOmitted,
+          markedForReview: row.markedForReview,
+        };
+      },
+      unavailable: unavailableRow,
       logger: this.logger,
       missingQuestionMessage:
         'Practice session review references missing question',
