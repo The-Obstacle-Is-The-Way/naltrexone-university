@@ -56,8 +56,8 @@ export async function fillHostedCheckoutTestCard(page: Page): Promise<void> {
     name: 'Card',
     exact: true,
   });
-  // Checkout markup from 2026-09-29 lists methods with a covering
-  // "Pay with card" button that is not itself visible.
+  // Checkout markup from 2026-09-29 lists methods with a "Pay with card"
+  // button that is not itself visible.
   const payWithCard = page.getByRole('button', {
     name: 'Pay with card',
     exact: true,
@@ -80,7 +80,9 @@ export async function fillHostedCheckoutTestCard(page: Page): Promise<void> {
     !(await cardNumber.isVisible()) &&
     (await payWithCard.count()) > 0
   ) {
-    await payWithCard.first().click({ force: true });
+    // The button sits outside the viewport, like a screen-reader control, so
+    // dispatch its click rather than pointing at it.
+    await payWithCard.first().dispatchEvent('click');
   }
   await expect(cardNumber).toBeVisible({ timeout: 30_000 });
   const saveInformation = page.getByRole('checkbox', {
