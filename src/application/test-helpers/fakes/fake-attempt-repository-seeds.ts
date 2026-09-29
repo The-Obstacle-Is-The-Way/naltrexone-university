@@ -27,6 +27,7 @@ export function makeAttempt(
     id: 'attempt-1',
     userId,
     questionId: 'q-1',
+    questionRevisionId: null,
     practiceSessionId: null,
     outcome:
       attemptOverrides.outcome ?? answeredOutcome(selectedChoiceId ?? 'c-1'),

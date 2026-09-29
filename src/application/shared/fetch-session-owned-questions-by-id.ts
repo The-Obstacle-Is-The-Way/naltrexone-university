@@ -1,13 +1,13 @@
 import type {
   QuestionRepository,
-  SessionItemBinding,
+  QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
 
 // A session holds each question once, so a question id identifies its item.
 export async function fetchSessionOwnedQuestionsById(
   repo: QuestionRepository,
-  items: readonly SessionItemBinding[],
+  items: readonly QuestionRevisionBinding[],
 ): Promise<Map<string, Question>> {
   const uniqueItems = [
     ...new Map(items.map((item) => [item.questionId, item])).values(),

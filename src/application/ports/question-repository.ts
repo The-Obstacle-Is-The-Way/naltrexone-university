@@ -1,7 +1,4 @@
-import type {
-  PracticeSessionQuestionState,
-  Question,
-} from '@/src/domain/entities';
+import type { Question } from '@/src/domain/entities';
 import type {
   QuestionDifficulty,
   QuestionProgressStatus,
@@ -24,18 +21,37 @@ export type QuestionFilters = {
 };
 
 /**
- * A practice-session item's question and the revision it is bound to
- * (ADR-021). A `PracticeSessionQuestionState` is one.
+ * A question and the revision a session item or attempt is bound to
+ * (ADR-021). A `PracticeSessionQuestionState` and an `Attempt` are each one.
+ * A null revision, on a row a deployment older than binding wrote, reads the
+ * question's current revision.
  */
-export type SessionItemBinding = Pick<
-  PracticeSessionQuestionState,
-  'questionId' | 'questionRevisionId'
->;
+export type QuestionRevisionBinding = {
+  readonly questionId: string;
+  readonly questionRevisionId: string | null;
+};
 
 export interface QuestionRepository {
   findPublishedById(id: string): Promise<Question | null>;
   findPublishedBySlug(slug: string): Promise<Question | null>;
   findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
+
+  /**
+   * Returns a published question as the revision its binding names, else as
+   * its current revision: what a review of a session item or an earlier
+   * attempt shows (ADR-021).
+   */
+  findPublishedByBinding(
+    binding: QuestionRevisionBinding,
+  ): Promise<Question | null>;
+
+  /**
+   * Returns published questions, in the bindings' order, as
+   * `findPublishedByBinding` does.
+   */
+  findPublishedByBindings(
+    bindings: readonly QuestionRevisionBinding[],
+  ): Promise<readonly Question[]>;
 
   /**
    * Returns a session item's question regardless of `questions.status`, with
@@ -46,7 +62,7 @@ export interface QuestionRepository {
    * deliberately bypasses the published boundary and must never back public
    * browsing or candidate selection.
    */
-  findByIdForSession(item: SessionItemBinding): Promise<Question | null>;
+  findByIdForSession(item: QuestionRevisionBinding): Promise<Question | null>;
 
   /**
    * Returns session items' questions, in the items' order, as
@@ -57,7 +73,7 @@ export interface QuestionRepository {
    * browsing or candidate selection.
    */
   findByIdsForSession(
-    items: readonly SessionItemBinding[],
+    items: readonly QuestionRevisionBinding[],
   ): Promise<readonly Question[]>;
 
   /**

@@ -372,6 +372,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         id: attempts.id,
         userId: attempts.userId,
         questionId: attempts.questionId,
+        questionRevisionId: attempts.questionRevisionId,
         practiceSessionId: attempts.practiceSessionId,
         selectedChoiceId: attempts.selectedChoiceId,
         isOmitted: attempts.isOmitted,

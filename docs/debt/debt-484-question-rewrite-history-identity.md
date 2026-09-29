@@ -280,6 +280,21 @@ What a session shows, what it grades and what its attempt records are now one re
   - Break-it proofs: dropping the binding in the next-question read, the submission or the draft save fails its use-case case, and dropping it in finalize fails the Postgres finalize case.
 - **What does not change.** Attempts still bind in SQL by the same rule, and history and review reads are part 3c.
 
+## Phase 2a, third increment, part three (i): reviews show the revision that was answered — 2026-09-29
+
+Part 3c lands in two halves. This one covers reviews that show choices and correctness: a session's review, a completed session's feedback, and an earlier attempt, including an unanswered item revealed after its session ended. The other half covers the attempted-questions list, recent activity and bookmarks.
+
+Until now, once a question gained a newer revision, reviewing an earlier session or attempt would have shown the new revision: a different stem, a different correct answer and a different explanation. A learner would have seen a correct answer they were never graded against.
+- **Domain.** An attempt carries `questionRevisionId`: the revision it graded, or null for a row a deployment older than binding wrote. The attempt row type requires the field, so every query that maps an attempt must select it; the recent-attempts query did not, and now does.
+- **Port.** The binding type now covers any row bound to a revision: a session item or an attempt. `findPublishedByBinding` and `findPublishedByBindings` read a published question as its binding's revision, else as its current one. The adapter shares one resolution path with the session lookups, and refuses a revision that is not the question's, which the attempts and session-state composite keys already prevent.
+- **Use cases.** Session review and completed-session feedback read the session's items as bound. The previous-attempt view reads the attempt as bound, and reads an unanswered item of an ended session as its item was bound. Withdrawn questions stay unavailable, as before; the notice is increment 5.
+- **Request cache.** The published binding lookup is cached by its exact binding list. Two attempts can bind one question at different revisions, so results are never mapped back by question id.
+- **Tests.**
+  - Six real-Postgres cases in `question-revision-review-reads.integration.test.ts`, with the questions revised after the session ended: the attempt carries its revision; the session review; completed-session feedback, with choices, selection, correct answer and explanation; an earlier session attempt; an earlier attempt outside a session; and an unanswered item's reveal. All six were red first.
+  - The attempt round-trip case now expects the revision on every read, including recent activity.
+  - Use-case cases on the fakes for the review and the previous attempt, and fake and request-cache cases for the binding lookups.
+  - Break-it proofs: dropping the binding fails both use-case cases and five of the six Postgres cases. The sixth checks the attempt's own field.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
