@@ -904,6 +904,12 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 - **Heading line:** "This question was withdrawn after your session began."
 - **Body line:** "It can't be answered here. Continue to the next question."
 - The item cannot be answered or submitted. How such an item counts toward the session's score is an open decision recorded in DEBT-484; the notice makes no claim about scoring.
+- The action bar offers navigation only:
+  - `Previous` when an earlier question is available, and `Next` when a later one is.
+  - Otherwise, the session's end action: `Review & Submit` in an exam, `End session` in tutor mode.
+  - The learner can always move on; the page never leaves them at the withdrawn item with no way forward.
+  - Exam `Mark for review` is hidden for the item.
+- A question withdrawn while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back withdrawn, shows this notice instead of an error.
 
 **Never attempted** (for example, only bookmarked): unchanged S-2 unavailable row (`[Question no longer available]`). The learner never answered it, so its content is not shown.
 
@@ -913,7 +919,7 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 - Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and `text-foreground` for the heading line. No new color pair, so no new `contrast-policy.md` ledger entry is required.
 - `role="status"` announces the notice politely; it is never focused automatically.
 
-**Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. Consumers land in the increment's UI change; until then the surfaces above show the S-2 or F-3 treatments.
+**Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, and the active session page. An active session's navigator and exam Review & Submit list still show the S-2 treatment for a withdrawn item; that is the increment's next slice.
 
 ---
 

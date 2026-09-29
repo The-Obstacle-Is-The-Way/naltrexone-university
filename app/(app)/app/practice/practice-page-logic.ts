@@ -8,7 +8,10 @@ import {
   submitAnswerRequestFingerprint,
 } from '@/app/(app)/app/shared/submit-answer-request-key';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type {
+  GetNextQuestionOutput,
+  NextQuestion,
+} from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { PracticeFilters } from './practice-page-types';
 import {
@@ -38,6 +41,24 @@ export type { PracticeFilters } from './practice-page-types';
 export { statusDisplayLabel } from './practice-page-types';
 
 export type LoadState = AsyncLoadStateWithIdle;
+
+// Quick practice reads by filters, which never return a session item; a
+// withdrawn session item here is a broken contract (ADR-021 §3).
+export function toPracticeQuestionResult(
+  result: ActionResult<GetNextQuestionOutput>,
+): ActionResult<NextQuestion | null> {
+  if (!result.ok) return result;
+  if (result.data && 'withdrawn' in result.data) {
+    return {
+      ok: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Expected a practice question',
+      },
+    };
+  }
+  return { ok: true, data: result.data };
+}
 
 export function canSubmitAnswer(input: {
   loadState: LoadState;

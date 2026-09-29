@@ -79,7 +79,28 @@ export type GetNextQuestionInput =
       filters: QuestionFilters;
     };
 
-export type GetNextQuestionOutput = NextQuestion | null;
+/**
+ * A session item whose question was withdrawn after the session began
+ * (ADR-021 §3): its place in the session and none of its content, so the page
+ * can show the withdrawal notice (Pattern Registry F-11) and move on.
+ */
+export type WithdrawnSessionQuestion = {
+  withdrawn: true;
+  questionId: string;
+  session: {
+    sessionId: string;
+    mode: PracticeMode;
+    index: number; // 0-based index within session
+    total: number;
+    deadlineAt: string | null;
+    isMarkedForReview: boolean;
+  };
+};
+
+export type GetNextQuestionOutput =
+  | NextQuestion
+  | WithdrawnSessionQuestion
+  | null;
 
 export type ExpiredExamFinalizer = {
   execute: (input: { userId: string; sessionId: string }) => Promise<unknown>;
@@ -233,11 +254,25 @@ export class GetNextQuestionUseCase {
     }
 
     // The item shows the revision it was bound to (ADR-021). A question
-    // withdrawn since the session began stays unavailable, as before; the
-    // withdrawal notice is a later increment.
+    // withdrawn since the session began can't be answered, so it comes back
+    // with its place in the session and none of its content (§3, F-11).
     const question = await this.questions.findByIdForSession(targetState);
-    if (question?.status !== 'published') {
+    if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
+    }
+    if (question.status !== 'published') {
+      return {
+        withdrawn: true,
+        questionId: question.id,
+        session: {
+          sessionId: session.id,
+          mode: session.mode,
+          index: targetIndex,
+          total: session.questionIds.length,
+          deadlineAt: computeExamDeadline(session)?.toISOString() ?? null,
+          isMarkedForReview: targetState.markedForReview,
+        },
+      };
     }
 
     const choiceViews = buildShuffledChoiceViews(question, userId);

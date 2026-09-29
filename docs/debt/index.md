@@ -3,18 +3,20 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part five (DEBT-484): the session breakdown keeps a withdrawn question the learner attempted in a finished session. Its row links into the review and reads `Withdrawn` before its result. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-five-the-session-breakdown-keeps-a-withdrawn-question--2026-09-29).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part six (DEBT-484): an active session shows a question withdrawn after it began with the F-11 notice, not an error, and the learner can always move on. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-six-an-active-session-shows-a-withdrawn-question--2026-09-29).
+- **Fixed.** Two ways to get stuck:
+  - an exam whose last item was withdrawn had no `Review & Submit`;
+  - a withdrawn first item looped on `Try again` with no navigator.
 - **What changes.**
-  - The session review reads owned items.
-  - A withdrawn item is available only once the session has ended and only if the learner attempted it. Otherwise it stays unavailable, with no missing-question warning.
-  - The published-by-binding read has no callers left and is deleted.
-  - Pattern Registry F-11 now covers rows without a difficulty slot.
-- **Proof.** Two real-Postgres cases, unit and view cases red first, four mutations of the rule each caught, and four captures of the local production build.
-- **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
+  - The next-question read returns a withdrawn item's place in the session with no content.
+  - The page shows the notice with navigation only, ending in `Review & Submit` or `End session`.
+  - A tutor answer to a question withdrawn while open brings up the notice. Other not-found answers keep their error.
+  - Scoring is unchanged, pending the owner's decision.
+- **Proof.** A real-Postgres case red first; use-case, logic, view and browser cases; three view mutations caught; four captures of the local production build with zero axe violations.
 - **Previous increments.**
-  - #1219 (part four) merged as `60b84523` with exact-head approval **5355336210**. It is promoted through #1220 (`ea268dd8`), which CodeRabbit approved with no findings. The promotion's proof was written into its body at 16:34:17Z, before the merge at 16:34:23Z.
-  - Release verified: main CI **36598704522** `test` **16:46:14Z**; Ready **16:35:51.401Z**, held without alias until its check completed; production assigned **16:46:16.742Z**; matching trees (`2d5eab4f`); healthy production.
-  - #1221 filed [BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md), the dark-theme contrast failures part four's captures found. It merged as `184767ab` with approval **5356314082**, after two review findings; one was declined with measurements. It is promoted with this increment.
+  - #1221 (BUG-309 filed) and #1222 (part five, the session breakdown, approval **5356755446**, no findings) were promoted together through #1223 (`35c29b29`). CodeRabbit approved the promotion with no findings.
+  - The promotion's proof was written into its body at 18:50:18Z, before the merge at 18:50:23Z.
+  - Release verified: main CI **36614925704** `test` **19:04:02Z**; Ready **18:52:11.756Z**, held without alias until its check completed; production assigned **19:04:04.905Z**; matching trees (`6927ba68`); healthy production.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
 

@@ -52,6 +52,8 @@ export type PracticeSessionPageViewProps = {
   sessionInfo: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
+  /** The current item when its question was withdrawn since the session began. */
+  withdrawnQuestionId?: string | null | undefined;
   selectedChoiceId: string | null;
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
@@ -87,7 +89,9 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const reviewLoadState = props.reviewLoadState ?? { status: 'idle' };
   const navigator = props.navigator ?? null;
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
-  const currentQuestionId = props.question?.questionId ?? null;
+  // ADR-021 §3: a withdrawn item has no question, but keeps its place.
+  const currentQuestionId =
+    props.question?.questionId ?? props.withdrawnQuestionId ?? null;
   const questionPanelId = useId();
   const questionAreaRef = useRef<HTMLElement | null>(null);
   const shouldRestoreQuestionPanelRef = useRef(false);
@@ -275,6 +279,9 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       examTimer={props.examTimer}
       loadState={props.loadState}
       question={props.question}
+      isQuestionWithdrawn={
+        props.question === null && (props.withdrawnQuestionId ?? null) !== null
+      }
       selectedChoiceId={props.selectedChoiceId}
       isAnswered={props.isAnswered}
       submitResult={props.submitResult}

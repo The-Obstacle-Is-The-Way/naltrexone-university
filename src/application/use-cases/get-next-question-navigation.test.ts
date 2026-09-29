@@ -3,6 +3,7 @@ import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import {
   ANSWERED_AT,
   ApplicationError,
+  answerableQuestion,
   createChoice,
   createPracticeSession,
   createQuestion,
@@ -35,10 +36,12 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      }),
+    );
 
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toEqual({
@@ -70,11 +73,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      fromIndex: 0,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        fromIndex: 0,
+      }),
+    );
 
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
@@ -156,11 +161,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      fromIndex: 2,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        fromIndex: 2,
+      }),
+    );
 
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
@@ -199,11 +206,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      fromIndex: 1,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        fromIndex: 1,
+      }),
+    );
 
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
@@ -239,10 +248,12 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      }),
+    );
 
     expect(result?.questionId).toBe('q2');
     expect(result?.session).toMatchObject({
@@ -277,10 +288,12 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      }),
+    );
 
     expect(result?.questionId).toBe('q1');
     expect(result?.session).toEqual({
@@ -314,10 +327,12 @@ describe('GetNextQuestionUseCase', () => {
       now: () => new Date('2026-05-22T12:00:30.000Z'),
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      }),
+    );
 
     expect(result?.session).toMatchObject({
       mode: 'exam',
@@ -387,19 +402,82 @@ describe('GetNextQuestionUseCase', () => {
     );
   });
 
-  it('throws NOT_FOUND when next session question is not published', async () => {
-    const questionId = 'q1';
+  // ADR-021 §3 and Pattern Registry F-11: a question withdrawn after the
+  // session began is returned as withdrawn, with its place in the session and
+  // none of its content, so the page can say so and move on.
+  describe('an item whose question was withdrawn since the session began', () => {
+    function withdrawnItemDeps() {
+      const withdrawn = createQuestion({
+        id: 'q2',
+        status: 'archived',
+        choices: [createChoice({ id: 'c2', questionId: 'q2' })],
+      });
+      const session = createPracticeSession({
+        questionIds: ['q1', 'q2'],
+        questionStates: [
+          createQuestionState('q1', {
+            latestSelectedChoiceId: 'c1',
+            latestIsCorrect: true,
+            latestAnsweredAt: ANSWERED_AT,
+          }),
+          createQuestionState('q2', { markedForReview: true }),
+        ],
+      });
+      return createTestDeps({
+        questions: [createSingleChoiceQuestion('q1', 'c1'), withdrawn],
+        sessions: [session],
+      });
+    }
+    const withdrawnItem = {
+      withdrawn: true,
+      questionId: 'q2',
+      session: {
+        sessionId: SESSION_ID,
+        mode: 'tutor',
+        index: 1,
+        total: 2,
+        deadlineAt: null,
+        isMarkedForReview: true,
+      },
+    };
 
-    const session = createPracticeSession({ questionIds: [questionId] });
+    it('is returned without its content when the next unanswered item', async () => {
+      const { getNextQuestion } = withdrawnItemDeps();
 
-    const { getNextQuestion } = createTestDeps({
-      questions: [
-        createQuestion({
-          id: questionId,
-          status: 'draft',
-          choices: [createChoice({ id: 'c1', questionId })],
+      await expect(
+        getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+      ).resolves.toEqual(withdrawnItem);
+    });
+
+    it('is refused by the answerable-question narrowing in tests', async () => {
+      const { getNextQuestion } = withdrawnItemDeps();
+      const output = await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      });
+
+      expect(() => answerableQuestion(output)).toThrow(
+        'Expected an answerable question, got a withdrawn item',
+      );
+    });
+
+    it('is returned without its content when requested by id', async () => {
+      const { getNextQuestion } = withdrawnItemDeps();
+
+      await expect(
+        getNextQuestion.execute({
+          userId: USER_ID,
+          sessionId: SESSION_ID,
+          questionId: 'q2',
         }),
-      ],
+      ).resolves.toEqual(withdrawnItem);
+    });
+  });
+
+  it('throws NOT_FOUND when a session question no longer exists', async () => {
+    const session = createPracticeSession({ questionIds: ['q-missing'] });
+    const { getNextQuestion } = createTestDeps({
+      questions: [],
       sessions: [session],
     });
 

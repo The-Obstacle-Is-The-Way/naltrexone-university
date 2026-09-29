@@ -8,6 +8,7 @@ import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-q
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from '@/src/application/use-cases/get-completed-session-questions-with-feedback';
+import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
 import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
 import { GetPreviousAttemptUseCase } from '@/src/application/use-cases/get-previous-attempt';
 import { GetQuestionForViewUseCase } from '@/src/application/use-cases/get-question-for-view';
@@ -537,5 +538,54 @@ describe('ADR-021 §3: the session breakdown keeps a withdrawn item the learner 
       isAvailable: false,
       questionId: answered.id,
     });
+  });
+});
+
+describe('ADR-021 §3: an active session reaches a withdrawn item as withdrawn, with no content', () => {
+  it('returns the item by id, and as the next unanswered item, with its place in the session', async () => {
+    const first = await createPublishedQuestion('active-first');
+    const second = await createPublishedQuestion('active-second');
+    const user = await createUser(db, cleanup);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [first.id, second.id],
+      },
+    });
+    await withdraw(second.id);
+    const nextQuestion = new GetNextQuestionUseCase(
+      new DrizzleQuestionRepository(db),
+      attempts,
+      sessions,
+    );
+
+    const byId = await nextQuestion.execute({
+      userId: user.id,
+      sessionId: session.id,
+      questionId: second.id,
+    });
+    const sequential = await nextQuestion.execute({
+      userId: user.id,
+      sessionId: session.id,
+      fromIndex: 0,
+    });
+
+    for (const item of [byId, sequential]) {
+      expect(item).toEqual({
+        withdrawn: true,
+        questionId: second.id,
+        session: expect.objectContaining({
+          sessionId: session.id,
+          mode: 'exam',
+          index: 1,
+          total: 2,
+          isMarkedForReview: false,
+        }),
+      });
+    }
   });
 });

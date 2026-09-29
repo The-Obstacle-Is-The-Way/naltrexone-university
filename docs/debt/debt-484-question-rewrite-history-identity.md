@@ -459,6 +459,47 @@ The fourth slice covers the session breakdown: the finished session's summary an
   - Four mutations of the rule each fail a Postgres case and a unit case: always hide withdrawn items, never hide them, ignore the ended check, ignore the attempted check.
 - **Not yet.** Slice 3: an active session's withdrawn item, and the Review & Submit list.
 
+## Phase 2a, fifth increment, part six: an active session shows a withdrawn question — 2026-09-29
+
+The fifth slice covers an active session whose item's question is withdrawn after the session began. Until now the page showed the generic `Question not found` error card, which hid the action bar. That left two ways to get stuck:
+- **Stuck exam.** When an exam's last item was withdrawn and had no draft, Next from the item before it landed on the error with no `Review & Submit` anywhere. An untimed exam then offered only `Return to dashboard`.
+- **Stuck first load.** When the first unanswered item was withdrawn, the page failed before the navigator existed, and `Try again` reloaded the same item.
+
+What changes:
+- **Reads.**
+  - `GetNextQuestionUseCase` returns a withdrawn session item as `{ withdrawn: true, questionId, session }`: its place in the session (index, total, mode, deadline, mark) and none of its content.
+  - A question that no longer exists is still `NOT_FOUND`.
+  - Quick practice reads by filters and never gets this result. A pure adapter narrows its action type and reports one as a broken contract.
+- **UI (Pattern Registry F-11, active session).**
+  - The page shows the active-session notice in place of the error card.
+  - The header shows the item's own number.
+  - The action bar offers navigation only: `Previous`; `Next` when a later question is available; otherwise the session's end action, `Review & Submit` or `End session`.
+  - `Mark for review` is hidden for the item, and the navigator marks it current.
+  - The registry now records these actions.
+- **A question withdrawn while open.** A tutor answer to it comes back `NOT_FOUND`. The session flow now asks for the item by id. Only if it comes back withdrawn does the page load it and show the notice.
+  - A not-found answer for any other reason keeps its error, untouched: a missing choice, a missing session, or a failed request.
+  - The review of #1224 found that the first version reloaded on every `NOT_FOUND`, which would have cleared those errors. The fix was red first.
+- **Scoring is unchanged.** It is the owner's open decision (part one):
+  - an exam draft for a withdrawn item is still saved and graded at finalize;
+  - an undrafted one is still finalized as omitted;
+  - the submit dialog's statement about unanswered items is unchanged.
+- **Found while building.**
+  - A client module first imported the controllers' `action-result` values, which pull in the server logger. The local production build refused it, and the adapter now builds its results itself.
+  - An inline callback made the quick-practice hook's effect re-run on every render. The browser suite caught it, and a stable module function fixed it.
+- **Captures.** The local production build, dark, with zero axe violations and no overflow:
+  - an exam whose last item was withdrawn, reached by Next: [desktop](./assets/debt-484/withdrawn-active-exam-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-active-exam-dark-390x844.png);
+  - a tutor item withdrawn while open, reached by answering it: [desktop](./assets/debt-484/withdrawn-active-tutor-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-active-tutor-dark-390x844.png).
+- **Tests.**
+  - A real-Postgres case, red first: an active exam's withdrawn item, by id and as the next unanswered item.
+  - Use-case cases for both paths and for a missing question.
+  - Load-logic cases for recording and clearing the item.
+  - Submit-recovery cases.
+  - The adapter's cases.
+  - View cases for the notice and each mode's actions.
+  - Browser cases for the page view (moving on by id, and each mode's end action) and for the question flow (load, and answer-then-reload).
+  - Three mutations of the view wiring each fail a case.
+- **Not yet.** Slice 3b: an active session's navigator and Review & Submit list, which still show a withdrawn item as unavailable.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
