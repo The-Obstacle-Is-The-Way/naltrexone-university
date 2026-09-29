@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import {
   ANSWERED_AT,
+  answerableQuestion,
   createChoice,
   createPracticeSession,
   createQuestion,
@@ -36,11 +37,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId: 'q1',
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    );
 
     expect(result?.stemMd).toBe('Bound stem');
     expect(result?.choices.map((choice) => choice.id)).toEqual(['c-bound']);
@@ -69,11 +72,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId: 'q1',
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    );
 
     expect(result?.questionId).toBe('q1');
     expect(result?.session).toMatchObject({
@@ -186,11 +191,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId,
+      }),
+    );
 
     const previousSubmission = result?.session?.previousSubmission;
     if (!previousSubmission) {
@@ -249,11 +256,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId,
+      }),
+    );
 
     expect(result?.session?.previousSubmission).toBeUndefined();
   });
@@ -284,11 +293,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId: 'q1',
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    );
 
     expect(result?.session?.latestIsCorrect).toBe(false);
   });
@@ -314,11 +325,13 @@ describe('GetNextQuestionUseCase', () => {
       sessions: [session],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      sessionId: SESSION_ID,
-      questionId: 'q1',
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    );
 
     expect(result?.session?.latestIsCorrect).toBeNull();
   });

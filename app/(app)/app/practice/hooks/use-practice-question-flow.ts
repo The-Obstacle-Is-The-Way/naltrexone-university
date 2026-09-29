@@ -7,7 +7,10 @@ import {
   type UsePracticeQuestionFeedbackOutput,
   usePracticeQuestionFeedback,
 } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
-import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
+import {
+  type PracticeFilters,
+  toPracticeQuestionResult,
+} from '@/app/(app)/app/practice/practice-page-logic';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getNextQuestion,
@@ -47,6 +50,12 @@ export type UsePracticeQuestionFlowOutput = {
 
 export { getFocusRecoveryTransition };
 
+// Quick practice reads by filters; a stable reference keeps the flow's
+// effects from re-running on every render.
+function getNextPracticeQuestion(request: unknown) {
+  return getNextQuestion(request).then(toPracticeQuestionResult);
+}
+
 export function usePracticeQuestionFlow(
   input: UsePracticeQuestionFlowInput,
 ): UsePracticeQuestionFlowOutput {
@@ -55,7 +64,7 @@ export function usePracticeQuestionFlow(
   const answerFlow = usePracticeQuestionAnswerFlow({
     filters: input.filters,
     isMounted,
-    getNextQuestionFn: getNextQuestion,
+    getNextQuestionFn: getNextPracticeQuestion,
     submitAnswerFn: submitAnswer,
     onQuestionAnswered: input.onQuestionProgressChanged,
   });

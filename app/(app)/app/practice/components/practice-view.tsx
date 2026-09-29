@@ -38,6 +38,8 @@ export type PracticeViewProps = {
   sessionInfo?: NextQuestion['session'] | undefined;
   loadState: LoadState;
   question: NextQuestion | null;
+  /** The current session item's question was withdrawn since the session began. */
+  isQuestionWithdrawn?: boolean | undefined;
   selectedChoiceId: string | null;
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
@@ -309,6 +311,55 @@ function ExamActionBar(props: ExamActionBarProps) {
   return navigationGroup;
 }
 
+type WithdrawnActionBarProps = Pick<
+  PracticeViewProps,
+  | 'canNavigatePrevious'
+  | 'hasNextQuestion'
+  | 'hasPreviousQuestion'
+  | 'isPending'
+  | 'loadState'
+  | 'onEndSession'
+  | 'onNextQuestion'
+  | 'onPreviousQuestion'
+> & {
+  endLabel: string;
+};
+
+// Pattern Registry F-11: a withdrawn item can't be answered, so it offers
+// navigation only, ending as the last question would.
+function WithdrawnActionBar(props: WithdrawnActionBarProps) {
+  const isNavigationDisabled =
+    props.isPending || props.loadState.status === 'loading';
+  const continues = props.hasNextQuestion !== false || !props.onEndSession;
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-3"
+      data-testid="withdrawn-action-primary-group"
+    >
+      {props.onPreviousQuestion && props.hasPreviousQuestion ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full"
+          disabled={isNavigationDisabled || props.canNavigatePrevious === false}
+          onClick={props.onPreviousQuestion}
+        >
+          Previous
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        className="rounded-full"
+        disabled={isNavigationDisabled}
+        onClick={continues ? props.onNextQuestion : props.onEndSession}
+      >
+        {continues ? 'Next' : props.endLabel}
+      </Button>
+    </div>
+  );
+}
+
 export function PracticeView(props: PracticeViewProps) {
   const { notify } = useNotification();
   const sessionInfo = props.sessionInfo ?? null;
@@ -329,6 +380,10 @@ export function PracticeView(props: PracticeViewProps) {
     typeof sessionInfo.index === 'number' &&
     typeof sessionInfo.total === 'number' &&
     sessionInfo.index >= sessionInfo.total - 1;
+  const isWithdrawn =
+    props.isQuestionWithdrawn === true &&
+    props.question === null &&
+    props.loadState.status === 'ready';
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const canSubmitSelectedChoice =
     !isExamMode &&
@@ -409,6 +464,23 @@ export function PracticeView(props: PracticeViewProps) {
         />
       )}
     </div>
+  ) : isWithdrawn ? (
+    <div
+      className="flex flex-wrap items-center gap-3"
+      data-testid="bottom-action-bar"
+    >
+      <WithdrawnActionBar
+        canNavigatePrevious={props.canNavigatePrevious}
+        endLabel={isExamMode ? 'Review & Submit' : endSessionLabel}
+        hasNextQuestion={props.hasNextQuestion}
+        hasPreviousQuestion={props.hasPreviousQuestion}
+        isPending={props.isPending}
+        loadState={props.loadState}
+        onEndSession={props.onEndSession}
+        onNextQuestion={props.onNextQuestion}
+        onPreviousQuestion={props.onPreviousQuestion}
+      />
+    </div>
   ) : null;
 
   return (
@@ -436,7 +508,7 @@ export function PracticeView(props: PracticeViewProps) {
             data-testid="question-header-actions"
           >
             {isExamMode ? props.examTimer : null}
-            {isExamMode && props.onToggleMarkForReview ? (
+            {isExamMode && props.onToggleMarkForReview && !isWithdrawn ? (
               <Button
                 type="button"
                 variant="outline"
@@ -528,7 +600,20 @@ export function PracticeView(props: PracticeViewProps) {
           </ErrorCard>
         ) : null}
 
-        {props.loadState.status === 'ready' && props.question === null ? (
+        {isWithdrawn ? (
+          <Card role="status" className="gap-0 p-4 text-sm">
+            <p className="font-medium text-foreground">
+              This question was withdrawn after your session began.
+            </p>
+            <p className="text-muted-foreground">
+              {"It can't be answered here. Continue to the next question."}
+            </p>
+          </Card>
+        ) : null}
+
+        {props.loadState.status === 'ready' &&
+        props.question === null &&
+        !isWithdrawn ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             <div>No more questions found.</div>
             {props.onEndSession ? (

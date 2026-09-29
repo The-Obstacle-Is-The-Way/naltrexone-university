@@ -354,6 +354,8 @@ export async function runSubmitAnswerFlow<
   ) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
+  /** Reloads the item when its question is gone, e.g. withdrawn (ADR-021 §3). */
+  recoverQuestionNotFound?: (() => Promise<void>) | undefined;
   rotateIdempotencyKey?: (() => void) | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
@@ -412,6 +414,10 @@ export async function runSubmitAnswerFlow<
       canCommit,
     });
     if (recovery === 'stale-request' || recovery === 'handled') return;
+    if (res.error.code === 'NOT_FOUND' && input.recoverQuestionNotFound) {
+      await input.recoverQuestionNotFound();
+      return;
+    }
 
     input.setLoadState({
       status: 'error',

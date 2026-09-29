@@ -543,6 +543,7 @@ export function usePracticeSessionPageModel(
     sessionInfo: questionFlow.sessionInfo,
     loadState: questionFlow.loadState,
     question: questionFlow.question,
+    withdrawnQuestionId: questionFlow.withdrawnQuestionId,
     selectedChoiceId: questionFlow.selectedChoiceId,
     isAnswered: questionFlow.isAnswered,
     submitResult: questionFlow.submitResult,

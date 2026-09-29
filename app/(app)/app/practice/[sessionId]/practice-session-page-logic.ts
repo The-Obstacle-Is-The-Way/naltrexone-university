@@ -32,7 +32,10 @@ import type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
-import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
+import type {
+  GetNextQuestionOutput,
+  NextQuestion,
+} from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
@@ -61,7 +64,7 @@ export async function loadNextQuestion(input: {
   fromIndex?: number | undefined;
   getNextQuestionFn: (
     input: unknown,
-  ) => Promise<ActionResult<NextQuestion | null>>;
+  ) => Promise<ActionResult<GetNextQuestionOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
@@ -70,6 +73,8 @@ export async function loadNextQuestion(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  /** The current item when its question was withdrawn since the session began. */
+  setWithdrawnQuestionId: (questionId: string | null) => void;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
@@ -93,10 +98,20 @@ export async function loadNextQuestion(input: {
     setSubmitResult: input.setSubmitResult,
     setSubmitRequestToken: input.setSubmitRequestToken,
     setQuestionLoadedAt: input.setQuestionLoadedAt,
-    setQuestion: input.setQuestion,
-    onLoaded: (question) => {
-      if (!question?.session) return;
-      input.setSessionInfo(question.session);
+    // ADR-021 §3: a withdrawn item has its place in the session but no
+    // content, so it is recorded apart from the question (Pattern Registry F-11).
+    setQuestion: (loaded) => {
+      if (loaded && 'withdrawn' in loaded) {
+        input.setWithdrawnQuestionId(loaded.questionId);
+        input.setQuestion(null);
+        return;
+      }
+      input.setWithdrawnQuestionId(null);
+      input.setQuestion(loaded);
+    },
+    onLoaded: (loaded) => {
+      if (!loaded?.session) return;
+      input.setSessionInfo(loaded.session);
     },
     recoverNullQuestion: input.recoverNullQuestion,
     recoverEndedSessionConflict: input.recoverEndedSessionConflict,
@@ -112,7 +127,7 @@ export function createLoadNextQuestionAction(input: {
   startTransition: (fn: () => void) => void;
   getNextQuestionFn: (
     input: unknown,
-  ) => Promise<ActionResult<NextQuestion | null>>;
+  ) => Promise<ActionResult<GetNextQuestionOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
@@ -121,6 +136,7 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  setWithdrawnQuestionId: (questionId: string | null) => void;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
@@ -150,6 +166,7 @@ export async function submitAnswerForQuestion(input: {
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
+  recoverQuestionNotFound?: (() => Promise<void>) | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -201,6 +218,7 @@ export async function submitAnswerForQuestion(input: {
       );
     },
     recoverEndedSessionConflict: input.recoverEndedSessionConflict,
+    recoverQuestionNotFound: input.recoverQuestionNotFound,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,

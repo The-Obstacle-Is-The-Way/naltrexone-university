@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   ANSWERED_AT,
   ApplicationError,
+  answerableQuestion,
   createAttempt,
   createChoice,
   createFiveQuickPracticeQuestions,
@@ -97,10 +98,12 @@ describe('GetNextQuestionUseCase', () => {
       ],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      filters: { tagSlugs: ['opioids'], difficulties: [] },
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        filters: { tagSlugs: ['opioids'], difficulties: [] },
+      }),
+    );
 
     expect(result?.questionId).toBe('q-new');
     expect(result?.session).toBeNull();
@@ -121,10 +124,12 @@ describe('GetNextQuestionUseCase', () => {
       userId,
       now,
     );
-    const result = await getNextQuestion.execute({
-      userId,
-      filters: EMPTY_FILTERS,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
     expect(expectedOrder[0]).not.toBe(candidateIds[0]);
     expect(result?.questionId).toBe(expectedOrder[0]);
@@ -511,10 +516,12 @@ describe('GetNextQuestionUseCase', () => {
       questions: [createShuffleQuestion(questionId)],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      filters: EMPTY_FILTERS,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
     expect(result?.choices).toHaveLength(4);
     expect(new Set(result?.choices.map((c) => c.id))).toEqual(
@@ -528,15 +535,19 @@ describe('GetNextQuestionUseCase', () => {
       questions: [createShuffleQuestion(questionId)],
     });
 
-    const result1 = await getNextQuestion.execute({
-      userId: USER_ID,
-      filters: EMPTY_FILTERS,
-    });
+    const result1 = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
-    const result2 = await getNextQuestion.execute({
-      userId: USER_ID,
-      filters: EMPTY_FILTERS,
-    });
+    const result2 = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
     expect(result1?.choices.map((c) => c.id)).toEqual(
       result2?.choices.map((c) => c.id),
@@ -574,10 +585,12 @@ describe('GetNextQuestionUseCase', () => {
 
     const { getNextQuestion } = createTestDeps({ questions: [question] });
 
-    const result = await getNextQuestion.execute({
-      userId,
-      filters: EMPTY_FILTERS,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
     expect(result?.choices.map((c) => c.label)).toEqual(['A', 'B', 'C', 'D']);
     expect(result?.choices.map((c) => c.sortOrder)).toEqual([1, 2, 3, 4]);
@@ -621,15 +634,19 @@ describe('GetNextQuestionUseCase', () => {
       questions: [questionUnordered],
     });
 
-    const result1 = await getNextQuestionOrdered.execute({
-      userId: USER_ID,
-      filters: EMPTY_FILTERS,
-    });
+    const result1 = answerableQuestion(
+      await getNextQuestionOrdered.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
-    const result2 = await getNextQuestionUnordered.execute({
-      userId: USER_ID,
-      filters: EMPTY_FILTERS,
-    });
+    const result2 = answerableQuestion(
+      await getNextQuestionUnordered.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
     expect(result1?.choices.map((c) => c.id)).toEqual(
       result2?.choices.map((c) => c.id),
@@ -665,10 +682,12 @@ describe('GetNextQuestionUseCase', () => {
       ],
     });
 
-    const result = await getNextQuestion.execute({
-      userId: USER_ID,
-      filters: EMPTY_FILTERS,
-    });
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        filters: EMPTY_FILTERS,
+      }),
+    );
 
     expect(result?.questionId).toBe('q1');
   });
