@@ -9,6 +9,7 @@ import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import { createAvailableAttemptedQuestionRow as createAvailableAttemptedQuestionRowShared } from '@/src/application/test-helpers/view-rows';
+import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
 const {
   fixtureQuestion1Id,
@@ -661,9 +662,7 @@ describe('HistoryQuestionsTab', () => {
       mode: 'review',
       historyHref: buildHistoryQuestionsHref({ limit: 20, offset: 0 }),
     });
-    const link = Array.from(doc.querySelectorAll('a')).find(
-      (a) => a.getAttribute('href') === href,
-    );
+    const link = findAnchorByHref(doc, href);
 
     expect(link?.textContent).toContain('Answered stem');
     expect(link?.textContent).toContain('Withdrawn');
