@@ -113,6 +113,7 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
 export function createReviewRow(input: ReviewRowFixtureInput) {
   return {
     isAvailable: input.isAvailable ?? true,
+    withdrawn: false,
     questionId: input.questionId,
     slug: input.slug ?? input.questionId,
     order: input.order,

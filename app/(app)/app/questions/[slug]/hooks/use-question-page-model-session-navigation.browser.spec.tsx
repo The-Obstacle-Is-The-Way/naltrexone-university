@@ -49,6 +49,7 @@ describe('useQuestionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -61,6 +62,7 @@ describe('useQuestionPageModel (browser)', () => {
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
@@ -168,6 +170,7 @@ describe('useQuestionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -180,6 +183,7 @@ describe('useQuestionPageModel (browser)', () => {
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
@@ -253,6 +257,7 @@ describe('useQuestionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -265,6 +270,7 @@ describe('useQuestionPageModel (browser)', () => {
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
@@ -344,6 +350,7 @@ describe('useQuestionPageModel (browser)', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: QUESTION_PAGE_QUESTION_1_ID,
               slug: 'q-1',
               stemMd: 'Stem',
@@ -356,6 +363,7 @@ describe('useQuestionPageModel (browser)', () => {
             },
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: QUESTION_PAGE_QUESTION_2_ID,
               slug: 'q-2',
               stemMd: 'Stem 2',
@@ -445,6 +453,7 @@ describe('useQuestionPageModel (browser)', () => {
       rows: [
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: QUESTION_PAGE_QUESTION_1_ID,
           slug: 'q-1',
           stemMd: 'Stem',
@@ -457,6 +466,7 @@ describe('useQuestionPageModel (browser)', () => {
         },
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: QUESTION_PAGE_QUESTION_2_ID,
           slug: 'q-2',
           stemMd: 'Stem 2',

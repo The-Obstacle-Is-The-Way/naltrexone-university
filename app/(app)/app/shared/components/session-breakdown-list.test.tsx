@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import type { PracticeSessionReviewRow } from '@/src/application/use-cases';
+import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
 const {
   fixtureQuestion1Id,
@@ -22,6 +23,7 @@ vi.mock('next/link', () => ({
 
 const availableRow: PracticeSessionReviewRow = {
   isAvailable: true,
+  withdrawn: false,
   questionId: fixtureQuestion1Id,
   slug: 'q-1',
   stemMd: 'A short stem',
@@ -126,6 +128,43 @@ describe('SessionBreakdownList', () => {
         historyHref,
       }),
     );
+  });
+
+  // Pattern Registry F-11: an attempted withdrawn question keeps its review
+  // link, and reads Withdrawn before its result, like the Unanswered label.
+  it('renders a withdrawn question as a review link labelled Withdrawn', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000001';
+    const html = await renderList([{ ...availableRow, withdrawn: true }], {
+      sessionId,
+    });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const link = findAnchorByHref(
+      doc,
+      toQuestionRoute('q-1', { from: 'practice', mode: 'review', sessionId }),
+    );
+    const label = Array.from(doc.querySelectorAll('li span')).find(
+      (span) => span.textContent === 'Withdrawn',
+    );
+
+    expect(link?.textContent).toContain('A short stem');
+    expect(label).toBeDefined();
+    expect(link?.contains(label ?? null)).toBe(false);
+    expect(label?.classList.contains('text-muted-foreground')).toBe(true);
+    expect(doc.body.textContent).toContain('Incorrect');
+    expect(html).not.toContain('[Question no longer available]');
+  });
+
+  it('labels a withdrawn question Withdrawn in callback mode too', async () => {
+    const html = await renderList([{ ...availableRow, withdrawn: true }], {
+      onOpenQuestion: () => undefined,
+    });
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(
+      Array.from(doc.querySelectorAll('li span')).some(
+        (span) => span.textContent === 'Withdrawn',
+      ),
+    ).toBe(true);
   });
 
   it('renders unavailable questions as plain text with no link', async () => {

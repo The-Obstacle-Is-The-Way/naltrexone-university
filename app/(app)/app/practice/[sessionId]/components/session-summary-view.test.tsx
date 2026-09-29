@@ -189,6 +189,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -261,6 +262,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -352,6 +354,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -477,6 +480,7 @@ describe('SessionSummaryView', () => {
           rows: [
             {
               isAvailable: true,
+              withdrawn: false,
               questionId: fixtureQuestion1Id,
               slug: 'q-1',
               stemMd: 'Stem for q1',

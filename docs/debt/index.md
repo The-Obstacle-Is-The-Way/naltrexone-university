@@ -3,17 +3,18 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part four (DEBT-484): History's attempted questions and the Dashboard's recent activity keep a withdrawn question the learner attempted. Each row links into its review and reads `Withdrawn` where the difficulty was. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-four-the-attempt-lists-keep-a-withdrawn-question--2026-09-29).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part five (DEBT-484): the session breakdown keeps a withdrawn question the learner attempted in a finished session. Its row links into the review and reads `Withdrawn` before its result. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-five-the-session-breakdown-keeps-a-withdrawn-question--2026-09-29).
 - **What changes.**
-  - Both lists read each attempt's bound revision whatever the question's status.
-  - The owned read's request cache now pairs each result with its binding, so two attempts of one question at different revisions stay apart.
-- **Proof.** Two real-Postgres cases, red first against the published reads; use-case, helper, cache and view cases; four captures of the local production build with no overflow.
-- **Found.** axe reports colour-contrast failures on both pages that predate this change: `text-destructive` "Incorrect" at 3.5:1, and muted dates and percentages at 4.44–4.49:1. They are filed as their own bug.
+  - The session review reads owned items.
+  - A withdrawn item is available only once the session has ended and only if the learner attempted it. Otherwise it stays unavailable, with no missing-question warning.
+  - The published-by-binding read has no callers left and is deleted.
+  - Pattern Registry F-11 now covers rows without a difficulty slot.
+- **Proof.** Two real-Postgres cases, unit and view cases red first, four mutations of the rule each caught, and four captures of the local production build.
 - **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
-- **Previous increments.** #1216 (the part three follow-up, `d5923b4a`) and #1217 (the bounded documentation audit, `2a1ee401`, approval **5354364444**) are promoted together through #1218 (`367047f4`).
-  - The promotion's one finding asked the audit to skip parsing an oversized file. It was declined, because the guard reports every finding in one run; the reasons are on #1218 and its thread is resolved.
-  - The promotion's proof was written into its body at 15:14:11Z, before the merge at 15:14:16Z.
-  - Release verified: main CI **36588655047** `test` **15:26:29Z**, the documentation suite passing with the fix; Ready **15:16:03.827Z**, held without alias until its check completed; production assigned **15:26:31.717Z**; matching trees (`4743b59b`); healthy production.
+- **Previous increments.**
+  - #1219 (part four) merged as `60b84523` with exact-head approval **5355336210**. It is promoted through #1220 (`ea268dd8`), which CodeRabbit approved with no findings. The promotion's proof was written into its body at 16:34:17Z, before the merge at 16:34:23Z.
+  - Release verified: main CI **36598704522** `test` **16:46:14Z**; Ready **16:35:51.401Z**, held without alias until its check completed; production assigned **16:46:16.742Z**; matching trees (`2d5eab4f`); healthy production.
+  - #1221 filed [BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md), the dark-theme contrast failures part four's captures found. It merged as `184767ab` with approval **5356314082**, after two review findings; one was declined with measurements. It is promoted with this increment.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
 

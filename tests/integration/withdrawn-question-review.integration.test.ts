@@ -8,6 +8,7 @@ import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-q
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from '@/src/application/use-cases/get-completed-session-questions-with-feedback';
+import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
 import { GetPreviousAttemptUseCase } from '@/src/application/use-cases/get-previous-attempt';
 import { GetQuestionForViewUseCase } from '@/src/application/use-cases/get-question-for-view';
 import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
@@ -464,5 +465,77 @@ describe('ADR-021 §3: the attempt lists keep a withdrawn question the learner a
         stemMd: '# Stem',
       }),
     ]);
+  });
+});
+
+// A tutor session over two questions whose first item is answered; both are
+// withdrawn afterwards.
+async function answerFirstOfTwoThenWithdrawBoth(end: boolean) {
+  const answered = await createPublishedQuestion('breakdown-answered');
+  const unanswered = await createPublishedQuestion('breakdown-unanswered');
+  const user = await createUser(db, cleanup);
+  const session = await sessions.create({
+    userId: user.id,
+    mode: 'tutor',
+    paramsJson: {
+      count: 2,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [answered.id, unanswered.id],
+    },
+  });
+  const attempt = await attempts.insert({
+    userId: user.id,
+    questionId: answered.id,
+    practiceSessionId: session.id,
+    outcome: { kind: 'answered', selectedChoiceId: answered.correctChoiceId },
+    isCorrect: true,
+    timeSpentSeconds: 4,
+  });
+  await sessions.recordQuestionAnswer({
+    sessionId: session.id,
+    userId: user.id,
+    questionId: answered.id,
+    selectedChoiceId: answered.correctChoiceId,
+    isCorrect: true,
+    answeredAt: attempt.answeredAt,
+  });
+  if (end) await sessions.end(session.id, user.id);
+  await withdraw(answered.id);
+  await withdraw(unanswered.id);
+  const review = await new GetPracticeSessionReviewUseCase(
+    sessions,
+    new DrizzleQuestionRepository(db),
+    new FakeLogger(),
+  ).execute({ userId: user.id, sessionId: session.id });
+  return { answered, unanswered, review };
+}
+
+describe('ADR-021 §3: the session breakdown keeps a withdrawn item the learner attempted', () => {
+  it('shows the answered item of an ended session, marked withdrawn, and hides the unanswered one', async () => {
+    const { answered, unanswered, review } =
+      await answerFirstOfTwoThenWithdrawBoth(true);
+
+    expect(review.rows).toEqual([
+      expect.objectContaining({
+        isAvailable: true,
+        withdrawn: true,
+        questionId: answered.id,
+        stemMd: '# Stem',
+      }),
+      expect.objectContaining({
+        isAvailable: false,
+        questionId: unanswered.id,
+      }),
+    ]);
+  });
+
+  it('hides a withdrawn item while the session is still in progress', async () => {
+    const { answered, review } = await answerFirstOfTwoThenWithdrawBoth(false);
+
+    expect(review.rows[0]).toMatchObject({
+      isAvailable: false,
+      questionId: answered.id,
+    });
   });
 });

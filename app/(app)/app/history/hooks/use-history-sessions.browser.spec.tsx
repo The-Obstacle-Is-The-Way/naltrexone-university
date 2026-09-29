@@ -33,6 +33,7 @@ function makeReviewOutput(sessionId: string): GetPracticeSessionReviewOutput {
         slug: 'q-1',
         order: 1,
         isAvailable: true,
+        withdrawn: false,
         stemMd: `Stem for ${sessionId}`,
         difficulty: 'easy',
         isAnswered: true,
