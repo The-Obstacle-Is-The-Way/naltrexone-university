@@ -74,8 +74,12 @@ export function QuestionNavigator({
                         : 'Answered'
                     : 'Answered'
                   : 'Unanswered';
+            // Pattern Registry F-11: a withdrawn question stays reachable in
+            // review and is named withdrawn.
+            const isWithdrawn = 'withdrawn' in row && row.withdrawn;
             const statusParts = [
               ...(isCurrent ? (['Current'] as const) : []),
+              ...(isWithdrawn ? (['Withdrawn'] as const) : []),
               ...(row.markedForReview ? (['Marked for review'] as const) : []),
               answeredLabel,
             ];

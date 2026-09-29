@@ -100,6 +100,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: BROWSER_QUESTION_1_ID,
             slug: 'question-1',
             stemMd: 'Question 1',
@@ -120,6 +121,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: BROWSER_QUESTION_2_ID,
             slug: 'question-2',
             stemMd: 'Question 2',

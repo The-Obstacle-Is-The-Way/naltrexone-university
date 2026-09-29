@@ -3,20 +3,21 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part one (DEBT-484): the withdrawal notice enters the Pattern Registry as F-11 before any UI uses it. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-one-the-withdrawal-notice-pattern--2026-09-29).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part two (DEBT-484): post-exam review keeps a withdrawn question the learner answered, marked with the F-11 notice. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-two-post-exam-review-keeps-a-withdrawn-question--2026-09-29).
 - **What changes.**
-  - Review views show an S-1 Status notice above the stem.
-  - List rows stay clickable into the review and read `Withdrawn`.
-  - An active session shows the notice in place of `Question not found`.
-  - A question the learner never attempted stays unavailable.
-  - No new surface, token or color pair.
-- **Open decision for the owner: scoring.** An exam item withdrawn mid-session and left unanswered is graded incorrect as omitted. Whether it should be left out of the score is a product and fairness question; the notice makes no claim about scoring.
-- **Also.** Promotion #1209's finding: a real-Postgres case now pins the seed's deferral on its skipped path.
-- **Previous increment.** #1208 (fourth increment) merged as `752b3942` with exact-head approval **5350197608**. Review closed a session-creation race with a `FOR SHARE` read, covered the lock helper's timeout, and fixed a stale register row.
-  - It is promoted through #1209 (`f2fd776c`). The promotion's proof was written into its body at 09:35:19Z, before the merge at 09:35:24Z.
-  - Release verified: main CI **36550150583** `test` **09:48:15Z**; Ready **09:36:51.572Z**, held without alias until its check completed; production assigned **09:48:17.079Z**; matching trees; healthy production.
+  - Completed-session feedback returns a withdrawn question as the revision the learner answered, marked `withdrawn`.
+  - Post-exam review shows the notice above it, hides bookmark, report and rating, and lets the navigator reach it.
+  - The reads and the UI of each surface ship together, so no view shows a withdrawn question without its notice. The session summary's breakdown moves with the history slice.
+- **Proof.** A real-Postgres case, red first, and two captures of the local production build with zero axe violations.
+- **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
+- **Previous increment.** #1210 (part one: F-11 and the seed's skipped-path case) merged as `7cbce254` with exact-head approval **5350845123** and no findings.
+  - It is promoted through #1211 (`98fc6b3c`). Its one finding, which read the entry's closing clause as stale, was declined with reasons; the clause below now states it describes the state when written.
+  - The promotion's proof was written into its body at 10:29:57Z, before the merge at 10:30:02Z.
+  - Release verified: main CI **36555950014** `test` **10:42:05Z**; Ready **10:31:31.323Z**, held without alias until its check completed; production assigned **10:42:07.562Z**; matching trees; healthy production.
 
-The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fifth increment, part one: the withdrawal notice enters the Pattern Registry as F-11, and a real-Postgres case pins the seed's deferral on its skipped path. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-one-the-withdrawal-notice-pattern--2026-09-29). The previous increment, #1208 (fourth increment), merged as `752b3942` and is promoted through #1209 (`f2fd776c`). Release verified: main CI **36550150583** `test` **09:48:15Z**; Ready **09:36:51.572Z**, held without alias until its check completed; production assigned **09:48:17.079Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-29 UTC ADR-021 phase 2a, fourth increment: the seed changes a question's content only while no incomplete practice session binds its revision, deferring the question and exiting non-zero otherwise, and session creation reads question rows `FOR SHARE`. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fourth-increment-the-seed-waits-for-learners-mid-session--2026-09-29). The previous increment, #1206 (part three, ii), merged as `648a7cc8` and is promoted through #1207 (`478585da`), completing the third increment. Release verified: main CI **36528887613** `test` **06:12:57Z**; Ready **06:02:29.599Z**, held without alias until its check completed; production assigned **06:12:59.981Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 

@@ -365,6 +365,75 @@ describe('PostExamReviewView', () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  it('marks a withdrawn question with the F-11 notice above the question, as answered', () => {
+    const doc = renderView({
+      row: createReviewRow({
+        withdrawn: true,
+        isAnswered: true,
+        isCorrect: false,
+        selectedChoiceId: 'choice-a',
+      }),
+    });
+    const panel = doc.getElementById('practice-question-panel');
+    const notice = panel?.querySelector('[role="status"]');
+
+    expect(notice?.textContent).toContain('This question has been withdrawn.');
+    expect(notice?.textContent).toContain(
+      'You can still review your answer. It no longer appears in new practice.',
+    );
+    expect(panel?.textContent).toContain('Question stem');
+    expect(panel?.textContent).toContain('Explanation for review.');
+    const stem = Array.from(panel?.querySelectorAll('*') ?? []).find(
+      (element) => element.textContent?.trim() === 'Question stem',
+    );
+    expect(
+      notice && stem
+        ? notice.compareDocumentPosition(stem) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        : 0,
+    ).toBeTruthy();
+  });
+
+  it('lets the navigator reach a withdrawn question and names it withdrawn', () => {
+    const doc = renderView({
+      rows: [
+        createReviewRow(),
+        createReviewRow({
+          questionId: 'question-2',
+          slug: 'question-2',
+          order: 2,
+          withdrawn: true,
+        }),
+      ],
+    });
+    const pill = Array.from(
+      doc.querySelectorAll('nav[aria-label="Question navigator"] button'),
+    ).find((button) => button.textContent?.startsWith('2'));
+
+    expect(pill?.hasAttribute('disabled')).toBe(false);
+    expect(pill?.getAttribute('aria-label')).toContain('Withdrawn');
+  });
+
+  it('hides bookmark, report and rating for a withdrawn question', () => {
+    const doc = renderView({
+      row: createReviewRow({ withdrawn: true }),
+      questionFeedback: {
+        rating: null,
+        feedbackStatus: 'idle',
+        onRate: () => undefined,
+        isReportOpen: false,
+        openReport: () => undefined,
+        submitReport: async () => true,
+      },
+    });
+
+    expect(doc.querySelector('button[aria-pressed]')).toBeNull();
+    expect(getReviewActionLabels(doc)).not.toContain('Give feedback');
+    expect(
+      doc.querySelector('[data-testid="question-rating-footer"]'),
+    ).toBeNull();
+  });
+
   it('does not render the bookmark toggle for unavailable questions', () => {
     const doc = renderView({
       row: createReviewRow({
