@@ -457,7 +457,7 @@ Every one of these was confirmed against the other branch's actual live registry
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
-| [BUG-309](./bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text fails WCAG AA contrast | P2 | Open | `text-destructive` ("Incorrect" and other red text) measures 3.5–4.15:1 on every dark surface, and `text-muted-foreground` 4.44:1 on the Dashboard's tonal rows; the fix needs a destructive-text value and a muted-on-row pairing that clear 4.5:1 without breaking `bg-destructive` fills. |
+| [BUG-309](./bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text fails WCAG AA contrast | P2 | Open | `text-destructive` ("Incorrect" and other red text) measured 3.5–4.15:1 on every dark surface, and `text-muted-foreground` 4.44:1 on the Dashboard's tonal rows. Fix on its branch: dark `--destructive` `0 91% 71%`, `--muted-foreground` `0 0% 55%`, destructive Button dark hover `/50`; axe 16 nodes per size to 0. Pending review and production proof. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

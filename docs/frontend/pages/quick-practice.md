@@ -74,7 +74,7 @@ From `app/globals.css` `.dark {}`:
 | `--foreground` | `0 0% 93%` | `#EDEDED` | Primary text |
 | `--card` | `0 0% 7%` | `#121212` | Card surface |
 | `--muted` | `0 0% 11%` | `#1C1C1C` | Muted surface |
-| `--muted-foreground` | `0 0% 51.5%` | `#838383` | Secondary text |
+| `--muted-foreground` | `0 0% 55%` | `#8C8C8C` | Secondary text (51.5% / `#838383` until BUG-309) |
 | `--border` | `0 0% 15%` | `#262626` | Default border |
 | `--primary` | `0 0% 93%` | `#EDEDED` | Primary accent (= foreground) |
 | `--primary-foreground` | `0 0% 3.5%` | `#090909` | Text on primary |
@@ -185,7 +185,7 @@ The Submit / Next / Bookmark buttons still use the standard Button primitives an
 | Container border | `dark:border-foreground/40` | `#6A6A6A` | Same heavy border as choice buttons |
 | Active tab bg | `bg-primary` | `#EDEDED` | High contrast — looks good |
 | Active tab text | `text-primary-foreground` | `#090909` | Dark on light — no issue |
-| Inactive tab text | `text-muted-foreground` | `#838383` on `#1C1C1C` | ~4.6:1 — passes 4.5:1 but just barely |
+| Inactive tab text | `text-muted-foreground` | `#8C8C8C` on `#1C1C1C` | 5.07:1. It was 4.495:1 as rendered (`#838383`), just below 4.5:1, until BUG-309 |
 
 **Concerns:**
 

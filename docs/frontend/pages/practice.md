@@ -279,7 +279,7 @@ type PracticeFilters = {
 | Container border | `border-border` | #262626 | Decorative — active pill provides identification (see [contrast-policy.md](../contrast-policy.md) §2) |
 | Active pill bg | `bg-primary` | #EDEDED | High contrast |
 | Active pill text | `text-primary-foreground` | #090909 | Dark on light |
-| Inactive text | `text-muted-foreground` | #838383 | ~4.6:1 on muted — passes AA |
+| Inactive text | `text-muted-foreground` | #8C8C8C | 5.07:1 on muted. It was 4.495:1 as rendered (#838383), just below AA, until BUG-309 |
 | Inactive hover | `hover:bg-muted/50` | Effectively neutral on the solid `bg-muted` container | The more noticeable hover cue is `hover:text-foreground` |
 
 ### FilterChip (I-4)
