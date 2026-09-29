@@ -206,7 +206,7 @@ export class FinalizeExamAnswersUseCase {
       );
       const questionsById = await fetchSessionOwnedQuestionsById(
         tx.questions,
-        draftedStates.map((state) => state.questionId),
+        draftedStates,
       );
 
       for (const state of activeSession.questionStates) {
@@ -354,9 +354,7 @@ export class FinalizeExamAnswersUseCase {
     }
 
     if (finalDraftAnswer.selectedChoiceId !== null) {
-      const question = await tx.questions.findByIdForSession(
-        finalDraftAnswer.questionId,
-      );
+      const question = await tx.questions.findByIdForSession(questionState);
       if (!question) {
         throw new ApplicationError('NOT_FOUND', 'Question not found');
       }

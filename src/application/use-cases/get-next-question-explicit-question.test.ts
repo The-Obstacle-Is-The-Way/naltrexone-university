@@ -13,6 +13,39 @@ import {
 } from '../test-helpers/get-next-question-test-helpers';
 
 describe('GetNextQuestionUseCase', () => {
+  it('shows a session item as the revision it was bound to (ADR-021)', async () => {
+    const current = createQuestion({
+      id: 'q1',
+      stemMd: 'Current stem',
+      choices: [createChoice({ id: 'c-current', questionId: 'q1' })],
+    });
+    const bound = createQuestion({
+      id: 'q1',
+      stemMd: 'Bound stem',
+      choices: [createChoice({ id: 'c-bound', questionId: 'q1' })],
+    });
+    const session = createPracticeSession({
+      mode: 'tutor',
+      questionIds: ['q1'],
+      questionStates: [
+        createQuestionState('q1', { questionRevisionId: bound.revisionId }),
+      ],
+    });
+    const { getNextQuestion } = createTestDeps({
+      questions: [current, bound],
+      sessions: [session],
+    });
+
+    const result = await getNextQuestion.execute({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      questionId: 'q1',
+    });
+
+    expect(result?.stemMd).toBe('Bound stem');
+    expect(result?.choices.map((choice) => choice.id)).toEqual(['c-bound']);
+  });
+
   it('returns a specific session question when questionId is provided', async () => {
     const q1 = createSingleChoiceQuestion('q1', 'c1');
     const q2 = createSingleChoiceQuestion('q2', 'c2');

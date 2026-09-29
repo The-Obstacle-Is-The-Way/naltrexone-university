@@ -4,6 +4,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import {
+  addCurrentRevision,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -42,45 +43,6 @@ async function currentRevisionId(questionId: string) {
   return String(row?.id);
 }
 
-// A second revision with its own choices, made current, as phase 2b will.
-async function makeSecondRevisionCurrent(questionId: string) {
-  const [revision] = await db
-    .insert(schema.questionRevisions)
-    .values({
-      questionId,
-      revisionNumber: 2,
-      stemMd: '# Revised stem',
-      explanationMd: '# Revised explanation',
-      referenceMd: 'Revised reference',
-      difficulty: 'hard',
-      canonicalizationVersion: 'stored-fields-json-v1',
-      contentHash: 'd'.repeat(64),
-    })
-    .returning({ id: schema.questionRevisions.id });
-  await db.insert(schema.choices).values([
-    {
-      questionId,
-      questionRevisionId: revision?.id,
-      label: 'C',
-      textMd: 'Revised C',
-      isCorrect: false,
-      sortOrder: 3,
-    },
-    {
-      questionId,
-      questionRevisionId: revision?.id,
-      label: 'D',
-      textMd: 'Revised D',
-      isCorrect: true,
-      sortOrder: 4,
-    },
-  ]);
-  await db
-    .update(schema.questions)
-    .set({ currentRevisionId: revision?.id })
-    .where(eq(schema.questions.id, questionId));
-}
-
 describe('ADR-021 phase 2a: question content reads through the current revision', () => {
   it("reads the stem, explanation, reference and difficulty from the question's current revision", async () => {
     const question = await createPublishedQuestion('content');
@@ -110,15 +72,18 @@ describe('ADR-021 phase 2a: question content reads through the current revision'
 
   it("reads only the current revision's choices", async () => {
     const question = await createPublishedQuestion('choices');
-    await makeSecondRevisionCurrent(question.id);
+    await addCurrentRevision(db, question.id);
     const repository = new DrizzleQuestionRepository(db);
+    // A session item an older deployment left unbound reads the current
+    // revision too; a bound item is covered by the session-reads suite.
+    const unboundItem = { questionId: question.id, questionRevisionId: null };
 
     for (const read of [
       await repository.findPublishedById(question.id),
       await repository.findPublishedBySlug(question.slug),
       (await repository.findPublishedByIds([question.id]))[0],
-      await repository.findByIdForSession(question.id),
-      (await repository.findByIdsForSession([question.id]))[0],
+      await repository.findByIdForSession(unboundItem),
+      (await repository.findByIdsForSession([unboundItem]))[0],
     ]) {
       expect(read?.stemMd).toBe('# Revised stem');
       expect(read?.choices.map((choice) => choice.label)).toEqual(['C', 'D']);
@@ -128,7 +93,7 @@ describe('ADR-021 phase 2a: question content reads through the current revision'
   it("filters selection by the current revision's difficulty", async () => {
     // Created easy; the current revision is hard.
     const question = await createPublishedQuestion('difficulty');
-    await makeSecondRevisionCurrent(question.id);
+    await addCurrentRevision(db, question.id);
     const repository = new DrizzleQuestionRepository(db);
     const hard = { tagSlugs: [], difficulties: ['hard' as const] };
     const easy = { tagSlugs: [], difficulties: ['easy' as const] };

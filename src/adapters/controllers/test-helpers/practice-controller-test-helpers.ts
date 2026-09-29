@@ -193,6 +193,7 @@ export function createDeps(overrides?: {
   const saveExamDraftAnswerUseCase = new FakeSaveExamDraftAnswerUseCase(
     overrides?.saveDraftOutput ?? {
       questionId: '33333333-3333-3333-3333-333333333333',
+      questionRevisionId: '55555555-5555-5555-5555-555555555555',
       markedForReview: false,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,

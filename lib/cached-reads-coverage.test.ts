@@ -1,9 +1,14 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import type { SessionItemBinding } from '@/src/application/ports/repositories';
 import {
   FakeQuestionRepository,
   FakeTagRepository,
 } from '@/src/application/test-helpers/fakes';
 import { createQuestion, createTag } from '@/src/domain/test-helpers';
+
+function unbound(questionId: string): SessionItemBinding {
+  return { questionId, questionRevisionId: null };
+}
 
 vi.mock('server-only', () => ({}));
 
@@ -37,9 +42,9 @@ describe('cached-reads coverage seam', () => {
     class CountingQuestionRepository extends FakeQuestionRepository {
       findByIdForSessionCallCount = 0;
 
-      override async findByIdForSession(id: string) {
+      override async findByIdForSession(item: SessionItemBinding) {
         this.findByIdForSessionCallCount += 1;
-        return super.findByIdForSession(id);
+        return super.findByIdForSession(item);
       }
     }
 
@@ -52,21 +57,44 @@ describe('cached-reads coverage seam', () => {
     ]);
     const repository = createRequestCachedQuestionRepository(rawRepository);
 
-    const first = await repository.findByIdForSession('question-1');
-    const second = await repository.findByIdForSession('question-1');
+    const first = await repository.findByIdForSession(unbound('question-1'));
+    const second = await repository.findByIdForSession(unbound('question-1'));
 
     expect(rawRepository.findByIdForSessionCallCount).toBe(1);
     expect(first?.status).toBe('archived');
     expect(second?.status).toBe('archived');
   });
 
+  it('never serves one revision of a session item for another', async () => {
+    const current = createQuestion({ id: 'question-1', stemMd: 'Current' });
+    const bound = createQuestion({ id: 'question-1', stemMd: 'Bound' });
+    const repository = createRequestCachedQuestionRepository(
+      new FakeQuestionRepository([current, bound]),
+    );
+
+    const unboundRead = await repository.findByIdForSession(
+      unbound('question-1'),
+    );
+    const boundRead = await repository.findByIdForSession({
+      questionId: 'question-1',
+      questionRevisionId: bound.revisionId,
+    });
+    const [boundBatchRead] = await repository.findByIdsForSession([
+      { questionId: 'question-1', questionRevisionId: bound.revisionId },
+    ]);
+
+    expect(unboundRead?.stemMd).toBe('Current');
+    expect(boundRead?.stemMd).toBe('Bound');
+    expect(boundBatchRead?.stemMd).toBe('Bound');
+  });
+
   it('normalizes session-owned batch reads while preserving caller order', async () => {
     class CountingQuestionRepository extends FakeQuestionRepository {
       findByIdsForSessionCallCount = 0;
 
-      override async findByIdsForSession(ids: readonly string[]) {
+      override async findByIdsForSession(items: readonly SessionItemBinding[]) {
         this.findByIdsForSessionCallCount += 1;
-        return super.findByIdsForSession(ids);
+        return super.findByIdsForSession(items);
       }
     }
 
@@ -76,8 +104,12 @@ describe('cached-reads coverage seam', () => {
     ]);
     const repository = createRequestCachedQuestionRepository(rawRepository);
 
-    const first = await repository.findByIdsForSession(['b', 'a', 'a']);
-    const second = await repository.findByIdsForSession(['a', 'b']);
+    const first = await repository.findByIdsForSession(
+      ['b', 'a', 'a'].map(unbound),
+    );
+    const second = await repository.findByIdsForSession(
+      ['a', 'b'].map(unbound),
+    );
 
     expect(rawRepository.findByIdsForSessionCallCount).toBe(1);
     expect(rawRepository.findByIdsForSessionCalls).toEqual([['a', 'b']]);

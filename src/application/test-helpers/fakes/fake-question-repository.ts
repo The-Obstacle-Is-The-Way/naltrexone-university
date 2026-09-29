@@ -2,6 +2,7 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   QuestionFilters,
   QuestionRepository,
+  SessionItemBinding,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
@@ -30,15 +31,26 @@ function validateStatusFilterInvariant(filters: QuestionFilters): void {
   }
 }
 
+// Each question is one revision. A test may list several revisions of a
+// question (same id, different revisionId): the first listed is the current
+// one, which every lookup except a bound session item reads.
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
+  private readonly revisions: readonly Question[];
   readonly findPublishedByIdsCalls: string[][] = [];
   readonly findByIdsForSessionCalls: string[][] = [];
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
   constructor(questions: readonly Question[]) {
-    this.questions = questions;
+    this.revisions = questions;
+    const currentById = new Map<string, Question>();
+    for (const question of questions) {
+      if (!currentById.has(question.id)) {
+        currentById.set(question.id, question);
+      }
+    }
+    this.questions = [...currentById.values()];
   }
 
   async findPublishedById(id: string): Promise<Question | null> {
@@ -67,16 +79,34 @@ export class FakeQuestionRepository implements QuestionRepository {
     return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
   }
 
-  async findByIdForSession(id: string): Promise<Question | null> {
-    return this.questions.find((q) => q.id === id) ?? null;
+  async findByIdForSession(item: SessionItemBinding): Promise<Question | null> {
+    return this.findSessionItem(item);
   }
 
   async findByIdsForSession(
-    ids: readonly string[],
+    items: readonly SessionItemBinding[],
   ): Promise<readonly Question[]> {
-    this.findByIdsForSessionCalls.push([...ids]);
-    const byId = new Map(this.questions.map((q) => [q.id, q]));
-    return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
+    this.findByIdsForSessionCalls.push(items.map((item) => item.questionId));
+    return items
+      .map((item) => this.findSessionItem(item))
+      .filter((q): q is Question => !!q);
+  }
+
+  private findSessionItem(item: SessionItemBinding): Question | null {
+    const current = this.questions.find((q) => q.id === item.questionId);
+    if (!current) return null;
+    if (item.questionRevisionId === null) return current;
+    const bound = this.revisions.find(
+      (q) =>
+        q.id === item.questionId && q.revisionId === item.questionRevisionId,
+    );
+    if (!bound) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Revision ${item.questionRevisionId} is not a revision of question ${item.questionId}`,
+      );
+    }
+    return bound;
   }
 
   async listPublishedCandidateIds(

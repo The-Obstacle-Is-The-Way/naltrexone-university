@@ -174,10 +174,17 @@ const getDeps = createDepsResolver<
 function serializeSaveExamDraftAnswerOutput(
   output: SaveExamDraftAnswerUseCaseOutput,
 ): SaveExamDraftAnswerOutput {
+  // Named fields, not a spread: the item's bound revision is internal
+  // (ADR-021), and the output schema is strict.
   return {
-    ...output,
+    questionId: output.questionId,
+    markedForReview: output.markedForReview,
+    latestSelectedChoiceId: output.latestSelectedChoiceId,
+    latestIsCorrect: output.latestIsCorrect,
     latestAnsweredAt: output.latestAnsweredAt?.toISOString() ?? null,
+    draftSelectedChoiceId: output.draftSelectedChoiceId,
     draftSavedAt: output.draftSavedAt?.toISOString() ?? null,
+    draftCumulativeMs: output.draftCumulativeMs,
   };
 }
 

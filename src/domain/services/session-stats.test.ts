@@ -15,6 +15,7 @@ describe('computeSessionStats', () => {
     const states: PracticeSessionQuestionState[] = [
       {
         questionId: 'q1',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -25,6 +26,7 @@ describe('computeSessionStats', () => {
       },
       {
         questionId: 'q2',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: 'choice_1',
         latestIsCorrect: true,
@@ -35,6 +37,7 @@ describe('computeSessionStats', () => {
       },
       {
         questionId: 'q3',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: 'choice_2',
         latestIsCorrect: false,
@@ -45,6 +48,7 @@ describe('computeSessionStats', () => {
       },
       {
         questionId: 'q4',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: 'choice_3',
         latestIsCorrect: null,
@@ -100,6 +104,7 @@ describe('createDefaultQuestionState', () => {
   it('returns the default question state object', () => {
     expect(createDefaultQuestionState('question_1')).toEqual({
       questionId: 'question_1',
+      questionRevisionId: null,
       markedForReview: false,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,

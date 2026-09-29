@@ -81,6 +81,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(unchanged?.questionStates).toEqual([
       {
         questionId,
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,

@@ -30,6 +30,7 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   QuestionFilters,
   QuestionRepository,
+  SessionItemBinding,
 } from '@/src/application/ports/repositories';
 import {
   isValidChoiceLabel,
@@ -56,8 +57,10 @@ const questionRelations = {
   },
 } as const;
 
+type RevisionWithChoices = QuestionRevision & { choices: Choice[] };
+
 type QuestionRowWithRelations = Question & {
-  currentRevision: (QuestionRevision & { choices: Choice[] }) | null;
+  currentRevision: RevisionWithChoices | null;
   questionTags: Array<QuestionTag & { tag: Tag }>;
 };
 
@@ -165,27 +168,58 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       .filter((q): q is NonNullable<typeof q> => !!q);
   }
 
-  async findByIdForSession(id: string) {
-    const row = await this.db.query.questions.findFirst({
-      where: eq(questions.id, id),
-      with: questionRelations,
-    });
-
-    return row ? this.toDomain(row) : null;
+  async findByIdForSession(item: SessionItemBinding) {
+    const [question] = await this.findByIdsForSession([item]);
+    return question ?? null;
   }
 
-  async findByIdsForSession(ids: readonly string[]) {
-    if (ids.length === 0) return [];
+  // ADR-021 phase 2a: a session item shows the revision it was bound to when
+  // the session began, else (an item an older deployment left unbound) the
+  // question's current revision, the rule attempts bind by.
+  async findByIdsForSession(items: readonly SessionItemBinding[]) {
+    if (items.length === 0) return [];
 
     const rows = await this.db.query.questions.findMany({
-      where: inArray(questions.id, [...ids]),
+      where: inArray(
+        questions.id,
+        items.map((item) => item.questionId),
+      ),
       with: questionRelations,
     });
+    const boundRevisionIds = [
+      ...new Set(
+        items.flatMap((item) =>
+          item.questionRevisionId === null ? [] : [item.questionRevisionId],
+        ),
+      ),
+    ];
+    const boundRevisions =
+      boundRevisionIds.length === 0
+        ? []
+        : await this.db.query.questionRevisions.findMany({
+            where: inArray(questionRevisions.id, boundRevisionIds),
+            with: { choices: true },
+          });
 
-    const byId = new Map(rows.map((row) => [row.id, this.toDomain(row)]));
-    return ids
-      .map((id) => byId.get(id))
-      .filter((q): q is NonNullable<typeof q> => !!q);
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const revisionById = new Map(
+      boundRevisions.map((revision) => [revision.id, revision]),
+    );
+    return items.flatMap((item) => {
+      const row = rowById.get(item.questionId);
+      if (!row) return [];
+      if (item.questionRevisionId === null) return [this.toDomain(row)];
+      const revision = revisionById.get(item.questionRevisionId);
+      // The session state's composite key makes its revision one of its
+      // question's, so any other binding is a broken invariant.
+      if (!revision || revision.questionId !== row.id) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Revision ${item.questionRevisionId} is not a revision of question ${row.id}`,
+        );
+      }
+      return [this.toDomain(row, revision)];
+    });
   }
 
   async listPublishedCandidateIds(filters: QuestionFilters) {
@@ -309,8 +343,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     }
   }
 
-  private toDomain(row: QuestionRowWithRelations) {
-    const content = row.currentRevision;
+  private toDomain(
+    row: QuestionRowWithRelations,
+    content: RevisionWithChoices | null = row.currentRevision,
+  ) {
     // Only the seed writes questions, and it mirrors each into a revision in
     // the same transaction.
     if (!content) {
@@ -340,6 +376,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
 
     return {
       id: row.id,
+      revisionId: content.id,
       slug: row.slug,
       stemMd: content.stemMd,
       explanationMd: content.explanationMd,

@@ -15,6 +15,7 @@ import {
   createIntegrationDb,
   createQuestion,
   createUser,
+  currentRevisionIdOf,
 } from './helpers';
 
 // Real-Postgres twins for the retired session-write units: the create input
@@ -160,8 +161,10 @@ describe('DrizzlePracticeSessionRepository create', () => {
       },
     });
 
-    const initialState = (questionId: string) => ({
+    // Each item is bound to its question's current revision (ADR-021).
+    const initialState = async (questionId: string) => ({
       questionId,
+      questionRevisionId: await currentRevisionIdOf(db, questionId),
       markedForReview: false,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
@@ -175,7 +178,10 @@ describe('DrizzlePracticeSessionRepository create', () => {
       userId: user.id,
       mode: 'exam',
       questionIds: [first.id, second.id],
-      questionStates: [initialState(first.id), initialState(second.id)],
+      questionStates: [
+        await initialState(first.id),
+        await initialState(second.id),
+      ],
       tagFilters: ['opioids'],
       difficultyFilters: ['easy', 'hard'],
       startedAt: expect.any(Date),

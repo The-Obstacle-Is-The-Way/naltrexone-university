@@ -336,6 +336,7 @@ describe('FakePracticeSessionRepository', () => {
     expect(created.questionStates).toEqual([
       {
         questionId: 'question-1',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -443,6 +444,7 @@ describe('FakePracticeSessionRepository', () => {
       }),
     ).resolves.toEqual({
       questionId: 'q1',
+      questionRevisionId: null,
       markedForReview: true,
       latestSelectedChoiceId: null,
       latestIsCorrect: false,

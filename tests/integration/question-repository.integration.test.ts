@@ -96,12 +96,21 @@ describe('DrizzleQuestionRepository', () => {
       repo.findPublishedByIds([archived.id, published.id, draft.id]),
     ).resolves.toMatchObject([{ id: published.id, status: 'published' }]);
 
-    await expect(repo.findByIdForSession(archived.id)).resolves.toMatchObject({
+    // Unbound session items read the current revision.
+    const unbound = (questionId: string) => ({
+      questionId,
+      questionRevisionId: null,
+    });
+    await expect(
+      repo.findByIdForSession(unbound(archived.id)),
+    ).resolves.toMatchObject({
       id: archived.id,
       status: 'archived',
     });
     await expect(
-      repo.findByIdsForSession([draft.id, published.id, archived.id]),
+      repo.findByIdsForSession(
+        [draft.id, published.id, archived.id].map(unbound),
+      ),
     ).resolves.toMatchObject([
       { id: draft.id, status: 'draft' },
       { id: published.id, status: 'published' },

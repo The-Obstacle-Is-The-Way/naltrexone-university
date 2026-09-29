@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { sql as drizzleSql, inArray } from 'drizzle-orm';
+import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
@@ -163,6 +163,76 @@ export async function mirrorQuestionRevision(
   await db.execute(
     drizzleSql`SELECT sync_question_revision_v1(${questionId}::uuid)`,
   );
+}
+
+export async function currentRevisionIdOf(
+  db: DrizzleDb,
+  questionId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ id: schema.questions.currentRevisionId })
+    .from(schema.questions)
+    .where(eq(schema.questions.id, questionId));
+  return row?.id ?? null;
+}
+
+// ADR-021: a second revision with its own choices, made current, as phase 2b
+// will. Choice C is correct and D is not; the stem and difficulty change too.
+export async function addCurrentRevision(
+  db: DrizzleDb,
+  questionId: string,
+): Promise<{
+  revisionId: string;
+  correctChoiceId: string;
+  incorrectChoiceId: string;
+}> {
+  const [revision] = await db
+    .insert(schema.questionRevisions)
+    .values({
+      questionId,
+      revisionNumber: 2,
+      stemMd: '# Revised stem',
+      explanationMd: '# Revised explanation',
+      referenceMd: 'Revised reference',
+      difficulty: 'hard',
+      canonicalizationVersion: 'stored-fields-json-v1',
+      contentHash: 'd'.repeat(64),
+    })
+    .returning({ id: schema.questionRevisions.id });
+  if (!revision) throw new Error('Failed to insert revision');
+  const choices = await db
+    .insert(schema.choices)
+    .values([
+      {
+        questionId,
+        questionRevisionId: revision.id,
+        label: 'C',
+        textMd: 'Revised C',
+        isCorrect: true,
+        sortOrder: 3,
+      },
+      {
+        questionId,
+        questionRevisionId: revision.id,
+        label: 'D',
+        textMd: 'Revised D',
+        isCorrect: false,
+        sortOrder: 4,
+      },
+    ])
+    .returning({ id: schema.choices.id, isCorrect: schema.choices.isCorrect });
+  await db
+    .update(schema.questions)
+    .set({ currentRevisionId: revision.id })
+    .where(eq(schema.questions.id, questionId));
+  const correct = choices.find((choice) => choice.isCorrect);
+  const incorrect = choices.find((choice) => !choice.isCorrect);
+  if (!correct || !incorrect) throw new Error('Failed to insert choices');
+  return {
+    revisionId: revision.id,
+    correctChoiceId: correct.id,
+    incorrectChoiceId: incorrect.id,
+  };
 }
 
 export async function createQuestion(
