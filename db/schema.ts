@@ -1197,7 +1197,12 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   feedback: many(questionFeedback),
 }));
 
-export const questionsRelations = relations(questions, ({ many }) => ({
+export const questionsRelations = relations(questions, ({ one, many }) => ({
+  // ADR-021: the revision new reads show.
+  currentRevision: one(questionRevisions, {
+    fields: [questions.currentRevisionId],
+    references: [questionRevisions.id],
+  }),
   choices: many(choices),
   questionTags: many(questionTags),
   attempts: many(attempts),
@@ -1211,7 +1216,18 @@ export const choicesRelations = relations(choices, ({ one }) => ({
     fields: [choices.questionId],
     references: [questions.id],
   }),
+  questionRevision: one(questionRevisions, {
+    fields: [choices.questionRevisionId],
+    references: [questionRevisions.id],
+  }),
 }));
+
+export const questionRevisionsRelations = relations(
+  questionRevisions,
+  ({ many }) => ({
+    choices: many(choices),
+  }),
+);
 
 export const tagsRelations = relations(tags, ({ many }) => ({
   questionTags: many(questionTags),
@@ -1344,6 +1360,8 @@ export type NewPendingStripeCancellation =
 
 export type Question = typeof questions.$inferSelect;
 export type NewQuestion = typeof questions.$inferInsert;
+
+export type QuestionRevision = typeof questionRevisions.$inferSelect;
 
 export type Choice = typeof choices.$inferSelect;
 export type NewChoice = typeof choices.$inferInsert;

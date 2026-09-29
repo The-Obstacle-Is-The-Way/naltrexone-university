@@ -3,17 +3,25 @@ import {
   asc,
   desc,
   eq,
+  exists,
   inArray,
   notInArray,
   or,
   type SQL,
   sql,
 } from 'drizzle-orm';
-import type { Choice, Question, QuestionTag, Tag } from '@/db/schema';
+import type {
+  Choice,
+  Question,
+  QuestionRevision,
+  QuestionTag,
+  Tag,
+} from '@/db/schema';
 import {
   attempts,
   bookmarks,
   practiceSessions,
+  questionRevisions,
   questions,
   questionTags,
   tags,
@@ -37,8 +45,10 @@ function isNonEmptyArray<T>(
   return values.length > 0;
 }
 
+// ADR-021 phase 2a: content and choices come from the question's current
+// revision, not the legacy columns or every choice of the question.
 const questionRelations = {
-  choices: true,
+  currentRevision: { with: { choices: true } },
   questionTags: {
     with: {
       tag: true,
@@ -47,7 +57,7 @@ const questionRelations = {
 } as const;
 
 type QuestionRowWithRelations = Question & {
-  choices: Choice[];
+  currentRevision: (QuestionRevision & { choices: Choice[] }) | null;
   questionTags: Array<QuestionTag & { tag: Tag }>;
 };
 
@@ -65,7 +75,23 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     const whereParts: [SQL, ...SQL[]] = [eq(questions.status, 'published')];
 
     if (hasDifficultyFilter) {
-      whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
+      // ADR-021 phase 2a: the difficulty the learner is shown is the current
+      // revision's.
+      whereParts.push(
+        exists(
+          this.db
+            .select({ one: sql`1` })
+            .from(questionRevisions)
+            .where(
+              and(
+                eq(questionRevisions.id, questions.currentRevisionId),
+                inArray(questionRevisions.difficulty, [
+                  ...filters.difficulties,
+                ]),
+              ),
+            ),
+        ),
+      );
     }
 
     if (isNonEmptyArray(statuses)) {
@@ -284,7 +310,16 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   }
 
   private toDomain(row: QuestionRowWithRelations) {
-    const mappedChoices = row.choices.map((c) => {
+    const content = row.currentRevision;
+    // Only the seed writes questions, and it mirrors each into a revision in
+    // the same transaction.
+    if (!content) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Question ${row.id} has no current revision`,
+      );
+    }
+    const mappedChoices = content.choices.map((c) => {
       if (!isValidChoiceLabel(c.label)) {
         throw new ApplicationError(
           'INTERNAL_ERROR',
@@ -306,10 +341,10 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return {
       id: row.id,
       slug: row.slug,
-      stemMd: row.stemMd,
-      explanationMd: row.explanationMd,
-      referenceMd: row.referenceMd ?? null,
-      difficulty: row.difficulty,
+      stemMd: content.stemMd,
+      explanationMd: content.explanationMd,
+      referenceMd: content.referenceMd ?? null,
+      difficulty: content.difficulty,
       status: row.status,
       choices: mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder),
       tags: row.questionTags.map((qt) => ({
