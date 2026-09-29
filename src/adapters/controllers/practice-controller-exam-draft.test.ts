@@ -6,6 +6,17 @@ import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import { saveExamDraftAnswer } from './practice-controller';
 import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
+// A session item's bound revision is internal (ADR-021): the client never
+// receives it.
+const BOUND_REVISION_ID = '55555555-5555-5555-5555-555555555555';
+
+function withoutRevision<T extends { questionRevisionId: string | null }>({
+  questionRevisionId: _boundRevision,
+  ...visible
+}: T) {
+  return visible;
+}
+
 describe('practice-controller', () => {
   describe('saveExamDraftAnswer', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
@@ -64,6 +75,7 @@ describe('practice-controller', () => {
     it('accepts cumulativeMs at the draft maximum boundary', async () => {
       const saveDraftOutput = {
         questionId: '22222222-2222-2222-2222-222222222222',
+        questionRevisionId: BOUND_REVISION_ID,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -74,7 +86,7 @@ describe('practice-controller', () => {
       } as const;
       const deps = createDeps({ saveDraftOutput });
       const expectedOutput = {
-        ...saveDraftOutput,
+        ...withoutRevision(saveDraftOutput),
         latestAnsweredAt: '2026-02-01T00:00:10.000Z',
         draftSavedAt: '2026-02-01T00:00:00.000Z',
       };
@@ -104,6 +116,7 @@ describe('practice-controller', () => {
     it('accepts a time-only draft save with null selectedChoiceId', async () => {
       const saveDraftOutput = {
         questionId: '22222222-2222-2222-2222-222222222222',
+        questionRevisionId: BOUND_REVISION_ID,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -127,7 +140,7 @@ describe('practice-controller', () => {
       expect(result).toEqual({
         ok: true,
         data: {
-          ...saveDraftOutput,
+          ...withoutRevision(saveDraftOutput),
           draftSavedAt: '2026-02-01T00:00:00.000Z',
         },
       });
@@ -185,6 +198,7 @@ describe('practice-controller', () => {
     it('returns saved draft state when use case succeeds', async () => {
       const saveDraftOutput = {
         questionId: '22222222-2222-2222-2222-222222222222',
+        questionRevisionId: BOUND_REVISION_ID,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -196,7 +210,7 @@ describe('practice-controller', () => {
 
       const deps = createDeps({ saveDraftOutput });
       const expectedOutput = {
-        ...saveDraftOutput,
+        ...withoutRevision(saveDraftOutput),
         latestAnsweredAt: '2026-02-01T00:00:10.000Z',
         draftSavedAt: '2026-02-01T00:00:00.000Z',
       };
@@ -295,6 +309,7 @@ describe('practice-controller', () => {
       const deps = createDeps({
         saveDraftOutput: {
           questionId: '22222222-2222-2222-2222-222222222222',
+          questionRevisionId: BOUND_REVISION_ID,
           markedForReview: false,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,

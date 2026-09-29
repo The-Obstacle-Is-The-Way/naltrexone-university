@@ -232,8 +232,11 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    const question = await this.questions.findPublishedById(targetQuestionId);
-    if (!question) {
+    // The item shows the revision it was bound to (ADR-021). A question
+    // withdrawn since the session began stays unavailable, as before; the
+    // withdrawal notice is a later increment.
+    const question = await this.questions.findByIdForSession(targetState);
+    if (question?.status !== 'published') {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 

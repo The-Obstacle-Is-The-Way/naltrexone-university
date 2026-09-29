@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import type {
   QuestionRepository,
+  SessionItemBinding,
   TagRepository,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
@@ -18,6 +19,30 @@ function deserializeQuestionIds(serializedIds: string): string[] {
   return JSON.parse(serializedIds) as string[];
 }
 
+// React's cache compares arguments by identity, so a session item is keyed by
+// its serialized binding.
+function serializeBinding(item: SessionItemBinding): string {
+  return JSON.stringify([item.questionId, item.questionRevisionId]);
+}
+
+function deserializeBinding(serialized: string): SessionItemBinding {
+  const [questionId, questionRevisionId] = JSON.parse(serialized) as [
+    string,
+    string | null,
+  ];
+  return { questionId, questionRevisionId };
+}
+
+function serializeSortedUniqueBindings(
+  items: readonly SessionItemBinding[],
+): string {
+  return JSON.stringify([...new Set(items.map(serializeBinding))].sort());
+}
+
+function deserializeBindings(serialized: string): SessionItemBinding[] {
+  return (JSON.parse(serialized) as string[]).map(deserializeBinding);
+}
+
 export function createRequestCachedQuestionRepository(
   questionRepository: QuestionRepository,
 ): QuestionRepository {
@@ -32,13 +57,11 @@ export function createRequestCachedQuestionRepository(
       deserializeQuestionIds(serializedIds),
     ),
   );
-  const findByIdForSession = cache(async (id: string) =>
-    questionRepository.findByIdForSession(id),
+  const findBySerializedBindingForSession = cache(async (serialized: string) =>
+    questionRepository.findByIdForSession(deserializeBinding(serialized)),
   );
-  const findByNormalizedIdsForSession = cache(async (serializedIds: string) =>
-    questionRepository.findByIdsForSession(
-      deserializeQuestionIds(serializedIds),
-    ),
+  const findByNormalizedBindingsForSession = cache(async (serialized: string) =>
+    questionRepository.findByIdsForSession(deserializeBindings(serialized)),
   );
 
   return {
@@ -61,22 +84,24 @@ export function createRequestCachedQuestionRepository(
         .map((id) => questionById.get(id))
         .filter((question): question is Question => question !== undefined);
     },
-    findByIdForSession,
+    findByIdForSession(item: SessionItemBinding) {
+      return findBySerializedBindingForSession(serializeBinding(item));
+    },
     async findByIdsForSession(
-      ids: readonly string[],
+      items: readonly SessionItemBinding[],
     ): Promise<readonly Question[]> {
-      const normalizedIds = getSortedUniqueQuestionIds(ids);
-      if (normalizedIds.length === 0) return [];
+      if (items.length === 0) return [];
 
-      const questions = await findByNormalizedIdsForSession(
-        serializeQuestionIds(normalizedIds),
+      const questions = await findByNormalizedBindingsForSession(
+        serializeSortedUniqueBindings(items),
       );
+      // A session holds each question once, so its id identifies the item.
       const questionById = new Map(
         questions.map((question) => [question.id, question]),
       );
 
-      return ids
-        .map((id) => questionById.get(id))
+      return items
+        .map((item) => questionById.get(item.questionId))
         .filter((question): question is Question => question !== undefined);
     },
     listPublishedCandidateIds(filters) {

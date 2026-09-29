@@ -26,6 +26,7 @@ export function toDomainQuestionState(
 ): PracticeSessionQuestionState {
   return {
     questionId: row.questionId,
+    questionRevisionId: row.questionRevisionId,
     markedForReview: row.markedForReview,
     latestSelectedChoiceId: row.latestSelectedChoiceId,
     latestIsCorrect: row.latestIsCorrect,

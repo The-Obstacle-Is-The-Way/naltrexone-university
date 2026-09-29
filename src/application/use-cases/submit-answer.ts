@@ -87,8 +87,20 @@ export class SubmitAnswerUseCase {
   }
 
   async execute(input: SubmitAnswerInput): Promise<SubmitAnswerOutput> {
-    const question = await this.questions.findPublishedById(input.questionId);
-    if (!question) {
+    const session = input.sessionId
+      ? await this.sessions.findByIdAndUserId(input.sessionId, input.userId)
+      : null;
+    // A session item is shown and graded as the revision it was bound to
+    // (ADR-021). Any other request reads the current revision, and the checks
+    // below refuse a missing session or a question outside it.
+    const item =
+      session?.questionStates.find(
+        (state) => state.questionId === input.questionId,
+      ) ?? null;
+    const question = item
+      ? await this.questions.findByIdForSession(item)
+      : await this.questions.findPublishedById(input.questionId);
+    if (question?.status !== 'published') {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
@@ -163,10 +175,6 @@ export class SubmitAnswerUseCase {
         );
       }
     }
-
-    const session = input.sessionId
-      ? await this.sessions.findByIdAndUserId(input.sessionId, input.userId)
-      : null;
 
     if (input.sessionId && !session) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');

@@ -280,9 +280,9 @@ const { createQuestion } = require('./src/domain/test-helpers/index.ts');
 class CountingQuestionRepository extends FakeQuestionRepository {
   findByIdForSessionCallCount = 0;
 
-  async findByIdForSession(id) {
+  async findByIdForSession(item) {
     this.findByIdForSessionCallCount++;
-    return super.findByIdForSession(id);
+    return super.findByIdForSession(item);
   }
 }
 
@@ -303,13 +303,13 @@ let firstStatus = 'missing';
 let secondStatus = 'missing';
 
 async function FirstCaller() {
-  const question = await repository.findByIdForSession('question-1');
+  const question = await repository.findByIdForSession({ questionId: 'question-1', questionRevisionId: null });
   firstStatus = question?.status ?? 'missing';
   return React.createElement('div', null, firstStatus);
 }
 
 async function SecondCaller() {
-  const question = await repository.findByIdForSession('question-1');
+  const question = await repository.findByIdForSession({ questionId: 'question-1', questionRevisionId: null });
   secondStatus = question?.status ?? 'missing';
   return React.createElement('div', null, secondStatus);
 }
@@ -359,9 +359,9 @@ const { createQuestion } = require('./src/domain/test-helpers/index.ts');
 class CountingQuestionRepository extends FakeQuestionRepository {
   findByIdsForSessionCallCount = 0;
 
-  async findByIdsForSession(ids) {
+  async findByIdsForSession(items) {
     this.findByIdsForSessionCallCount++;
-    return super.findByIdsForSession(ids);
+    return super.findByIdsForSession(items);
   }
 }
 
@@ -383,13 +383,13 @@ let firstResultIds = [];
 let secondResultIds = [];
 
 async function FirstCaller() {
-  const questions = await repository.findByIdsForSession(['b', 'a', 'a']);
+  const questions = await repository.findByIdsForSession(['b', 'a', 'a'].map((questionId) => ({ questionId, questionRevisionId: null })));
   firstResultIds = questions.map((question) => question.id);
   return React.createElement('div', null, firstResultIds.join(','));
 }
 
 async function SecondCaller() {
-  const questions = await repository.findByIdsForSession(['a', 'b']);
+  const questions = await repository.findByIdsForSession(['a', 'b'].map((questionId) => ({ questionId, questionRevisionId: null })));
   secondResultIds = questions.map((question) => question.id);
   return React.createElement('div', null, secondResultIds.join(','));
 }

@@ -15,6 +15,50 @@ import {
 } from './save-exam-draft-answer';
 
 describe('SaveExamDraftAnswerUseCase', () => {
+  it('refuses a choice of a revision other than the one the item was bound to (ADR-021)', async () => {
+    const current = createQuestion({
+      id: 'q1',
+      choices: [createChoice({ id: 'current-choice', questionId: 'q1' })],
+    });
+    const bound = createQuestion({
+      id: 'q1',
+      choices: [createChoice({ id: 'bound-choice', questionId: 'q1' })],
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          questionRevisionId: bound.revisionId,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+    const useCase = new SaveExamDraftAnswerUseCase(
+      new FakeQuestionRepository([current, bound]),
+      new FakePracticeSessionRepository([session]),
+    );
+    const draft = {
+      userId: 'user-1',
+      sessionId: 'session-1',
+      questionId: 'q1',
+      cumulativeMs: 1_000,
+    };
+
+    await expect(
+      useCase.execute({ ...draft, selectedChoiceId: 'current-choice' }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    await expect(
+      useCase.execute({ ...draft, selectedChoiceId: 'bound-choice' }),
+    ).resolves.toMatchObject({ draftSelectedChoiceId: 'bound-choice' });
+  });
+
   it('saves a draft answer for an active exam session without changing latest answer fields', async () => {
     const session = createPracticeSession({
       id: 'session-1',

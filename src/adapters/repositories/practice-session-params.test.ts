@@ -89,6 +89,7 @@ describe('parsePracticeSessionParamsJson', () => {
       questionStates: [
         {
           questionId,
+          questionRevisionId: null,
           markedForReview: true,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,

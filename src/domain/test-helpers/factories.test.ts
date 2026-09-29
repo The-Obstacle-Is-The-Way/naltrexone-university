@@ -55,6 +55,7 @@ describe('createPracticeSession', () => {
     expect(session.questionStates).toEqual([
       {
         questionId: 'question-1',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -65,6 +66,7 @@ describe('createPracticeSession', () => {
       },
       {
         questionId: 'question-2',
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,

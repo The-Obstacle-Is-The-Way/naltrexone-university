@@ -1,4 +1,7 @@
-import type { Question } from '@/src/domain/entities';
+import type {
+  PracticeSessionQuestionState,
+  Question,
+} from '@/src/domain/entities';
 import type {
   QuestionDifficulty,
   QuestionProgressStatus,
@@ -20,28 +23,42 @@ export type QuestionFilters = {
   userId?: string;
 };
 
+/**
+ * A practice-session item's question and the revision it is bound to
+ * (ADR-021). A `PracticeSessionQuestionState` is one.
+ */
+export type SessionItemBinding = Pick<
+  PracticeSessionQuestionState,
+  'questionId' | 'questionRevisionId'
+>;
+
 export interface QuestionRepository {
   findPublishedById(id: string): Promise<Question | null>;
   findPublishedBySlug(slug: string): Promise<Question | null>;
   findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
 
   /**
-   * Returns a question by id regardless of `questions.status`.
+   * Returns a session item's question regardless of `questions.status`, with
+   * the content and choices of the revision the item is bound to, else of the
+   * question's current revision (an item an older deployment left unbound).
    *
-   * Callers MUST prove the id is part of the caller's owned practice session
-   * before using this. This deliberately bypasses the published boundary and
-   * must never back public browsing or candidate selection.
+   * Callers MUST take the item from the caller's owned practice session. This
+   * deliberately bypasses the published boundary and must never back public
+   * browsing or candidate selection.
    */
-  findByIdForSession(id: string): Promise<Question | null>;
+  findByIdForSession(item: SessionItemBinding): Promise<Question | null>;
 
   /**
-   * Returns questions by id regardless of `questions.status`.
+   * Returns session items' questions, in the items' order, as
+   * `findByIdForSession` does.
    *
-   * Callers MUST prove these ids are part of the caller's owned practice
-   * session before using this. This deliberately bypasses the published
-   * boundary and must never back public browsing or candidate selection.
+   * Callers MUST take the items from the caller's owned practice session. This
+   * deliberately bypasses the published boundary and must never back public
+   * browsing or candidate selection.
    */
-  findByIdsForSession(ids: readonly string[]): Promise<readonly Question[]>;
+  findByIdsForSession(
+    items: readonly SessionItemBinding[],
+  ): Promise<readonly Question[]>;
 
   /**
    * Return candidate question ids for "next question" selection.

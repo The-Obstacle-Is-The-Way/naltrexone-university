@@ -83,6 +83,7 @@ export function createQuestionState(
 ): QuestionState {
   return {
     questionId,
+    questionRevisionId: null,
     markedForReview: false,
     latestSelectedChoiceId: null,
     latestIsCorrect: null,
