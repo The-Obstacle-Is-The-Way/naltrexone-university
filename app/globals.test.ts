@@ -177,6 +177,6 @@ describe('globals.css dark-mode tokens are unchanged', () => {
 
   it('returns dark-mode destructive token when theme is dark', () => {
     const value = getRequiredTokenValue(darkBlock, 'destructive');
-    expect(value).toBe('0 72% 51%');
+    expect(value).toBe('0 91% 71%');
   });
 });

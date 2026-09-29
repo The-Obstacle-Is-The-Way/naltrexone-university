@@ -3,20 +3,18 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part six (DEBT-484): an active session shows a question withdrawn after it began with the F-11 notice, not an error, and the learner can always move on. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-six-an-active-session-shows-a-withdrawn-question--2026-09-29).
-- **Fixed.** Two ways to get stuck:
-  - an exam whose last item was withdrawn had no `Review & Submit`;
-  - a withdrawn first item looped on `Try again` with no navigator.
+**Latest** — 2026-09-29 UTC: [BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md) is fixed on its branch. Dark-theme small text clears WCAG AA contrast.
 - **What changes.**
-  - The next-question read returns a withdrawn item's place in the session with no content.
-  - The page shows the notice with navigation only, ending in `Review & Submit` or `End session`.
-  - A tutor answer to a question withdrawn while open brings up the notice. Other not-found answers keep their error.
-  - Scoring is unchanged, pending the owner's decision.
-- **Proof.** A real-Postgres case red first; use-case, logic, view and browser cases; three view mutations caught; four captures of the local production build with zero axe violations.
-- **Previous increments.**
-  - #1221 (BUG-309 filed) and #1222 (part five, the session breakdown, approval **5356755446**, no findings) were promoted together through #1223 (`35c29b29`). CodeRabbit approved the promotion with no findings.
-  - The promotion's proof was written into its body at 18:50:18Z, before the merge at 18:50:23Z.
-  - Release verified: main CI **36614925704** `test` **19:04:02Z**; Ready **18:52:11.756Z**, held without alias until its check completed; production assigned **19:04:04.905Z**; matching trees (`6927ba68`); healthy production.
+  - Dark `--destructive` is now `0 91% 71%` and `--muted-foreground` `0 0% 55%`.
+  - The destructive Button's dark hover is `/50`, so its white label stays legible.
+  - A new suite measures each pairing on every surface the text sits on, as rendered. It is red on the old tokens.
+- **Proof.** axe on the local production build of Dashboard, History (both tabs) and Practice at two sizes: 16 `color-contrast` nodes per size before, 0 after.
+- **Previous increment.** #1224 (ADR-021 phase 2a, part six: an active session shows a withdrawn question) merged as `84007681` with exact-head approval **5357815056**.
+  - Its one finding (a `NOT_FOUND` answer reloaded on any cause) was fixed red-first on that head.
+  - It is promoted through #1225 (`cec105e1`). The promotion's one finding asked for a flag the page could not act on; it was declined with the trace, and its thread is resolved.
+  - The promotion's proof was written into its body at 20:32:34Z, before the merge at 20:32:39Z.
+  - Release verified: main CI **36627082996** `test` **20:45:06Z**; Ready **20:34:08.515Z**, held without alias until its check completed; production assigned **20:45:08.819Z**; matching trees (`c191ca97`); healthy production.
+- **Open decision for the owner.** Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
 

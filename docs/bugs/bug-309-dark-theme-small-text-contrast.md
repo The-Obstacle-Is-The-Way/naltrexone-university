@@ -46,19 +46,33 @@ The DEBT-484 part-four captures ran axe 4.10.2 on the local production build of 
   - The tonal row fills added afterwards (DEBT-289, DEBT-302) raise the surface luminance behind small text. The dark destructive token was never tuned for text on dark surfaces; it serves both fills (`bg-destructive`) and text.
 - **A stale policy pointer.** `contrast-policy.md` §3.1 still says "current failures are documented in BS-042", but BS-042 is archived as resolved, so nothing tracked these.
 
-## Fix (proposed; decide in the fix PR)
+## Fix (2026-09-29; on its branch, pending review, merge and promotion)
 
-- **Destructive text.**
-  - Give destructive *text* its own dark value that meets 4.5:1 on the lightest surface it sits on, the row fills, while keeping `bg-destructive` fills and their foreground compliant. For example, a text token or a lighter dark `--destructive`, checked against every consumer.
-  - Record the pairing in `contrast-policy.md`, and extend `theme-token-regression` to cover it.
-- **Muted text.** Choose one of these, and record each pairing:
-  - Raise the dark `--muted-foreground` enough to clear 4.5:1 on the tonal row fills *and* on `bg-muted`. This one token change covers the rows and the inactive History tab link.
-  - Or use a documented foreground-ramp text value on the rows, plus an explicit correction for the History tab link, which a row-only change does not reach.
-- **Policy.** Correct `contrast-policy.md` §3.1's pointer.
-- **Proof.** An axe sweep of the affected pages, with receipts, before and after.
+- **Tokens, dark theme only.**
+  - `--destructive` changes from `0 72% 51%` to `0 91% 71%` (`#dc2828` to `#f87171`).
+  - `--muted-foreground` changes from `0 0% 51.5%` to `0 0% 55%` (`#838383` to `#8c8c8c`).
+  - A single token change for each covers every consumer, including the inactive History tab link and the Practice segmented controls on `bg-muted`.
+- **Button.** The destructive variant gains `dark:hover:bg-destructive/50`. Without it, the inherited `hover:bg-destructive/90` would put white text at 3.29:1 on the lighter red. Solid fills stay at `dark:bg-destructive/60`.
+- **Measured, as rendered (8-bit channels):**
+
+| Pairing | Before | After |
+| --- | --- | --- |
+| `text-destructive` on its worst surface (page, card, row fills and hovers, destructive tints) | 3.24:1 | 5.56:1 |
+| `text-muted-foreground` on its worst surface (row fills and hovers, `bg-muted`) | 4.09:1 | 4.62:1 |
+| White text on the destructive fills at rest (`/60`) and on the dark hover (`/50`) | 9.08:1 | 5.96:1 |
+| `destructive-foreground` on the destructive fills | 7.75:1 | 5.09:1 |
+
+- **Guard.** `components/theme-dark-text-contrast.test.ts` measures these pairings on every surface the text sits on. It is red on the old tokens.
+  - The contrast math moved to `components/theme-contrast-test-helpers.ts`, with its own unit test.
+  - The existing token suites pin the new values.
+- **Policy.** `contrast-policy.md` §3.1 records the pairings and the rule: add a surface to the suite before placing small text on a new fill. The Pattern Registry's gray stack and the page audits cite the new values.
 
 ## Verification
 
-- [ ] Token/pairing unit guard added
-- [ ] axe sweep: History, Dashboard, session summary, post-exam review, bookmarks — zero `color-contrast` nodes
-- [ ] Captures before and after
+- [x] Token/pairing unit guard added: `components/theme-dark-text-contrast.test.ts`, red on the old tokens.
+- [x] axe sweep on the local production build, Dashboard, History questions, History sessions with a breakdown open, and Practice, at 1440×900 and 390×844:
+  - old tokens: 16 `color-contrast` nodes per size (Dashboard 5, History questions 2, History sessions 3, Practice 6);
+  - new tokens: 0.
+  - The Practice nodes were its segmented controls, which the record had not listed.
+- [x] Captures before and after: [Dashboard before](./assets/bug-309/before-dashboard-dark-1440x900.png), [Dashboard after](./assets/bug-309/after-dashboard-dark-1440x900.png), [History before](./assets/bug-309/before-history-questions-dark-1440x900.png), [History after](./assets/bug-309/after-history-questions-dark-1440x900.png); mobile: [Dashboard before](./assets/bug-309/before-dashboard-dark-390x844.png), [Dashboard after](./assets/bug-309/after-dashboard-dark-390x844.png), [History before](./assets/bug-309/before-history-questions-dark-390x844.png), [History after](./assets/bug-309/after-history-questions-dark-390x844.png).
+- [ ] Production release verified, then the record is resolved and archived.
