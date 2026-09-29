@@ -3,20 +3,20 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, third increment, part one (DEBT-484): question content and selection read through the question's current revision. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-one-question-content-reads-through-the-current-revision--2026-09-28).
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, third increment, part two (DEBT-484): a session shows, grades and records the revision each item was bound to when it began. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-two-a-session-shows-and-grades-its-bound-revision--2026-09-28).
 - **What changes.**
-  - The question repository reads the stem, explanation, reference, difficulty and choices from the current revision, and selection's difficulty filter matches that revision's difficulty.
-  - A question with no current revision is refused with `INTERNAL_ERROR`, not served from the legacy columns.
-  - The serving deployment reads the same content, while each question has one revision.
-- **Proof.** Five real-Postgres cases, three red first. Every published question in the corpus reads exactly as its legacy columns and choices.
-- **Previous increment.** Promotion #1199 (`dc0fcd74`) released #1198 and Dependabot #1188 and #1191.
-  - #1198: the reviewed-merge tool carries a Dependabot approval across a rebase that changes nothing but the lockfile. CodeRabbit's full review found two gaps, both fixed before merge: rename sources were not compared, and the review selector was duplicated. Exact-head approval **5345245012**; merged as `d9be03f7`.
-  - #1188 and #1191: each rebase re-resolved a version in `package.json`, so the tool rightly refused to carry the approval. The stale approvals were dismissed with that reason, and CodeRabbit approved the new heads (**5345748713**, **5345949560**). dotenv 18's removals, vault and preloading, are unused here.
-  - The local full gate passed on the combined dev head with the new versions installed, and the promotion's CI ran E2E.
-  - The promotion's proof was written into its body at 23:55:26Z, before the merge at 23:55:31Z.
-  - Release verified: main CI **36500516846** `test` **00:08:28Z**; Ready **23:59:03.538Z**, held without alias until its check completed; production assigned **00:08:30.390Z**; matching trees; healthy production.
+  - A session item carries `questionRevisionId`, and a question carries the `revisionId` whose content it holds. The session lookups take the item, so no caller can drop the binding.
+  - The next-question read, a tutor submission, an exam draft and exam finalization all use the item's revision. A newer revision's choice is refused as not found, not failed as a server error by the `(choice, revision)` key.
+  - The exam-draft controller had spread the whole session item into its strict output schema, so the new field would have failed every draft save. It now names each field the client receives.
+- **Proof.** Six real-Postgres cases with revision 2 made current after the session began, five red first. Four use-case cases on the fakes, and break-it proofs for each use case.
+- **Previous increment.** #1200 (part one) merged as `fcc1f05c` with exact-head approval **5346509422**; its one finding, a vacuous corpus case, is fixed there.
+  - It is promoted through #1201 (`a798ea9d`). The promotion's proof was written into its body at 01:33:54Z, before the merge at 01:33:59Z.
+  - The promotion's one finding was declined, with the reason recorded in DEBT-484: failing every candidate query when any published question lacks a revision would let one bad row stop selection for every learner.
+  - Release verified: main CI **36508512475** `test` **01:46:56Z**; Ready **01:35:28.748Z**, held without alias until its check completed; production assigned **01:46:57.824Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-29 UTC ADR-021 phase 2a, third increment, part one: question content and selection read through the question's current revision, and a question with no current revision is refused with `INTERNAL_ERROR`. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-one-question-content-reads-through-the-current-revision--2026-09-28). The previous increment, promotion #1199 (`dc0fcd74`), released #1198's carry-forward and Dependabot #1188 and #1191. Release verified: main CI **36500516846** `test` **00:08:28Z**; Ready **23:59:03.538Z**, held without alias until its check completed; production assigned **00:08:30.390Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC the reviewed-merge tool carries a Dependabot approval across a rebase that changes nothing but the lockfile, because CodeRabbit ignores review commands on a Dependabot PR and skips a lockfile-only rebase; promotion #1197's finding is fixed, and the backfill suite asserts relative to a baseline. The previous increment, #1196 (ADR-021 phase 2a, second increment), merged as `e4610230` and is promoted through #1197 (`46fb8546`); production's `0041` bound 306 session states and 249 attempts, with 0 remaining, and validated the five history keys. Release verified: main CI **36472088029** `test` **19:37:53Z**; Ready **19:26:58.149Z**, held without alias until its check completed; production assigned **19:37:56.115Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 

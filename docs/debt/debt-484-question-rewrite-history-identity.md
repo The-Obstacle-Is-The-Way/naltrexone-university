@@ -254,6 +254,11 @@ This part:
 
   The first three were red first. The refusal case was red against the legacy fallback, which this part removed. Restoring the legacy difficulty column in the filter fails the difficulty case.
 - **What does not change.** Grading, history and review reads, and the seed.
+- **Review.**
+  - #1200's one finding was fixed: the corpus case now requires a nonempty corpus.
+  - Promotion #1201's finding was declined. It proposed failing every candidate query when any published question lacks a current revision. That would let one bad row take down selection for every learner, the corrupt-row blast radius DEBT-439 retired.
+  - Today the failure is contained. A difficulty-filtered selection cannot pick such a question, and an unfiltered pick fails with `INTERNAL_ERROR` for that one question; neither shows stale content.
+  - The structural guard is phase 3's `NOT NULL` on `current_revision_id`. It cannot land earlier, because the seed inserts a question before the revision that references it.
 
 ## Phase 2a, third increment, part two: a session shows and grades its bound revision — 2026-09-28
 
