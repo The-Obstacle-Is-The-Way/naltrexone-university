@@ -162,6 +162,8 @@ describe('ADR-021 phase 2a: question content reads through the current revision'
       .select()
       .from(schema.questions)
       .where(eq(schema.questions.status, 'published'));
+    // An empty corpus would make every comparison below vacuous.
+    expect(published.length).toBeGreaterThan(0);
     const ids = published.map((row) => row.id);
     const legacyChoices = await db
       .select()
