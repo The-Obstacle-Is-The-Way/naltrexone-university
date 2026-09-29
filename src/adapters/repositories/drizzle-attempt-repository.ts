@@ -10,11 +10,13 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
   practiceSessionQuestionStates,
   practiceSessions,
+  questionRevisions,
   questions,
   questionTags,
   tags,
@@ -49,6 +51,11 @@ import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
 
+// ADR-021 phase 2a: the revision a question's latest attempt was answered
+// against, else (an attempt an older deployment left unbound) its current one.
+// The attempted list shows, filters and sorts by it.
+const answeredRevision = alias(questionRevisions, 'answered_revision');
+
 // WHY: This file exceeds the 300-line soft guideline intentionally.
 // DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
 // It is a deep module (Ousterhout) with a single responsibility: implement the full AttemptRepository query and write surface against Drizzle for attempt/history workflows.
@@ -61,6 +68,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return this.db
       .select({
         questionId: attempts.questionId,
+        questionRevisionId: attempts.questionRevisionId,
         answeredAt: attempts.answeredAt,
         practiceSessionId: attempts.practiceSessionId,
         isCorrect: attempts.isCorrect,
@@ -115,7 +123,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     }
 
     if (difficulty) {
-      conditions.push(eq(questions.difficulty, difficulty));
+      conditions.push(eq(answeredRevision.difficulty, difficulty));
     }
 
     if (tagSlug) {
@@ -160,8 +168,8 @@ export class DrizzleAttemptRepository implements AttemptRepository {
 
     return [
       asc(sql<number>`CASE
-        WHEN ${questions.status} = 'published' AND ${questions.difficulty} = 'hard' THEN 0
-        WHEN ${questions.status} = 'published' AND ${questions.difficulty} = 'medium' THEN 1
+        WHEN ${questions.status} = 'published' AND ${answeredRevision.difficulty} = 'hard' THEN 0
+        WHEN ${questions.status} = 'published' AND ${answeredRevision.difficulty} = 'medium' THEN 1
         ELSE 2
       END`),
       ...byRecency,
@@ -438,6 +446,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     const baseQuery = this.db
       .select({
         questionId: latestAttemptRows.questionId,
+        questionRevisionId: latestAttemptRows.questionRevisionId,
         answeredAt: latestAttemptRows.answeredAt,
         isCorrect: latestAttemptRows.isCorrect,
         sessionId: latestAttemptRows.practiceSessionId,
@@ -448,7 +457,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         practiceSessions,
         eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
       )
-      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id));
+      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+      .leftJoin(
+        answeredRevision,
+        eq(
+          answeredRevision.id,
+          sql`COALESCE(${latestAttemptRows.questionRevisionId}, ${questions.currentRevisionId})`,
+        ),
+      );
 
     const query = tagSlug
       ? baseQuery
@@ -467,6 +483,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       if (!row.answeredAt) continue;
       result.push({
         questionId: row.questionId,
+        questionRevisionId: row.questionRevisionId,
         answeredAt: row.answeredAt,
         isCorrect: row.isCorrect,
         sessionId: row.sessionId,
@@ -497,7 +514,14 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         practiceSessions,
         eq(latestAttemptRows.practiceSessionId, practiceSessions.id),
       )
-      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id));
+      .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
+      .leftJoin(
+        answeredRevision,
+        eq(
+          answeredRevision.id,
+          sql`COALESCE(${latestAttemptRows.questionRevisionId}, ${questions.currentRevisionId})`,
+        ),
+      );
 
     const query = tagSlug
       ? baseQuery

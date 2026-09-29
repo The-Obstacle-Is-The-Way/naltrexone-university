@@ -5,6 +5,8 @@ export function enrichWithQuestion<T, R>(input: {
   rows: readonly T[];
   getQuestionId: (row: T) => string;
   questionsById: ReadonlyMap<string, Question>;
+  /** The map key for a row, when it is not the question id. */
+  getLookupKey?: (row: T) => string;
   available: (row: T, question: Question) => R;
   unavailable: (row: T) => R;
   logger: Logger;
@@ -14,7 +16,9 @@ export function enrichWithQuestion<T, R>(input: {
 
   for (const row of input.rows) {
     const questionId = input.getQuestionId(row);
-    const question = input.questionsById.get(questionId);
+    const question = input.questionsById.get(
+      input.getLookupKey ? input.getLookupKey(row) : questionId,
+    );
     if (!question) {
       input.logger.warn({ questionId }, input.missingQuestionMessage);
       result.push(input.unavailable(row));

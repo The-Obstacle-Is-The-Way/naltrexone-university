@@ -9,6 +9,36 @@ import {
 import { GetUserStatsUseCase } from './get-user-stats';
 
 describe('GetUserStatsUseCase', () => {
+  it('shows each recent attempt as the revision it graded, even of one question (ADR-021)', async () => {
+    const current = createQuestion({ id: 'q1', stemMd: 'Current stem' });
+    const older = createQuestion({ id: 'q1', stemMd: 'Older stem' });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          questionRevisionId: older.revisionId,
+          answeredAt: new Date('2026-02-01T10:00:00Z'),
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          questionRevisionId: current.revisionId,
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([current, older]),
+      new FakeLogger(),
+      () => new Date('2026-02-01T12:00:00Z'),
+    );
+
+    const stats = await useCase.execute({ userId: 'user-1' });
+
+    expect(
+      stats.recentActivity.map((row) => (row.isAvailable ? row.stemMd : null)),
+    ).toEqual(['Current stem', 'Older stem']);
+  });
+
   it('returns computed stats and recent activity when user has attempts', async () => {
     const now = new Date('2026-02-01T12:00:00Z');
     const q1Attempt = createAttempt({

@@ -7,6 +7,7 @@ import {
   createIntegrationDb,
   createQuestion,
   createUser,
+  currentRevisionIdOf,
 } from './helpers';
 
 const { db, sql } = createIntegrationDb();
@@ -43,6 +44,8 @@ export async function insertAttemptAt(
   await db.insert(schema.attempts).values({
     userId: input.userId,
     questionId: input.questionId,
+    // ADR-021: as the app does, bind the question's current revision.
+    questionRevisionId: await currentRevisionIdOf(db, input.questionId),
     practiceSessionId: input.practiceSessionId,
     selectedChoiceId: input.selectedChoiceId ?? input.outcome?.selectedChoiceId,
     isCorrect: input.isCorrect ?? true,

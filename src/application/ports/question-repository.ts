@@ -47,7 +47,8 @@ export interface QuestionRepository {
 
   /**
    * Returns published questions, in the bindings' order, as
-   * `findPublishedByBinding` does.
+   * `findPublishedByBinding` does. A question that is not published is omitted
+   * for every binding of it; every other binding yields exactly one question.
    */
   findPublishedByBindings(
     bindings: readonly QuestionRevisionBinding[],

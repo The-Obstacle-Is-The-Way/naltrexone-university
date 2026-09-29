@@ -23,16 +23,29 @@ type InMemoryAttempt = Attempt & {
 
 export class FakeAttemptRepository implements AttemptRepository {
   private attempts: InMemoryAttempt[];
-  private readonly questionsById: Map<string, Question> | null;
+  // Question metadata for the attempted-list filters. A test may list several
+  // revisions of a question (same id, different revisionId); the first listed
+  // is current, as in `FakeQuestionRepository`.
+  private readonly questions: readonly Question[] | null;
 
   constructor(
     seed: readonly InMemoryAttempt[] = [],
     deps?: { questions?: readonly Question[] },
   ) {
     this.attempts = [...seed];
-    this.questionsById = deps?.questions
-      ? new Map(deps.questions.map((q) => [q.id, q]))
-      : null;
+    this.questions = deps?.questions ?? null;
+  }
+
+  // ADR-021: the revision the attempt answered, else the current one.
+  private answeredQuestion(attempt: InMemoryAttempt): Question | undefined {
+    const questions = this.questions ?? [];
+    return (
+      questions.find(
+        (q) =>
+          q.id === attempt.questionId &&
+          q.revisionId === attempt.questionRevisionId,
+      ) ?? questions.find((q) => q.id === attempt.questionId)
+    );
   }
 
   async insert(input: AttemptInsertInput): Promise<Attempt> {
@@ -234,6 +247,7 @@ export class FakeAttemptRepository implements AttemptRepository {
       .slice(offset, offset + limit)
       .map((a) => ({
         questionId: a.questionId,
+        questionRevisionId: a.questionRevisionId,
         answeredAt: a.answeredAt,
         isCorrect: a.isCorrect,
         sessionId: a.practiceSessionId,
@@ -286,16 +300,15 @@ export class FakeAttemptRepository implements AttemptRepository {
     const tagSlug = filters?.tagSlug ?? null;
     if (!difficulty && !tagSlug) return filteredBySource;
 
-    if (!this.questionsById) {
+    if (!this.questions) {
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'FakeAttemptRepository requires questions metadata to filter by difficulty or tagSlug',
       );
     }
 
-    const questionsById = this.questionsById;
     return filteredBySource.filter((attempt) => {
-      const question = questionsById.get(attempt.questionId);
+      const question = this.answeredQuestion(attempt);
       if (!question) return false;
       if (question.status !== 'published') return false;
 
@@ -335,8 +348,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     }
 
     const difficultyRankDiff =
-      this.getDifficultySortRank(a.questionId) -
-      this.getDifficultySortRank(b.questionId);
+      this.getDifficultySortRank(a) - this.getDifficultySortRank(b);
     if (difficultyRankDiff !== 0) {
       return difficultyRankDiff;
     }
@@ -344,8 +356,8 @@ export class FakeAttemptRepository implements AttemptRepository {
     return byRecency;
   }
 
-  private getDifficultySortRank(questionId: string): number {
-    const question = this.questionsById?.get(questionId);
+  private getDifficultySortRank(attempt: InMemoryAttempt): number {
+    const question = this.answeredQuestion(attempt);
     const difficulty =
       question && question.status === 'published'
         ? question.difficulty

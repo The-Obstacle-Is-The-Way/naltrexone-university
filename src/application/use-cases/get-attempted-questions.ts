@@ -8,7 +8,10 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import {
+  bindingKey,
+  fetchQuestionsByBinding,
+} from '@/src/application/shared/fetch-questions-by-binding';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 export type GetAttemptedQuestionsInput = {
@@ -92,15 +95,14 @@ export class GetAttemptedQuestionsUseCase {
       };
     }
 
-    const byId = await fetchQuestionsById(
-      this.questions,
-      page.map((attempted) => attempted.questionId),
-    );
+    // ADR-021: each row shows the revision its latest attempt answered.
+    const byBinding = await fetchQuestionsByBinding(this.questions, page);
 
     const rows = enrichWithQuestion({
       rows: page,
       getQuestionId: (attempted) => attempted.questionId,
-      questionsById: byId,
+      questionsById: byBinding,
+      getLookupKey: bindingKey,
       available: (attempted, question): AttemptedQuestionRow => ({
         isAvailable: true,
         questionId: question.id,
