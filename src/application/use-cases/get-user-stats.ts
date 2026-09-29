@@ -6,7 +6,7 @@ import type {
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
 import {
   bindingKey,
-  fetchQuestionsByBinding,
+  fetchOwnedQuestionsByBinding,
 } from '@/src/application/shared/fetch-questions-by-binding';
 import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
@@ -46,6 +46,8 @@ export type UserStatsOutput = {
   recentActivity: Array<
     | {
         isAvailable: true;
+        /** Withdrawn since the learner attempted it (ADR-021 §3). */
+        withdrawn: boolean;
         attemptId: string;
         answeredAt: string; // ISO
         questionId: string;
@@ -105,8 +107,8 @@ export class GetUserStatsUseCase {
     const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
     // ADR-021: each attempt shows the revision it graded; two attempts of one
-    // question can differ.
-    const byBinding = await fetchQuestionsByBinding(
+    // question can differ. A question withdrawn since stays listed (§3).
+    const byBinding = await fetchOwnedQuestionsByBinding(
       this.questions,
       recentAttempts,
     );
@@ -121,6 +123,7 @@ export class GetUserStatsUseCase {
         question,
       ): UserStatsOutput['recentActivity'][number] => ({
         isAvailable: true,
+        withdrawn: question.status !== 'published',
         attemptId: attempt.id,
         answeredAt: attempt.answeredAt.toISOString(),
         questionId: attempt.questionId,

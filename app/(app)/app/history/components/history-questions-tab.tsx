@@ -516,9 +516,12 @@ export function HistoryQuestionsTab({
                           {bodyPreview}
                         </div>
                       ) : null}
+                      {/* Pattern Registry F-11: withdrawn since attempted. */}
                       <QuestionMetadata
                         row={row}
-                        middleLabel={row.difficulty}
+                        middleLabel={
+                          row.withdrawn ? 'Withdrawn' : row.difficulty
+                        }
                         middleLabelClassName="capitalize"
                       />
                     </div>

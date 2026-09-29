@@ -3,22 +3,17 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: the documentation guard's register audit is bounded. The debt register's update history moves to monthly files, and each register index and history file has a 256 KiB budget ([AGENTS.md](../../AGENTS.md#closing-and-archiving-documentation-records)).
-- **Why.**
-  - Hosted CI failed twice (#1214, #1216) on the documentation guard's lifecycle hook, which hit the 15 s hook timeout under coverage with no assertion failure.
-  - The hook parsed the debt index (444 KB, of which 247 KB was accumulated update stanzas) and the bug index (226 KB) twice each: once for links and once for the Latest count.
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part four (DEBT-484): History's attempted questions and the Dashboard's recent activity keep a withdrawn question the learner attempted. Each row links into its review and reads `Withdrawn` where the difficulty was. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-four-the-attempt-lists-keep-a-withdrawn-question--2026-09-29).
 - **What changes.**
-  - One parse per index. Records whose metadata prefix has no code fence, indented line or block quote skip the code-block parse.
-  - The debt and bug registers' earlier update stanzas move unchanged to `register-history-YYYY-MM.md` beside each index, linked from its **Update history** line. The standing terminal-close rule stays in each index.
-  - The guard fails when a register index or history file exceeds 256 KiB in UTF-8 bytes. The hook gets an explicit 30 s ceiling for loaded CI runners.
-  - AGENTS.md step 5 now moves a replaced Latest stanza to its month's history file.
-- **Proof.**
-  - The hook takes 2.2 s under coverage locally, down from 4.5 s. The debt index is now 201 KB.
-  - Every non-blank line of both registers survives the move; only titles, intros and the pointer lines are new.
-  - Red-first budget cases; eight mutations of the budget and the fast path each fail a case. The review of #1217 found that a block quote can hold indented code, and its case was red first.
-- **Previous increment.** #1216 (the part three follow-up) merged as `d5923b4a` with exact-head approval **5353408404** and no findings.
-  - Its CI hit the same timeout once; the cause is documented on #1216, and the job passed on its single re-run.
-  - Its promotion waits for this fix, so the promotion's CI runs with it.
+  - Both lists read each attempt's bound revision whatever the question's status.
+  - The owned read's request cache now pairs each result with its binding, so two attempts of one question at different revisions stay apart.
+- **Proof.** Two real-Postgres cases, red first against the published reads; use-case, helper, cache and view cases; four captures of the local production build with no overflow.
+- **Found.** axe reports colour-contrast failures on both pages that predate this change: `text-destructive` "Incorrect" at 3.5:1, and muted dates and percentages at 4.44–4.49:1. They are filed as their own bug.
+- **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
+- **Previous increments.** #1216 (the part three follow-up, `d5923b4a`) and #1217 (the bounded documentation audit, `2a1ee401`, approval **5354364444**) are promoted together through #1218 (`367047f4`).
+  - The promotion's one finding asked the audit to skip parsing an oversized file. It was declined, because the guard reports every finding in one run; the reasons are on #1218 and its thread is resolved.
+  - The promotion's proof was written into its body at 15:14:11Z, before the merge at 15:14:16Z.
+  - Release verified: main CI **36588655047** `test` **15:26:29Z**, the documentation suite passing with the fix; Ready **15:16:03.827Z**, held without alias until its check completed; production assigned **15:26:31.717Z**; matching trees (`4743b59b`); healthy production.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
 

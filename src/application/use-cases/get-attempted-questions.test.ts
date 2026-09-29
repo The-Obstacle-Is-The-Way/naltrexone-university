@@ -46,6 +46,49 @@ describe('GetAttemptedQuestionsUseCase', () => {
     expect(hard.rows).toEqual([]);
   });
 
+  // ADR-021 §3: the learner attempted it, so it stays listed and reviewable.
+  it('lists a question withdrawn since the attempt as available, marked withdrawn', async () => {
+    const withdrawn = createQuestion({
+      id: 'q1',
+      slug: 'withdrawn-question',
+      status: 'archived',
+      stemMd: 'Answered stem',
+    });
+    const published = createQuestion({ id: 'q2', slug: 'published-question' });
+    const questions = [withdrawn, published];
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository(
+        [
+          createAttempt({ userId: 'user-1', questionId: 'q1' }),
+          createAttempt({ userId: 'user-1', questionId: 'q2' }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
+      new FakeLogger(),
+    );
+
+    const { rows } = await useCase.execute({
+      userId: 'user-1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(rows).toHaveLength(2);
+    expect(rows).toContainEqual(
+      expect.objectContaining({
+        isAvailable: true,
+        questionId: 'q1',
+        slug: 'withdrawn-question',
+        stemMd: 'Answered stem',
+        withdrawn: true,
+      }),
+    );
+    expect(rows).toContainEqual(
+      expect.objectContaining({ questionId: 'q2', withdrawn: false }),
+    );
+  });
+
   it('returns empty rows when user has no attempts', async () => {
     const useCase = new GetAttemptedQuestionsUseCase(
       new FakeAttemptRepository([]),
@@ -99,6 +142,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: 'q1',
           isCorrect: false,
           sessionId: null,
@@ -111,6 +155,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
         },
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: 'q2',
           isCorrect: true,
           sessionId: null,
@@ -123,6 +168,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
         },
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: 'q3',
           isCorrect: true,
           sessionId: null,
@@ -311,6 +357,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: 'q1',
           sessionId: 'session-1',
           sessionMode: 'exam',
@@ -375,6 +422,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
     expect(result.rows[0]).toMatchObject({
       questionId: 'q1',
       isAvailable: true,
+      withdrawn: false,
     });
     expect(result.totalCount).toBe(0);
   });
@@ -425,6 +473,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: 'q1',
           slug: 'q-1',
           tagSlugs: ['opioids'],
