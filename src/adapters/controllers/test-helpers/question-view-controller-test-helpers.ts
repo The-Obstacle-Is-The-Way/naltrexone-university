@@ -8,8 +8,9 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import { GetPreviousAttemptUseCase } from '@/src/application/use-cases/get-previous-attempt';
 import { GetQuestionForViewUseCase } from '@/src/application/use-cases/get-question-for-view';
-import type { Attempt, User } from '@/src/domain/entities';
+import type { Attempt, PracticeSession, User } from '@/src/domain/entities';
 import {
   type createQuestion,
   createSubscription,
@@ -23,6 +24,7 @@ export function createQuestionViewControllerDeps(overrides?: {
   isEntitled?: boolean;
   question?: ReturnType<typeof createQuestion> | null;
   attempts?: Attempt[];
+  sessions?: PracticeSession[];
   logger?: FakeLogger;
   questionRepository?: QuestionRepository;
   getPreviousAttemptUseCase?: {
@@ -67,20 +69,20 @@ export function createQuestionViewControllerDeps(overrides?: {
     new FakeQuestionRepository(overrides?.question ? [overrides.question] : []);
   const logger = overrides?.logger ?? new FakeLogger();
 
+  const attemptRepository = new FakeAttemptRepository(
+    overrides?.attempts ?? [],
+  );
+  const sessionRepository = new FakePracticeSessionRepository(
+    overrides?.sessions ?? [],
+  );
   const getPreviousAttemptUseCase =
     overrides?.getPreviousAttemptUseCase ??
-    ({
-      execute: async () => {
-        throw new Error('getPreviousAttemptUseCase should not be called');
-      },
-    } satisfies {
-      execute: (input: {
-        userId: string;
-        questionId: string;
-        attemptId?: string;
-        sessionId?: string;
-      }) => Promise<unknown>;
-    });
+    new GetPreviousAttemptUseCase(
+      attemptRepository,
+      questionRepository,
+      logger,
+      sessionRepository,
+    );
 
   return {
     authGateway,
@@ -88,8 +90,8 @@ export function createQuestionViewControllerDeps(overrides?: {
     logger,
     getQuestionForViewUseCase: new GetQuestionForViewUseCase(
       questionRepository,
-      new FakeAttemptRepository(overrides?.attempts ?? []),
-      new FakePracticeSessionRepository([]),
+      attemptRepository,
+      sessionRepository,
     ),
     getPreviousAttemptUseCase,
     _fixtures: {

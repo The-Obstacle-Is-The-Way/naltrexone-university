@@ -369,21 +369,31 @@ The second slice covers the standalone question page in review mode, where Histo
 - **A latent gap, closed first.** In review mode the page took its stem and choices from `getQuestionBySlug`, which reads the question's current revision. It took the learner's selection, the correct choice and the explanations from `getPreviousAttempt`, which since part 3c-i reads the revision the learner answered. The two agree while each question has one revision; after phase 2b they could not. The page now loads the revision of the answer under review.
 - **`GetQuestionForViewUseCase`** (new).
   - Outside review, it returns the published question's current revision, as before.
-  - In review, it resolves the learner's own answer: the named attempt, matched by id and learner; an item of the learner's own finished session; or, when the review names neither, the learner's latest attempt. It returns that revision, marked `withdrawn` when the question is no longer published.
-  - A learner with no answer to the question sees only a published question, so a withdrawn question's content never reaches anyone who did not answer it. Another learner's attempt id resolves to nothing, because every read is scoped to the learner.
+  - In review, it resolves the learner's own item:
+    - the named attempt, matched by id and learner;
+    - for a named session, the learner's attempt in it, else the item of their finished session;
+    - when the review names neither, the learner's latest attempt.
+  - It returns that item's revision, marked `withdrawn` when the question is no longer published.
+  - A withdrawn question shows only for an item the learner attempted (ADR-021 §3: "Learners who never attempted a withdrawn question never see it"). An item left unanswered in a finished session shows its bound revision only while the question is published. A learner with no item sees only a published question. Another learner's ids resolve to nothing, because every read is scoped to the learner.
   - A new port method, `findIdBySlug`, finds a question's id whatever its status. It is used only to resolve the answer the use case then proves belongs to the learner.
-- **`getPreviousAttempt`** reads its bindings, all of them the learner's own, whatever the question's status, so a withdrawn question's previous attempt still hydrates. The single-binding published read that only it used is deleted.
+- **`getPreviousAttempt`** reads the learner's attempts whatever the question's status, so a withdrawn question's previous attempt still hydrates. Its reveal for an item left unanswered in a finished session gives nothing for a withdrawn question. The single-binding published read that only it used is deleted.
+- **Post-exam review corrected (review finding on #1214).**
+  - Part two made every item of a finished session reviewable once withdrawn, including an item the learner never answered. That breaks §3.
+  - A withdrawn item now stays on the unavailable row unless the learner attempted it. That use case already counts an answer recorded on the session item, so "attempted" there means an attempt or a recorded answer.
+  - A finished exam gives every item an attempt, answered or omitted, so post-exam review is unchanged for exams. The gap reached a session ended with items left unanswered.
 - **UI (Pattern Registry F-11).** In review mode the page shows the notice above the question and offers navigation only: Submit, Try Again, Bookmark, Report and Rating are hidden.
 - **Captures.** Two captures of the local production build, dark, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](./assets/debt-484/withdrawn-standalone-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-standalone-dark-390x844.png).
 - **Not yet.** The History, Dashboard and session-summary rows still show a withdrawn question as unavailable; the next slice makes them link here.
 - **Tests.**
-  - Eight real-Postgres cases, red first:
+  - Eleven real-Postgres cases, red first:
     - the three ways of naming the answer;
     - never shown to a learner who did not answer it, through another learner's attempt, or outside review;
     - a published question reviewed as the revision answered;
-    - a withdrawn question's previous attempt.
-  - Nineteen use-case cases over fakes, covering each way of naming the answer and six reviews that name no answer of the learner, for a withdrawn and for a published question.
-  - Controller cases: a withdrawn review, NOT_FOUND outside review, and a review naming both an attempt and a session rejected. The controller suite is split in two, one file per action, to stay under the 800-line limit.
+    - a withdrawn question's previous attempt;
+    - an item left unanswered in a finished session and withdrawn afterwards, which stays hidden from post-exam review, the standalone review and the reveal.
+  - Twenty-two use-case cases over fakes, covering each way of naming the answer, an unanswered item of a finished session, and six reviews that name no answer of the learner, each for a withdrawn and a published question.
+  - Unit cases for the reveal and post-exam review of a withdrawn item the learner left unanswered: nothing is revealed, the row stays unavailable, and no missing-question warning is logged.
+  - Controller cases: a withdrawn review by each way of naming the answer, NOT_FOUND outside review, and a review naming both an attempt and a session rejected. The controller deps now run the real `GetPreviousAttemptUseCase` over the same fakes. The controller suite is split in two, one file per action, to stay under the 800-line limit.
   - Load-logic cases for the review context, page-model browser cases for building it from the URL, and a view case for the notice and actions.
   - Break-it proofs:
     - dropping the context from the page model, never marking withdrawn in the view, and reading a question the learner never answered each fail their cases;

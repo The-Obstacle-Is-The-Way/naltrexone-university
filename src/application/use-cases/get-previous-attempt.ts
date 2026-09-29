@@ -115,8 +115,8 @@ export class GetPreviousAttemptUseCase {
       );
       if (!item) return null;
 
-      // ADR-021: the revision the item was bound to, whatever the question's
-      // status now; a withdrawn question stays reviewable by its learner (§3).
+      // ADR-021: the revision the item was bound to. The learner never
+      // attempted it, so a withdrawn question reveals nothing (§3).
       const question = await this.questions.findByIdForSession(item);
       if (!question) {
         this.logger.warn(
@@ -125,6 +125,7 @@ export class GetPreviousAttemptUseCase {
         );
         return null;
       }
+      if (question.status !== 'published') return null;
 
       const correctChoice = question.choices.find((c) => c.isCorrect);
       if (!correctChoice) {

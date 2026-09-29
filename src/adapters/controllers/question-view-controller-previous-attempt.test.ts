@@ -91,7 +91,16 @@ describe('question-view-controller', () => {
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
-      const deps = createQuestionViewControllerDeps({ isEntitled: false });
+      let executeCalled = false;
+      const deps = createQuestionViewControllerDeps({
+        isEntitled: false,
+        getPreviousAttemptUseCase: {
+          execute: async () => {
+            executeCalled = true;
+            return null;
+          },
+        },
+      });
 
       const result = await getPreviousAttempt(
         { questionId: validPreviousAttemptQuestionId },
@@ -102,6 +111,7 @@ describe('question-view-controller', () => {
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
+      expect(executeCalled).toBe(false);
     });
 
     it('passes attemptId to use case when provided', async () => {

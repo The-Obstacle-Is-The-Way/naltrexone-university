@@ -50,7 +50,9 @@ function answerOf(
   });
 }
 
-function sessionAnswering(
+// A session over the question; the learner's answer to it, if any, is an
+// attempt in that session.
+function sessionOver(
   question: Question,
   overrides: Partial<Omit<PracticeSession, 'questionStates'>> = {},
 ): PracticeSession {
@@ -152,9 +154,51 @@ describe('GetQuestionForViewUseCase', () => {
     });
   });
 
-  it('shows the revision of the learner’s item in a finished session', async () => {
+  it('shows the revision the learner answered in a finished session', async () => {
     const { current, answered } = revisions('archived');
-    const session = sessionAnswering(answered);
+    const session = sessionOver(answered);
+    const attempt = answerOf(answered, { practiceSessionId: session.id });
+
+    await expect(
+      view([current, answered], { attempts: [attempt], sessions: [session] })({
+        sessionId: session.id,
+      }),
+    ).resolves.toMatchObject({
+      question: { stemMd: 'Answered' },
+      withdrawn: true,
+    });
+  });
+
+  it('shows the revision the learner answered in a session still active', async () => {
+    const { current, answered } = revisions('archived');
+    const session = sessionOver(answered, { endedAt: null });
+    const attempt = answerOf(answered, { practiceSessionId: session.id });
+
+    await expect(
+      view([current, answered], { attempts: [attempt], sessions: [session] })({
+        sessionId: session.id,
+      }),
+    ).resolves.toMatchObject({
+      question: { stemMd: 'Answered' },
+      withdrawn: true,
+    });
+  });
+
+  // ADR-021 §3: the learner saw an unanswered item but never attempted it.
+  it('shows no withdrawn question for an item the learner left unanswered in a finished session', async () => {
+    const { current, answered } = revisions('archived');
+    const session = sessionOver(answered);
+
+    await expect(
+      view([current, answered], { sessions: [session] })({
+        sessionId: session.id,
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('shows an unanswered item of a finished session as its bound revision while the question is published', async () => {
+    const { current, answered } = revisions('published');
+    const session = sessionOver(answered);
 
     await expect(
       view([current, answered], { sessions: [session] })({
@@ -162,7 +206,7 @@ describe('GetQuestionForViewUseCase', () => {
       }),
     ).resolves.toMatchObject({
       question: { stemMd: 'Answered' },
-      withdrawn: true,
+      withdrawn: false,
     });
   });
 
@@ -194,21 +238,21 @@ describe('GetQuestionForViewUseCase', () => {
     [
       'an active session',
       (answered) => {
-        const session = sessionAnswering(answered, { endedAt: null });
+        const session = sessionOver(answered, { endedAt: null });
         return { sessions: [session], review: { sessionId: session.id } };
       },
     ],
     [
       'a finished session without the question',
       () => {
-        const session = sessionAnswering(createQuestion());
+        const session = sessionOver(createQuestion());
         return { sessions: [session], review: { sessionId: session.id } };
       },
     ],
     [
       'another learner’s finished session',
       (answered) => {
-        const session = sessionAnswering(answered, { userId: otherUserId });
+        const session = sessionOver(answered, { userId: otherUserId });
         return { sessions: [session], review: { sessionId: session.id } };
       },
     ],

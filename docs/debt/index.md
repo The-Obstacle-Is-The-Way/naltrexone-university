@@ -5,11 +5,12 @@
 
 **Latest** — 2026-09-29 UTC: ADR-021 phase 2a, fifth increment, part three (DEBT-484): the standalone review page keeps a withdrawn question for the learner who answered it, and in review mode shows the revision that was answered. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-fifth-increment-part-three-the-standalone-review-keeps-a-withdrawn-question--2026-09-29).
 - **What changes.**
-  - A new use case resolves the learner's own answer under review: the named attempt, the learner's finished session item, or their latest attempt. It returns that revision, marked withdrawn when the question is no longer published.
+  - A new use case resolves the learner's own answer under review: the named attempt, their attempt in a named session (else its item once the session is finished), or their latest attempt. It returns that revision, marked withdrawn when the question is no longer published.
   - A withdrawn question's content never reaches a learner who did not answer it.
   - This also closes a latent gap: the page's stem and choices came from the current revision, but its answer came from the revision that was answered.
   - The page shows the F-11 notice and offers navigation only.
-- **Proof.** Eight real-Postgres cases, red first, including three that the content never leaks; nineteen use-case cases over fakes; break-it proofs for the page model, the view and six use-case branches; two captures of the local production build with zero axe violations. The question fake now reads a bound revision under its question's status, as the adapter does.
+  - A withdrawn question shows only for an item the learner attempted. That corrects part two, which also showed a finished session's unanswered items once withdrawn (#1214 review).
+- **Proof.** Eleven real-Postgres cases, red first, including six that the content never leaks; twenty-two use-case cases over fakes; break-it proofs for the page model, the view and six use-case branches; two captures of the local production build with zero axe violations. The question fake now reads a bound revision under its question's status, as the adapter does.
 - **Open decision for the owner.** Scoring of an exam item withdrawn mid-session; see DEBT-484's part one.
 - **Previous increment.** #1212 (part two: post-exam review) merged as `fe578a68` with exact-head approval **5351508443** and no findings.
   - It is promoted through #1213 (`1b0ed206`), approved with no findings. The promotion's proof was written into its body at 11:23:19Z, before the merge at 11:23:23Z.

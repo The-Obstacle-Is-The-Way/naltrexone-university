@@ -269,3 +269,91 @@ describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
     });
   });
 });
+
+// A finished tutor session whose second item the learner never answered, and
+// which is withdrawn afterwards: the learner never attempted it (ADR-021 §3).
+async function finishWithUnansweredThenWithdraw() {
+  const answered = await createPublishedQuestion('answered');
+  const unanswered = await createPublishedQuestion('unanswered');
+  const user = await createUser(db, cleanup);
+  const session = await sessions.create({
+    userId: user.id,
+    mode: 'tutor',
+    paramsJson: {
+      count: 2,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [answered.id, unanswered.id],
+    },
+  });
+  const attempt = await attempts.insert({
+    userId: user.id,
+    questionId: answered.id,
+    practiceSessionId: session.id,
+    outcome: { kind: 'answered', selectedChoiceId: answered.correctChoiceId },
+    isCorrect: true,
+    timeSpentSeconds: 4,
+  });
+  await sessions.recordQuestionAnswer({
+    sessionId: session.id,
+    userId: user.id,
+    questionId: answered.id,
+    selectedChoiceId: answered.correctChoiceId,
+    isCorrect: true,
+    answeredAt: attempt.answeredAt,
+  });
+  await sessions.end(session.id, user.id);
+  await withdraw(unanswered.id);
+  return { answered, unanswered, user, session };
+}
+
+describe('ADR-021 §3: a withdrawn question the learner never attempted stays hidden', () => {
+  it('keeps it unavailable in completed-session feedback', async () => {
+    const { answered, unanswered, user, session } =
+      await finishWithUnansweredThenWithdraw();
+
+    const feedback = await new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      sessions,
+      new DrizzleQuestionRepository(db),
+      attempts,
+      new FakeLogger(),
+    ).execute({ userId: user.id, sessionId: session.id });
+
+    expect(feedback.rows).toEqual([
+      expect.objectContaining({ isAvailable: true, questionId: answered.id }),
+      { ...feedback.rows[1], isAvailable: false, questionId: unanswered.id },
+    ]);
+    expect(feedback.rows[1]).not.toHaveProperty('stemMd');
+  });
+
+  it('shows no standalone review of it by the session', async () => {
+    const { unanswered, user, session } =
+      await finishWithUnansweredThenWithdraw();
+
+    await expect(
+      questionForView().execute({
+        userId: user.id,
+        slug: unanswered.slug,
+        review: { sessionId: session.id },
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('reveals no answer to it for the session', async () => {
+    const { unanswered, user, session } =
+      await finishWithUnansweredThenWithdraw();
+
+    await expect(
+      new GetPreviousAttemptUseCase(
+        attempts,
+        new DrizzleQuestionRepository(db),
+        new FakeLogger(),
+        sessions,
+      ).execute({
+        userId: user.id,
+        questionId: unanswered.id,
+        sessionId: session.id,
+      }),
+    ).resolves.toBeNull();
+  });
+});

@@ -4,6 +4,7 @@ import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choi
 import {
   createAttempt,
   createChoice,
+  createPracticeSession,
   createQuestion,
   createUser,
 } from '@/src/domain/test-helpers';
@@ -185,32 +186,52 @@ describe('question-view-controller', () => {
       });
     });
 
-    it('returns a withdrawn question to the learner reviewing their own attempt, marked withdrawn (ADR-021 §3)', async () => {
-      const question = createQuestion({
-        slug: 'q-withdrawn',
-        status: 'archived',
-      });
-      const user = createUser();
-      const attempt = createAttempt({
-        userId: user.id,
-        questionId: question.id,
-      });
-      const deps = createQuestionViewControllerDeps({
-        question,
-        user,
-        attempts: [attempt],
-      });
+    // ADR-021 §3: each way of naming the learner's own answer under review.
+    it.each([
+      ['the attempt', 'attempt'],
+      ['the session', 'session'],
+      ['neither, for the latest attempt', 'latest'],
+    ] as const)(
+      'returns a withdrawn question to the learner reviewing their answer by %s, marked withdrawn',
+      async (_name, by) => {
+        const question = createQuestion({
+          slug: 'q-withdrawn',
+          status: 'archived',
+        });
+        const user = createUser();
+        const session = createPracticeSession({
+          userId: user.id,
+          questionIds: [question.id],
+          endedAt: new Date('2026-09-01T00:00:00Z'),
+        });
+        const attempt = createAttempt({
+          userId: user.id,
+          questionId: question.id,
+          practiceSessionId: session.id,
+        });
+        const deps = createQuestionViewControllerDeps({
+          question,
+          user,
+          attempts: [attempt],
+          sessions: [session],
+        });
+        const review = {
+          attempt: { attemptId: attempt.id },
+          session: { sessionId: session.id },
+          latest: {},
+        }[by];
 
-      const result = await getQuestionBySlug(
-        { slug: 'q-withdrawn', review: { attemptId: attempt.id } },
-        deps as never,
-      );
+        const result = await getQuestionBySlug(
+          { slug: 'q-withdrawn', review },
+          deps as never,
+        );
 
-      expect(result).toMatchObject({
-        ok: true,
-        data: { questionId: question.id, withdrawn: true },
-      });
-    });
+        expect(result).toMatchObject({
+          ok: true,
+          data: { questionId: question.id, withdrawn: true },
+        });
+      },
+    );
 
     it('returns NOT_FOUND for a withdrawn question outside review', async () => {
       const question = createQuestion({
