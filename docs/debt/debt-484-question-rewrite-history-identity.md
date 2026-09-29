@@ -363,6 +363,33 @@ Parts two and three ship as vertical slices, with the reads and the UI of a surf
   - A use-case case on the fakes, and component cases for the notice's placement and text, the hidden actions and the navigator.
   - Break-it proofs: marking nothing withdrawn, or reading only published questions, fails the use-case case.
 
+## Phase 2a, fifth increment, part three: the standalone review keeps a withdrawn question — 2026-09-29
+
+The second slice covers the standalone question page in review mode, where History, the Dashboard and the session summary send a learner to review an answer.
+- **A latent gap, closed first.** In review mode the page took its stem and choices from `getQuestionBySlug`, which reads the question's current revision. It took the learner's selection, the correct choice and the explanations from `getPreviousAttempt`, which since part 3c-i reads the revision the learner answered. The two agree while each question has one revision; after phase 2b they could not. The page now loads the revision of the answer under review.
+- **`GetQuestionForViewUseCase`** (new).
+  - Outside review, it returns the published question's current revision, as before.
+  - In review, it resolves the learner's own answer: the named attempt, matched by id and learner; an item of the learner's own finished session; or, when the review names neither, the learner's latest attempt. It returns that revision, marked `withdrawn` when the question is no longer published.
+  - A learner with no answer to the question sees only a published question, so a withdrawn question's content never reaches anyone who did not answer it. Another learner's attempt id resolves to nothing, because every read is scoped to the learner.
+  - A new port method, `findIdBySlug`, finds a question's id whatever its status. It is used only to resolve the answer the use case then proves belongs to the learner.
+- **`getPreviousAttempt`** reads its bindings, all of them the learner's own, whatever the question's status, so a withdrawn question's previous attempt still hydrates. The single-binding published read that only it used is deleted.
+- **UI (Pattern Registry F-11).** In review mode the page shows the notice above the question and offers navigation only: Submit, Try Again, Bookmark, Report and Rating are hidden.
+- **Captures.** Two captures of the local production build, dark, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](./assets/debt-484/withdrawn-standalone-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-standalone-dark-390x844.png).
+- **Not yet.** The History, Dashboard and session-summary rows still show a withdrawn question as unavailable; the next slice makes them link here.
+- **Tests.**
+  - Eight real-Postgres cases, red first:
+    - the three ways of naming the answer;
+    - never shown to a learner who did not answer it, through another learner's attempt, or outside review;
+    - a published question reviewed as the revision answered;
+    - a withdrawn question's previous attempt.
+  - Nineteen use-case cases over fakes, covering each way of naming the answer and six reviews that name no answer of the learner, for a withdrawn and for a published question.
+  - Controller cases: a withdrawn review, NOT_FOUND outside review, and a review naming both an attempt and a session rejected. The controller suite is split in two, one file per action, to stay under the 800-line limit.
+  - Load-logic cases for the review context, page-model browser cases for building it from the URL, and a view case for the notice and actions.
+  - Break-it proofs:
+    - dropping the context from the page model, never marking withdrawn in the view, and reading a question the learner never answered each fail their cases;
+    - six mutations of the use case each fail its unit cases: skipping the outside-review path, the attempt's question check, the finished-session check, the withdrawn flag, the latest-attempt fallback and the session item match.
+- **Fake fidelity.** `FakeQuestionRepository` returned a bound older revision under that revision's own status. The adapter reads status from the question, so a withdrawn question's older revision could read as published in the fake only. The fake now reads a bound revision under its question's status, pinned by a red-first fake case and recorded in the contract register.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

@@ -27,6 +27,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -66,6 +67,58 @@ describe('useQuestionPageModel (browser)', () => {
     expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
+    // ADR-021: a review loads the revision of the learner's own answer.
+    expect(getQuestionBySlug).toHaveBeenCalledWith({ slug: 'q-1', review: {} });
+  });
+
+  it('asks for the reviewed attempt’s revision when the review names one', async () => {
+    getQuestionBySlug.mockResolvedValue(
+      ok({
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        withdrawn: true,
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
+      }),
+    );
+    getPreviousAttempt.mockResolvedValue(ok(null));
+
+    const screen = await render(
+      <Probe mode="review" attemptId={QUESTION_PAGE_ATTEMPT_1_ID} />,
+    );
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    expect(getQuestionBySlug).toHaveBeenCalledWith({
+      slug: 'q-1',
+      review: { attemptId: QUESTION_PAGE_ATTEMPT_1_ID },
+    });
+  });
+
+  it('asks for the published question outside review', async () => {
+    getQuestionBySlug.mockResolvedValue(
+      ok({
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
+        slug: 'q-1',
+        stemMd: 'Stem',
+        difficulty: 'easy',
+        withdrawn: false,
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
+      }),
+    );
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    expect(getQuestionBySlug).toHaveBeenCalledWith({ slug: 'q-1' });
   });
 
   it('starts in loading-review state and clears it when previous attempt resolves', async () => {
@@ -75,6 +128,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -138,6 +192,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -241,6 +296,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },

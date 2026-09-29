@@ -115,8 +115,9 @@ export class GetPreviousAttemptUseCase {
       );
       if (!item) return null;
 
-      // ADR-021: the revision the item was bound to.
-      const question = await this.questions.findPublishedByBinding(item);
+      // ADR-021: the revision the item was bound to, whatever the question's
+      // status now; a withdrawn question stays reviewable by its learner (§3).
+      const question = await this.questions.findByIdForSession(item);
       if (!question) {
         this.logger.warn(
           { questionId: input.questionId, sessionId: input.sessionId },
@@ -171,7 +172,7 @@ export class GetPreviousAttemptUseCase {
       const sessionMode = attemptSession?.mode ?? null;
 
       // ADR-021: the revision the attempt graded.
-      const question = await this.questions.findPublishedByBinding(attempt);
+      const question = await this.questions.findByIdForSession(attempt);
 
       if (!question) {
         this.logger.warn(
@@ -206,7 +207,7 @@ export class GetPreviousAttemptUseCase {
       };
     }
 
-    const question = await this.questions.findPublishedByBinding(attempt);
+    const question = await this.questions.findByIdForSession(attempt);
 
     if (!question) {
       this.logger.warn(

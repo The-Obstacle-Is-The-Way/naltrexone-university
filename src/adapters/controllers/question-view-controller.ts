@@ -6,11 +6,12 @@ import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import type { QuestionRepository } from '@/src/application/ports/repositories';
 import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
 import type {
   GetPreviousAttemptInput,
   GetPreviousAttemptOutput,
+  GetQuestionForViewInput,
+  GetQuestionForViewOutput,
 } from '@/src/application/use-cases';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import { createAction } from './create-action';
@@ -22,8 +23,26 @@ const MAX_SLUG_LENGTH = 255;
 const GetQuestionBySlugInputSchema = z
   .object({
     slug: z.string().min(1).max(MAX_SLUG_LENGTH),
+    // A review of the learner's own answer: its attempt or session, or neither
+    // for their latest attempt (ADR-021 §3).
+    review: z
+      .object({
+        attemptId: zUuid.optional(),
+        sessionId: zUuid.optional(),
+      })
+      .strict()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((input, ctx) => {
+    if (input.review?.attemptId && input.review.sessionId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['review', 'attemptId'],
+        message: 'Provide either attemptId or sessionId, not both',
+      });
+    }
+  });
 
 export type GetQuestionBySlugOutput = {
   questionId: string;
@@ -35,13 +54,19 @@ export type GetQuestionBySlugOutput = {
     label: string;
     textMd: string;
   }>;
+  /** Withdrawn after the learner answered it (Pattern Registry F-11). */
+  withdrawn: boolean;
 };
 
 export type QuestionViewControllerDeps = {
   authGateway: AuthGateway;
   logger: Logger;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-  questionRepository: QuestionRepository;
+  getQuestionForViewUseCase: {
+    execute: (
+      input: GetQuestionForViewInput,
+    ) => Promise<GetQuestionForViewOutput>;
+  };
   getPreviousAttemptUseCase: {
     execute: (
       input: GetPreviousAttemptInput,
@@ -80,10 +105,26 @@ export const getQuestionBySlug = createAction({
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
 
-    const question = await d.questionRepository.findPublishedBySlug(input.slug);
-    if (!question) {
+    const view = await d.getQuestionForViewUseCase.execute({
+      userId,
+      slug: input.slug,
+      ...(input.review
+        ? {
+            review: {
+              ...(input.review.attemptId
+                ? { attemptId: input.review.attemptId }
+                : {}),
+              ...(input.review.sessionId
+                ? { sessionId: input.review.sessionId }
+                : {}),
+            },
+          }
+        : {}),
+    });
+    if (!view) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
+    const { question } = view;
 
     return {
       questionId: question.id,
@@ -95,6 +136,7 @@ export const getQuestionBySlug = createAction({
         label: choice.displayLabel,
         textMd: choice.textMd,
       })),
+      withdrawn: view.withdrawn,
     };
   },
 });

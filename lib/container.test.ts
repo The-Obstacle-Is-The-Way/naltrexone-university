@@ -50,6 +50,7 @@ import {
   GetNextQuestionUseCase,
   GetPracticeSessionSummaryUseCase,
   GetPreviousAttemptUseCase,
+  GetQuestionForViewUseCase,
   GetQuestionRatingUseCase,
   GetUserStatsUseCase,
   PruneRenewalConsentsUseCase,
@@ -394,8 +395,8 @@ describe('container factories', () => {
     expect(questionViewDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(questionViewDeps.questionRepository).toBeInstanceOf(
-      DrizzleQuestionRepository,
+    expect(questionViewDeps.getQuestionForViewUseCase).toBeInstanceOf(
+      GetQuestionForViewUseCase,
     );
     expect(questionViewDeps.getPreviousAttemptUseCase).toBeInstanceOf(
       GetPreviousAttemptUseCase,

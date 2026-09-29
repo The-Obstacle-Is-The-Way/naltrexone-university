@@ -297,6 +297,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [
             { id: 'c1', label: 'A', textMd: 'Choice A' },
             { id: 'c2', label: 'B', textMd: 'Choice B' },
@@ -343,6 +344,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [
             { id: 'c1', label: 'A', textMd: 'Choice A' },
             { id: 'c2', label: 'B', textMd: 'Choice B' },
@@ -385,6 +387,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [
             { id: 'c1', label: 'A', textMd: 'Choice A' },
             { id: 'c2', label: 'B', textMd: 'Choice B' },

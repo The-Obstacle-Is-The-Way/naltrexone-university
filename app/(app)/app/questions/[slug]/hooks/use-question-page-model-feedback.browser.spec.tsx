@@ -24,6 +24,7 @@ describe('useQuestionPageModel feedback wiring (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -80,6 +81,7 @@ describe('useQuestionPageModel feedback wiring (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
+        withdrawn: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],

@@ -7,7 +7,10 @@ import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/dr
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from '@/src/application/use-cases/get-completed-session-questions-with-feedback';
+import { GetPreviousAttemptUseCase } from '@/src/application/use-cases/get-previous-attempt';
+import { GetQuestionForViewUseCase } from '@/src/application/use-cases/get-question-for-view';
 import {
+  addCurrentRevision,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -116,5 +119,153 @@ describe('ADR-021 §3: a withdrawn question stays reviewable by the learner who 
         explanationMd: '# Explanation',
       }),
     ]);
+  });
+});
+
+function questionForView() {
+  return new GetQuestionForViewUseCase(
+    new DrizzleQuestionRepository(db),
+    attempts,
+    sessions,
+  );
+}
+
+// A learner's answer outside a session, to a question later withdrawn.
+async function answerThenWithdraw(label: string) {
+  const question = await createPublishedQuestion(label);
+  const user = await createUser(db, cleanup);
+  const attempt = await attempts.insert({
+    userId: user.id,
+    questionId: question.id,
+    practiceSessionId: null,
+    outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
+    isCorrect: true,
+    timeSpentSeconds: 5,
+  });
+  await withdraw(question.id);
+  return { question, user, attempt };
+}
+
+describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
+  it('shows it to the learner by the attempt they are reviewing, marked withdrawn', async () => {
+    const { question, user, attempt } = await answerThenWithdraw('by-attempt');
+
+    const view = await questionForView().execute({
+      userId: user.id,
+      slug: question.slug,
+      review: { attemptId: attempt.id },
+    });
+
+    expect(view).toMatchObject({
+      withdrawn: true,
+      question: { id: question.id, stemMd: '# Stem' },
+    });
+  });
+
+  it('shows it by the learner’s latest attempt when the review names none', async () => {
+    const { question, user } = await answerThenWithdraw('latest');
+
+    const view = await questionForView().execute({
+      userId: user.id,
+      slug: question.slug,
+      review: {},
+    });
+
+    expect(view).toMatchObject({ withdrawn: true });
+  });
+
+  it('shows it by the learner’s finished session item', async () => {
+    const { withdrawn, user, session } = await createCompletedSession();
+    await withdraw(withdrawn.id);
+
+    const view = await questionForView().execute({
+      userId: user.id,
+      slug: withdrawn.slug,
+      review: { sessionId: session.id },
+    });
+
+    expect(view).toMatchObject({ withdrawn: true });
+  });
+
+  it('never shows it to a learner who did not answer it', async () => {
+    const { question } = await answerThenWithdraw('stranger');
+    const stranger = await createUser(db, cleanup);
+
+    await expect(
+      questionForView().execute({
+        userId: stranger.id,
+        slug: question.slug,
+        review: {},
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('never shows it through another learner’s attempt', async () => {
+    const { question, attempt } = await answerThenWithdraw('borrowed');
+    const stranger = await createUser(db, cleanup);
+
+    await expect(
+      questionForView().execute({
+        userId: stranger.id,
+        slug: question.slug,
+        review: { attemptId: attempt.id },
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('never shows it outside review', async () => {
+    const { question, user } = await answerThenWithdraw('practice');
+
+    await expect(
+      questionForView().execute({ userId: user.id, slug: question.slug }),
+    ).resolves.toBeNull();
+  });
+
+  it('reviews a published question as the revision the learner answered', async () => {
+    const question = await createPublishedQuestion('revised');
+    const user = await createUser(db, cleanup);
+    const attempt = await attempts.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+    await addCurrentRevision(db, question.id);
+
+    const view = await questionForView().execute({
+      userId: user.id,
+      slug: question.slug,
+      review: { attemptId: attempt.id },
+    });
+
+    expect(view).toMatchObject({
+      withdrawn: false,
+      question: { stemMd: '# Stem' },
+    });
+    expect(view?.question.choices.map((choice) => choice.id).sort()).toEqual(
+      [question.correctChoiceId, question.incorrectChoiceId].sort(),
+    );
+  });
+
+  it('gives the previous attempt of a withdrawn question to the learner who answered it', async () => {
+    const { question, user, attempt } = await answerThenWithdraw('previous');
+
+    const previous = await new GetPreviousAttemptUseCase(
+      attempts,
+      new DrizzleQuestionRepository(db),
+      new FakeLogger(),
+      sessions,
+    ).execute({
+      userId: user.id,
+      questionId: question.id,
+      attemptId: attempt.id,
+    });
+
+    expect(previous).toMatchObject({
+      kind: 'attempt',
+      correctChoiceId: question.correctChoiceId,
+    });
   });
 });

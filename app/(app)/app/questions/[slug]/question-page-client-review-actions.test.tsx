@@ -243,6 +243,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -269,6 +270,54 @@ describe('QuestionView', () => {
     ]);
   });
 
+  it('marks a withdrawn question with the F-11 notice and offers only navigation (ADR-021 §3)', () => {
+    const html = renderToStaticMarkup(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        origin="history"
+        sessionId={fixtureSession123Id}
+        reviewSessionMode="tutor"
+        question={{
+          questionId: fixtureQuestion2Id,
+          slug: 'q2',
+          stemMd: 'Question stem',
+          difficulty: 'easy',
+          withdrawn: true,
+          choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+        }}
+        sessionNavigation={sharedSessionNavigation}
+        isBookmarkHydrated={true}
+        bookmarkStatus="idle"
+        submitResult={{
+          attemptId: fixtureAttempt1Id,
+          isCorrect: false,
+          correctChoiceId: 'c1',
+          explanationMd: 'Explanation',
+          referenceMd: null,
+          choiceExplanations: [],
+        }}
+      />,
+    );
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const notice = Array.from(doc.querySelectorAll('[role="status"]')).find(
+      (element) =>
+        element.textContent?.includes('This question has been withdrawn.'),
+    );
+    expect(notice?.textContent).toContain(
+      'You can still review your answer. It no longer appears in new practice.',
+    );
+    expect(getBottomActionLabels(doc)).toEqual([
+      'Previous',
+      'Next',
+      'Back to History',
+    ]);
+    expect(
+      doc.querySelector('[data-testid="question-rating-footer"]'),
+    ).toBeNull();
+  });
+
   it('suppresses reattempt in answered exam-session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
@@ -282,6 +331,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -318,6 +368,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -355,6 +406,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -396,6 +448,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -441,6 +494,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -478,6 +532,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -510,6 +565,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
+          withdrawn: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{

@@ -190,12 +190,16 @@ export function QuestionView(props: QuestionViewProps) {
   const reviewHydrationState = props.reviewHydrationState ?? null;
   const reviewSessionMode = props.reviewSessionMode ?? null;
   const isReviewMode = props.mode === 'review';
+  // Pattern Registry F-11: a question withdrawn after the learner answered it
+  // stays reviewable, marked, with navigation only (ADR-021 §3).
+  const isWithdrawn = isReviewMode && props.question?.withdrawn === true;
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const isReviewHydrationError =
     isReviewMode && reviewHydrationState === 'hydration_error';
   const shouldShowReattempt =
     (props.submitResult !== null || isSessionReviewUnansweredReveal) &&
-    reviewSessionMode !== 'exam';
+    reviewSessionMode !== 'exam' &&
+    !isWithdrawn;
   const onAnswerAsNew = props.onAnswerAsNew ?? (() => undefined);
   const correctChoiceId =
     sessionUnansweredReveal?.correctChoiceId ??
@@ -371,13 +375,28 @@ export function QuestionView(props: QuestionViewProps) {
           onSelectChoice={props.onSelectChoice}
           feedback={questionSurfaceFeedback}
           beforeQuestionCard={
-            isSessionReviewUnansweredReveal ? (
-              <Card
-                className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
-                role="status"
-              >
-                You did not answer this question during this session.
-              </Card>
+            isWithdrawn || isSessionReviewUnansweredReveal ? (
+              <>
+                {isWithdrawn ? (
+                  <Card role="status" className="gap-0 p-4 text-sm">
+                    <p className="font-medium text-foreground">
+                      This question has been withdrawn.
+                    </p>
+                    <p className="text-muted-foreground">
+                      You can still review your answer. It no longer appears in
+                      new practice.
+                    </p>
+                  </Card>
+                ) : null}
+                {isSessionReviewUnansweredReveal ? (
+                  <Card
+                    className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm"
+                    role="status"
+                  >
+                    You did not answer this question during this session.
+                  </Card>
+                ) : null}
+              </>
             ) : null
           }
         />
@@ -411,7 +430,9 @@ export function QuestionView(props: QuestionViewProps) {
             )
           ) : null}
 
-          {!props.submitResult && !isSessionReviewUnansweredReveal ? (
+          {!props.submitResult &&
+          !isSessionReviewUnansweredReveal &&
+          !isWithdrawn ? (
             <Button
               type="button"
               className="rounded-full"
@@ -438,7 +459,10 @@ export function QuestionView(props: QuestionViewProps) {
             </Button>
           ) : null}
 
-          {isReviewMode && props.question && isBookmarkHydrated ? (
+          {isReviewMode &&
+          props.question &&
+          isBookmarkHydrated &&
+          !isWithdrawn ? (
             <Button
               type="button"
               variant="outline"
@@ -451,7 +475,10 @@ export function QuestionView(props: QuestionViewProps) {
             </Button>
           ) : null}
 
-          {isReviewMode && props.question && questionFeedback ? (
+          {isReviewMode &&
+          props.question &&
+          questionFeedback &&
+          !isWithdrawn ? (
             <QuestionReportDialog
               open={questionFeedback.isReportOpen}
               onOpenChange={questionFeedback.openReport}
@@ -495,7 +522,8 @@ export function QuestionView(props: QuestionViewProps) {
       {shouldRenderBottomActionBar &&
       isReviewMode &&
       props.question &&
-      questionFeedback ? (
+      questionFeedback &&
+      !isWithdrawn ? (
         <QuestionRatingFooter
           rating={questionFeedback.rating}
           feedbackStatus={questionFeedback.feedbackStatus}
