@@ -331,6 +331,7 @@ Until phase 2b, a content correction still refreshes revision 1 in place. #951's
   - It now reads the question rows `FOR SHARE`. Session creations still run concurrently, but each waits for, or blocks, a seed transaction's `FOR UPDATE`.
   - A Postgres case holding the seed's lock shows creation waiting; it was red first.
   - **Residual, recorded.** Grading an answer outside a session reads the question before the attempt is written, so a seed refresh landing in that window could bind the attempt to refreshed content. That is the pre-existing #951 race class, not introduced here. Phase 2b removes it: revisions become immutable, so nothing is refreshed in place.
+- **Promotion #1209's finding, fixed in the next feature PR.** The skipped path also mirrors the legacy row into revision 1, so a revision left stale by another writer would be refreshed under an incomplete session. The guard already deferred it, but no case pinned it. One now does: the legacy row matches the seed file, the revision is stale, and an incomplete session binds it; the result is `skipped: 0` and a deferral, with nothing changed. Bypassing the guard on that path fails the case.
 
 ## Phase 2a, fifth increment, part one: the withdrawal notice pattern — 2026-09-29
 
