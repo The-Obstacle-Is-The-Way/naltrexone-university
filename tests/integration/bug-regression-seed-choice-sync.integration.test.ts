@@ -520,6 +520,7 @@ describe('BUG-266 seed choice sync guard', () => {
         inserted: 0,
         updated: 1,
         skipped: 0,
+        deferred: [],
       });
 
       const labels = await db
@@ -610,7 +611,7 @@ describe('BUG-281 seed answer-key change guard', () => {
           }),
         },
       ]),
-    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0, deferred: [] });
 
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -639,7 +640,7 @@ describe('BUG-281 seed answer-key change guard', () => {
           }),
         },
       ]),
-    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0, deferred: [] });
 
     await expect(readCorrectLabels(question.id)).resolves.toEqual(['A']);
   });
@@ -752,7 +753,7 @@ describe('BUG-270 seed choice reorder', () => {
           raw: buildSeedQuestionWithInsertedChoice(slug),
         },
       ]),
-    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0, deferred: [] });
 
     const choices = await db
       .select({

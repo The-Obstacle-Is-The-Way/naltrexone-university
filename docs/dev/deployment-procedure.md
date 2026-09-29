@@ -124,6 +124,15 @@ import, or rerun only with an explicit operator override:
 The override logs the affected question slug, changed labels, and graded row
 counts.
 
+A reseed also waits for learners mid-session (ADR-021). It will not change a
+question's content while an incomplete practice session binds the question's
+revision, even when no answer has been graded yet. That question stays unchanged,
+every other question is applied, and the seed then exits non-zero:
+`Seed deferred N questions because incomplete practice sessions bind their
+current revision: <slug> (<k> sessions) ... Rerun the seed after those sessions
+end.` Rerun it later; no override exists, because changing content under a
+learner is never correct.
+
 ---
 
 ## 3. Data-Affecting Migration Pattern

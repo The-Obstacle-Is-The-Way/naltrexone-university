@@ -5,6 +5,7 @@ import * as schema from '../db/schema';
 import { readSeedQuestionFiles } from './seed/file-reader';
 import { archivePlaceholderQuestions } from './seed/placeholder-archiver';
 import { syncQuestionsFromFiles } from './seed/question-syncer';
+import { summarizeSeedSync } from './seed/seed-summary';
 
 export async function runSeed(databaseUrl: string): Promise<void> {
   const includePlaceholders = process.env.SEED_INCLUDE_PLACEHOLDERS === 'true';
@@ -14,10 +15,12 @@ export async function runSeed(databaseUrl: string): Promise<void> {
   try {
     const files = await readSeedQuestionFiles(includePlaceholders);
     const counts = await syncQuestionsFromFiles(db, files);
-
-    console.info(
-      `Seed complete: inserted=${counts.inserted} updated=${counts.updated} skipped=${counts.skipped} (files=${files.length})`,
+    const { summary, deferralFailure } = summarizeSeedSync(
+      counts,
+      files.length,
     );
+
+    console.info(summary);
     console.info(`Content root: ${path.resolve('content/questions')}`);
 
     if (!includePlaceholders) {
@@ -26,6 +29,8 @@ export async function runSeed(databaseUrl: string): Promise<void> {
         `Archived placeholders: ${archivedCount} (slug LIKE "placeholder-%")`,
       );
     }
+
+    if (deferralFailure) throw new Error(deferralFailure);
   } finally {
     await sql.end({ timeout: 5 });
   }
