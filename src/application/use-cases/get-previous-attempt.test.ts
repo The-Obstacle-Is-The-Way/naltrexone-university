@@ -14,6 +14,58 @@ import { omittedOutcome } from '@/src/domain/value-objects';
 import { GetPreviousAttemptUseCase } from './get-previous-attempt';
 
 describe('GetPreviousAttemptUseCase', () => {
+  it('shows the revision the attempt graded (ADR-021)', async () => {
+    const current = createQuestion({
+      id: 'q1',
+      explanationMd: 'Current explanation',
+      choices: [
+        createChoice({
+          id: 'c3',
+          questionId: 'q1',
+          label: 'C',
+          isCorrect: true,
+        }),
+      ],
+    });
+    const graded = createQuestion({
+      id: 'q1',
+      explanationMd: 'Graded explanation',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId: 'q1',
+          label: 'A',
+          isCorrect: false,
+        }),
+        createChoice({
+          id: 'c2',
+          questionId: 'q1',
+          label: 'B',
+          isCorrect: true,
+        }),
+      ],
+    });
+    const attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q1',
+      questionRevisionId: graded.revisionId,
+      selectedChoiceId: 'c1',
+    });
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([attempt]),
+      new FakeQuestionRepository([current, graded]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', questionId: 'q1' }),
+    ).resolves.toMatchObject({
+      selectedChoiceId: 'c1',
+      correctChoiceId: 'c2',
+      explanationMd: 'Graded explanation',
+    });
+  });
+
   it('returns previous attempt data with correct choice, explanation, and choice explanations', async () => {
     const attempt = createAttempt({
       id: 'attempt-1',

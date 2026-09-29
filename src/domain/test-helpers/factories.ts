@@ -58,6 +58,7 @@ export function createAttempt(
     id: overrides.id ?? createUuid(),
     userId: overrides.userId ?? createUuid(),
     questionId,
+    questionRevisionId: overrides.questionRevisionId ?? null,
     practiceSessionId: overrides.practiceSessionId ?? null,
     outcome: overrides.outcome ?? answeredOutcome(selectedChoiceId),
     isCorrect: overrides.isCorrect ?? false,

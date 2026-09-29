@@ -6,11 +6,13 @@ const attemptId = crypto.randomUUID();
 const userId = crypto.randomUUID();
 const questionId = crypto.randomUUID();
 const selectedChoiceId = crypto.randomUUID();
+const questionRevisionId = crypto.randomUUID();
 
 const baseRow = {
   id: attemptId,
   userId,
   questionId,
+  questionRevisionId,
   practiceSessionId: null,
   selectedChoiceId,
   isCorrect: true,
@@ -19,6 +21,12 @@ const baseRow = {
 };
 
 describe('attempt row mappers', () => {
+  it('carries the revision the attempt graded', () => {
+    expect(toAttemptDomain(baseRow).questionRevisionId).toBe(
+      questionRevisionId,
+    );
+  });
+
   it('maps omitted rows to omitted outcomes', () => {
     expect(
       toAttemptDomain({

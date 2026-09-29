@@ -6,7 +6,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import { fetchSessionQuestionsAsBound } from '@/src/application/shared/fetch-session-questions-as-bound';
 import {
   createPracticeSessionStateMap,
   requirePracticeSessionQuestionState,
@@ -128,9 +128,9 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       );
     }
 
-    const questionById = await fetchQuestionsById(
+    const questionById = await fetchSessionQuestionsAsBound(
       this.questions,
-      session.questionIds,
+      session,
     );
     const attempts = await this.attempts.findBySessionId(
       input.sessionId,

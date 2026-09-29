@@ -5,7 +5,7 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import { fetchSessionQuestionsAsBound } from '@/src/application/shared/fetch-session-questions-as-bound';
 import {
   createPracticeSessionStateMap,
   getEffectiveSelectedChoiceId,
@@ -73,9 +73,9 @@ export class GetPracticeSessionReviewUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
-    const questionById = await fetchQuestionsById(
+    const questionById = await fetchSessionQuestionsAsBound(
       this.questions,
-      session.questionIds,
+      session,
     );
     const shouldShowCorrectness = sessionShouldShowExplanation(session);
     const stateByQuestionId = createPracticeSessionStateMap(session);

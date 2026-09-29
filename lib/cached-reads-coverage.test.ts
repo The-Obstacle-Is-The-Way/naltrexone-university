@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import type { SessionItemBinding } from '@/src/application/ports/repositories';
+import type { QuestionRevisionBinding } from '@/src/application/ports/repositories';
 import {
   FakeQuestionRepository,
   FakeTagRepository,
 } from '@/src/application/test-helpers/fakes';
 import { createQuestion, createTag } from '@/src/domain/test-helpers';
 
-function unbound(questionId: string): SessionItemBinding {
+function unbound(questionId: string): QuestionRevisionBinding {
   return { questionId, questionRevisionId: null };
 }
 
@@ -42,7 +42,7 @@ describe('cached-reads coverage seam', () => {
     class CountingQuestionRepository extends FakeQuestionRepository {
       findByIdForSessionCallCount = 0;
 
-      override async findByIdForSession(item: SessionItemBinding) {
+      override async findByIdForSession(item: QuestionRevisionBinding) {
         this.findByIdForSessionCallCount += 1;
         return super.findByIdForSession(item);
       }
@@ -63,6 +63,31 @@ describe('cached-reads coverage seam', () => {
     expect(rawRepository.findByIdForSessionCallCount).toBe(1);
     expect(first?.status).toBe('archived');
     expect(second?.status).toBe('archived');
+  });
+
+  it('keeps two review bindings of one question apart and deduplicates a repeated read', async () => {
+    const current = createQuestion({ id: 'question-1', stemMd: 'Current' });
+    const older = createQuestion({ id: 'question-1', stemMd: 'Older' });
+    const rawRepository = new FakeQuestionRepository([current, older]);
+    const repository = createRequestCachedQuestionRepository(rawRepository);
+    const olderBinding = {
+      questionId: 'question-1',
+      questionRevisionId: older.revisionId,
+    };
+    const bindings = [unbound('question-1'), olderBinding];
+
+    const first = await repository.findPublishedByBindings(bindings);
+    const second = await repository.findPublishedByBindings(bindings);
+    const single = await repository.findPublishedByBinding(olderBinding);
+
+    expect(first.map((question) => question.stemMd)).toEqual([
+      'Current',
+      'Older',
+    ]);
+    expect(second).toBe(first);
+    expect(rawRepository.findPublishedByBindingsCalls).toHaveLength(1);
+    expect(single?.stemMd).toBe('Older');
+    await expect(repository.findPublishedByBindings([])).resolves.toEqual([]);
   });
 
   it('never serves one revision of a session item for another', async () => {
@@ -92,7 +117,9 @@ describe('cached-reads coverage seam', () => {
     class CountingQuestionRepository extends FakeQuestionRepository {
       findByIdsForSessionCallCount = 0;
 
-      override async findByIdsForSession(items: readonly SessionItemBinding[]) {
+      override async findByIdsForSession(
+        items: readonly QuestionRevisionBinding[],
+      ) {
         this.findByIdsForSessionCallCount += 1;
         return super.findByIdsForSession(items);
       }

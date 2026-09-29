@@ -9,6 +9,7 @@ type AttemptRowBase = {
   id: string;
   userId: string;
   questionId: string;
+  questionRevisionId: string | null;
   practiceSessionId: string | null;
   selectedChoiceId: string | null;
   isOmitted?: boolean;
@@ -76,6 +77,7 @@ export function toAttemptDomain(row: AttemptRowBase): Attempt {
       id: row.id,
       userId: row.userId,
       questionId: row.questionId,
+      questionRevisionId: row.questionRevisionId,
       practiceSessionId: row.practiceSessionId ?? null,
       outcome,
       isCorrect: row.isCorrect,
