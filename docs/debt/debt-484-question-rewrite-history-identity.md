@@ -476,7 +476,9 @@ What changes:
   - The action bar offers navigation only: `Previous`; `Next` when a later question is available; otherwise the session's end action, `Review & Submit` or `End session`.
   - `Mark for review` is hidden for the item, and the navigator marks it current.
   - The registry now records these actions.
-- **A question withdrawn while open.** A tutor answer to it comes back `NOT_FOUND`. The session flow now reloads the item, which shows the notice instead of an error beside the stale question.
+- **A question withdrawn while open.** A tutor answer to it comes back `NOT_FOUND`. The session flow now asks for the item by id. Only if it comes back withdrawn does the page load it and show the notice.
+  - A not-found answer for any other reason keeps its error, untouched: a missing choice, a missing session, or a failed request.
+  - The review of #1224 found that the first version reloaded on every `NOT_FOUND`, which would have cleared those errors. The fix was red first.
 - **Scoring is unchanged.** It is the owner's open decision (part one):
   - an exam draft for a withdrawn item is still saved and graded at finalize;
   - an undrafted one is still finalized as omitted;

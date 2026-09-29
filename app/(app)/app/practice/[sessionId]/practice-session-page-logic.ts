@@ -152,6 +152,33 @@ export function createLoadNextQuestionAction(input: {
   };
 }
 
+/** What a session needs to reload its current item (ADR-021 §3). */
+export type SessionQuestionReload = Omit<
+  Parameters<typeof loadNextQuestion>[0],
+  'questionId' | 'fromIndex'
+>;
+
+// ADR-021 §3: a not-found answer may mean the question was withdrawn while it
+// was open. Ask for the item first; only if it comes back withdrawn does the
+// page load it, so any other not-found answer keeps its error untouched.
+async function reloadWithdrawnQuestion(
+  reload: SessionQuestionReload,
+  questionId: string,
+): Promise<boolean> {
+  let probe: Awaited<ReturnType<SessionQuestionReload['getNextQuestionFn']>>;
+  try {
+    probe = await reload.getNextQuestionFn({
+      sessionId: reload.sessionId,
+      questionId,
+    });
+  } catch {
+    return false;
+  }
+  if (!probe.ok || !probe.data || !('withdrawn' in probe.data)) return false;
+  await loadNextQuestion({ ...reload, questionId });
+  return true;
+}
+
 export async function submitAnswerForQuestion(input: {
   sessionId: string;
   question: NextQuestion | null;
@@ -166,15 +193,18 @@ export async function submitAnswerForQuestion(input: {
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
-  recoverQuestionNotFound?: (() => Promise<void>) | undefined;
+  /** Reloads the item after a not-found answer (ADR-021 §3). */
+  reload?: SessionQuestionReload | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   if (!input.question || !input.selectedChoiceId) return;
 
+  const fingerprintQuestionId = input.question.questionId;
+  const reload = input.reload;
   const fingerprint = submitAnswerRequestFingerprint({
-    questionId: input.question.questionId,
+    questionId: fingerprintQuestionId,
     selectedChoiceId: input.selectedChoiceId,
     sessionId: input.sessionId,
   });
@@ -218,7 +248,9 @@ export async function submitAnswerForQuestion(input: {
       );
     },
     recoverEndedSessionConflict: input.recoverEndedSessionConflict,
-    recoverQuestionNotFound: input.recoverQuestionNotFound,
+    recoverQuestionNotFound: reload
+      ? () => reloadWithdrawnQuestion(reload, fingerprintQuestionId)
+      : undefined,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,

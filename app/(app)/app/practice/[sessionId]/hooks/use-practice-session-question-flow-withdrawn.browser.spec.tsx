@@ -16,6 +16,10 @@ const notFound = {
   ok: false as const,
   error: { code: 'NOT_FOUND' as const, message: 'Question not found' },
 };
+const choiceNotFound = {
+  ok: false as const,
+  error: { code: 'NOT_FOUND' as const, message: 'Choice not found' },
+};
 const fixtureQ1Id = crypto.randomUUID();
 const fixtureChoiceId = crypto.randomUUID();
 
@@ -101,7 +105,7 @@ describe('usePracticeSessionQuestionFlow with a withdrawn item (browser)', () =>
           }),
         ),
       )
-      .mockResolvedValueOnce(ok(withdrawnItem(fixtureQ1Id)));
+      .mockResolvedValue(ok(withdrawnItem(fixtureQ1Id)));
     const harness = await renderFlow({
       getNextQuestionFn,
       submitAnswerFn: vi.fn(async () => notFound),
@@ -121,5 +125,34 @@ describe('usePracticeSessionQuestionFlow with a withdrawn item (browser)', () =>
     });
     expect(harness.result.current.question).toBeNull();
     expect(harness.result.current.loadState).toEqual({ status: 'ready' });
+  });
+
+  it('keeps a not-found answer error when the item reloads still answerable', async () => {
+    const question = createNextQuestion({
+      questionId: fixtureQ1Id,
+      choices: [{ id: fixtureChoiceId, label: 'A', textMd: 'A', sortOrder: 1 }],
+      session: {
+        sessionId: fixtureSessionId,
+        mode: 'tutor',
+        deadlineAt: null,
+        index: 0,
+        total: 2,
+        isMarkedForReview: false,
+      },
+    });
+    const harness = await renderFlow({
+      getNextQuestionFn: vi.fn(async () => ok(question)),
+      submitAnswerFn: vi.fn(async () => choiceNotFound),
+    });
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe(fixtureQ1Id);
+
+    harness.result.current.onSelectChoice(fixtureChoiceId, 'pointer');
+
+    await expect
+      .poll(() => harness.result.current.loadState)
+      .toEqual({ status: 'error', message: 'Choice not found' });
+    expect(harness.result.current.withdrawnQuestionId).toBeNull();
   });
 });

@@ -354,8 +354,11 @@ export async function runSubmitAnswerFlow<
   ) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
-  /** Reloads the item when its question is gone, e.g. withdrawn (ADR-021 §3). */
-  recoverQuestionNotFound?: (() => Promise<void>) | undefined;
+  /**
+   * Reloads the item after a not-found answer, resolving true when that
+   * explains the failure, e.g. the question was withdrawn (ADR-021 §3).
+   */
+  recoverQuestionNotFound?: (() => Promise<boolean>) | undefined;
   rotateIdempotencyKey?: (() => void) | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
@@ -415,8 +418,8 @@ export async function runSubmitAnswerFlow<
     });
     if (recovery === 'stale-request' || recovery === 'handled') return;
     if (res.error.code === 'NOT_FOUND' && input.recoverQuestionNotFound) {
-      await input.recoverQuestionNotFound();
-      return;
+      const recovered = await input.recoverQuestionNotFound();
+      if (!canCommit() || recovered) return;
     }
 
     input.setLoadState({

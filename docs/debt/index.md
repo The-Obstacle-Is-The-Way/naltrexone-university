@@ -10,7 +10,7 @@
 - **What changes.**
   - The next-question read returns a withdrawn item's place in the session with no content.
   - The page shows the notice with navigation only, ending in `Review & Submit` or `End session`.
-  - A tutor answer to a question withdrawn while open reloads the item.
+  - A tutor answer to a question withdrawn while open brings up the notice. Other not-found answers keep their error.
   - Scoring is unchanged, pending the owner's decision.
 - **Proof.** A real-Postgres case red first; use-case, logic, view and browser cases; three view mutations caught; four captures of the local production build with zero axe violations.
 - **Previous increments.**

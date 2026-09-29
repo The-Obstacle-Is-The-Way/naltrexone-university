@@ -449,6 +449,18 @@ describe('GetNextQuestionUseCase', () => {
       ).resolves.toEqual(withdrawnItem);
     });
 
+    it('is refused by the answerable-question narrowing in tests', async () => {
+      const { getNextQuestion } = withdrawnItemDeps();
+      const output = await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      });
+
+      expect(() => answerableQuestion(output)).toThrow(
+        'Expected an answerable question, got a withdrawn item',
+      );
+    });
+
     it('is returned without its content when requested by id', async () => {
       const { getNextQuestion } = withdrawnItemDeps();
 

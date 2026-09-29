@@ -447,15 +447,9 @@ export function usePracticeSessionQuestionFlow(
               captured = result;
             },
             recoverEndedSessionConflict: input.recoverEndedSessionConflict,
-            // ADR-021 §3: the question was withdrawn while it was open, so
-            // reload the item, which then shows the withdrawal notice.
-            recoverQuestionNotFound: question
-              ? () =>
-                  loadNextQuestion({
-                    ...loadQuestionConfig,
-                    questionId: question.questionId,
-                  })
-              : undefined,
+            // ADR-021 §3: a not-found answer reloads the item, which shows the
+            // withdrawal notice if the question was withdrawn while open.
+            reload: loadQuestionConfig,
             createRequestSequenceId,
             isLatestRequest,
             isMounted,

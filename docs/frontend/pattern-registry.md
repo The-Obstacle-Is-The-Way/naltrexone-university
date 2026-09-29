@@ -909,7 +909,7 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
   - Otherwise, the session's end action: `Review & Submit` in an exam, `End session` in tutor mode.
   - The learner can always move on; the page never leaves them at the withdrawn item with no way forward.
   - Exam `Mark for review` is hidden for the item.
-- A question withdrawn while the learner has it open behaves the same way. Their answer attempt reloads the item, which then shows this notice instead of an error.
+- A question withdrawn while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back withdrawn, shows this notice instead of an error.
 
 **Never attempted** (for example, only bookmarked): unchanged S-2 unavailable row (`[Question no longer available]`). The learner never answered it, so its content is not shown.
 

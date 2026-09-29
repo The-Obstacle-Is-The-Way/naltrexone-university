@@ -24,6 +24,7 @@ const noop = () => undefined;
 function renderWithdrawn(input: {
   mode: 'tutor' | 'exam';
   hasNextQuestion: boolean;
+  hasPreviousQuestion?: boolean;
 }): Document {
   const props: PracticeViewProps = {
     sessionInfo: {
@@ -52,7 +53,7 @@ function renderWithdrawn(input: {
     onSelectChoice: noop,
     onNextQuestion: noop,
     onPreviousQuestion: noop,
-    hasPreviousQuestion: true,
+    hasPreviousQuestion: input.hasPreviousQuestion ?? true,
     canNavigatePrevious: true,
     hasNextQuestion: input.hasNextQuestion,
   };
@@ -99,6 +100,18 @@ describe('PracticeView for a question withdrawn during the session', () => {
       ).toEqual(labels);
     },
   );
+
+  it('offers only Next on a withdrawn first item', () => {
+    const doc = renderWithdrawn({
+      mode: 'tutor',
+      hasNextQuestion: true,
+      hasPreviousQuestion: false,
+    });
+
+    expect(
+      buttonLabels(doc.querySelector('[data-testid="bottom-action-bar"]')),
+    ).toEqual(['Next']);
+  });
 
   it('offers no mark for review, since the item cannot be answered', () => {
     const doc = renderWithdrawn({ mode: 'exam', hasNextQuestion: true });

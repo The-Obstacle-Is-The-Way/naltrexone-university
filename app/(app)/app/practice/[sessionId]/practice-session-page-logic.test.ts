@@ -201,74 +201,6 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
-    // ADR-021 §3, Pattern Registry F-11: a question withdrawn after the
-    // session began comes back as its place in the session, with no content.
-    it('records a withdrawn item, with no question, and moves the session to it', async () => {
-      const setLoadState = vi.fn();
-      const setQuestion = vi.fn();
-      const setSessionInfo = vi.fn();
-      const setWithdrawnQuestionId = vi.fn();
-
-      await loadNextQuestion({
-        sessionId: fixtureSession1Id,
-        getNextQuestionFn: async () =>
-          ok({
-            withdrawn: true as const,
-            questionId: fixtureQuestion2Id,
-            session: {
-              sessionId: fixtureSession1Id,
-              mode: 'exam' as const,
-              index: 1,
-              total: 2,
-              deadlineAt: null,
-              isMarkedForReview: false,
-            },
-          }),
-        nowMs: () => 1234,
-        setLoadState,
-        setSelectedChoiceId: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSubmitRequestToken: vi.fn(),
-        setQuestionLoadedAt: vi.fn(),
-        setQuestion,
-        setSessionInfo,
-        setWithdrawnQuestionId,
-      });
-
-      expect(setWithdrawnQuestionId).toHaveBeenLastCalledWith(
-        fixtureQuestion2Id,
-      );
-      expect(setQuestion).toHaveBeenLastCalledWith(null);
-      expect(setSessionInfo).toHaveBeenLastCalledWith(
-        expect.objectContaining({ mode: 'exam', index: 1, total: 2 }),
-      );
-      expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
-    });
-
-    it('clears a recorded withdrawn item when a question loads', async () => {
-      const setQuestion = vi.fn();
-      const setWithdrawnQuestionId = vi.fn();
-
-      await loadNextQuestion({
-        sessionId: fixtureSession1Id,
-        getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
-        nowMs: () => 1234,
-        setLoadState: vi.fn(),
-        setSelectedChoiceId: vi.fn(),
-        setSubmitResult: vi.fn(),
-        setSubmitRequestToken: vi.fn(),
-        setQuestionLoadedAt: vi.fn(),
-        setQuestion,
-        setSessionInfo: vi.fn(),
-        setWithdrawnQuestionId,
-      });
-
-      expect(setWithdrawnQuestionId).toHaveBeenLastCalledWith(null);
-      expect(setQuestion).toHaveBeenLastCalledWith(
-        expect.objectContaining({ questionId: fixtureQuestion1Id }),
-      );
-    });
-
     it('forwards questionId when loading a specific session question', async () => {
       const getNextQuestionFn = vi.fn(async () =>
         ok(createFixtureNextQuestion()),
@@ -597,59 +529,6 @@ describe('practice-session-page-logic', () => {
         setSubmitResult: vi.fn(),
       });
 
-      expect(setLoadState).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Boom',
-      });
-    });
-
-    // ADR-021 §3: the question was withdrawn while the learner had it open;
-    // reloading the item shows the withdrawal notice instead of an error.
-    it('recovers instead of showing an error when the submitted question is not found', async () => {
-      const setLoadState = vi.fn();
-      const recoverQuestionNotFound = vi.fn(async () => undefined);
-
-      await submitAnswerForQuestion({
-        sessionId: fixtureSession1Id,
-        question: createFixtureNextQuestion(),
-        selectedChoiceId: fixtureChoice1Id,
-        questionLoadedAtMs: 0,
-        submitRequestToken: null,
-        createIdempotencyKey: () => 'idem_1',
-        setSubmitRequestToken: vi.fn(),
-        submitAnswerFn: async () => err('NOT_FOUND', 'Question not found'),
-        nowMs: () => 0,
-        setLoadState,
-        setSubmitResult: vi.fn(),
-        recoverQuestionNotFound,
-      });
-
-      expect(recoverQuestionNotFound).toHaveBeenCalledTimes(1);
-      expect(setLoadState).not.toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'error' }),
-      );
-    });
-
-    it('still shows other submit errors when a not-found recovery is given', async () => {
-      const setLoadState = vi.fn();
-      const recoverQuestionNotFound = vi.fn(async () => undefined);
-
-      await submitAnswerForQuestion({
-        sessionId: fixtureSession1Id,
-        question: createFixtureNextQuestion(),
-        selectedChoiceId: fixtureChoice1Id,
-        questionLoadedAtMs: 0,
-        submitRequestToken: null,
-        createIdempotencyKey: () => 'idem_1',
-        setSubmitRequestToken: vi.fn(),
-        submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
-        nowMs: () => 0,
-        setLoadState,
-        setSubmitResult: vi.fn(),
-        recoverQuestionNotFound,
-      });
-
-      expect(recoverQuestionNotFound).not.toHaveBeenCalled();
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Boom',
