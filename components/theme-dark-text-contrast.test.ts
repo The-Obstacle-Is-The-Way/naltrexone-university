@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { buttonVariants } from '@/components/ui/button';
 import {
   compositeOver,
   contrastRatio,
@@ -102,13 +101,7 @@ describe('dark theme small-text contrast (BUG-309)', () => {
   });
 
   it('keeps the destructive button on the fills measured above in dark mode', () => {
-    const button = readFileSync(
-      resolve(process.cwd(), 'components/ui/button.tsx'),
-      'utf-8',
-    );
-    const variant = /destructive:\s*'([^']+)'/.exec(button)?.[1] ?? '';
-
-    expect(variant.split(/\s+/)).toEqual(
+    expect(buttonVariants({ variant: 'destructive' }).split(/\s+/)).toEqual(
       expect.arrayContaining([
         'dark:bg-destructive/60',
         'dark:hover:bg-destructive/50',
