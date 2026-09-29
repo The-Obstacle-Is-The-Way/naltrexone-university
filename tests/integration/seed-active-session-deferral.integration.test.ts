@@ -178,6 +178,21 @@ describe('ADR-021 phase 2a: the seed waits for incomplete sessions', () => {
     }
   });
 
+  it('reports a timeout when nothing waits on the question row lock', async () => {
+    const { sql: monitorSql } = createIntegrationDb();
+    try {
+      await expect(
+        waitForBlockedQuestionLock({
+          monitorSql,
+          blockerPid: -1,
+          timeoutMs: 100,
+        }),
+      ).rejects.toThrow('Timed out waiting for a query to block');
+    } finally {
+      await closeConnection(monitorSql);
+    }
+  });
+
   it('still applies the run’s other questions', async () => {
     const waiting = await arrangeSeededQuestion('waiting');
     const free = await arrangeSeededQuestion('free');

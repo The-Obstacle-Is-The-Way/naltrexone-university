@@ -61,12 +61,13 @@ export function source(slug: string, edits: ContentEdits = {}) {
 const LOCK_WAIT_TIMEOUT_MS = 5_000;
 
 // Resolves once another backend waits on a `questions` row lock held by
-// `blockerPid`; rejects after five seconds.
+// `blockerPid`; rejects after `timeoutMs` (five seconds by default).
 export async function waitForBlockedQuestionLock(input: {
   monitorSql: IntegrationSql;
   blockerPid: number;
+  timeoutMs?: number;
 }): Promise<void> {
-  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+  const deadline = Date.now() + (input.timeoutMs ?? LOCK_WAIT_TIMEOUT_MS);
 
   while (Date.now() < deadline) {
     const rows = await input.monitorSql<{ count: number }[]>`
