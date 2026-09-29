@@ -803,7 +803,10 @@ and `docs/qa/`. These live folders are the open-record list.
 5. Move the register row to its **Resolved** or **Archived** table, using the
    archive path. The Deferred table keeps any unfinished tail visible. Keep
    exactly one `**Latest**` stanza when updating a register that uses one;
-   demote the prior stanza without rewriting its dated claims.
+   move the prior stanza, relabelled **Earlier** and without rewriting its
+   dated claims, to the top of that month's history file beside the index
+   (`register-history-YYYY-MM.md`), which the index's **Update history** line
+   links.
 6. Run the documentation unit guard and the full pre-push gate. A move is not
    complete until live links resolve, register rows resolve, and no live/archive
    duplicate or terminal-status live record remains. Every archived numbered
@@ -845,6 +848,14 @@ exactly one. Other registers may omit update stanzas, but must not have multiple
 Latest entries. The guard counts top-level Markdown paragraphs beginning with
 the bold label `Latest`, not code examples or older labels such as “Latest
 archival (date)”.
+
+**2026-09-29 register size budget:** each register index and each
+`register-history-YYYY-MM.md` file must stay within 256 KiB, counted in UTF-8
+bytes. The lifecycle audit parses every index in one test hook, and each
+history file is parsed whole, so the budget bounds the guard's cost. The debt
+index had grown to 444 KB of accumulated update stanzas, and the hook timed
+out twice in CI. Keep update history in the monthly files. When an index
+approaches the budget, move historical sections out rather than raising it.
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)

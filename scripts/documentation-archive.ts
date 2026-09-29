@@ -46,8 +46,26 @@ export type DocumentationAudit = {
   brokenLive: DocumentationLink[];
   brokenArchive: DocumentationLink[];
   repairableArchive: ArchiveLinkRepair[];
+  oversized: string[];
   counts: { register: string; live: number; archived: number }[];
 };
+
+// The lifecycle audit parses every register index in one test hook, and a
+// history file is parsed whole, so this bounds the audit's cost. An index
+// moves its older update stanzas to a monthly history file beside it.
+export const REGISTER_FILE_BUDGET_BYTES = 256 * 1024;
+
+function isBudgetedRegisterFile(file: string): boolean {
+  const [docs, register, name, ...rest] = file.split('/');
+  return (
+    docs === 'docs' &&
+    rest.length === 0 &&
+    register !== undefined &&
+    Object.hasOwn(REGISTERS, register) &&
+    (name === 'index.md' ||
+      /^register-history-\d{4}-\d{2}\.md$/.test(name ?? ''))
+  );
+}
 
 type ArchiveLinkRepair = DocumentationLink & {
   replacementTarget: string;
@@ -123,7 +141,16 @@ export function documentationLinks(
   file: string,
   contents: string,
 ): DocumentationLink[] {
+  return scanMarkdown(file, contents).links;
+}
+
+// One parse yields a file's links and its count of top-level Latest stanzas.
+function scanMarkdown(
+  file: string,
+  contents: string,
+): { links: DocumentationLink[]; latestStanzas: number } {
   const links: DocumentationLink[] = [];
+  let latestStanzas = 0;
   // Use the installed first-party application Markdown seam, including GFM
   // tables. Code examples are not links; definitions cover reference links.
   Markdown({
@@ -131,6 +158,12 @@ export function documentationLinks(
     remarkPlugins: [
       remarkGfm,
       () => (tree: MarkdownNode) => {
+        latestStanzas = (tree.children ?? []).filter(
+          (node) =>
+            node.type === 'paragraph' &&
+            node.children?.[0]?.type === 'strong' &&
+            nodeText(node.children[0]) === 'Latest',
+        ).length;
         function visit(
           node: MarkdownNode,
           inTable = false,
@@ -185,7 +218,7 @@ export function documentationLinks(
       },
     ],
   });
-  return links;
+  return { links, latestStanzas };
 }
 
 function recordStatus(file: string, contents: string): string {
@@ -199,6 +232,9 @@ function recordStatus(file: string, contents: string): string {
   // Validate the first candidate's code-block context, not every historical
   // body. Ambiguous metadata fails closed instead of searching for a later
   // status that happens to pass. Existing unrelated earlier code is allowed.
+  // A code block needs a fence or an indented line; without either, skip
+  // the parse.
+  if (!/```|~~~|^(?: {4}|\t)/m.test(prefix)) return statusValue(field);
   Markdown({
     children: prefix,
     remarkPlugins: [
@@ -217,6 +253,10 @@ function recordStatus(file: string, contents: string): string {
       },
     ],
   });
+  return statusValue(field);
+}
+
+function statusValue(field: RegExpExecArray): string {
   return (field[1] ?? '')
     .replaceAll('**', '')
     .replace(/^[^\p{L}\p{N}]+/u, '')
@@ -228,24 +268,6 @@ const CLOSED_STATUS =
   /^(?:resolved|archived|implemented|closed|completed?|fixed|fully addressed)\b/i;
 const HISTORICAL_DISPOSITION =
   /^(?:accepted|invalidated|decomposed|deferred|decided|won['’]t fix|reclassified|superseded|parked)\b/i;
-
-function latestStanzas(contents: string): number {
-  let count = 0;
-  Markdown({
-    children: contents,
-    remarkPlugins: [
-      () => (tree: MarkdownNode) => {
-        count = (tree.children ?? []).filter(
-          (node) =>
-            node.type === 'paragraph' &&
-            node.children?.[0]?.type === 'strong' &&
-            nodeText(node.children[0]) === 'Latest',
-        ).length;
-      },
-    ],
-  });
-  return count;
-}
 
 export function auditRecordLifecycle(
   files: ReadonlyMap<string, string>,
@@ -263,20 +285,28 @@ export function auditRecordLifecycle(
     brokenLive: [],
     brokenArchive: [],
     repairableArchive: [],
+    oversized: [],
     counts: [],
   };
-  const links = new Map(
+  const scans = new Map(
     Object.keys(REGISTERS).map((register) => {
       const file = `docs/${register}/index.md`;
-      return [file, documentationLinks(file, files.get(file) ?? '')];
+      return [file, scanMarkdown(file, files.get(file) ?? '')];
     }),
   );
+  for (const [file, contents] of files) {
+    if (
+      isBudgetedRegisterFile(file) &&
+      Buffer.byteLength(contents, 'utf8') > REGISTER_FILE_BUDGET_BYTES
+    )
+      result.oversized.push(file);
+  }
 
   for (const [register, pattern] of Object.entries(REGISTERS)) {
     const liveDirectory = `docs/${register}`;
     const archiveDirectory = `docs/_archive/${register}`;
     const indexFile = `${liveDirectory}/index.md`;
-    const latest = latestStanzas(files.get(indexFile) ?? '');
+    const latest = scans.get(indexFile)?.latestStanzas ?? 0;
     // Debt and bugs already use this convention. Other registers need not
     // adopt update stanzas, but may not carry competing Latest entries.
     if (latest > 1 || (['debt', 'bugs'].includes(register) && latest !== 1))
@@ -292,7 +322,7 @@ export function auditRecordLifecycle(
     const recordId = (file: string) =>
       recordIdentity(path.posix.basename(file));
     const archivedIds = new Set(archived.map(recordId));
-    const rows = (links.get(`${liveDirectory}/index.md`) ?? []).filter(
+    const rows = (scans.get(indexFile)?.links ?? []).filter(
       (link) => link.inTable,
     );
     // A related link in another record's notes is not this record's own row.
@@ -455,6 +485,7 @@ export function runDocumentationCommand(
     result.missingLiveRows,
     result.missingRowTargets,
     result.brokenLive,
+    result.oversized,
     result.repairableArchive,
     result.brokenArchive.filter((link) => link.invalidEncoding),
   ].some((issues) => issues.length > 0)
