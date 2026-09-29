@@ -291,6 +291,62 @@ describe('FakeAttemptRepository', () => {
   });
 
   describe('listAttemptedQuestionsByUserId (attempted-question filters)', () => {
+    it('sorts by the difficulty each attempt answered, with unpublished questions and ties last by recency', async () => {
+      const hard = createQuestion({ id: 'q_hard', difficulty: 'hard' });
+      const medium = createQuestion({ id: 'q_medium', difficulty: 'medium' });
+      // ADR-021: now hard, but answered while it was easy.
+      const revisedNow = createQuestion({
+        id: 'q_revised',
+        difficulty: 'hard',
+      });
+      const revisedAnswered = createQuestion({
+        id: 'q_revised',
+        difficulty: 'easy',
+      });
+      const draftHard = createQuestion({
+        id: 'q_draft',
+        difficulty: 'hard',
+        status: 'draft',
+      });
+      const repo = new FakeAttemptRepository(
+        [
+          makeAttempt({
+            id: 'attempt-hard',
+            questionId: hard.id,
+            answeredAt: new Date('2026-02-01T00:00:00Z'),
+          }),
+          makeAttempt({
+            id: 'attempt-medium',
+            questionId: medium.id,
+            answeredAt: new Date('2026-02-02T00:00:00Z'),
+          }),
+          makeAttempt({
+            id: 'attempt-revised',
+            questionId: revisedNow.id,
+            questionRevisionId: revisedAnswered.revisionId,
+            answeredAt: new Date('2026-02-03T00:00:00Z'),
+          }),
+          makeAttempt({
+            id: 'attempt-draft',
+            questionId: draftHard.id,
+            answeredAt: new Date('2026-02-04T00:00:00Z'),
+          }),
+        ],
+        { questions: [hard, medium, revisedNow, revisedAnswered, draftHard] },
+      );
+
+      const rows = await repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
+        sort: 'difficulty',
+      });
+
+      expect(rows.map((row) => row.questionId)).toEqual([
+        'q_hard',
+        'q_medium',
+        'q_draft',
+        'q_revised',
+      ]);
+    });
+
     it('filters by difficulty and tagSlug using question metadata', async () => {
       const qEasy = createQuestion({
         id: 'q_easy',

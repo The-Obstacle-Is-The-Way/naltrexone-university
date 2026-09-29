@@ -38,6 +38,26 @@ describe('fetchQuestionsByBinding', () => {
     expect(repo.findPublishedByBindingsCalls).toEqual([]);
   });
 
+  it('fails loudly when the repository swaps two revisions of one question', async () => {
+    const current = createQuestion({ id: 'q1', stemMd: 'Current' });
+    const older = createQuestion({ id: 'q1', stemMd: 'Older' });
+    class SwappingQuestionRepository extends FakeQuestionRepository {
+      override async findPublishedByBindings(
+        bindings: readonly QuestionRevisionBinding[],
+      ) {
+        return [...(await super.findPublishedByBindings(bindings))].reverse();
+      }
+    }
+    const repo = new SwappingQuestionRepository([current, older]);
+
+    await expect(
+      fetchQuestionsByBinding(repo, [
+        { questionId: 'q1', questionRevisionId: current.revisionId },
+        { questionId: 'q1', questionRevisionId: older.revisionId },
+      ]),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+
   it.each([
     [
       'returns them out of order',

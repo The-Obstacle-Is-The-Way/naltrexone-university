@@ -301,14 +301,15 @@ This half covers lists of earlier answers, and bookmarks.
 - **Attempted questions.** The list query joins the revision each question's latest attempt was answered against, else (an attempt an older deployment left unbound) its current revision. The difficulty filter and the difficulty sort use that revision, so a filter and the row it returns can never disagree. Each row shows that revision, through the binding.
 - **Recent activity.** Each attempt shows the revision it graded. Two attempts of one question can differ, so questions are keyed by the whole binding, never by question id.
   - The port now states the pairing rule: an unpublished question is omitted for every binding of it, and every other binding yields exactly one question, in order.
-  - The shared helper checks that rule and fails with `INTERNAL_ERROR` if a repository breaks it.
+  - The shared helper checks every pair, including a bound binding's revision, and fails with `INTERNAL_ERROR` if a repository breaks the rule.
 - **Bookmarks.** A bookmark binds no revision, so it shows the question's current revision, through a join, not the legacy columns.
 - **Removed.** The id-keyed fetch helper had no callers left, so it and its test are deleted, and the practice-engine file index now lists every shared helper.
 - **Fakes.** `FakeAttemptRepository` filters and sorts the attempted list by the revision each attempt answered, when a test lists several revisions of a question.
 - **Fixtures.** Two integration fixtures that write attempt rows directly now bind the question's current revision, as the app does.
 - **Tests.**
   - Four real-Postgres cases in `question-revision-list-reads.integration.test.ts`: the attempted filter, the attempted sort, recent activity with two attempts of one question at different revisions, and a bookmark. Each case rewrites the legacy row as the seed does, so a read of the legacy columns is caught. All four were red first.
-  - Use-case cases on the fakes for the attempted list and recent activity. Helper cases cover distinct bindings, an unpublished question, and a repository that returns questions out of order or extra.
+  - Use-case cases on the fakes for the attempted list and recent activity. Helper cases cover distinct bindings, an unpublished question, and a repository that returns questions out of order, extra, or with two revisions of one question swapped.
+  - A fake case covers the attempted list's difficulty sort: the answered revision, unpublished questions and ties by recency. That sort had no test before.
   - Break-it proofs: a helper that ignores revisions fails the helper and both use-case cases; restoring the legacy difficulty column fails the Postgres filter and sort cases.
 
 ## Related

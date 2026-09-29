@@ -13,7 +13,8 @@ export function bindingKey(binding: QuestionRevisionBinding): string {
 
 // Published questions as each binding's revision, keyed by `bindingKey`. The
 // port omits an unpublished question for every binding of it and yields one
-// question per other binding, in order, so the two lists pair up.
+// question per other binding, in order, so the two lists pair up; each pair is
+// checked, including a bound binding's revision.
 export async function fetchQuestionsByBinding(
   repo: QuestionRepository,
   bindings: readonly QuestionRevisionBinding[],
@@ -34,7 +35,13 @@ export async function fetchQuestionsByBinding(
   return new Map(
     found.map((binding, index) => {
       const question = questions[index];
-      if (question?.id !== binding.questionId) throw brokenContract();
+      if (
+        question?.id !== binding.questionId ||
+        (binding.questionRevisionId !== null &&
+          question.revisionId !== binding.questionRevisionId)
+      ) {
+        throw brokenContract();
+      }
       return [bindingKey(binding), question];
     }),
   );
