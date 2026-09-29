@@ -50,7 +50,12 @@ use-cases/
   check-entitlement.ts, create-checkout-session.ts, create-portal-session.ts,
   index.ts
 shared/
-  enrich-with-question.ts, fetch-questions-by-id.ts, shuffled-choice-views.ts
+  enrich-with-question.ts, fetch-questions-by-binding.ts,
+  fetch-session-owned-questions-by-id.ts, fetch-session-questions-as-bound.ts,
+  persist-subscription-observation.ts, practice-session-state.ts,
+  renewal-notice-email-format.ts, renewal-notice-schedule.ts,
+  shuffled-choice-views.ts, subscription-canonicalization.ts,
+  transactional-email-payload.ts
 test-helpers/
   create-next-question.ts, render-hook.tsx
   fakes/
