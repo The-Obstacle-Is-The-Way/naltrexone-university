@@ -181,6 +181,7 @@ describe('documentation archive convention', () => {
     ['a tilde fence', '~~~md\n**Status:** Resolved\n~~~'],
     ['an indented block', 'Intro.\n\n    **Status:** Resolved'],
     ['a tab-indented block', 'Intro.\n\n\t**Status:** Resolved'],
+    ['an indented block inside a block quote', '>     **Status:** Resolved'],
   ])('fails closed when the first status field is %s', (_form, example) => {
     const file = 'docs/debt/debt-001-example.md';
     expect(() => audit({ [file]: `${example}\n\n**Status:** Open` })).toThrow(

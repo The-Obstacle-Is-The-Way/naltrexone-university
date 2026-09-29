@@ -232,9 +232,9 @@ function recordStatus(file: string, contents: string): string {
   // Validate the first candidate's code-block context, not every historical
   // body. Ambiguous metadata fails closed instead of searching for a later
   // status that happens to pass. Existing unrelated earlier code is allowed.
-  // A code block needs a fence or an indented line; without either, skip
-  // the parse.
-  if (!/```|~~~|^(?: {4}|\t)/m.test(prefix)) return statusValue(field);
+  // A code block needs a fence or an indented line, and a block quote can
+  // hold one after its marker; without any of these, skip the parse.
+  if (!/```|~~~|^(?: {4}|\t| {0,3}>)/m.test(prefix)) return statusValue(field);
   Markdown({
     children: prefix,
     remarkPlugins: [

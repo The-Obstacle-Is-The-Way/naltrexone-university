@@ -8,14 +8,14 @@
   - Hosted CI failed twice (#1214, #1216) on the documentation guard's lifecycle hook, which hit the 15 s hook timeout under coverage with no assertion failure.
   - The hook parsed the debt index (444 KB, of which 247 KB was accumulated update stanzas) and the bug index (226 KB) twice each: once for links and once for the Latest count.
 - **What changes.**
-  - One parse per index. Records whose metadata prefix has no code fence or indented line skip the code-block parse.
+  - One parse per index. Records whose metadata prefix has no code fence, indented line or block quote skip the code-block parse.
   - The debt and bug registers' earlier update stanzas move unchanged to `register-history-YYYY-MM.md` beside each index, linked from its **Update history** line. The standing terminal-close rule stays in each index.
   - The guard fails when a register index or history file exceeds 256 KiB in UTF-8 bytes. The hook gets an explicit 30 s ceiling for loaded CI runners.
   - AGENTS.md step 5 now moves a replaced Latest stanza to its month's history file.
 - **Proof.**
   - The hook takes 2.2 s under coverage locally, down from 4.5 s. The debt index is now 201 KB.
   - Every non-blank line of both registers survives the move; only titles, intros and the pointer lines are new.
-  - Red-first budget cases; seven mutations of the budget and the fast path each fail a case.
+  - Red-first budget cases; eight mutations of the budget and the fast path each fail a case. The review of #1217 found that a block quote can hold indented code, and its case was red first.
 - **Previous increment.** #1216 (the part three follow-up) merged as `d5923b4a` with exact-head approval **5353408404** and no findings.
   - Its CI hit the same timeout once; the cause is documented on #1216, and the job passed on its single re-run.
   - Its promotion waits for this fix, so the promotion's CI runs with it.
