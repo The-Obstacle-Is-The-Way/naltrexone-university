@@ -1,18 +1,24 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-28 UTC
+**Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-28 UTC: the reviewed-merge tool carries a Dependabot approval across a rebase that changes nothing but the lockfile. CodeRabbit reviews a Dependabot PR when it opens, ignores review commands on it, and skips a lockfile-only rebase. So a Dependabot PR that had to be rebased after another merged could never gain an exact-head approval.
-- **The rule.** For Dependabot-authored PRs only, CodeRabbit's latest decisive review may be an approval on an earlier head, if GitHub's compare API shows every file except `pnpm-lock.yaml` with a byte-identical diff and status at both heads. The receipt names the head as `carriedFrom`. Any other difference, a missing diff, a truncated compare, another author, or a later change request still refuses.
-- **Proof.** Six refusal cases and one carried case, plus the command-level flow. A dry run against #1188 carried its approval, because only the lockfile differs. A break-it proof: ignoring patch contents fails two refusal cases.
-- **Also.** Promotion #1197's finding is fixed: the backfill suite now drains bindable rows and asserts relative to a baseline. With planted leftovers, it passed 6/6 and the previous version failed 4 of 6.
-- **Previous increment.** #1196 (ADR-021 phase 2a, second increment) merged as `e4610230` with exact-head approval **5343358545** and no findings. CodeRabbit reviewed `0041`'s SQL under the new filters.
-  - It is promoted through #1197 (`46fb8546`). Its one finding is fixed here. The promotion's proof was written into its body at 19:24:57Z, before the merge at 19:25:02Z; a first merge attempt exited with an uncaptured error before merging.
-  - The production build logged `306 session states and 249 attempts bound; 0 and 0 remain unbound`, validated the five history keys, and the ledger matched.
-  - Release verified: main CI **36472088029** `test` **19:37:53Z**; Ready **19:26:58.149Z**, held without alias until its check completed; production assigned **19:37:56.115Z**; matching trees; healthy production.
+**Latest** — 2026-09-29 UTC: ADR-021 phase 2a, third increment, part one (DEBT-484): question content and selection read through the question's current revision. [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2a-third-increment-part-one-question-content-reads-through-the-current-revision--2026-09-28).
+- **What changes.**
+  - The question repository reads the stem, explanation, reference, difficulty and choices from the current revision, and selection's difficulty filter matches that revision's difficulty.
+  - A question with no current revision is refused with `INTERNAL_ERROR`, not served from the legacy columns.
+  - The serving deployment reads the same content, while each question has one revision.
+- **Proof.** Five real-Postgres cases, three red first. Every published question in the corpus reads exactly as its legacy columns and choices.
+- **Previous increment.** Promotion #1199 (`dc0fcd74`) released #1198 and Dependabot #1188 and #1191.
+  - #1198: the reviewed-merge tool carries a Dependabot approval across a rebase that changes nothing but the lockfile. CodeRabbit's full review found two gaps, both fixed before merge: rename sources were not compared, and the review selector was duplicated. Exact-head approval **5345245012**; merged as `d9be03f7`.
+  - #1188 and #1191: each rebase re-resolved a version in `package.json`, so the tool rightly refused to carry the approval. The stale approvals were dismissed with that reason, and CodeRabbit approved the new heads (**5345748713**, **5345949560**). dotenv 18's removals, vault and preloading, are unused here.
+  - The local full gate passed on the combined dev head with the new versions installed, and the promotion's CI ran E2E.
+  - The promotion's proof was written into its body at 23:55:26Z, before the merge at 23:55:31Z.
+  - Release verified: main CI **36500516846** `test` **00:08:28Z**; Ready **23:59:03.538Z**, held without alias until its check completed; production assigned **00:08:30.390Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-28 UTC the reviewed-merge tool carries a Dependabot approval across a rebase that changes nothing but the lockfile, because CodeRabbit ignores review commands on a Dependabot PR and skips a lockfile-only rebase; promotion #1197's finding is fixed, and the backfill suite asserts relative to a baseline. The previous increment, #1196 (ADR-021 phase 2a, second increment), merged as `e4610230` and is promoted through #1197 (`46fb8546`); production's `0041` bound 306 session states and 249 attempts, with 0 remaining, and validated the five history keys. Release verified: main CI **36472088029** `test` **19:37:53Z**; Ready **19:26:58.149Z**, held without alias until its check completed; production assigned **19:37:56.115Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC ADR-021 phase 2a's second increment binds older history to its revision in bounded batches and validates the history keys; CodeRabbit now reviews migration SQL. The previous increment, promotion #1195 (`cc01062b`), released #1193, #1194 and Dependabot #1187 and #1189. Release verified: main CI **36464138853** `test` **18:30:29Z**; Ready **18:19:34.776Z**, held without alias until its check completed; production assigned **18:30:32.601Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
