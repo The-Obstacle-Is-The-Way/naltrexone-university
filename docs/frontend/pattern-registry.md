@@ -55,10 +55,12 @@ The foundation of the visual hierarchy. Every surface must sit at its correct la
 | 1 | `--card` | `0 0% 7%` | 7% | Card surfaces — one step up from page |
 | 2 | `--muted` / `--secondary` / `--accent` | `0 0% 11%` | 11% | Subdued fills, hover targets, tinted backgrounds |
 | 3 | `--border` / `--input` | `0 0% 15%` | 15% | Borders, input outlines, separators |
-| 4 | `--muted-foreground` | `0 0% 51.5%` | 51.5% | Secondary text, labels, timestamps |
+| 4 | `--muted-foreground` | `0 0% 55%` | 55% | Secondary text, labels, timestamps. Raised from 51.5% by BUG-309 so small text clears 4.5:1 on the foreground-ramp rows, their hovers and `bg-muted` |
 | 5 | `--foreground` | `0 0% 93%` | 93% | Primary text, headings |
 
 **Rule:** Surfaces must step UP this stack, never skip layers or go backwards. A hover effect on a card surface (layer 1) targets layer 2 with opacity. A hover on page background (layer 0) also targets layer 2 but needs slightly higher opacity for equivalent perceived contrast.
+
+**Dark destructive:** `--destructive` is `0 91% 71%` in dark mode (raised from `0 72% 51%` by BUG-309), so `text-destructive` small text clears 4.5:1 on every surface it sits on. Solid destructive fills stay at `dark:bg-destructive/60`; the destructive Button's dark hover is `dark:hover:bg-destructive/50`, because the inherited `/90` would drop white text below 4.5:1. `components/theme-dark-text-contrast.test.ts` measures these pairings.
 
 **Known debt:** `--muted`, `--secondary`, and `--accent` are identical values. `--border` and `--input` are identical values. If these tokens are ever differentiated, all patterns in this registry will need visual regression testing.
 

@@ -1,9 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-29 — BUG-309 filed (dark-theme small-text contrast, P2); update history moved to monthly files under the register size budget.
+**Last Updated:** 2026-09-29 — BUG-310 filed (trial add-card offers non-card methods, P3); BUG-309 fix merged into dev.
 
-**Latest** — 2026-09-29: **BUG-309 (P2) filed: dark-theme small text fails WCAG AA contrast.** The app forces its dark theme. There, `text-destructive` (the "Incorrect" result label and other red text) measures 3.9:1 on cards and 3.5:1 on row fills, and `text-muted-foreground` measures 4.44:1 on the Dashboard's tonal rows, below the 4.5:1 that small informational text needs. axe found them on History and the Dashboard during DEBT-484's part-four captures (#1219); they predate that change. The contrast policy's pointer to BS-042 was stale, because BS-042 is archived as resolved, and now points here. [BUG-309](./bug-309-dark-theme-small-text-contrast.md). BUG-304 and BUG-309 are active. **Next Bug ID is BUG-310.**
+**Latest** — 2026-09-29: **BUG-310 (P3) filed: the trial add-card Checkout offers payment methods that are not cards.** The flow's copy, consent and renewal are about a card, but its setup Session keeps dynamic payment methods by DEBT-414's recorded design. Stripe's test-mode page offered Cash App Pay, Klarna and Amazon Pay, and the webhook saves whatever method the learner chose as the renewal method. Because the fix overturns that recorded decision in a payment and consent flow, the record asks the owner to choose: restrict the Session to card (recommended), limit it through a card-only Stripe payment-method configuration, or change the copy. [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md). BUG-304, BUG-309 and BUG-310 are active. **Next Bug ID is BUG-311.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -26,7 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-310
+**Next Bug ID:** BUG-311
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -457,7 +457,8 @@ Every one of these was confirmed against the other branch's actual live registry
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
-| [BUG-309](./bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text fails WCAG AA contrast | P2 | Open | `text-destructive` ("Incorrect" and other red text) measures 3.5–4.15:1 on every dark surface, and `text-muted-foreground` 4.44:1 on the Dashboard's tonal rows; the fix needs a destructive-text value and a muted-on-row pairing that clear 4.5:1 without breaking `bg-destructive` fills. |
+| [BUG-309](./bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text fails WCAG AA contrast | P2 | Open | `text-destructive` ("Incorrect" and other red text) measured 3.5–4.15:1 on every dark surface, and `text-muted-foreground` 4.44:1 on the Dashboard's tonal rows. Fix on its branch: dark `--destructive` `0 91% 71%`, `--muted-foreground` `0 0% 55%`, destructive Button dark hover `/50`; axe 16 nodes per size to 0. Pending review and production proof. |
+| [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

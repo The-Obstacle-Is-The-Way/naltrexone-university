@@ -1,6 +1,6 @@
 # Contrast Policy (WCAG AA)
 
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-09-29
 **Status:** Canonical
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
@@ -67,7 +67,12 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 ### 3.1 Text
 
 - Informational text MUST meet 4.5:1 (normal text), including: labels, timestamps, metadata, helper text, and inactive navigation items.
-- Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. BS-042's failures were resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md); current failures, including `text-destructive` text on dark surfaces, are tracked in [BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md).
+- Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. BS-042's failures were resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md).
+- **Dark small-text tokens ([BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md), 2026-09-29).** `components/theme-dark-text-contrast.test.ts` measures each pairing on every surface the text sits on, rounded to the 8-bit colors the browser paints:
+  - `--destructive` `0 91% 71%`: at least 5.56:1 on the page, the card, the foreground-ramp rows and their hovers, and the destructive tints.
+  - `--muted-foreground` `0 0% 55%`: at least 4.62:1 on the rows, their hovers and `bg-muted`.
+  - Light text on the dark destructive fills: at least 5.09:1, at rest (`/60`) and on the Button's dark hover (`/50`).
+  - Before placing small text on a new fill, add that surface to the suite. A threshold case is judged as rendered: `#838383` on `#1C1C1C` was 4.495:1, a failure.
 - Do not use parent `opacity-*` on containers as a substitute for text styling when descendants contain informational text or UI glyphs. It reduces contrast for everything inside the subtree.
 
 ### 3.2 Non-Text Boundaries
