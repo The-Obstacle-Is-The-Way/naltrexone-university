@@ -54,23 +54,26 @@ export interface QuestionRepository {
   ): Promise<readonly Question[]>;
 
   /**
-   * Returns a session item's question regardless of `questions.status`, with
-   * the content and choices of the revision the item is bound to, else of the
-   * question's current revision (an item an older deployment left unbound).
+   * Returns a session item's or attempt's question regardless of
+   * `questions.status`, with the content and choices of the revision it is
+   * bound to, else of the question's current revision (a row an older
+   * deployment left unbound).
    *
-   * Callers MUST take the item from the caller's owned practice session. This
-   * deliberately bypasses the published boundary and must never back public
-   * browsing or candidate selection.
+   * Callers MUST take the binding from the caller's own practice session or
+   * attempts (ADR-021 §3). This deliberately bypasses the published boundary
+   * and must never back public browsing or candidate selection.
    */
   findByIdForSession(item: QuestionRevisionBinding): Promise<Question | null>;
 
   /**
-   * Returns session items' questions, in the items' order, as
-   * `findByIdForSession` does.
+   * Returns the questions of session items or attempts, in the bindings'
+   * order, as `findByIdForSession` does. A missing question is omitted for
+   * every binding of it; every other binding yields exactly one question, so
+   * two bindings of one question at different revisions yield both.
    *
-   * Callers MUST take the items from the caller's owned practice session. This
-   * deliberately bypasses the published boundary and must never back public
-   * browsing or candidate selection.
+   * Callers MUST take the bindings from the caller's own practice session or
+   * attempts (ADR-021 §3). This deliberately bypasses the published boundary
+   * and must never back public browsing or candidate selection.
    */
   findByIdsForSession(
     items: readonly QuestionRevisionBinding[],

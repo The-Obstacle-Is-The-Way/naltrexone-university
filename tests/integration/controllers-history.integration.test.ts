@@ -141,7 +141,7 @@ describe('stats controller (integration)', () => {
 });
 
 describe('review controller (integration)', () => {
-  it('lists attempted questions (incorrect) and marks unavailable ones when they are no longer published', async () => {
+  it('lists attempted questions (incorrect) and keeps one unpublished since, marked withdrawn (ADR-021 §3)', async () => {
     const user = await createUser(db, cleanup);
     const incorrectSlug = `it-incorrect-${randomUUID()}`;
     const incorrectQuestion = await createQuestion(db, cleanup, {
@@ -226,6 +226,7 @@ describe('review controller (integration)', () => {
     expect(first.data.rows).toHaveLength(1);
     expect(first.data.rows[0]).toMatchObject({
       isAvailable: true,
+      withdrawn: false,
       questionId: incorrectQuestion.id,
       isCorrect: false,
       sessionId: null,
@@ -252,21 +253,17 @@ describe('review controller (integration)', () => {
     if (!second.ok) return;
 
     expect(second.data.rows).toEqual([
-      {
-        isAvailable: false,
+      expect.objectContaining({
+        isAvailable: true,
+        withdrawn: true,
         questionId: incorrectQuestion.id,
         isCorrect: false,
-        sessionId: null,
-        sessionMode: null,
+        slug: incorrectSlug,
+        stemMd: '# Stem',
         lastAnsweredAt: t2.toISOString(),
-      },
+      }),
     ]);
-    expect(logger.warnCalls).toEqual([
-      {
-        context: { questionId: incorrectQuestion.id },
-        msg: 'Attempted question references missing question',
-      },
-    ]);
+    expect(logger.warnCalls).toEqual([]);
   });
 
   it('applies incorrect-first ordering before pagination across pages', async () => {

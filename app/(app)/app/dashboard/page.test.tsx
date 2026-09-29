@@ -160,6 +160,7 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
+              withdrawn: false,
               attemptId: fixtureAttempt1Id,
               answeredAt: '2026-02-02T00:00:00.000Z',
               questionId: fixtureQuestionCorrectId,
@@ -172,6 +173,7 @@ describe('app/(app)/app/dashboard', () => {
             },
             {
               isAvailable: true,
+              withdrawn: false,
               attemptId: fixtureAttempt2Id,
               answeredAt: '2026-02-03T00:00:00.000Z',
               questionId: fixtureQuestionIncorrectId,
@@ -458,6 +460,56 @@ describe('app/(app)/app/dashboard', () => {
     expect(html).not.toContain('Answered Feb 2, 2026');
   });
 
+  // Pattern Registry F-11: an attempted withdrawn question keeps its row and
+  // link into review; its pill reads Withdrawn where the difficulty was.
+  it('renders withdrawn recent activity as a review link whose pill reads Withdrawn', () => {
+    const attemptId = crypto.randomUUID();
+    const html = renderToStaticMarkup(
+      <DashboardView
+        stats={{
+          totalAnswered: 1,
+          accuracyOverall: 0,
+          answeredLast7Days: 1,
+          accuracyLast7Days: 0,
+          currentStreakDays: 1,
+          recentActivity: [
+            {
+              isAvailable: true,
+              withdrawn: true,
+              attemptId,
+              answeredAt: '2026-02-01T00:00:00.000Z',
+              questionId: crypto.randomUUID(),
+              sessionId: null,
+              sessionMode: null,
+              slug: 'q-withdrawn',
+              stemMd: 'Answered stem',
+              difficulty: 'hard',
+              isCorrect: false,
+            },
+          ],
+        }}
+        sessionHistoryResult={{
+          ok: true,
+          data: { rows: [], total: 0, limit: 3, offset: 0 },
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const link = findAnchorByHref(
+      doc,
+      toQuestionRoute('q-withdrawn', {
+        from: 'dashboard',
+        mode: 'review',
+        attemptId,
+      }),
+    );
+
+    expect(link?.textContent).toContain('Answered stem');
+    expect(link?.textContent).toContain('Withdrawn');
+    expect(link?.textContent).not.toContain('Hard');
+    expect(html).not.toContain('[Question no longer available]');
+  });
+
   it('renders per-section error when sessionHistoryResult fails', () => {
     const html = renderToStaticMarkup(
       <DashboardView
@@ -584,6 +636,7 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
+              withdrawn: false,
               attemptId: fixtureAttempt1Id,
               answeredAt: '2026-02-02T00:00:00.000Z',
               questionId: fixtureQuestionCorrectId,

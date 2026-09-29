@@ -138,6 +138,32 @@ describe('cached-reads coverage seam', () => {
     expect(boundBatchRead?.stemMd).toBe('Bound');
   });
 
+  // Two of a learner's attempts can bind one question at different revisions.
+  it('keeps two owned bindings of one question apart in a batch read', async () => {
+    const current = createQuestion({ id: 'question-1', stemMd: 'Current' });
+    const older = createQuestion({ id: 'question-1', stemMd: 'Older' });
+    const repository = createRequestCachedQuestionRepository(
+      new FakeQuestionRepository([current, older]),
+    );
+    const olderBinding = {
+      questionId: 'question-1',
+      questionRevisionId: older.revisionId,
+    };
+
+    const read = await repository.findByIdsForSession([
+      olderBinding,
+      unbound('question-1'),
+      unbound('missing'),
+      olderBinding,
+    ]);
+
+    expect(read.map((question) => question.stemMd)).toEqual([
+      'Older',
+      'Current',
+      'Older',
+    ]);
+  });
+
   it('normalizes session-owned batch reads while preserving caller order', async () => {
     class CountingQuestionRepository extends FakeQuestionRepository {
       findByIdsForSessionCallCount = 0;

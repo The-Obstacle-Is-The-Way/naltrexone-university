@@ -10,7 +10,7 @@ import type {
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
 import {
   bindingKey,
-  fetchQuestionsByBinding,
+  fetchOwnedQuestionsByBinding,
 } from '@/src/application/shared/fetch-questions-by-binding';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
@@ -27,6 +27,8 @@ export type GetAttemptedQuestionsInput = {
 
 export type AvailableAttemptedQuestionRow = {
   isAvailable: true;
+  /** Withdrawn since the learner attempted it (ADR-021 §3). */
+  withdrawn: boolean;
   questionId: string;
   isCorrect: boolean;
   sessionId: string | null;
@@ -95,8 +97,9 @@ export class GetAttemptedQuestionsUseCase {
       };
     }
 
-    // ADR-021: each row shows the revision its latest attempt answered.
-    const byBinding = await fetchQuestionsByBinding(this.questions, page);
+    // ADR-021: each row shows the revision its latest attempt answered, and
+    // stays listed once withdrawn, since the learner attempted it (§3).
+    const byBinding = await fetchOwnedQuestionsByBinding(this.questions, page);
 
     const rows = enrichWithQuestion({
       rows: page,
@@ -105,6 +108,7 @@ export class GetAttemptedQuestionsUseCase {
       getLookupKey: bindingKey,
       available: (attempted, question): AttemptedQuestionRow => ({
         isAvailable: true,
+        withdrawn: question.status !== 'published',
         questionId: question.id,
         isCorrect: attempted.isCorrect,
         sessionId: attempted.sessionId,

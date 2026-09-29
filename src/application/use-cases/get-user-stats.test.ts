@@ -95,6 +95,7 @@ describe('GetUserStatsUseCase', () => {
       recentActivity: [
         {
           isAvailable: true,
+          withdrawn: false,
           attemptId: q1Attempt.id,
           answeredAt: '2026-02-01T11:00:00.000Z',
           questionId: 'q1',
@@ -107,6 +108,7 @@ describe('GetUserStatsUseCase', () => {
         },
         {
           isAvailable: true,
+          withdrawn: false,
           attemptId: q2Attempt.id,
           answeredAt: '2026-01-31T11:00:00.000Z',
           questionId: 'q2',
@@ -119,6 +121,7 @@ describe('GetUserStatsUseCase', () => {
         },
         {
           isAvailable: true,
+          withdrawn: false,
           attemptId: q3Attempt.id,
           answeredAt: '2026-01-20T11:00:00.000Z',
           questionId: 'q3',
@@ -128,6 +131,39 @@ describe('GetUserStatsUseCase', () => {
           stemMd: 'Stem for q3',
           difficulty: 'hard',
           isCorrect: true,
+        },
+      ],
+    });
+  });
+
+  // ADR-021 §3: the learner attempted it, so it stays listed and reviewable.
+  it('shows recent activity on a question withdrawn since as available, marked withdrawn', async () => {
+    const now = new Date('2026-02-01T12:00:00Z');
+    const withdrawn = createQuestion({
+      id: 'q1',
+      status: 'archived',
+      stemMd: 'Answered stem',
+    });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([withdrawn]),
+      new FakeLogger(),
+      () => now,
+    );
+
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toMatchObject({
+      recentActivity: [
+        {
+          isAvailable: true,
+          questionId: 'q1',
+          stemMd: 'Answered stem',
+          withdrawn: true,
         },
       ],
     });
@@ -201,6 +237,7 @@ describe('GetUserStatsUseCase', () => {
       recentActivity: [
         {
           isAvailable: true,
+          withdrawn: false,
           questionId: 'q1',
           sessionId: 'session-1',
           sessionMode: 'exam',

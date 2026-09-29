@@ -107,16 +107,23 @@ export function createRequestCachedQuestionRepository(
     ): Promise<readonly Question[]> {
       if (items.length === 0) return [];
 
-      const questions = await findByNormalizedBindingsForSession(
-        serializeSortedUniqueBindings(items),
-      );
-      // A session holds each question once, so its id identifies the item.
-      const questionById = new Map(
-        questions.map((question) => [question.id, question]),
-      );
+      const serialized = serializeSortedUniqueBindings(items);
+      const questions = await findByNormalizedBindingsForSession(serialized);
+      // Two attempts can bind one question at different revisions, so each
+      // result pairs with its binding. The port answers in the bindings' order
+      // and omits a missing question for every binding of it.
+      const questionByBinding = new Map<string, Question>();
+      let next = 0;
+      for (const binding of JSON.parse(serialized) as string[]) {
+        const question = questions[next];
+        if (question?.id === deserializeBinding(binding).questionId) {
+          questionByBinding.set(binding, question);
+          next += 1;
+        }
+      }
 
       return items
-        .map((item) => questionById.get(item.questionId))
+        .map((item) => questionByBinding.get(serializeBinding(item)))
         .filter((question): question is Question => question !== undefined);
     },
     listPublishedCandidateIds(filters) {

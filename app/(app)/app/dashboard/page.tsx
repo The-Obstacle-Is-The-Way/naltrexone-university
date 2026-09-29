@@ -236,8 +236,11 @@ export function DashboardView({
                         <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
                           {getStemPreview(row.stemMd, 110)}
                         </span>
+                        {/* Pattern Registry F-11: withdrawn since attempted. */}
                         <span className="inline-flex shrink-0 items-center rounded-full border-0 bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60">
-                          {toSentenceCase(row.difficulty)}
+                          {row.withdrawn
+                            ? 'Withdrawn'
+                            : toSentenceCase(row.difficulty)}
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">
