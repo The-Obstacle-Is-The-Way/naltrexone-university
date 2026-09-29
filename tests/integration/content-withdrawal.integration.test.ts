@@ -229,6 +229,7 @@ it('keeps an unchanged archived seed idempotent', async () => {
     inserted: 0,
     updated: 0,
     skipped: 1,
+    deferred: [],
   });
   expect(await snapshot(question.id)).toEqual(before);
 });
@@ -259,6 +260,7 @@ it.each([
         inserted: 0,
         updated: 1,
         skipped: 0,
+        deferred: [],
       });
       expect((await snapshot(question.id)).question?.status).toBe('published');
     } else {

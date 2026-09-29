@@ -24,6 +24,7 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
+import { type ContentEdits, source } from './seed-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -42,59 +43,6 @@ afterEach(async () => {
 afterAll(async () => {
   await closeConnection(sql);
 });
-
-type ContentEdits = {
-  stem?: string;
-  explanation?: string;
-  reference?: string;
-  correctText?: string;
-  wrongText?: string;
-  wrongExplanation?: string;
-  labels?: readonly string[];
-  correctLabel?: string;
-  status?: schema.QuestionStatus;
-};
-
-function source(slug: string, edits: ContentEdits = {}) {
-  const choices = (edits.labels ?? ['A', 'B', 'C']).flatMap((label) => {
-    const correct = label === (edits.correctLabel ?? 'B');
-    const text =
-      label === 'B'
-        ? (edits.correctText ?? 'Original correct option.')
-        : (edits.wrongText ?? `Original option ${label}.`);
-    return [
-      `  - label: ${label}`,
-      `    text: ${JSON.stringify(text)}`,
-      `    correct: ${correct}`,
-      ...(correct
-        ? []
-        : [
-            `    explanation: ${JSON.stringify(edits.wrongExplanation ?? 'Original wrong-option explanation.')}`,
-          ]),
-    ];
-  });
-  return {
-    absolutePath: `/tmp/${slug}.mdx`,
-    raw: [
-      '---',
-      `slug: ${slug}`,
-      'difficulty: easy',
-      `status: ${edits.status ?? 'published'}`,
-      'tags:',
-      '  - {slug: general, name: General, kind: topic}',
-      '  - {slug: alcohol, name: Alcohol, kind: substance}',
-      'choices:',
-      ...choices,
-      '---',
-      '## Stem',
-      edits.stem ?? 'Original clinical task.',
-      '## Explanation',
-      edits.explanation ?? 'Original general explanation.',
-      '### Reference',
-      edits.reference ?? 'Original synthetic reference.',
-    ].join('\n'),
-  };
-}
 
 async function arrangeQuestion(history?: 'attempt' | 'session') {
   const question = await createQuestion(db, cleanup, {
@@ -137,6 +85,10 @@ async function arrangeQuestion(history?: 'attempt' | 'session') {
       .where(
         eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
       );
+    // Ended, so this suite exercises #951's graded-history guard. An
+    // incomplete session defers any refresh of the revision it binds, which
+    // seed-active-session-deferral covers.
+    await sessions.end(session.id, user.id);
   }
   return question;
 }
@@ -206,7 +158,7 @@ describe.each(['attempt', 'session'] as const)(
             status: 'archived',
           }),
         ]),
-      ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+      ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0, deferred: [] });
       const after = await snapshot(question.id);
       expect(after.question).toMatchObject({
         id: question.id,
@@ -231,7 +183,7 @@ describe('seed rewrite policy boundaries', () => {
       syncQuestionsFromFiles(db, [
         source(question.slug, { stem: 'Revised task.' }),
       ]),
-    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0, deferred: [] });
     expect((await snapshot(question.id)).question?.stemMd).toBe(
       'Revised task.',
     );

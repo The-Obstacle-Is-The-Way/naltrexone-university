@@ -312,6 +312,26 @@ This half covers lists of earlier answers, and bookmarks.
   - A fake case covers the attempted list's difficulty sort: the answered revision, unpublished questions and ties by recency. That sort had no test before.
   - Break-it proofs: a helper that ignores revisions fails the helper and both use-case cases; restoring the legacy difficulty column fails the Postgres filter and sort cases.
 
+## Phase 2a, fourth increment: the seed waits for learners mid-session — 2026-09-29
+
+Until phase 2b, a content correction still refreshes revision 1 in place. #951's guard refuses a rewrite once graded history exists: attempts, or session states with a graded answer.
+- **The gap.** A learner who has started a session but not yet answered a question has no graded history. The seed would rewrite the question and refresh revision 1 under that session, so its stem, choices or difficulty could change between reading and answering. A difficulty change is not "content" to #951 at all.
+- **The rule.** The seed refreshes a question's revision 1 only while no incomplete practice session binds it. Before mirroring, it compares the content it would write with the revision's stored hash. If they differ and an incomplete session binds the revision, the question's transaction rolls back, and both the legacy row and revision 1 stay unchanged.
+- **Deferred, not failed.** The run applies every other question, then exits non-zero, naming each deferred slug with its session count and asking for a rerun after those sessions end. Aborting the whole run instead would let one abandoned session block every other correction. No override exists: changing content under a learner is never correct.
+- **Unchanged.**
+  - #951 still governs graded history.
+  - Tag-only and status changes do not change the revision's content, so they still apply.
+  - The graded-history suite now ends its arranged session, so it exercises #951 alone, and the new suite owns incomplete sessions.
+- **Operations.** Production seeding is a manual operator command, never a deploy step, so a deferral cannot block a release. Local E2E seeding can defer if a content change meets an incomplete session an earlier E2E run left behind; the message names the question. The deployment procedure and the tag-taxonomy pipeline document the rule.
+- **Tests.**
+  - Four real-Postgres cases in `seed-active-session-deferral.integration.test.ts`: a rewrite deferred with nothing changed; a difficulty-only change deferred; the same rewrite applied once the session ends; and the run's other questions still applied. All four were red first; the first showed the rewrite applied under the active session.
+  - Unit cases for the seed's report.
+- **Review (#1208).**
+  - Session creation read the question's current revision without a lock, so a session created while a seed transaction was running could bind the revision just after the seed counted sessions, and see the refresh.
+  - It now reads the question rows `FOR SHARE`. Session creations still run concurrently, but each waits for, or blocks, a seed transaction's `FOR UPDATE`.
+  - A Postgres case holding the seed's lock shows creation waiting; it was red first.
+  - **Residual, recorded.** Grading an answer outside a session reads the question before the attempt is written, so a seed refresh landing in that window could bind the attempt to refreshed content. That is the pre-existing #951 race class, not introduced here. Phase 2b removes it: revisions become immutable, so nothing is refreshed in place.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
