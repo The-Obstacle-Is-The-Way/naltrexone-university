@@ -357,3 +357,46 @@ describe('ADR-021 §3: a withdrawn question the learner never attempted stays hi
     ).resolves.toBeNull();
   });
 });
+
+describe('ADR-021 §3: an attempt inside an exam still in progress is not yet reviewable', () => {
+  it('shows no withdrawn question by that attempt, as the reveal gives none', async () => {
+    const question = await createPublishedQuestion('exam-in-progress');
+    const user = await createUser(db, cleanup);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    const attempt = await attempts.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: session.id,
+      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
+      isCorrect: true,
+      timeSpentSeconds: 3,
+    });
+    await withdraw(question.id);
+    const review = { attemptId: attempt.id };
+
+    await expect(
+      questionForView().execute({
+        userId: user.id,
+        slug: question.slug,
+        review,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      new GetPreviousAttemptUseCase(
+        attempts,
+        new DrizzleQuestionRepository(db),
+        new FakeLogger(),
+        sessions,
+      ).execute({ userId: user.id, questionId: question.id, ...review }),
+    ).resolves.toBeNull();
+  });
+});

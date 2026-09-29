@@ -400,6 +400,18 @@ The second slice covers the standalone question page in review mode, where Histo
     - six mutations of the use case each fail its unit cases: skipping the outside-review path, the attempt's question check, the finished-session check, the withdrawn flag, the latest-attempt fallback and the session item match.
 - **Fake fidelity.** `FakeQuestionRepository` returned a bound older revision under that revision's own status. The adapter reads status from the question, so a withdrawn question's older revision could read as published in the fake only. The fake now reads a bound revision under its question's status, pinned by a red-first fake case and recorded in the contract register.
 
+## Phase 2a, fifth increment, part three follow-up: an exam in progress is not yet reviewable — 2026-09-29
+
+The promotion review of part three (#1215) found a disagreement between the two use cases the standalone review page calls. Accepted in substance; fixed in a different place.
+
+- **The gap.**
+  - `GetPreviousAttemptUseCase` gives nothing for an attempt inside an exam still in progress.
+  - `GetQuestionForViewUseCase` bound that attempt's revision when the review named it, by attempt id or through the session.
+  - Reachable only through a hand-built review URL during the learner's own exam. It showed question content the learner was already seeing, with no answer, correctness or explanation.
+- **The fix.** `GetQuestionForViewUseCase` applies the rule `GetPreviousAttemptUseCase` applies to every attempt in a session: an exam still in progress is not an item to review, so the view falls back to the published question. A withdrawn question then shows nothing.
+- **Not in the adapter.** The review suggested hiding such attempts in `findByIdAndUserId`. That method also serves a retry's parent attempt in `submit-answer` and `validate-feedback-context`, which would change without their own analysis.
+- **Tests.** Four fake-level cases, by attempt and by session, for a withdrawn and a published question, and one real-Postgres case that checks the view and the reveal together. All red first.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

@@ -284,4 +284,49 @@ describe('GetQuestionForViewUseCase', () => {
       });
     },
   );
+
+  // As `GetPreviousAttemptUseCase`: an attempt inside an exam still in
+  // progress is not yet an answer to review, so the view falls back to the
+  // published question.
+  const examInProgress = (question: Question) => {
+    const session = sessionOver(question, { mode: 'exam', endedAt: null });
+    const attempt = answerOf(question, { practiceSessionId: session.id });
+    return { attempts: [attempt], sessions: [session], attempt, session };
+  };
+  const namingTheExamAttempt: [
+    string,
+    (
+      exam: ReturnType<typeof examInProgress>,
+    ) => GetQuestionForViewInput['review'],
+  ][] = [
+    ['the attempt', ({ attempt }) => ({ attemptId: attempt.id })],
+    ['the session', ({ session }) => ({ sessionId: session.id })],
+  ];
+
+  it.each(namingTheExamAttempt)(
+    'shows no withdrawn question for an exam in progress, reviewed by %s',
+    async (_name, review) => {
+      const { current, answered } = revisions('archived');
+      const exam = examInProgress(answered);
+
+      await expect(
+        view([current, answered], exam)(review(exam)),
+      ).resolves.toBeNull();
+    },
+  );
+
+  it.each(namingTheExamAttempt)(
+    'shows the current published question for an exam in progress, reviewed by %s',
+    async (_name, review) => {
+      const { current, answered } = revisions('published');
+      const exam = examInProgress(answered);
+
+      await expect(
+        view([current, answered], exam)(review(exam)),
+      ).resolves.toMatchObject({
+        question: { stemMd: 'Current' },
+        withdrawn: false,
+      });
+    },
+  );
 });
