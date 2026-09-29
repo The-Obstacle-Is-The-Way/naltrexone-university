@@ -56,6 +56,10 @@ export function PostExamReviewView({
       ? (review.rows[currentIndex + 1] ?? null)
       : null;
   const focusedQuestionId = currentRow?.questionId ?? null;
+  // A withdrawn question stays reviewable, but not bookmarkable, reportable or
+  // ratable (Pattern Registry F-11).
+  const canActOnQuestion =
+    currentRow?.isAvailable === true && !currentRow.withdrawn;
   const navigateToQuestion = (questionId: string) => {
     shouldRestorePanelRef.current = true;
     onNavigateQuestion(questionId);
@@ -121,6 +125,19 @@ export function PostExamReviewView({
 
           {currentRow.isAvailable ? (
             <>
+              {currentRow.withdrawn ? (
+                // Pattern Registry F-11: a question withdrawn after the learner
+                // answered it stays reviewable, as answered (ADR-021 §3).
+                <Card role="status" className="gap-0 p-4 text-sm">
+                  <p className="font-medium text-foreground">
+                    This question has been withdrawn.
+                  </p>
+                  <p className="text-muted-foreground">
+                    You can still review your answer. It no longer appears in
+                    new practice.
+                  </p>
+                </Card>
+              ) : null}
               <QuestionCard
                 stemMd={currentRow.stemMd}
                 choices={currentRow.choices}
@@ -199,7 +216,7 @@ export function PostExamReviewView({
           </Button>
         )}
 
-        {currentRow?.isAvailable ? (
+        {canActOnQuestion ? (
           <Button
             type="button"
             variant="outline"
@@ -211,7 +228,7 @@ export function PostExamReviewView({
             {isBookmarked ? 'Remove bookmark' : 'Bookmark'}
           </Button>
         ) : null}
-        {currentRow?.isAvailable && questionFeedback ? (
+        {canActOnQuestion && questionFeedback ? (
           <QuestionReportDialog
             open={questionFeedback.isReportOpen}
             onOpenChange={questionFeedback.openReport}
@@ -219,7 +236,7 @@ export function PostExamReviewView({
           />
         ) : null}
       </div>
-      {currentRow?.isAvailable && questionFeedback ? (
+      {canActOnQuestion && questionFeedback ? (
         <QuestionRatingFooter
           rating={questionFeedback.rating}
           feedbackStatus={questionFeedback.feedbackStatus}

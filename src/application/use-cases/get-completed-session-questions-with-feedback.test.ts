@@ -90,6 +90,59 @@ function createCorrectnessComparisonFixture(input: {
 }
 
 describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
+  it('keeps a withdrawn question reviewable, as answered, and marks it withdrawn (ADR-021 §3)', async () => {
+    const withdrawn = createQuestion({
+      id: 'q1',
+      slug: 'q-1',
+      status: 'archived',
+      stemMd: 'Answered stem',
+      choices: [
+        createChoice({
+          id: 'c1',
+          questionId: 'q1',
+          label: 'A',
+          isCorrect: true,
+        }),
+      ],
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      endedAt: new Date('2026-03-19T12:00:00.000Z'),
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: 'c1',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-03-19T11:58:00.000Z'),
+        },
+      ],
+    });
+    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([withdrawn]),
+      new FakeAttemptRepository([]),
+      new FakeLogger(),
+    );
+
+    const output = await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+    });
+
+    expect(output.rows).toEqual([
+      expect.objectContaining({
+        isAvailable: true,
+        withdrawn: true,
+        stemMd: 'Answered stem',
+        correctChoiceId: 'c1',
+      }),
+    ]);
+  });
+
   it('warns on attempt-state correctness divergence while preserving the attempt-preferred output', async () => {
     const fixture = createCorrectnessComparisonFixture({
       attemptIsCorrect: true,

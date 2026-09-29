@@ -96,6 +96,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
         rows: [
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: fixtureQ1Id,
             slug: 'q-1',
             stemMd: 'Stem 1',
@@ -132,6 +133,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
           },
           {
             isAvailable: true,
+            withdrawn: false,
             questionId: fixtureQ2Id,
             slug: 'q-2',
             stemMd: 'Stem 2',

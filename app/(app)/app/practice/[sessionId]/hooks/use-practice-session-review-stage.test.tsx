@@ -45,6 +45,7 @@ function createPostExamReviewRow(input: {
 
   return {
     isAvailable: true,
+    withdrawn: false,
     questionId: input.questionId,
     slug: `${input.questionId}-slug`,
     stemMd: `Stem for ${input.questionId}`,
