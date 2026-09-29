@@ -12,6 +12,7 @@ import {
   createIntegrationDb,
   createQuestion,
   createTag,
+  mirrorQuestionRevision,
 } from './helpers';
 
 // Lookup and mapping twins for the retired call-chain units. Split from
@@ -51,6 +52,7 @@ describe('DrizzleQuestionRepository lookups', () => {
       isCorrect: false,
       sortOrder: 0,
     });
+    await mirrorQuestionRevision(db, question.id);
     const repo = new DrizzleQuestionRepository(db);
 
     const result = await repo.findPublishedById(question.id);
@@ -126,6 +128,7 @@ describe('DrizzleQuestionRepository lookups', () => {
       })
       .returning({ id: schema.choices.id });
     if (!corrupt) throw new Error('Expected the corrupt choice row');
+    await mirrorQuestionRevision(db, question.id);
     const repo = new DrizzleQuestionRepository(db);
 
     await expect(repo.findPublishedById(question.id)).rejects.toMatchObject({

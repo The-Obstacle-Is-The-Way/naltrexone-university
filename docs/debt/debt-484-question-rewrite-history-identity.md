@@ -190,7 +190,7 @@ ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../a
 ADR-021 phase 2a switches readers to revisions. It lands as five reviewed increments, each safe with the N-1 deployment:
 1. bind new rows (this increment);
 2. bind older rows in a bounded, batched job, then validate the keys;
-3. switch selection, grading and review reads to the bound revision;
+3. switch selection, grading and review reads to the bound revision, in three parts (3a, 3b, 3c);
 4. refresh revision 1 only while no incomplete session binds it;
 5. show the withdrawal notice to learners who attempted a withdrawn question.
 
@@ -233,6 +233,27 @@ Since the first increment, every new session state and attempt is bound. The ser
   - a row whose selection is a choice of another revision, left unbound and reported;
   - all five keys validated.
 - **What does not change.** Readers, grading and the seed behave as before.
+
+## Phase 2a, third increment, part one: question content reads through the current revision — 2026-09-28
+
+The third increment switches reads to revisions. It lands in three parts, so each reviewed change stays small:
+- 3a, question content and selection read the question's current revision (this part);
+- 3b, grading and in-session reads use the session item's or attempt's bound revision;
+- 3c, history, review and bookmark reads use the bound revision.
+
+This part:
+- **Reads.** The question repository reads a question's stem, explanation, reference, difficulty and choices from its current revision, no longer from the legacy columns or from every choice with the question's id. Selection's difficulty filter matches the current revision's difficulty. Every lookup the application uses changes: by id, by slug, by several ids, and the two session lookups.
+- **Invariant.** A question with no current revision is refused with `INTERNAL_ERROR`, not served from the legacy columns. Only the seed writes questions, and it mirrors each into its revision in the same transaction; `0040` re-ran the sweep. Serving such a question silently would create unbound history, which phase 2b's migration refuses.
+- **N-1.** The serving deployment still reads the legacy columns. While each question has exactly one revision, both read the same content.
+- **Tests.** Five real-Postgres cases in `question-revision-reads.integration.test.ts`:
+  - content from the current revision;
+  - only the current revision's choices, through all five lookups;
+  - the difficulty filter, both matching and excluding, and the candidate count;
+  - refusal of a question without a revision;
+  - every published question in the corpus read exactly as its legacy columns and choices.
+
+  The first three were red first. The refusal case was red against the legacy fallback, which this part removed. Restoring the legacy difficulty column in the filter fails the difficulty case.
+- **What does not change.** Grading, history and review reads, and the seed.
 
 ## Related
 

@@ -153,6 +153,18 @@ export async function createTag(
   return row;
 }
 
+// ADR-021: like the seed after every write, mirror the question and its
+// choices into revision 1, so fixtures carry the current revision that reads
+// resolve and sessions and attempts bind. Call it again after adding a choice.
+export async function mirrorQuestionRevision(
+  db: DrizzleDb,
+  questionId: string,
+): Promise<void> {
+  await db.execute(
+    drizzleSql`SELECT sync_question_revision_v1(${questionId}::uuid)`,
+  );
+}
+
 export async function createQuestion(
   db: DrizzleDb,
   cleanup: CleanupState,
@@ -224,11 +236,7 @@ export async function createQuestion(
     throw new Error('Failed to insert choices');
   }
 
-  // ADR-021: like the seed, mirror the question into its revision 1, so
-  // fixtures carry the current revision that sessions and attempts bind.
-  await db.execute(
-    drizzleSql`SELECT sync_question_revision_v1(${question.id}::uuid)`,
-  );
+  await mirrorQuestionRevision(db, question.id);
 
   if (input.tagIds && input.tagIds.length > 0) {
     await db.insert(schema.questionTags).values(
