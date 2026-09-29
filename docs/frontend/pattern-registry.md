@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-08-08
+**Last Updated:** 2026-09-29
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -185,7 +185,7 @@ group rounded-xl bg-foreground/5
 rounded-xl bg-foreground/5 p-3
 ```
 
-**Used in:** Dashboard unavailable activity rows (question no longer available)
+**Used in:** Dashboard unavailable activity rows (question no longer available). After ADR-021 increment 5, a withdrawn question the learner attempted uses F-11 instead.
 
 **Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
 
@@ -194,7 +194,7 @@ rounded-xl bg-foreground/5 p-3
 rounded-2xl bg-foreground/[0.08] p-4
 ```
 
-**Used in:** History questions unavailable rows, bookmarks unavailable rows
+**Used in:** History questions unavailable rows, bookmarks unavailable rows. After ADR-021 increment 5, only for a question the learner never attempted; an attempted withdrawn question uses F-11.
 
 **Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
 
@@ -878,6 +878,41 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 - Server-rendered at page load; no live-region role needed (matches past-due banner precedent).
 
 **Source:** `app/(app)/app/layout.tsx` (trial countdown banner)
+
+### F-11: Withdrawal Notice (withdrawn question the learner attempted)
+
+Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
+
+**Review views** (standalone review, post-exam review, completed-session feedback) — an S-1 **Status notice** placed first in the question region, above the stem:
+
+```text
+<Card role="status" className="gap-0 p-4 text-sm">
+```
+
+- **Heading line:** `font-medium text-foreground` — "This question has been withdrawn."
+- **Body line:** `text-muted-foreground` — "You can still review your answer. It no longer appears in new practice."
+- The answer, the correct choice and the explanation show as the learner answered them. Bookmark, report and rating actions stay hidden, as for unavailable rows.
+
+**List rows** (History attempted list, Dashboard recent activity, Session breakdown, Review & Submit list):
+
+- The row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
+- Its metadata reads `Withdrawn` where an available row shows the difficulty, in the same metadata style.
+
+**Active session** (a question withdrawn after the session began) — the same Status notice, in place of the F-3 `Question not found` error card:
+
+- **Heading line:** "This question was withdrawn after your session began."
+- **Body line:** "It can't be answered here. Continue to the next question."
+- The item cannot be answered or submitted. How such an item counts toward the session's score is an open decision recorded in DEBT-484; the notice makes no claim about scoring.
+
+**Never attempted** (for example, only bookmarked): unchanged S-2 unavailable row (`[Question no longer available]`). The learner never answered it, so its content is not shown.
+
+**Rules:**
+- Reuses S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`), I-1/I-2 rows and the existing metadata style; no new surface, token or opacity value.
+- Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong.
+- Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and `text-foreground` for the heading line. No new color pair, so no new `contrast-policy.md` ledger entry is required.
+- `role="status"` announces the notice politely; it is never focused automatically.
+
+**Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. Consumers land in the increment's UI change; until then the surfaces above show the S-2 or F-3 treatments.
 
 ---
 
@@ -1564,4 +1599,5 @@ Compact lookup for code reviews and implementation.
 | L-6 | Mobile Menu Link | `hover:bg-muted/50` | `rounded-md` | — |
 | F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive` |
 | F-4 | Toast | — | `rounded-xl` | varies by tone |
+| F-11 | Withdrawal Notice | — (non-interactive; list rows keep I-1 / I-2 hover) | `rounded-2xl` (S-1) | `border` (S-1) |
 | M-1 | Badge/Pill | — | `rounded-full` | `border-border/60` |
