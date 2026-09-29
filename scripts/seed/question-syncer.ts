@@ -23,11 +23,22 @@ import {
 } from './question-parser';
 import { upsertTags, validateSeedQuestionTags } from './tag-manager';
 
+// A question the seed left unchanged because incomplete practice sessions
+// bind the revision the change would refresh (ADR-021).
+export type SeedDeferral = { slug: string; sessions: number };
+
 export type SeedSyncCounts = {
   inserted: number;
   updated: number;
   skipped: number;
+  deferred: SeedDeferral[];
 };
+
+class RevisionInUseError extends Error {
+  constructor(readonly sessions: number) {
+    super(`revision is bound by ${sessions} incomplete practice sessions`);
+  }
+}
 
 const ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY_ENV =
   'SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY';
@@ -183,10 +194,32 @@ function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
 // ADR-021 phase 1: a question's revision 1 mirrors its legacy row. The SQL
 // function from migration 0039 creates, refreshes or re-points it and attaches
 // the choices, inside the caller's transaction.
+//
+// Phase 2a: it refuses to refresh a revision that an incomplete practice
+// session binds, so content never changes under a learner mid-session. #951's
+// guard covers graded history; this covers an item not yet answered, and a
+// change #951 does not count as content, such as difficulty. The caller's
+// transaction rolls back and the question waits for a later run.
 async function syncQuestionRevision(
   tx: PostgresJsDatabase<typeof schema>,
   questionId: string,
 ): Promise<void> {
+  const [binding] = await tx.execute<{ sessions: number }>(sql`
+    SELECT count(DISTINCT s.practice_session_id)::int AS sessions
+    FROM questions q
+    JOIN question_revisions r ON r.id = q.current_revision_id
+    JOIN practice_session_question_states s ON s.question_revision_id = r.id
+    JOIN practice_sessions p ON p.id = s.practice_session_id
+    WHERE q.id = ${questionId}::uuid
+      AND p.ended_at IS NULL
+      AND r.content_hash <> encode(
+        sha256(convert_to(question_content_json_v1(q.id), 'UTF8')),
+        'hex'
+      )
+  `);
+  const sessions = Number(binding?.sessions ?? 0);
+  if (sessions > 0) throw new RevisionInUseError(sessions);
+
   await tx.execute(sql`SELECT sync_question_revision_v1(${questionId}::uuid)`);
 }
 
@@ -210,6 +243,7 @@ export async function syncQuestionsFromFiles(
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
+  const deferred: SeedDeferral[] = [];
 
   for (const { file, seedFromFile, fileHash } of prepared) {
     try {
@@ -482,6 +516,10 @@ export async function syncQuestionsFromFiles(
         updated += 1;
       }
     } catch (error) {
+      if (error instanceof RevisionInUseError) {
+        deferred.push({ slug: seedFromFile.slug, sessions: error.sessions });
+        continue;
+      }
       throw createSeedQuestionSyncError({
         file,
         slug: seedFromFile.slug,
@@ -490,5 +528,5 @@ export async function syncQuestionsFromFiles(
     }
   }
 
-  return { inserted, updated, skipped };
+  return { inserted, updated, skipped, deferred };
 }

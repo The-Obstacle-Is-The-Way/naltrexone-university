@@ -159,6 +159,10 @@ Behavior:
   `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true` only for an explicit,
   operator-approved historical-key override; the override logs the same audit
   context.
+- Seed defers any content change, including difficulty, to a question whose
+  current revision an incomplete practice session binds (ADR-021). It applies
+  every other question, names each deferred slug with its session count, and
+  exits non-zero; rerun it after those sessions end.
 - Seed validation rejects:
   - legacy `domain` tags
   - non-canonical topic / substance / treatment slugs

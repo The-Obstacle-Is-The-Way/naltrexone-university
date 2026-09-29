@@ -569,13 +569,18 @@ export class DrizzlePracticeSessionRepository
 
         if (!row) return undefined;
 
+        // ADR-021: a shared lock on the question rows serializes this read
+        // with a seed refresh, which takes the rows FOR UPDATE before counting
+        // the sessions that bind them. Session creations do not block each
+        // other (#1208 review).
         const revisions = await tx
           .select({
             questionId: questions.id,
             revisionId: questions.currentRevisionId,
           })
           .from(questions)
-          .where(inArray(questions.id, params.questionIds));
+          .where(inArray(questions.id, params.questionIds))
+          .for('share');
 
         const stateRows = await tx
           .insert(practiceSessionQuestionStates)
