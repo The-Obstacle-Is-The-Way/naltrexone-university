@@ -11,11 +11,13 @@ export function bindingKey(binding: QuestionRevisionBinding): string {
   return JSON.stringify([binding.questionId, binding.questionRevisionId]);
 }
 
-// Published questions as each binding's revision, keyed by `bindingKey`. The
-// port omits an unpublished question for every binding of it and yields one
-// question per other binding, in order, so the two lists pair up; each pair is
-// checked, including a bound binding's revision.
-export async function fetchQuestionsByBinding(
+// The questions of the learner's own attempts, as each binding's revision and
+// whatever their status now, keyed by `bindingKey` (ADR-021 §3: a withdrawn
+// question stays reviewable by the learner who attempted it). The port omits a
+// missing question for every binding of it and yields one question per other
+// binding, in order, so the two lists pair up; each pair is checked, including
+// a bound binding's revision.
+export async function fetchOwnedQuestionsByBinding(
   repo: QuestionRepository,
   bindings: readonly QuestionRevisionBinding[],
 ): Promise<Map<string, Question>> {
@@ -26,9 +28,9 @@ export async function fetchQuestionsByBinding(
   ];
   if (unique.length === 0) return new Map();
 
-  const questions = await repo.findPublishedByBindings(unique);
-  const published = new Set(questions.map((question) => question.id));
-  const found = unique.filter((binding) => published.has(binding.questionId));
+  const questions = await repo.findByIdsForSession(unique);
+  const present = new Set(questions.map((question) => question.id));
+  const found = unique.filter((binding) => present.has(binding.questionId));
   if (found.length !== questions.length) {
     throw brokenContract();
   }
@@ -50,6 +52,6 @@ export async function fetchQuestionsByBinding(
 function brokenContract() {
   return new ApplicationError(
     'INTERNAL_ERROR',
-    'findPublishedByBindings did not return one question per binding in order',
+    'findByIdsForSession did not return one question per binding in order',
   );
 }

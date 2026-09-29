@@ -6,9 +6,11 @@ import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-at
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from '@/src/application/use-cases/get-completed-session-questions-with-feedback';
 import { GetPreviousAttemptUseCase } from '@/src/application/use-cases/get-previous-attempt';
 import { GetQuestionForViewUseCase } from '@/src/application/use-cases/get-question-for-view';
+import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
 import {
   addCurrentRevision,
   cleanupAfterEach,
@@ -398,5 +400,69 @@ describe('ADR-021 §3: an attempt inside an exam still in progress is not yet re
         sessions,
       ).execute({ userId: user.id, questionId: question.id, ...review }),
     ).resolves.toBeNull();
+  });
+});
+
+describe('ADR-021 §3: the attempt lists keep a withdrawn question the learner attempted', () => {
+  it('lists it among attempted questions, as answered and marked withdrawn', async () => {
+    const { question, user } = await answerThenWithdraw('attempted-list');
+
+    const listed = await new GetAttemptedQuestionsUseCase(
+      attempts,
+      new DrizzleQuestionRepository(db),
+      new FakeLogger(),
+    ).execute({ userId: user.id, limit: 10, offset: 0 });
+
+    expect(listed.rows).toEqual([
+      expect.objectContaining({
+        isAvailable: true,
+        withdrawn: true,
+        questionId: question.id,
+        slug: question.slug,
+        stemMd: '# Stem',
+      }),
+    ]);
+  });
+
+  it('shows each recent attempt as the revision it graded, marked withdrawn', async () => {
+    const question = await createPublishedQuestion('recent-activity');
+    const user = await createUser(db, cleanup);
+    await attempts.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+    const revised = await addCurrentRevision(db, question.id);
+    await attempts.insert({
+      userId: user.id,
+      questionId: question.id,
+      practiceSessionId: null,
+      outcome: { kind: 'answered', selectedChoiceId: revised.correctChoiceId },
+      isCorrect: true,
+      timeSpentSeconds: 5,
+    });
+    await withdraw(question.id);
+
+    const stats = await new GetUserStatsUseCase(
+      attempts,
+      new DrizzleQuestionRepository(db),
+      new FakeLogger(),
+    ).execute({ userId: user.id });
+
+    expect(stats.recentActivity).toEqual([
+      expect.objectContaining({
+        isAvailable: true,
+        withdrawn: true,
+        stemMd: '# Revised stem',
+      }),
+      expect.objectContaining({
+        isAvailable: true,
+        withdrawn: true,
+        stemMd: '# Stem',
+      }),
+    ]);
   });
 });

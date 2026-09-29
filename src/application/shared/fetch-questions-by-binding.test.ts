@@ -5,11 +5,11 @@ import type { Question } from '@/src/domain/entities';
 import { createQuestion } from '@/src/domain/test-helpers';
 import {
   bindingKey,
-  fetchQuestionsByBinding,
+  fetchOwnedQuestionsByBinding,
 } from './fetch-questions-by-binding';
 
-describe('fetchQuestionsByBinding', () => {
-  it('keys each distinct binding to its own revision and omits unpublished questions', async () => {
+describe('fetchOwnedQuestionsByBinding', () => {
+  it('keys each distinct binding to its own revision, keeps a withdrawn question and omits a missing one', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
     const older = createQuestion({ id: 'q1', stemMd: 'Older' });
     const archived = createQuestion({ id: 'q2', status: 'archived' });
@@ -17,41 +17,46 @@ describe('fetchQuestionsByBinding', () => {
     const unboundQ1 = { questionId: 'q1', questionRevisionId: null };
     const olderQ1 = { questionId: 'q1', questionRevisionId: older.revisionId };
     const unboundQ2 = { questionId: 'q2', questionRevisionId: null };
+    const missing = { questionId: 'q3', questionRevisionId: null };
 
-    const byBinding = await fetchQuestionsByBinding(repo, [
+    const byBinding = await fetchOwnedQuestionsByBinding(repo, [
       unboundQ1,
       olderQ1,
       unboundQ1,
       unboundQ2,
+      missing,
     ]);
 
-    expect(repo.findPublishedByBindingsCalls).toEqual([['q1', 'q1', 'q2']]);
+    expect(repo.findByIdsForSessionCalls).toEqual([['q1', 'q1', 'q2', 'q3']]);
     expect(byBinding.get(bindingKey(unboundQ1))?.stemMd).toBe('Current');
     expect(byBinding.get(bindingKey(olderQ1))?.stemMd).toBe('Older');
-    expect(byBinding.has(bindingKey(unboundQ2))).toBe(false);
+    expect(byBinding.get(bindingKey(unboundQ2))?.status).toBe('archived');
+    expect(byBinding.has(bindingKey(missing))).toBe(false);
   });
 
   it('short-circuits when there are no bindings', async () => {
     const repo = new FakeQuestionRepository([createQuestion({ id: 'q1' })]);
 
-    await expect(fetchQuestionsByBinding(repo, [])).resolves.toEqual(new Map());
-    expect(repo.findPublishedByBindingsCalls).toEqual([]);
+    await expect(fetchOwnedQuestionsByBinding(repo, [])).resolves.toEqual(
+      new Map(),
+    );
+    expect(repo.findByIdsForSessionCalls).toEqual([]);
   });
 
   it('fails loudly when the repository swaps two revisions of one question', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
     const older = createQuestion({ id: 'q1', stemMd: 'Older' });
     class SwappingQuestionRepository extends FakeQuestionRepository {
-      override async findPublishedByBindings(
+      override async findByIdsForSession(
         bindings: readonly QuestionRevisionBinding[],
       ) {
-        return [...(await super.findPublishedByBindings(bindings))].reverse();
+        return [...(await super.findByIdsForSession(bindings))].reverse();
       }
     }
     const repo = new SwappingQuestionRepository([current, older]);
 
     await expect(
-      fetchQuestionsByBinding(repo, [
+      fetchOwnedQuestionsByBinding(repo, [
         { questionId: 'q1', questionRevisionId: current.revisionId },
         { questionId: 'q1', questionRevisionId: older.revisionId },
       ]),
@@ -69,10 +74,10 @@ describe('fetchQuestionsByBinding', () => {
     ],
   ])('fails loudly when the repository %s', async (_label, distort) => {
     class DistortingQuestionRepository extends FakeQuestionRepository {
-      override async findPublishedByBindings(
+      override async findByIdsForSession(
         bindings: readonly QuestionRevisionBinding[],
       ) {
-        return distort(await super.findPublishedByBindings(bindings));
+        return distort(await super.findByIdsForSession(bindings));
       }
     }
     const repo = new DistortingQuestionRepository([
@@ -81,7 +86,7 @@ describe('fetchQuestionsByBinding', () => {
     ]);
 
     await expect(
-      fetchQuestionsByBinding(repo, [
+      fetchOwnedQuestionsByBinding(repo, [
         { questionId: 'q1', questionRevisionId: null },
         { questionId: 'q2', questionRevisionId: null },
       ]),

@@ -11,6 +11,7 @@ export function createAvailableAttemptedQuestionRow(
 ): AvailableAttemptedQuestionRow {
   return {
     isAvailable: true,
+    withdrawn: false,
     questionId: crypto.randomUUID(),
     isCorrect: false,
     sessionId: null,

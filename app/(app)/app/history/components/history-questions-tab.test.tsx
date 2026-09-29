@@ -634,6 +634,43 @@ describe('HistoryQuestionsTab', () => {
     );
   });
 
+  // Pattern Registry F-11: an attempted withdrawn question keeps its row and
+  // link into review; its metadata reads Withdrawn where the difficulty was.
+  it('renders a withdrawn question as a review link whose metadata reads Withdrawn', () => {
+    const result: ActionResult<GetAttemptedQuestionsOutput> = {
+      ok: true,
+      data: {
+        rows: [
+          createAvailableAttemptedQuestionRow({
+            slug: 'q-withdrawn',
+            stemMd: 'Answered stem',
+            difficulty: 'hard',
+            withdrawn: true,
+          }),
+        ],
+        totalCount: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const html = renderToStaticMarkup(<HistoryQuestionsTab result={result} />);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const href = toQuestionRoute('q-withdrawn', {
+      from: 'history',
+      mode: 'review',
+      historyHref: buildHistoryQuestionsHref({ limit: 20, offset: 0 }),
+    });
+    const link = Array.from(doc.querySelectorAll('a')).find(
+      (a) => a.getAttribute('href') === href,
+    );
+
+    expect(link?.textContent).toContain('Answered stem');
+    expect(link?.textContent).toContain('Withdrawn');
+    expect(link?.textContent?.toLowerCase()).not.toContain('hard');
+    expect(html).not.toContain('[Question no longer available]');
+  });
+
   it('renders unavailable question placeholders with no question links', () => {
     const result: ActionResult<GetAttemptedQuestionsOutput> = {
       ok: true,

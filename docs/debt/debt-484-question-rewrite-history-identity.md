@@ -412,6 +412,29 @@ The promotion review of part three (#1215) found a disagreement between the two 
 - **Not in the adapter.** The review suggested hiding such attempts in `findByIdAndUserId`. That method also serves a retry's parent attempt in `submit-answer` and `validate-feedback-context`, which would change without their own analysis.
 - **Tests.** Four fake-level cases, by attempt and by session, for a withdrawn and a published question, and one real-Postgres case that checks the view and the reveal together. All red first.
 
+## Phase 2a, fifth increment, part four: the attempt lists keep a withdrawn question — 2026-09-29
+
+The third slice covers the two lists built from the learner's attempts: History's attempted questions and the Dashboard's recent activity. Every row is an attempt, so a withdrawn question on these lists was attempted by definition (ADR-021 §3).
+
+- **Reads.**
+  - `fetchOwnedQuestionsByBinding` replaces the published lookup for these lists. It reads each attempt's bound revision whatever the question's status, and omits only a question that no longer exists.
+  - `GetAttemptedQuestionsUseCase` and `GetUserStatsUseCase` mark each available row `withdrawn` when its question is no longer published.
+  - The owned read's contract now names attempts as well as session items: two bindings of one question at different revisions each yield their own revision.
+  - The request cache for that read paired results with bindings by question id, which holds for a session but not for two attempts of one question. It now pairs each result with its binding.
+- **UI (Pattern Registry F-11).**
+  - A withdrawn row keeps its link into the review, which part three resolves. It shows the stem of the revision the learner answered.
+  - Its metadata reads `Withdrawn` where an available row shows the difficulty: History's metadata line and the Dashboard's pill.
+  - A row whose question no longer exists keeps the unavailable treatment.
+- **Captures.** The local production build, dark, at 1440×900 and 390×844, with no horizontal overflow: [History, desktop](./assets/debt-484/withdrawn-history-dark-1440x900.png), [History, mobile](./assets/debt-484/withdrawn-history-dark-390x844.png), [Dashboard, desktop](./assets/debt-484/withdrawn-dashboard-dark-1440x900.png), [Dashboard, mobile](./assets/debt-484/withdrawn-dashboard-dark-390x844.png).
+- **Found, and recorded separately.** axe reports colour-contrast failures on both pages. None is in the withdrawn row's new label; all predate this change:
+  - `text-destructive` "Incorrect" at 3.5:1 on the row fills;
+  - muted dates and percentages at 4.44–4.49:1.
+  - They are WCAG 1.4.3 failures and are filed as their own bug.
+- **Not yet.** The session breakdown (the next slice) and an active session's items (slice 3).
+- **Tests.**
+  - Two real-Postgres cases, red first against the published reads: the attempted list, and recent activity with two attempts of one withdrawn question at different revisions.
+  - Use-case cases; the helper's cases rewritten for the owned read; a cache case for two bindings of one question; view cases for both rows. All red first.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
