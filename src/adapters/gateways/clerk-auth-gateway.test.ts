@@ -8,6 +8,12 @@ import {
   ClerkAuthGateway,
   type ClerkAuthGatewayDeps,
 } from './clerk-auth-gateway';
+import {
+  clerkSdkErrorFor,
+  droppedConnection,
+} from './test-helpers/clerk-sdk-errors';
+
+vi.mock('server-only', () => ({}));
 
 function createGateway(
   deps: Pick<ClerkAuthGatewayDeps, 'getClerkUser' | 'userRepository'> &
@@ -219,6 +225,27 @@ describe('ClerkAuthGateway', () => {
       userRepository,
       getClerkUser,
     });
+
+    await expect(gateway.getCurrentUser()).resolves.toMatchObject({
+      email: 'user@example.com',
+    });
+    expect(getClerkUser).toHaveBeenCalledTimes(2);
+  });
+
+  // BUG-313: the Clerk SDK reports a dropped connection as an API error with
+  // no status.
+  it('retries a dropped connection as the Clerk SDK reports it', async () => {
+    const userRepository = new FakeUserRepository();
+    const getClerkUser = vi
+      .fn()
+      .mockRejectedValueOnce(await clerkSdkErrorFor(droppedConnection))
+      .mockResolvedValueOnce({
+        id: 'clerk_1',
+        updatedAt: clerkUpdatedAt.getTime(),
+        emailAddresses: [{ emailAddress: 'user@example.com' }],
+      });
+
+    const gateway = createGateway({ userRepository, getClerkUser });
 
     await expect(gateway.getCurrentUser()).resolves.toMatchObject({
       email: 'user@example.com',
