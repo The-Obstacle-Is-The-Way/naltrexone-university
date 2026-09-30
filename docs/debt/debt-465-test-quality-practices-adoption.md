@@ -51,7 +51,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 - [x] Part 2 pilot: baseline and after-triage scores recorded below; zero un-triaged survivors in the nine pilot files (2026-09-27)
 - [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
-- [ ] Part 2 widening: production files across `src/domain/**` (**done 2026-09-30**, third wave below), then `src/application/{use-cases,shared}/**`
+- [ ] Part 2 widening: production files across `src/domain/**` (**done 2026-09-30**, third wave below), then `src/application/{use-cases,shared}/**` (`shared` **done 2026-09-30**, wave 4a below; `use-cases` remains)
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
 - [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
@@ -63,6 +63,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 | CRAP top-25 snapshot | 2026-08-22 | Required three-lane merged baseline (unit + browser + integration): 445 files / 2,177 functions; 6 scores ≥30, none >100; highest `QuestionView` at 84.00. Full measured snapshot below. |
 | Mutation second wave | 2026-09-27 | Four files: baseline 91.44% (187 mutants), after triage 100.00% (168), no suppression. Triage below. |
 | Mutation third wave | 2026-09-30 | Every other production file under `src/domain/**`, by glob: 21 with mutants. Baseline 87.25% (267 killed, 39 survived, of 306). After triage 100.00% (295 killed, 1 timed out, of 296 scored; 6 suppressed). The full weekly scope then scored 100.00% (763 killed, 26 timed out, 12 suppressed) in 6 min 6 s. Triage below. |
+| Mutation wave 4a | 2026-09-30 | The rest of `src/application/shared/**`, by glob: eight files. Baseline 94.85% (216 killed, 5 timed out, 11 survived and 1 without coverage, of 233). After triage 100.00% (230 killed, 2 timed out, of 232; 1 suppressed). The full weekly scope then scored 100.00% (993 killed, 28 timed out, 13 suppressed) in 7 min 9 s. Triage below. |
 | Mutation pilot scores | 2026-09-27 | Stryker 9.6.1, unit lane, nine files. Baseline 91.77%: 286 killed, 4 timed out, 24 survived and 2 without coverage, of 316 mutants. After triage 100.00%: 286 killed and 3 timed out, of 289 scored; 6 more are suppressed. Both are full `--force` runs. Per-file scores are in the runbook's §7; the triage is below. |
 
 ### Part 2 mutation pilot triage — 2026-09-27
@@ -97,6 +98,16 @@ Full `--force` runs over the runbook's four second-wave files: baseline 91.44% (
 |---|---|---|
 | `start-practice-session.ts` | The use case's own incomplete-session check, including its message (3). The fake repository enforces the same one-incomplete-session rule as Postgres, so only a conflict that must win over empty filters distinguishes the check. | — |
 | `idempotency-error-policy.ts` | The cacheable outcomes are code-and-reason pairs: a non-`CONFLICT` error carrying a terminal-session reason is not cached (1), and the incomplete-session conflict is cached only for starting a session and only as a `CONFLICT` (4). The trial-setup helper had no unit test (1). | A three-way disposition whose two cache labels no caller distinguished, now a boolean with the reasons kept as comments (3); `new Set([])` for the billing actions, now `new Set()` (3); a `typeof` guard that `Set.has` already covers, now a set typed to accept an absent reason (1). |
+
+### Part 2 wave 4a triage — 2026-09-30
+
+Full `--force` runs over the rest of `src/application/shared/**`; `stryker.config.json` mutates the folder by glob. Of eight files, five scored 100% at baseline. The three others:
+
+| File | Missing test (11) | Equivalent, suppressed (1) |
+|---|---|---|
+| `transactional-email-payload.ts` | Each error's code, where tests had matched only a message substring (4); the provider-key refusal and its message (1); a snapshot that parses to something other than an object, which reached a type guard no test fed (1, without coverage). | — |
+| `fetch-questions-by-binding.ts` | A repository that returns each question under the other's id while keeping its bound revision, which only the id check catches (1); the broken-contract message (1). | `question?.id`: the lengths are checked equal first, so every index has a question (1). |
+| `renewal-notice-email-format.ts` | The text and HTML renderers had no direct test. Exact-output cases now pin one line per line, one paragraph per line, and escaped anchors (3). | — |
 
 ### Part 2 third wave triage — 2026-09-30
 

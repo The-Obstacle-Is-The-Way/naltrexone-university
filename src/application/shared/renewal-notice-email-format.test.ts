@@ -7,7 +7,33 @@ import {
   RENEWAL_NOTICE_BUSINESS_CONTACT,
   RENEWAL_NOTICE_FROM,
   RENEWAL_NOTICE_REPLY_TO,
+  renderRenewalNoticeHtml,
+  renderRenewalNoticeText,
+  renewalNoticeLink,
 } from './renewal-notice-email-format';
+
+const lines = [
+  [
+    'Manage it on ',
+    renewalNoticeLink('https://example.com/billing?a=1&b=2'),
+    '.',
+  ],
+  ['Questions: <support>'],
+] as const;
+
+describe('renewal notice rendering', () => {
+  it('renders one line per line of text, with each link as its URL', () => {
+    expect(renderRenewalNoticeText(lines)).toBe(
+      'Manage it on https://example.com/billing?a=1&b=2.\nQuestions: <support>',
+    );
+  });
+
+  it('renders one paragraph per line in HTML, with escaped anchors', () => {
+    expect(renderRenewalNoticeHtml(lines)).toBe(
+      '<p>Manage it on <a href="https://example.com/billing?a=1&amp;b=2">https://example.com/billing?a=1&amp;b=2</a>.</p><p>Questions: &lt;support&gt;</p>',
+    );
+  });
+});
 
 describe('renewal notice email format', () => {
   it('pins the sender identity', () => {

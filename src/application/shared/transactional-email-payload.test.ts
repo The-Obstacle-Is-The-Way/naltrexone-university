@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FakeSha256Hasher } from '@/src/application/test-helpers/fakes';
 import {
+  assertValidRenewalNoticeDeliveryPayload,
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
   getRenewalNoticeRetryAt,
@@ -26,6 +27,14 @@ function evidenceFor(snapshot: string) {
   };
 }
 
+function applicationError(code: string, message: string) {
+  return expect.objectContaining({
+    name: 'ApplicationError',
+    code,
+    message: expect.stringContaining(message),
+  });
+}
+
 describe('transactional email payload snapshot', () => {
   it('creates canonical JSON and delegates its digest to the SHA-256 port', () => {
     const result = createTransactionalEmailPayloadSnapshot(payload, hasher);
@@ -49,7 +58,7 @@ describe('transactional email payload snapshot', () => {
         },
         hasher,
       ),
-    ).toThrow('valid non-empty fields');
+    ).toThrow(applicationError('VALIDATION_ERROR', 'valid non-empty fields'));
   });
 
   it('parses only a matching immutable snapshot and destination', () => {
@@ -77,7 +86,7 @@ describe('transactional email payload snapshot', () => {
         },
         hasher,
       ),
-    ).toThrow('payload hash');
+    ).toThrow(applicationError('CONFLICT', 'payload hash'));
     expect(() =>
       parseTransactionalEmailPayloadSnapshot(
         {
@@ -87,13 +96,13 @@ describe('transactional email payload snapshot', () => {
         },
         hasher,
       ),
-    ).toThrow('destination');
+    ).toThrow(applicationError('CONFLICT', 'destination'));
   });
 
   it('rejects non-JSON and exact-shape violations with valid hashes', () => {
     expect(() =>
       parseTransactionalEmailPayloadSnapshot(evidenceFor('not-json'), hasher),
-    ).toThrow('not valid JSON');
+    ).toThrow(applicationError('INTERNAL_ERROR', 'not valid JSON'));
 
     const missingField = JSON.stringify({
       from: payload.from,
@@ -104,12 +113,21 @@ describe('transactional email payload snapshot', () => {
     });
     expect(() =>
       parseTransactionalEmailPayloadSnapshot(evidenceFor(missingField), hasher),
-    ).toThrow('invalid shape');
+    ).toThrow(applicationError('INTERNAL_ERROR', 'invalid shape'));
+
+    for (const notAnObject of ['null', '"Renewal terms"']) {
+      expect(() =>
+        parseTransactionalEmailPayloadSnapshot(
+          evidenceFor(notAnObject),
+          hasher,
+        ),
+      ).toThrow(applicationError('INTERNAL_ERROR', 'invalid shape'));
+    }
 
     const extraField = JSON.stringify({ ...payload, trackingId: 'unexpected' });
     expect(() =>
       parseTransactionalEmailPayloadSnapshot(evidenceFor(extraField), hasher),
-    ).toThrow('invalid shape');
+    ).toThrow(applicationError('INTERNAL_ERROR', 'invalid shape'));
   });
 });
 
@@ -120,6 +138,36 @@ describe('renewal notice provider invariants', () => {
         '11111111-1111-4111-8111-111111111111',
       ),
     ).toBe('renewal-notice/11111111-1111-4111-8111-111111111111');
+  });
+
+  it('accepts a delivery whose provider key derives from its id, and refuses one that does not', () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(
+      payload,
+      hasher,
+    );
+    const delivery = {
+      id,
+      destination: payload.to,
+      providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(id),
+      payloadSnapshot: snapshot,
+      payloadHash: hash,
+    };
+
+    expect(() =>
+      assertValidRenewalNoticeDeliveryPayload(delivery, hasher),
+    ).not.toThrow();
+    expect(() =>
+      assertValidRenewalNoticeDeliveryPayload(
+        { ...delivery, providerIdempotencyKey: 'renewal-notice/other' },
+        hasher,
+      ),
+    ).toThrow(
+      applicationError(
+        'CONFLICT',
+        'Renewal notice provider idempotency key is not derived from its delivery ID',
+      ),
+    );
   });
 
   it('uses capped exponential backoff from the completed attempt count', () => {
@@ -135,7 +183,7 @@ describe('renewal notice provider invariants', () => {
       failedAt.getTime() + RENEWAL_NOTICE_RETRY_MAX_DELAY_MS,
     );
     expect(() => getRenewalNoticeRetryAt(failedAt, 0)).toThrow(
-      'requires a completed attempt',
+      applicationError('VALIDATION_ERROR', 'requires a completed attempt'),
     );
   });
 });
