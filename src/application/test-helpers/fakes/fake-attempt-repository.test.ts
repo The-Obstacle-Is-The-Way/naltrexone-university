@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createQuestion, createTag } from '@/src/domain/test-helpers';
-import { omittedOutcome } from '@/src/domain/value-objects';
+import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { FakeAttemptRepository } from './fake-attempt-repository';
 import { makeAttempt, userId } from './fake-attempt-repository-seeds';
 
@@ -19,6 +19,27 @@ describe('FakeAttemptRepository', () => {
         timeSpentSeconds: 0,
       }),
     ).rejects.toThrow('Omitted attempts must be incorrect');
+  });
+
+  // ADR-021: the revision the attempt was graded against. The Drizzle
+  // adapter falls back for null; the fake keeps it (test-double register).
+  it.each([
+    ['the revision it is given', crypto.randomUUID()],
+    ['null when given none', null],
+  ])('stores %s', async (_label, questionRevisionId) => {
+    const repo = new FakeAttemptRepository();
+
+    const attempt = await repo.insert({
+      userId,
+      questionId: 'q-revision',
+      questionRevisionId,
+      practiceSessionId: null,
+      outcome: answeredOutcome('c-1'),
+      isCorrect: true,
+      timeSpentSeconds: 1,
+    });
+
+    expect(attempt.questionRevisionId).toBe(questionRevisionId);
   });
 
   describe('count*', () => {
