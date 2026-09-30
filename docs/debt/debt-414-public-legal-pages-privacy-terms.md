@@ -652,6 +652,10 @@ Receipts:
   - The verifier refuses a changed body, another secret, a stale timestamp, missing headers and an unconfigured webhook. Replacing verification with a plain parse fails four cases.
   - The route tests sign real requests and run the real verifier, controller and use case over the fake repository.
 - **Owner action to activate.** In Resend, create a webhook for `https://addictionboards.com/api/webhooks/resend` with the events `email.delivered`, `email.bounced`, `email.failed` and `email.suppressed` (`email.delivery_delayed` and `email.complained` are optional and ignored). Then set its signing secret as `RESEND_WEBHOOK_SECRET` for Production in Vercel. Until then, notices stay `accepted`, as before.
+- **Released 2026-09-30.**
+  - #1262 was merged as `3ea6aba9` (exact-head approval **5372017944** on `24dca9e3`, no findings) and promoted through #1263 (`c133d005`).
+  - Main CI **36779696911** `test` passed at **21:49:16Z**. Production was assigned at **21:49:19.064Z**, with matching trees `a6385dfb` and healthy production.
+  - A production smoke POST without a signature returned `503 {"error":"Webhook not configured"}`. Only the owner's configuration remains.
 
 **F06, notice content.** Scheduled notices said only "Renewal date" with a UTC date, escaped every line into a plain paragraph and linked nothing. Annual reminders and renewal notices now:
 - say the plan "renews automatically unless you cancel";

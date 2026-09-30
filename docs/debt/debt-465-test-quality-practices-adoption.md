@@ -51,7 +51,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 - [x] Part 2 pilot: baseline and after-triage scores recorded below; zero un-triaged survivors in the nine pilot files (2026-09-27)
 - [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
-- [ ] Part 2 widening: production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`
+- [ ] Part 2 widening: production files across `src/domain/**` (**done 2026-09-30**, third wave below), then `src/application/{use-cases,shared}/**`
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
 - [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
@@ -62,6 +62,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 |---|---|---|
 | CRAP top-25 snapshot | 2026-08-22 | Required three-lane merged baseline (unit + browser + integration): 445 files / 2,177 functions; 6 scores ≥30, none >100; highest `QuestionView` at 84.00. Full measured snapshot below. |
 | Mutation second wave | 2026-09-27 | Four files: baseline 91.44% (187 mutants), after triage 100.00% (168), no suppression. Triage below. |
+| Mutation third wave | 2026-09-30 | Every other production file under `src/domain/**`, by glob: 21 with mutants. Baseline 87.25% (267 killed, 39 survived, of 306). After triage 100.00% (295 killed, 1 timed out, of 296 scored; 6 suppressed). The full weekly scope then scored 100.00% (763 killed, 26 timed out, 12 suppressed) in 6 min 6 s. Triage below. |
 | Mutation pilot scores | 2026-09-27 | Stryker 9.6.1, unit lane, nine files. Baseline 91.77%: 286 killed, 4 timed out, 24 survived and 2 without coverage, of 316 mutants. After triage 100.00%: 286 killed and 3 timed out, of 289 scored; 6 more are suppressed. Both are full `--force` runs. Per-file scores are in the runbook's §7; the triage is below. |
 
 ### Part 2 mutation pilot triage — 2026-09-27
@@ -96,6 +97,21 @@ Full `--force` runs over the runbook's four second-wave files: baseline 91.44% (
 |---|---|---|
 | `start-practice-session.ts` | The use case's own incomplete-session check, including its message (3). The fake repository enforces the same one-incomplete-session rule as Postgres, so only a conflict that must win over empty filters distinguishes the check. | — |
 | `idempotency-error-policy.ts` | The cacheable outcomes are code-and-reason pairs: a non-`CONFLICT` error carrying a terminal-session reason is not cached (1), and the incomplete-session conflict is cached only for starting a session and only as a `CONFLICT` (4). The trial-setup helper had no unit test (1). | A three-way disposition whose two cache labels no caller distinguished, now a boolean with the reasons kept as comments (3); `new Set([])` for the billing actions, now `new Set()` (3); a `typeof` guard that `Set.has` already covers, now a set typed to accept an absent reason (1). |
+
+### Part 2 third wave triage — 2026-09-30
+
+Full `--force` runs over every production file under `src/domain/**` not already in scope; `stryker.config.json` now mutates the whole folder by glob. Of 21 files with mutants, 15 scored 100% at baseline. The six others:
+
+| File | Missing test (35) | Dead code, removed (1) | Equivalent, suppressed (3) |
+|---|---|---|---|
+| `renewal-notice-delivery.ts` | The key-shape rule, which mirrors the database check, had no unit test (13). A table now covers both valid shapes and every single-field deviation. | — | — |
+| `renewal-consent-record.ts` | The consumer-reference pattern's anchors (2); the error code and message of each rule, where tests had checked only the error type (8); the whole `stripe_setup` source branch (5); present but non-positive price-increase amounts (2); a later termination after an earlier one (2). | — | `>` against `>=` at equal termination instants (1). |
+| `renewal-consent.ts` | No termination never extends retention, whatever the consent date (1). | — | `>` against `>=` at equal floors (1). |
+| `attempt.ts` | A first attempt naming a retry parent or retry session (1). | — | — |
+| `subscription-canonicalization.ts` | The locale orders mixed-case Stripe identities before code units do (1). | — | `<` against `<=` after identical identities have returned 0 (1). |
+| `question-selection.ts` | — | The second loop's `continue`, unreachable because every candidate that reaches it has history. The two loops are one, with the same rules (1 survivor, 4 mutants fewer). | — |
+
+Each suppression names `EqualityOperator`, which also covers the operator's other replacement on that line. The baseline, run without the comments, shows that the other replacement was killed on all three lines (§5).
 
 ### Part 1 CRAP top-25 baseline — 2026-08-22
 
