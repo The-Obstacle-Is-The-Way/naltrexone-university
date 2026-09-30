@@ -68,7 +68,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 
 - Informational text MUST meet 4.5:1 (normal text), including: labels, timestamps, metadata, helper text, and inactive navigation items.
 - Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. BS-042's failures were resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md).
-- **Dark small-text tokens ([BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md), 2026-09-29).** `components/theme-dark-text-contrast.test.ts` measures each pairing on every surface the text sits on, rounded to the 8-bit colors the browser paints:
+- **Dark small-text tokens ([BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md), 2026-09-29).** `components/theme-dark-text-contrast.test.ts` measures each pairing on every surface the text sits on, rounded to the 8-bit colors the browser paints:
   - `--destructive` `0 91% 71%`: at least 5.56:1 on the page, the card, the foreground-ramp rows and their hovers, and the destructive tints.
   - `--muted-foreground` `0 0% 55%`: at least 4.62:1 on the rows, their hovers and `bg-muted`.
   - Light text on the dark destructive fills: at least 5.09:1, at rest (`/60`) and on the Button's dark hover (`/50`).
