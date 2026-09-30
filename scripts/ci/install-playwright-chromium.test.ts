@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import {
   chmod,
   mkdir,
@@ -14,6 +14,8 @@ import { describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
 const INSTALL_SCRIPT = 'scripts/ci/install-playwright-chromium.sh';
+// The command-line pattern the script stops leftover apt-get by (BUG-311).
+const APT_GET_PATTERN = '(^|/)apt-get( |$)';
 
 async function createHarness(
   firstDependencyInstallHangs: boolean,
@@ -26,6 +28,7 @@ async function createHarness(
   const logPath = join(root, 'pnpm.log');
   const counterPath = join(root, 'counter');
   const aptLockPath = join(root, 'apt-lock');
+  const processLogPath = join(root, 'process.log');
   const ubuntuSource = join(sourcesDir, 'ubuntu.sources');
   const microsoftSource = join(sourcesDir, 'microsoft-prod.list');
   const aptConfigDir = join(aptRoot, 'apt.conf.d');
@@ -72,8 +75,26 @@ exit 0
 ${leftoverAptIgnoresTerm ? "trap '' TERM\n" : ''}echo $$ > "$PLAYWRIGHT_TEST_APT_LOCK"
 sleep 30
 `;
+  // The script finds leftover apt-get by command line. These stand-ins act only
+  // on this harness's fake, so a test never matches or signals a host process,
+  // and they log the pattern the script asked for.
+  const pgrepScript = `#!/bin/sh
+printf 'pgrep %s\\n' "$*" >> "$PLAYWRIGHT_TEST_PROCESS_LOG"
+pid=$(cat "$PLAYWRIGHT_TEST_APT_LOCK" 2>/dev/null) || exit 1
+kill -0 "$pid" 2>/dev/null || exit 1
+echo "$pid"
+`;
+  const pkillScript = `#!/bin/sh
+printf 'pkill %s\\n' "$*" >> "$PLAYWRIGHT_TEST_PROCESS_LOG"
+pid=$(cat "$PLAYWRIGHT_TEST_APT_LOCK" 2>/dev/null) || exit 1
+kill "$1" "$pid" 2>/dev/null
+`;
   await writeFile(join(binDir, 'apt-get'), aptGetScript);
+  await writeFile(join(binDir, 'pgrep'), pgrepScript);
+  await writeFile(join(binDir, 'pkill'), pkillScript);
   await chmod(join(binDir, 'apt-get'), 0o755);
+  await chmod(join(binDir, 'pgrep'), 0o755);
+  await chmod(join(binDir, 'pkill'), 0o755);
   await writeFile(join(binDir, 'pnpm'), pnpmScript);
   await writeFile(join(binDir, 'sudo'), sudoScript);
   await chmod(join(binDir, 'pnpm'), 0o755);
@@ -86,6 +107,7 @@ sleep 30
     unrelatedAptConfig,
     logPath,
     aptLockPath,
+    processLogPath,
     env: {
       ...process.env,
       PATH: `${binDir}:${process.env.PATH ?? ''}`,
@@ -99,6 +121,7 @@ sleep 30
       PLAYWRIGHT_TEST_HANG_FIRST: String(firstDependencyInstallHangs),
       PLAYWRIGHT_TEST_FAIL_DEPS: 'false',
       PLAYWRIGHT_TEST_APT_LOCK: aptLockPath,
+      PLAYWRIGHT_TEST_PROCESS_LOG: processLogPath,
       PLAYWRIGHT_TEST_APT_GET: join(binDir, 'apt-get'),
       PLAYWRIGHT_TEST_LEAVE_APT: String(firstPhaseLeavesAptRunning),
     },
@@ -167,11 +190,37 @@ describe('install-playwright-chromium.sh', () => {
         expect(isRunning(await readFile(harness.aptLockPath, 'utf8'))).toBe(
           false,
         );
+        const signals = (await readFile(harness.processLogPath, 'utf8'))
+          .split('\n')
+          .filter((line) => line.startsWith('pkill '));
+        expect(signals).toEqual(
+          leftoverAptIgnoresTerm
+            ? [
+                `pkill -TERM -f ${APT_GET_PATTERN}`,
+                `pkill -KILL -f ${APT_GET_PATTERN}`,
+              ]
+            : [`pkill -TERM -f ${APT_GET_PATTERN}`],
+        );
       } finally {
         stopIfRunning(await readFile(harness.aptLockPath, 'utf8'));
       }
     },
   );
+
+  it('matches apt-get command lines, and not its methods or wrappers', () => {
+    const matches = (commandLine: string) =>
+      spawnSync('grep', ['-Eq', APT_GET_PATTERN], { input: commandLine })
+        .status === 0;
+
+    expect(matches('apt-get update')).toBe(true);
+    expect(
+      matches('/usr/bin/apt-get install -y --no-install-recommends libnss3'),
+    ).toBe(true);
+    expect(matches('/usr/lib/apt/methods/http')).toBe(false);
+    expect(matches('sh -c apt-get update && apt-get install -y libnss3')).toBe(
+      false,
+    );
+  });
 
   it('does not rewrite a healthy Ubuntu archive path', async () => {
     const harness = await createHarness(false);
