@@ -45,4 +45,5 @@ A dropped connection while reading the signed-in user fails that request, which 
   - `getCurrentUser` fails once with the SDK's dropped-connection error, then succeeds: two calls. Before the fix it rejected.
   - The provisioner's existing-identity lookup is retried the same way before the conflict is decided.
 - **`clerk-retry.test.ts`.** The classifier accepts the SDK's dropped-connection error and its 429, 500 and 503 answers. It rejects its 400, 401, 403, 404 and 422 answers and unrelated errors.
+- **The helper's own test.** It returns the SDK's own error for a dropped connection and for a 404, and fails loudly if the SDK does not throw (#1260's Codecov patch check).
 - **Mutation checks.** Excluding status-less errors from either call site fails that site's case.
