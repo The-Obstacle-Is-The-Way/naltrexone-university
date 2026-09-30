@@ -39,12 +39,12 @@ CI only. No user or data impact. A red required check on `main` holds the produc
 - a thrown error that `isTransientExternalError` recognizes, on the error or on its cause, because undici reports a dropped connection as `fetch failed` with the socket code on `cause`;
 - a 429 or 5xx response.
 
-Once retries run out, it returns the last response, or throws the last error, so each caller maps failures exactly as before. The reset's user lookup, the health check's lookup and its password check all use it.
+Before each further attempt it cancels the superseded response's body, which could otherwise hold undici's connection (#1256 review). Once retries run out, it returns the last response, body unread, or throws the last error, so each caller maps failures exactly as before. The reset's user lookup, the health check's lookup and its password check all use it.
 
 It does not retry a timeout (15 s per attempt) or any other error, and it does not retry an auth or validation answer.
 
 ## Verification
 
 - **Red first, in `e2e-reset-shared.test.ts`.** The reset lookup retries a connection reset, a 503 and a 429, then resolves the user. It gives up after three attempts on a persistent reset or 503 and maps the failure as before. It does not retry a 401 or an error with no transient cause.
-- **`credential-health-check-clerk-retry.test.ts`.** The helper retries a dropped connection and a 503 and keeps the request's method. It returns the last 429 and throws the last dropped connection once retries run out. It returns a 401 or 422 at once.
+- **`credential-health-check-clerk-retry.test.ts`.** The helper retries a dropped connection and a 503 and keeps the request's method. It returns the last 429 and throws the last dropped connection once retries run out. It returns a 401 or 422 at once. It cancels each superseded body and leaves the last one readable; skipping the cancel fails that case.
 - **Mutation checks.** Dropping the cause-code check fails the connection-reset cases. Dropping the transient-status throw fails the 429 and 503 cases.

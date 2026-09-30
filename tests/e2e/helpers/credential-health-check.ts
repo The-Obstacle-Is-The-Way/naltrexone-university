@@ -194,7 +194,16 @@ export async function fetchClerkWithRetry(
         }
         return response;
       },
-      { ...DEFAULT_RETRY_OPTIONS, shouldRetry: isTransientClerkFailure },
+      {
+        ...DEFAULT_RETRY_OPTIONS,
+        shouldRetry: isTransientClerkFailure,
+        // A superseded response's unread body can hold undici's connection.
+        onRetry: ({ error }) => {
+          if (error instanceof TransientClerkResponse) {
+            void error.response.body?.cancel().catch(() => {});
+          }
+        },
+      },
     );
   } catch (error) {
     if (error instanceof TransientClerkResponse) return error.response;

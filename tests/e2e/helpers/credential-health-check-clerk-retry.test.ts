@@ -48,6 +48,38 @@ describe('fetchClerkWithRetry', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
+  // An unread body can hold undici's connection (#1256 review).
+  it('cancels each superseded response body and keeps the last one readable', async () => {
+    const cancelled: number[] = [];
+    // Delivers its body only when read, so an unread body is still open and a
+    // cancel reaches it.
+    const answer = (attempt: number) =>
+      new Response(
+        new ReadableStream(
+          {
+            pull(controller) {
+              controller.enqueue(new TextEncoder().encode(`answer ${attempt}`));
+              controller.close();
+            },
+            cancel() {
+              cancelled.push(attempt);
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+        { status: 503 },
+      );
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(answer(1))
+      .mockResolvedValueOnce(answer(2))
+      .mockResolvedValueOnce(answer(3));
+
+    const response = await fetchClerkWithRetry(URL, {});
+
+    expect(cancelled).toEqual([1, 2]);
+    await expect(response.text()).resolves.toBe('answer 3');
+  });
+
   it('throws the last dropped connection once its retries run out', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
