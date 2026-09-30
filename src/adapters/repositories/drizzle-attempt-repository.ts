@@ -193,10 +193,11 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           retryOfAttemptId: input.retryOfAttemptId ?? null,
           retryOrigin: input.retryOrigin ?? null,
           retrySessionId: input.retrySessionId ?? null,
-          // ADR-021 phase 2a: the revision this attempt graded, which is the
-          // session item's bound revision, else the question's current one
-          // (outside a session, or in a session the N-1 deployment created).
+          // ADR-021: the revision this attempt was graded against. Without
+          // one (an item the N-1 deployment left unbound), the session
+          // item's bound revision, else the question's current one.
           questionRevisionId: sql`COALESCE(
+            ${input.questionRevisionId}::uuid,
             (SELECT ${practiceSessionQuestionStates.questionRevisionId}
                FROM ${practiceSessionQuestionStates}
               WHERE ${practiceSessionQuestionStates.practiceSessionId} = ${input.practiceSessionId}

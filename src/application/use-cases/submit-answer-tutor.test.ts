@@ -66,7 +66,14 @@ function createRevisedSessionFixture() {
     new FakeLogger(),
     passthroughTransaction(attempts, sessions),
   );
-  return { userId, sessionId, questionId, attempts, useCase };
+  return {
+    userId,
+    sessionId,
+    questionId,
+    boundRevisionId: bound.revisionId,
+    attempts,
+    useCase,
+  };
 }
 
 describe('SubmitAnswerUseCase', () => {
@@ -81,6 +88,23 @@ describe('SubmitAnswerUseCase', () => {
       correctChoiceId: 'c2',
       explanationMd: 'Bound explanation',
     });
+  });
+
+  it('records the bound revision it graded on the attempt', async () => {
+    const {
+      userId,
+      sessionId,
+      questionId,
+      boundRevisionId,
+      attempts,
+      useCase,
+    } = createRevisedSessionFixture();
+
+    await useCase.execute({ userId, questionId, choiceId: 'c2', sessionId });
+
+    expect(attempts.getAll().map((a) => a.questionRevisionId)).toEqual([
+      boundRevisionId,
+    ]);
   });
 
   it('refuses a choice of another revision in a session bound to an older one', async () => {

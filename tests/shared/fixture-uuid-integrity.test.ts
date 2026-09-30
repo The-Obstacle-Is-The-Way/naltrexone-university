@@ -78,6 +78,7 @@ describe('fixture UUID integrity', () => {
     const attempt = await attemptRepository.insert({
       userId: crypto.randomUUID(),
       questionId: crypto.randomUUID(),
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: answeredOutcome(crypto.randomUUID()),
       isCorrect: true,

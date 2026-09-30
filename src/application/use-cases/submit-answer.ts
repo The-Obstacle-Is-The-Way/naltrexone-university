@@ -210,6 +210,7 @@ export class SubmitAnswerUseCase {
     const attemptInsertInput = {
       userId: input.userId,
       questionId: question.id,
+      questionRevisionId: question.revisionId,
       practiceSessionId: session ? session.id : null,
       outcome: answeredOutcome(input.choiceId),
       isCorrect: grade.isCorrect,

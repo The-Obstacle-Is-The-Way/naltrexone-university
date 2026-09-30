@@ -67,6 +67,7 @@ async function createCompletedSession() {
     const attempt = await attempts.insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: session.id,
       outcome: {
         kind: 'answered',
@@ -141,6 +142,7 @@ async function answerThenWithdraw(label: string) {
   const attempt = await attempts.insert({
     userId: user.id,
     questionId: question.id,
+    questionRevisionId: null,
     practiceSessionId: null,
     outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
     isCorrect: true,
@@ -231,6 +233,7 @@ describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
     const attempt = await attempts.insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
       isCorrect: true,
@@ -293,6 +296,7 @@ async function finishWithUnansweredThenWithdraw() {
   const attempt = await attempts.insert({
     userId: user.id,
     questionId: answered.id,
+    questionRevisionId: null,
     practiceSessionId: session.id,
     outcome: { kind: 'answered', selectedChoiceId: answered.correctChoiceId },
     isCorrect: true,
@@ -379,6 +383,7 @@ describe('ADR-021 §3: an attempt inside an exam still in progress is not yet re
     const attempt = await attempts.insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: session.id,
       outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
       isCorrect: true,
@@ -432,6 +437,7 @@ describe('ADR-021 §3: the attempt lists keep a withdrawn question the learner a
     await attempts.insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
       isCorrect: true,
@@ -441,6 +447,7 @@ describe('ADR-021 §3: the attempt lists keep a withdrawn question the learner a
     await attempts.insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: { kind: 'answered', selectedChoiceId: revised.correctChoiceId },
       isCorrect: true,
@@ -488,6 +495,7 @@ async function answerFirstOfTwoThenWithdrawBoth(end: boolean) {
   const attempt = await attempts.insert({
     userId: user.id,
     questionId: answered.id,
+    questionRevisionId: null,
     practiceSessionId: session.id,
     outcome: { kind: 'answered', selectedChoiceId: answered.correctChoiceId },
     isCorrect: true,

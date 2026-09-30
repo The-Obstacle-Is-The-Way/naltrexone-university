@@ -14,6 +14,31 @@ import {
 } from '../test-helpers/submit-answer-test-helpers';
 
 describe('SubmitAnswerUseCase', () => {
+  it('records the revision it graded on an attempt outside a session', async () => {
+    const questionId = 'q1';
+    const question = createQuestion({
+      id: questionId,
+      status: 'published',
+      choices: [
+        createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+        createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+      ],
+    });
+    const attempts = new FakeAttemptRepository();
+    const useCase = new SubmitAnswerUseCase(
+      new FakeQuestionRepository([question]),
+      attempts,
+      new FakePracticeSessionRepository(),
+      new FakeLogger(),
+    );
+
+    await useCase.execute({ userId: 'user-1', questionId, choiceId: 'c2' });
+
+    expect(attempts.getAll().map((a) => a.questionRevisionId)).toEqual([
+      question.revisionId,
+    ]);
+  });
+
   it('returns choice explanations in deterministic display order', async () => {
     const userId = 'user-1';
     const questionId = 'q1';

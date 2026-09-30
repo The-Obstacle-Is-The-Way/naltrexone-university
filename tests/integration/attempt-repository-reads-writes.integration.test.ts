@@ -48,6 +48,7 @@ async function fixture() {
     input: {
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
