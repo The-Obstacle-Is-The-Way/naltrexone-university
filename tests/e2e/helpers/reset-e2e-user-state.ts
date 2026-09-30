@@ -326,12 +326,16 @@ const defaultServices: E2EUserStateResetServices = {
         { id: string; questionId: string; isCorrect: boolean }[]
       >`
         SELECT
-          id,
-          question_id AS "questionId",
-          is_correct AS "isCorrect"
-        FROM choices
-        WHERE question_id IN (${questionIds.placeholder01Id}, ${questionIds.placeholder02Id})
-        ORDER BY question_id ASC, is_correct DESC, id ASC
+          c.id,
+          c.question_id AS "questionId",
+          c.is_correct AS "isCorrect"
+        FROM choices c
+        -- ADR-021: only the current revision's choices.
+        JOIN questions q
+          ON q.id = c.question_id
+         AND c.question_revision_id = q.current_revision_id
+        WHERE c.question_id IN (${questionIds.placeholder01Id}, ${questionIds.placeholder02Id})
+        ORDER BY c.question_id ASC, c.is_correct DESC, c.id ASC
       `;
 
       const placeholder01CorrectChoiceId = rows.find(
@@ -418,6 +422,7 @@ const defaultServices: E2EUserStateResetServices = {
           INSERT INTO practice_session_question_states (
             practice_session_id,
             question_id,
+            question_revision_id,
             position,
             marked_for_review,
             latest_selected_choice_id,
@@ -427,9 +432,22 @@ const defaultServices: E2EUserStateResetServices = {
             draft_saved_at,
             draft_cumulative_ms
           )
-          VALUES
-            ($1, $2, 0, false, $3, true, $4, NULL, NULL, 0),
-            ($1, $5, 1, false, NULL, NULL, NULL, NULL, NULL, 0)
+          SELECT
+            $1, q.id, q.current_revision_id, v.position, false,
+            v.latest_selected_choice_id, v.latest_is_correct,
+            v.latest_answered_at, NULL, NULL, 0
+          FROM (
+            VALUES
+              ($2::uuid, 0, $3::uuid, true, $4::timestamptz),
+              ($5::uuid, 1, NULL::uuid, NULL::boolean, NULL::timestamptz)
+          ) AS v (
+            question_id,
+            position,
+            latest_selected_choice_id,
+            latest_is_correct,
+            latest_answered_at
+          )
+          JOIN questions q ON q.id = v.question_id
           `,
           [
             DETERMINISTIC_BASELINE.sessionId,
@@ -446,13 +464,16 @@ const defaultServices: E2EUserStateResetServices = {
             id,
             user_id,
             question_id,
+            question_revision_id,
             practice_session_id,
             selected_choice_id,
             is_correct,
             time_spent_seconds,
             answered_at
           )
-          VALUES ($1, $2, $3, $4, $5, true, 30, $6)
+          SELECT $1, $2, q.id, q.current_revision_id, $4, $5, true, 30, $6
+          FROM questions q
+          WHERE q.id = $3
           `,
           [
             DETERMINISTIC_BASELINE.attemptInSessionId,
@@ -470,13 +491,16 @@ const defaultServices: E2EUserStateResetServices = {
             id,
             user_id,
             question_id,
+            question_revision_id,
             practice_session_id,
             selected_choice_id,
             is_correct,
             time_spent_seconds,
             answered_at
           )
-          VALUES ($1, $2, $3, NULL, $4, false, 45, $5)
+          SELECT $1, $2, q.id, q.current_revision_id, NULL, $4, false, 45, $5
+          FROM questions q
+          WHERE q.id = $3
           `,
           [
             DETERMINISTIC_BASELINE.adhocAttemptId,
@@ -527,6 +551,7 @@ const defaultServices: E2EUserStateResetServices = {
           bookmarkCount: number;
           placeholderBookmarkCount: number;
           questionStateCount: number;
+          offRevisionCount: number;
         }[]
       >`
         SELECT
@@ -562,7 +587,21 @@ const defaultServices: E2EUserStateResetServices = {
             SELECT COUNT(*)::int
             FROM practice_session_question_states state
             WHERE state.practice_session_id = ${DETERMINISTIC_BASELINE.sessionId}
-          ) AS "questionStateCount"
+          ) AS "questionStateCount",
+          -- ADR-021: baseline rows bind their question's current revision.
+          (
+            SELECT COUNT(*)::int
+            FROM practice_session_question_states state
+            JOIN questions q ON q.id = state.question_id
+            WHERE state.practice_session_id = ${DETERMINISTIC_BASELINE.sessionId}
+              AND state.question_revision_id IS DISTINCT FROM q.current_revision_id
+          ) + (
+            SELECT COUNT(*)::int
+            FROM attempts attempt
+            JOIN questions q ON q.id = attempt.question_id
+            WHERE attempt.user_id = ${userId}
+              AND attempt.question_revision_id IS DISTINCT FROM q.current_revision_id
+          ) AS "offRevisionCount"
       `;
 
       const baseline = rows[0];
@@ -572,6 +611,7 @@ const defaultServices: E2EUserStateResetServices = {
       const bookmarkCount = baseline?.bookmarkCount ?? 0;
       const placeholderBookmarkCount = baseline?.placeholderBookmarkCount ?? 0;
       const questionStateCount = baseline?.questionStateCount ?? 0;
+      const offRevisionCount = baseline?.offRevisionCount ?? 0;
 
       if (
         incompleteSessionCount !== 0 ||
@@ -580,12 +620,13 @@ const defaultServices: E2EUserStateResetServices = {
         bookmarkCount !== DETERMINISTIC_BASELINE_BOOKMARK_COUNT ||
         placeholderBookmarkCount !==
           DETERMINISTIC_BASELINE_PLACEHOLDER_BOOKMARK_COUNT ||
-        questionStateCount !== DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT
+        questionStateCount !== DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT ||
+        offRevisionCount !== 0
       ) {
         throw new E2EUserStateResetError(
           'E2E_RESET:BASELINE_STATE_INCOMPLETE',
           'Deterministic E2E baseline verification failed after reset.',
-          'Verify reset helper leaves no incomplete sessions and inserts completed session, normalized session question state, attempts, and bookmark rows for the E2E user.',
+          "Verify reset helper leaves no incomplete sessions and inserts completed session, normalized session question state, attempts, and bookmark rows for the E2E user, each bound to its question's current revision.",
         );
       }
     } catch (error) {

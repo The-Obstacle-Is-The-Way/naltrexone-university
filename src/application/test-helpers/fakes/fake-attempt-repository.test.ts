@@ -12,6 +12,7 @@ describe('FakeAttemptRepository', () => {
       repo.insert({
         userId,
         questionId: 'q-omitted',
+        questionRevisionId: null,
         practiceSessionId: 'session-omitted',
         outcome: omittedOutcome(),
         isCorrect: true,

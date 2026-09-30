@@ -97,6 +97,7 @@ async function createLegacySessionWithAnswer(label: string) {
   const attempt = await new DrizzleAttemptRepository(db).insert({
     userId: user.id,
     questionId: question.id,
+    questionRevisionId: null,
     practiceSessionId: session.id,
     outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
     isCorrect: true,

@@ -271,6 +271,62 @@ describe('FinalizeExamAnswersUseCase', () => {
     });
   });
 
+  it("records each item's bound revision on its finalized attempt", async () => {
+    const drafted = createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong');
+    const omitted = createFinalizeQuestion('q2', 'q2-correct', 'q2-wrong');
+    const questions = new FakeQuestionRepository([drafted, omitted]);
+    const attempts = new FakeAttemptRepository();
+    const state = {
+      markedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
+    };
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1', 'q2'],
+        questionStates: [
+          {
+            ...state,
+            questionId: 'q1',
+            questionRevisionId: drafted.revisionId,
+            draftSelectedChoiceId: 'q1-correct',
+          },
+          {
+            ...state,
+            questionId: 'q2',
+            questionRevisionId: omitted.revisionId,
+            draftSelectedChoiceId: null,
+          },
+        ],
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await useCase.execute({ userId: 'user-1', sessionId: 'session-1' });
+
+    const finalized = await attempts.findBySessionId('session-1', 'user-1');
+    expect(
+      finalized.map(({ questionId, questionRevisionId }) => ({
+        questionId,
+        questionRevisionId,
+      })),
+    ).toEqual([
+      { questionId: 'q1', questionRevisionId: drafted.revisionId },
+      { questionId: 'q2', questionRevisionId: omitted.revisionId },
+    ]);
+  });
+
   it('finalizes and grades a drafted session-owned question after it leaves the published set', async () => {
     const questions = new FakeQuestionRepository([
       createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong', {

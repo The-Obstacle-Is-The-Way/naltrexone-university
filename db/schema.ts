@@ -1203,7 +1203,8 @@ export const questionsRelations = relations(questions, ({ one, many }) => ({
     fields: [questions.currentRevisionId],
     references: [questionRevisions.id],
   }),
-  choices: many(choices),
+  // No `choices` relation: a question's choices belong to its revisions, so
+  // they are read through one (`currentRevision` or a bound revision).
   questionTags: many(questionTags),
   attempts: many(attempts),
   bookmarks: many(bookmarks),

@@ -1,4 +1,4 @@
-import { getTableColumns } from 'drizzle-orm';
+import { createTableRelationsHelpers, getTableColumns } from 'drizzle-orm';
 import { getTableConfig, PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { DAY_MS } from '@/src/domain/services/time-constants';
@@ -24,7 +24,9 @@ import {
   QUESTION_REVISIONS_ID_QUESTION_ID_UQ,
   QUESTIONS_CURRENT_REVISION_FK,
   questionRevisions,
+  questionRevisionsRelations,
   questions,
+  questionsRelations,
   stripeSubscriptions,
 } from './schema';
 
@@ -242,4 +244,18 @@ describe('question revision keys', () => {
       });
     },
   );
+});
+
+describe('question relations (ADR-021)', () => {
+  it('reads choices through a revision, never by question alone', () => {
+    const byQuestion = questionsRelations.config(
+      createTableRelationsHelpers(questions),
+    );
+    const byRevision = questionRevisionsRelations.config(
+      createTableRelationsHelpers(questionRevisions),
+    );
+
+    expect(Object.keys(byQuestion)).not.toContain('choices');
+    expect(Object.keys(byRevision)).toContain('choices');
+  });
 });

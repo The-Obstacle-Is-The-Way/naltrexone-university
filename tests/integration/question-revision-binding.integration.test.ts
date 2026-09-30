@@ -5,6 +5,7 @@ import * as schema from '@/db/schema';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import {
+  addCurrentRevision,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -149,6 +150,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
     const attempt = await new DrizzleAttemptRepository(db).insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: session.id,
       outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
       isCorrect: true,
@@ -167,6 +169,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
     const attempt = await new DrizzleAttemptRepository(db).insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
       isCorrect: true,
@@ -176,6 +179,29 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
     const current = await currentRevisionId(question.id);
     expect(current).not.toBeNull();
     await expect(attemptRevisionId(attempt.id)).resolves.toBe(current);
+  });
+
+  // ADR-021 phase 2b: once a question can gain a revision, the current one
+  // may move between reading the question and grading it. The attempt keeps
+  // the revision it was graded against, whose choice it selected.
+  it('binds an attempt to the revision it graded after a newer one became current', async () => {
+    const question = await createPublishedQuestion('graded-revision');
+    const user = await createUser(db, cleanup);
+    const graded = await currentRevisionId(question.id);
+    expect(graded).not.toBeNull();
+    await addCurrentRevision(db, question.id);
+
+    const attempt = await new DrizzleAttemptRepository(db).insert({
+      userId: user.id,
+      questionId: question.id,
+      questionRevisionId: graded,
+      practiceSessionId: null,
+      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
+      isCorrect: true,
+      timeSpentSeconds: 6,
+    });
+
+    await expect(attemptRevisionId(attempt.id)).resolves.toBe(graded);
   });
 
   it("binds an attempt in a session created before binding to the question's current revision", async () => {
@@ -192,6 +218,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
     const attempt = await new DrizzleAttemptRepository(db).insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: session.id,
       outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
       isCorrect: true,
@@ -232,6 +259,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
       .insert({
         userId: user.id,
         questionId: question.id,
+        questionRevisionId: null,
         practiceSessionId: session.id,
         outcome: { kind: 'answered', selectedChoiceId: otherChoiceId },
         isCorrect: true,

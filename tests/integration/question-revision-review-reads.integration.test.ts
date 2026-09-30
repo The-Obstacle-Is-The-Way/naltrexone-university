@@ -64,6 +64,7 @@ async function createAnsweredSessionThenRevise() {
   const attempt = await attempts.insert({
     userId: user.id,
     questionId: answered.id,
+    questionRevisionId: null,
     practiceSessionId: session.id,
     outcome: { kind: 'answered', selectedChoiceId: answered.correctChoiceId },
     isCorrect: true,
@@ -167,6 +168,7 @@ describe('ADR-021 phase 2a: review reads use the bound revision', () => {
     const attempt = await attempts.insert({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: null,
       practiceSessionId: null,
       outcome: {
         kind: 'answered',
