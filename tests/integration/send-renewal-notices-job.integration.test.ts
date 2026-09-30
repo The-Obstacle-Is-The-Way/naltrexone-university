@@ -13,6 +13,7 @@ import {
   listAnnualRenewalsPastNoticeDeadline,
   listAnnualSubscriptionsDue,
 } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { DrizzleRenewalNoticeDeliveryRepository } from '@/src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
 import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
 import {
   createTransactionalEmailPayloadSnapshot,
@@ -469,6 +470,56 @@ describe('renewal notice deadline query', () => {
     await expect(
       listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
     ).resolves.toEqual([]);
+  });
+
+  // DEBT-414 F07: a notice the provider reports bounced was not given.
+  it('flags a renewal again once the provider reports its notice bounced', async () => {
+    const renewal = new Date('2026-09-06T12:00:00.000Z');
+    const subscription = await insertSubscription({
+      currentPeriodEnd: renewal,
+    });
+    const notice = {
+      externalSubscriptionId: subscription.externalSubscriptionId,
+      applicableAt: renewal,
+      destination: subscription.email,
+      status: 'accepted',
+    } as const;
+    const reminderId = await insertNotice({
+      ...notice,
+      noticeKind: 'annual_reminder',
+    });
+    await insertNotice({ ...notice, noticeKind: 'renewal_notice' });
+    const providerEventId = `email_${randomUUID()}`;
+    await db
+      .update(renewalNoticeDeliveries)
+      .set({ providerEventId })
+      .where(eq(renewalNoticeDeliveries.id, reminderId));
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([]);
+
+    await new DrizzleRenewalNoticeDeliveryRepository(
+      db,
+      hasher,
+      () => now,
+    ).recordProviderOutcome({
+      providerEventId,
+      outcome: {
+        kind: 'failed',
+        failureClass: 'provider_bounced',
+        failureCode: 'Permanent',
+      },
+      observedAt: now,
+    });
+
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: subscription.externalSubscriptionId,
+        renewalAt: renewal,
+      },
+    ]);
   });
 
   // #1155 review: dispatch refuses a notice whose destination is no longer the

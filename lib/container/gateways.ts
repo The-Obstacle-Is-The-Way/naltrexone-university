@@ -3,6 +3,7 @@ import {
   ClerkAuthGateway,
   type ClerkUserLike,
   type ClerkUserLookup,
+  createResendWebhookVerifier,
   DrizzleRateLimiter,
   ResendTransactionalEmailGateway,
   StripePaymentGateway,
@@ -55,6 +56,11 @@ export function createGatewayFactories(input: {
     createTransactionalEmailGateway: () =>
       new ResendTransactionalEmailGateway({
         apiKey: primitives.env.RESEND_API_KEY,
+      }),
+    createResendWebhookVerifier: () =>
+      createResendWebhookVerifier({
+        apiKey: primitives.env.RESEND_API_KEY,
+        webhookSecret: primitives.env.RESEND_WEBHOOK_SECRET,
       }),
   };
 }

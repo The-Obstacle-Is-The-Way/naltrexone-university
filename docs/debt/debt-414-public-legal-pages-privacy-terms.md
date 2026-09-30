@@ -632,7 +632,26 @@ Receipts:
 
 **F07, second part: acceptance is not delivery.** Resend accepting a message was stored as `delivered`, which overstates what the record proves. The status enum gains `accepted` in an expand-only migration (`0036`, `ALTER TYPE ... ADD VALUE`). The serving code never writes the new value, so the N-1 deployment keeps working through the overlap. The gateway port and Resend adapter now report `accepted`, and the repository's `markDelivered` became `markAccepted`, in the fake and the Drizzle adapter together (contract register updated). The deadline query counts `accepted` or `delivered` as sent, and one real-Postgres case holds a row of each. `delivered` is reserved for delivery evidence. Rows written before this change record acceptance under the old label, which is described here rather than rewritten, because a migration-time backfill could not see rows the serving code still writes. The schema test now pins the seven-state machine; it was red against the new enum first.
 
-**Still open under F07:** delivery and bounce evidence. It needs a Resend webhook endpoint, which the owner must configure in Resend with its signing secret, to move `accepted` rows to `delivered` or a bounce state.
+**Still open under F07:** delivery and bounce evidence. It needs a Resend webhook endpoint, which the owner must configure in Resend with its signing secret, to move `accepted` rows to `delivered` or a bounce state. *(The endpoint is built: see "F07, third part" below. Only the owner's configuration remains.)*
+
+**F07, third part: delivery and bounce evidence (2026-09-30).** Resend now reports what happened to each accepted notice, at `POST /api/webhooks/resend`.
+- **Trust.** The route verifies Resend's signature (Standard Webhooks, `svix-*` headers) over the raw body with the installed SDK, before parsing anything. It needs the webhook's signing secret, `RESEND_WEBHOOK_SECRET`, and `RESEND_API_KEY`. Until both are set it refuses every report with 503 and logs an error, so an unsigned report is never processed. It is rate limited like the Clerk webhook.
+- **Correlation.** A report names Resend's email id, which `markAccepted` already stores as the notice's `provider_event_id`. No schema change.
+- **Transitions.** They are conditional updates, so a redelivered or reordered report is harmless:
+  - `email.delivered` moves `accepted` to `delivered`.
+  - `email.bounced`, `email.failed` and `email.suppressed` move `accepted` or `delivered` to `terminal_failure`, with class `provider_bounced`, `provider_send_failed` or `provider_suppressed`. A late bounce after delivery wins, because the notice did not arrive.
+  - A delivery report after a failure is ignored, keeping the failure and its alert.
+  - Other events (sent, delayed, complained, opened) change nothing. A report on an email that is not a notice is acknowledged and ignored.
+- **Stored.** Only Resend's short type values are stored as the failure code (for example `Permanent`), never its free-text reasons, which can name the recipient.
+- **Effect.** A notice that did not arrive is logged at error level. It no longer counts as sent, so the daily job's `Annual renewal notice deadline missed` alert fires for it inside the 30-day window. Re-sending a bounced notice is not automatic: the remedy for a missed statutory deadline is a counsel question, as F01 records.
+- **Receipts, red first.**
+  - `renewal-notice-provider-evidence.integration.test.ts` covers each transition against real Postgres: delivery, a bounce before and after delivery, delivery after a bounce, a repeat, and an unknown email.
+  - `send-renewal-notices-job.integration.test.ts` shows a renewal whose reminder bounces is flagged again.
+  - The fake mirrors the transitions (register updated). The use case logs only a change.
+  - The controller maps each event type and rejects a malformed report.
+  - The verifier refuses a changed body, another secret, a stale timestamp, missing headers and an unconfigured webhook. Replacing verification with a plain parse fails four cases.
+  - The route tests sign real requests and run the real verifier, controller and use case over the fake repository.
+- **Owner action to activate.** In Resend, create a webhook for `https://addictionboards.com/api/webhooks/resend` with the events `email.delivered`, `email.bounced`, `email.failed` and `email.suppressed` (`email.delivery_delayed` and `email.complained` are optional and ignored). Then set its signing secret as `RESEND_WEBHOOK_SECRET` for Production in Vercel. Until then, notices stay `accepted`, as before.
 
 **F06, notice content.** Scheduled notices said only "Renewal date" with a UTC date, escaped every line into a plain paragraph and linked nothing. Annual reminders and renewal notices now:
 - say the plan "renews automatically unless you cancel";

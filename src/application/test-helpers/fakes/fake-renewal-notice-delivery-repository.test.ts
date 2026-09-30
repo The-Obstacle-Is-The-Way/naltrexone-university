@@ -269,6 +269,96 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     });
   });
 
+  // DEBT-414 F07: the provider's later report on an accepted notice, as the
+  // Drizzle adapter records it (renewal-notice-provider-evidence suite).
+  describe('recordProviderOutcome', () => {
+    const later = new Date('2026-08-06T18:05:00.000Z');
+    const bounced = {
+      kind: 'failed',
+      failureClass: 'provider_bounced',
+      failureCode: 'Permanent',
+    } as const;
+
+    async function acceptedRepository() {
+      const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+      await repository.saveQueued(createDelivery());
+      await repository.claim({
+        id: deliveryId,
+        attemptId: 'attempt-1',
+        startedAt: now,
+      });
+      await repository.markAccepted({
+        id: deliveryId,
+        attemptId: 'attempt-1',
+        providerEventId: 'email_123',
+        completedAt: now,
+      });
+      return repository;
+    }
+
+    it('marks an accepted notice delivered', async () => {
+      const repository = await acceptedRepository();
+
+      await expect(
+        repository.recordProviderOutcome({
+          providerEventId: 'email_123',
+          outcome: { kind: 'delivered' },
+          observedAt: later,
+        }),
+      ).resolves.toBe('recorded');
+      await expect(repository.findById(deliveryId)).resolves.toMatchObject({
+        status: 'delivered',
+        updatedAt: later,
+      });
+    });
+
+    it('records a bounce after delivery as a terminal failure, and keeps it', async () => {
+      const repository = await acceptedRepository();
+      await repository.recordProviderOutcome({
+        providerEventId: 'email_123',
+        outcome: { kind: 'delivered' },
+        observedAt: now,
+      });
+
+      await expect(
+        repository.recordProviderOutcome({
+          providerEventId: 'email_123',
+          outcome: bounced,
+          observedAt: later,
+        }),
+      ).resolves.toBe('recorded');
+      await expect(
+        repository.recordProviderOutcome({
+          providerEventId: 'email_123',
+          outcome: { kind: 'delivered' },
+          observedAt: later,
+        }),
+      ).resolves.toBe('unchanged');
+      await expect(repository.findById(deliveryId)).resolves.toMatchObject({
+        status: 'terminal_failure',
+        failureClass: 'provider_bounced',
+        failureCode: 'Permanent',
+        nextAttemptAt: null,
+        updatedAt: later,
+      });
+    });
+
+    it('reports an email that is not a notice as unknown', async () => {
+      const repository = await acceptedRepository();
+
+      await expect(
+        repository.recordProviderOutcome({
+          providerEventId: 'email_other',
+          outcome: bounced,
+          observedAt: later,
+        }),
+      ).resolves.toBe('unknown');
+      await expect(repository.findById(deliveryId)).resolves.toMatchObject({
+        status: 'accepted',
+      });
+    });
+  });
+
   it('quarantines stale processing claims as outcome_unknown', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
     await repository.saveQueued(createDelivery());

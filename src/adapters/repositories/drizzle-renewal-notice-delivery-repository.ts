@@ -1,11 +1,13 @@
-import { and, asc, eq, lte, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, lte, or, type SQL, sql } from 'drizzle-orm';
 import { renewalNoticeDeliveries } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   ClaimRenewalNoticeDeliveryInput,
   MarkRenewalNoticeDeliveryFailureInput,
+  RecordRenewalNoticeProviderOutcomeResult,
   RenewalNoticeDeliveryRepository,
+  RenewalNoticeProviderOutcome,
 } from '@/src/application/ports/repositories';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { assertValidRenewalNoticeDeliveryPayload } from '@/src/application/shared/transactional-email-payload';
@@ -302,6 +304,56 @@ export class DrizzleRenewalNoticeDeliveryRepository
       );
     }
     return toDelivery(row);
+  }
+
+  async recordProviderOutcome(input: {
+    providerEventId: string;
+    outcome: RenewalNoticeProviderOutcome;
+    observedAt: Date;
+  }): Promise<RecordRenewalNoticeProviderOutcomeResult> {
+    const byProviderEvent = eq(
+      renewalNoticeDeliveries.providerEventId,
+      input.providerEventId,
+    );
+    const updated =
+      input.outcome.kind === 'delivered'
+        ? await this.db
+            .update(renewalNoticeDeliveries)
+            .set({ status: 'delivered', updatedAt: input.observedAt })
+            .where(
+              and(
+                byProviderEvent,
+                eq(renewalNoticeDeliveries.status, 'accepted'),
+              ),
+            )
+            .returning({ id: renewalNoticeDeliveries.id })
+        : await this.db
+            .update(renewalNoticeDeliveries)
+            .set({
+              status: 'terminal_failure',
+              failureClass: input.outcome.failureClass,
+              failureCode: input.outcome.failureCode,
+              nextAttemptAt: null,
+              updatedAt: input.observedAt,
+            })
+            .where(
+              and(
+                byProviderEvent,
+                inArray(renewalNoticeDeliveries.status, [
+                  'accepted',
+                  'delivered',
+                ]),
+              ),
+            )
+            .returning({ id: renewalNoticeDeliveries.id });
+    if (updated.length > 0) return 'recorded';
+
+    const [existing] = await this.db
+      .select({ id: renewalNoticeDeliveries.id })
+      .from(renewalNoticeDeliveries)
+      .where(byProviderEvent)
+      .limit(1);
+    return existing ? 'unchanged' : 'unknown';
   }
 
   private markFailure(

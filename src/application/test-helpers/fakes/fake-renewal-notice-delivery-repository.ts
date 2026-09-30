@@ -2,7 +2,9 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   ClaimRenewalNoticeDeliveryInput,
   MarkRenewalNoticeDeliveryFailureInput,
+  RecordRenewalNoticeProviderOutcomeResult,
   RenewalNoticeDeliveryRepository,
+  RenewalNoticeProviderOutcome,
 } from '@/src/application/ports/renewal-notice-delivery-repository';
 import { assertValidRenewalNoticeDeliveryPayload } from '@/src/application/shared/transactional-email-payload';
 import type {
@@ -192,6 +194,36 @@ export class FakeRenewalNoticeDeliveryRepository
       updatedAt: input.completedAt,
     });
     return cloneDelivery(record);
+  }
+
+  async recordProviderOutcome(input: {
+    providerEventId: string;
+    outcome: RenewalNoticeProviderOutcome;
+    observedAt: Date;
+  }): Promise<RecordRenewalNoticeProviderOutcomeResult> {
+    const matching = this.records.filter(
+      (record) => record.providerEventId === input.providerEventId,
+    );
+    if (matching.length === 0) return 'unknown';
+    const { outcome } = input;
+    const from: readonly RenewalNoticeDelivery['status'][] =
+      outcome.kind === 'delivered' ? ['accepted'] : ['accepted', 'delivered'];
+    const changing = matching.filter((record) => from.includes(record.status));
+    for (const record of changing) {
+      Object.assign(
+        record,
+        outcome.kind === 'delivered'
+          ? { status: 'delivered' as const, updatedAt: input.observedAt }
+          : {
+              status: 'terminal_failure' as const,
+              failureClass: outcome.failureClass,
+              failureCode: outcome.failureCode,
+              nextAttemptAt: null,
+              updatedAt: input.observedAt,
+            },
+      );
+    }
+    return changing.length > 0 ? 'recorded' : 'unchanged';
   }
 
   markTransientFailure(

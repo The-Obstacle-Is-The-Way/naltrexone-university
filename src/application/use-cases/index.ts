@@ -137,6 +137,7 @@ export {
   type RecordRenewalConsentOutput,
   RecordRenewalConsentUseCase,
 } from './record-renewal-consent';
+export { RecordRenewalNoticeProviderOutcomeUseCase } from './record-renewal-notice-provider-outcome';
 export {
   type RequeueRenewalNoticeDeliveryInput,
   RequeueRenewalNoticeDeliveryUseCase,

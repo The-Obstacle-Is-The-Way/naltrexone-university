@@ -1,9 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-30 — BUG-311 and BUG-312 resolved and archived; BUG-313 filed with its fix.
+**Last Updated:** 2026-09-30 — BUG-313 resolved and archived.
 
-**Latest** — 2026-09-30: **BUG-311 and BUG-312 (P3) are Resolved and archived; BUG-313 (P3) filed, fix in review.** Promotion #1259 (`a9849911`) carried BUG-311's install-retry fix (#1255) and BUG-312's E2E Clerk retry (#1256, and #1258 for undici's `UND_ERR_SOCKET`, added after promotion #1257's review; #1257 was closed unmerged so it could ship first). Release verified: main CI **36761596767** passed on its first run at **19:04:43Z**; production assigned **19:04:46.774Z**; matching trees `19f3ba2c`; healthy. [BUG-311](../_archive/bugs/bug-311-playwright-install-retry-blocked-by-orphaned-apt.md), [BUG-312](../_archive/bugs/bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md). BUG-313: the app retries Clerk reads for transient failures, but the Clerk SDK reports a dropped connection as a `ClerkAPIResponseError` with no status, which the shared classifier does not recognize. The signed-in-user read and the provisioning lookup therefore never retried the commonest transient failure. A Clerk-specific classifier now recognizes it, red first against the real SDK's own error. Stripe's SDK retries network failures itself. [BUG-313](./bug-313-app-clerk-retry-misses-dropped-connections.md). BUG-304, BUG-310 and BUG-313 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-314.**
+**Latest** — 2026-09-30: **BUG-313 (P3) is Resolved and archived.** The app's Clerk reads now retry a dropped connection. The fix, #1260 (**5371251023** on `3dc2ac8a`), was promoted through #1261 (`1d1fdaa0`). That promotion's two review findings were withdrawn by the reviewer: a runtime probe showed Stripe 22.6.2 defaults to two network retries, and the adapter tests fall under the error-translation exception. Release verified: main CI **36772077166** `test` **20:32:58Z**; production assigned **20:33:00.607Z**; matching trees `1c611df0`; healthy. [BUG-313](../_archive/bugs/bug-313-app-clerk-retry-misses-dropped-connections.md). BUG-304 and BUG-310 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-314.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -458,7 +458,6 @@ Every one of these was confirmed against the other branch's actual live registry
 |----|-------|----------|--------|---------|
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
-| [BUG-313](./bug-313-app-clerk-retry-misses-dropped-connections.md) | The app's Clerk retry never retries a dropped connection | P3 | In Progress | Fix in review. The Clerk SDK reports a dropped connection as a `ClerkAPIResponseError` with no status, which `isTransientExternalError` does not recognize, so the signed-in-user read and the provisioning lookup failed on a blip they were meant to retry. A Clerk-specific classifier now retries it; tests use the real SDK's error. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 
@@ -1079,6 +1078,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-313](../_archive/bugs/bug-313-app-clerk-retry-misses-dropped-connections.md) | The app's Clerk reads (the signed-in user, the provisioning identity lookup) retry a dropped connection, which the Clerk SDK reports as a `ClerkAPIResponseError` with no status; tests use the real SDK's own error | P3 | 2026-09-30 |
 | [BUG-312](../_archive/bugs/bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md) | The E2E helpers' Clerk calls retry dropped connections (including undici's `UND_ERR_SOCKET`), 429 and 5xx with the app's retry policy, cancelling superseded bodies, so one dropped connection no longer fails a test in its reset or holds a release | P3 | 2026-09-30 |
 | [BUG-311](../_archive/bugs/bug-311-playwright-install-retry-blocked-by-orphaned-apt.md) | CI's Playwright install stops an `apt-get` left over from a timed-out phase (TERM, then KILL) before retrying, so the retry no longer fails on apt's lists lock | P3 | 2026-09-30 |
 | [BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text clears WCAG AA contrast: dark `--destructive` `0 91% 71%` and `--muted-foreground` `0 0% 55%`, and the destructive Button's dark hover is `/50`. A guard measures each pairing on every surface the text sits on; axe went from 16 `color-contrast` nodes per size to 0. Production release verified, and its stylesheet serves the new tokens. | P2 | 2026-09-29 |

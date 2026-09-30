@@ -1,12 +1,12 @@
 # BUG-313: The App's Clerk Retry Never Retries a Dropped Connection
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-09-30
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-09-30 — promoted to `main` through #1261; production release verified (see Resolution)
+**Verification receipts:** see Resolution
 
 ---
 
@@ -47,3 +47,13 @@ A dropped connection while reading the signed-in user fails that request, which 
 - **`clerk-retry.test.ts`.** The classifier accepts the SDK's dropped-connection error and its 429, 500 and 503 answers. It rejects its 400, 401, 403, 404 and 422 answers and unrelated errors.
 - **The helper's own test.** It returns the SDK's own error for a dropped connection and for a 404, and fails loudly if the SDK does not throw (#1260's Codecov patch check).
 - **Mutation checks.** Excluding status-less errors from either call site fails that site's case.
+
+## Resolution (2026-09-30)
+
+- **Shipped.** #1260 merged as `ef63c862` with exact-head approval **5371251023** on `3dc2ac8a`, no findings.
+  - Its first head's Codecov patch check failed on the test helper's untested no-throw guard. The helper gained its own test, and the stale approval was dismissed for a full review of the new head.
+  - The local full gate passed on that exact head: 6,130 unit, 448 browser and 552 integration tests; build; all 60 E2E tests; the hosted Stripe lane, 7/7.
+- **Promoted and released.** Promoted through #1261 (`1d1fdaa0`, merged **20:21:40Z**) after `git fetch` and a passing `verify-promotion` receipt.
+  - Its review raised two findings, and the reviewer withdrew both. One claimed Stripe 22.6.2 defaults to one network retry; a runtime probe showed two. The other asked for integration-lane adapter tests, which the error-translation exception covers. The withdrawn CHANGES_REQUESTED review was then dismissed.
+  - Release verified: main CI **36772077166** `test` **20:32:58Z**; Ready **20:23:18.487Z**, held without alias until its check completed; production assigned **20:33:00.607Z**; matching trees `1c611df0`; healthy production.
+- **Verified on `main`.** Both Clerk read sites use `isTransientClerkError` on `main` at `1d1fdaa0`.
