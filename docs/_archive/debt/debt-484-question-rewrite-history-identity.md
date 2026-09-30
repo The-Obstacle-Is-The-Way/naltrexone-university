@@ -1,13 +1,13 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phases 1, 2a, 2b and 3's database contract (migrations `0043` and `0044`) are in production as of 2026-09-30; non-null revision types in code are merged (#1248), the fakes' question-level fields follow, and the record closes once both are released
+**Status:** Resolved — 2026-09-30; ADR-021 phases 1–3 promoted and release-verified, and every Verification bullet re-verified on `main` before archival; withdrawn-item scoring and answer-key regrade stay Deferred on the owner's decisions
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
 
 ## Evidence
 
-**2026-09-21 release readback.** #951's merge `269ffeec` is an ancestor of deployed main `76e65e9c`; formal review `5261726459` approved its exact head `d8bf8adc`, and CI `35536461282` succeeded. The guard is shipped, not pending release: `scripts/seed/question-syncer.ts:320-329` checks substantive content changes as well as answer-key changes before updates. The original key-only behavior below is a pre-fix receipt. This does not provide immutable revision identity for attempts/sessions, prevent the active-ungraded-session race, or restore archived-question review. Those remain Open. The separate content repository's authoring-policy line references were not reauthenticated in this app-tree audit and remain attributed historical evidence. [Audit ledger](./assets/active-audit-2026-09-21/verification.md).
+**2026-09-21 release readback.** #951's merge `269ffeec` is an ancestor of deployed main `76e65e9c`; formal review `5261726459` approved its exact head `d8bf8adc`, and CI `35536461282` succeeded. The guard is shipped, not pending release: `scripts/seed/question-syncer.ts:320-329` checks substantive content changes as well as answer-key changes before updates. The original key-only behavior below is a pre-fix receipt. This does not provide immutable revision identity for attempts/sessions, prevent the active-ungraded-session race, or restore archived-question review. Those remain Open. The separate content repository's authoring-policy line references were not reauthenticated in this app-tree audit and remain attributed historical evidence. [Audit ledger](../../debt/assets/active-audit-2026-09-21/verification.md).
 
 The original inspection below predates the initial guard. The dated implementation
 receipt records its narrower protection and the revision support still missing.
@@ -146,14 +146,14 @@ merged as `269ffeec` at 21:03:24 UTC after review `5261726459` approved exact
 head `d8bf8adc`, zero unresolved threads, and green [CI 35536461282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35536461282).
 The [review adjudication](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/951#issuecomment-5752644555)
 retains the mutation evidence for canonical whitespace coverage. The
-[reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot)
+[reconciliation snapshot](../../debt/assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot)
 separates that dev merge from the release readback. Immutable revision binding,
 active-session behavior and archived-question review remain open regardless of
 that deployment milestone.
 
 ## Decision — 2026-09-27
 
-[ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) decides the structure this record asks for:
+[ADR-021](../../adr/adr-021-question-revisions-and-content-releases.md) decides the structure this record asks for:
 - **Revisions.** Learner-visible content moves into immutable `question_revisions`. Each choice belongs to one revision, and existing choice IDs attach to revision 1 so every stored selection still resolves.
 - **Binding.** Session states bind each item's revision when the session is created, and attempts bind the revision they graded. Grading uses the bound revision, which closes the active-session race. Composite `(choice, revision)` foreign keys make the database reject a selected choice from any other revision of the same question (#1166 review).
 - **Review.** History, session review, previous-attempt and bookmark reads resolve content through the bound revision, not `status = 'published'`. A withdrawn question stays reviewable, with a visible withdrawal notice, by learners who attempted it, following COPE retraction practice. The notice needs a Pattern Registry entry before its UI lands.
@@ -164,7 +164,7 @@ This record closes after ADR-021's phases 1–3: revisions, binding and review, 
 
 ## Phase 1: revisions mirror the live rows — 2026-09-28
 
-ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../adr/adr-021-question-revisions-and-content-releases.md#why-phase-1-mirrors-instead-of-appending-2026-09-28) records why phase 1 mirrors content rather than appending revisions.
+ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../../adr/adr-021-question-revisions-and-content-releases.md#why-phase-1-mirrors-instead-of-appending-2026-09-28) records why phase 1 mirrors content rather than appending revisions.
 - **Schema (migration `0039`).**
   - `question_revisions` holds each question's stem, explanation, reference and difficulty, with its canonicalization version and `stored-fields-json-v1` content hash. A check constraint requires the hash to be lowercase hex.
   - `questions.current_revision_id`, `choices.question_revision_id`, `attempts.question_revision_id` and `practice_session_question_states.question_revision_id` are added, all nullable.
@@ -358,7 +358,7 @@ Parts two and three ship as vertical slices, with the reads and the UI of a surf
   - Post-exam review shows the notice above the question: "This question has been withdrawn. You can still review your answer. It no longer appears in new practice."
   - Bookmark, report and rating stay hidden for it.
   - The question navigator reaches it, and its label names it withdrawn.
-- **Captures.** Two captures of the local production build in the app's forced dark theme, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](./assets/debt-484/withdrawn-review-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-review-dark-390x844.png). A temporary Playwright script archived a question from a finished exam in the local database and restored it afterwards.
+- **Captures.** Two captures of the local production build in the app's forced dark theme, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](../../debt/assets/debt-484/withdrawn-review-dark-1440x900.png), [mobile](../../debt/assets/debt-484/withdrawn-review-dark-390x844.png). A temporary Playwright script archived a question from a finished exam in the local database and restored it afterwards.
 - **Not yet.** The session summary's breakdown still shows the item as `[Question no longer available]`. Its rows link to the standalone review page, which the history slice changes next, so the breakdown moves with it.
 - **Tests.**
   - A real-Postgres case, red first: a finished session whose question is archived afterwards returns that question as answered, marked withdrawn.
@@ -384,7 +384,7 @@ The second slice covers the standalone question page in review mode, where Histo
   - A withdrawn item now stays on the unavailable row unless the learner attempted it. That use case already counts an answer recorded on the session item, so "attempted" there means an attempt or a recorded answer.
   - A finished exam gives every item an attempt, answered or omitted, so post-exam review is unchanged for exams. The gap reached a session ended with items left unanswered.
 - **UI (Pattern Registry F-11).** In review mode the page shows the notice above the question and offers navigation only: Submit, Try Again, Bookmark, Report and Rating are hidden.
-- **Captures.** Two captures of the local production build, dark, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](./assets/debt-484/withdrawn-standalone-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-standalone-dark-390x844.png).
+- **Captures.** Two captures of the local production build, dark, at 1440×900 and 390×844, each with zero axe violations and no horizontal overflow: [desktop](../../debt/assets/debt-484/withdrawn-standalone-dark-1440x900.png), [mobile](../../debt/assets/debt-484/withdrawn-standalone-dark-390x844.png).
 - **Not yet.** The History, Dashboard and session-summary rows still show a withdrawn question as unavailable; the next slice makes them link here.
 - **Tests.**
   - Eleven real-Postgres cases, red first:
@@ -427,7 +427,7 @@ The third slice covers the two lists built from the learner's attempts: History'
   - A withdrawn row keeps its link into the review, which part three resolves. It shows the stem of the revision the learner answered.
   - Its metadata reads `Withdrawn` where an available row shows the difficulty: History's metadata line and the Dashboard's pill.
   - A row whose question no longer exists keeps the unavailable treatment.
-- **Captures.** The local production build, dark, at 1440×900 and 390×844, with no horizontal overflow: [History, desktop](./assets/debt-484/withdrawn-history-dark-1440x900.png), [History, mobile](./assets/debt-484/withdrawn-history-dark-390x844.png), [Dashboard, desktop](./assets/debt-484/withdrawn-dashboard-dark-1440x900.png), [Dashboard, mobile](./assets/debt-484/withdrawn-dashboard-dark-390x844.png).
+- **Captures.** The local production build, dark, at 1440×900 and 390×844, with no horizontal overflow: [History, desktop](../../debt/assets/debt-484/withdrawn-history-dark-1440x900.png), [History, mobile](../../debt/assets/debt-484/withdrawn-history-dark-390x844.png), [Dashboard, desktop](../../debt/assets/debt-484/withdrawn-dashboard-dark-1440x900.png), [Dashboard, mobile](../../debt/assets/debt-484/withdrawn-dashboard-dark-390x844.png).
 - **Found, and recorded separately.** axe reports colour-contrast failures on both pages. None is in the withdrawn row's new label; all predate this change:
   - `text-destructive` "Incorrect" at 3.5:1 on the row fills;
   - muted dates and percentages at 4.44–4.49:1.
@@ -451,7 +451,7 @@ The fourth slice covers the session breakdown: the finished session's summary an
 - **UI (Pattern Registry F-11).**
   - A breakdown row has no difficulty slot. The registry now says such a row shows `Withdrawn` before its result, in the style the row already uses for `Unanswered`.
   - The row keeps its link (summary and History) or its button (post-exam), which the earlier parts resolve.
-- **Captures.** The local production build, dark, a tutor session with its answered item and its unanswered item both withdrawn, with no horizontal overflow: [summary, desktop](./assets/debt-484/withdrawn-breakdown-summary-dark-1440x900.png), [summary, mobile](./assets/debt-484/withdrawn-breakdown-summary-dark-390x844.png), [History, desktop](./assets/debt-484/withdrawn-breakdown-history-dark-1440x900.png), [History, mobile](./assets/debt-484/withdrawn-breakdown-history-dark-390x844.png).
+- **Captures.** The local production build, dark, a tutor session with its answered item and its unanswered item both withdrawn, with no horizontal overflow: [summary, desktop](../../debt/assets/debt-484/withdrawn-breakdown-summary-dark-1440x900.png), [summary, mobile](../../debt/assets/debt-484/withdrawn-breakdown-summary-dark-390x844.png), [History, desktop](../../debt/assets/debt-484/withdrawn-breakdown-history-dark-1440x900.png), [History, mobile](../../debt/assets/debt-484/withdrawn-breakdown-history-dark-390x844.png).
   - axe reports nothing on the summary.
   - On History it reports only the tab links already recorded in BUG-309.
 - **Tests.**
@@ -489,8 +489,8 @@ What changes:
   - A client module first imported the controllers' `action-result` values, which pull in the server logger. The local production build refused it, and the adapter now builds its results itself.
   - An inline callback made the quick-practice hook's effect re-run on every render. The browser suite caught it, and a stable module function fixed it.
 - **Captures.** The local production build, dark, with zero axe violations and no overflow:
-  - an exam whose last item was withdrawn, reached by Next: [desktop](./assets/debt-484/withdrawn-active-exam-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-active-exam-dark-390x844.png);
-  - a tutor item withdrawn while open, reached by answering it: [desktop](./assets/debt-484/withdrawn-active-tutor-dark-1440x900.png), [mobile](./assets/debt-484/withdrawn-active-tutor-dark-390x844.png).
+  - an exam whose last item was withdrawn, reached by Next: [desktop](../../debt/assets/debt-484/withdrawn-active-exam-dark-1440x900.png), [mobile](../../debt/assets/debt-484/withdrawn-active-exam-dark-390x844.png);
+  - a tutor item withdrawn while open, reached by answering it: [desktop](../../debt/assets/debt-484/withdrawn-active-tutor-dark-1440x900.png), [mobile](../../debt/assets/debt-484/withdrawn-active-tutor-dark-390x844.png).
 - **Tests.**
   - A real-Postgres case, red first: an active exam's withdrawn item, by id and as the next unanswered item.
   - Use-case cases for both paths and for a missing question.
@@ -558,8 +558,8 @@ A review shows the revision the learner answered. Once a newer revision is curre
   - Use-case, controller, component and view cases, red first.
   - A mutation removing the withdrawn precedence from the page fails a case.
 - **Captures.** The local production build, dark, with zero axe violations and no horizontal overflow. A question in a finished exam was given a newer current revision, then restored:
-  - post-exam review: [desktop](./assets/debt-484/superseded-post-exam-dark-1440x900.png), [mobile](./assets/debt-484/superseded-post-exam-dark-390x844.png);
-  - the standalone review: [desktop](./assets/debt-484/superseded-standalone-dark-1440x900.png), [mobile](./assets/debt-484/superseded-standalone-dark-390x844.png).
+  - post-exam review: [desktop](../../debt/assets/debt-484/superseded-post-exam-dark-1440x900.png), [mobile](../../debt/assets/debt-484/superseded-post-exam-dark-390x844.png);
+  - the standalone review: [desktop](../../debt/assets/debt-484/superseded-standalone-dark-1440x900.png), [mobile](../../debt/assets/debt-484/superseded-standalone-dark-390x844.png).
 - **Not yet.** Active-session answer feedback (plan step 2), then append-only writers (step 3).
 
 ## Phase 2b, second step: an active session says when its question has been updated — 2026-09-30
@@ -578,8 +578,8 @@ A session keeps the revision each item was bound to. Once a newer revision is cu
   - The use-case cases; a mutation that hard-codes `false` fails one.
   - Component and view cases, red first, in both modes.
 - **Captures.** The local production build, dark, with zero axe violations and no horizontal overflow. The first item's question was given a newer current revision, then restored:
-  - tutor: [desktop](./assets/debt-484/superseded-active-tutor-dark-1440x900.png), [mobile](./assets/debt-484/superseded-active-tutor-dark-390x844.png);
-  - exam: [desktop](./assets/debt-484/superseded-active-exam-dark-1440x900.png), [mobile](./assets/debt-484/superseded-active-exam-dark-390x844.png).
+  - tutor: [desktop](../../debt/assets/debt-484/superseded-active-tutor-dark-1440x900.png), [mobile](../../debt/assets/debt-484/superseded-active-tutor-dark-390x844.png);
+  - exam: [desktop](../../debt/assets/debt-484/superseded-active-exam-dark-1440x900.png), [mobile](../../debt/assets/debt-484/superseded-active-exam-dark-390x844.png).
 - **Not yet.** Writers become append-only (plan step 3).
 
 ## Phase 2b, third step: writers become append-only — 2026-09-30
@@ -705,7 +705,24 @@ The Drizzle adapter reads a revision's content, difficulty and choices from the 
 - **Tests, red first.** A bound read carries the question's slug, status, tags and timestamps; the attempted list filters by the question's status and tags and the answered revision's difficulty. A third test pins `isCurrentRevision` to list order whatever the fixture says.
 - **Register.** The test-double register states the parity and no longer records the divergence.
 
+## Verified closeout — 2026-09-30 UTC
+
+ADR-021's phases 1–3 are implemented, reviewed, promoted to `main` and release-verified: revisions, binding, review, the database contract (`0043`, `0044`) and the code contract (#1248, #1249). Each dated section above carries its increment's receipts; its "Not yet" and "Next" lines are historical execution notes, superseded by this section. Every Verification bullet was re-checked on `main` at `96973534` (tree `903b25fb`) before archival.
+
+| Verification | Holds | Receipt on `main` |
+| --- | --- | --- |
+| A changed learning objective, stem or option meaning with unchanged labels does not rewrite historical meaning | Yes | Content lives only in immutable `question_revisions`; migration `0042`'s triggers refuse any update to a revision or a choice (`question-revision-append-only.integration.test.ts`: "refuses any update to a revision", "refuses any update to a choice"). The seed appends a revision for each of eight kinds of change, among them the clinical task, an explanation and the answer key, and leaves the earlier revision unchanged (`seed-revision-append.integration.test.ts`, "appends a revision for a changed %s and leaves the earlier one intact"). Every attempt and session item names its revision (`question-revision-contract.integration.test.ts`). |
+| Minor copy edits have explicit tests | Yes, by a stricter rule | There is no in-place copy edit any more: any change to stored content appends a revision, and the reviews and sessions that show the earlier one say the question has been updated (Pattern Registry F-12; `question-revision-review-reads.integration.test.ts` and `question-revision-session-reads.integration.test.ts`). What is not a change is tested explicitly: trailing whitespace and a choice explanation ending in a newline append nothing (`seed-revision-append.integration.test.ts`), and a full-corpus reseed appends nothing (958 skipped, 0 new revisions, in the E2E seeds of #1248's and #1249's local gates). |
+| Old attempts remain reviewable and analytics separate revisions | Yes | Reviews, completed-session feedback and the previous attempt show the revision each attempt graded (`question-revision-review-reads.integration.test.ts`). A withdrawn question stays reviewable, marked, by learners who attempted it (`withdrawn-question-review.integration.test.ts`). The attempted list shows, filters and sorts by the revision each question's latest attempt answered, and recent activity shows each attempt as its revision (`question-revision-list-reads.integration.test.ts`). |
+| The answer-key-change protection is preserved, not weakened | Yes, strengthened | The #951 guard refused a key change over graded history. Its replacement makes history immutable: a key correction appends a revision, and a graded attempt keeps its revision and its grade (`seed-revision-append.integration.test.ts`, "keeps a graded attempt on its revision and grade after a key correction"). Whether a correction should regrade earlier attempts is an open owner decision, Deferred below. |
+
+**Final increments.** #1248 (the non-null revision types; exact-head approval **5365851572** on `1bfe82aa`, no findings; merged `08d7b6b0`), #1249 (the fakes' question-level fields; **5366435437** on `2951ff0d`, one Minor finding fixed; merged `e1fb8d9a`) and #1251 (comments describing the non-null revision, found by promotion #1250's review, which was closed unmerged so the fix shipped first; **5366911918** on `dd088e52`, no findings; merged `c2e8cb00`) were promoted together through #1252 (`96973534`, merged **13:53:28Z**) after `git fetch` and a passing `verify-promotion` receipt; its review approved with no findings. Release verified: main CI **36724968565** `test` **14:06:39Z**; Ready **13:55:06.578Z**, held without alias until its check completed; production assigned **14:06:44.973Z**; the build's ledger post-check matched exactly; matching trees (`903b25fb`); healthy production. The database contract shipped earlier: `0043` through #1245 and `0044` through #1247, each with an exact ledger post-check.
+
+**Deferred, not resolved.** Two tails move to the register's Deferred table with revive triggers:
+1. **Withdrawn-item scoring and navigator rows.** An exam item withdrawn mid-session and left unanswered is finalized as omitted and graded incorrect. The active-session navigator and Review & Submit list still show such an item as unavailable. Both wait on the owner's scoring decision ([part one](#phase-2a-fifth-increment-part-one-the-withdrawal-notice-pattern--2026-09-29)).
+2. **Answer-key regrade.** A key correction leaves earlier attempts with the grade they received, and their reviews say the question has been updated. Whether a correction should regrade them is the owner's decision ([phase 2b plan](#phase-2b-plan-decided-2026-09-30)).
+
 ## Related
 
-- [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
+- [DEBT-483](../../debt/debt-483-content-withdrawal-and-release-rollback.md)
 - Content SPEC-005 approval hashes and SPEC-007 release identity.
