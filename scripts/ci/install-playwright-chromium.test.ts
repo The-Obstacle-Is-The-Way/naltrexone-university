@@ -15,13 +15,17 @@ import { describe, expect, it } from 'vitest';
 const execFileAsync = promisify(execFile);
 const INSTALL_SCRIPT = 'scripts/ci/install-playwright-chromium.sh';
 
-async function createHarness(firstDependencyInstallHangs: boolean) {
+async function createHarness(
+  firstDependencyInstallHangs: boolean,
+  { firstPhaseLeavesAptRunning = false, leftoverAptIgnoresTerm = false } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), 'playwright-install-'));
   const aptRoot = join(root, 'etc', 'apt');
   const sourcesDir = join(aptRoot, 'sources.list.d');
   const binDir = join(root, 'bin');
   const logPath = join(root, 'pnpm.log');
   const counterPath = join(root, 'counter');
+  const aptLockPath = join(root, 'apt-lock');
   const ubuntuSource = join(sourcesDir, 'ubuntu.sources');
   const microsoftSource = join(sourcesDir, 'microsoft-prod.list');
   const aptConfigDir = join(aptRoot, 'apt.conf.d');
@@ -48,12 +52,28 @@ if [ "$3" = "install-deps" ]; then
   if [ -f "$PLAYWRIGHT_TEST_COUNTER" ]; then count=$(cat "$PLAYWRIGHT_TEST_COUNTER"); fi
   count=$((count + 1))
   printf '%s' "$count" > "$PLAYWRIGHT_TEST_COUNTER"
+  if [ -f "$PLAYWRIGHT_TEST_APT_LOCK" ] && kill -0 "$(cat "$PLAYWRIGHT_TEST_APT_LOCK")" 2>/dev/null; then
+    echo "E: Could not get lock /var/lib/apt/lists/lock. It is held by process $(cat "$PLAYWRIGHT_TEST_APT_LOCK") (apt-get)" >&2
+    exit 100
+  fi
+  if [ "$PLAYWRIGHT_TEST_LEAVE_APT" = "true" ] && [ "$count" -eq 1 ]; then
+    node -e "require('node:child_process').spawn(process.argv[1], [], { detached: true, stdio: 'ignore' }).unref()" "$PLAYWRIGHT_TEST_APT_GET"
+    while [ ! -s "$PLAYWRIGHT_TEST_APT_LOCK" ]; do sleep 0.1; done
+  fi
   if [ "$PLAYWRIGHT_TEST_HANG_FIRST" = "true" ] && [ "$count" -eq 1 ]; then sleep 20; fi
   if [ "$PLAYWRIGHT_TEST_FAIL_DEPS" = "true" ]; then exit 23; fi
 fi
 exit 0
 `;
   const sudoScript = '#!/bin/sh\nexec "$@"\n';
+  // Stands in for the root apt-get a timed-out phase leaves behind: detached,
+  // so the script's `timeout` cannot reach it, and holding apt's lists lock.
+  const aptGetScript = `#!/bin/sh
+${leftoverAptIgnoresTerm ? "trap '' TERM\n" : ''}echo $$ > "$PLAYWRIGHT_TEST_APT_LOCK"
+sleep 30
+`;
+  await writeFile(join(binDir, 'apt-get'), aptGetScript);
+  await chmod(join(binDir, 'apt-get'), 0o755);
   await writeFile(join(binDir, 'pnpm'), pnpmScript);
   await writeFile(join(binDir, 'sudo'), sudoScript);
   await chmod(join(binDir, 'pnpm'), 0o755);
@@ -65,6 +85,7 @@ exit 0
     microsoftSource,
     unrelatedAptConfig,
     logPath,
+    aptLockPath,
     env: {
       ...process.env,
       PATH: `${binDir}:${process.env.PATH ?? ''}`,
@@ -77,8 +98,24 @@ exit 0
       PLAYWRIGHT_TEST_COUNTER: counterPath,
       PLAYWRIGHT_TEST_HANG_FIRST: String(firstDependencyInstallHangs),
       PLAYWRIGHT_TEST_FAIL_DEPS: 'false',
+      PLAYWRIGHT_TEST_APT_LOCK: aptLockPath,
+      PLAYWRIGHT_TEST_APT_GET: join(binDir, 'apt-get'),
+      PLAYWRIGHT_TEST_LEAVE_APT: String(firstPhaseLeavesAptRunning),
     },
   };
+}
+
+function isRunning(pid: string): boolean {
+  try {
+    process.kill(Number(pid.trim()), 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function stopIfRunning(pid: string): void {
+  if (isRunning(pid)) process.kill(Number(pid.trim()), 'SIGKILL');
 }
 
 describe('install-playwright-chromium.sh', () => {
@@ -105,6 +142,36 @@ describe('install-playwright-chromium.sh', () => {
     await expect(stat(harness.microsoftSource)).rejects.toThrow();
     await expect(stat(harness.unrelatedAptConfig)).resolves.toBeDefined();
   });
+
+  // BUG-311: `timeout` runs as the runner user and cannot stop the root
+  // apt-get that `install-deps` started through sudo; the orphan kept apt's
+  // lists lock and the retry failed at once.
+  it.each([
+    ['stops', false],
+    ['kills, when it ignores TERM,', true],
+  ])(
+    '%s an apt-get the timed-out phase left holding the lock, then retries',
+    async (_how, leftoverAptIgnoresTerm) => {
+      const harness = await createHarness(true, {
+        firstPhaseLeavesAptRunning: true,
+        leftoverAptIgnoresTerm,
+      });
+      try {
+        await execFileAsync('bash', [INSTALL_SCRIPT], { env: harness.env });
+
+        expect(await readFile(harness.logPath, 'utf8')).toBe(
+          'exec playwright install-deps chromium\n' +
+            'exec playwright install-deps chromium\n' +
+            'exec playwright install chromium\n',
+        );
+        expect(isRunning(await readFile(harness.aptLockPath, 'utf8'))).toBe(
+          false,
+        );
+      } finally {
+        stopIfRunning(await readFile(harness.aptLockPath, 'utf8'));
+      }
+    },
+  );
 
   it('does not rewrite a healthy Ubuntu archive path', async () => {
     const harness = await createHarness(false);
