@@ -115,23 +115,19 @@ export DB_TARGET_ACK='["host/database"]'
 pnpm db:seed
 ```
 
-Manual reseeds refuse in-place answer-key flips over existing graded history by
-default. If `pnpm db:seed` reports
-`Refusing to change answer key ... because graded history exists`, treat that as
-a content-data decision point: fork/version the question, accept the blocked
-import, or rerun only with an explicit operator override:
-`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true DATABASE_URL="<target>" DB_TARGET_ACK='["host/database"]' pnpm db:seed`.
-The override logs the affected question slug, changed labels, and graded row
-counts.
+A reseed appends changed content as a new question revision (ADR-021 phase 2b):
+a corrected stem, explanation, reference, difficulty or answer key becomes the
+question's current revision, and the question's status and tags change in place.
+Nothing earlier is rewritten. Attempts and practice sessions keep the revision
+they were shown and graded against; reviews and sessions in progress say the
+question has been updated since (Pattern Registry F-12). The seed therefore has
+no graded-history refusal, no key-change override and no wait for sessions in
+progress. It reports `updated=N (new revisions=M)`.
 
-A reseed also waits for learners mid-session (ADR-021). It will not change a
-question's content while an incomplete practice session binds the question's
-revision, even when no answer has been graded yet. That question stays unchanged,
-every other question is applied, and the seed then exits non-zero:
-`Seed deferred N questions because incomplete practice sessions bind their
-current revision: <slug> (<k> sessions) ... Rerun the seed after those sessions
-end.` Rerun it later; no override exists, because changing content under a
-learner is never correct.
+Seed from the commit that is deployed to the target. The seed refuses to run
+until the target has applied migration `0042`
+(`Refusing to seed: this database has not applied migration 0042`), and the
+seed of a commit before `0042` fails on the retired revision-sync function.
 
 ---
 

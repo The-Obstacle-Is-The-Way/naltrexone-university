@@ -580,6 +580,49 @@ A session keeps the revision each item was bound to. Once a newer revision is cu
   - exam: [desktop](./assets/debt-484/superseded-active-exam-dark-1440x900.png), [mobile](./assets/debt-484/superseded-active-exam-dark-390x844.png).
 - **Not yet.** Writers become append-only (plan step 3).
 
+## Phase 2b, third step: writers become append-only — 2026-09-30
+
+Content is now appended, never updated. A changed question becomes a new revision with its own choice rows, and the question's current revision moves to it. History keeps the revision it was shown and graded against, and the database rejects any update to a revision or a choice.
+
+- **Migration `0042`.**
+  - It binds any history row still unbound with `bind_history_revisions_v1`, while every question still has one revision, and logs the counts.
+  - It then calls a new read-only assertion, `assert_question_revisions_bound_v1()`, which fails the migration if any session state, attempt or choice names no revision, or any question has no current revision. A row a concurrent writer holds is skipped by the bind and so fails the migration, and the deploy is retried.
+  - A choice's label and sort order become unique within its revision (`choices_question_revision_id_label_uq`, `choices_question_revision_id_sort_order_uq`). The per-question keys are dropped last, because `DROP INDEX` holds `ACCESS EXCLUSIVE` on `choices` until commit.
+  - It retires `sync_question_revision_v1`, `sweep_question_revisions_v1`, `question_content_json_v1` and `bind_history_revisions_v1`. Once a second revision exists, the sync would point the question back at revision 1 and re-attach the newer revision's choices to it. The bind would bind an unanswered row to a revision newer than the one it showed.
+  - The triggers `question_revisions_reject_update` and `choices_reject_update` reject every update with `restrict_violation`. Deletes still cascade from the question.
+- **Pre-flight on a copy of the per-clone test database.** The copy was cloned from the database at `0041`. `0042` logged `0 session states and 0 attempts bound; 0 and 0 remain unbound` and applied cleanly. Production bound all of its history in `0041` (306 and 249 rows, 0 remaining). The shared database was not migrated while the previous step was still in review.
+- **The seed** (`question-syncer.ts`, with the shared `question-revision-writer.ts`).
+  - It refuses to run until `0042`'s trigger exists, before any write.
+  - It compares each file with the question's current revision, canonicalized as before, so a row written before canonicalization does not read as changed.
+  - Changed content (stem, explanation, reference, difficulty, choices or answer key) is appended as revision N+1, with its hash computed in TypeScript. The question's legacy text columns keep mirroring the current revision until the contract phase.
+  - Status and tags change in place.
+  - Removed, as ADR-021 §6 anticipated: #951's graded-history refusal and its `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY` override, the active-session deferral, the choice delete and temporary-sort-order handling (BUG-266, BUG-270), and the dead helpers behind them.
+  - The summary reports `updated=N (new revisions=M)`.
+- **N-1.**
+  - The serving deployment never writes revisions or choices and never relies on the per-question keys. Since #1233 it names the revision of every attempt it writes.
+  - The seed of a commit before `0042` fails on the retired sync function, so the operator seeds from the deployed commit.
+- **Tests.**
+  - Real Postgres, red first, in `question-revision-append-only.integration.test.ts`:
+    - a newer revision may reuse labels and sort orders, and duplicates within one revision are refused by name;
+    - updates to a revision and to a choice are refused;
+    - deletes still cascade;
+    - the retired functions are gone;
+    - the bound-history assertion passes on bound data and fails on an unbound attempt.
+  - `seed-revision-append.integration.test.ts` replaces the suites that encoded the superseded guards (`seed-content-rewrite`, `seed-active-session-deferral`, `bug-regression-seed-choice-sync`, and the retired function's `question-revision-backfill`). It covers:
+    - each kind of content change, which appends a revision and leaves the earlier one intact;
+    - the legacy mirror;
+    - an unchanged or canonically equal question, which is skipped;
+    - status and tags, which change in place;
+    - a graded attempt, which keeps its revision and grade after a key correction;
+    - a removed choice, which stays with the revision a session selected it in;
+    - an incomplete session, which keeps its revision and reads superseded;
+    - the migration guard;
+    - the lock order with session creation;
+    - error context.
+  - `question-revisions.integration.test.ts` now proves that every current revision's stored hash, including those `0039`'s SQL form wrote, equals the reference hash of its own rows, and that the legacy columns mirror the current revision.
+  - Test fixtures write revisions through the same writer as the seed.
+- **Docs.** The deployment procedure, the content README, the tag-taxonomy pipeline and the master spec describe appending, and no longer mention the override or the deferral.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

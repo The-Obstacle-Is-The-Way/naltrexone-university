@@ -675,7 +675,8 @@ export const questions = pgTable(
 // question_revisions (ADR-021): learner-visible content by revision. Phase 1
 // is the expand step of a parallel change: revision 1 mirrors each question's
 // legacy row, kept in sync by sync_question_revision_v1 (migration 0039).
-// Phase 2b makes revisions append-only and immutable.
+// Phase 2b (migration 0042) retired that function and made revisions and
+// their choices append-only: a trigger rejects every update to either.
 export const QUESTION_REVISIONS_ID_QUESTION_ID_UQ =
   'question_revisions_id_question_id_uq';
 export const QUESTION_REVISION_CANONICALIZATION_VERSIONS = [
@@ -730,6 +731,12 @@ export const CHOICES_ID_QUESTION_ID_UQ = 'choices_id_question_id_uq';
 export const CHOICES_ID_QUESTION_REVISION_ID_UQ =
   'choices_id_question_revision_id_uq';
 export const CHOICES_QUESTION_REVISION_FK = 'choices_question_revision_fk';
+// ADR-021 phase 2b: a choice's label and sort order are unique within its
+// revision, so a newer revision may reuse its question's labels.
+export const CHOICES_QUESTION_REVISION_ID_LABEL_UQ =
+  'choices_question_revision_id_label_uq';
+export const CHOICES_QUESTION_REVISION_ID_SORT_ORDER_UQ =
+  'choices_question_revision_id_sort_order_uq';
 
 export const choices = pgTable(
   'choices',
@@ -743,8 +750,8 @@ export const choices = pgTable(
     isCorrect: boolean('is_correct').notNull(),
     explanationMd: text('explanation_md'),
     sortOrder: integer('sort_order').notNull(), // 1..N
-    // ADR-021 phase 1: the revision this choice belongs to. Nullable until
-    // the contract phase; the revision sweep fills it.
+    // ADR-021: the revision this choice belongs to. Nullable until the
+    // contract phase; migration 0042 verified that every choice has one.
     questionRevisionId: uuid('question_revision_id'),
   },
   (t) => ({
@@ -765,14 +772,13 @@ export const choices = pgTable(
       t.questionRevisionId,
     ),
     questionIdIdx: index('choices_question_id_idx').on(t.questionId),
-    questionLabelUq: uniqueIndex('choices_question_id_label_uq').on(
-      t.questionId,
+    revisionLabelUq: uniqueIndex(CHOICES_QUESTION_REVISION_ID_LABEL_UQ).on(
+      t.questionRevisionId,
       t.label,
     ),
-    questionSortOrderUq: uniqueIndex('choices_question_id_sort_order_uq').on(
-      t.questionId,
-      t.sortOrder,
-    ),
+    revisionSortOrderUq: uniqueIndex(
+      CHOICES_QUESTION_REVISION_ID_SORT_ORDER_UQ,
+    ).on(t.questionRevisionId, t.sortOrder),
   }),
 );
 

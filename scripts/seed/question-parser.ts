@@ -2,8 +2,8 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import type {
   Choice,
-  Question,
   QuestionDifficulty,
+  QuestionRevision,
   QuestionStatus,
   TagKind,
 } from '../../db/schema';
@@ -11,6 +11,7 @@ import {
   canonicalizeMarkdown,
   parseMdxQuestionBody,
 } from '../../lib/content/parse-mdx-question';
+import type { QuestionRevisionFields } from '../../lib/content/question-revision-hash';
 import {
   FullQuestionSchema,
   QuestionFrontmatterSchema,
@@ -133,31 +134,46 @@ export function parseSeedQuestionFile(
   return question;
 }
 
-export function buildSeedRepFromDb(
-  question: Question,
-  choices: Choice[],
-  tags: SeedTag[],
-): SeedQuestionRep {
+// ADR-021: a revision's content in the form the seed compares and writes.
+export function revisionFieldsFromSeed(
+  seed: SeedQuestionRep,
+): QuestionRevisionFields {
   return {
-    slug: question.slug,
-    stem_md: canonicalizeMarkdown(question.stemMd),
-    explanation_md: canonicalizeMarkdown(question.explanationMd),
-    reference_md: question.referenceMd
-      ? canonicalizeMarkdown(question.referenceMd)
+    stemMd: seed.stem_md,
+    explanationMd: seed.explanation_md,
+    referenceMd: seed.reference_md,
+    difficulty: seed.difficulty,
+    choices: seed.choices.map((choice) => ({
+      label: choice.label,
+      textMd: choice.text_md,
+      isCorrect: choice.is_correct,
+      explanationMd: choice.explanation_md,
+      sortOrder: choice.sort_order,
+    })),
+  };
+}
+
+// A stored revision's content, canonicalized as the seed canonicalizes its
+// input, so a row written before canonicalization does not read as changed.
+export function revisionFieldsFromDb(
+  revision: QuestionRevision,
+  choices: readonly Choice[],
+): QuestionRevisionFields {
+  return {
+    stemMd: canonicalizeMarkdown(revision.stemMd),
+    explanationMd: canonicalizeMarkdown(revision.explanationMd),
+    referenceMd: revision.referenceMd
+      ? canonicalizeMarkdown(revision.referenceMd)
       : null,
-    difficulty: question.difficulty,
-    status: question.status,
-    choices: [...choices]
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((choice) => ({
-        label: choice.label,
-        text_md: canonicalizeMarkdown(choice.textMd),
-        is_correct: choice.isCorrect,
-        explanation_md: choice.explanationMd
-          ? canonicalizeMarkdown(choice.explanationMd)
-          : null,
-        sort_order: choice.sortOrder,
-      })),
-    tags: [...tags].sort((a, b) => a.slug.localeCompare(b.slug)),
+    difficulty: revision.difficulty,
+    choices: choices.map((choice) => ({
+      label: choice.label,
+      textMd: canonicalizeMarkdown(choice.textMd),
+      isCorrect: choice.isCorrect,
+      explanationMd: choice.explanationMd
+        ? canonicalizeMarkdown(choice.explanationMd)
+        : null,
+      sortOrder: choice.sortOrder,
+    })),
   };
 }

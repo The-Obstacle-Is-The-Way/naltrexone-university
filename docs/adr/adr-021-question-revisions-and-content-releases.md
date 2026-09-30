@@ -83,7 +83,7 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 
 ### Phase 2b order: the update notice before appending (2026-09-30)
 
-Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. It then adds the same notice to an active session's items, since a session keeps its bound revision. Only then does a PR make the writers append-only. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md#phase-2b-plan-decided-2026-09-30).
+Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. It then adds the same notice to an active session's items, since a session keeps its bound revision. Only then does a PR make the writers append-only; migration `0042` did so on 2026-09-30. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md#phase-2b-plan-decided-2026-09-30).
 
 ### Why phase 1 mirrors instead of appending (2026-09-28)
 

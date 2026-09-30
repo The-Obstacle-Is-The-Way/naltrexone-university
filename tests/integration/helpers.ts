@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
+import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 
@@ -153,18 +154,6 @@ export async function createTag(
   return row;
 }
 
-// ADR-021: like the seed after every write, mirror the question and its
-// choices into revision 1, so fixtures carry the current revision that reads
-// resolve and sessions and attempts bind. Call it again after adding a choice.
-export async function mirrorQuestionRevision(
-  db: DrizzleDb,
-  questionId: string,
-): Promise<void> {
-  await db.execute(
-    drizzleSql`SELECT sync_question_revision_v1(${questionId}::uuid)`,
-  );
-}
-
 export async function currentRevisionIdOf(
   db: DrizzleDb,
   questionId: string,
@@ -176,8 +165,9 @@ export async function currentRevisionIdOf(
   return row?.id ?? null;
 }
 
-// ADR-021: a second revision with its own choices, made current, as phase 2b
-// will. Choice C is correct and D is not; the stem and difficulty change too.
+// ADR-021 phase 2b: a second revision with its own choices, made current, as
+// the seed appends it. Choice C is correct and D is not; the stem and
+// difficulty change too.
 export async function addCurrentRevision(
   db: DrizzleDb,
   questionId: string,
@@ -186,52 +176,37 @@ export async function addCurrentRevision(
   correctChoiceId: string;
   incorrectChoiceId: string;
 }> {
-  const [revision] = await db
-    .insert(schema.questionRevisions)
-    .values({
-      questionId,
-      revisionNumber: 2,
-      stemMd: '# Revised stem',
-      explanationMd: '# Revised explanation',
-      referenceMd: 'Revised reference',
-      difficulty: 'hard',
-      canonicalizationVersion: 'stored-fields-json-v1',
-      contentHash: 'd'.repeat(64),
-    })
-    .returning({ id: schema.questionRevisions.id });
-  if (!revision) throw new Error('Failed to insert revision');
-  const choices = await db
-    .insert(schema.choices)
-    .values([
+  const appended = await appendQuestionRevision(db, questionId, {
+    stemMd: '# Revised stem',
+    explanationMd: '# Revised explanation',
+    referenceMd: 'Revised reference',
+    difficulty: 'hard',
+    choices: [
       {
-        questionId,
-        questionRevisionId: revision.id,
         label: 'C',
         textMd: 'Revised C',
         isCorrect: true,
+        explanationMd: null,
         sortOrder: 3,
       },
       {
-        questionId,
-        questionRevisionId: revision.id,
         label: 'D',
         textMd: 'Revised D',
         isCorrect: false,
+        explanationMd: null,
         sortOrder: 4,
       },
-    ])
-    .returning({ id: schema.choices.id, isCorrect: schema.choices.isCorrect });
-  await db
-    .update(schema.questions)
-    .set({ currentRevisionId: revision.id })
-    .where(eq(schema.questions.id, questionId));
-  const correct = choices.find((choice) => choice.isCorrect);
-  const incorrect = choices.find((choice) => !choice.isCorrect);
-  if (!correct || !incorrect) throw new Error('Failed to insert choices');
+    ],
+  });
+  const correctChoiceId = appended.choiceIdsByLabel.get('C');
+  const incorrectChoiceId = appended.choiceIdsByLabel.get('D');
+  if (!correctChoiceId || !incorrectChoiceId) {
+    throw new Error('Failed to insert choices');
+  }
   return {
-    revisionId: revision.id,
-    correctChoiceId: correct.id,
-    incorrectChoiceId: incorrect.id,
+    revisionId: appended.revisionId,
+    correctChoiceId,
+    incorrectChoiceId,
   };
 }
 
@@ -280,33 +255,39 @@ export async function createQuestion(
 
   cleanup.questionIds.push(question.id);
 
-  const choices = await db
-    .insert(schema.choices)
-    .values([
-      {
-        questionId: question.id,
-        label: 'A',
-        textMd: 'Choice A',
-        isCorrect: false,
-        sortOrder: 1,
-      },
-      {
-        questionId: question.id,
-        label: 'B',
-        textMd: 'Choice B',
-        isCorrect: true,
-        sortOrder: 2,
-      },
-    ])
-    .returning({ id: schema.choices.id, isCorrect: schema.choices.isCorrect });
-
-  const correctChoice = choices.find((choice) => choice.isCorrect);
-  const incorrectChoice = choices.find((choice) => !choice.isCorrect);
-  if (!correctChoice || !incorrectChoice) {
+  // ADR-021: revision 1, written as the seed writes it.
+  const appended = await appendQuestionRevision(
+    db,
+    question.id,
+    {
+      stemMd: '# Stem',
+      explanationMd: '# Explanation',
+      referenceMd: null,
+      difficulty: input.difficulty,
+      choices: [
+        {
+          label: 'A',
+          textMd: 'Choice A',
+          isCorrect: false,
+          explanationMd: null,
+          sortOrder: 1,
+        },
+        {
+          label: 'B',
+          textMd: 'Choice B',
+          isCorrect: true,
+          explanationMd: null,
+          sortOrder: 2,
+        },
+      ],
+    },
+    updatedAt,
+  );
+  const correctChoiceId = appended.choiceIdsByLabel.get('B');
+  const incorrectChoiceId = appended.choiceIdsByLabel.get('A');
+  if (!correctChoiceId || !incorrectChoiceId) {
     throw new Error('Failed to insert choices');
   }
-
-  await mirrorQuestionRevision(db, question.id);
 
   if (input.tagIds && input.tagIds.length > 0) {
     await db.insert(schema.questionTags).values(
@@ -320,7 +301,7 @@ export async function createQuestion(
   return {
     id: question.id,
     slug: input.slug,
-    correctChoiceId: correctChoice.id,
-    incorrectChoiceId: incorrectChoice.id,
+    correctChoiceId,
+    incorrectChoiceId,
   };
 }
