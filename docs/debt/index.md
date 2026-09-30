@@ -3,15 +3,15 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-30 UTC
 
-**Latest** — 2026-09-30 UTC: ADR-021 phase 3, first contract step. Every question revision binding is required ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-3-first-contract-step-every-binding-is-required--2026-09-30)).
-- **Migration `0043`.**
-  - It asserts every row is bound.
-  - The attempt, session-item, choice and question-pointer bindings become `NOT NULL`.
-  - The question's current-revision key becomes deferrable, so a new question and its first revision can point at each other in one transaction.
-  - The legacy text columns become nullable and leave `schema.ts`. The next migration drops them once the serving deployment no longer selects them.
-- **Pre-flight.** On a copy of the per-clone database, `0043` applied cleanly and the full-corpus seed skipped all 958 questions with 0 new revisions.
-- **Retired tests.** Those asserting states `0043` makes impossible, and replays of historical backfills that insert unbound rows, are retired and listed in DEBT-484.
-- **Also merged, not yet promoted.** #1243 (**5364038677** on `ab2a472b`) corrects the multi-clone seed runbook, including that an older clone's status or tag set changes a question in place with no revision. It also states DEBT-484's closure scope: the withdrawn-item navigator rows move to Deferred when phase 3 is released. Its two findings were accepted.
+**Latest** — 2026-09-30 UTC: ADR-021 phase 3, second contract step. The legacy question text columns are dropped (migration `0044`, [DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-3-second-contract-step-the-legacy-text-columns-are-dropped--2026-09-30)).
+- **Change.** A question's content now lives only in its revisions.
+- **Why now.** `0043`'s release stopped every write to the columns and no longer selects them, and it is now the serving deployment.
+- **Pre-flight.** On a copy of the per-clone database, `0044` applied, every integration case passed, and the full-corpus seed skipped all 958 questions with 0 new revisions.
+- **Previous promotion.** #1245 (`22713752`) carried #1244 (**5364650322** on `2d78754f`, no findings), the required bindings and migration `0043`, and #1243 (**5364038677** on `ab2a472b`), the seed runbook.
+  - The promotion's proof was written at 10:24:54Z, before the merge at 10:25:00Z, and its review raised no findings.
+  - The production build applied `0043`: its bound-history assertion passed, and the ledger post-check matched exactly.
+  - Release verified: main CI **36702286136** `test` **10:38:29Z**; Ready **10:26:31.958Z**, held without alias until its check completed; production assigned **10:38:34.821Z**; matching trees (`3e8c372e`); healthy production.
+- **Next.** Once this is released, DEBT-484 closes. Its withdrawn-item navigator rows move to Deferred, revived by the owner's scoring decision.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.

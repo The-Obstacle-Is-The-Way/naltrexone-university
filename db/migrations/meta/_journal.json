@@ -309,6 +309,13 @@
       "when": 1790757527459,
       "tag": "0043_adr021_contract_bindings",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1790763215870,
+      "tag": "0044_adr021_drop_legacy_question_columns",
+      "breakpoints": true
     }
   ]
 }
