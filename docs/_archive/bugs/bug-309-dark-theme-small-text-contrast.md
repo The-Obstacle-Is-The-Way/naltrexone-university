@@ -1,12 +1,10 @@
 # BUG-309: Dark-Theme Small Text Fails WCAG AA Contrast (Destructive Text; Muted Text on Tonal Rows)
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
-
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-09-29
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-09-29 — promoted to `main` through #1229; production release verified (see Resolution)
+**Verification receipts:** see Resolution
 
 ---
 
@@ -46,7 +44,7 @@ The DEBT-484 part-four captures ran axe 4.10.2 on the local production build of 
   - The tonal row fills added afterwards (DEBT-289, DEBT-302) raise the surface luminance behind small text. The dark destructive token was never tuned for text on dark surfaces; it serves both fills (`bg-destructive`) and text.
 - **A stale policy pointer.** `contrast-policy.md` §3.1 still says "current failures are documented in BS-042", but BS-042 is archived as resolved, so nothing tracked these.
 
-## Fix (2026-09-29; on its branch, pending review, merge and promotion)
+## Fix (2026-09-29)
 
 - **Tokens, dark theme only.**
   - `--destructive` changes from `0 72% 51%` to `0 91% 71%` (`#dc2828` to `#f87171`).
@@ -74,5 +72,14 @@ The DEBT-484 part-four captures ran axe 4.10.2 on the local production build of 
   - old tokens: 16 `color-contrast` nodes per size (Dashboard 5, History questions 2, History sessions 3, Practice 6);
   - new tokens: 0.
   - The Practice nodes were its segmented controls, which the record had not listed.
-- [x] Captures before and after: [Dashboard before](./assets/bug-309/before-dashboard-dark-1440x900.png), [Dashboard after](./assets/bug-309/after-dashboard-dark-1440x900.png), [History before](./assets/bug-309/before-history-questions-dark-1440x900.png), [History after](./assets/bug-309/after-history-questions-dark-1440x900.png); mobile: [Dashboard before](./assets/bug-309/before-dashboard-dark-390x844.png), [Dashboard after](./assets/bug-309/after-dashboard-dark-390x844.png), [History before](./assets/bug-309/before-history-questions-dark-390x844.png), [History after](./assets/bug-309/after-history-questions-dark-390x844.png).
-- [ ] Production release verified, then the record is resolved and archived.
+- [x] Captures before and after: [Dashboard before](../../bugs/assets/bug-309/before-dashboard-dark-1440x900.png), [Dashboard after](../../bugs/assets/bug-309/after-dashboard-dark-1440x900.png), [History before](../../bugs/assets/bug-309/before-history-questions-dark-1440x900.png), [History after](../../bugs/assets/bug-309/after-history-questions-dark-1440x900.png); mobile: [Dashboard before](../../bugs/assets/bug-309/before-dashboard-dark-390x844.png), [Dashboard after](../../bugs/assets/bug-309/after-dashboard-dark-390x844.png), [History before](../../bugs/assets/bug-309/before-history-questions-dark-390x844.png), [History after](../../bugs/assets/bug-309/after-history-questions-dark-390x844.png).
+- [x] Production release verified, then the record is resolved and archived.
+
+## Resolution (2026-09-29)
+
+- **Shipped.** #1227 merged as `6d8072ee` with exact-head approval **5359310519** on `a1be2cfe`.
+  - Its one finding was accepted: the guard's Button case now asserts the exported `buttonVariants({ variant: 'destructive' })` instead of parsing the source. Removing `dark:hover:bg-destructive/50` from the variant fails it.
+  - The local full gate passed on that exact head: 6,074 unit, 448 browser and 573 integration tests; build; all 60 E2E tests; the hosted Stripe lane, 7/7.
+- **Promoted and released.** Promoted through #1229 (`2a3d665f`), with #1226 and #1228. The promotion's proof was written into its body at 23:46:34Z, before the merge at 23:46:39Z; its review raised no findings.
+  - Release verified: main CI **36646977307** `test` **23:59:11Z**; Ready **23:47:59.946Z**, held without alias until its check completed; production assigned **23:59:13.515Z**; matching trees `9bb54d1a`; healthy production.
+  - Production's stylesheet serves the new dark tokens, `--destructive: 0 91% 71%` and `--muted-foreground: 0 0% 55%`. Before the alias moved, it served `0 72% 51%` and `0 0% 51.5%`.
