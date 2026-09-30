@@ -3,19 +3,14 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-29 UTC
 
-**Latest** — 2026-09-29 UTC: [BUG-309](../bugs/bug-309-dark-theme-small-text-contrast.md) is fixed on its branch. Dark-theme small text clears WCAG AA contrast.
-- **What changes.**
-  - Dark `--destructive` is now `0 91% 71%` and `--muted-foreground` `0 0% 55%`.
-  - The destructive Button's dark hover is `/50`, so its white label stays legible.
-  - A new suite measures each pairing on every surface the text sits on, as rendered. It is red on the old tokens.
-- **Proof.** axe on the local production build of Dashboard, History (both tabs) and Practice at two sizes: 16 `color-contrast` nodes per size before, 0 after.
-- **Previous increment.** #1224 (ADR-021 phase 2a, part six: an active session shows a withdrawn question) merged as `84007681` with exact-head approval **5357815056**.
-  - Its one finding (a `NOT_FOUND` answer reloaded on any cause) was fixed red-first on that head.
-  - It is promoted through #1225 (`cec105e1`). The promotion's one finding asked for a flag the page could not act on; it was declined with the trace, and its thread is resolved.
-  - The promotion's proof was written into its body at 20:32:34Z, before the merge at 20:32:39Z.
-  - Release verified: main CI **36627082996** `test` **20:45:06Z**; Ready **20:34:08.515Z**, held without alias until its check completed; production assigned **20:45:08.819Z**; matching trees (`c191ca97`); healthy production.
-- **Also promoted with this increment.** #1226 (approval **5358747299**, no findings) teaches the hosted-journey helper Stripe's new Checkout layout. The layout arrived on 2026-09-29 and failed the hosted lane twice.
-  - The same page showed the trial add-card flow offering non-card payment methods; that is filed as BUG-310, for an owner decision.
+**Latest** — 2026-09-29 UTC: promotion #1229 released the fix for [BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md), and the record is resolved and archived. Dark-theme small text now clears WCAG AA contrast in production.
+- **Promoted.** #1229 (`2a3d665f`) carried three feature PRs, each with an exact-head approval that predates its merge:
+  - #1226 (**5358747299**, no findings): the hosted-journey helper chooses card on Stripe's new Checkout layout.
+  - #1227 (**5359310519**): the BUG-309 fix. Its one finding was accepted: the guard asserts the exported destructive Button variant instead of parsing its source.
+  - #1228 (**5359688401** on `9f085bc7`): files [BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md). Its one finding was accepted: Stripe chooses the methods it offers from the Dashboard configuration, limited to those compatible with the setup Session.
+- **Release verified.** The promotion's proof was written into its body at 23:46:34Z, before the merge at 23:46:39Z, and its review raised no findings.
+  - Main CI **36646977307** `test` **23:59:11Z**; Ready **23:47:59.946Z**, held without alias until its check completed; production assigned **23:59:13.515Z**; matching trees (`9bb54d1a`); healthy production.
+  - Production's stylesheet serves the new dark tokens, `--destructive: 0 91% 71%` and `--muted-foreground: 0 0% 55%`.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.

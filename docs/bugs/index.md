@@ -1,9 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-29 — BUG-310 filed (trial add-card offers non-card methods, P3); BUG-309 fix merged into dev.
+**Last Updated:** 2026-09-29 — BUG-309 resolved and archived after its production release.
 
-**Latest** — 2026-09-29: **BUG-310 (P3) filed: the trial add-card Checkout offers payment methods that are not cards.** The flow's copy, consent and renewal are about a card, but its setup Session keeps dynamic payment methods by DEBT-414's recorded design. Stripe's test-mode page offered Cash App Pay, Klarna and Amazon Pay, and the webhook saves whatever method the learner chose as the renewal method. Because the fix overturns that recorded decision in a payment and consent flow, the record asks the owner to choose: restrict the Session to card (recommended), limit it through a card-only Stripe payment-method configuration, or change the copy. [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md). BUG-304, BUG-309 and BUG-310 are active. **Next Bug ID is BUG-311.**
+**Latest** — 2026-09-29: **BUG-309 (P2) is Resolved and archived.** Dark-theme small text clears WCAG AA contrast. Dark `--destructive` is now `0 91% 71%` and `--muted-foreground` `0 0% 55%`, and the destructive Button's dark hover is `/50`. The fix was #1227, promoted through #1229 with #1226 and #1228. Production was assigned at 23:59:13.515Z, and its stylesheet serves the new tokens. A guard measures each pairing on every surface the text sits on, and axe on the local production build went from 16 `color-contrast` nodes per size to 0. [BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md). BUG-304 and BUG-310 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-311.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -457,7 +457,6 @@ Every one of these was confirmed against the other branch's actual live registry
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
-| [BUG-309](./bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text fails WCAG AA contrast | P2 | Open | `text-destructive` ("Incorrect" and other red text) measured 3.5–4.15:1 on every dark surface, and `text-muted-foreground` 4.44:1 on the Dashboard's tonal rows. Fix on its branch: dark `--destructive` `0 91% 71%`, `--muted-foreground` `0 0% 55%`, destructive Button dark hover `/50`; axe 16 nodes per size to 0. Pending review and production proof. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
@@ -1079,6 +1078,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md) | Dark-theme small text clears WCAG AA contrast: dark `--destructive` `0 91% 71%` and `--muted-foreground` `0 0% 55%`, and the destructive Button's dark hover is `/50`. A guard measures each pairing on every surface the text sits on; axe went from 16 `color-contrast` nodes per size to 0. Production release verified, and its stylesheet serves the new tokens. | P2 | 2026-09-29 |
 | [BUG-308](../_archive/bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md) | Once a trial has a saved card, the banner states the renewal instead of asking for one; Billing names the plan and status and confirms the add-card return; Stripe's setup page visibly displays the learner's email. Proved by the hosted add-card journey; production release verified. | P3 | 2026-09-28 |
 | [BUG-307](../_archive/bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md) | Public E2E artifacts no longer publish auth state or traces; required and hosted workflow shapes, local-only tracing, output redaction, and the promoted one-file artifact's zero-match scan are verified. | P2 | 2026-08-28 |
 | [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md) | Suite session accumulation and unbounded auth-loss diagnostics were fixed and owner backlog containment is complete; the original one-off redirect cause remains explicitly unproven. | P3 | 2026-08-28 |
