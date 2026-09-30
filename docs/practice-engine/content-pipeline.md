@@ -527,10 +527,15 @@ You may have multiple local clones of the repo (e.g., `naltrexone-university`, `
 | Scenario | Result |
 |----------|--------|
 | Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (content matches). Zero DB writes. |
-| Seed from clone A, edit a question in clone B, seed from clone B | Only the changed question gains a **new revision**. Everything else skipped. |
+| Seed from clone A, edit a question's content in clone B, seed from clone B | Only that question gains a **new revision**. Everything else skipped. |
+| Seed from clone B after changing only a question's status or tags | That question's status or tags change **in place**, with no new revision. |
 | Seed from different clones against different DBs (dev vs prod) | Each DB gets its own independent copy. No cross-contamination. |
 
-**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, it appends the older content as a **new current revision** of those questions, and learners who saw the newer version get an update notice. The seed output counts it under `new revisions`, which is your signal that content changed.
+**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, the older files win:
+- **Content** (stem, explanation, reference, difficulty, choices or answer key) is appended as a **new current revision**. Learners who saw the newer version get an update notice. The seed counts it under both `updated` and `new revisions`.
+- **Status and tags** change **in place**, with no revision. A stale status can change what learners see: a question that is `published` in B but `draft` in A disappears from new practice. (The seed refuses to reactivate an archived question.) The seed counts these under `updated` only.
+
+So `updated` greater than `new revisions` means metadata changed. Check `status` before seeding from any clone but the newest.
 
 **Import procedure:** generate a fresh staged bundle from the intended draft version using [Import Drafts → MDX](#import-drafts--mdx-generated), review it, and separately place the approved artifact before seeding. A fresh directory prevents stale generated files from joining the new bundle; it does not prove release freshness or authorize a rollback.
 

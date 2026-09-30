@@ -160,6 +160,8 @@ that deployment milestone.
 
 This record closes after ADR-021's phases 1–3: revisions, binding and review, then the contract step that makes the bindings `NOT NULL` and drops the legacy text columns. The #951 guard stays in force until revisions replace it.
 
+**Closure scope (clarified 2026-09-30).** The active-session navigator and Review & Submit rows for a withdrawn item wait on the owner's scoring decision (part one), so they are outside this closure. When phase 3 is released, they move to the debt register's Deferred table with that decision as the revive trigger, and the record closes.
+
 ## Phase 1: revisions mirror the live rows — 2026-09-28
 
 ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../adr/adr-021-question-revisions-and-content-releases.md#why-phase-1-mirrors-instead-of-appending-2026-09-28) records why phase 1 mirrors content rather than appending revisions.
