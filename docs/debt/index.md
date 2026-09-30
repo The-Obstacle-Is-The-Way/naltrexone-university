@@ -3,11 +3,11 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-30 UTC
 
-**Latest** — 2026-09-30 UTC: ADR-021 phase 3 follow-up. The test fakes compose a question revision as the adapter does ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-3-follow-up-the-fakes-compose-a-revision-as-the-adapter-does--2026-09-30)).
-- **Change.** A revision keeps its content, difficulty and choices and takes its slug, status, tags and timestamps from its question. `FakeQuestionRepository` and `FakeAttemptRepository` share this rule (`listedRevisions`), so bound reads and the attempted-list filters match the Drizzle adapter. The test-double register no longer records a divergence.
-- **Tests, red first.** A bound read carries the question's fields; the attempted list filters by the question's status and tags and the answered revision's difficulty; `isCurrentRevision` follows list order.
-- **Previous change.** #1248 (**5365851572** on `1bfe82aa`, no findings; merged `08d7b6b0`), the non-null revision types: attempts, session items and bindings require a revision, and the `COALESCE` and unbound-read fallbacks are gone. It is on `dev` and ships in the same promotion as this change.
-- **Next.** Promote both. Once released, DEBT-484 closes, and its withdrawn-item navigator rows move to Deferred, revived by the owner's scoring decision.
+**Latest** — 2026-09-30 UTC: ADR-021 phase 3, promotion review fixes ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-3-third-step-every-revision-is-required-in-code--2026-09-30)).
+- **Why.** Promotion #1250's review (**CHANGES_REQUESTED** on `e1fb8d9a`) found three comments still describing a null revision that #1248's types no longer allow: on `Attempt.questionRevisionId`, on `PracticeSessionQuestionState.questionRevisionId`, and on `FakeAttemptRepository.insert`. #1250 was closed unmerged so the fix ships first, as #1240 was.
+- **Change.** The three comments now describe the non-null revision. A wider sweep for the same wording found one more site, a test helper whose type constraint still admitted `null`; it now requires a `string`. Applied migrations keep their comments as history.
+- **Previous change.** #1249 (**5366435437** on `2951ff0d`; one Minor finding, clock-dependent fake tests, fixed and resolved; merged `e1fb8d9a`), the fakes' question-level fields. #1248 (**5365851572** on `1bfe82aa`, no findings; merged `08d7b6b0`), the non-null revision types. Both are on `dev`.
+- **Next.** One promotion carries #1248, #1249 and this fix. Once released, DEBT-484 closes, and its withdrawn-item scoring and answer-key regrade tails move to Deferred, revived by the owner's decisions.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
