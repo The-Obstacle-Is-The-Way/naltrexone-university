@@ -56,7 +56,7 @@ describe('DrizzleAttemptRepository error translation', () => {
         retryOfAttemptId: null,
         retryOrigin: null,
         retrySessionId: null,
-        questionRevisionId: null,
+        questionRevisionId: crypto.randomUUID(),
       } satisfies typeof schema.attempts.$inferSelect;
       vi.mocked(
         PostgresJsPreparedQuery.prototype.execute,

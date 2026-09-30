@@ -23,11 +23,12 @@ This document serves two purposes:
 │ 2. SEEDING                                                            │
 │    pnpm db:seed                                                       │
 │    gray-matter → Zod validation → section extraction → canonicalize   │
-│    → SHA256 change detection → upsert to PostgreSQL                   │
+│    → compare with current revision → append a revision if changed      │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 3. DATABASE STORAGE                                                   │
-│    questions (stemMd, explanationMd)                                  │
-│    choices (label, textMd, isCorrect, explanationMd, sortOrder)       │
+│    questions (slug, status, currentRevisionId)                        │
+│    question_revisions (stemMd, explanationMd, referenceMd, difficulty)│
+│    choices (revision, label, textMd, isCorrect, explanationMd, order) │
 │    tags, question_tags                                                │
 │    Raw markdown stored as-is — no HTML compilation at rest            │
 ├───────────────────────────────────────────────────────────────────────┤
@@ -292,7 +293,9 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 
 **Schema:** `db/schema.ts`
 
-**Questions table:** Stores `stemMd` and `explanationMd` as raw markdown text.
+**Questions table:** Stores a question's identity (`slug`) and `status`, and `currentRevisionId`, the revision new practice shows (ADR-021).
+
+**Question revisions table:** Stores the content a learner reads, as raw markdown: `stemMd`, `explanationMd`, `referenceMd`, plus `difficulty` and the `stored-fields-json-v1` content hash. A revision is never updated; changed content is a new revision (migration `0042`). Attempts and session items bind the revision they were shown and graded against (`NOT NULL` since migration `0043`).
 
 **Choices table:**
 
@@ -300,13 +303,14 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 |--------|------|---------|
 | `id` | uuid | Primary key |
 | `questionId` | uuid FK | Parent question |
+| `questionRevisionId` | uuid FK | The revision the choice belongs to (`NOT NULL` since `0043`) |
 | `label` | varchar(4) | Canonical authored label: A–E |
 | `textMd` | text | Choice text (raw markdown) |
 | `isCorrect` | boolean | Correctness flag |
 | `explanationMd` | text (nullable) | Per-choice explanation (parsed from "Why other answers are wrong") |
 | `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D, 5=E |
 
-**Unique constraints:** `(questionId, label)` and `(questionId, sortOrder)` — ensures no duplicate labels or ordering within a question.
+**Unique constraints:** `(questionRevisionId, label)` and `(questionRevisionId, sortOrder)`: no duplicate labels or ordering within a revision. A newer revision may reuse its question's labels. A choice is never updated.
 
 **Attempts table:** Stores `selectedChoiceId` (FK to choices), but does **not** store which shuffle order the user saw. The shuffle is deterministic and recomputed from `userId + questionId` at render time.
 

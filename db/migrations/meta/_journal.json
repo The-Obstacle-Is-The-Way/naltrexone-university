@@ -302,6 +302,13 @@
       "when": 1790740493873,
       "tag": "0042_adr021_append_only_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790757527459,
+      "tag": "0043_adr021_contract_bindings",
+      "breakpoints": true
     }
   ]
 }

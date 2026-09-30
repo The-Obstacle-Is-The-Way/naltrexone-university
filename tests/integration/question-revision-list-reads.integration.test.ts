@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
@@ -47,15 +46,9 @@ async function createPublishedQuestion(
   });
 }
 
-// A newer revision made current. As the seed does, the legacy row is rewritten
-// with the new content too, so a read of the legacy columns is caught.
+// A newer revision made current, as the seed appends it.
 async function reviseQuestion(questionId: string) {
-  const revised = await addCurrentRevision(db, questionId);
-  await db
-    .update(schema.questions)
-    .set({ stemMd: '# Revised stem', difficulty: 'hard' })
-    .where(eq(schema.questions.id, questionId));
-  return revised;
+  return addCurrentRevision(db, questionId);
 }
 
 async function answer(

@@ -19,19 +19,6 @@ import { readDebt425BackfillSql } from './practice-session-state-backfill-helper
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 
-type LegacyPracticeSessionParams = schema.PracticeSessionParams & {
-  questionStates?: Array<{
-    questionId: string;
-    markedForReview: boolean;
-    latestSelectedChoiceId: string | null;
-    latestIsCorrect: boolean | null;
-    latestAnsweredAt: string | null;
-    draftSelectedChoiceId?: string | null;
-    draftSavedAt?: string | null;
-    draftCumulativeMs?: number;
-  }>;
-};
-
 afterEach(async () => {
   await cleanupAfterEach(db, cleanup);
 });
@@ -106,117 +93,6 @@ describe('practice session question state normalization', () => {
     } finally {
       rmSync(migrationsDir, { recursive: true, force: true });
     }
-  });
-
-  it('backfills legacy params_json states into relational rows idempotently', async () => {
-    const user = await createUser(db, cleanup);
-    const firstQuestion = await createQuestion(db, cleanup, {
-      slug: `it-state-backfill-first-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const secondQuestion = await createQuestion(db, cleanup, {
-      slug: `it-state-backfill-second-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'medium',
-    });
-
-    const legacyParamsJson: LegacyPracticeSessionParams = {
-      count: 2,
-      tagSlugs: [],
-      difficulties: [],
-      questionIds: [firstQuestion.id, secondQuestion.id],
-      questionStates: [
-        {
-          questionId: firstQuestion.id,
-          markedForReview: true,
-          latestSelectedChoiceId: firstQuestion.correctChoiceId,
-          latestIsCorrect: true,
-          latestAnsweredAt: '2026-03-17T12:00:00.000Z',
-        },
-        {
-          questionId: secondQuestion.id,
-          markedForReview: false,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-          draftSelectedChoiceId: secondQuestion.incorrectChoiceId,
-          draftSavedAt: '2026-04-25T12:00:00.000Z',
-          draftCumulativeMs: Number.MAX_SAFE_INTEGER,
-        },
-      ],
-    };
-
-    const [session] = await db
-      .insert(schema.practiceSessions)
-      .values({
-        userId: user.id,
-        mode: 'exam',
-        paramsJson: legacyParamsJson,
-        endedAt: new Date('2026-04-25T13:00:00.000Z'),
-      })
-      .returning({ id: schema.practiceSessions.id });
-
-    if (!session) throw new Error('Failed to insert legacy session');
-
-    const backfillSql = readDebt425BackfillSql();
-    await sql.unsafe(backfillSql);
-    await sql.unsafe(backfillSql);
-
-    const rows = await sql<
-      Array<{
-        question_id: string;
-        position: number;
-        marked_for_review: boolean;
-        latest_selected_choice_id: string | null;
-        latest_is_correct: boolean | null;
-        latest_answered_at: string | null;
-        draft_selected_choice_id: string | null;
-        draft_saved_at: string | null;
-        draft_cumulative_ms: number;
-        state_count: number;
-      }>
-    >`
-      SELECT
-        question_id::text,
-        position,
-        marked_for_review,
-        latest_selected_choice_id::text,
-        latest_is_correct,
-        latest_answered_at,
-        draft_selected_choice_id::text,
-        draft_saved_at,
-        draft_cumulative_ms,
-        count(*) OVER ()::int AS state_count
-      FROM practice_session_question_states
-      WHERE practice_session_id = ${session.id}
-      ORDER BY position
-    `;
-
-    expect(rows).toHaveLength(2);
-    expect(rows.map((row) => row.state_count)).toEqual([2, 2]);
-    expect(rows[0]).toMatchObject({
-      question_id: firstQuestion.id,
-      position: 0,
-      marked_for_review: true,
-      latest_selected_choice_id: firstQuestion.correctChoiceId,
-      latest_is_correct: true,
-      latest_answered_at: '2026-03-17 12:00:00+00',
-      draft_selected_choice_id: null,
-      draft_saved_at: null,
-      draft_cumulative_ms: 0,
-    });
-    expect(rows[1]).toMatchObject({
-      question_id: secondQuestion.id,
-      position: 1,
-      marked_for_review: false,
-      latest_selected_choice_id: null,
-      latest_is_correct: null,
-      latest_answered_at: null,
-      draft_selected_choice_id: secondQuestion.incorrectChoiceId,
-      draft_saved_at: '2026-04-25 12:00:00+00',
-      draft_cumulative_ms: 86_400_000,
-    });
   });
 
   it('creates relational state rows and leaves params_json immutable', async () => {

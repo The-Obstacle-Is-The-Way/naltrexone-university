@@ -15,9 +15,9 @@ All entities are pure TypeScript type aliases with no runtime behavior. They liv
 
 | Entity | Key Fields | Purpose |
 |--------|-----------|---------|
-| `Question` | `id`, `slug`, `stemMd`, `explanationMd`, `difficulty`, `status`, `choices[]`, `tags[]` | A board-prep question with markdown content |
+| `Question` | `id`, `revisionId`, `isCurrentRevision`, `slug`, `stemMd`, `explanationMd`, `difficulty`, `status`, `choices[]`, `tags[]` | A board-prep question with markdown content |
 | `Choice` | `id`, `questionId`, `label` (A–E), `textMd`, `isCorrect`, `explanationMd`, `sortOrder` | One answer choice; `explanationMd` is per-choice (beyond question-level explanation) |
-| `Attempt` | `id`, `userId`, `questionId`, `practiceSessionId` (nullable), `selectedChoiceId`, `isCorrect`, `timeSpentSeconds`, `retryOfAttemptId` (nullable), `retryOrigin` (nullable), `retrySessionId` (nullable), `answeredAt` | A single answer submission with optional retry provenance lineage |
+| `Attempt` | `id`, `userId`, `questionId`, `questionRevisionId` (the revision graded, ADR-021), `practiceSessionId` (nullable), `selectedChoiceId`, `isCorrect`, `timeSpentSeconds`, `retryOfAttemptId` (nullable), `retryOrigin` (nullable), `retrySessionId` (nullable), `answeredAt` | A single answer submission with optional retry provenance lineage |
 | `PracticeSession` | `id`, `userId`, `mode`, `questionIds[]`, `questionStates[]`, `tagFilters[]`, `difficultyFilters[]`, `startedAt`, `endedAt` (nullable) | A structured practice session (tutor or exam) |
 | `PracticeSessionQuestionState` | `questionId`, `markedForReview`, `latestSelectedChoiceId` (nullable), `latestIsCorrect` (nullable), `latestAnsweredAt` (nullable), `draftSelectedChoiceId` (nullable), `draftSavedAt` (nullable), `draftCumulativeMs` | Per-question state within a session. Tutor writes finalized `latest*` state on submit; active exam writes mutable `draft*` state until `FinalizeExamAnswers` materializes final attempts and `latest*` state. |
 | `Bookmark` | `userId`, `questionId`, `createdAt` | A user-saved question |

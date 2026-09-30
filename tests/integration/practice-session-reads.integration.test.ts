@@ -12,6 +12,7 @@ import {
   createIntegrationDb,
   createQuestion,
   createUser,
+  currentRevisionIdOf,
 } from './helpers';
 
 // Real-Postgres twins for the retired practice-session read units: domain
@@ -78,6 +79,7 @@ async function insertSurplusStateRow(sessionId: string, questionId: string) {
   await db.insert(schema.practiceSessionQuestionStates).values({
     practiceSessionId: sessionId,
     questionId,
+    questionRevisionId: await currentRevisionIdOf(db, questionId),
     position: 2,
   });
 }

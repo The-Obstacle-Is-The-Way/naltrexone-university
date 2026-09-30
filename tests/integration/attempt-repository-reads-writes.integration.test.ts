@@ -221,18 +221,35 @@ describe('attempt reads and writes against real Postgres', () => {
 
   it('bounds session reads to the newest 500 attempts with an ID tie-breaker', async () => {
     const user = await createUser(db, cleanup);
-    const questionIds = Array.from({ length: 501 }, () => randomUUID());
+    // ADR-021: each question with its first revision, written together.
+    const questionRevisions = Array.from({ length: 501 }, () => ({
+      questionId: randomUUID(),
+      revisionId: randomUUID(),
+    }));
+    const questionIds = questionRevisions.map(({ questionId }) => questionId);
     cleanup.questionIds.push(...questionIds);
-    await db.insert(schema.questions).values(
-      questionIds.map((id) => ({
-        id,
-        slug: `it-bounded-session-${id}`,
-        stemMd: 'Stem',
-        explanationMd: 'Explanation',
-        status: 'published' as const,
-        difficulty: 'easy' as const,
-      })),
-    );
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.questions).values(
+        questionRevisions.map(({ questionId, revisionId }) => ({
+          id: questionId,
+          slug: `it-bounded-session-${questionId}`,
+          status: 'published' as const,
+          currentRevisionId: revisionId,
+        })),
+      );
+      await tx.insert(schema.questionRevisions).values(
+        questionRevisions.map(({ questionId, revisionId }) => ({
+          id: revisionId,
+          questionId,
+          revisionNumber: 1,
+          stemMd: 'Stem',
+          explanationMd: 'Explanation',
+          difficulty: 'easy' as const,
+          canonicalizationVersion: 'stored-fields-json-v1',
+          contentHash: 'a'.repeat(64),
+        })),
+      );
+    });
     const session = await sessions.create({
       userId: user.id,
       mode: 'exam',
@@ -245,10 +262,11 @@ describe('attempt reads and writes against real Postgres', () => {
     });
     // Seed a legacy-sized stored result directly: current session creation caps
     // the question list at 200, but the read boundary must still cap DB rows.
-    const rows = questionIds.map((questionId) => ({
+    const rows = questionRevisions.map(({ questionId, revisionId }) => ({
       id: randomUUID(),
       userId: user.id,
       questionId,
+      questionRevisionId: revisionId,
       practiceSessionId: session.id,
       isOmitted: true,
       isCorrect: false,

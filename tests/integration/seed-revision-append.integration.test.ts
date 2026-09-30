@@ -137,19 +137,6 @@ describe('ADR-021 phase 2b: the seed appends changed content', () => {
     },
   );
 
-  it("mirrors the new revision into the question's legacy columns", async () => {
-    const question = await seedQuestion('legacy');
-
-    await syncQuestionsFromFiles(db, [
-      source(question.slug, { stem: 'A corrected clinical task.' }),
-    ]);
-
-    expect(await questionRow(question.id)).toMatchObject({
-      stemMd: 'A corrected clinical task.',
-      difficulty: 'easy',
-    });
-  });
-
   it('skips an unchanged question', async () => {
     const question = await seedQuestion('unchanged');
 
@@ -404,20 +391,6 @@ describe('ADR-021 phase 2b: the seed and the database agree on the schema', () =
     } finally {
       await closeConnection(monitorSql);
     }
-  });
-
-  it('refuses a question with no current revision rather than guessing one', async () => {
-    // 0042 verified every question has one; until the contract phase makes
-    // the pointer NOT NULL, the seed fails loudly if one is missing.
-    const question = await seedQuestion('no-pointer');
-    await db
-      .update(schema.questions)
-      .set({ currentRevisionId: null })
-      .where(eq(schema.questions.id, question.id));
-
-    await expect(
-      syncQuestionsFromFiles(db, [source(question.slug)]),
-    ).rejects.toThrow(`Question "${question.slug}" has no current revision`);
   });
 
   it('adds file context to seed failures and keeps later files untouched', async () => {

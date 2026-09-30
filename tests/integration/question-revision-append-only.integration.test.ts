@@ -8,7 +8,6 @@ import {
   createCleanupState,
   createIntegrationDb,
   createQuestion,
-  createUser,
   currentRevisionIdOf,
 } from './helpers';
 
@@ -210,25 +209,11 @@ describe('ADR-021 phase 2b: every history row and choice is bound', () => {
       .catch((caught: unknown) => databaseError(caught));
   }
 
+  // Since migration 0043 the columns are NOT NULL, so the assertion can no
+  // longer see an unbound row; question-revision-contract proves the refusal.
   it('passes when every session state, attempt and choice names its revision', async () => {
     await createPublishedQuestion('bound');
 
     await expect(assertBound()).resolves.toBeNull();
-  });
-
-  it('fails loudly on an attempt with no revision', async () => {
-    const question = await createPublishedQuestion('unbound-attempt');
-    const user = await createUser(db, cleanup);
-    await db.insert(schema.attempts).values({
-      userId: user.id,
-      questionId: question.id,
-      selectedChoiceId: question.correctChoiceId,
-      isCorrect: true,
-      timeSpentSeconds: 3,
-    });
-
-    const failure = await assertBound();
-
-    expect(failure?.message).toContain('1 attempts');
   });
 });

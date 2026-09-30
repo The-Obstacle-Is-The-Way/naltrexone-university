@@ -635,6 +635,39 @@ Content is now appended, never updated. A changed question becomes a new revisio
   - Main CI **36688108991** `test` **08:23:45Z**; Ready **08:12:35.735Z**, held without alias until its check completed; production assigned **08:23:47.501Z**; matching trees (`da8df5b5`); healthy production.
   - The promotion's review raised one outside-diff finding: the multi-clone seed runbook still described the removed hash skip. It was accepted and corrected in the next documentation PR.
 
+## Phase 3, first contract step: every binding is required — 2026-09-30
+
+The database now requires what the code has guaranteed since phase 2b: every attempt, session item and choice names its revision, and every question names its current one. The legacy text columns on `questions` stop being written and are dropped by the next step.
+
+- **Migration `0043`.**
+  - It calls `assert_question_revisions_bound_v1()` first.
+  - `questions_current_revision_fk` becomes `DEFERRABLE INITIALLY DEFERRED`. A new question and its first revision point at each other, so the seed writes the question with its revision's pre-generated id and the revision after it, and the key is checked at commit.
+  - `attempts.question_revision_id`, `practice_session_question_states.question_revision_id`, `choices.question_revision_id` and `questions.current_revision_id` become `NOT NULL`.
+  - `questions.stem_md`, `explanation_md` and `difficulty` become nullable, and the unused `questions_status_difficulty_idx` is dropped. They leave `schema.ts`, so no code selects or writes them. The next migration drops the columns once the serving deployment no longer selects them.
+- **Code.**
+  - The revision writer takes the pre-generated id and no longer mirrors the legacy columns.
+  - Session creation refuses an item with no current revision with `INTERNAL_ERROR`, as the foreign key did before bindings were required.
+  - The seed's revision lookup is total.
+- **Pre-flight on a copy of the per-clone database.** `0043` applied cleanly and its assertion passed. The full-corpus seed then skipped all 958 questions with 0 new revisions.
+- **Tests.**
+  - `question-revision-contract.integration.test.ts`, red first:
+    - an unbound attempt, choice or session item, and a null current revision, are each refused with `23502` on their column;
+    - a question and its first revision can be written in one transaction, and a pointer to a revision that is never written is refused at commit;
+    - the seed writes no legacy column;
+    - session creation over a missing question is refused.
+  - Fixtures bind as the app does. `answeredRevisionIdOf` gives a fixture attempt its selected choice's revision.
+- **Retired tests.** Each asserted a state `0043` makes impossible:
+  - the N-1 unbound attempt and unbound session item;
+  - reads of an unbound item and of a question with no current revision;
+  - the legacy-column mirror and equivalence proofs;
+  - the seed's missing-pointer refusal;
+  - the assertion function's failure on an unbound attempt, which the column now refuses first.
+  The replays of historical backfill migrations that insert unbound rows are retired too: `0018`'s omitted-attempt backfill, the DEBT-425 params_json normalization, and BUG-188's two legacy-shape cases. Every environment ran those migrations long before `0041` bound all history, a fresh database runs them with no rows, and their SQL stays in the ledger.
+- **N-1.**
+  - The serving deployment binds every attempt and session item it writes, writes no choice or question, and still selects the legacy columns, which exist until the next step.
+  - The previous commit's seed inserts a question without its current revision and fails loudly, so the operator seeds from the deployed commit.
+- **Not yet.** Phase 3's second step drops the legacy columns. A later refactor makes the domain's revision fields non-null and removes the unbound-binding fallbacks, now unreachable.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

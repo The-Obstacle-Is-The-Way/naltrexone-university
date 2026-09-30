@@ -3,14 +3,15 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-30 UTC
 
-**Latest** — 2026-09-30 UTC: ADR-021 phase 2b is in production. Promotion #1242 released the append-only content writers and migration `0042` ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2b-third-step-writers-become-append-only--2026-09-30)).
-- **Released.** #1242 (`b3dd9e82`) carried two feature PRs:
-  - #1239 (**5362731691** on `de5fc26c`): the append-only writers.
-  - #1241 (**5363098940** on `b0e8960d`): canonical seed choice explanations. Promotion #1240's review found that defect, and #1240 was closed unmerged so the fix could ship first.
-- **Production migration.** The build logged `0 session states and 0 attempts bound; 0 and 0 remain unbound`, the bound-history assertion passed, and the ledger post-check matched the checkout exactly.
-- **Release verified.** The promotion's proof was written at 08:10:42Z, before the merge at 08:10:47Z. Main CI **36688108991** `test` **08:23:45Z**; Ready **08:12:35.735Z**, held without alias until its check completed; production assigned **08:23:47.501Z**; matching trees (`da8df5b5`); healthy production.
-- **This PR.** The multi-clone seed runbook (deployment procedure §7 and content pipeline §16) now describes appending instead of the removed hash skip; this was the promotion review's one outside-diff finding. DEBT-484's register row is refreshed.
-- **Next.** Phase 3, the contract step, which closes DEBT-484: `NOT NULL` bindings, then dropping the legacy text columns, in two deploys.
+**Latest** — 2026-09-30 UTC: ADR-021 phase 3, first contract step. Every question revision binding is required ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-3-first-contract-step-every-binding-is-required--2026-09-30)).
+- **Migration `0043`.**
+  - It asserts every row is bound.
+  - The attempt, session-item, choice and question-pointer bindings become `NOT NULL`.
+  - The question's current-revision key becomes deferrable, so a new question and its first revision can point at each other in one transaction.
+  - The legacy text columns become nullable and leave `schema.ts`. The next migration drops them once the serving deployment no longer selects them.
+- **Pre-flight.** On a copy of the per-clone database, `0043` applied cleanly and the full-corpus seed skipped all 958 questions with 0 new revisions.
+- **Retired tests.** Those asserting states `0043` makes impossible, and replays of historical backfills that insert unbound rows, are retired and listed in DEBT-484.
+- **Also merged, not yet promoted.** #1243 (**5364038677** on `ab2a472b`) corrects the multi-clone seed runbook, including that an older clone's status or tag set changes a question in place with no revision. It also states DEBT-484's closure scope: the withdrawn-item navigator rows move to Deferred when phase 3 is released. Its two findings were accepted.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
