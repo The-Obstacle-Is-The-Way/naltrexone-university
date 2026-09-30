@@ -7,6 +7,7 @@ import {
   type QuestionRevisionFields,
   questionRevisionContentHash,
 } from '../../lib/content/question-revision-hash';
+import { onlyRow } from './only-row';
 
 export type AppendedQuestionRevision = {
   revisionId: string;
@@ -34,22 +35,22 @@ export async function appendQuestionRevision(
     .where(eq(schema.questionRevisions.questionId, questionId));
   const revisionNumber = (latest?.revisionNumber ?? 0) + 1;
 
-  const [revision] = await tx
-    .insert(schema.questionRevisions)
-    .values({
-      questionId,
-      revisionNumber,
-      stemMd: fields.stemMd,
-      explanationMd: fields.explanationMd,
-      referenceMd: fields.referenceMd,
-      difficulty: fields.difficulty,
-      canonicalizationVersion: QUESTION_REVISION_CANONICALIZATION,
-      contentHash: questionRevisionContentHash(fields, { hash: sha256Hex }),
-    })
-    .returning({ id: schema.questionRevisions.id });
-  if (!revision) {
-    throw new Error(`Failed to append a revision to question ${questionId}`);
-  }
+  const revision = onlyRow(
+    await tx
+      .insert(schema.questionRevisions)
+      .values({
+        questionId,
+        revisionNumber,
+        stemMd: fields.stemMd,
+        explanationMd: fields.explanationMd,
+        referenceMd: fields.referenceMd,
+        difficulty: fields.difficulty,
+        canonicalizationVersion: QUESTION_REVISION_CANONICALIZATION,
+        contentHash: questionRevisionContentHash(fields, { hash: sha256Hex }),
+      })
+      .returning({ id: schema.questionRevisions.id }),
+    `Failed to append a revision to question ${questionId}`,
+  );
 
   const choices = await tx
     .insert(schema.choices)
@@ -85,4 +86,18 @@ export async function appendQuestionRevision(
       choices.map((choice) => [choice.label, choice.id]),
     ),
   };
+}
+
+// A new revision's choice id by label, for callers that know its labels.
+export function choiceIdByLabel(
+  appended: AppendedQuestionRevision,
+  label: string,
+): string {
+  const id = appended.choiceIdsByLabel.get(label);
+  if (id === undefined) {
+    throw new Error(
+      `Revision ${appended.revisionNumber} has no choice ${label}`,
+    );
+  }
+  return id;
 }

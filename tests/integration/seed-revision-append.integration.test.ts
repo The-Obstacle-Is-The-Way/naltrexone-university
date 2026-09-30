@@ -392,6 +392,20 @@ describe('ADR-021 phase 2b: the seed and the database agree on the schema', () =
     }
   });
 
+  it('refuses a question with no current revision rather than guessing one', async () => {
+    // 0042 verified every question has one; until the contract phase makes
+    // the pointer NOT NULL, the seed fails loudly if one is missing.
+    const question = await seedQuestion('no-pointer');
+    await db
+      .update(schema.questions)
+      .set({ currentRevisionId: null })
+      .where(eq(schema.questions.id, question.id));
+
+    await expect(
+      syncQuestionsFromFiles(db, [source(question.slug)]),
+    ).rejects.toThrow(`Question "${question.slug}" has no current revision`);
+  });
+
   it('adds file context to seed failures and keeps later files untouched', async () => {
     const badSlug = `it-seed-append-fail-${randomUUID()}`;
     const laterSlug = `it-seed-append-later-${randomUUID()}`;

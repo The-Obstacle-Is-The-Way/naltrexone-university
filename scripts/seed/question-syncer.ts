@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 import * as schema from '../../db/schema';
 import { canonicalQuestionRevisionJson } from '../../lib/content/question-revision-hash';
 import type { SeedSourceFile } from './file-reader';
+import { onlyRow } from './only-row';
 import {
   isSyntheticPlaceholderSource,
   parseSeedQuestionFile,
@@ -121,17 +122,13 @@ async function replaceQuestionTags(
   await tx
     .delete(schema.questionTags)
     .where(eq(schema.questionTags.questionId, questionId));
-  const tagMap = await upsertTags(tx, tags);
-  await tx.insert(schema.questionTags).values(
-    tags.map((tag) => ({
-      questionId,
-      tagId:
-        tagMap.get(tag.slug)?.id ??
-        (() => {
-          throw new Error(`Missing tag id for slug "${tag.slug}"`);
-        })(),
-    })),
-  );
+  // upsertTags returns exactly the incoming tags, by slug.
+  const tagRows = await upsertTags(tx, tags);
+  await tx
+    .insert(schema.questionTags)
+    .values(
+      [...tagRows.values()].map((tag) => ({ questionId, tagId: tag.id })),
+    );
 }
 
 async function insertQuestion(
@@ -140,20 +137,20 @@ async function insertQuestion(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     const fields = revisionFieldsFromSeed(seed);
-    const [created] = await tx
-      .insert(schema.questions)
-      .values({
-        slug: seed.slug,
-        stemMd: fields.stemMd,
-        explanationMd: fields.explanationMd,
-        referenceMd: fields.referenceMd,
-        difficulty: fields.difficulty,
-        status: seed.status,
-      })
-      .returning({ id: schema.questions.id });
-    if (!created) {
-      throw new Error(`Failed to insert question for slug "${seed.slug}"`);
-    }
+    const created = onlyRow(
+      await tx
+        .insert(schema.questions)
+        .values({
+          slug: seed.slug,
+          stemMd: fields.stemMd,
+          explanationMd: fields.explanationMd,
+          referenceMd: fields.referenceMd,
+          difficulty: fields.difficulty,
+          status: seed.status,
+        })
+        .returning({ id: schema.questions.id }),
+      `Failed to insert question for slug "${seed.slug}"`,
+    );
     await appendQuestionRevision(tx, created.id, fields);
     await replaceQuestionTags(tx, created.id, seed.tags);
   });
@@ -170,16 +167,14 @@ async function syncExistingQuestion(
   sourcePath: string,
 ): Promise<'skipped' | 'updated' | 'revised'> {
   return db.transaction(async (tx) => {
-    const [locked] = await tx
-      .select()
-      .from(schema.questions)
-      .where(eq(schema.questions.id, questionId))
-      .for('update');
-    if (!locked) {
-      throw new Error(
-        `Question disappeared during seed sync for slug "${seed.slug}"`,
-      );
-    }
+    const locked = onlyRow(
+      await tx
+        .select()
+        .from(schema.questions)
+        .where(eq(schema.questions.id, questionId))
+        .for('update'),
+      `Question disappeared during seed sync for slug "${seed.slug}"`,
+    );
     if (
       locked.status === 'archived' &&
       seed.status !== 'archived' &&
@@ -189,14 +184,14 @@ async function syncExistingQuestion(
         `Refusing to reactivate archived question "${seed.slug}" from seed input. Use a new question QID for a replacement.`,
       );
     }
-    if (!locked.currentRevisionId) {
-      throw new Error(`Question "${seed.slug}" has no current revision`);
-    }
-
-    const [revision] = await tx
-      .select()
-      .from(schema.questionRevisions)
-      .where(eq(schema.questionRevisions.id, locked.currentRevisionId));
+    // Migration 0042 verified every question has one; the contract phase
+    // makes it NOT NULL.
+    const [revision] = locked.currentRevisionId
+      ? await tx
+          .select()
+          .from(schema.questionRevisions)
+          .where(eq(schema.questionRevisions.id, locked.currentRevisionId))
+      : [];
     if (!revision) {
       throw new Error(`Question "${seed.slug}" has no current revision`);
     }

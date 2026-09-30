@@ -3,7 +3,10 @@ import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
-import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
+import {
+  appendQuestionRevision,
+  choiceIdByLabel,
+} from '@/scripts/seed/question-revision-writer';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 
@@ -198,15 +201,10 @@ export async function addCurrentRevision(
       },
     ],
   });
-  const correctChoiceId = appended.choiceIdsByLabel.get('C');
-  const incorrectChoiceId = appended.choiceIdsByLabel.get('D');
-  if (!correctChoiceId || !incorrectChoiceId) {
-    throw new Error('Failed to insert choices');
-  }
   return {
     revisionId: appended.revisionId,
-    correctChoiceId,
-    incorrectChoiceId,
+    correctChoiceId: choiceIdByLabel(appended, 'C'),
+    incorrectChoiceId: choiceIdByLabel(appended, 'D'),
   };
 }
 
@@ -283,11 +281,8 @@ export async function createQuestion(
     },
     updatedAt,
   );
-  const correctChoiceId = appended.choiceIdsByLabel.get('B');
-  const incorrectChoiceId = appended.choiceIdsByLabel.get('A');
-  if (!correctChoiceId || !incorrectChoiceId) {
-    throw new Error('Failed to insert choices');
-  }
+  const correctChoiceId = choiceIdByLabel(appended, 'B');
+  const incorrectChoiceId = choiceIdByLabel(appended, 'A');
 
   if (input.tagIds && input.tagIds.length > 0) {
     await db.insert(schema.questionTags).values(
