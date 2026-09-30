@@ -11,6 +11,7 @@ import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-at
 import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
 
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createAuthGateway,
@@ -58,6 +59,11 @@ describe('stats controller (integration)', () => {
       {
         userId: user.id,
         questionId: questionA.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          questionA.id,
+          questionA.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: questionA.correctChoiceId,
         isCorrect: true,
@@ -67,6 +73,11 @@ describe('stats controller (integration)', () => {
       {
         userId: user.id,
         questionId: questionB.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          questionB.id,
+          questionB.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: questionB.incorrectChoiceId,
         isCorrect: false,
@@ -76,6 +87,11 @@ describe('stats controller (integration)', () => {
       {
         userId: user.id,
         questionId: questionA.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          questionA.id,
+          questionA.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: questionA.correctChoiceId,
         isCorrect: true,
@@ -85,6 +101,7 @@ describe('stats controller (integration)', () => {
       {
         userId: user.id,
         questionId: questionC.id,
+        questionRevisionId: await answeredRevisionIdOf(db, questionC.id, null),
         practiceSessionId: null,
         selectedChoiceId: null,
         isOmitted: true,
@@ -164,6 +181,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: incorrectQuestion.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          incorrectQuestion.id,
+          incorrectQuestion.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: incorrectQuestion.correctChoiceId,
         isCorrect: true,
@@ -173,6 +195,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: incorrectQuestion.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          incorrectQuestion.id,
+          incorrectQuestion.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: incorrectQuestion.incorrectChoiceId,
         isCorrect: false,
@@ -182,6 +209,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: recoveredQuestion.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          recoveredQuestion.id,
+          recoveredQuestion.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: recoveredQuestion.incorrectChoiceId,
         isCorrect: false,
@@ -191,6 +223,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: recoveredQuestion.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          recoveredQuestion.id,
+          recoveredQuestion.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: recoveredQuestion.correctChoiceId,
         isCorrect: true,
@@ -293,6 +330,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: correctRecent.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          correctRecent.id,
+          correctRecent.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: correctRecent.correctChoiceId,
         isCorrect: true,
@@ -302,6 +344,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: incorrectRecent.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          incorrectRecent.id,
+          incorrectRecent.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: incorrectRecent.incorrectChoiceId,
         isCorrect: false,
@@ -311,6 +358,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: correctOld.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          correctOld.id,
+          correctOld.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: correctOld.correctChoiceId,
         isCorrect: true,
@@ -320,6 +372,11 @@ describe('review controller (integration)', () => {
       {
         userId: user.id,
         questionId: incorrectOld.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          incorrectOld.id,
+          incorrectOld.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: incorrectOld.incorrectChoiceId,
         isCorrect: false,

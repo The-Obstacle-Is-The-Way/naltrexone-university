@@ -16,16 +16,16 @@ export type AppendedQuestionRevision = {
   choiceIdsByLabel: ReadonlyMap<string, string>;
 };
 
-// ADR-021 phase 2b: content is appended, never updated. The new revision gets
-// the next number and its own choice rows, the question's current revision
-// moves to it, and the question's legacy text columns keep mirroring the
-// current revision until the contract phase drops them. The caller holds the
-// question row lock, so revision numbers cannot race.
+// ADR-021: content is appended, never updated. The new revision gets the next
+// number and its own choice rows, and the question's current revision moves to
+// it. The caller holds the question row lock, so revision numbers cannot race.
+// A new question is written pointing at its first revision's id, given here,
+// before that revision exists; the deferred key is checked at commit.
 export async function appendQuestionRevision(
   tx: PostgresJsDatabase<typeof schema>,
   questionId: string,
   fields: QuestionRevisionFields,
-  updatedAt: Date = new Date(),
+  options: { revisionId?: string; updatedAt?: Date } = {},
 ): Promise<AppendedQuestionRevision> {
   const [latest] = await tx
     .select({
@@ -39,6 +39,7 @@ export async function appendQuestionRevision(
     await tx
       .insert(schema.questionRevisions)
       .values({
+        ...(options.revisionId ? { id: options.revisionId } : {}),
         questionId,
         revisionNumber,
         stemMd: fields.stemMd,
@@ -71,11 +72,7 @@ export async function appendQuestionRevision(
     .update(schema.questions)
     .set({
       currentRevisionId: revision.id,
-      stemMd: fields.stemMd,
-      explanationMd: fields.explanationMd,
-      referenceMd: fields.referenceMd,
-      difficulty: fields.difficulty,
-      updatedAt,
+      updatedAt: options.updatedAt ?? new Date(),
     })
     .where(eq(schema.questions.id, questionId));
 

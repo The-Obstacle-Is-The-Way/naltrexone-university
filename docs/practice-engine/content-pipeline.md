@@ -23,11 +23,12 @@ This document serves two purposes:
 │ 2. SEEDING                                                            │
 │    pnpm db:seed                                                       │
 │    gray-matter → Zod validation → section extraction → canonicalize   │
-│    → SHA256 change detection → upsert to PostgreSQL                   │
+│    → compare with current revision → append a revision if changed      │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 3. DATABASE STORAGE                                                   │
-│    questions (stemMd, explanationMd)                                  │
-│    choices (label, textMd, isCorrect, explanationMd, sortOrder)       │
+│    questions (slug, status, currentRevisionId)                        │
+│    question_revisions (stemMd, explanationMd, referenceMd, difficulty)│
+│    choices (revision, label, textMd, isCorrect, explanationMd, order) │
 │    tags, question_tags                                                │
 │    Raw markdown stored as-is — no HTML compilation at rest            │
 ├───────────────────────────────────────────────────────────────────────┤
@@ -292,7 +293,9 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 
 **Schema:** `db/schema.ts`
 
-**Questions table:** Stores `stemMd` and `explanationMd` as raw markdown text.
+**Questions table:** Stores a question's identity (`slug`) and `status`, and `currentRevisionId`, the revision new practice shows (ADR-021).
+
+**Question revisions table:** Stores the content a learner reads, as raw markdown: `stemMd`, `explanationMd`, `referenceMd`, plus `difficulty` and the `stored-fields-json-v1` content hash. A revision is never updated; changed content is a new revision (migration `0042`). Attempts and session items bind the revision they were shown and graded against (`NOT NULL` since migration `0043`).
 
 **Choices table:**
 
@@ -300,13 +303,14 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 |--------|------|---------|
 | `id` | uuid | Primary key |
 | `questionId` | uuid FK | Parent question |
+| `questionRevisionId` | uuid FK | The revision the choice belongs to (`NOT NULL` since `0043`) |
 | `label` | varchar(4) | Canonical authored label: A–E |
 | `textMd` | text | Choice text (raw markdown) |
 | `isCorrect` | boolean | Correctness flag |
 | `explanationMd` | text (nullable) | Per-choice explanation (parsed from "Why other answers are wrong") |
 | `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D, 5=E |
 
-**Unique constraints:** `(questionId, label)` and `(questionId, sortOrder)` — ensures no duplicate labels or ordering within a question.
+**Unique constraints:** `(questionRevisionId, label)` and `(questionRevisionId, sortOrder)`: no duplicate labels or ordering within a revision. A newer revision may reuse its question's labels. A choice is never updated.
 
 **Attempts table:** Stores `selectedChoiceId` (FK to choices), but does **not** store which shuffle order the user saw. The shuffle is deterministic and recomputed from `userId + questionId` at render time.
 
@@ -509,16 +513,16 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 ## 16. Seed Idempotency and Multi-Clone Safety
 
-The seed script is idempotent for **question content upserts** — running it multiple times with the same MDX question content produces the same question rows and skips unchanged questions.
+The seed script is idempotent: running it again with the same MDX content skips every unchanged question and writes nothing.
 
 **Important:** By default, every `pnpm db:seed` run also archives any `placeholder-%` rows unless `SEED_INCLUDE_PLACEHOLDERS=true`. That placeholder archival is a deliberate side effect and runs on every invocation.
 
 ### How it works
 
-1. **Slug is the identity key.** Each question is looked up by `slug`. If the slug exists, it's an update; if not, it's an insert.
-2. **SHA256 change detection.** Before writing, the seed computes a hash of the file's canonical representation and compares it to a hash of what's already in the DB. If they match, the question is **skipped entirely** — no writes, no `updatedAt` bump.
-3. **Choices use upsert.** `INSERT ... ON CONFLICT (questionId, label) DO UPDATE` — so even if the update path runs, it's a safe merge.
-4. **Tags are upserted** via `upsertTags()` — existing tags are reused by slug.
+1. **Slug is the identity key.** Each question is looked up by `slug`. If the slug exists, the question is compared; if not, it's inserted with revision 1.
+2. **Canonical comparison with the current revision.** The seed locks the question and compares the file's canonical content with the question's current revision, canonicalized the same way. If the content, status and tags all match, the question is **skipped entirely**: no writes, no `updatedAt` bump.
+3. **Changed content is appended, never updated** (ADR-021 phase 2b). A changed stem, explanation, reference, difficulty, choice or answer key becomes a new revision with its own choice rows, and the question's current revision moves to it. Earlier attempts and sessions keep the revision they answered. Status and tags change in place.
+4. **Tags are upserted** via `upsertTags()`: existing tags are reused by slug, and a tag whose name or kind differs is refused.
 
 ### What this means for multiple clones
 
@@ -526,11 +530,16 @@ You may have multiple local clones of the repo (e.g., `naltrexone-university`, `
 
 | Scenario | Result |
 |----------|--------|
-| Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (hashes match). Zero DB writes. |
-| Seed from clone A, edit a question in clone B, seed from clone B | Only the changed question is **updated**. Everything else skipped. |
+| Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (content matches). Zero DB writes. |
+| Seed from clone A, edit a question's content in clone B, seed from clone B | Only that question gains a **new revision**. Everything else skipped. |
+| Seed from clone B after changing only a question's status or tags | That question's status or tags change **in place**, with no new revision. |
 | Seed from different clones against different DBs (dev vs prod) | Each DB gets its own independent copy. No cross-contamination. |
 
-**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, it will **downgrade** those questions to the older version. The seed output will show this as "updated" (not "skipped"), which is your signal that content changed.
+**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, the older files win:
+- **Content** (stem, explanation, reference, difficulty, choices or answer key) is appended as a **new current revision**. Learners who saw the newer version get an update notice. The seed counts it under both `updated` and `new revisions`.
+- **Status and tags** change **in place**, with no revision. A stale status can change what learners see: a question that is `published` in B but `draft` in A disappears from new practice. (The seed refuses to reactivate an archived question.) The seed counts these under `updated` only.
+
+So `updated` greater than `new revisions` means metadata changed. Check `status` before seeding from any clone but the newest.
 
 **Import procedure:** generate a fresh staged bundle from the intended draft version using [Import Drafts → MDX](#import-drafts--mdx-generated), review it, and separately place the approved artifact before seeding. A fresh directory prevents stale generated files from joining the new bundle; it does not prove release freshness or authorize a rollback.
 

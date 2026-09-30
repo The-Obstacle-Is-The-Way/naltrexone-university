@@ -3,6 +3,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { readQuestionFeedbackRows } from '@/scripts/export-question-feedback';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -54,6 +55,11 @@ describe('readQuestionFeedbackRows', () => {
       .values({
         userId: user.id,
         questionId: reportQuestion.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          reportQuestion.id,
+          null,
+        ),
         practiceSessionId: session.id,
         isOmitted: true,
         isCorrect: false,

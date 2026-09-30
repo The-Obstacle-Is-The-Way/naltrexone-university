@@ -81,9 +81,8 @@ async function createPublishedQuestion(label: string) {
   });
 }
 
-// A second revision of the question with its own choice, as phase 2b will
-// write; phase 2a never creates one, but the database must already refuse a
-// selection that mixes revisions.
+// A second revision of the question with its own choice, as the seed appends
+// it; the database refuses a selection that mixes revisions.
 async function createOtherRevisionChoice(questionId: string) {
   const [revision] = await db
     .insert(schema.questionRevisions)
@@ -97,11 +96,12 @@ async function createOtherRevisionChoice(questionId: string) {
       contentHash: 'a'.repeat(64),
     })
     .returning({ id: schema.questionRevisions.id });
+  if (!revision) throw new Error('Failed to insert revision');
   const [choice] = await db
     .insert(schema.choices)
     .values({
       questionId,
-      questionRevisionId: revision?.id,
+      questionRevisionId: revision.id,
       label: 'C',
       textMd: 'Choice C, revised',
       isCorrect: true,
@@ -202,52 +202,6 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
     });
 
     await expect(attemptRevisionId(attempt.id)).resolves.toBe(graded);
-  });
-
-  it("binds an attempt in a session created before binding to the question's current revision", async () => {
-    const question = await createPublishedQuestion('legacy-session');
-    const { user, session } = await createSessionWith([question.id]);
-    // A session created by the N-1 deployment has no bound revision.
-    await db
-      .update(schema.practiceSessionQuestionStates)
-      .set({ questionRevisionId: null })
-      .where(
-        eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
-      );
-
-    const attempt = await new DrizzleAttemptRepository(db).insert({
-      userId: user.id,
-      questionId: question.id,
-      questionRevisionId: null,
-      practiceSessionId: session.id,
-      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
-      isCorrect: true,
-      timeSpentSeconds: 7,
-    });
-
-    const current = await currentRevisionId(question.id);
-    expect(current).not.toBeNull();
-    await expect(attemptRevisionId(attempt.id)).resolves.toBe(current);
-  });
-
-  // N-1: the serving deployment leaves the revision NULL until it is
-  // replaced, and MATCH SIMPLE keys accept that.
-  it('accepts an attempt with no bound revision, as the N-1 deployment writes it', async () => {
-    const question = await createPublishedQuestion('n-minus-1');
-    const user = await createUser(db, cleanup);
-
-    const [row] = await db
-      .insert(schema.attempts)
-      .values({
-        userId: user.id,
-        questionId: question.id,
-        selectedChoiceId: question.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 4,
-      })
-      .returning({ revisionId: schema.attempts.questionRevisionId });
-
-    expect(row).toEqual({ revisionId: null });
   });
 
   it('refuses an attempt whose selected choice belongs to another revision', async () => {

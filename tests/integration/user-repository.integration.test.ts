@@ -6,6 +6,7 @@ import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -476,6 +477,11 @@ describe('DrizzleUserRepository', () => {
     await db.insert(schema.attempts).values({
       userId: existing.id,
       questionId: question.id,
+      questionRevisionId: await answeredRevisionIdOf(
+        db,
+        question.id,
+        question.correctChoiceId,
+      ),
       selectedChoiceId: question.correctChoiceId,
       isCorrect: true,
     });

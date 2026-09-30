@@ -3,6 +3,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -226,6 +227,11 @@ describe('DrizzleQuestionRepository', () => {
       await db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qAttempted.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          qAttempted.id,
+          qAttempted.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: qAttempted.correctChoiceId,
         isCorrect: true,
@@ -263,6 +269,11 @@ describe('DrizzleQuestionRepository', () => {
       await db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qLatestIncorrect.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          qLatestIncorrect.id,
+          qLatestIncorrect.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: qLatestIncorrect.incorrectChoiceId,
         isCorrect: false,
@@ -274,6 +285,11 @@ describe('DrizzleQuestionRepository', () => {
         {
           userId: user.id,
           questionId: qLatestCorrect.id,
+          questionRevisionId: await answeredRevisionIdOf(
+            db,
+            qLatestCorrect.id,
+            qLatestCorrect.incorrectChoiceId,
+          ),
           practiceSessionId: null,
           selectedChoiceId: qLatestCorrect.incorrectChoiceId,
           isCorrect: false,
@@ -283,6 +299,11 @@ describe('DrizzleQuestionRepository', () => {
         {
           userId: user.id,
           questionId: qLatestCorrect.id,
+          questionRevisionId: await answeredRevisionIdOf(
+            db,
+            qLatestCorrect.id,
+            qLatestCorrect.correctChoiceId,
+          ),
           practiceSessionId: null,
           selectedChoiceId: qLatestCorrect.correctChoiceId,
           isCorrect: true,
@@ -327,6 +348,7 @@ describe('DrizzleQuestionRepository', () => {
       await db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qOmitted.id,
+        questionRevisionId: await answeredRevisionIdOf(db, qOmitted.id, null),
         practiceSessionId: null,
         selectedChoiceId: null,
         isOmitted: true,
@@ -436,6 +458,11 @@ describe('DrizzleQuestionRepository', () => {
         {
           userId: user.id,
           questionId: qIncorrect.id,
+          questionRevisionId: await answeredRevisionIdOf(
+            db,
+            qIncorrect.id,
+            qIncorrect.incorrectChoiceId,
+          ),
           practiceSessionId: null,
           selectedChoiceId: qIncorrect.incorrectChoiceId,
           isCorrect: false,
@@ -445,6 +472,11 @@ describe('DrizzleQuestionRepository', () => {
         {
           userId: user.id,
           questionId: qCorrect.id,
+          questionRevisionId: await answeredRevisionIdOf(
+            db,
+            qCorrect.id,
+            qCorrect.correctChoiceId,
+          ),
           practiceSessionId: null,
           selectedChoiceId: qCorrect.correctChoiceId,
           isCorrect: true,
@@ -640,6 +672,11 @@ describe('DrizzleQuestionRepository', () => {
         {
           userId: user.id,
           questionId: qIncorrect.id,
+          questionRevisionId: await answeredRevisionIdOf(
+            db,
+            qIncorrect.id,
+            qIncorrect.incorrectChoiceId,
+          ),
           practiceSessionId: null,
           selectedChoiceId: qIncorrect.incorrectChoiceId,
           isCorrect: false,
@@ -649,6 +686,11 @@ describe('DrizzleQuestionRepository', () => {
         {
           userId: user.id,
           questionId: qCorrect.id,
+          questionRevisionId: await answeredRevisionIdOf(
+            db,
+            qCorrect.id,
+            qCorrect.correctChoiceId,
+          ),
           practiceSessionId: null,
           selectedChoiceId: qCorrect.correctChoiceId,
           isCorrect: true,

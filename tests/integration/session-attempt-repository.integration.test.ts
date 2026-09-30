@@ -7,6 +7,7 @@ import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/dr
 import { ApplicationConflictReasons } from '@/src/application/errors';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -169,6 +170,11 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qOmittedWithChoice.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          qOmittedWithChoice.id,
+          qOmittedWithChoice.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: qOmittedWithChoice.correctChoiceId,
         isOmitted: true,
@@ -185,6 +191,11 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qOmittedCorrect.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          qOmittedCorrect.id,
+          null,
+        ),
         practiceSessionId: null,
         selectedChoiceId: null,
         isOmitted: true,
@@ -201,6 +212,11 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       db.insert(schema.attempts).values({
         userId: user.id,
         questionId: qAnsweredWithoutChoice.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          qAnsweredWithoutChoice.id,
+          null,
+        ),
         practiceSessionId: null,
         selectedChoiceId: null,
         isOmitted: false,
@@ -311,6 +327,11 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
         id: lowerId,
         userId: user.id,
         questionId: question.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          question.id,
+          question.incorrectChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: question.incorrectChoiceId,
         isCorrect: false,
@@ -321,6 +342,11 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
         id: higherId,
         userId: user.id,
         questionId: question.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          question.id,
+          question.correctChoiceId,
+        ),
         practiceSessionId: null,
         selectedChoiceId: question.correctChoiceId,
         isCorrect: true,

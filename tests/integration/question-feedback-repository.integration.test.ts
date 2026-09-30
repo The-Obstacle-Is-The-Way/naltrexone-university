@@ -8,6 +8,7 @@ import {
   newQuestionReportFeedback,
 } from '@/src/domain/entities';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -157,6 +158,7 @@ describe('DrizzleQuestionFeedbackRepository', () => {
       .values({
         userId: user.id,
         questionId: question.id,
+        questionRevisionId: await answeredRevisionIdOf(db, question.id, null),
         isOmitted: true,
         isCorrect: false,
       })
