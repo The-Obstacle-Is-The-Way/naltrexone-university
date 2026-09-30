@@ -223,6 +223,7 @@ export class FinalizeExamAnswersUseCase {
           const attempt = await tx.attempts.insert({
             userId: input.userId,
             questionId: state.questionId,
+            questionRevisionId: state.questionRevisionId,
             practiceSessionId: activeSession.id,
             outcome,
             isCorrect: false,
@@ -252,6 +253,7 @@ export class FinalizeExamAnswersUseCase {
         const attempt = await tx.attempts.insert({
           userId: input.userId,
           questionId: state.questionId,
+          questionRevisionId: question.revisionId,
           practiceSessionId: activeSession.id,
           outcome,
           isCorrect: grade.isCorrect,

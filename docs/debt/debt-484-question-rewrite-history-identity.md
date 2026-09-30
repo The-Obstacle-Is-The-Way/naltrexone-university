@@ -500,6 +500,43 @@ What changes:
   - Three mutations of the view wiring each fail a case.
 - **Not yet.** Slice 3b: an active session's navigator and Review & Submit list, which still show a withdrawn item as unavailable.
 
+## Phase 2b, prerequisites: every writer names its revision — 2026-09-30
+
+Phase 2b makes content writers append-only, so a question will have more than one revision. Three places still assumed one revision per question. This increment changes them; nothing a learner sees changes.
+
+- **An attempt records the revision it was graded against.**
+  - Until now the attempt repository bound the session item's revision, else the question's current revision *at insert time*. Outside a session, the answer is graded against the revision read a moment earlier. If a new revision became current in between, the selected choice belonged to the older revision, `attempts_selected_choice_revision_fk` refused the insert, and the learner saw a generic error. This is the residual race the fourth increment noted.
+  - `AttemptInsertInput.questionRevisionId` is now required. Submit and finalize pass the revision they graded: the question's `revisionId` for an answer, and the item's bound revision for an omitted exam item. `null` remains only for an item the N-1 deployment left unbound, and the adapter then falls back as before.
+  - Red first on real Postgres: an answer graded against revision 1 after revision 2 became current was refused by `attempts_selected_choice_revision_fk`. It is now stored against revision 1. The submit and finalize cases were red first too.
+- **The E2E baseline binds its rows.**
+  - The E2E reset inserted two session states and two attempts with no revision, so every local and E2E database held unbound rows, which phase 2b's migration will refuse. It also read its fixture choices by `question_id` alone, which would mix revisions.
+  - It now binds each row to its question's current revision and reads that revision's choices.
+  - Its baseline check also requires every baseline row to be on its question's current revision. The check failed the E2E setup before the fix and passes after it.
+- **No relation reads a question's choices directly.** The unused Drizzle relation `questions.choices` joined on `question_id`. It is removed, so choices are read only through a revision, and a schema test pins that.
+- **Test doubles.** `FakeAttemptRepository` stores the revision it is given; the register records the remaining divergence for `null`.
+
+### Phase 2b plan (decided 2026-09-30)
+
+Under the owner's delegation, phase 2b ships as two more increments, in this order.
+
+1. **Reviews say when a question changed after it was answered.**
+   - Once the seed appends, an answer-key correction is a new revision. A review shows the revision the learner answered, so without a notice it would show the superseded key as correct. Today's in-place key correction shows the corrected key, so appending without a notice would be a regression in what a learner learns from review.
+   - Medical publishing marks a corrected article and links the correction (the erratum practice beside COPE's retraction guidance). A review of an answered revision that is no longer current therefore carries an update notice and a way to see the current version. The Pattern Registry entry comes first, as F-11 did for withdrawals.
+   - It renders nothing while every question has one revision, so it can ship before appending exists.
+   - **Scoring is unchanged.** An attempt keeps the grade it received. Whether a key correction should regrade history is an owner decision, like the withdrawn-item scoring in part one.
+2. **Writers become append-only.** One PR, because the seed and the migration depend on each other.
+   - **Migration `0042`.**
+     - It binds any remaining unbound history with `bind_history_revisions_v1`, the function `0041` ran.
+     - It then fails loudly if any session state or attempt is still unbound, or any choice has no revision. Production had none after `0041`.
+     - It replaces the per-question choice keys `(question_id, label)` and `(question_id, sort_order)` with per-revision keys.
+     - It retires `sync_question_revision_v1` and `sweep_question_revisions_v1`. Both refresh revision 1 in place and point the question back at it; after a second revision exists they would re-attach its choices to revision 1.
+     - It adds triggers that reject every update to a revision and to a choice's content. Deletes still cascade.
+   - **The seed appends.**
+     - Changed content becomes revision N+1 with its own choices, and the question's current revision moves to it in the same transaction.
+     - The comparison reads the current revision, not the legacy columns.
+     - Graded history keeps the revision it answered. The #951 rewrite refusal, its key-change override and the active-session deferral are therefore superseded, as ADR-021 §6 anticipates.
+     - The seed refuses to append until `0042` has committed, so a seed run from a newer commit cannot meet an older schema.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

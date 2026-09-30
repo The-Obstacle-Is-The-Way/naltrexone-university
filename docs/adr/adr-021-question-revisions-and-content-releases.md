@@ -81,6 +81,10 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 | 4 | Releases, staging, atomic activation, the withdrawal and hold overlay, and rollback. Selection reads the active release. | The legacy `status` stays in step until the release pointer is authoritative. |
 | 5 | Release zero, the inventory of what is live, hashed in `stored-fields-json-v1`. | Read-only export. |
 
+### Phase 2b order: the update notice before appending (2026-09-30)
+
+Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. Only then does a PR make the writers append-only. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md#phase-2b-plan-decided-2026-09-30).
+
 ### Why phase 1 mirrors instead of appending (2026-09-28)
 
 Phase 1 was first written as "the seed writes a new revision for changed content". That cannot be done safely before the readers switch (phase 2a), because the serving code reads a question's choices by `question_id` and choices are unique per `(question_id, label)`. There are three options, and only one is sound:

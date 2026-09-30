@@ -13,6 +13,12 @@ export type PageOptions = {
 export type AttemptInsertInput = {
   userId: string;
   questionId: string;
+  /**
+   * The revision the attempt was graded against (ADR-021): the session
+   * item's bound revision, or the one read outside a session. Null only for
+   * an unbound session item, which then binds its question's current one.
+   */
+  questionRevisionId: string | null;
   practiceSessionId: string | null;
   outcome: AnswerOutcome;
   isCorrect: boolean;

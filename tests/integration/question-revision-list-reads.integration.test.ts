@@ -66,6 +66,7 @@ async function answer(
   return attempts.insert({
     userId,
     questionId: question.id,
+    questionRevisionId: null,
     practiceSessionId: null,
     outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
     isCorrect: true,
