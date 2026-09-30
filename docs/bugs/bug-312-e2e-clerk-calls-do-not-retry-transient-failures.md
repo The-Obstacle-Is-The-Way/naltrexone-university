@@ -37,6 +37,7 @@ CI only. No user or data impact. A red required check on `main` holds the produc
 
 `fetchClerkWithRetry` in `credential-health-check.ts` wraps `fetchWithTimeout` in the app's `retry` with `DEFAULT_RETRY_OPTIONS`. It retries:
 - a thrown error that `isTransientExternalError` recognizes, on the error or on its cause, because undici reports a dropped connection as `fetch failed` with the socket code on `cause`;
+- a cause with undici's own code for a socket closed before the response headers, `UND_ERR_SOCKET` (#1257 review). It is recognized in this predicate only, because the app's shared classifier also governs production Stripe and Clerk retries;
 - a 429 or 5xx response.
 
 Before each further attempt it cancels the superseded response's body, which could otherwise hold undici's connection (#1256 review). Once retries run out, it returns the last response, body unread, or throws the last error, so each caller maps failures exactly as before. The reset's user lookup, the health check's lookup and its password check all use it.
@@ -47,4 +48,5 @@ It does not retry a timeout (15 s per attempt) or any other error, and it does n
 
 - **Red first, in `e2e-reset-shared.test.ts`.** The reset lookup retries a connection reset, a 503 and a 429, then resolves the user. It gives up after three attempts on a persistent reset or 503 and maps the failure as before. It does not retry a 401 or an error with no transient cause.
 - **`credential-health-check-clerk-retry.test.ts`.** The helper retries a dropped connection and a 503 and keeps the request's method. It returns the last 429 and throws the last dropped connection once retries run out. It returns a 401 or 422 at once. It cancels each superseded body and leaves the last one readable; skipping the cancel fails that case.
+- **`UND_ERR_SOCKET`, red first.** A fetch that fails once with a `SocketError`-shaped cause, then succeeds, is retried.
 - **Mutation checks.** Dropping the cause-code check fails the connection-reset cases. Dropping the transient-status throw fails the 429 and 503 cases.

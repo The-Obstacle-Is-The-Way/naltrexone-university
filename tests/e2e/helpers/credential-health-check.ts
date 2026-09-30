@@ -169,12 +169,23 @@ class TransientClerkResponse extends Error {
   }
 }
 
+// undici's own code for a socket closed before the response headers arrive.
+// It is retried here, not added to the app's shared classifier, which also
+// governs production Stripe and Clerk retries (#1257 review).
+const UNDICI_SOCKET_CLOSED = 'UND_ERR_SOCKET';
+
 function isTransientClerkFailure(error: unknown): boolean {
   if (error instanceof TransientClerkResponse) return true;
   // undici's fetch reports a dropped connection as `fetch failed`, with the
   // socket error's code on its cause.
   const cause = error instanceof Error ? error.cause : undefined;
-  return isTransientExternalError(error) || isTransientExternalError(cause);
+  return (
+    isTransientExternalError(error) ||
+    isTransientExternalError(cause) ||
+    (cause instanceof Error &&
+      'code' in cause &&
+      cause.code === UNDICI_SOCKET_CLOSED)
+  );
 }
 
 export async function fetchClerkWithRetry(
