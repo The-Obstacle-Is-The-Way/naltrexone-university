@@ -160,6 +160,8 @@ that deployment milestone.
 
 This record closes after ADR-021's phases 1–3: revisions, binding and review, then the contract step that makes the bindings `NOT NULL` and drops the legacy text columns. The #951 guard stays in force until revisions replace it.
 
+**Closure scope (clarified 2026-09-30).** The active-session navigator and Review & Submit rows for a withdrawn item wait on the owner's scoring decision (part one), so they are outside this closure. When phase 3 is released, they move to the debt register's Deferred table with that decision as the revive trigger, and the record closes.
+
 ## Phase 1: revisions mirror the live rows — 2026-09-28
 
 ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../adr/adr-021-question-revisions-and-content-releases.md#why-phase-1-mirrors-instead-of-appending-2026-09-28) records why phase 1 mirrors content rather than appending revisions.
@@ -627,6 +629,11 @@ Content is now appended, never updated. A changed question becomes a new revisio
   - The parser kept a choice explanation exactly as written, while the comparison canonicalizes the stored one. An explanation with trailing whitespace, such as a YAML block scalar with its trailing newline, would never compare equal, so every reseed would append the same content as a new revision and learners would see a false update notice.
   - No current content has one (the rehearsal skipped all 958), but it is a latent fault in what this step introduces. Promotion #1240 was therefore closed without merging.
   - The parser now canonicalizes choice explanations like every other field. Two cases prove it on the parser and on real Postgres: a reseed of an unchanged question whose explanation ends in a newline appends nothing.
+- **Released.**
+  - #1239 (approval **5362731691** on `de5fc26c`) and #1241 (approval **5363098940** on `b0e8960d`) were promoted through #1242 (`b3dd9e82`). The promotion's proof was written at 08:10:42Z, before the merge at 08:10:47Z.
+  - The production build logged `0 session states and 0 attempts bound; 0 and 0 remain unbound`, the bound-history assertion passed, and the ledger post-check matched exactly.
+  - Main CI **36688108991** `test` **08:23:45Z**; Ready **08:12:35.735Z**, held without alias until its check completed; production assigned **08:23:47.501Z**; matching trees (`da8df5b5`); healthy production.
+  - The promotion's review raised one outside-diff finding: the multi-clone seed runbook still described the removed hash skip. It was accepted and corrected in the next documentation PR.
 
 ## Related
 
