@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phases 1, 2a, 2b and 3's database contract (migrations `0043` and `0044`) are in production as of 2026-09-30; non-null revision types in code and the fakes' question-level tags and status remain
+**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phases 1, 2a, 2b and 3's database contract (migrations `0043` and `0044`) are in production as of 2026-09-30; non-null revision types in code are merged (#1248), the fakes' question-level fields follow, and the record closes once both are released
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
@@ -695,6 +695,15 @@ The code now requires what `0043` made the database require: every attempt, sess
 - **Retired tests.** They asserted the removed fallbacks: the adapter binding an attempt inserted with no revision, in a session and outside one, and reads of unbound items. The use cases bind, proved in `question-revision-session-reads.integration.test.ts` and the submit and finalize unit suites.
 - **N-1.** No schema change. The serving deployment and this one both name a revision on every row they write, which `0043` requires.
 - **Found on the way.** Both fakes read a revision's tags from its listed entry, and `FakeAttemptRepository` its publication status too. The adapters read both from the question. The divergence is recorded in the test-double register and fixed in the next change.
+
+## Phase 3 follow-up: the fakes compose a revision as the adapter does — 2026-09-30
+
+The Drizzle adapter reads a revision's content, difficulty and choices from the revision, and its slug, status, tags and timestamps from the question. The two fakes that hold question revisions now do the same.
+
+- **Shared rule.** `listedRevisions` normalizes a fake's listed revisions: the first listed per id is current, and each later one takes its question-level fields from it. `FakeQuestionRepository` and `FakeAttemptRepository` both use it.
+- **What changed.** A bound read from `FakeQuestionRepository` took the question's status but kept the listed revision's slug, tags and timestamps. `FakeAttemptRepository`'s attempted-list filters took status and tags from the answered revision's entry. Neither divergence changed a result in an existing test; each could have hidden a regression in a new one.
+- **Tests, red first.** A bound read carries the question's slug, status, tags and timestamps; the attempted list filters by the question's status and tags and the answered revision's difficulty. A third test pins `isCurrentRevision` to list order whatever the fixture says.
+- **Register.** The test-double register states the parity and no longer records the divergence.
 
 ## Related
 
