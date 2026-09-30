@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phase 1 (revisions mirror the live rows) landed 2026-09-28; immutable revision binding and review milestones remain open
+**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phases 1, 2a, 2b and 3's database contract (migrations `0043` and `0044`) are in production as of 2026-09-30; non-null revision types in code and the fakes' question-level tags and status remain
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
