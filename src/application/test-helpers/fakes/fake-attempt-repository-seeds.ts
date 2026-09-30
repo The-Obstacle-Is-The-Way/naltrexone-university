@@ -1,4 +1,5 @@
 // Seed builders shared by the FakeAttemptRepository suites.
+import { defaultRevisionIdOf } from '@/src/domain/test-helpers';
 import {
   type AnswerOutcome,
   answeredOutcome,
@@ -27,7 +28,9 @@ export function makeAttempt(
     id: 'attempt-1',
     userId,
     questionId: 'q-1',
-    questionRevisionId: null,
+    questionRevisionId: defaultRevisionIdOf(
+      attemptOverrides.questionId ?? 'q-1',
+    ),
     practiceSessionId: null,
     outcome:
       attemptOverrides.outcome ?? answeredOutcome(selectedChoiceId ?? 'c-1'),

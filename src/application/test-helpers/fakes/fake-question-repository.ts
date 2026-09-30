@@ -109,7 +109,6 @@ export class FakeQuestionRepository implements QuestionRepository {
   private findByBinding(item: QuestionRevisionBinding): Question | null {
     const current = this.questions.find((q) => q.id === item.questionId);
     if (!current) return null;
-    if (item.questionRevisionId === null) return current;
     const bound = this.revisions.find(
       (q) =>
         q.id === item.questionId && q.revisionId === item.questionRevisionId,

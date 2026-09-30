@@ -36,16 +36,23 @@ export class FakeAttemptRepository implements AttemptRepository {
     this.questions = deps?.questions ?? null;
   }
 
-  // ADR-021: the revision the attempt answered, else the current one.
+  // ADR-021: the revision the attempt answered. A listed question without it
+  // is a broken fixture, as the adapter's composite key allows none.
   private answeredQuestion(attempt: InMemoryAttempt): Question | undefined {
-    const questions = this.questions ?? [];
-    return (
-      questions.find(
-        (q) =>
-          q.id === attempt.questionId &&
-          q.revisionId === attempt.questionRevisionId,
-      ) ?? questions.find((q) => q.id === attempt.questionId)
+    const revisions = (this.questions ?? []).filter(
+      (q) => q.id === attempt.questionId,
     );
+    if (revisions.length === 0) return undefined;
+    const answered = revisions.find(
+      (q) => q.revisionId === attempt.questionRevisionId,
+    );
+    if (!answered) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Revision ${attempt.questionRevisionId} is not a revision of question ${attempt.questionId}`,
+      );
+    }
+    return answered;
   }
 
   async insert(input: AttemptInsertInput): Promise<Attempt> {

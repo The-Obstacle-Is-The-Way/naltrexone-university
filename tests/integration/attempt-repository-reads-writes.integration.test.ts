@@ -16,7 +16,6 @@ import {
   createIntegrationDb,
   createQuestion,
   createUser,
-  currentRevisionIdOf,
 } from './helpers';
 
 const { db, sql } = createIntegrationDb();
@@ -48,7 +47,7 @@ async function fixture() {
     input: {
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -64,8 +63,6 @@ describe('attempt reads and writes against real Postgres', () => {
     const expected = {
       id: attempt.id,
       ...input,
-      // ADR-021: the revision the attempt graded, on every read.
-      questionRevisionId: await currentRevisionIdOf(db, question.id),
       answeredAt: oldDate,
       retryOfAttemptId: null,
       retryOrigin: null,

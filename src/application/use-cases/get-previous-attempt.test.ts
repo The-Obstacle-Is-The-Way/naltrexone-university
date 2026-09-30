@@ -29,6 +29,7 @@ describe('GetPreviousAttemptUseCase', () => {
     });
     const graded = createQuestion({
       id: 'q1',
+      revisionId: crypto.randomUUID(),
       explanationMd: 'Graded explanation',
       choices: [
         createChoice({

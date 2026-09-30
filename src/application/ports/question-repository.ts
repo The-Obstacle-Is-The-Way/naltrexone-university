@@ -22,13 +22,12 @@ export type QuestionFilters = {
 
 /**
  * A question and the revision a session item or attempt is bound to
- * (ADR-021). A `PracticeSessionQuestionState` and an `Attempt` are each one.
- * A null revision, on a row a deployment older than binding wrote, reads the
- * question's current revision.
+ * (ADR-021). A `PracticeSessionQuestionState` and an `Attempt` are each one;
+ * every one names its revision (migration 0043).
  */
 export type QuestionRevisionBinding = {
   readonly questionId: string;
-  readonly questionRevisionId: string | null;
+  readonly questionRevisionId: string;
 };
 
 export interface QuestionRepository {
@@ -46,8 +45,7 @@ export interface QuestionRepository {
   /**
    * Returns a session item's or attempt's question regardless of
    * `questions.status`, with the content and choices of the revision it is
-   * bound to, else of the question's current revision (a row an older
-   * deployment left unbound).
+   * bound to.
    *
    * Callers MUST take the binding from the caller's own practice session or
    * attempts (ADR-021 §3). This deliberately bypasses the published boundary

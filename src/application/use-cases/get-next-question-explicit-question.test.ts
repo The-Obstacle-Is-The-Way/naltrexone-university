@@ -22,6 +22,7 @@ describe('GetNextQuestionUseCase', () => {
     });
     const bound = createQuestion({
       id: 'q1',
+      revisionId: crypto.randomUUID(),
       stemMd: 'Bound stem',
       choices: [createChoice({ id: 'c-bound', questionId: 'q1' })],
     });

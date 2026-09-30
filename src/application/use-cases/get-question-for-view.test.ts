@@ -31,6 +31,7 @@ function revisions(status: Question['status']) {
     }),
     answered: createQuestion({
       id: questionId,
+      revisionId: crypto.randomUUID(),
       slug,
       status,
       stemMd: 'Answered',

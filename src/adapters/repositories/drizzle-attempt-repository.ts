@@ -14,7 +14,6 @@ import { alias } from 'drizzle-orm/pg-core';
 import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
-  practiceSessionQuestionStates,
   practiceSessions,
   questionRevisions,
   questions,
@@ -51,8 +50,7 @@ import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
 
-// ADR-021 phase 2a: the revision a question's latest attempt was answered
-// against, else (an attempt an older deployment left unbound) its current one.
+// ADR-021: the revision a question's latest attempt was answered against.
 // The attempted list shows, filters and sorts by it.
 const answeredRevision = alias(questionRevisions, 'answered_revision');
 
@@ -193,19 +191,8 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           retryOfAttemptId: input.retryOfAttemptId ?? null,
           retryOrigin: input.retryOrigin ?? null,
           retrySessionId: input.retrySessionId ?? null,
-          // ADR-021: the revision this attempt was graded against. Without
-          // one (an item the N-1 deployment left unbound), the session
-          // item's bound revision, else the question's current one.
-          questionRevisionId: sql`COALESCE(
-            ${input.questionRevisionId}::uuid,
-            (SELECT ${practiceSessionQuestionStates.questionRevisionId}
-               FROM ${practiceSessionQuestionStates}
-              WHERE ${practiceSessionQuestionStates.practiceSessionId} = ${input.practiceSessionId}
-                AND ${practiceSessionQuestionStates.questionId} = ${input.questionId}),
-            (SELECT ${questions.currentRevisionId}
-               FROM ${questions}
-              WHERE ${questions.id} = ${input.questionId})
-          )`,
+          // ADR-021: the revision this attempt was graded against.
+          questionRevisionId: input.questionRevisionId,
         })
         .returning();
     } catch (error) {
@@ -461,10 +448,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
       .leftJoin(
         answeredRevision,
-        eq(
-          answeredRevision.id,
-          sql`COALESCE(${latestAttemptRows.questionRevisionId}, ${questions.currentRevisionId})`,
-        ),
+        eq(answeredRevision.id, latestAttemptRows.questionRevisionId),
       );
 
     const query = tagSlug
@@ -518,10 +502,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .leftJoin(questions, eq(latestAttemptRows.questionId, questions.id))
       .leftJoin(
         answeredRevision,
-        eq(
-          answeredRevision.id,
-          sql`COALESCE(${latestAttemptRows.questionRevisionId}, ${questions.currentRevisionId})`,
-        ),
+        eq(answeredRevision.id, latestAttemptRows.questionRevisionId),
       );
 
     const query = tagSlug

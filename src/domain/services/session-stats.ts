@@ -36,19 +36,3 @@ export function computeSessionDurationSeconds(
 
   return Math.max(0, Math.floor((endedAtMs - startedAtMs) / MS_PER_SECOND));
 }
-
-export function createDefaultQuestionState(
-  questionId: string,
-): PracticeSessionQuestionState {
-  return {
-    questionId,
-    questionRevisionId: null,
-    markedForReview: false,
-    latestSelectedChoiceId: null,
-    latestIsCorrect: null,
-    latestAnsweredAt: null,
-    draftSelectedChoiceId: null,
-    draftSavedAt: null,
-    draftCumulativeMs: 0,
-  };
-}

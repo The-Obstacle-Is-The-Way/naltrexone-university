@@ -55,7 +55,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     await attemptRepo.insert({
       userId: userA.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: session.id,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -98,7 +98,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const attempt = await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: session.id,
       outcome: omittedOutcome(),
       isCorrect: false,
@@ -267,7 +267,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const first = await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(incorrectChoiceId),
       isCorrect: false,
@@ -277,7 +277,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const second = await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -376,7 +376,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const attempt = await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -410,7 +410,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const attempt = await attemptRepo.insert({
       userId: userA.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -455,7 +455,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     const attempt = await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: session.id,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -504,7 +504,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: q1.id,
-      questionRevisionId: null,
+      questionRevisionId: q1.revisionId,
       practiceSessionId: session.id,
       outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
@@ -541,7 +541,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     await attemptRepo.insert({
       userId: userA.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: session.id,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -587,7 +587,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,

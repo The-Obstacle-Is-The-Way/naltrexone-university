@@ -22,6 +22,7 @@ describe('SaveExamDraftAnswerUseCase', () => {
     });
     const bound = createQuestion({
       id: 'q1',
+      revisionId: crypto.randomUUID(),
       choices: [createChoice({ id: 'bound-choice', questionId: 'q1' })],
     });
     const session = createPracticeSession({

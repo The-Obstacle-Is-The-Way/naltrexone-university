@@ -37,6 +37,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
     });
     const bound = createQuestion({
       id: 'q1',
+      revisionId: crypto.randomUUID(),
       slug: 'q-1',
       stemMd: 'Bound stem',
       difficulty: 'easy',

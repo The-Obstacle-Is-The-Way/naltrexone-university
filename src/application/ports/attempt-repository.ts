@@ -15,10 +15,9 @@ export type AttemptInsertInput = {
   questionId: string;
   /**
    * The revision the attempt was graded against (ADR-021): the session
-   * item's bound revision, or the one read outside a session. Null only for
-   * an unbound session item, which then binds its question's current one.
+   * item's bound revision, or the one read outside a session.
    */
-  questionRevisionId: string | null;
+  questionRevisionId: string;
   practiceSessionId: string | null;
   outcome: AnswerOutcome;
   isCorrect: boolean;
@@ -37,7 +36,7 @@ export type AttemptMostRecentAnsweredAt = {
 export type AttemptedQuestionSummary = {
   questionId: string;
   /** The revision the latest attempt was answered against (ADR-021). */
-  questionRevisionId: string | null;
+  questionRevisionId: string;
   answeredAt: Date;
   isCorrect: boolean;
   sessionId: string | null;
