@@ -32,29 +32,32 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "testRunner": "vitest",
-  "vitest": { "configFile": "vitest.config.mts" },
+  "vitest": {
+    "configFile": "vitest.config.mts"
+  },
   "mutate": [
-    "src/domain/services/subscription-write-guard.ts",
-    "src/domain/services/entitlement.ts",
-    "src/domain/services/grading.ts",
-    "src/domain/services/exam-timer.ts",
-    "src/domain/services/statistics.ts",
-    "src/domain/services/shuffle.ts",
+    "src/domain/**/*.ts",
+    "!src/domain/**/*.test.ts",
+    "!src/domain/**/index.ts",
+    "!src/domain/test-helpers/**",
     "src/application/shared/shuffled-choice-views.ts",
     "src/application/shared/persist-subscription-observation.ts",
     "src/application/use-cases/validate-feedback-context.ts",
-    "src/domain/services/session-stats.ts",
-    "src/domain/value-objects/subscription-status.ts",
     "src/application/use-cases/start-practice-session.ts",
-    "src/adapters/controllers/shared/idempotency-error-policy.ts",
-    "src/domain/services/subscription-anniversary.ts"
+    "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,
   "incrementalFile": ".stryker-incremental.json",
   "reporters": ["clear-text", "progress", "html", "json"],
-  "htmlReporter": { "fileName": "reports/mutation/index.html" },
-  "thresholds": { "high": 90, "low": 75, "break": null },
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 75,
+    "break": null
+  },
   "tempDirName": ".stryker-tmp"
 }
 ```
@@ -80,7 +83,7 @@ Chosen 2026-08-13 for consequence-per-minute: small, fast, unit-tested, mostly p
 | `src/application/shared/persist-subscription-observation.ts` | Retry-loop bounds + version-conflict discriminator; wrong can mean a nonterminating conflict retry or a lost write | Attempt-counter reversal times out; the defensive fallback is `NoCoverage` |
 | `src/application/use-cases/validate-feedback-context.ts` (15 tests) | BUG-260 ownership/integrity boundary with a compound negated clause | Condition removal in the both-ID and retry-provenance ladder |
 
-The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). Next come production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`, subject to the §2 exclusions.
+The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). The third wave, triaged on 2026-09-30, covers every production file under `src/domain/**` through a glob, which excludes tests, barrels and test helpers, so a new domain module joins with its first run. Type-only modules produce no mutants. Next come `src/application/{use-cases,shared}/**`, subject to the §2 exclusions.
 
 ## 5. Triage — what each survivor means
 
@@ -136,10 +139,37 @@ The second wave ran on 2026-09-27 the same way:
 | `src/adapters/controllers/shared/idempotency-error-policy.ts` | 89.68% | 100.00% |
 | **All four files** | **91.44%** | **100.00%** |
 
+The third wave ran on 2026-09-30 over the rest of `src/domain/**`:
+
+| File | Baseline | After triage |
+|---|---:|---:|
+| `src/domain/entities/attempt.ts` | 97.37% | 100.00% |
+| `src/domain/entities/question-feedback.ts` | 100.00% | 100.00% |
+| `src/domain/entities/renewal-consent-record.ts` | 83.74% | 100.00% |
+| `src/domain/entities/renewal-notice-delivery.ts` | 51.85% | 100.00% |
+| `src/domain/errors/domain-errors.ts` | 100.00% | 100.00% |
+| `src/domain/services/question-selection.ts` | 94.12% | 100.00% |
+| `src/domain/services/session.ts` | 100.00% | 100.00% |
+| `src/domain/services/subscription-canonicalization.ts` | 92.31% | 100.00% |
+| `src/domain/services/time-constants.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/answer-outcome.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/choice-label.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/practice-mode.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/question-difficulty.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/question-feedback-category.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/question-feedback-kind.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/question-feedback-rating.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/question-progress-status.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/question-status.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/renewal-consent.ts` | 81.82% | 100.00% |
+| `src/domain/value-objects/subscription-plan.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/tag-kind.ts` | 100.00% | 100.00% |
+| **All 21 files with mutants** | **87.25%** | **100.00%** |
+
 Modules written after the pilot join the list with their first run:
 
 | File | First run | Score |
 |---|---|---:|
 | `src/domain/services/subscription-anniversary.ts` | 2026-09-27, DEBT-414 F02 | 100.00% (39 mutants: 18 killed, 21 timed out) |
 
-The after-triage scores exclude four suppressed equivalent mutants, each with its reason in the source, and the two siblings those comments also cover (§5). 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.
+The after-triage scores exclude suppressed equivalent mutants, each with its reason in the source, and the siblings those comments also cover (§5): four and two from the pilot, and three and three from the third wave, whose three `EqualityOperator` comments each cover two replacements of one operator. The baseline, run without the comments, shows that only the equivalent replacement survived and the other was killed. 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.

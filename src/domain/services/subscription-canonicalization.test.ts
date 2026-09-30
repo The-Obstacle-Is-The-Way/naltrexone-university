@@ -75,6 +75,28 @@ describe('subscription canonicalization', () => {
     ]);
   });
 
+  // Stripe identities mix cases. The locale's order, not code units, decides
+  // them: code units would put every capital before every small letter.
+  it('orders mixed-case identities by the locale before code units', () => {
+    const lower = createSubscriptionWriteCandidate({
+      subscriptionIdentity: 'sub_a',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
+    });
+    const upper = createSubscriptionWriteCandidate({
+      subscriptionIdentity: 'sub_B',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    expect(compareCanonicalSubscriptionCandidates(lower, upper)).toBeLessThan(
+      0,
+    );
+    expect(
+      compareCanonicalSubscriptionCandidates(upper, lower),
+    ).toBeGreaterThan(0);
+  });
+
   // #1160 review: localeCompare treats the NFC and NFD spellings of the same
   // text as equal, so distinct identities could tie. A total order keeps
   // canonical selection deterministic and makes "equal" mean "identical".

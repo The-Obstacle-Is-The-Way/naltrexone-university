@@ -38,5 +38,6 @@ export function compareCanonicalSubscriptionCandidates(
   // localeCompare treats canonically equivalent spellings (NFC and NFD) as
   // equal; code units break that tie, so only identical identities are equal.
   if (a.subscriptionIdentity === b.subscriptionIdentity) return 0;
+  // Stryker disable next-line EqualityOperator: identical identities returned 0 above, so `<` and `<=` agree
   return a.subscriptionIdentity < b.subscriptionIdentity ? -1 : 1;
 }

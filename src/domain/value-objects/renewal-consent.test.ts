@@ -22,6 +22,12 @@ describe('renewal consent value objects', () => {
     expect(POST_TERMINATION_RETENTION_YEARS).toBe(1);
   });
 
+  it('keeps the three-year floor without a termination, however old the consent', () => {
+    expect(
+      computeRenewalConsentRetainUntil(new Date('1960-01-01T00:00:00Z'), null),
+    ).toEqual(new Date('1963-01-01T00:00:00Z'));
+  });
+
   it('keeps the three-year floor when termination occurs earlier', () => {
     expect(
       computeRenewalConsentRetainUntil(

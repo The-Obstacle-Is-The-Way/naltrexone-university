@@ -121,6 +121,7 @@ export function terminateRenewalConsentRecord<
 >(record: T, terminatedAt: Date): T {
   const effectiveTerminatedAt =
     record.subscriptionTerminatedAt &&
+    // Stryker disable next-line EqualityOperator: at equal instants either branch yields the same time
     record.subscriptionTerminatedAt > terminatedAt
       ? record.subscriptionTerminatedAt
       : terminatedAt;

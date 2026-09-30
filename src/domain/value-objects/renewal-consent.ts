@@ -35,5 +35,6 @@ export function computeRenewalConsentRetainUntil(
     subscriptionTerminatedAt,
     POST_TERMINATION_RETENTION_YEARS,
   );
+  // Stryker disable next-line EqualityOperator: at equal instants either branch yields the same time
   return terminationFloor > consentFloor ? terminationFloor : consentFloor;
 }
