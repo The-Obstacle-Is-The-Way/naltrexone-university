@@ -472,55 +472,66 @@ describe('renewal notice deadline query', () => {
     ).resolves.toEqual([]);
   });
 
-  // DEBT-414 F07: a notice the provider reports bounced was not given.
-  it('flags a renewal again once the provider reports its notice bounced', async () => {
-    const renewal = new Date('2026-09-06T12:00:00.000Z');
-    const subscription = await insertSubscription({
-      currentPeriodEnd: renewal,
-    });
-    const notice = {
-      externalSubscriptionId: subscription.externalSubscriptionId,
-      applicableAt: renewal,
-      destination: subscription.email,
-      status: 'accepted',
-    } as const;
-    const reminderId = await insertNotice({
-      ...notice,
-      noticeKind: 'annual_reminder',
-    });
-    await insertNotice({ ...notice, noticeKind: 'renewal_notice' });
-    const providerEventId = `email_${randomUUID()}`;
-    await db
-      .update(renewalNoticeDeliveries)
-      .set({ providerEventId })
-      .where(eq(renewalNoticeDeliveries.id, reminderId));
-    await expect(
-      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
-    ).resolves.toEqual([]);
-
-    await new DrizzleRenewalNoticeDeliveryRepository(
-      db,
-      hasher,
-      () => now,
-    ).recordProviderOutcome({
-      providerEventId,
-      outcome: {
-        kind: 'failed',
-        failureClass: 'provider_bounced',
-        failureCode: 'Permanent',
-      },
-      observedAt: now,
-    });
-
-    await expect(
-      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
-    ).resolves.toEqual([
-      {
+  // DEBT-414 F07: a notice the provider reports it could not deliver was not
+  // given, whether it was only accepted or already reported delivered.
+  it.each(
+    (
+      [
+        'provider_bounced',
+        'provider_send_failed',
+        'provider_suppressed',
+      ] as const
+    ).flatMap((failureClass) => [
+      [failureClass, 'accepted'] as const,
+      [failureClass, 'delivered'] as const,
+    ]),
+  )(
+    'flags a renewal again once the provider reports %s of its %s notice',
+    async (failureClass, noticeStatus) => {
+      const renewal = new Date('2026-09-06T12:00:00.000Z');
+      const subscription = await insertSubscription({
+        currentPeriodEnd: renewal,
+      });
+      const notice = {
         externalSubscriptionId: subscription.externalSubscriptionId,
-        renewalAt: renewal,
-      },
-    ]);
-  });
+        applicableAt: renewal,
+        destination: subscription.email,
+        status: noticeStatus,
+      } as const;
+      const reminderId = await insertNotice({
+        ...notice,
+        noticeKind: 'annual_reminder',
+      });
+      await insertNotice({ ...notice, noticeKind: 'renewal_notice' });
+      const providerEventId = `email_${randomUUID()}`;
+      await db
+        .update(renewalNoticeDeliveries)
+        .set({ providerEventId })
+        .where(eq(renewalNoticeDeliveries.id, reminderId));
+      await expect(
+        listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+      ).resolves.toEqual([]);
+
+      await new DrizzleRenewalNoticeDeliveryRepository(
+        db,
+        hasher,
+        () => now,
+      ).recordProviderOutcome({
+        providerEventId,
+        outcome: { kind: 'failed', failureClass, failureCode: 'code' },
+        observedAt: now,
+      });
+
+      await expect(
+        listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+      ).resolves.toEqual([
+        {
+          externalSubscriptionId: subscription.externalSubscriptionId,
+          renewalAt: renewal,
+        },
+      ]);
+    },
+  );
 
   // #1155 review: dispatch refuses a notice whose destination is no longer the
   // account email (destination_changed), so a delivered notice reached the

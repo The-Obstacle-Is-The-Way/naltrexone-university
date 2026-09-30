@@ -99,12 +99,22 @@ describe('renewal notice provider evidence', () => {
     });
   });
 
-  it.each([
-    ['accepted', false],
-    ['delivered', true],
-  ])(
-    'records a bounce of a notice %s as a terminal failure',
-    async (_status, deliveredFirst) => {
+  // Every provider failure, whether the notice was accepted or already
+  // reported delivered (a late bounce), ends as a terminal failure.
+  it.each(
+    (
+      [
+        'provider_bounced',
+        'provider_send_failed',
+        'provider_suppressed',
+      ] as const
+    ).flatMap((failureClass) => [
+      [failureClass, 'accepted', false] as const,
+      [failureClass, 'delivered', true] as const,
+    ]),
+  )(
+    'records %s of a notice %s as a terminal failure',
+    async (failureClass, _status, deliveredFirst) => {
       const notice = await acceptedNotice();
       if (deliveredFirst) {
         await repository.recordProviderOutcome({
@@ -117,14 +127,14 @@ describe('renewal notice provider evidence', () => {
       await expect(
         repository.recordProviderOutcome({
           providerEventId: notice.providerEventId,
-          outcome: bounced,
+          outcome: { kind: 'failed', failureClass, failureCode: 'code' },
           observedAt,
         }),
       ).resolves.toBe('recorded');
       await expect(repository.findById(notice.id)).resolves.toMatchObject({
         status: 'terminal_failure',
-        failureClass: 'provider_bounced',
-        failureCode: 'Permanent',
+        failureClass,
+        failureCode: 'code',
         nextAttemptAt: null,
         updatedAt: observedAt,
       });
