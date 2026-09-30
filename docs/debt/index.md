@@ -3,16 +3,14 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-30 UTC
 
-**Latest** — 2026-09-30 UTC: DEBT-484 is resolved and archived ([verified closeout](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc)). ADR-021's phases 1–3 are in production: content lives in immutable revisions, every session item and attempt names the revision it was shown and graded against, and the database and the code's types both require it.
-- **Verification.** Every bullet of the record's Verification section was re-checked on `main` at `96973534` against named real-Postgres cases: a changed stem, explanation or answer key appends a revision and leaves the earlier one unchanged; what is not a change appends nothing; old attempts stay reviewable as the revision they graded; and the #951 key-change guard is replaced by immutable history.
-- **Deferred, not resolved.** Two tails move to the Deferred table, each waiting on an owner decision: withdrawn-item scoring with the active-session navigator rows, and whether an answer-key correction regrades earlier attempts.
-- **Previous promotion.** #1252 (`96973534`) carried #1248 (**5365851572** on `1bfe82aa`, no findings), the non-null revision types; #1249 (**5366435437** on `2951ff0d`, one Minor finding fixed), the fakes' question-level fields; and #1251 (**5366911918** on `dd088e52`, no findings), the comment fix found by promotion #1250's review, which was closed unmerged so the fix shipped first.
-  - The promotion's review approved with no findings; it merged at 13:53:28Z after a passing `verify-promotion` receipt.
-  - Release verified: main CI **36724968565** `test` **14:06:39Z**; Ready **13:55:06.578Z**, held without alias until its check completed; production assigned **14:06:44.973Z**; the build's ledger post-check matched exactly; matching trees (`903b25fb`); healthy production.
+**Latest** — 2026-09-30 UTC: DEBT-484's closeout is in production ([release receipt](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc)).
+- **Closeout.** #1253 merged as `c30d1292` (**5368193777** on `a6d0323f`, after two findings: one withdrawn by the reviewer, one fixed) and was promoted through #1254 (`ae6e6d14`).
+- **Release.** Main CI **36737453772** first failed three E2E tests in the per-test reset: a Clerk API `ECONNRESET`, before any assertion ran. The cause was documented on #1254, and one re-run passed (`test` **16:06:03Z**). Production was assigned at **16:06:06.000Z**, with matching trees (`2686eae0`) and healthy production.
+- **Found.** The reset's Clerk lookup has no retry for a transient network error, unlike the app's own Clerk calls. It is not yet filed; the change after BUG-311 files it with its fix. BUG-311, CI's Playwright install retry blocked by an orphaned `apt-get`, ships with this entry.
 - **Open decisions for the owner.**
-  - Scoring of an exam item withdrawn mid-session (Deferred above). The active-session navigator and Review & Submit rows wait on it.
+  - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
-  - Whether an answer-key correction should regrade earlier attempts (Deferred above). Until decided, an attempt keeps its grade.
+  - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID remains DEBT-489.**
 

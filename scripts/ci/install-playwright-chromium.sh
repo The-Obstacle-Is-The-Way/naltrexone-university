@@ -60,12 +60,43 @@ fail_over_azure_archive_sources() {
   fi
 }
 
+# A timed-out apt phase can leave apt-get running as root: `timeout` runs as
+# the runner user and cannot signal what `playwright install-deps` started
+# through sudo. The orphan keeps apt's lists lock, so the retry would fail at
+# once (BUG-311). Stop it, bounded, before retrying.
+apt_get_pattern='(^|/)apt-get( |$)'
+
+wait_for_apt_get_exit() {
+  local waited=0
+  while pgrep -f "$apt_get_pattern" > /dev/null; do
+    if (( waited >= kill_after_seconds )); then
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+}
+
+stop_leftover_apt_get() {
+  if ! pgrep -f "$apt_get_pattern" > /dev/null; then
+    return 0
+  fi
+  echo '[playwright-install] Stopping apt-get left over from the timed-out phase.'
+  sudo pkill -TERM -f "$apt_get_pattern" || true
+  if ! wait_for_apt_get_exit; then
+    sudo pkill -KILL -f "$apt_get_pattern" || true
+    wait_for_apt_get_exit ||
+      echo '[playwright-install] apt-get is still running; the retry may fail on its lock.'
+  fi
+}
+
 remove_microsoft_sources
 
 if ! run_bounded \
   "$primary_timeout_seconds" \
   pnpm exec playwright install-deps chromium; then
   echo '[playwright-install] Primary apt phase failed or timed out.'
+  stop_leftover_apt_get
   fail_over_azure_archive_sources
   run_bounded \
     "$fallback_timeout_seconds" \
