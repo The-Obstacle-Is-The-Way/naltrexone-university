@@ -8,6 +8,21 @@ function bindingOf(question: Question) {
   return { questionId: question.id, questionRevisionId: question.revisionId };
 }
 
+// Another revision of a question, sharing its slug, status, tags and
+// timestamps, so an expectation does not depend on two clock reads.
+function revisionOf(question: Question, overrides: Partial<Question> = {}) {
+  return createQuestion({
+    id: question.id,
+    slug: question.slug,
+    status: question.status,
+    tags: question.tags,
+    createdAt: question.createdAt,
+    updatedAt: question.updatedAt,
+    revisionId: crypto.randomUUID(),
+    ...overrides,
+  });
+}
+
 describe('FakeQuestionRepository', () => {
   it('keeps published lookups public-only while session-owned lookups ignore publication status', async () => {
     const published = createQuestion({
@@ -38,11 +53,7 @@ describe('FakeQuestionRepository', () => {
 
   it('reads the first listed revision of a question as current, and a session item as its bound revision', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
-    const older = createQuestion({
-      id: 'q1',
-      revisionId: crypto.randomUUID(),
-      stemMd: 'Older',
-    });
+    const older = revisionOf(current, { stemMd: 'Older' });
     const repo = new FakeQuestionRepository([current, older]);
 
     await expect(repo.findPublishedById('q1')).resolves.toBe(current);
@@ -61,11 +72,7 @@ describe('FakeQuestionRepository', () => {
 
   it('finds a question id by slug whatever its status, and batches owned bindings in order', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
-    const older = createQuestion({
-      id: 'q1',
-      revisionId: crypto.randomUUID(),
-      stemMd: 'Older',
-    });
+    const older = revisionOf(current, { stemMd: 'Older' });
     const archived = createQuestion({
       id: 'q2',
       slug: 'q-archived',
@@ -102,7 +109,7 @@ describe('FakeQuestionRepository', () => {
 
   it('reads the first listed revision as current whatever its fixture says', async () => {
     const current = createQuestion({ id: 'q1', isCurrentRevision: false });
-    const older = createQuestion({ id: 'q1', revisionId: crypto.randomUUID() });
+    const older = revisionOf(current);
     const repo = new FakeQuestionRepository([current, older]);
 
     await expect(repo.findByIdForSession(bindingOf(current))).resolves.toEqual({
