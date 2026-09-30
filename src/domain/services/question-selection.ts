@@ -11,16 +11,12 @@ export function selectNextQuestionId(
   candidateIds: readonly string[],
   attemptHistory: AttemptHistory,
 ): string | null {
-  for (const questionId of candidateIds) {
-    if (!attemptHistory.has(questionId)) return questionId;
-  }
-
   let oldestQuestionId: string | null = null;
   let oldestAnsweredAt: Date | null = null;
 
   for (const questionId of candidateIds) {
     const answeredAt = attemptHistory.get(questionId);
-    if (!answeredAt) continue;
+    if (answeredAt === undefined) return questionId;
 
     if (!oldestAnsweredAt || answeredAt < oldestAnsweredAt) {
       oldestAnsweredAt = answeredAt;

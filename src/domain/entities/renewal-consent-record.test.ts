@@ -39,6 +39,14 @@ function createInitialOfferInput() {
   };
 }
 
+function invalidConsent(message: string) {
+  return expect.objectContaining({
+    name: 'DomainError',
+    code: 'INVALID_RENEWAL_CONSENT',
+    message,
+  });
+}
+
 describe('renewal consent record', () => {
   it('creates an initial-offer record with vendor-neutral identifiers and a three-year retention floor', () => {
     const record = newRenewalConsentRecord(createInitialOfferInput());
@@ -54,13 +62,21 @@ describe('renewal consent record', () => {
     expect(record).not.toHaveProperty('stripeSubscriptionId');
   });
 
-  it('rejects a consumer reference that is not a SHA-256 hex value', () => {
+  it.each([
+    ['a Stripe identifier', 'cus_renewal_123'],
+    ['a SHA-256 value with a prefix', `x${'a'.repeat(64)}`],
+    ['a SHA-256 value with a suffix', `${'a'.repeat(64)}x`],
+  ])('rejects a consumer reference that is %s', (_label, consumerReference) => {
     expect(() =>
       newRenewalConsentRecord({
         ...createInitialOfferInput(),
-        consumerReference: 'cus_renewal_123',
+        consumerReference,
       }),
-    ).toThrow(DomainError);
+    ).toThrow(
+      invalidConsent(
+        'Renewal consent consumer reference must be a SHA-256 value',
+      ),
+    );
   });
 
   it.each([0, -1, 1.5])('rejects invalid amountCents %s', (amountCents) => {
@@ -69,7 +85,9 @@ describe('renewal consent record', () => {
         ...createInitialOfferInput(),
         amountCents,
       }),
-    ).toThrow(DomainError);
+    ).toThrow(
+      invalidConsent('Renewal consent amount must be a positive integer'),
+    );
   });
 
   it('requires all subscriber-specific terms for price-increase consent', () => {
@@ -81,8 +99,35 @@ describe('renewal consent record', () => {
         proposedAmountCents: null,
         effectiveRenewalAt: new Date('2027-01-01T00:00:00Z'),
       }),
-    ).toThrow(DomainError);
+    ).toThrow(
+      invalidConsent(
+        'Renewal consent price-increase terms do not match its kind',
+      ),
+    );
   });
+
+  it.each([
+    ['prior', { priorAmountCents: 0 }],
+    ['proposed', { proposedAmountCents: -1 }],
+  ])(
+    'rejects a %s price-increase amount that is not a positive integer',
+    (_label, amount) => {
+      expect(() =>
+        newRenewalConsentRecord({
+          ...createInitialOfferInput(),
+          consentKind: 'price_increase',
+          priorAmountCents: 2900,
+          proposedAmountCents: 3900,
+          effectiveRenewalAt: new Date('2027-01-01T00:00:00Z'),
+          ...amount,
+        }),
+      ).toThrow(
+        invalidConsent(
+          'Renewal consent price-increase terms do not match its kind',
+        ),
+      );
+    },
+  );
 
   it('rejects price-increase fields on an initial offer', () => {
     expect(() =>
@@ -106,6 +151,44 @@ describe('renewal consent record', () => {
         setupSessionId: 'cs_setup_123',
       }),
     ).toThrow(DomainError);
+  });
+
+  it('accepts setup consent with a setup session alone', () => {
+    expect(
+      newRenewalConsentRecord({
+        ...createInitialOfferInput(),
+        checkoutSessionId: null,
+        setupSessionId: 'cs_setup_123',
+        consentSource: 'stripe_setup',
+      }),
+    ).toMatchObject({
+      checkoutSessionId: null,
+      setupSessionId: 'cs_setup_123',
+      consentSource: 'stripe_setup',
+    });
+  });
+
+  it.each([
+    ['no setup session', { setupSessionId: null }],
+    ['a Checkout session too', { checkoutSessionId: 'cs_123' }],
+    [
+      'an application source too',
+      { applicationSourceId: 'price-change-offer:offer_123' },
+    ],
+  ])('rejects setup consent with %s', (_label, change) => {
+    expect(() =>
+      newRenewalConsentRecord({
+        ...createInitialOfferInput(),
+        checkoutSessionId: null,
+        setupSessionId: 'cs_setup_123',
+        consentSource: 'stripe_setup',
+        ...change,
+      }),
+    ).toThrow(
+      invalidConsent(
+        'Renewal consent source must match its allowed Stripe Session shape',
+      ),
+    );
   });
 
   it('supports application consent with an explicit non-Stripe source identity', () => {
@@ -156,6 +239,23 @@ describe('renewal consent record', () => {
       new Date('2030-02-01T00:00:00Z'),
     );
     expect(terminated.retainUntil).toEqual(new Date('2031-02-01T00:00:00Z'));
+  });
+
+  it('moves termination to a later one when the contract ends again', () => {
+    const record = terminateRenewalConsentRecord(
+      newRenewalConsentRecord(createInitialOfferInput()),
+      new Date('2027-01-01T00:00:00Z'),
+    );
+
+    const later = terminateRenewalConsentRecord(
+      record,
+      new Date('2030-02-01T00:00:00Z'),
+    );
+
+    expect(later.subscriptionTerminatedAt).toEqual(
+      new Date('2030-02-01T00:00:00Z'),
+    );
+    expect(later.retainUntil).toEqual(new Date('2031-02-01T00:00:00Z'));
   });
 
   it('does not shorten retention when an older termination is replayed', () => {

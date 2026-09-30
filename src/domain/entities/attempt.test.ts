@@ -42,6 +42,18 @@ describe('Attempt entity provenance', () => {
     ).toBe(true);
   });
 
+  it.each([
+    ['a retry parent', { retryOfAttemptId: 'attempt-1', retrySessionId: null }],
+    [
+      'a retry session',
+      { retryOfAttemptId: null, retrySessionId: 'session-1' },
+    ],
+  ])('rejects a first attempt that names %s', (_label, provenance) => {
+    expect(isValidAttemptProvenance({ ...provenance, retryOrigin: null })).toBe(
+      false,
+    );
+  });
+
   it('accepts session review retries with parent attempt', () => {
     expect(
       isValidAttemptProvenance({
