@@ -10,7 +10,7 @@ import { createDeps } from './test-helpers/practice-controller-test-helpers';
 // receives it.
 const BOUND_REVISION_ID = '55555555-5555-5555-5555-555555555555';
 
-function withoutRevision<T extends { questionRevisionId: string | null }>({
+function withoutRevision<T extends { questionRevisionId: string }>({
   questionRevisionId: _boundRevision,
   ...visible
 }: T) {

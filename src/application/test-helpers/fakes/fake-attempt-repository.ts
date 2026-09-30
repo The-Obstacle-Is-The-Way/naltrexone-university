@@ -82,8 +82,6 @@ export class FakeAttemptRepository implements AttemptRepository {
       id: crypto.randomUUID(),
       userId: input.userId,
       questionId: input.questionId,
-      // Postgres falls back to the session item's or the current revision
-      // when none is given; the fake keeps null (test-double register).
       questionRevisionId: input.questionRevisionId,
       practiceSessionId: input.practiceSessionId,
       outcome: input.outcome,
