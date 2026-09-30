@@ -46,27 +46,28 @@ async function currentRevisionId(questionId: string) {
 describe('ADR-021 phase 2a: question content reads through the current revision', () => {
   it("reads the stem, explanation, reference and difficulty from the question's current revision", async () => {
     const question = await createPublishedQuestion('content');
+    // Revisions are immutable (phase 2b), so the legacy columns diverge
+    // instead; the read must ignore them.
     await db
-      .update(schema.questionRevisions)
+      .update(schema.questions)
       .set({
-        stemMd: '# Stem from the revision',
-        explanationMd: '# Explanation from the revision',
-        referenceMd: 'Reference from the revision',
+        stemMd: '# Legacy stem',
+        explanationMd: '# Legacy explanation',
+        referenceMd: 'Legacy reference',
         difficulty: 'hard',
       })
-      .where(
-        eq(schema.questionRevisions.id, await currentRevisionId(question.id)),
-      );
+      .where(eq(schema.questions.id, question.id));
 
     const read = await new DrizzleQuestionRepository(db).findPublishedById(
       question.id,
     );
 
     expect(read).toMatchObject({
-      stemMd: '# Stem from the revision',
-      explanationMd: '# Explanation from the revision',
-      referenceMd: 'Reference from the revision',
-      difficulty: 'hard',
+      revisionId: await currentRevisionId(question.id),
+      stemMd: '# Stem',
+      explanationMd: '# Explanation',
+      referenceMd: null,
+      difficulty: 'easy',
     });
   });
 

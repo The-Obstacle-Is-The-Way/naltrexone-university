@@ -199,13 +199,13 @@ describe('seed bundle identity and taxonomy consistency', () => {
         inserted: 2,
         updated: 0,
         skipped: 0,
-        deferred: [],
+        revised: 0,
       });
       await expect(syncQuestionsFromFiles(db, files)).resolves.toEqual({
         inserted: 0,
         updated: 0,
         skipped: 2,
-        deferred: [],
+        revised: 0,
       });
     } finally {
       await trackQuestions(slugs);

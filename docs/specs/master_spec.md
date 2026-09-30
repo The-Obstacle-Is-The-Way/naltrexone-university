@@ -1397,22 +1397,25 @@ The entry point is [scripts/seed.ts](../../scripts/seed.ts), invoked with
 Target selection and acknowledgement are mandatory; a content update does not
 authorize a different database.
 
-- The canonical file/database representations in
-  [question-parser.ts](../../scripts/seed/question-parser.ts) include the
-  question reference and each choice's explanation, as well as question fields,
-  ordered choices and tags. [Canonical JSON/hash helpers](../../lib/content/parse-mdx-question.ts)
-  normalize the representation for change detection.
-- [question-syncer.ts](../../scripts/seed/question-syncer.ts) locks the existing
-  question, compares the canonical hash, and applies the
-  graded-history policy and [content-rewrite classification](../../scripts/seed/content-rewrite-policy.ts) before
-  writes. Archived questions are not silently reactivated by ordinary seeding.
-- Existing choice identity is preserved by label. Removal candidates are checked
-  against attempts and normalized practice state; the
-  [choice-sync plan](../../scripts/seed-helpers.ts) refuses unsafe removal.
-  Surviving choices are upserted instead of deleting and recreating the whole set.
-- Rewrites and withdrawals must follow those protections and their owning
-  records. This reconciliation does not select unresolved content-history or
-  release/rollback policies.
+- [question-parser.ts](../../scripts/seed/question-parser.ts) parses each file
+  into its canonical representation: the question's fields, its ordered choices
+  (each with its explanation), its reference and its tags.
+- [question-syncer.ts](../../scripts/seed/question-syncer.ts) refuses to run
+  until the database has applied migration `0042` (ADR-021 phase 2b). It locks
+  each existing question and compares the file with the question's current
+  revision, canonicalized the same way.
+  - **Changed content** (stem, explanation, reference, difficulty or choices)
+    is appended by the [revision writer](../../scripts/seed/question-revision-writer.ts)
+    as a new revision with its own choice rows. The question's current revision
+    moves to it in the same transaction.
+  - **Status and tags** belong to the question and change in place.
+  - Archived questions are not silently reactivated by ordinary seeding.
+- A revision and its choices are never updated; the database rejects it. Earlier
+  attempts and sessions keep the revision they were shown and graded against,
+  so there is no graded-history refusal and no wait for sessions in progress.
+  Reviews and sessions say when a question has been updated since (Pattern
+  Registry F-12). Withdrawals follow their owning records. This
+  reconciliation does not select release or rollback policies (ADR-021 phase 4).
 
 The former unconditional choice-delete pseudocode is withdrawn. Copying it
 would bypass protections that the executable seed path now enforces.

@@ -82,9 +82,6 @@ pnpm db:seed
 
 # Include placeholder content during seed
 SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
-
-# Explicitly allow answer-key flips over existing graded history
-SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true pnpm db:seed
 ```
 
 ## Workflow
@@ -97,12 +94,11 @@ SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true pnpm db:seed
 excludes `content/questions/placeholder/**/*.mdx`; when placeholders are
 excluded, existing `placeholder-*` database rows are archived during seed.
 
-Seed refuses to change `correct` on an existing choice when attempts or graded
-practice-session state already exist for that question. This prevents silent
-history drift where stored grades contradict the current answer key. If a human
-operator deliberately accepts that historical-key change, rerun with
-`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true`; the seed logs the affected
-question slug, changed labels, and graded row counts.
+Changed content, including a corrected answer key, becomes a new revision of the
+question (ADR-021 phase 2b); nothing earlier is rewritten. Attempts and practice
+sessions keep the revision they were shown and graded against, so a stored grade
+never contradicts the key it was graded with, and reviews say the question has
+been updated since.
 
 Manual `.mdx` files outside `imported/` will still be read by the seed script,
 but the maintained workflow is draft -> import -> seed.
