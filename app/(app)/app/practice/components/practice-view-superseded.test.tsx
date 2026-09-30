@@ -1,12 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { isNodeBefore, parseHtml } from '@/tests/shared/dom-helpers';
 import { createQuestionProps } from './practice-view-test-helpers';
 
-const { fixtureSession1Id } = vi.hoisted(() => ({
-  fixtureSession1Id: crypto.randomUUID(),
-}));
+const fixtureSession1Id = crypto.randomUUID();
 
 type PracticeViewModule = typeof import('./practice-view');
 type PracticeViewProps = Parameters<PracticeViewModule['PracticeView']>[0];
