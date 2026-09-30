@@ -3,16 +3,20 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-30 UTC
 
-**Latest** — 2026-09-30 UTC: ADR-021 phase 2b, second step. An active session says when its item's question has been updated since the session began (Pattern Registry F-12, active session) ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2b-second-step-an-active-session-says-when-its-question-has-been-updated--2026-09-30)).
-- **What changes.**
-  - A session item's read carries `superseded`.
-  - The session page shows the notice above the stem from the moment the item loads, in tutor and exam mode. It has no link, so the learner stays in the session.
-  - The flag is on the unkeyed read, not the idempotency-keyed submit output. A new field there would need two releases for rollback safety.
-  - It renders nothing while every question has one revision. Captures had zero axe violations.
-- **Next.** Writers become append-only: migration `0042` and the appending seed.
-- **Previous promotion.** #1236 (`c14806f9`) carried #1235 (**5361019737** on `c8d24d7d`, no findings), the review notice.
-  - The promotion's proof was written into its body at 03:26:13Z, before the merge at 03:26:19Z, and its review raised no findings.
-  - Release verified: main CI **36664393880** `test` **03:39:23Z**; Ready **03:28:03.445Z**, held without alias until its check completed; production assigned **03:39:34.327Z**; matching trees (`ad47d882`); healthy production.
+**Latest** — 2026-09-30 UTC: ADR-021 phase 2b, third step. Question content writers become append-only ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2b-third-step-writers-become-append-only--2026-09-30)).
+- **Migration `0042`.**
+  - It binds any remaining history and asserts that every row and choice names a revision.
+  - Choice labels and sort orders become unique per revision.
+  - It retires the functions that refreshed revision 1 in place.
+  - Triggers reject any update to a revision or a choice.
+- **The seed.**
+  - Changed content becomes a new revision; status and tags change in place.
+  - The graded-history refusal, its override and the active-session deferral are superseded, because history keeps the revision it answered and both notices say when a question has been updated since.
+  - The seed refuses to run before `0042`.
+- **Pre-flight.** On a copy of the per-clone database, `0042` bound 0 rows with 0 remaining, and the full-corpus seed then skipped all 958 questions with 0 new revisions.
+- **Previous promotion.** #1238 (`f9341382`) carried #1237 (**5361413807** on `f171f38b`), the active-session notice. Its one finding was accepted: the new test's fixture is a module constant.
+  - The promotion's proof was written into its body at 04:37:37Z, before the merge at 04:37:42Z, and its review raised no findings.
+  - Release verified: main CI **36669697031** `test` **04:50:02Z**; Ready **04:39:00.622Z**, held without alias until its check completed; production assigned **04:50:04.279Z**; matching trees (`15765574`); healthy production.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.

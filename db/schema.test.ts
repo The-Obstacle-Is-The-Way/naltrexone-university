@@ -14,6 +14,8 @@ import {
   attempts,
   CHOICES_ID_QUESTION_REVISION_ID_UQ,
   CHOICES_QUESTION_REVISION_FK,
+  CHOICES_QUESTION_REVISION_ID_LABEL_UQ,
+  CHOICES_QUESTION_REVISION_ID_SORT_ORDER_UQ,
   choices,
   PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_REVISION_FK,
   PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_REVISION_FK,
@@ -215,6 +217,32 @@ describe('question revision keys', () => {
     expect(
       config.columns.map((column) => ('name' in column ? column.name : null)),
     ).toEqual(['id', 'question_revision_id']);
+  });
+
+  // ADR-021 phase 2b: a newer revision may reuse its question's labels and
+  // sort orders, so both are unique within a revision, not a question.
+  it.each([
+    [CHOICES_QUESTION_REVISION_ID_LABEL_UQ, ['question_revision_id', 'label']],
+    [
+      CHOICES_QUESTION_REVISION_ID_SORT_ORDER_UQ,
+      ['question_revision_id', 'sort_order'],
+    ],
+  ] as const)('keeps %s unique within a revision', (name, columns) => {
+    const { config } = findIndex(choices, name);
+
+    expect(config.unique).toBe(true);
+    expect(
+      config.columns.map((column) => ('name' in column ? column.name : null)),
+    ).toEqual(columns);
+  });
+
+  it('has no per-question label or sort-order key', () => {
+    const names = getTableConfig(choices).indexes.map(
+      (index) => index.config.name,
+    );
+
+    expect(names).not.toContain('choices_question_id_label_uq');
+    expect(names).not.toContain('choices_question_id_sort_order_uq');
   });
 
   it.each([

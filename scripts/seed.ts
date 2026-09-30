@@ -15,12 +15,7 @@ export async function runSeed(databaseUrl: string): Promise<void> {
   try {
     const files = await readSeedQuestionFiles(includePlaceholders);
     const counts = await syncQuestionsFromFiles(db, files);
-    const { summary, deferralFailure } = summarizeSeedSync(
-      counts,
-      files.length,
-    );
-
-    console.info(summary);
+    console.info(summarizeSeedSync(counts, files.length));
     console.info(`Content root: ${path.resolve('content/questions')}`);
 
     if (!includePlaceholders) {
@@ -29,8 +24,6 @@ export async function runSeed(databaseUrl: string): Promise<void> {
         `Archived placeholders: ${archivedCount} (slug LIKE "placeholder-%")`,
       );
     }
-
-    if (deferralFailure) throw new Error(deferralFailure);
   } finally {
     await sql.end({ timeout: 5 });
   }

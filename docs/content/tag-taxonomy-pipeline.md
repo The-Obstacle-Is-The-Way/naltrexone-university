@@ -152,17 +152,11 @@ Behavior:
   unless `SEED_INCLUDE_PLACEHOLDERS=true`.
 - When placeholders are excluded, `archivePlaceholderQuestions()` archives
   existing DB rows whose slug matches `placeholder-%`.
-- Seed blocks in-place answer-key flips over existing graded history. If an
-  existing choice's `correct` value changes while attempts or graded
-  practice-session state rows exist for that question, `pnpm db:seed` fails
-  closed with the question slug, changed labels, and graded row counts. Use
-  `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true` only for an explicit,
-  operator-approved historical-key override; the override logs the same audit
-  context.
-- Seed defers any content change, including difficulty, to a question whose
-  current revision an incomplete practice session binds (ADR-021). It applies
-  every other question, names each deferred slug with its session count, and
-  exits non-zero; rerun it after those sessions end.
+- Seed appends changed content, including an answer-key or difficulty change,
+  as a new revision of the question (ADR-021 phase 2b), and changes status and
+  tags in place. Earlier attempts and sessions keep the revision they were shown
+  and graded against, so there is no graded-history refusal, override or
+  deferral.
 - Seed validation rejects:
   - legacy `domain` tags
   - non-canonical topic / substance / treatment slugs

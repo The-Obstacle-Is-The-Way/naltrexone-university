@@ -15,10 +15,12 @@ export type ContentEdits = {
   labels?: readonly string[];
   correctLabel?: string;
   status?: schema.QuestionStatus;
+  tags?: readonly string[];
 };
 
 export function source(slug: string, edits: ContentEdits = {}) {
-  const choices = (edits.labels ?? ['A', 'B', 'C']).flatMap((label) => {
+  const labels = edits.labels ?? ['A', 'B', 'C'];
+  const choices = labels.flatMap((label) => {
     const correct = label === (edits.correctLabel ?? 'B');
     const text =
       label === 'B'
@@ -43,8 +45,10 @@ export function source(slug: string, edits: ContentEdits = {}) {
       `difficulty: ${edits.difficulty ?? 'easy'}`,
       `status: ${edits.status ?? 'published'}`,
       'tags:',
-      '  - {slug: general, name: General, kind: topic}',
-      '  - {slug: alcohol, name: Alcohol, kind: substance}',
+      ...(edits.tags ?? [
+        '  - {slug: general, name: General, kind: topic}',
+        '  - {slug: alcohol, name: Alcohol, kind: substance}',
+      ]),
       'choices:',
       ...choices,
       '---',

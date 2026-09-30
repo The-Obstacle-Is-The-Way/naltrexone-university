@@ -12,7 +12,7 @@ import {
   createIntegrationDb,
   createQuestion,
   createTag,
-  mirrorQuestionRevision,
+  currentRevisionIdOf,
 } from './helpers';
 
 // Lookup and mapping twins for the retired call-chain units. Split from
@@ -47,12 +47,12 @@ describe('DrizzleQuestionRepository lookups', () => {
     // sortOrder, not by insertion or label.
     await db.insert(schema.choices).values({
       questionId: question.id,
+      questionRevisionId: await currentRevisionIdOf(db, question.id),
       label: 'C',
       textMd: 'Choice C',
       isCorrect: false,
       sortOrder: 0,
     });
-    await mirrorQuestionRevision(db, question.id);
     const repo = new DrizzleQuestionRepository(db);
 
     const result = await repo.findPublishedById(question.id);
@@ -121,6 +121,7 @@ describe('DrizzleQuestionRepository lookups', () => {
       .insert(schema.choices)
       .values({
         questionId: question.id,
+        questionRevisionId: await currentRevisionIdOf(db, question.id),
         label: 'Z',
         textMd: 'Corrupt',
         isCorrect: false,
@@ -128,7 +129,6 @@ describe('DrizzleQuestionRepository lookups', () => {
       })
       .returning({ id: schema.choices.id });
     if (!corrupt) throw new Error('Expected the corrupt choice row');
-    await mirrorQuestionRevision(db, question.id);
     const repo = new DrizzleQuestionRepository(db);
 
     await expect(repo.findPublishedById(question.id)).rejects.toMatchObject({
