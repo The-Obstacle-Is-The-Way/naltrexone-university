@@ -47,6 +47,33 @@ describe('GetNextQuestionUseCase', () => {
 
     expect(result?.stemMd).toBe('Bound stem');
     expect(result?.choices.map((choice) => choice.id)).toEqual(['c-bound']);
+    // Pattern Registry F-12: a newer revision is current.
+    expect(result?.superseded).toBe(true);
+  });
+
+  it('does not mark a session item bound to the current revision as superseded', async () => {
+    const question = createSingleChoiceQuestion('q1', 'c1');
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [
+        createQuestionState('q1', { questionRevisionId: question.revisionId }),
+      ],
+    });
+    const { getNextQuestion } = createTestDeps({
+      questions: [question],
+      sessions: [session],
+    });
+
+    const result = answerableQuestion(
+      await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    );
+
+    expect(result?.superseded).toBe(false);
   });
 
   it('returns a specific session question when questionId is provided', async () => {

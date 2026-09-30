@@ -37,6 +37,7 @@ type QuestionFixtureInput = {
   stemMd?: string;
   difficulty?: QuestionDifficulty;
   choices?: ChoiceFixture[];
+  superseded?: boolean;
   session: QuestionSessionFixture;
 };
 
@@ -85,6 +86,7 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
     stemMd: input.stemMd ?? `Question ${input.questionId}`,
     difficulty: input.difficulty ?? 'easy',
     choices: input.choices ?? [createChoice({ id: BROWSER_CHOICE_1_ID })],
+    superseded: input.superseded ?? false,
     session: {
       sessionId: input.session.sessionId ?? BROWSER_SESSION_ID,
       mode: input.session.mode,

@@ -36,6 +36,7 @@ export function createNextQuestion(
       textMd: currentChoice.textMd,
       sortOrder: index + 1,
     })),
+    superseded: false,
     session: null,
     ...overrides,
   };
