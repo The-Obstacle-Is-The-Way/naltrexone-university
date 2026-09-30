@@ -1,12 +1,12 @@
 # BUG-312: E2E Helpers' Clerk Calls Do Not Retry a Transient Failure
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-09-30
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-09-30 — promoted to `main` through #1259; production release verified (see Resolution)
+**Verification receipts:** see Resolution
 
 ---
 
@@ -50,3 +50,12 @@ It does not retry a timeout (15 s per attempt) or any other error, and it does n
 - **`credential-health-check-clerk-retry.test.ts`.** The helper retries a dropped connection and a 503 and keeps the request's method. It returns the last 429 and throws the last dropped connection once retries run out. It returns a 401 or 422 at once. It cancels each superseded body and leaves the last one readable; skipping the cancel fails that case.
 - **`UND_ERR_SOCKET`, red first.** A fetch that fails once with a `SocketError`-shaped cause, then succeeds, is retried.
 - **Mutation checks.** Dropping the cause-code check fails the connection-reset cases. Dropping the transient-status throw fails the 429 and 503 cases.
+
+## Resolution (2026-09-30)
+
+- **Shipped.** #1256 merged as `56a241b8` with exact-head approval **5369870046** on `754dcb6f`. Its one finding was accepted: superseded response bodies are cancelled before a retry.
+  - #1258 merged as `efddb6b6` with exact-head approval **5370342714** on `29f7a7fc`, no findings. It added undici's `UND_ERR_SOCKET`, which promotion #1257's review found. That review's other finding, a behavioral fake with contract tests, was declined with reasons: the failures cannot be forced against real Clerk.
+  - Local full gates passed on both heads: 6,114 and 6,115 unit, 448 browser and 552 integration tests; build; all 60 E2E tests; the hosted Stripe lane, 7/7.
+- **Promoted and released.** Promoted through #1259 (`a9849911`, merged **18:51:43Z**) with #1255, #1256 and #1258, after `git fetch` and a passing `verify-promotion` receipt; its review approved with no findings. Promotion #1257, carrying the first two, was closed unmerged so #1258 could ship with them.
+  - Release verified: main CI **36761596767** `test` **19:04:43Z**, passing on its first run; Ready **18:52:53.964Z**, held without alias until its check completed; production assigned **19:04:46.774Z**; matching trees `19f3ba2c`; healthy production.
+- **Verified on `main`.** The fix and its cases are present on `main` at `a9849911`.
