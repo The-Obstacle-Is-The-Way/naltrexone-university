@@ -509,16 +509,16 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 ## 16. Seed Idempotency and Multi-Clone Safety
 
-The seed script is idempotent for **question content upserts** — running it multiple times with the same MDX question content produces the same question rows and skips unchanged questions.
+The seed script is idempotent: running it again with the same MDX content skips every unchanged question and writes nothing.
 
 **Important:** By default, every `pnpm db:seed` run also archives any `placeholder-%` rows unless `SEED_INCLUDE_PLACEHOLDERS=true`. That placeholder archival is a deliberate side effect and runs on every invocation.
 
 ### How it works
 
-1. **Slug is the identity key.** Each question is looked up by `slug`. If the slug exists, it's an update; if not, it's an insert.
-2. **SHA256 change detection.** Before writing, the seed computes a hash of the file's canonical representation and compares it to a hash of what's already in the DB. If they match, the question is **skipped entirely** — no writes, no `updatedAt` bump.
-3. **Choices use upsert.** `INSERT ... ON CONFLICT (questionId, label) DO UPDATE` — so even if the update path runs, it's a safe merge.
-4. **Tags are upserted** via `upsertTags()` — existing tags are reused by slug.
+1. **Slug is the identity key.** Each question is looked up by `slug`. If the slug exists, the question is compared; if not, it's inserted with revision 1.
+2. **Canonical comparison with the current revision.** The seed locks the question and compares the file's canonical content with the question's current revision, canonicalized the same way. If the content, status and tags all match, the question is **skipped entirely**: no writes, no `updatedAt` bump.
+3. **Changed content is appended, never updated** (ADR-021 phase 2b). A changed stem, explanation, reference, difficulty, choice or answer key becomes a new revision with its own choice rows, and the question's current revision moves to it. Earlier attempts and sessions keep the revision they answered. Status and tags change in place.
+4. **Tags are upserted** via `upsertTags()`: existing tags are reused by slug, and a tag whose name or kind differs is refused.
 
 ### What this means for multiple clones
 
@@ -526,11 +526,11 @@ You may have multiple local clones of the repo (e.g., `naltrexone-university`, `
 
 | Scenario | Result |
 |----------|--------|
-| Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (hashes match). Zero DB writes. |
-| Seed from clone A, edit a question in clone B, seed from clone B | Only the changed question is **updated**. Everything else skipped. |
+| Seed same questions from two different clones against the same DB | All questions **skipped** on the second run (content matches). Zero DB writes. |
+| Seed from clone A, edit a question in clone B, seed from clone B | Only the changed question gains a **new revision**. Everything else skipped. |
 | Seed from different clones against different DBs (dev vs prod) | Each DB gets its own independent copy. No cross-contamination. |
 
-**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, it will **downgrade** those questions to the older version. The seed output will show this as "updated" (not "skipped"), which is your signal that content changed.
+**The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, it appends the older content as a **new current revision** of those questions, and learners who saw the newer version get an update notice. The seed output counts it under `new revisions`, which is your signal that content changed.
 
 **Import procedure:** generate a fresh staged bundle from the intended draft version using [Import Drafts → MDX](#import-drafts--mdx-generated), review it, and separately place the approved artifact before seeding. A fresh directory prevents stale generated files from joining the new bundle; it does not prove release freshness or authorize a rollback.
 

@@ -627,6 +627,11 @@ Content is now appended, never updated. A changed question becomes a new revisio
   - The parser kept a choice explanation exactly as written, while the comparison canonicalizes the stored one. An explanation with trailing whitespace, such as a YAML block scalar with its trailing newline, would never compare equal, so every reseed would append the same content as a new revision and learners would see a false update notice.
   - No current content has one (the rehearsal skipped all 958), but it is a latent fault in what this step introduces. Promotion #1240 was therefore closed without merging.
   - The parser now canonicalizes choice explanations like every other field. Two cases prove it on the parser and on real Postgres: a reseed of an unchanged question whose explanation ends in a newline appends nothing.
+- **Released.**
+  - #1239 (approval **5362731691** on `de5fc26c`) and #1241 (approval **5363098940** on `b0e8960d`) were promoted through #1242 (`b3dd9e82`). The promotion's proof was written at 08:10:42Z, before the merge at 08:10:47Z.
+  - The production build logged `0 session states and 0 attempts bound; 0 and 0 remain unbound`, the bound-history assertion passed, and the ledger post-check matched exactly.
+  - Main CI **36688108991** `test` **08:23:45Z**; Ready **08:12:35.735Z**, held without alias until its check completed; production assigned **08:23:47.501Z**; matching trees (`da8df5b5`); healthy production.
+  - The promotion's review raised one outside-diff finding: the multi-clone seed runbook still described the removed hash skip. It was accepted and corrected in the next documentation PR.
 
 ## Related
 

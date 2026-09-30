@@ -240,9 +240,9 @@ The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotenc
 
 **Key points:**
 - The `slug` field is the stable identity key — same slug = same question across any clone or DB
-- SHA256 hashing skips unchanged questions entirely (zero writes)
+- A question whose canonical content, status and tags equal its current revision is skipped (zero writes)
 - Seeding the same content from different clones is a no-op
-- The only risk is seeding from a clone with *older* imported MDX, which would downgrade content
+- The only risk is seeding from a clone with *older* imported MDX: it appends the older content as a new current revision, and learners who saw the newer one get an update notice (ADR-021 phase 2b). The seed reports it under `new revisions`
 
 ---
 
