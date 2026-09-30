@@ -23,6 +23,12 @@ describe('PUBLIC_ROUTE_PATTERNS', () => {
     );
   });
 
+  // DEBT-414 F07: Resend's reports carry no session; the route verifies their
+  // signature itself.
+  it('includes the Resend webhook so its signature is enforced at route level', () => {
+    expect(PUBLIC_ROUTE_PATTERNS).toContain('/api/webhooks/resend(.*)');
+  });
+
   it('derives both signed-out legal-page patterns from shared routes', () => {
     expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.PRIVACY}(.*)`);
     expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.TERMS}(.*)`);
@@ -41,6 +47,7 @@ describe('PUBLIC_ROUTE_PATTERNS', () => {
       '/api/health(.*)',
       '/api/stripe/webhook(.*)',
       '/api/webhooks/clerk(.*)',
+      '/api/webhooks/resend(.*)',
     ]);
   });
 });

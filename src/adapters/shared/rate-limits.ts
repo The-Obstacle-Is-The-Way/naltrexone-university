@@ -19,6 +19,12 @@ export const CLERK_WEBHOOK_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+// DEBT-414 F07: Resend's delivery reports, one per sent email and outcome.
+export const RESEND_WEBHOOK_RATE_LIMIT = {
+  limit: 100,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 export const CHECKOUT_SESSION_RATE_LIMIT = {
   limit: 10,
   windowMs: ONE_MINUTE_MS,

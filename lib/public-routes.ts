@@ -35,4 +35,5 @@ export const PUBLIC_ROUTE_PATTERNS = [
   '/api/health(.*)',
   '/api/stripe/webhook(.*)',
   '/api/webhooks/clerk(.*)',
+  '/api/webhooks/resend(.*)',
 ] satisfies string[];

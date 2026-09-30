@@ -66,6 +66,13 @@ const envSchema = z.object({
     .min(1)
     .regex(/^re_/, 'Must start with "re_"')
     .optional(),
+  // DEBT-414 F07: the signing secret of the Resend webhook that reports
+  // delivery and bounces. Until it is set, the webhook refuses every report.
+  RESEND_WEBHOOK_SECRET: z
+    .string()
+    .min(1)
+    .regex(/^whsec_/, 'Must start with "whsec_"')
+    .optional(),
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
