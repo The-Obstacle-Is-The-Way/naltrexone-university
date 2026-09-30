@@ -378,6 +378,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             {
               isAvailable: true,
               withdrawn: false,
+              superseded: false,
               questionId: fixtureQ1Id,
               slug: 'q-1',
               stemMd: 'Stem 1',

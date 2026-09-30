@@ -34,6 +34,11 @@ export type AvailableCompletedSessionQuestionWithFeedbackRow = {
    * reviewable here, as answered, and the view marks it (Pattern Registry F-11).
    */
   withdrawn: boolean;
+  /**
+   * Still published, but a newer revision replaced the one shown here: the
+   * question was updated after the session (Pattern Registry F-12).
+   */
+  superseded: boolean;
   questionId: string;
   slug: string;
   stemMd: string;
@@ -233,9 +238,11 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
           );
         }
 
+        const withdrawn = question.status !== 'published';
         return {
           isAvailable: true,
-          withdrawn: question.status !== 'published',
+          withdrawn,
+          superseded: !withdrawn && !question.isCurrentRevision,
           questionId: question.id,
           slug: question.slug,
           stemMd: question.stemMd,

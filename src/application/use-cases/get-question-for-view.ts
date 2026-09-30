@@ -20,6 +20,11 @@ export type GetQuestionForViewOutput = {
   question: Question;
   /** Withdrawn after the learner answered it (ADR-021 §3). */
   withdrawn: boolean;
+  /**
+   * Still published, but the revision shown is no longer current: the
+   * question was updated after the learner saw it (Pattern Registry F-12).
+   */
+  superseded: boolean;
 } | null;
 
 type ReviewedItem = {
@@ -63,12 +68,16 @@ export class GetQuestionForViewUseCase {
     const withdrawn = question.status !== 'published';
     // ADR-021 §3: only a learner who attempted a withdrawn question sees it.
     if (withdrawn && !reviewed.attempted) return null;
-    return { question, withdrawn };
+    return {
+      question,
+      withdrawn,
+      superseded: !withdrawn && !question.isCurrentRevision,
+    };
   }
 
   private async published(slug: string): Promise<GetQuestionForViewOutput> {
     const question = await this.questions.findPublishedBySlug(slug);
-    return question ? { question, withdrawn: false } : null;
+    return question ? { question, withdrawn: false, superseded: false } : null;
   }
 
   // The learner's own item under review, or null when they have none. Every

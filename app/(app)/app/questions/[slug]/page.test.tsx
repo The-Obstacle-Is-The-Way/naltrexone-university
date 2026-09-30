@@ -69,6 +69,7 @@ function toGetQuestionBySlugOutput(
     stemMd: question.stemMd,
     difficulty: question.difficulty,
     withdrawn: false,
+    superseded: false,
     choices: question.choices.map((c) => ({
       id: c.id,
       label: c.label,

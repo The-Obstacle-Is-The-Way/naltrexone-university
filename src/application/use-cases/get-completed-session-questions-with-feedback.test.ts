@@ -143,6 +143,62 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
     ]);
   });
 
+  // Pattern Registry F-12: a newer revision replaced the one the session was
+  // bound to. A withdrawn question is marked withdrawn only.
+  it.each([
+    ['published', { withdrawn: false, superseded: true }],
+    ['archived', { withdrawn: true, superseded: false }],
+  ] as const)(
+    'marks a row of a %s question whose bound revision is no longer current',
+    async (status, marks) => {
+      const choice = createChoice({
+        id: 'c1',
+        questionId: 'q1',
+        isCorrect: true,
+      });
+      const current = createQuestion({ id: 'q1', slug: 'q-1', status });
+      const bound = createQuestion({
+        id: 'q1',
+        slug: 'q-1',
+        status,
+        stemMd: 'Bound stem',
+        choices: [choice],
+      });
+      const session = createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'tutor',
+        endedAt: new Date('2026-03-19T12:00:00.000Z'),
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            questionRevisionId: bound.revisionId,
+            markedForReview: false,
+            latestSelectedChoiceId: 'c1',
+            latestIsCorrect: true,
+            latestAnsweredAt: new Date('2026-03-19T11:58:00.000Z'),
+          },
+        ],
+      });
+      const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+        new FakePracticeSessionRepository([session]),
+        new FakeQuestionRepository([current, bound]),
+        new FakeAttemptRepository([]),
+        new FakeLogger(),
+      );
+
+      const output = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(output.rows).toEqual([
+        expect.objectContaining({ stemMd: 'Bound stem', ...marks }),
+      ]);
+    },
+  );
+
   // ADR-021 §3: the learner saw the item but never attempted it.
   it('keeps a withdrawn question the learner left unanswered unavailable, without a missing-question warning', async () => {
     const logger = new FakeLogger();

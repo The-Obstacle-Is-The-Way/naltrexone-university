@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { QuestionRepository } from '@/src/application/ports/repositories';
 import { buildShuffledChoiceViews } from '@/src/application/shared/shuffled-choice-views';
+import { FakeQuestionRepository } from '@/src/application/test-helpers/fakes';
 import {
   createAttempt,
   createChoice,
@@ -179,7 +180,40 @@ describe('question-view-controller', () => {
           difficulty: 'medium',
           choices: mapChoicesForOutput(question, userId),
           withdrawn: false,
+          superseded: false,
         },
+      });
+    });
+
+    // Pattern Registry F-12: the learner reviews the revision they answered,
+    // and a newer one has replaced it.
+    it('returns a question updated since the learner answered it, marked updated', async () => {
+      const user = createUser();
+      const current = createQuestion({ slug: 'q-updated', stemMd: 'Current' });
+      const answered = createQuestion({
+        id: current.id,
+        slug: 'q-updated',
+        stemMd: 'Answered',
+      });
+      const attempt = createAttempt({
+        userId: user.id,
+        questionId: current.id,
+        questionRevisionId: answered.revisionId,
+      });
+      const deps = createQuestionViewControllerDeps({
+        user,
+        attempts: [attempt],
+        questionRepository: new FakeQuestionRepository([current, answered]),
+      });
+
+      const result = await getQuestionBySlug(
+        { slug: 'q-updated', review: { attemptId: attempt.id } },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { stemMd: 'Answered', withdrawn: false, superseded: true },
       });
     });
 
@@ -334,6 +368,7 @@ describe('question-view-controller', () => {
           difficulty: 'hard',
           choices: mapChoicesForOutput(question, userId),
           withdrawn: false,
+          superseded: false,
         },
       });
     });

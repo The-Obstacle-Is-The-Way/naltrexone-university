@@ -94,7 +94,38 @@ describe('GetQuestionForViewUseCase', () => {
     await expect(view([current])()).resolves.toEqual({
       question: current,
       withdrawn: false,
+      superseded: false,
     });
+  });
+
+  // Pattern Registry F-12: the learner sees the revision they answered, and
+  // is told when a newer one has replaced it.
+  it('marks a review of an answered revision that is no longer current as updated', async () => {
+    const { current, answered } = revisions('published');
+
+    await expect(
+      view([current, answered], { attempts: [answerOf(answered)] })({}),
+    ).resolves.toMatchObject({
+      question: { stemMd: 'Answered' },
+      withdrawn: false,
+      superseded: true,
+    });
+  });
+
+  it('does not mark a review of the current revision as updated', async () => {
+    const { current } = revisions('published');
+
+    await expect(
+      view([current], { attempts: [answerOf(current)] })({}),
+    ).resolves.toMatchObject({ withdrawn: false, superseded: false });
+  });
+
+  it('marks a withdrawn question withdrawn only, even when a newer revision exists', async () => {
+    const { current, answered } = revisions('archived');
+
+    await expect(
+      view([current, answered], { attempts: [answerOf(answered)] })({}),
+    ).resolves.toMatchObject({ withdrawn: true, superseded: false });
   });
 
   it('shows no withdrawn question outside review, even to a learner who answered it', async () => {

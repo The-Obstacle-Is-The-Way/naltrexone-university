@@ -393,6 +393,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return {
       id: row.id,
       revisionId: content.id,
+      isCurrentRevision: content.id === row.currentRevisionId,
       slug: row.slug,
       stemMd: content.stemMd,
       explanationMd: content.explanationMd,
