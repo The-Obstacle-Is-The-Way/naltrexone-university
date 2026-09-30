@@ -6,7 +6,7 @@
 **Latest** — 2026-09-30 UTC: DEBT-484's closeout is in production ([release receipt](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc)).
 - **Closeout.** #1253 merged as `c30d1292` (**5368193777** on `a6d0323f`, after two findings: one withdrawn by the reviewer, one fixed) and was promoted through #1254 (`ae6e6d14`).
 - **Release.** Main CI **36737453772** first failed three E2E tests in the per-test reset: a Clerk API `ECONNRESET`, before any assertion ran. The cause was documented on #1254, and one re-run passed (`test` **16:06:03Z**). Production was assigned at **16:06:06.000Z**, with matching trees (`2686eae0`) and healthy production.
-- **Found.** The reset's Clerk lookup has no retry for a transient network error, unlike the app's own Clerk calls. It is not yet filed; the change after BUG-311 files it with its fix. BUG-311, CI's Playwright install retry blocked by an orphaned `apt-get`, ships with this entry.
+- **Found.** The reset's Clerk lookup has no retry for a transient network error, unlike the app's own Clerk calls. It is filed as [BUG-312](../bugs/bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md) with its fix. BUG-311, CI's Playwright install retry blocked by an orphaned `apt-get`, ships with this entry.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.

@@ -5,6 +5,8 @@ import {
   MigrationLedgerVerificationError,
   verifyMigrationLedger as verifySharedMigrationLedger,
 } from '@/scripts/migration-ledger';
+import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { createStripeTestClient } from './stripe-test-client';
 
 export const CLERK_API_BASE = 'https://api.clerk.com/v1';
@@ -153,6 +155,53 @@ export async function fetchWithTimeout(
   }
 }
 
+// Clerk's API can drop a connection or answer 429 or 5xx for a moment. The
+// app's own Clerk calls retry those with DEFAULT_RETRY_OPTIONS, and so do the
+// E2E helpers, so one dropped connection does not fail a test (BUG-312).
+// Once retries run out, the last response is returned, or the last error
+// thrown, for the caller to map as before.
+class TransientClerkResponse extends Error {
+  readonly status: number;
+
+  constructor(readonly response: Response) {
+    super(`Clerk API answered ${response.status}`);
+    this.status = response.status;
+  }
+}
+
+function isTransientClerkFailure(error: unknown): boolean {
+  if (error instanceof TransientClerkResponse) return true;
+  // undici's fetch reports a dropped connection as `fetch failed`, with the
+  // socket error's code on its cause.
+  const cause = error instanceof Error ? error.cause : undefined;
+  return isTransientExternalError(error) || isTransientExternalError(cause);
+}
+
+export async function fetchClerkWithRetry(
+  input: string,
+  init: RequestInit,
+): Promise<Response> {
+  try {
+    return await retry(
+      async () => {
+        const response = await fetchWithTimeout(
+          input,
+          init,
+          CLERK_API_TIMEOUT_MS,
+        );
+        if (isTransientExternalError({ status: response.status })) {
+          throw new TransientClerkResponse(response);
+        }
+        return response;
+      },
+      { ...DEFAULT_RETRY_OPTIONS, shouldRetry: isTransientClerkFailure },
+    );
+  } catch (error) {
+    if (error instanceof TransientClerkResponse) return error.response;
+    throw error;
+  }
+}
+
 export async function verifyMigrationLedger(sql: postgres.Sql): Promise<void> {
   try {
     await verifySharedMigrationLedger(createPostgresMigrationLedgerQuery(sql));
@@ -219,13 +268,9 @@ const defaultServices: CredentialHealthCheckServices = {
 
     let response: Response;
     try {
-      response = await fetchWithTimeout(
-        url,
-        {
-          headers: { Authorization: `Bearer ${clerkSecretKey}` },
-        },
-        CLERK_API_TIMEOUT_MS,
-      );
+      response = await fetchClerkWithRetry(url, {
+        headers: { Authorization: `Bearer ${clerkSecretKey}` },
+      });
     } catch {
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:CLERK_API_UNAVAILABLE',
@@ -262,18 +307,14 @@ const defaultServices: CredentialHealthCheckServices = {
 
     let response: Response;
     try {
-      response = await fetchWithTimeout(
-        url,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${clerkSecretKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ password }),
+      response = await fetchClerkWithRetry(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${clerkSecretKey}`,
+          'Content-Type': 'application/json',
         },
-        CLERK_API_TIMEOUT_MS,
-      );
+        body: JSON.stringify({ password }),
+      });
     } catch {
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:CLERK_API_UNAVAILABLE',
