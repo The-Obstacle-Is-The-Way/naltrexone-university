@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
+import { onlyRow } from '@/scripts/seed/only-row';
 import {
   appendQuestionRevision,
   choiceIdByLabel,
@@ -263,13 +264,13 @@ export async function createQuestion(
   }
 
   const { question, appended } = await db.transaction(async (tx) => {
-    const [inserted] = await tx
-      .insert(schema.questions)
-      .values(questionValues)
-      .returning({ id: schema.questions.id });
-    if (!inserted) {
-      throw new Error('Failed to insert question');
-    }
+    const inserted = onlyRow(
+      await tx
+        .insert(schema.questions)
+        .values(questionValues)
+        .returning({ id: schema.questions.id }),
+      'Failed to insert question',
+    );
     // ADR-021: revision 1, written as the seed writes it.
     const revision = await appendQuestionRevision(
       tx,
