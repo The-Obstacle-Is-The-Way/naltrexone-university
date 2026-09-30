@@ -201,6 +201,20 @@ describe('ADR-021 phase 2b: the seed appends changed content', () => {
     expect(await revisionsOf(question.id)).toHaveLength(2);
   });
 
+  it('skips a question whose choice explanation ends in a newline', async () => {
+    // A YAML block scalar keeps its trailing newline; the file side must be
+    // canonical too, or every reseed would append the same content again.
+    const edits = { wrongExplanation: 'Why this option is wrong.\n' };
+    const question = await seedQuestion('trailing-newline', edits);
+
+    const counts = await syncQuestionsFromFiles(db, [
+      source(question.slug, edits),
+    ]);
+
+    expect(counts).toMatchObject({ skipped: 1, revised: 0 });
+    expect(await revisionsOf(question.id)).toHaveLength(1);
+  });
+
   it('changes status and tags in place, without a new revision', async () => {
     const question = await seedQuestion('in-place');
     // A canonical tag, written with its stored name so nothing is renamed.

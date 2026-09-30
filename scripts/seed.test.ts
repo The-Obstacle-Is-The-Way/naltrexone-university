@@ -115,6 +115,40 @@ describe('validateSeedQuestionTags', () => {
 });
 
 describe('parseSeedQuestionFile', () => {
+  // ADR-021: the seed compares a file with the stored revision canonically, so
+  // a choice explanation must be canonical as parsed, like every other field.
+  it('canonicalizes a choice explanation written as a YAML block scalar', () => {
+    const raw = [
+      '---',
+      'slug: demo-block-explanation',
+      'difficulty: easy',
+      'status: published',
+      'tags:',
+      '  - {slug: general, name: General, kind: topic}',
+      '  - {slug: alcohol, name: Alcohol, kind: substance}',
+      'choices:',
+      '  - label: A',
+      '    text: Wrong option',
+      '    correct: false',
+      '    explanation: |',
+      '      Why A is wrong.   ',
+      '  - label: B',
+      '    text: Right option',
+      '    correct: true',
+      '---',
+      '## Stem',
+      'A clinical task.',
+      '## Explanation',
+      'A general explanation.',
+      '### Reference',
+      'A synthetic reference.',
+    ].join('\n');
+
+    const parsed = parseSeedQuestionFile(raw);
+
+    expect(parsed.choices[0]?.explanation_md).toBe('Why A is wrong.');
+  });
+
   it('uses YAML explanations and extracts reference_md for new-format MDX', () => {
     const raw = readSeedFixture('new-format-example.mdx');
 
