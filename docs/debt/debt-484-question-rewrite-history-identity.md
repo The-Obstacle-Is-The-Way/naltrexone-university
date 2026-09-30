@@ -668,6 +668,15 @@ The database now requires what the code has guaranteed since phase 2b: every att
   - The previous commit's seed inserts a question without its current revision and fails loudly, so the operator seeds from the deployed commit.
 - **Not yet.** Phase 3's second step drops the legacy columns. A later refactor makes the domain's revision fields non-null and removes the unbound-binding fallbacks, now unreachable.
 
+## Phase 3, second contract step: the legacy text columns are dropped — 2026-09-30
+
+`questions.stem_md`, `explanation_md`, `reference_md` and `difficulty` are dropped (migration `0044`). A question's content now lives only in its revisions.
+
+- **Why a separate release.** `0043` stopped every write to these columns and removed them from the schema, but the deployment serving during `0043`'s build still selected them. They are dropped only once `0043`'s release is the serving one, so that neither release meets a missing column.
+- **Migration.** Four `DROP COLUMN`s. This is a catalog change that rewrites no rows, on a small content table, under a brief `ACCESS EXCLUSIVE` lock.
+- **Pre-flight on a copy of the per-clone database at `0043`.** `0044` applied cleanly, every integration case passed, and the full-corpus seed skipped all 958 questions with 0 new revisions.
+- **Tests.** Red first: `questions` has exactly its identity, status, pointer and timestamps, and no legacy text column.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
