@@ -8,6 +8,17 @@ function connectionReset() {
   });
 }
 
+// What undici's fetch throws when the peer closes the socket before the
+// response headers arrive.
+function socketClosed() {
+  return new TypeError('fetch failed', {
+    cause: Object.assign(new Error('other side closed'), {
+      name: 'SocketError',
+      code: 'UND_ERR_SOCKET',
+    }),
+  });
+}
+
 const URL = 'https://api.clerk.com/v1/users?limit=1';
 
 afterEach(() => {
@@ -33,6 +44,19 @@ describe('fetchClerkWithRetry', () => {
       'POST',
       'POST',
     ]);
+  });
+
+  // #1257 review: undici's code for a socket closed before the headers.
+  it('retries a socket closed before the response, then returns the answer', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(socketClosed())
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+    const response = await fetchClerkWithRetry(URL, {});
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it('returns the last transient response once its retries run out', async () => {
