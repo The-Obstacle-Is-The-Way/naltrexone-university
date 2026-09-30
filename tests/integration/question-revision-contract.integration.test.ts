@@ -193,7 +193,28 @@ describe('ADR-021 phase 3: a question and its first revision point at each other
   });
 });
 
-describe('ADR-021 phase 3: the legacy text columns are no longer written', () => {
+describe('ADR-021 phase 3: content lives only in revisions', () => {
+  it('has no legacy text columns on questions', async () => {
+    const columns = await db.execute<{ column_name: string }>(drizzleSql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'questions'
+    `);
+
+    expect(columns.map((column) => column.column_name)).not.toEqual(
+      expect.arrayContaining(['stem_md']),
+    );
+    expect(columns.map((column) => column.column_name).sort()).toEqual(
+      [
+        'created_at',
+        'current_revision_id',
+        'id',
+        'slug',
+        'status',
+        'updated_at',
+      ].sort(),
+    );
+  });
+
   it('seeds a question whose content lives only in its revision', async () => {
     const slug = `it-contract-seed-${randomUUID()}`;
     await syncQuestionsFromFiles(db, [source(slug)]);
@@ -204,18 +225,8 @@ describe('ADR-021 phase 3: the legacy text columns are no longer written', () =>
     if (!row) throw new Error('seed did not insert the question');
     cleanup.questionIds.push(row.id);
 
-    const [legacy] = await db.execute<{
-      stem_md: string | null;
-      explanation_md: string | null;
-      difficulty: string | null;
-    }>(drizzleSql`
-      SELECT stem_md, explanation_md, difficulty FROM questions WHERE id = ${row.id}
-    `);
-
-    expect(legacy).toEqual({
-      stem_md: null,
-      explanation_md: null,
-      difficulty: null,
-    });
+    await expect(currentRevisionIdOf(db, row.id)).resolves.toMatch(
+      /^[0-9a-f-]{36}$/,
+    );
   });
 });

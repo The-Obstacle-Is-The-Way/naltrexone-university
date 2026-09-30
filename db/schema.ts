@@ -638,10 +638,8 @@ export const questions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     slug: varchar('slug', { length: 255 }).notNull(),
-    // ADR-021 phase 3: content lives only in revisions. The legacy text
-    // columns (stem_md, explanation_md, reference_md, difficulty) are
-    // nullable and unwritten after migration 0043 and dropped by the next
-    // migration, once no serving deployment reads them.
+    // ADR-021 phase 3: content lives only in revisions. Migration 0043
+    // stopped writing the legacy text columns and 0044 dropped them.
     status: questionStatusEnum('status').notNull(),
     // ADR-021: the revision new selections use. Its foreign key is
     // DEFERRABLE INITIALLY DEFERRED (migration 0043), so a new question and
