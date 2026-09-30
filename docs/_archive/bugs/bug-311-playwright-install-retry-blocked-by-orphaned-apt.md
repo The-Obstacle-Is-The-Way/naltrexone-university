@@ -1,12 +1,12 @@
 # BUG-311: The Playwright Install Retry Fails on a Lock Held by the Timed-Out apt-get
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-09-30
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-09-30 — promoted to `main` through #1259; production release verified (see Resolution)
+**Verification receipts:** see Resolution
 
 ---
 
@@ -44,3 +44,12 @@ The fix stops only `apt-get`. If a timeout ever interrupts `dpkg` mid-install, t
 - Red first, in `scripts/ci/install-playwright-chromium.test.ts`. A fake `apt-get` is started detached, so the script's `timeout` cannot reach it, and holds a stand-in lock. Before the fix, the retry failed with the production message (`Could not get lock … held by process N (apt-get)`).
 - After the fix, the retry runs and the fake `apt-get` is gone, both when it exits on `TERM` and when it ignores `TERM` and needs `KILL`. Removing the `KILL` fallback fails the second case.
 - The harness's own `pgrep` and `pkill` act only on its fake `apt-get` and log the pattern the script passed, so a test never matches or signals a host process (#1255 review). A separate case checks that pattern against real command lines: it matches `apt-get update` and `/usr/bin/apt-get install …`, and not apt's methods or the `sh -c` wrapper.
+
+## Resolution (2026-09-30)
+
+- **Shipped.** #1255 merged as `5b455896` with exact-head approval **5369368103** on `09dd4ab4`.
+  - Its three findings were accepted: the harness's own `pgrep`/`pkill` keep its tests from touching host processes, the status became the canonical `In Progress`, and two debt records' filing status was corrected.
+  - The local full gate passed on that exact head: 6,101 unit, 448 browser and 552 integration tests; build; all 60 E2E tests; the hosted Stripe lane, 7/7.
+- **Promoted and released.** Promoted through #1259 (`a9849911`, merged **18:51:43Z**) with #1255, #1256 and #1258, after `git fetch` and a passing `verify-promotion` receipt; its review approved with no findings. Promotion #1257, carrying the first two, was closed unmerged so #1258 could ship with them.
+  - Release verified: main CI **36761596767** `test` **19:04:43Z**, passing on its first run; Ready **18:52:53.964Z**, held without alias until its check completed; production assigned **19:04:46.774Z**; matching trees `19f3ba2c`; healthy production.
+- **Verified on `main`.** The fix and its cases are present on `main` at `a9849911`.
