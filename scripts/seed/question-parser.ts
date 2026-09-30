@@ -84,7 +84,9 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
       label: choice.label,
       text_md: canonicalizeMarkdown(choice.text),
       is_correct: choice.correct,
-      explanation_md: choice.explanation ?? null,
+      explanation_md: choice.explanation
+        ? canonicalizeMarkdown(choice.explanation)
+        : null,
       sort_order: index + 1,
     })),
   };

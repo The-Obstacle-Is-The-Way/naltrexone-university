@@ -623,6 +623,10 @@ Content is now appended, never updated. A changed question becomes a new revisio
   - `question-revisions.integration.test.ts` now proves that every current revision's stored hash, including those `0039`'s SQL form wrote, equals the reference hash of its own rows, and that the legacy columns mirror the current revision.
   - Test fixtures write revisions through the same writer as the seed.
 - **Docs.** The deployment procedure, the content README, the tag-taxonomy pipeline and the master spec describe appending, and no longer mention the override or the deferral.
+- **Found on the promotion's review, fixed before release.**
+  - The parser kept a choice explanation exactly as written, while the comparison canonicalizes the stored one. An explanation with trailing whitespace, such as a YAML block scalar with its trailing newline, would never compare equal, so every reseed would append the same content as a new revision and learners would see a false update notice.
+  - No current content has one (the rehearsal skipped all 958), but it is a latent fault in what this step introduces. Promotion #1240 was therefore closed without merging.
+  - The parser now canonicalizes choice explanations like every other field. Two cases prove it on the parser and on real Postgres: a reseed of an unchanged question whose explanation ends in a newline appends nothing.
 
 ## Related
 
