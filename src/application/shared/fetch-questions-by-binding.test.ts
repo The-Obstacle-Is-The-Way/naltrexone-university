@@ -11,26 +11,39 @@ import {
 describe('fetchOwnedQuestionsByBinding', () => {
   it('keys each distinct binding to its own revision, keeps a withdrawn question and omits a missing one', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
-    const older = createQuestion({ id: 'q1', stemMd: 'Older' });
+    const older = createQuestion({
+      id: 'q1',
+      revisionId: crypto.randomUUID(),
+      stemMd: 'Older',
+    });
     const archived = createQuestion({ id: 'q2', status: 'archived' });
     const repo = new FakeQuestionRepository([current, older, archived]);
-    const unboundQ1 = { questionId: 'q1', questionRevisionId: null };
+    const currentQ1 = {
+      questionId: 'q1',
+      questionRevisionId: current.revisionId,
+    };
     const olderQ1 = { questionId: 'q1', questionRevisionId: older.revisionId };
-    const unboundQ2 = { questionId: 'q2', questionRevisionId: null };
-    const missing = { questionId: 'q3', questionRevisionId: null };
+    const archivedQ2 = {
+      questionId: 'q2',
+      questionRevisionId: archived.revisionId,
+    };
+    const missing = {
+      questionId: 'q3',
+      questionRevisionId: crypto.randomUUID(),
+    };
 
     const byBinding = await fetchOwnedQuestionsByBinding(repo, [
-      unboundQ1,
+      currentQ1,
       olderQ1,
-      unboundQ1,
-      unboundQ2,
+      currentQ1,
+      archivedQ2,
       missing,
     ]);
 
     expect(repo.findByIdsForSessionCalls).toEqual([['q1', 'q1', 'q2', 'q3']]);
-    expect(byBinding.get(bindingKey(unboundQ1))?.stemMd).toBe('Current');
+    expect(byBinding.get(bindingKey(currentQ1))?.stemMd).toBe('Current');
     expect(byBinding.get(bindingKey(olderQ1))?.stemMd).toBe('Older');
-    expect(byBinding.get(bindingKey(unboundQ2))?.status).toBe('archived');
+    expect(byBinding.get(bindingKey(archivedQ2))?.status).toBe('archived');
     expect(byBinding.has(bindingKey(missing))).toBe(false);
   });
 
@@ -45,7 +58,11 @@ describe('fetchOwnedQuestionsByBinding', () => {
 
   it('fails loudly when the repository swaps two revisions of one question', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
-    const older = createQuestion({ id: 'q1', stemMd: 'Older' });
+    const older = createQuestion({
+      id: 'q1',
+      revisionId: crypto.randomUUID(),
+      stemMd: 'Older',
+    });
     class SwappingQuestionRepository extends FakeQuestionRepository {
       override async findByIdsForSession(
         bindings: readonly QuestionRevisionBinding[],
@@ -80,15 +97,14 @@ describe('fetchOwnedQuestionsByBinding', () => {
         return distort(await super.findByIdsForSession(bindings));
       }
     }
-    const repo = new DistortingQuestionRepository([
-      createQuestion({ id: 'q1' }),
-      createQuestion({ id: 'q2' }),
-    ]);
+    const q1 = createQuestion({ id: 'q1' });
+    const q2 = createQuestion({ id: 'q2' });
+    const repo = new DistortingQuestionRepository([q1, q2]);
 
     await expect(
       fetchOwnedQuestionsByBinding(repo, [
-        { questionId: 'q1', questionRevisionId: null },
-        { questionId: 'q2', questionRevisionId: null },
+        { questionId: 'q1', questionRevisionId: q1.revisionId },
+        { questionId: 'q2', questionRevisionId: q2.revisionId },
       ]),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });

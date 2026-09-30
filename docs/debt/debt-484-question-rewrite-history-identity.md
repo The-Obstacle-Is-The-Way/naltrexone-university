@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phase 1 (revisions mirror the live rows) landed 2026-09-28; immutable revision binding and review milestones remain open
+**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phases 1, 2a, 2b and 3's database contract (migrations `0043` and `0044`) are in production as of 2026-09-30; non-null revision types in code and the fakes' question-level tags and status remain
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
@@ -666,7 +666,7 @@ The database now requires what the code has guaranteed since phase 2b: every att
 - **N-1.**
   - The serving deployment binds every attempt and session item it writes, writes no choice or question, and still selects the legacy columns, which exist until the next step.
   - The previous commit's seed inserts a question without its current revision and fails loudly, so the operator seeds from the deployed commit.
-- **Not yet.** Phase 3's second step drops the legacy columns. A later refactor makes the domain's revision fields non-null and removes the unbound-binding fallbacks, now unreachable.
+- **Not yet.** Phase 3's second step drops the legacy columns. The third makes the domain's revision fields non-null and removes the unbound-binding fallbacks, now unreachable.
 
 ## Phase 3, second contract step: the legacy text columns are dropped — 2026-09-30
 
@@ -676,6 +676,25 @@ The database now requires what the code has guaranteed since phase 2b: every att
 - **Migration.** Four `DROP COLUMN`s. This is a catalog change that rewrites no rows, on a small content table, under a brief `ACCESS EXCLUSIVE` lock.
 - **Pre-flight on a copy of the per-clone database at `0043`.** `0044` applied cleanly, every integration case passed, and the full-corpus seed skipped all 958 questions with 0 new revisions.
 - **Tests.** Red first: `questions` has exactly its identity, status, pointer and timestamps, and no legacy text column.
+
+## Phase 3, third step: every revision is required in code — 2026-09-30
+
+The code now requires what `0043` made the database require: every attempt, session item and binding names its revision. The fallbacks for a row with none are gone, since none can exist.
+
+- **Types.** `Attempt.questionRevisionId`, `PracticeSessionQuestionState.questionRevisionId`, `AttemptInsertInput`, `AttemptedQuestionSummary` and `QuestionRevisionBinding` carry a `string`, not `string | null`.
+- **Fallbacks removed.**
+  - The attempt insert's `COALESCE` to the session item's revision, else the question's current one. The adapter stores the revision the use case graded.
+  - The attempted list's `COALESCE` from an attempt's revision to the question's current one.
+  - The question repository's read of an unbound item as the current revision, and the null exemption in `fetchOwnedQuestionsByBinding`'s revision check.
+  - `createDefaultQuestionState`, which nothing called.
+- **Fakes and fixtures.**
+  - A fixture question's revision defaults to `defaultRevisionIdOf(id)`, derived from its id. A fixture attempt or session item binds that revision unless the test names another. A test with several revisions of one question gives the others their own ids.
+  - `FakeQuestionRepository` no longer reads a null binding as the current revision.
+  - `FakeAttemptRepository` refuses an attempt whose revision a listed question does not hold, as the adapter's composite key allows none (red first). It no longer falls back to the first listed revision.
+  - The integration helper `createQuestion` returns its first revision's id, and every fixture attempt names its revision.
+- **Retired tests.** They asserted the removed fallbacks: the adapter binding an attempt inserted with no revision, in a session and outside one, and reads of unbound items. The use cases bind, proved in `question-revision-session-reads.integration.test.ts` and the submit and finalize unit suites.
+- **N-1.** No schema change. The serving deployment and this one both name a revision on every row they write, which `0043` requires.
+- **Found on the way.** Both fakes read a revision's tags from its listed entry, and `FakeAttemptRepository` its publication status too. The adapters read both from the question. The divergence is recorded in the test-double register and fixed in the next change.
 
 ## Related
 

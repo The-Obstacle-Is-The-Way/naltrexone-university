@@ -45,7 +45,7 @@ async function answer(input: {
   const attempt = await attempts.insert({
     userId: input.userId,
     questionId: input.question.id,
-    questionRevisionId: null,
+    questionRevisionId: input.question.revisionId,
     practiceSessionId: input.sessionId,
     outcome: answeredOutcome(
       input.isCorrect

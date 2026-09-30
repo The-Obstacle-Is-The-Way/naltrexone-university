@@ -48,7 +48,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 | `session.ts` | `computeSessionProgress()`, `shouldShowExplanation()`, `getNextQuestionId()` | Session state machine helpers |
 | `statistics.ts` | `computeAccuracy()`, `computeStreak()`, `filterAttemptsInWindow()` | Dashboard stat computations |
 | `shuffle.ts` | `shuffleWithSeed()`, `createSeed()`, `createQuestionSeed()` | Deterministic question/choice ordering |
-| `session-stats.ts` | `computeSessionStats()`, `computeSessionDurationSeconds()`, `createDefaultQuestionState()` | Session-level stat computations |
+| `session-stats.ts` | `computeSessionStats()`, `computeSessionDurationSeconds()` | Session-level stat computations |
 | `question-selection.ts` | `selectNextQuestionId(candidates, history)` | Picks next question prioritizing least-recently-seen |
 
 ### 1.4 Domain Errors

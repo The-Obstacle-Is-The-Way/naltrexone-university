@@ -4,7 +4,10 @@ import {
   ApplicationError,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
-import { createPracticeSession } from '@/src/domain/test-helpers';
+import {
+  createPracticeSession,
+  defaultRevisionIdOf,
+} from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
 import {
   FakePracticeSessionRepository,
@@ -336,7 +339,7 @@ describe('FakePracticeSessionRepository', () => {
     expect(created.questionStates).toEqual([
       {
         questionId: 'question-1',
-        questionRevisionId: null,
+        questionRevisionId: defaultRevisionIdOf('question-1'),
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -444,7 +447,7 @@ describe('FakePracticeSessionRepository', () => {
       }),
     ).resolves.toEqual({
       questionId: 'q1',
-      questionRevisionId: null,
+      questionRevisionId: defaultRevisionIdOf('q1'),
       markedForReview: true,
       latestSelectedChoiceId: null,
       latestIsCorrect: false,

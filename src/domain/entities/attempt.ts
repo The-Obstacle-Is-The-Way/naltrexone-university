@@ -46,7 +46,7 @@ export type Attempt = {
    * attempt a deployment older than binding wrote; it reads the question's
    * current revision.
    */
-  readonly questionRevisionId: string | null;
+  readonly questionRevisionId: string;
   readonly practiceSessionId: string | null;
   readonly outcome: AnswerOutcome;
   readonly isCorrect: boolean;

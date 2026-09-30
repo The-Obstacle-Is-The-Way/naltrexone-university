@@ -23,7 +23,6 @@ export {
 export {
   computeSessionDurationSeconds,
   computeSessionStats,
-  createDefaultQuestionState,
   type SessionStats,
 } from './session-stats';
 export { createQuestionSeed, createSeed, shuffleWithSeed } from './shuffle';

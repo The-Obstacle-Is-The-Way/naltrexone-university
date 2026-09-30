@@ -62,18 +62,21 @@ describe('ADR-021 phase 2a: question content reads through the current revision'
 
   it("reads only the current revision's choices", async () => {
     const question = await createPublishedQuestion('choices');
-    await addCurrentRevision(db, question.id);
+    const revised = await addCurrentRevision(db, question.id);
     const repository = new DrizzleQuestionRepository(db);
-    // A session item an older deployment left unbound reads the current
-    // revision too; a bound item is covered by the session-reads suite.
-    const unboundItem = { questionId: question.id, questionRevisionId: null };
+    // A session item bound to the current revision reads it too; one bound
+    // to an older revision is covered by the session-reads suite.
+    const currentItem = {
+      questionId: question.id,
+      questionRevisionId: revised.revisionId,
+    };
 
     for (const read of [
       await repository.findPublishedById(question.id),
       await repository.findPublishedBySlug(question.slug),
       (await repository.findPublishedByIds([question.id]))[0],
-      await repository.findByIdForSession(unboundItem),
-      (await repository.findByIdsForSession([unboundItem]))[0],
+      await repository.findByIdForSession(currentItem),
+      (await repository.findByIdsForSession([currentItem]))[0],
     ]) {
       expect(read?.stemMd).toBe('# Revised stem');
       expect(read?.choices.map((choice) => choice.label)).toEqual(['C', 'D']);

@@ -241,6 +241,8 @@ export async function createQuestion(
   },
 ): Promise<{
   id: string;
+  /** Its first revision, current until a test adds another. */
+  revisionId: string;
   slug: string;
   correctChoiceId: string;
   incorrectChoiceId: string;
@@ -318,6 +320,7 @@ export async function createQuestion(
 
   return {
     id: question.id,
+    revisionId,
     slug: input.slug,
     correctChoiceId,
     incorrectChoiceId,

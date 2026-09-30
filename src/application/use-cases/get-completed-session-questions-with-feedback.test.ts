@@ -159,6 +159,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       const current = createQuestion({ id: 'q1', slug: 'q-1', status });
       const bound = createQuestion({
         id: 'q1',
+        revisionId: crypto.randomUUID(),
         slug: 'q-1',
         status,
         stemMd: 'Bound stem',

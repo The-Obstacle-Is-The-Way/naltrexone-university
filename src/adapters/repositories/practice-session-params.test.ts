@@ -89,7 +89,7 @@ describe('parsePracticeSessionParamsJson', () => {
       questionStates: [
         {
           questionId,
-          questionRevisionId: null,
+          questionRevisionId: crypto.randomUUID(),
           markedForReview: true,
           latestSelectedChoiceId: null,
           latestIsCorrect: null,

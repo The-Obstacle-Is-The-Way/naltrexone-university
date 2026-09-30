@@ -30,6 +30,22 @@ function createUuid(): string {
   return crypto.randomUUID();
 }
 
+// ADR-021: a fixture question's default revision id, derived from its id, so
+// a fixture attempt or session item binds that question's default revision
+// unless a test names another. A test with several revisions of one question
+// gives the others their own revisionId. FNV-1a, spread to UUID shape.
+export function defaultRevisionIdOf(questionId: string): string {
+  const words = [0x811c9dc5, 0x01000193, 0x9e3779b9, 0x85ebca6b].map((seed) => {
+    let hash = seed;
+    for (const char of `revision:${questionId}`) {
+      hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, '0');
+  });
+  const hex = words.join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 export function createUser(overrides: Partial<User> = {}): User {
   const now = new Date();
   return {
@@ -58,7 +74,8 @@ export function createAttempt(
     id: overrides.id ?? createUuid(),
     userId: overrides.userId ?? createUuid(),
     questionId,
-    questionRevisionId: overrides.questionRevisionId ?? null,
+    questionRevisionId:
+      overrides.questionRevisionId ?? defaultRevisionIdOf(questionId),
     practiceSessionId: overrides.practiceSessionId ?? null,
     outcome: overrides.outcome ?? answeredOutcome(selectedChoiceId),
     isCorrect: overrides.isCorrect ?? false,
@@ -154,9 +171,10 @@ export function createChoice(overrides: Partial<Choice> = {}): Choice {
 
 export function createQuestion(overrides: Partial<Question> = {}): Question {
   const now = new Date();
+  const id = overrides.id ?? createUuid();
   const question: Question = {
-    id: createUuid(),
-    revisionId: createUuid(),
+    id,
+    revisionId: defaultRevisionIdOf(id),
     isCurrentRevision: true,
     slug: 'question-1',
     stemMd: 'Stem',
@@ -235,7 +253,7 @@ export function createPracticeSession(
     overrides.questionStates ??
     questionIds.map((questionId) => ({
       questionId,
-      questionRevisionId: null,
+      questionRevisionId: defaultRevisionIdOf(questionId),
       markedForReview: false,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
@@ -247,7 +265,8 @@ export function createPracticeSession(
   const normalizedQuestionStates: PracticeSessionQuestionState[] =
     questionStates.map((state) => ({
       questionId: state.questionId,
-      questionRevisionId: state.questionRevisionId ?? null,
+      questionRevisionId:
+        state.questionRevisionId ?? defaultRevisionIdOf(state.questionId),
       markedForReview: state.markedForReview,
       latestSelectedChoiceId: state.latestSelectedChoiceId,
       latestIsCorrect: state.latestIsCorrect,

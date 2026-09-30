@@ -9,6 +9,7 @@ import {
   createPracticeSession as createDomainPracticeSession,
   createQuestion,
   createTag,
+  defaultRevisionIdOf,
 } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import type { QuestionFilters } from '../ports/repositories';
@@ -98,7 +99,7 @@ export function createQuestionState(
 ): QuestionState {
   return {
     questionId,
-    questionRevisionId: null,
+    questionRevisionId: defaultRevisionIdOf(questionId),
     markedForReview: false,
     latestSelectedChoiceId: null,
     latestIsCorrect: null,

@@ -11,7 +11,11 @@ import { GetUserStatsUseCase } from './get-user-stats';
 describe('GetUserStatsUseCase', () => {
   it('shows each recent attempt as the revision it graded, even of one question (ADR-021)', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current stem' });
-    const older = createQuestion({ id: 'q1', stemMd: 'Older stem' });
+    const older = createQuestion({
+      id: 'q1',
+      revisionId: crypto.randomUUID(),
+      stemMd: 'Older stem',
+    });
     const useCase = new GetUserStatsUseCase(
       new FakeAttemptRepository([
         createAttempt({

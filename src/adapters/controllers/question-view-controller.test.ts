@@ -192,6 +192,7 @@ describe('question-view-controller', () => {
       const current = createQuestion({ slug: 'q-updated', stemMd: 'Current' });
       const answered = createQuestion({
         id: current.id,
+        revisionId: crypto.randomUUID(),
         slug: 'q-updated',
         stemMd: 'Answered',
       });

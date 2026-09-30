@@ -21,6 +21,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
     });
     const answered = createQuestion({
       id: 'q1',
+      revisionId: crypto.randomUUID(),
       stemMd: 'Answered stem',
       difficulty: 'easy',
     });

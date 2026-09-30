@@ -10,7 +10,7 @@ export type PracticeSessionQuestionState = {
    * session began. Null only for an item a deployment older than binding
    * created; such an item reads the question's current revision.
    */
-  readonly questionRevisionId: string | null;
+  readonly questionRevisionId: string;
   readonly markedForReview: boolean;
   readonly latestSelectedChoiceId: string | null;
   readonly latestIsCorrect: boolean | null;

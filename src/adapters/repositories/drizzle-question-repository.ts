@@ -186,9 +186,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return this.findByBindings(items);
   }
 
-  // ADR-021 phase 2a: a session item or attempt shows the revision it is bound
-  // to, else (a row an older deployment left unbound) the question's current
-  // revision, the rule attempts bind by.
+  // ADR-021: a session item or attempt shows the revision it is bound to.
   private async findByBindings(bindings: readonly QuestionRevisionBinding[]) {
     if (bindings.length === 0) return [];
 
@@ -200,22 +198,12 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       where: byId,
       with: questionRelations,
     });
-    const boundRevisionIds = [
-      ...new Set(
-        bindings.flatMap((binding) =>
-          binding.questionRevisionId === null
-            ? []
-            : [binding.questionRevisionId],
-        ),
-      ),
-    ];
-    const boundRevisions =
-      boundRevisionIds.length === 0
-        ? []
-        : await this.db.query.questionRevisions.findMany({
-            where: inArray(questionRevisions.id, boundRevisionIds),
-            with: { choices: true },
-          });
+    const boundRevisions = await this.db.query.questionRevisions.findMany({
+      where: inArray(questionRevisions.id, [
+        ...new Set(bindings.map((binding) => binding.questionRevisionId)),
+      ]),
+      with: { choices: true },
+    });
 
     const rowById = new Map(rows.map((row) => [row.id, row]));
     const revisionById = new Map(
@@ -224,7 +212,6 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return bindings.flatMap((binding) => {
       const row = rowById.get(binding.questionId);
       if (!row) return [];
-      if (binding.questionRevisionId === null) return [this.toDomain(row)];
       const revision = revisionById.get(binding.questionRevisionId);
       // Composite keys make a session state's or attempt's revision one of its
       // question's, so any other binding is a broken invariant.

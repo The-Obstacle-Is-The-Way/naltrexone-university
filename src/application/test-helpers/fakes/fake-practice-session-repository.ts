@@ -8,6 +8,7 @@ import {
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
 import { computeSessionStats } from '@/src/domain/services';
+import { defaultRevisionIdOf } from '@/src/domain/test-helpers';
 import type {
   AnswerOutcome,
   PracticeMode,
@@ -60,7 +61,10 @@ export class FakePracticeSessionRepository
   ): PracticeSession['questionStates'][number] {
     return {
       questionId: state.questionId,
-      questionRevisionId: state.questionRevisionId ?? null,
+      // ADR-021: a created item binds its question's revision; the fake,
+      // holding no questions, uses the fixtures' default revision.
+      questionRevisionId:
+        state.questionRevisionId ?? defaultRevisionIdOf(state.questionId),
       markedForReview: state.markedForReview,
       latestSelectedChoiceId: state.latestSelectedChoiceId,
       latestIsCorrect: state.latestIsCorrect,

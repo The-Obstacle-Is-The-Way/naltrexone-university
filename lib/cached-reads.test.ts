@@ -294,22 +294,22 @@ async function drain(stream) {
   }
 }
 
-const rawRepository = new CountingQuestionRepository([
-  createQuestion({ id: 'question-1', slug: 'question-1', status: 'archived' }),
-]);
+const question1 = createQuestion({ id: 'question-1', slug: 'question-1', status: 'archived' });
+const binding = { questionId: question1.id, questionRevisionId: question1.revisionId };
+const rawRepository = new CountingQuestionRepository([question1]);
 const repository = createRequestCachedQuestionRepository(rawRepository);
 
 let firstStatus = 'missing';
 let secondStatus = 'missing';
 
 async function FirstCaller() {
-  const question = await repository.findByIdForSession({ questionId: 'question-1', questionRevisionId: null });
+  const question = await repository.findByIdForSession(binding);
   firstStatus = question?.status ?? 'missing';
   return React.createElement('div', null, firstStatus);
 }
 
 async function SecondCaller() {
-  const question = await repository.findByIdForSession({ questionId: 'question-1', questionRevisionId: null });
+  const question = await repository.findByIdForSession(binding);
   secondStatus = question?.status ?? 'missing';
   return React.createElement('div', null, secondStatus);
 }
@@ -373,23 +373,23 @@ async function drain(stream) {
   }
 }
 
-const rawRepository = new CountingQuestionRepository([
-  createQuestion({ id: 'a', slug: 'question-a', status: 'archived' }),
-  createQuestion({ id: 'b', slug: 'question-b', status: 'draft' }),
-]);
+const a = createQuestion({ id: 'a', slug: 'question-a', status: 'archived' });
+const b = createQuestion({ id: 'b', slug: 'question-b', status: 'draft' });
+const bindingOf = (question) => ({ questionId: question.id, questionRevisionId: question.revisionId });
+const rawRepository = new CountingQuestionRepository([a, b]);
 const repository = createRequestCachedQuestionRepository(rawRepository);
 
 let firstResultIds = [];
 let secondResultIds = [];
 
 async function FirstCaller() {
-  const questions = await repository.findByIdsForSession(['b', 'a', 'a'].map((questionId) => ({ questionId, questionRevisionId: null })));
+  const questions = await repository.findByIdsForSession([b, a, a].map(bindingOf));
   firstResultIds = questions.map((question) => question.id);
   return React.createElement('div', null, firstResultIds.join(','));
 }
 
 async function SecondCaller() {
-  const questions = await repository.findByIdsForSession(['a', 'b'].map((questionId) => ({ questionId, questionRevisionId: null })));
+  const questions = await repository.findByIdsForSession([a, b].map(bindingOf));
   secondResultIds = questions.map((question) => question.id);
   return React.createElement('div', null, secondResultIds.join(','));
 }

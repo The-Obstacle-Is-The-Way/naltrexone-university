@@ -9,7 +9,7 @@ type AttemptRowBase = {
   id: string;
   userId: string;
   questionId: string;
-  questionRevisionId: string | null;
+  questionRevisionId: string;
   practiceSessionId: string | null;
   selectedChoiceId: string | null;
   isOmitted?: boolean;

@@ -12,7 +12,7 @@ describe('FakeAttemptRepository', () => {
       repo.insert({
         userId,
         questionId: 'q-omitted',
-        questionRevisionId: null,
+        questionRevisionId: crypto.randomUUID(),
         practiceSessionId: 'session-omitted',
         outcome: omittedOutcome(),
         isCorrect: true,
@@ -21,13 +21,10 @@ describe('FakeAttemptRepository', () => {
     ).rejects.toThrow('Omitted attempts must be incorrect');
   });
 
-  // ADR-021: the revision the attempt was graded against. The Drizzle
-  // adapter falls back for null; the fake keeps it (test-double register).
-  it.each([
-    ['the revision it is given', crypto.randomUUID()],
-    ['null when given none', null],
-  ])('stores %s', async (_label, questionRevisionId) => {
+  // ADR-021: the revision the attempt was graded against.
+  it('stores the revision it is given', async () => {
     const repo = new FakeAttemptRepository();
+    const questionRevisionId = crypto.randomUUID();
 
     const attempt = await repo.insert({
       userId,
@@ -323,6 +320,7 @@ describe('FakeAttemptRepository', () => {
       });
       const revisedAnswered = createQuestion({
         id: 'q_revised',
+        revisionId: crypto.randomUUID(),
         difficulty: 'easy',
       });
       const draftHard = createQuestion({
@@ -463,6 +461,36 @@ describe('FakeAttemptRepository', () => {
           tagSlug: 'opioids',
         }),
       ).resolves.toBe(1);
+    });
+
+    // ADR-021: every attempt names its revision, which the adapter's
+    // composite key makes one of its question's.
+    it('refuses an attempt whose revision the listed question does not hold', async () => {
+      const repo = new FakeAttemptRepository(
+        [
+          makeAttempt({
+            id: 'attempt-unheld',
+            questionId: 'q1',
+            questionRevisionId: crypto.randomUUID(),
+          }),
+          makeAttempt({ id: 'attempt-held', questionId: 'q2' }),
+        ],
+        {
+          questions: [
+            createQuestion({ id: 'q1', difficulty: 'hard' }),
+            createQuestion({ id: 'q2', difficulty: 'hard' }),
+          ],
+        },
+      );
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
+          sort: 'difficulty',
+        }),
+      ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+      await expect(
+        repo.countAttemptedQuestionsByUserId(userId, { difficulty: 'hard' }),
+      ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
 
     it('throws when difficulty/tagSlug filters are used without questions metadata', async () => {
