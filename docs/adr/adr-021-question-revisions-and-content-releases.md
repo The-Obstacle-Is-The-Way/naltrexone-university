@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
+**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Decisions 4–6, atomic releases, withdrawals and holds as an overlay, and the seed as a release builder, remain with [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
@@ -11,7 +12,7 @@
 
 Two P1 records describe the same missing structure.
 
-- [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md): a question is one mutable row. Its stem, explanation, reference and choices are overwritten in place by the seed. An attempt stores only `question_id` and a `selected_choice_id`, so it cannot say which content the learner answered.
+- [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md): a question is one mutable row. Its stem, explanation, reference and choices are overwritten in place by the seed. An attempt stores only `question_id` and a `selected_choice_id`, so it cannot say which content the learner answered.
   - The #951 guard refuses substantive rewrites once graded history exists. It does not store revisions.
   - It does not protect a learner who is viewing an ungraded item while the seed changes it.
   - It does not make a withdrawn question reviewable, because every history read filters on `status = 'published'`.
@@ -83,7 +84,7 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 
 ### Phase 2b order: the update notice before appending (2026-09-30)
 
-Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. It then adds the same notice to an active session's items, since a session keeps its bound revision. Only then does a PR make the writers append-only; migration `0042` did so on 2026-09-30. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md#phase-2b-plan-decided-2026-09-30).
+Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. It then adds the same notice to an active session's items, since a session keeps its bound revision. Only then does a PR make the writers append-only; migration `0042` did so on 2026-09-30. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#phase-2b-plan-decided-2026-09-30).
 
 ### Why phase 1 mirrors instead of appending (2026-09-28)
 
@@ -120,6 +121,6 @@ The app stores parsed fields after two transformations, draft → MDX → rows, 
 
 ## Related
 
-- [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md), [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md)
+- [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md), [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
 - [Migration Authoring](../dev/migration-authoring.md)
 - Content repository: SPEC-005, SPEC-007, ADR-001 (repository boundary)

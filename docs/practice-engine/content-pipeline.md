@@ -440,9 +440,11 @@ Both bugs identified during the BS-011 audit have been fixed:
 | **Bug B: Choice label desync** | `getQuestionBySlug` now calls `buildShuffledChoiceViews()` — all paths produce consistent shuffled labels | SPEC-025 |
 | **Bug A: Result-dependent `mode=review` wiring** | History Questions tab now routes all rows through `mode=review` consistently, regardless of result | SPEC-026 |
 
-That conclusion applied to the 2026-03-17 audit. Current withdrawal/release and
-historical-identity gaps remain tracked in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md)
-and [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md).
+That conclusion applied to the 2026-03-17 audit. The historical-identity gap is
+closed: question revisions and history binding shipped under
+[DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md), resolved 2026-09-30.
+Current withdrawal and release gaps remain tracked in
+[DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
 
 ---
 

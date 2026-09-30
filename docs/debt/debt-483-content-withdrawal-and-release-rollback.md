@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); release milestones remain open
+**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); release milestones remain open; archived-question review, which the dated receipts below list as open, shipped under [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) (resolved 2026-09-30)
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -363,7 +363,7 @@ This record closes after ADR-021's phase 4 (releases, overlay and rollback), wit
 
 ## Related
 
-- [DEBT-484](debt-484-question-rewrite-history-identity.md)
+- [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
 - [Parked DEBT-446](../_archive/debt/debt-446-local-db-script-target-guards.md):
   existing freshness-related scope remains subject to its owner ruling; this
   record does not silently activate unrelated parked work.
