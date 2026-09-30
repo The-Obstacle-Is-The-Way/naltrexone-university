@@ -151,6 +151,7 @@ describe('app/(app)/app/practice', () => {
               sortOrder: 1,
             },
           ],
+          superseded: false,
           session: null,
         }}
         selectedChoiceId={fixtureChoice1Id}
@@ -203,6 +204,7 @@ describe('app/(app)/app/practice', () => {
               sortOrder: 1,
             },
           ],
+          superseded: false,
           session: null,
         }}
         selectedChoiceId={null}
@@ -308,6 +310,7 @@ describe('app/(app)/app/practice', () => {
               sortOrder: 1,
             },
           ],
+          superseded: false,
           session: null,
         }}
         selectedChoiceId={null}

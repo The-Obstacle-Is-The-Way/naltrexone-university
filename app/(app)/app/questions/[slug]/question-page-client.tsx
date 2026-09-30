@@ -383,7 +383,10 @@ export function QuestionView(props: QuestionViewProps) {
             isWithdrawn || isSuperseded || isSessionReviewUnansweredReveal ? (
               <>
                 {isSuperseded && props.question ? (
-                  <QuestionUpdateNotice slug={props.question.slug} />
+                  <QuestionUpdateNotice
+                    variant="review"
+                    slug={props.question.slug}
+                  />
                 ) : null}
                 {isWithdrawn ? (
                   <Card role="status" className="gap-0 p-4 text-sm">

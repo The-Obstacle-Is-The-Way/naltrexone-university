@@ -236,3 +236,48 @@ describe('ADR-021 phase 2a: session reads and grading use the bound revision', (
     ]);
   });
 });
+
+// ADR-021 phase 2b: the session keeps its bound revision, and its item says
+// when a newer one became current (Pattern Registry F-12).
+describe('ADR-021 phase 2b: a session item knows when its question has been updated', () => {
+  it('marks an item whose bound revision is no longer current', async () => {
+    const { user, session } = await createSessionThenRevise('tutor');
+
+    const next = answerableQuestion(
+      await new GetNextQuestionUseCase(questions, attempts, sessions).execute({
+        userId: user.id,
+        sessionId: session.id,
+      }),
+    );
+
+    expect(next?.superseded).toBe(true);
+  });
+
+  it('does not mark an item bound to the current revision', async () => {
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-revision-session-current-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const user = await createUser(db, cleanup);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    const next = answerableQuestion(
+      await new GetNextQuestionUseCase(questions, attempts, sessions).execute({
+        userId: user.id,
+        sessionId: session.id,
+      }),
+    );
+
+    expect(next?.superseded).toBe(false);
+  });
+});

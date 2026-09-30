@@ -75,6 +75,7 @@ test('renders Previous button in the session answering branch', async () => {
         stemMd: 'Stem 2',
         difficulty: 'medium',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -154,6 +155,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
         stemMd: 'Stem 1',
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -199,6 +201,7 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
         stemMd: 'Stem missing',
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -244,6 +247,7 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
         stemMd: 'Stem 2',
         difficulty: 'medium',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -389,6 +393,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
         stemMd: 'Stem 2',
         difficulty: 'medium',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -471,6 +476,7 @@ test('routes the last tutor-question footer End session button through onEndSess
         stemMd: 'Stem 2',
         difficulty: 'medium',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId="c1"
@@ -748,6 +754,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
         stemMd: 'Stem 2',
         difficulty: 'medium',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
+        superseded: false,
         session: null,
       }}
       selectedChoiceId={null}

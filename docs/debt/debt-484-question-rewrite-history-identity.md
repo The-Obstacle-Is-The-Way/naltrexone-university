@@ -524,7 +524,7 @@ Under the owner's delegation, phase 2b ships as three more increments, in this o
    - Medical publishing marks a corrected article and links the correction (the erratum practice beside COPE's retraction guidance). A review of an answered revision that is no longer current therefore carries an update notice and a way to see the current version. The Pattern Registry entry comes first, as F-11 did for withdrawals.
    - It renders nothing while every question has one revision, so it can ship before appending exists.
    - **Scoring is unchanged.** An attempt keeps the grade it received. Whether a key correction should regrade history is an owner decision, like the withdrawn-item scoring in part one.
-2. **Active-session answer feedback says so too.** Once the seed appends, a question can gain a revision while a session is open. The session keeps its bound revision, so a tutor answer's feedback would show the superseded key. That feedback therefore carries the same notice. (Added 2026-09-30 while building step 1.)
+2. **An active session says so too.** Once the seed appends, a question can gain a revision while a session is open. The session keeps its bound revision, so a tutor answer's feedback would show the superseded key. The session item therefore carries the notice from the moment it loads. (Added 2026-09-30 while building step 1.)
 3. **Writers become append-only.** One PR, because the seed and the migration depend on each other.
    - **Migration `0042`.**
      - It binds any remaining unbound history with `bind_history_revisions_v1`, the function `0041` ran.
@@ -559,6 +559,26 @@ A review shows the revision the learner answered. Once a newer revision is curre
   - post-exam review: [desktop](./assets/debt-484/superseded-post-exam-dark-1440x900.png), [mobile](./assets/debt-484/superseded-post-exam-dark-390x844.png);
   - the standalone review: [desktop](./assets/debt-484/superseded-standalone-dark-1440x900.png), [mobile](./assets/debt-484/superseded-standalone-dark-390x844.png).
 - **Not yet.** Active-session answer feedback (plan step 2), then append-only writers (step 3).
+
+## Phase 2b, second step: an active session says when its question has been updated — 2026-09-30
+
+A session keeps the revision each item was bound to. Once a newer revision is current, the item now says so from the moment it loads, in tutor and exam mode. In tutor mode that covers the answer feedback, which shows the bound revision's key (Pattern Registry F-12, active session).
+
+- **Read, not submit.** The flag is on the session item's read, `NextQuestion.superseded`, not on the submit output.
+  - The submit action is idempotency-keyed, and its cached outputs are validated strictly on replay. Adding a field there is an incompatible keyed-output change: the deployment procedure would require two releases, so that a rollback target can parse the new shape.
+  - The read is not keyed. It also tells the learner before they answer, not after.
+  - The residual gap is a question updated after the item loaded and before the learner answers. That answer's feedback carries no notice, and the post-session review does.
+- **UI.** `QuestionUpdateNotice` gains a `session` variant: "This question has been updated since your session began." / "This session uses the version shown here. Its answer or explanation may have changed."
+  - It has no link, because leaving would interrupt the session.
+  - The review notice keeps its link to the current version.
+- **Tests.**
+  - Real Postgres, red first: an item whose bound revision is no longer current is marked, and one on the current revision is not.
+  - The use-case cases; a mutation that hard-codes `false` fails one.
+  - Component and view cases, red first, in both modes.
+- **Captures.** The local production build, dark, with zero axe violations and no horizontal overflow. The first item's question was given a newer current revision, then restored:
+  - tutor: [desktop](./assets/debt-484/superseded-active-tutor-dark-1440x900.png), [mobile](./assets/debt-484/superseded-active-tutor-dark-390x844.png);
+  - exam: [desktop](./assets/debt-484/superseded-active-exam-dark-1440x900.png), [mobile](./assets/debt-484/superseded-active-exam-dark-390x844.png).
+- **Not yet.** Writers become append-only (plan step 3).
 
 ## Related
 

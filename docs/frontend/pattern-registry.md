@@ -943,11 +943,16 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - The answer, the correct choice and the explanation show as the learner saw them.
 - Bookmark, report and rating stay available. They belong to the question, which is still published.
 
+**Active session** (a question updated after the session began): the session keeps the revision its item was bound to, so it can show a superseded key in tutor feedback. The same S-1 Status notice goes first in the question region, above the stem, from the moment the item loads, in tutor and exam mode alike:
+
+- **Heading line:** "This question has been updated since your session began."
+- **Body line:** "This session uses the version shown here. Its answer or explanation may have changed."
+- **No link.** Leaving mid-session would interrupt it. The post-session review carries the review notice and its link.
+- The item is answered and graded as usual.
+
 **Precedence:** a withdrawn question shows F-11 only. It is no longer offered, so there is no current version to link to.
 
-**Not marked:**
-- **List rows** (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
-- **An active session's answer feedback** is a separate slice (DEBT-484, phase 2b plan). It must land before any question can gain a second revision.
+**Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
 
 **Rules:**
 - Reuses S-1 Status notice, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
@@ -955,7 +960,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - `role="status"` announces the notice politely; it is never focused automatically.
 - Scoring is unchanged: the attempt keeps the grade it received. Whether a key correction regrades history is an owner decision recorded in DEBT-484.
 
-**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, and DEBT-484 phase 2b. In use: the standalone review page and post-exam review. It renders nothing while every question has one revision.
+**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, and DEBT-484 phase 2b. In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`). It renders nothing while every question has one revision.
 
 ---
 

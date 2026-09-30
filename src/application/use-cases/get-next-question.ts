@@ -49,6 +49,11 @@ export type NextQuestion = {
   stemMd: string;
   difficulty: QuestionDifficulty;
   choices: PublicChoice[];
+  /**
+   * A newer revision replaced the one shown: the session keeps the revision
+   * its item was bound to (Pattern Registry F-12).
+   */
+  superseded: boolean;
   session: null | {
     sessionId: string;
     mode: PracticeMode;
@@ -292,6 +297,7 @@ export class GetNextQuestionUseCase {
       stemMd: question.stemMd,
       difficulty: question.difficulty,
       choices,
+      superseded: !question.isCurrentRevision,
       session: {
         sessionId: session.id,
         mode: session.mode,
@@ -362,6 +368,7 @@ export class GetNextQuestionUseCase {
       stemMd: question.stemMd,
       difficulty: question.difficulty,
       choices,
+      superseded: !question.isCurrentRevision,
       session: null,
     };
   }

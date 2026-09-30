@@ -14,6 +14,7 @@ import {
   type QuestionReportDialogProps,
 } from '@/components/question/question-report-dialog';
 import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
+import { QuestionUpdateNotice } from '@/components/question/question-update-notice';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useNotification } from '@/components/ui/notification-provider';
@@ -652,6 +653,13 @@ export function PracticeView(props: PracticeViewProps) {
             }
             feedback={feedbackResult}
             feedbackRef={feedbackRef}
+            beforeQuestionCard={
+              // Pattern Registry F-12: the session keeps the revision its
+              // item was bound to after a newer one became current.
+              props.question?.superseded ? (
+                <QuestionUpdateNotice variant="session" />
+              ) : undefined
+            }
           />
         ) : null}
       </section>
