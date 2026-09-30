@@ -76,7 +76,9 @@ describe('container webhook transaction wiring', () => {
     await expect(
       deps.transaction(async (repositories) => {
         const transactionDb = createStripeEventRepository.mock.calls[0]?.[0];
-        expect(transactionDb).toBeDefined();
+        if (!transactionDb) {
+          throw new Error('Expected the event repository inside the callback');
+        }
         // Compare identities as booleans so failures never serialize a DB
         // client (including its connection configuration) into the test log.
         expect(transactionDb === db, 'a transaction, not the pool').toBe(false);
@@ -87,9 +89,7 @@ describe('container webhook transaction wiring', () => {
         const subscriptionTargets = createSubscriptionRepository.mock.calls.map(
           ([dbOverride]) => dbOverride ?? db,
         );
-        const transactionIndex = subscriptionTargets.findIndex(
-          (target) => target === transactionDb,
-        );
+        const transactionIndex = subscriptionTargets.indexOf(transactionDb);
         expect(
           (createSubscriptionRepository.mock.calls[0]?.[0] ?? db) === db,
           'version reads use the outside-transaction pool',
