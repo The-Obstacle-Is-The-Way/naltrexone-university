@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { Question } from '@/src/domain/entities';
-import { createQuestion } from '@/src/domain/test-helpers';
+import { createQuestion, createTag } from '@/src/domain/test-helpers';
 import { FakeQuestionRepository } from './fake-question-repository';
 
 function bindingOf(question: Question) {
@@ -100,27 +100,61 @@ describe('FakeQuestionRepository', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
-  it('reads a bound revision under its question status, as the adapter does', async () => {
-    const current = createQuestion({ id: 'q1', status: 'archived' });
+  it('reads the first listed revision as current whatever its fixture says', async () => {
+    const current = createQuestion({ id: 'q1', isCurrentRevision: false });
+    const older = createQuestion({ id: 'q1', revisionId: crypto.randomUUID() });
+    const repo = new FakeQuestionRepository([current, older]);
+
+    await expect(repo.findByIdForSession(bindingOf(current))).resolves.toEqual({
+      ...current,
+      isCurrentRevision: true,
+    });
+    await expect(repo.findByIdForSession(bindingOf(older))).resolves.toEqual({
+      ...older,
+      isCurrentRevision: false,
+    });
+  });
+
+  // The adapter reads a revision's content from the revision and everything
+  // else from its question.
+  it("reads a bound revision under its question's slug, status, tags and timestamps, as the adapter does", async () => {
+    const current = createQuestion({
+      id: 'q1',
+      slug: 'q-current',
+      status: 'archived',
+      difficulty: 'hard',
+      tags: [createTag({ slug: 'opioids' })],
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-09-01T00:00:00Z'),
+    });
     const older = createQuestion({
       id: 'q1',
       revisionId: crypto.randomUUID(),
+      slug: 'q-older',
       stemMd: 'Older',
       status: 'published',
+      difficulty: 'easy',
+      tags: [createTag({ slug: 'alcohol' })],
+      createdAt: new Date('2026-02-01T00:00:00Z'),
+      updatedAt: new Date('2026-03-01T00:00:00Z'),
     });
     const repo = new FakeQuestionRepository([current, older]);
-    const olderBinding = {
-      questionId: 'q1',
-      questionRevisionId: older.revisionId,
+    const expected = {
+      ...older,
+      isCurrentRevision: false,
+      slug: current.slug,
+      status: current.status,
+      tags: current.tags,
+      createdAt: current.createdAt,
+      updatedAt: current.updatedAt,
     };
 
-    await expect(repo.findByIdForSession(olderBinding)).resolves.toMatchObject({
-      stemMd: 'Older',
-      status: 'archived',
-    });
-    await expect(repo.findByIdsForSession([olderBinding])).resolves.toEqual([
-      expect.objectContaining({ stemMd: 'Older', status: 'archived' }),
-    ]);
+    await expect(repo.findByIdForSession(bindingOf(older))).resolves.toEqual(
+      expected,
+    );
+    await expect(repo.findByIdsForSession([bindingOf(older)])).resolves.toEqual(
+      [expected],
+    );
   });
 
   it('throws VALIDATION_ERROR when status filters are provided without userId', async () => {

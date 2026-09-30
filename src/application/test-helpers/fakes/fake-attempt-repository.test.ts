@@ -463,6 +463,41 @@ describe('FakeAttemptRepository', () => {
       ).resolves.toBe(1);
     });
 
+    // ADR-021: the adapter filters by the question's status and tags and the
+    // answered revision's difficulty.
+    it("filters by the question's status and tags and the difficulty the attempt answered", async () => {
+      const current = createQuestion({
+        id: 'q1',
+        status: 'published',
+        difficulty: 'hard',
+        tags: [createTag({ slug: 'opioids' })],
+      });
+      const answered = createQuestion({
+        id: 'q1',
+        revisionId: crypto.randomUUID(),
+        status: 'archived',
+        difficulty: 'easy',
+        tags: [],
+      });
+      const repo = new FakeAttemptRepository(
+        [
+          makeAttempt({
+            questionId: 'q1',
+            questionRevisionId: answered.revisionId,
+          }),
+        ],
+        { questions: [current, answered] },
+      );
+      const filters = { difficulty: 'easy', tagSlug: 'opioids' } as const;
+
+      await expect(
+        repo.listAttemptedQuestionsByUserId(userId, 10, 0, filters),
+      ).resolves.toEqual([expect.objectContaining({ questionId: 'q1' })]);
+      await expect(
+        repo.countAttemptedQuestionsByUserId(userId, filters),
+      ).resolves.toBe(1);
+    });
+
     // ADR-021: every attempt names its revision, which the adapter's
     // composite key makes one of its question's.
     it('refuses an attempt whose revision the listed question does not hold', async () => {

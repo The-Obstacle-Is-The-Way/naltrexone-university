@@ -14,6 +14,7 @@ import type {
 import type { Attempt, Question } from '@/src/domain/entities';
 import { createAttempt } from '@/src/domain/entities/attempt';
 import { isOmittedOutcome } from '@/src/domain/value-objects';
+import { listedRevisions } from './fake-question-repository';
 
 type InMemoryAttempt = Attempt & {
   practiceSessionId: string | null;
@@ -23,9 +24,8 @@ type InMemoryAttempt = Attempt & {
 
 export class FakeAttemptRepository implements AttemptRepository {
   private attempts: InMemoryAttempt[];
-  // Question metadata for the attempted-list filters. A test may list several
-  // revisions of a question (same id, different revisionId); the first listed
-  // is current, as in `FakeQuestionRepository`.
+  // Question metadata for the attempted-list filters, listed as for
+  // `FakeQuestionRepository`: several revisions of a question, current first.
   private readonly questions: readonly Question[] | null;
 
   constructor(
@@ -33,7 +33,7 @@ export class FakeAttemptRepository implements AttemptRepository {
     deps?: { questions?: readonly Question[] },
   ) {
     this.attempts = [...seed];
-    this.questions = deps?.questions ?? null;
+    this.questions = deps?.questions ? listedRevisions(deps.questions) : null;
   }
 
   // ADR-021: the revision the attempt answered. A listed question without it
