@@ -160,12 +160,31 @@ export async function createTag(
 export async function currentRevisionIdOf(
   db: DrizzleDb,
   questionId: string,
-): Promise<string | null> {
+): Promise<string> {
   const [row] = await db
     .select({ id: schema.questions.currentRevisionId })
     .from(schema.questions)
     .where(eq(schema.questions.id, questionId));
-  return row?.id ?? null;
+  if (!row) throw new Error(`No question ${questionId}`);
+  return row.id;
+}
+
+// ADR-021: the revision a fixture attempt answered, as the app binds it: its
+// selected choice's revision, else (an omitted answer) the question's current
+// one. A question the seed has since revised keeps earlier choices on the
+// earlier revision.
+export async function answeredRevisionIdOf(
+  db: DrizzleDb,
+  questionId: string,
+  selectedChoiceId: string | null | undefined,
+): Promise<string> {
+  if (!selectedChoiceId) return currentRevisionIdOf(db, questionId);
+  const [choice] = await db
+    .select({ revisionId: schema.choices.questionRevisionId })
+    .from(schema.choices)
+    .where(eq(schema.choices.id, selectedChoiceId));
+  if (!choice) throw new Error(`No choice ${selectedChoiceId}`);
+  return choice.revisionId;
 }
 
 // ADR-021 phase 2b: a second revision with its own choices, made current, as
@@ -228,12 +247,13 @@ export async function createQuestion(
   const createdAt = input.createdAt ?? new Date();
   const updatedAt = createdAt;
 
+  // ADR-021 phase 3: the question points at its first revision, written in
+  // the same transaction; the deferred key is checked at commit.
+  const revisionId = randomUUID();
   const questionValues: typeof schema.questions.$inferInsert = {
     slug: input.slug,
-    stemMd: '# Stem',
-    explanationMd: '# Explanation',
     status: input.status,
-    difficulty: input.difficulty,
+    currentRevisionId: revisionId,
     createdAt,
     updatedAt,
   };
@@ -242,45 +262,47 @@ export async function createQuestion(
     questionValues.id = input.id;
   }
 
-  const [question] = await db
-    .insert(schema.questions)
-    .values(questionValues)
-    .returning({ id: schema.questions.id });
-
-  if (!question) {
-    throw new Error('Failed to insert question');
-  }
+  const { question, appended } = await db.transaction(async (tx) => {
+    const [inserted] = await tx
+      .insert(schema.questions)
+      .values(questionValues)
+      .returning({ id: schema.questions.id });
+    if (!inserted) {
+      throw new Error('Failed to insert question');
+    }
+    // ADR-021: revision 1, written as the seed writes it.
+    const revision = await appendQuestionRevision(
+      tx,
+      inserted.id,
+      {
+        stemMd: '# Stem',
+        explanationMd: '# Explanation',
+        referenceMd: null,
+        difficulty: input.difficulty,
+        choices: [
+          {
+            label: 'A',
+            textMd: 'Choice A',
+            isCorrect: false,
+            explanationMd: null,
+            sortOrder: 1,
+          },
+          {
+            label: 'B',
+            textMd: 'Choice B',
+            isCorrect: true,
+            explanationMd: null,
+            sortOrder: 2,
+          },
+        ],
+      },
+      { revisionId, updatedAt },
+    );
+    return { question: inserted, appended: revision };
+  });
 
   cleanup.questionIds.push(question.id);
 
-  // ADR-021: revision 1, written as the seed writes it.
-  const appended = await appendQuestionRevision(
-    db,
-    question.id,
-    {
-      stemMd: '# Stem',
-      explanationMd: '# Explanation',
-      referenceMd: null,
-      difficulty: input.difficulty,
-      choices: [
-        {
-          label: 'A',
-          textMd: 'Choice A',
-          isCorrect: false,
-          explanationMd: null,
-          sortOrder: 1,
-        },
-        {
-          label: 'B',
-          textMd: 'Choice B',
-          isCorrect: true,
-          explanationMd: null,
-          sortOrder: 2,
-        },
-      ],
-    },
-    updatedAt,
-  );
   const correctChoiceId = choiceIdByLabel(appended, 'B');
   const incorrectChoiceId = choiceIdByLabel(appended, 'A');
 

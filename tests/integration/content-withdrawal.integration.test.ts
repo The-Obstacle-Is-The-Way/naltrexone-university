@@ -6,6 +6,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -65,6 +66,11 @@ async function arrangeQuestion(
     await db.insert(schema.attempts).values({
       userId: user.id,
       questionId: question.id,
+      questionRevisionId: await answeredRevisionIdOf(
+        db,
+        question.id,
+        question.correctChoiceId,
+      ),
       selectedChoiceId: question.correctChoiceId,
       isCorrect: true,
       isOmitted: false,

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
@@ -46,17 +46,6 @@ async function currentRevisionId(questionId: string) {
 describe('ADR-021 phase 2a: question content reads through the current revision', () => {
   it("reads the stem, explanation, reference and difficulty from the question's current revision", async () => {
     const question = await createPublishedQuestion('content');
-    // Revisions are immutable (phase 2b), so the legacy columns diverge
-    // instead; the read must ignore them.
-    await db
-      .update(schema.questions)
-      .set({
-        stemMd: '# Legacy stem',
-        explanationMd: '# Legacy explanation',
-        referenceMd: 'Legacy reference',
-        difficulty: 'hard',
-      })
-      .where(eq(schema.questions.id, question.id));
 
     const read = await new DrizzleQuestionRepository(db).findPublishedById(
       question.id,
@@ -107,55 +96,5 @@ describe('ADR-021 phase 2a: question content reads through the current revision'
     await expect(repository.countPublishedCandidateIds(hard)).resolves.toBe(
       hardIds.length,
     );
-  });
-
-  it('refuses to read a question that has no current revision', async () => {
-    // Only the seed writes questions, and it mirrors each one in the same
-    // transaction, so this is a broken invariant, not a state to serve.
-    const question = await createPublishedQuestion('unmirrored');
-    await db
-      .update(schema.questions)
-      .set({ currentRevisionId: null })
-      .where(eq(schema.questions.id, question.id));
-
-    await expect(
-      new DrizzleQuestionRepository(db).findPublishedById(question.id),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
-  });
-
-  it('reads every published question exactly as its legacy columns while each has one revision', async () => {
-    const published = await db
-      .select()
-      .from(schema.questions)
-      .where(eq(schema.questions.status, 'published'));
-    // An empty corpus would make every comparison below vacuous.
-    expect(published.length).toBeGreaterThan(0);
-    const ids = published.map((row) => row.id);
-    const legacyChoices = await db
-      .select()
-      .from(schema.choices)
-      .where(inArray(schema.choices.questionId, ids))
-      .orderBy(asc(schema.choices.sortOrder));
-
-    const reads = await new DrizzleQuestionRepository(db).findPublishedByIds(
-      ids,
-    );
-
-    expect(reads).toHaveLength(published.length);
-    const byId = new Map(reads.map((read) => [read.id, read]));
-    for (const row of published) {
-      const read = byId.get(row.id);
-      expect(read).toMatchObject({
-        stemMd: row.stemMd,
-        explanationMd: row.explanationMd,
-        referenceMd: row.referenceMd ?? null,
-        difficulty: row.difficulty,
-      });
-      expect(read?.choices.map((choice) => choice.id)).toEqual(
-        legacyChoices
-          .filter((choice) => choice.questionId === row.id)
-          .map((choice) => choice.id),
-      );
-    }
   });
 });

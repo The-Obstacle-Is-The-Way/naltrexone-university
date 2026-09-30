@@ -282,16 +282,33 @@ export class DrizzlePracticeSessionRepository
     );
   }
 
+  // A question that no longer exists has no current revision; the caller's
+  // transaction fails and the creation reports INTERNAL_ERROR, as the foreign
+  // key did before bindings were required.
+  private currentRevisionOf(
+    revisionIdByQuestionId: ReadonlyMap<string, string>,
+    questionId: string,
+  ): string {
+    const revisionId = revisionIdByQuestionId.get(questionId);
+    if (!revisionId) {
+      throw new Error(`Question ${questionId} has no current revision`);
+    }
+    return revisionId;
+  }
+
   private initialQuestionStateRows(input: {
     sessionId: string;
     questionIds: readonly string[];
-    revisionIdByQuestionId: ReadonlyMap<string, string | null>;
+    revisionIdByQuestionId: ReadonlyMap<string, string>;
   }): Array<typeof practiceSessionQuestionStates.$inferInsert> {
     return input.questionIds.map((questionId, position) => ({
       practiceSessionId: input.sessionId,
       questionId,
-      // ADR-021 phase 2a: each item binds the revision the learner is shown.
-      questionRevisionId: input.revisionIdByQuestionId.get(questionId) ?? null,
+      // ADR-021: each item binds the revision the learner is shown.
+      questionRevisionId: this.currentRevisionOf(
+        input.revisionIdByQuestionId,
+        questionId,
+      ),
       position,
       markedForReview: false,
       latestSelectedChoiceId: null,

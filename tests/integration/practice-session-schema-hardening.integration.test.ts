@@ -4,6 +4,7 @@ import * as schema from '@/db/schema';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
+  answeredRevisionIdOf,
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
@@ -77,6 +78,11 @@ describe('practice session schema hardening', () => {
       db.insert(schema.attempts).values({
         userId: user.id,
         questionId: attemptQuestion.id,
+        questionRevisionId: await answeredRevisionIdOf(
+          db,
+          attemptQuestion.id,
+          otherQuestion.correctChoiceId,
+        ),
         selectedChoiceId: otherQuestion.correctChoiceId,
         isOmitted: false,
         isCorrect: false,

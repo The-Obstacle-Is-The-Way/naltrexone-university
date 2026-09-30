@@ -638,14 +638,15 @@ export const questions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     slug: varchar('slug', { length: 255 }).notNull(),
-    stemMd: text('stem_md').notNull(),
-    explanationMd: text('explanation_md').notNull(),
-    referenceMd: text('reference_md'),
-    difficulty: questionDifficultyEnum('difficulty').notNull(),
+    // ADR-021 phase 3: content lives only in revisions. The legacy text
+    // columns (stem_md, explanation_md, reference_md, difficulty) are
+    // nullable and unwritten after migration 0043 and dropped by the next
+    // migration, once no serving deployment reads them.
     status: questionStatusEnum('status').notNull(),
-    // ADR-021 phase 1: the revision new selections use. Nullable until the
-    // contract phase; the revision sweep fills it.
-    currentRevisionId: uuid('current_revision_id'),
+    // ADR-021: the revision new selections use. Its foreign key is
+    // DEFERRABLE INITIALLY DEFERRED (migration 0043), so a new question and
+    // its first revision can each point at the other in one transaction.
+    currentRevisionId: uuid('current_revision_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -661,10 +662,6 @@ export const questions = pgTable(
       columns: [t.currentRevisionId, t.id],
       foreignColumns: [questionRevisions.id, questionRevisions.questionId],
     }),
-    statusDifficultyIdx: index('questions_status_difficulty_idx').on(
-      t.status,
-      t.difficulty,
-    ),
     statusCreatedAtIdx: index('questions_status_created_at_idx').on(
       t.status,
       desc(t.createdAt),
@@ -750,9 +747,8 @@ export const choices = pgTable(
     isCorrect: boolean('is_correct').notNull(),
     explanationMd: text('explanation_md'),
     sortOrder: integer('sort_order').notNull(), // 1..N
-    // ADR-021: the revision this choice belongs to. Nullable until the
-    // contract phase; migration 0042 verified that every choice has one.
-    questionRevisionId: uuid('question_revision_id'),
+    // ADR-021: the revision this choice belongs to (NOT NULL since 0043).
+    questionRevisionId: uuid('question_revision_id').notNull(),
   },
   (t) => ({
     idQuestionIdUq: uniqueIndex(CHOICES_ID_QUESTION_ID_UQ).on(
@@ -905,9 +901,9 @@ export const practiceSessionQuestionStates = pgTable(
     draftSelectedChoiceId: uuid('draft_selected_choice_id'),
     draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
     draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
-    // ADR-021 phase 1: the revision this session item shows. Nullable until
-    // the contract phase; phase 2a binds it at session creation.
-    questionRevisionId: uuid('question_revision_id'),
+    // ADR-021: the revision this session item shows, bound at session
+    // creation (NOT NULL since 0043).
+    questionRevisionId: uuid('question_revision_id').notNull(),
     version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -1021,9 +1017,8 @@ export const attempts = pgTable(
     retryOfAttemptId: uuid('retry_of_attempt_id'),
     retryOrigin: attemptRetryOriginEnum('retry_origin'),
     retrySessionId: uuid('retry_session_id'),
-    // ADR-021 phase 1: the revision this attempt graded. Nullable until the
-    // contract phase; phase 2a binds it when grading.
-    questionRevisionId: uuid('question_revision_id'),
+    // ADR-021: the revision this attempt graded (NOT NULL since 0043).
+    questionRevisionId: uuid('question_revision_id').notNull(),
     answeredAt: timestamp('answered_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import matter from 'gray-matter';
@@ -136,22 +137,23 @@ async function insertQuestion(
   seed: SeedQuestionRep,
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const fields = revisionFieldsFromSeed(seed);
+    // ADR-021 phase 3: the question points at its first revision, written
+    // next in this transaction; the deferred key is checked at commit.
+    const revisionId = randomUUID();
     const created = onlyRow(
       await tx
         .insert(schema.questions)
         .values({
           slug: seed.slug,
-          stemMd: fields.stemMd,
-          explanationMd: fields.explanationMd,
-          referenceMd: fields.referenceMd,
-          difficulty: fields.difficulty,
           status: seed.status,
+          currentRevisionId: revisionId,
         })
         .returning({ id: schema.questions.id }),
       `Failed to insert question for slug "${seed.slug}"`,
     );
-    await appendQuestionRevision(tx, created.id, fields);
+    await appendQuestionRevision(tx, created.id, revisionFieldsFromSeed(seed), {
+      revisionId,
+    });
     await replaceQuestionTags(tx, created.id, seed.tags);
   });
 }
@@ -184,17 +186,14 @@ async function syncExistingQuestion(
         `Refusing to reactivate archived question "${seed.slug}" from seed input. Use a new question QID for a replacement.`,
       );
     }
-    // Migration 0042 verified every question has one; the contract phase
-    // makes it NOT NULL.
-    const [revision] = locked.currentRevisionId
-      ? await tx
-          .select()
-          .from(schema.questionRevisions)
-          .where(eq(schema.questionRevisions.id, locked.currentRevisionId))
-      : [];
-    if (!revision) {
-      throw new Error(`Question "${seed.slug}" has no current revision`);
-    }
+    // Required since migration 0043, so its revision always exists.
+    const revision = onlyRow(
+      await tx
+        .select()
+        .from(schema.questionRevisions)
+        .where(eq(schema.questionRevisions.id, locked.currentRevisionId)),
+      `Question "${seed.slug}" has no current revision`,
+    );
     const choices = await tx
       .select()
       .from(schema.choices)

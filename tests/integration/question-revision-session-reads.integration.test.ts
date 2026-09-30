@@ -140,28 +140,6 @@ describe('ADR-021 phase 2a: session reads and grading use the bound revision', (
     );
   });
 
-  it('shows an item an older deployment left unbound as the current revision', async () => {
-    const { user, session, revised } = await createSessionThenRevise('tutor');
-    await db
-      .update(schema.practiceSessionQuestionStates)
-      .set({ questionRevisionId: null })
-      .where(
-        eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
-      );
-
-    const next = answerableQuestion(
-      await new GetNextQuestionUseCase(questions, attempts, sessions).execute({
-        userId: user.id,
-        sessionId: session.id,
-      }),
-    );
-
-    expect(next?.stemMd).toBe('# Revised stem');
-    expect(next?.choices.map((choice) => choice.id).sort()).toEqual(
-      [revised.correctChoiceId, revised.incorrectChoiceId].sort(),
-    );
-  });
-
   it('grades a session answer against the bound revision and records it', async () => {
     const { question, user, session } = await createSessionThenRevise('tutor');
 
