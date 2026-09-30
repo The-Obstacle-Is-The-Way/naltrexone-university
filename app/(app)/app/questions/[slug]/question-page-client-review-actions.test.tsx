@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { toQuestionRoute } from '@/lib/routes';
 import {
   containsDescendant,
+  findAnchorByHref,
   findFieldsetByLegendText,
   isNodeBefore,
   parseHtml,
@@ -244,6 +246,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -284,6 +287,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: true,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -318,6 +322,96 @@ describe('QuestionView', () => {
     ).toBeNull();
   });
 
+  // Pattern Registry F-12: a newer revision replaced the one the learner saw.
+  function renderReviewedQuestion(marks: {
+    withdrawn: boolean;
+    superseded: boolean;
+  }) {
+    return parseHtml(
+      renderToStaticMarkup(
+        <QuestionView
+          {...createBaseProps()}
+          mode="review"
+          origin="history"
+          sessionId={fixtureSession123Id}
+          reviewSessionMode="tutor"
+          question={{
+            questionId: fixtureQuestion2Id,
+            slug: 'q2',
+            stemMd: 'Question stem',
+            difficulty: 'easy',
+            ...marks,
+            choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
+          }}
+          sessionNavigation={sharedSessionNavigation}
+          isBookmarked={false}
+          isBookmarkHydrated={true}
+          bookmarkStatus="idle"
+          onToggleBookmark={() => undefined}
+          questionFeedback={{
+            rating: null,
+            feedbackStatus: 'idle',
+            onRate: () => undefined,
+            isReportOpen: false,
+            openReport: () => undefined,
+            submitReport: async () => true,
+          }}
+          submitResult={{
+            attemptId: fixtureAttempt1Id,
+            isCorrect: false,
+            correctChoiceId: 'c1',
+            explanationMd: 'Explanation',
+            referenceMd: null,
+            choiceExplanations: [],
+          }}
+        />,
+      ),
+    );
+  }
+
+  function statusWith(doc: Document, text: string) {
+    return (
+      Array.from(doc.querySelectorAll('[role="status"]')).find((element) =>
+        element.textContent?.includes(text),
+      ) ?? null
+    );
+  }
+
+  it('marks a question updated since the learner saw it with the F-12 notice above the stem', () => {
+    const doc = renderReviewedQuestion({ withdrawn: false, superseded: true });
+
+    const notice = statusWith(doc, 'This question has been updated.');
+    const stem = Array.from(doc.querySelectorAll('p')).find(
+      (element) => element.textContent === 'Question stem',
+    );
+    expect(notice).not.toBeNull();
+    expect(stem).toBeDefined();
+    expect(notice && stem ? isNodeBefore(notice, stem) : false).toBe(true);
+    expect(findAnchorByHref(doc, toQuestionRoute('q2'))?.textContent).toBe(
+      'Practice the current version',
+    );
+    // Its actions stay: the question is still published.
+    expect(getBottomActionLabels(doc)).toEqual(
+      expect.arrayContaining(['Bookmark', 'Give feedback']),
+    );
+    expect(
+      doc.querySelector('[data-testid="question-rating-footer"]'),
+    ).not.toBeNull();
+  });
+
+  it('shows no update notice for the current version', () => {
+    const doc = renderReviewedQuestion({ withdrawn: false, superseded: false });
+
+    expect(statusWith(doc, 'This question has been updated.')).toBeNull();
+  });
+
+  it('marks a withdrawn question withdrawn only', () => {
+    const doc = renderReviewedQuestion({ withdrawn: true, superseded: true });
+
+    expect(statusWith(doc, 'This question has been withdrawn.')).not.toBeNull();
+    expect(statusWith(doc, 'This question has been updated.')).toBeNull();
+  });
+
   it('suppresses reattempt in answered exam-session review', () => {
     const html = renderToStaticMarkup(
       <QuestionView
@@ -332,6 +426,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -369,6 +464,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -407,6 +503,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -449,6 +546,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -495,6 +593,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -533,6 +632,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -566,6 +666,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{

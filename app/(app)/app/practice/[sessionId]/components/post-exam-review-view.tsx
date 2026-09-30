@@ -7,6 +7,7 @@ import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
 import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import { QuestionReportDialog } from '@/components/question/question-report-dialog';
+import { QuestionUpdateNotice } from '@/components/question/question-update-notice';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type {
@@ -137,6 +138,9 @@ export function PostExamReviewView({
                     new practice.
                   </p>
                 </Card>
+              ) : currentRow.superseded ? (
+                // Pattern Registry F-12: updated since the learner saw it.
+                <QuestionUpdateNotice slug={currentRow.slug} />
               ) : null}
               <QuestionCard
                 stemMd={currentRow.stemMd}

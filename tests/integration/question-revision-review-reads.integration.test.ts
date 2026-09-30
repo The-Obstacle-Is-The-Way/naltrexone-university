@@ -7,6 +7,7 @@ import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from '@/src/application/use-cases/get-completed-session-questions-with-feedback';
 import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
 import { GetPreviousAttemptUseCase } from '@/src/application/use-cases/get-previous-attempt';
+import { GetQuestionForViewUseCase } from '@/src/application/use-cases/get-question-for-view';
 import {
   addCurrentRevision,
   cleanupAfterEach,
@@ -207,5 +208,54 @@ describe('ADR-021 phase 2a: review reads use the bound revision', () => {
       correctChoiceId: unanswered.correctChoiceId,
       explanationMd: '# Explanation',
     });
+  });
+});
+
+// ADR-021 phase 2b: once a newer revision is current, a review of the one the
+// learner saw says the question has been updated (Pattern Registry F-12).
+describe('ADR-021 phase 2b: reviews know when the question has been updated', () => {
+  it('marks a bound revision that is no longer current', async () => {
+    const { answered, answeredRevisionId } =
+      await createAnsweredSessionThenRevise();
+
+    const bound = await questions.findByIdForSession({
+      questionId: answered.id,
+      questionRevisionId: answeredRevisionId,
+    });
+    const current = await questions.findPublishedById(answered.id);
+
+    expect(bound?.isCurrentRevision).toBe(false);
+    expect(current?.isCurrentRevision).toBe(true);
+  });
+
+  it('reviews an attempt at a question updated since as updated', async () => {
+    const { answered, user, attempt } = await createAnsweredSessionThenRevise();
+
+    const view = await new GetQuestionForViewUseCase(
+      questions,
+      attempts,
+      sessions,
+    ).execute({
+      userId: user.id,
+      slug: answered.slug,
+      review: { attemptId: attempt.id },
+    });
+
+    expect(view).toMatchObject({ withdrawn: false, superseded: true });
+  });
+
+  it('marks both answered and unanswered feedback rows of a question updated since', async () => {
+    const { user, session } = await createAnsweredSessionThenRevise();
+
+    const feedback = await new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      sessions,
+      questions,
+      attempts,
+      new FakeLogger(),
+    ).execute({ userId: user.id, sessionId: session.id });
+
+    expect(
+      feedback.rows.map((row) => (row.isAvailable ? row.superseded : null)),
+    ).toEqual([true, true]);
   });
 });

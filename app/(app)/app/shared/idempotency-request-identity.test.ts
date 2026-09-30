@@ -117,6 +117,7 @@ const standaloneQuestion = {
   stemMd: 'Question stem',
   difficulty: 'easy',
   withdrawn: false,
+  superseded: false,
   choices: [
     { id: choiceAId, label: 'A', textMd: 'Choice A' },
     { id: choiceBId, label: 'B', textMd: 'Choice B' },

@@ -157,6 +157,7 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
   const question: Question = {
     id: createUuid(),
     revisionId: createUuid(),
+    isCurrentRevision: true,
     slug: 'question-1',
     stemMd: 'Stem',
     explanationMd: 'Explanation',

@@ -517,14 +517,15 @@ Phase 2b makes content writers append-only, so a question will have more than on
 
 ### Phase 2b plan (decided 2026-09-30)
 
-Under the owner's delegation, phase 2b ships as two more increments, in this order.
+Under the owner's delegation, phase 2b ships as three more increments, in this order.
 
 1. **Reviews say when a question changed after it was answered.**
    - Once the seed appends, an answer-key correction is a new revision. A review shows the revision the learner answered, so without a notice it would show the superseded key as correct. Today's in-place key correction shows the corrected key, so appending without a notice would be a regression in what a learner learns from review.
    - Medical publishing marks a corrected article and links the correction (the erratum practice beside COPE's retraction guidance). A review of an answered revision that is no longer current therefore carries an update notice and a way to see the current version. The Pattern Registry entry comes first, as F-11 did for withdrawals.
    - It renders nothing while every question has one revision, so it can ship before appending exists.
    - **Scoring is unchanged.** An attempt keeps the grade it received. Whether a key correction should regrade history is an owner decision, like the withdrawn-item scoring in part one.
-2. **Writers become append-only.** One PR, because the seed and the migration depend on each other.
+2. **Active-session answer feedback says so too.** Once the seed appends, a question can gain a revision while a session is open. The session keeps its bound revision, so a tutor answer's feedback would show the superseded key. That feedback therefore carries the same notice. (Added 2026-09-30 while building step 1.)
+3. **Writers become append-only.** One PR, because the seed and the migration depend on each other.
    - **Migration `0042`.**
      - It binds any remaining unbound history with `bind_history_revisions_v1`, the function `0041` ran.
      - It then fails loudly if any session state or attempt is still unbound, or any choice has no revision. Production had none after `0041`.
@@ -536,6 +537,28 @@ Under the owner's delegation, phase 2b ships as two more increments, in this ord
      - The comparison reads the current revision, not the legacy columns.
      - Graded history keeps the revision it answered. The #951 rewrite refusal, its key-change override and the active-session deferral are therefore superseded, as ADR-021 §6 anticipates.
      - The seed refuses to append until `0042` has committed, so a seed run from a newer commit cannot meet an older schema.
+
+## Phase 2b, first step: reviews say when a question has been updated — 2026-09-30
+
+A review shows the revision the learner answered. Once a newer revision is current, the review now says so and links to the current version (Pattern Registry F-12). While every question has one revision, it renders nothing.
+
+- **Read.** A question read now carries `isCurrentRevision`. The adapter derives it from the question's current-revision pointer; the fake derives it from list order, the first listed being current.
+- **Review outputs.** Each gains `superseded`: the question is still published, but the revision shown is not current.
+  - The standalone review (`GetQuestionForViewUseCase`, then `getQuestionBySlug`).
+  - Completed-session feedback rows, which post-exam review renders.
+  - A withdrawn question is marked withdrawn only (F-11 precedence).
+- **UI.** One shared component, `QuestionUpdateNotice`, renders the S-1 status notice: "This question has been updated." / "This is the version you saw. Its answer or explanation may have changed." / "Practice the current version".
+  - It appears above the stem on the standalone review page and in post-exam review.
+  - Bookmark, report and rating stay available, because the question is still published.
+- **Naming.** The field was first called `updated`. The controller datetime guard treats that prefix as a timestamp and failed it. The precise term is `superseded`; the UI copy still says "updated".
+- **Tests.**
+  - Real Postgres, red first: a bound revision that is no longer current is marked, while the current one is not; the standalone review and both feedback rows (answered and unanswered) report `superseded`.
+  - Use-case, controller, component and view cases, red first.
+  - A mutation removing the withdrawn precedence from the page fails a case.
+- **Captures.** The local production build, dark, with zero axe violations and no horizontal overflow. A question in a finished exam was given a newer current revision, then restored:
+  - post-exam review: [desktop](./assets/debt-484/superseded-post-exam-dark-1440x900.png), [mobile](./assets/debt-484/superseded-post-exam-dark-390x844.png);
+  - the standalone review: [desktop](./assets/debt-484/superseded-standalone-dark-1440x900.png), [mobile](./assets/debt-484/superseded-standalone-dark-390x844.png).
+- **Not yet.** Active-session answer feedback (plan step 2), then append-only writers (step 3).
 
 ## Related
 

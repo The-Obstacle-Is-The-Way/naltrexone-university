@@ -32,6 +32,7 @@ describe('useQuestionPageModel (browser)', () => {
           stemMd: string;
           difficulty: 'easy';
           withdrawn: boolean;
+          superseded: boolean;
           choices: Array<{ id: string; label: string; textMd: string }>;
         }>
       >();
@@ -43,6 +44,7 @@ describe('useQuestionPageModel (browser)', () => {
           stemMd: string;
           difficulty: 'easy';
           withdrawn: boolean;
+          superseded: boolean;
           choices: Array<{ id: string; label: string; textMd: string }>;
         }>
       >();
@@ -83,6 +85,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem 2',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -99,6 +102,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem 1',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -119,6 +123,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: `Stem ${slug}`,
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -243,6 +248,7 @@ describe('useQuestionPageModel (browser)', () => {
           stemMd: 'Stem 1',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [
             { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           ],
@@ -333,6 +339,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: `Stem ${slug}`,
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -411,6 +418,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem 1',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],

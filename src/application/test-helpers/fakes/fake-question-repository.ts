@@ -43,14 +43,22 @@ export class FakeQuestionRepository implements QuestionRepository {
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
   constructor(questions: readonly Question[]) {
-    this.revisions = questions;
     const currentById = new Map<string, Question>();
     for (const question of questions) {
       if (!currentById.has(question.id)) {
         currentById.set(question.id, question);
       }
     }
-    this.questions = [...currentById.values()];
+    // As the adapter derives it from the question's current-revision pointer.
+    this.revisions = questions.map((question) => {
+      const isCurrentRevision = currentById.get(question.id) === question;
+      return question.isCurrentRevision === isCurrentRevision
+        ? question
+        : { ...question, isCurrentRevision };
+    });
+    this.questions = this.revisions.filter(
+      (question) => question.isCurrentRevision,
+    );
   }
 
   async findPublishedById(id: string): Promise<Question | null> {

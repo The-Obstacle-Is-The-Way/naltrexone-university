@@ -56,6 +56,8 @@ export type GetQuestionBySlugOutput = {
   }>;
   /** Withdrawn after the learner answered it (Pattern Registry F-11). */
   withdrawn: boolean;
+  /** Updated since the learner saw it (Pattern Registry F-12). */
+  superseded: boolean;
 };
 
 export type QuestionViewControllerDeps = {
@@ -137,6 +139,7 @@ export const getQuestionBySlug = createAction({
         textMd: choice.textMd,
       })),
       withdrawn: view.withdrawn,
+      superseded: view.superseded,
     };
   },
 });

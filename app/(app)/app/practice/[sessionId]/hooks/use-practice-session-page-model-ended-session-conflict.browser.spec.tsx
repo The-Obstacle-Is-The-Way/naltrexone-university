@@ -87,6 +87,7 @@ function mockCompletedSessionQuestionsWithFeedback(
         {
           isAvailable: true,
           withdrawn: false,
+          superseded: false,
           questionId: BROWSER_QUESTION_1_ID,
           slug: 'question-1',
           stemMd: 'Question 1',

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { toQuestionRoute } from '@/lib/routes';
 import type { GetCompletedSessionQuestionsWithFeedbackOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   containsDescendant,
+  findAnchorByHref,
   findFieldsetByLegendText,
   isNodeBefore,
 } from '@/tests/shared/dom-helpers';
@@ -432,6 +434,51 @@ describe('PostExamReviewView', () => {
     expect(
       doc.querySelector('[data-testid="question-rating-footer"]'),
     ).toBeNull();
+  });
+
+  // Pattern Registry F-12: a newer revision replaced the one the learner saw.
+  it('marks a question updated since the exam with the F-12 notice above it, keeping its actions', () => {
+    const doc = renderView({
+      row: createReviewRow({ slug: 'q-updated', superseded: true }),
+      questionFeedback: {
+        rating: null,
+        feedbackStatus: 'idle',
+        onRate: () => undefined,
+        isReportOpen: false,
+        openReport: () => undefined,
+        submitReport: async () => true,
+      },
+    });
+    const panel = doc.getElementById('practice-question-panel');
+    const notice = Array.from(
+      panel?.querySelectorAll('[role="status"]') ?? [],
+    ).find((element) =>
+      element.textContent?.includes('This question has been updated.'),
+    );
+    const stem = Array.from(panel?.querySelectorAll('*') ?? []).find(
+      (element) => element.textContent?.trim() === 'Question stem',
+    );
+
+    expect(notice).toBeDefined();
+    expect(notice && stem ? isNodeBefore(notice, stem) : false).toBe(true);
+    expect(
+      findAnchorByHref(doc, toQuestionRoute('q-updated'))?.textContent,
+    ).toBe('Practice the current version');
+    expect(getReviewActionLabels(doc)).toContain('Give feedback');
+    expect(
+      doc.querySelector('[data-testid="question-rating-footer"]'),
+    ).not.toBeNull();
+  });
+
+  it('marks a withdrawn question withdrawn only, even when updated', () => {
+    const doc = renderView({
+      row: createReviewRow({ withdrawn: true, superseded: true }),
+    });
+
+    expect(doc.body.textContent).toContain('This question has been withdrawn.');
+    expect(doc.body.textContent).not.toContain(
+      'This question has been updated.',
+    );
   });
 
   it('does not render the bookmark toggle for unavailable questions', () => {

@@ -28,6 +28,7 @@ function createQuestion(): GetQuestionBySlugOutput {
     stemMd: 'Stem',
     difficulty: 'easy',
     withdrawn: false,
+    superseded: false,
     choices: [],
   };
 }

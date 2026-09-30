@@ -45,7 +45,7 @@ describe('FakeQuestionRepository', () => {
         questionId: 'q1',
         questionRevisionId: older.revisionId,
       }),
-    ).resolves.toBe(older);
+    ).resolves.toEqual({ ...older, isCurrentRevision: false });
     await expect(
       repo.listPublishedCandidateIds({ tagSlugs: [], difficulties: [] }),
     ).resolves.toEqual(['q1']);
@@ -74,7 +74,11 @@ describe('FakeQuestionRepository', () => {
         unbound('q-missing'),
         unbound('q2'),
       ]),
-    ).resolves.toEqual([current, older, archived]);
+    ).resolves.toEqual([
+      current,
+      { ...older, isCurrentRevision: false },
+      archived,
+    ]);
   });
 
   it('refuses a session item bound to a revision it does not hold', async () => {
