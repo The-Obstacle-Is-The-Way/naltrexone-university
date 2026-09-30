@@ -31,6 +31,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         stemMd: 'Question 1',
         difficulty: 'easy',
         choices: [CHOICE_1],
+        superseded: false,
         session: {
           sessionId: BROWSER_SESSION_ID,
           mode: 'tutor',
@@ -80,6 +81,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         stemMd: 'Question 1',
         difficulty: 'easy',
         choices: [CHOICE_1],
+        superseded: false,
         session: {
           sessionId: BROWSER_SESSION_ID,
           mode: 'tutor',
@@ -136,6 +138,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           stemMd: 'Question 1',
           difficulty: 'easy',
           choices: [CHOICE_1],
+          superseded: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -155,6 +158,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           stemMd: 'Question 2',
           difficulty: 'easy',
           choices: [CHOICE_1],
+          superseded: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -238,6 +242,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           stemMd: 'Question 1',
           difficulty: 'easy',
           choices: [CHOICE_1],
+          superseded: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -257,6 +262,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           stemMd: 'Question 2',
           difficulty: 'easy',
           choices: [CHOICE_1],
+          superseded: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',

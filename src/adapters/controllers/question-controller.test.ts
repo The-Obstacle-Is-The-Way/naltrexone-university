@@ -258,6 +258,7 @@ describe('question-controller', () => {
               sortOrder: 1,
             },
           ],
+          superseded: false,
           session: null,
         },
       });

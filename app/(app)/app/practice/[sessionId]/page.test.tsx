@@ -136,6 +136,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
               sortOrder: 1,
             },
           ],
+          superseded: false,
           session: null,
         }}
         selectedChoiceId={null}
@@ -356,6 +357,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
               sortOrder: 1,
             },
           ],
+          superseded: false,
           session: null,
         }}
         selectedChoiceId={null}
@@ -440,6 +442,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           stemMd: '#',
           difficulty: 'easy',
           choices: [],
+          superseded: false,
           session: null,
         },
         new Set([fixtureQuestion1Id2]),

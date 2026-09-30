@@ -34,6 +34,7 @@ function createActiveQuestion(
         sortOrder: 1,
       },
     ],
+    superseded: false,
     session: {
       sessionId,
       mode: deadlineAt ? 'exam' : 'tutor',
