@@ -1,9 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-30 — BUG-312 filed with its fix; BUG-311's fix merged.
+**Last Updated:** 2026-09-30 — BUG-313 filed with its fix; BUG-312's fixes merged.
 
-**Latest** — 2026-09-30: **BUG-312 (P3) filed, fix in review; BUG-311's fix merged.** The E2E helpers' Clerk calls, before every test and in the run's credential check, made one request each. A dropped connection therefore failed a test in its reset and held a production release until a re-run (run 36737453772 after #1254). They now retry dropped connections, 429 and 5xx with the app's own retry policy, red first. [BUG-312](./bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md). BUG-311's fix, stopping an orphaned `apt-get` before the Playwright install retry, merged as #1255 (**5369368103** on `09dd4ab4`, after three findings, all fixed). Both ship in the next promotion. BUG-304, BUG-310, BUG-311 and BUG-312 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-313.**
+**Latest** — 2026-09-30: **BUG-313 (P3) filed, fix in review; BUG-312's fixes merged.** The app retries Clerk reads for transient failures, but the Clerk SDK reports a dropped connection as a `ClerkAPIResponseError` with no status. The shared classifier does not recognize that, so the signed-in-user read and the provisioning lookup never retried the commonest transient failure. A Clerk-specific classifier now recognizes it, red first against the real SDK's own error. Stripe's SDK retries network failures itself. [BUG-313](./bug-313-app-clerk-retry-misses-dropped-connections.md). BUG-312's fixes merged as #1256 (**5369870046** on `754dcb6f`, one finding fixed) and #1258 (**5370342714** on `29f7a7fc`, no findings), which added undici's `UND_ERR_SOCKET` after promotion #1257's review; #1257 was closed unmerged so it could ship first. BUG-311 and BUG-312 ship in promotion #1259. BUG-304, BUG-310, BUG-311, BUG-312 and BUG-313 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-314.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -26,7 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-313
+**Next Bug ID:** BUG-314
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -460,6 +460,7 @@ Every one of these was confirmed against the other branch's actual live registry
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 | [BUG-311](./bug-311-playwright-install-retry-blocked-by-orphaned-apt.md) | The Playwright install retry fails on a lock held by the timed-out apt-get | P3 | In Progress | Fix in review. When the Ubuntu mirror stalls, `timeout` cannot stop the root `apt-get` that `install-deps` started through sudo, so the single retry fails at once on apt's lists lock and the required `test` check goes red. The fix stops the leftover `apt-get` before retrying. |
 | [BUG-312](./bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md) | E2E helpers' Clerk calls do not retry a transient failure | P3 | In Progress | Fix in review. The per-test reset's Clerk lookup, and the health check's, made one request, so a dropped connection failed a test and held a production release until a re-run (run 36737453772). They now retry dropped connections, 429 and 5xx with the app's own policy. |
+| [BUG-313](./bug-313-app-clerk-retry-misses-dropped-connections.md) | The app's Clerk retry never retries a dropped connection | P3 | In Progress | Fix in review. The Clerk SDK reports a dropped connection as a `ClerkAPIResponseError` with no status, which `isTransientExternalError` does not recognize, so the signed-in-user read and the provisioning lookup failed on a blip they were meant to retry. A Clerk-specific classifier now retries it; tests use the real SDK's error. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

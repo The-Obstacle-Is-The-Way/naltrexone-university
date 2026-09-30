@@ -1,10 +1,11 @@
-import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
+import { retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type { UserRepository } from '@/src/application/ports/repositories';
 import type { User } from '@/src/domain/entities';
+import { isTransientClerkError } from './clerk-retry';
 import {
   type ClerkUserLike,
   type ClerkUserLookup,
@@ -28,7 +29,7 @@ export class ClerkAuthGateway implements AuthGateway {
   async getCurrentUser(): Promise<User | null> {
     const clerkUser = await retry(() => this.deps.getClerkUser(), {
       ...DEFAULT_RETRY_OPTIONS,
-      shouldRetry: isTransientExternalError,
+      shouldRetry: isTransientClerkError,
     });
     if (!clerkUser) return null;
 

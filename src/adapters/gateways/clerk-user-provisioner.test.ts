@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { UpsertUserByClerkIdOptions } from '@/src/application/ports/repositories';
 import {
@@ -6,6 +6,12 @@ import {
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 import { ensureClerkUser } from './clerk-user-provisioner';
+import {
+  clerkSdkErrorFor,
+  droppedConnection,
+} from './test-helpers/clerk-sdk-errors';
+
+vi.mock('server-only', () => ({}));
 
 class IncomingLookupFailingUserRepository extends FakeUserRepository {
   constructor(
@@ -196,6 +202,41 @@ describe('ensureClerkUser', () => {
         },
         msg: 'Blocked Clerk user email ownership conflict',
       },
+    ]);
+  });
+
+  // BUG-313: a dropped connection, as the Clerk SDK reports it, is retried
+  // before the conflict is decided.
+  it('retries a dropped connection while looking up the existing identity', async () => {
+    const userRepository = new FakeUserRepository();
+    const logger = new FakeLogger();
+    await userRepository.upsertByClerkId('clerk_owner', 'reused@example.com');
+    const getClerkUserById = vi
+      .fn()
+      .mockRejectedValueOnce(await clerkSdkErrorFor(droppedConnection))
+      .mockResolvedValueOnce({
+        id: 'clerk_owner',
+        updatedAt: new Date('2026-02-02T00:00:00.000Z'),
+        emailAddresses: [{ emailAddress: 'reused@example.com' }],
+      });
+
+    await expect(
+      ensureClerkUser(
+        { userRepository, getClerkUserById, logger },
+        {
+          clerkUserId: 'clerk_incoming',
+          email: 'reused@example.com',
+          observedAt: new Date('2026-02-03T00:00:00.000Z'),
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(getClerkUserById).toHaveBeenCalledTimes(2);
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({
+          resolution: 'blocked_existing_identity_still_owns_email',
+        }),
+      }),
     ]);
   });
 
