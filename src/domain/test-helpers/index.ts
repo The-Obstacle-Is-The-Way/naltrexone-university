@@ -10,4 +10,5 @@ export {
   createSubscriptionWriteCandidate,
   createTag,
   createUser,
+  defaultRevisionIdOf,
 } from './factories';

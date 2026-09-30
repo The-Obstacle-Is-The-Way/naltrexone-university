@@ -29,14 +29,6 @@ afterAll(async () => {
   await closeConnection(sql);
 });
 
-async function currentRevisionId(questionId: string) {
-  const [row] = await db
-    .select({ id: schema.questions.currentRevisionId })
-    .from(schema.questions)
-    .where(eq(schema.questions.id, questionId));
-  return row?.id ?? null;
-}
-
 async function stateRevisionId(sessionId: string, questionId: string) {
   const [row] = await db
     .select({ id: schema.practiceSessionQuestionStates.questionRevisionId })
@@ -135,50 +127,10 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
     const { session } = await createSessionWith([first.id, second.id]);
 
     for (const question of [first, second]) {
-      const expected = await currentRevisionId(question.id);
-      expect(expected).not.toBeNull();
       await expect(stateRevisionId(session.id, question.id)).resolves.toBe(
-        expected,
+        question.revisionId,
       );
     }
-  });
-
-  it("binds a session attempt to its item's revision", async () => {
-    const question = await createPublishedQuestion('session-attempt');
-    const { user, session } = await createSessionWith([question.id]);
-
-    const attempt = await new DrizzleAttemptRepository(db).insert({
-      userId: user.id,
-      questionId: question.id,
-      questionRevisionId: null,
-      practiceSessionId: session.id,
-      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
-      isCorrect: true,
-      timeSpentSeconds: 12,
-    });
-
-    const bound = await stateRevisionId(session.id, question.id);
-    expect(bound).not.toBeNull();
-    await expect(attemptRevisionId(attempt.id)).resolves.toBe(bound);
-  });
-
-  it("binds an attempt outside a session to the question's current revision", async () => {
-    const question = await createPublishedQuestion('no-session');
-    const user = await createUser(db, cleanup);
-
-    const attempt = await new DrizzleAttemptRepository(db).insert({
-      userId: user.id,
-      questionId: question.id,
-      questionRevisionId: null,
-      practiceSessionId: null,
-      outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
-      isCorrect: true,
-      timeSpentSeconds: 9,
-    });
-
-    const current = await currentRevisionId(question.id);
-    expect(current).not.toBeNull();
-    await expect(attemptRevisionId(attempt.id)).resolves.toBe(current);
   });
 
   // ADR-021 phase 2b: once a question can gain a revision, the current one
@@ -187,8 +139,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
   it('binds an attempt to the revision it graded after a newer one became current', async () => {
     const question = await createPublishedQuestion('graded-revision');
     const user = await createUser(db, cleanup);
-    const graded = await currentRevisionId(question.id);
-    expect(graded).not.toBeNull();
+    const graded = question.revisionId;
     await addCurrentRevision(db, question.id);
 
     const attempt = await new DrizzleAttemptRepository(db).insert({
@@ -213,7 +164,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
       .insert({
         userId: user.id,
         questionId: question.id,
-        questionRevisionId: null,
+        questionRevisionId: question.revisionId,
         practiceSessionId: session.id,
         outcome: { kind: 'answered', selectedChoiceId: otherChoiceId },
         isCorrect: true,
@@ -280,7 +231,6 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
         AND c.question_revision_id IS DISTINCT FROM q.current_revision_id
     `);
 
-    await expect(currentRevisionId(question.id)).resolves.not.toBeNull();
     expect(rows[0]?.unbound).toBe(0);
   });
 });

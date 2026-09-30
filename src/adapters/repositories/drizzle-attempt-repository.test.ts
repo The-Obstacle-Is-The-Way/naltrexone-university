@@ -12,7 +12,7 @@ const selectedChoiceId = crypto.randomUUID();
 const input = {
   userId,
   questionId,
-  questionRevisionId: null,
+  questionRevisionId: crypto.randomUUID(),
   practiceSessionId: null,
   outcome: answeredOutcome(selectedChoiceId),
   isCorrect: true,

@@ -16,7 +16,6 @@ import {
   createIntegrationDb,
   createQuestion,
   createUser,
-  currentRevisionIdOf,
 } from './helpers';
 
 // ADR-021 phase 2a, third increment (3c-i): reviewing a session or an earlier
@@ -65,7 +64,7 @@ async function createAnsweredSessionThenRevise() {
   const attempt = await attempts.insert({
     userId: user.id,
     questionId: answered.id,
-    questionRevisionId: null,
+    questionRevisionId: answered.revisionId,
     practiceSessionId: session.id,
     outcome: { kind: 'answered', selectedChoiceId: answered.correctChoiceId },
     isCorrect: true,
@@ -80,10 +79,16 @@ async function createAnsweredSessionThenRevise() {
     answeredAt: attempt.answeredAt,
   });
   await sessions.end(session.id, user.id);
-  const answeredRevisionId = await currentRevisionIdOf(db, answered.id);
   await addCurrentRevision(db, answered.id);
   await addCurrentRevision(db, unanswered.id);
-  return { answered, unanswered, user, session, attempt, answeredRevisionId };
+  return {
+    answered,
+    unanswered,
+    user,
+    session,
+    attempt,
+    answeredRevisionId: answered.revisionId,
+  };
 }
 
 function previousAttempt() {
@@ -169,7 +174,7 @@ describe('ADR-021 phase 2a: review reads use the bound revision', () => {
     const attempt = await attempts.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: null,
       outcome: {
         kind: 'answered',

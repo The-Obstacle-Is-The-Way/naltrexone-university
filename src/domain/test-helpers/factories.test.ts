@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createAttempt,
   createBookmark,
   createPracticeSession,
+  createQuestion,
   createQuestionRatingFeedback,
   createQuestionReportFeedback,
   createSubscriptionWriteCandidate,
+  defaultRevisionIdOf,
 } from './index';
 
 const UUID_PATTERN =
@@ -46,6 +49,33 @@ describe('createBookmark', () => {
   });
 });
 
+// ADR-021: every attempt and session item names a revision of its question.
+describe('defaultRevisionIdOf', () => {
+  it('derives one UUID-shaped revision id per question id', () => {
+    const questionId = crypto.randomUUID();
+
+    expect(defaultRevisionIdOf(questionId)).toMatch(UUID_PATTERN);
+    expect(defaultRevisionIdOf('q1')).toMatch(UUID_PATTERN);
+    expect(defaultRevisionIdOf(questionId)).toBe(
+      defaultRevisionIdOf(questionId),
+    );
+    expect(defaultRevisionIdOf(questionId)).not.toBe(questionId);
+    expect(defaultRevisionIdOf('q1')).not.toBe(defaultRevisionIdOf('q2'));
+  });
+
+  it('binds a fixture attempt and session item to their question default revision', () => {
+    const question = createQuestion({ id: 'q1' });
+    const attempt = createAttempt({ questionId: 'q1' });
+    const session = createPracticeSession({ questionIds: ['q1'] });
+
+    expect(question.revisionId).toBe(defaultRevisionIdOf('q1'));
+    expect(attempt.questionRevisionId).toBe(question.revisionId);
+    expect(session.questionStates[0]?.questionRevisionId).toBe(
+      question.revisionId,
+    );
+  });
+});
+
 describe('createPracticeSession', () => {
   it('defaults question states with draft fields when no overrides are provided', () => {
     const session = createPracticeSession({
@@ -55,7 +85,7 @@ describe('createPracticeSession', () => {
     expect(session.questionStates).toEqual([
       {
         questionId: 'question-1',
-        questionRevisionId: null,
+        questionRevisionId: defaultRevisionIdOf('question-1'),
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -66,7 +96,7 @@ describe('createPracticeSession', () => {
       },
       {
         questionId: 'question-2',
-        questionRevisionId: null,
+        questionRevisionId: defaultRevisionIdOf('question-2'),
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,

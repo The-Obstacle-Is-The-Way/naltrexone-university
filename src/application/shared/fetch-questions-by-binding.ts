@@ -15,8 +15,8 @@ export function bindingKey(binding: QuestionRevisionBinding): string {
 // whatever their status now, keyed by `bindingKey` (ADR-021 §3: a withdrawn
 // question stays reviewable by the learner who attempted it). The port omits a
 // missing question for every binding of it and yields one question per other
-// binding, in order, so the two lists pair up; each pair is checked, including
-// a bound binding's revision.
+// binding, in order, so the two lists pair up; each pair is checked, revision
+// included.
 export async function fetchOwnedQuestionsByBinding(
   repo: QuestionRepository,
   bindings: readonly QuestionRevisionBinding[],
@@ -39,8 +39,7 @@ export async function fetchOwnedQuestionsByBinding(
       const question = questions[index];
       if (
         question?.id !== binding.questionId ||
-        (binding.questionRevisionId !== null &&
-          question.revisionId !== binding.questionRevisionId)
+        question.revisionId !== binding.questionRevisionId
       ) {
         throw brokenContract();
       }

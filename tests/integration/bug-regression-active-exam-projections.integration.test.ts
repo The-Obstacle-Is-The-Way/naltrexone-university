@@ -159,7 +159,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: q1.id,
-      questionRevisionId: null,
+      questionRevisionId: q1.revisionId,
       practiceSessionId: examSession.id,
       outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
@@ -170,7 +170,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: q2.id,
-      questionRevisionId: null,
+      questionRevisionId: q2.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(q2.correctChoiceId),
       isCorrect: true,
@@ -233,7 +233,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: q1.id,
-      questionRevisionId: null,
+      questionRevisionId: q1.revisionId,
       practiceSessionId: examSession.id,
       outcome: answeredOutcome(q1.correctChoiceId),
       isCorrect: true,
@@ -243,7 +243,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: q2.id,
-      questionRevisionId: null,
+      questionRevisionId: q2.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(q2.correctChoiceId),
       isCorrect: true,
@@ -288,7 +288,7 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
     await attemptRepo.insert({
       userId: user.id,
       questionId: question.id,
-      questionRevisionId: null,
+      questionRevisionId: question.revisionId,
       practiceSessionId: tutorSession.id,
       outcome: answeredOutcome(question.correctChoiceId),
       isCorrect: true,
@@ -336,7 +336,7 @@ describe('BUG-192: Attempted-question history excludes active-exam attempts', ()
     await attemptRepo.insert({
       userId: user.id,
       questionId: qExam.id,
-      questionRevisionId: null,
+      questionRevisionId: qExam.revisionId,
       practiceSessionId: examSession.id,
       outcome: answeredOutcome(qExam.correctChoiceId),
       isCorrect: true,
@@ -346,7 +346,7 @@ describe('BUG-192: Attempted-question history excludes active-exam attempts', ()
     await attemptRepo.insert({
       userId: user.id,
       questionId: qAdhoc.id,
-      questionRevisionId: null,
+      questionRevisionId: qAdhoc.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(qAdhoc.correctChoiceId),
       isCorrect: true,
@@ -437,7 +437,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
     await attemptRepo.insert({
       userId: user.id,
       questionId: qExamIncorrect.id,
-      questionRevisionId: null,
+      questionRevisionId: qExamIncorrect.revisionId,
       practiceSessionId: examSession.id,
       outcome: answeredOutcome(qExamIncorrect.incorrectChoiceId),
       isCorrect: false,
@@ -446,7 +446,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
     await attemptRepo.insert({
       userId: user.id,
       questionId: qAdhocIncorrect.id,
-      questionRevisionId: null,
+      questionRevisionId: qAdhocIncorrect.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(qAdhocIncorrect.incorrectChoiceId),
       isCorrect: false,
@@ -455,7 +455,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
     await attemptRepo.insert({
       userId: user.id,
       questionId: qAdhocCorrect.id,
-      questionRevisionId: null,
+      questionRevisionId: qAdhocCorrect.revisionId,
       practiceSessionId: null,
       outcome: answeredOutcome(qAdhocCorrect.correctChoiceId),
       isCorrect: true,
@@ -575,7 +575,7 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
     await attemptRepo.insert({
       userId: user.id,
       questionId: qTutorIncorrect.id,
-      questionRevisionId: null,
+      questionRevisionId: qTutorIncorrect.revisionId,
       practiceSessionId: tutorSession.id,
       outcome: answeredOutcome(qTutorIncorrect.incorrectChoiceId),
       isCorrect: false,

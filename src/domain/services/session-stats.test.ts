@@ -3,7 +3,6 @@ import type { PracticeSessionQuestionState } from '../entities';
 import {
   computeSessionDurationSeconds,
   computeSessionStats,
-  createDefaultQuestionState,
 } from './session-stats';
 
 describe('computeSessionStats', () => {
@@ -15,7 +14,7 @@ describe('computeSessionStats', () => {
     const states: PracticeSessionQuestionState[] = [
       {
         questionId: 'q1',
-        questionRevisionId: null,
+        questionRevisionId: 'q1-revision',
         markedForReview: false,
         latestSelectedChoiceId: null,
         latestIsCorrect: null,
@@ -26,7 +25,7 @@ describe('computeSessionStats', () => {
       },
       {
         questionId: 'q2',
-        questionRevisionId: null,
+        questionRevisionId: 'q2-revision',
         markedForReview: false,
         latestSelectedChoiceId: 'choice_1',
         latestIsCorrect: true,
@@ -37,7 +36,7 @@ describe('computeSessionStats', () => {
       },
       {
         questionId: 'q3',
-        questionRevisionId: null,
+        questionRevisionId: 'q3-revision',
         markedForReview: false,
         latestSelectedChoiceId: 'choice_2',
         latestIsCorrect: false,
@@ -48,7 +47,7 @@ describe('computeSessionStats', () => {
       },
       {
         questionId: 'q4',
-        questionRevisionId: null,
+        questionRevisionId: 'q4-revision',
         markedForReview: false,
         latestSelectedChoiceId: 'choice_3',
         latestIsCorrect: null,
@@ -97,21 +96,5 @@ describe('computeSessionDurationSeconds', () => {
     const endedAt = new Date('invalid date');
 
     expect(computeSessionDurationSeconds(startedAt, endedAt)).toBe(0);
-  });
-});
-
-describe('createDefaultQuestionState', () => {
-  it('returns the default question state object', () => {
-    expect(createDefaultQuestionState('question_1')).toEqual({
-      questionId: 'question_1',
-      questionRevisionId: null,
-      markedForReview: false,
-      latestSelectedChoiceId: null,
-      latestIsCorrect: null,
-      latestAnsweredAt: null,
-      draftSelectedChoiceId: null,
-      draftSavedAt: null,
-      draftCumulativeMs: 0,
-    });
   });
 });

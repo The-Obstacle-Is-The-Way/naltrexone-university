@@ -28,7 +28,7 @@ function serializeBinding(item: QuestionRevisionBinding): string {
 function deserializeBinding(serialized: string): QuestionRevisionBinding {
   const [questionId, questionRevisionId] = JSON.parse(serialized) as [
     string,
-    string | null,
+    string,
   ];
   return { questionId, questionRevisionId };
 }

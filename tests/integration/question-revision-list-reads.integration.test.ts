@@ -53,13 +53,13 @@ async function reviseQuestion(questionId: string) {
 
 async function answer(
   userId: string,
-  question: { id: string; correctChoiceId: string },
+  question: { id: string; revisionId: string; correctChoiceId: string },
   answeredAt: Date,
 ) {
   return attempts.insert({
     userId,
     questionId: question.id,
-    questionRevisionId: null,
+    questionRevisionId: question.revisionId,
     practiceSessionId: null,
     outcome: { kind: 'answered', selectedChoiceId: question.correctChoiceId },
     isCorrect: true,
@@ -135,7 +135,11 @@ describe('ADR-021 phase 2a: list reads use the answered revision', () => {
     // The second answer selects a choice of the revision now current.
     await answer(
       user.id,
-      { id: question.id, correctChoiceId: revised.correctChoiceId },
+      {
+        id: question.id,
+        revisionId: revised.revisionId,
+        correctChoiceId: revised.correctChoiceId,
+      },
       new Date('2026-09-02T10:00:00Z'),
     );
 

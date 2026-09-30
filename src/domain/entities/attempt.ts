@@ -41,12 +41,8 @@ export type Attempt = {
   readonly id: string;
   readonly userId: string;
   readonly questionId: string;
-  /**
-   * The question revision this attempt graded (ADR-021). Null only for an
-   * attempt a deployment older than binding wrote; it reads the question's
-   * current revision.
-   */
-  readonly questionRevisionId: string | null;
+  /** The question revision this attempt graded (ADR-021). */
+  readonly questionRevisionId: string;
   readonly practiceSessionId: string | null;
   readonly outcome: AnswerOutcome;
   readonly isCorrect: boolean;

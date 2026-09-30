@@ -34,6 +34,7 @@ function createRevisedSessionFixture() {
   });
   const bound = createQuestion({
     id: questionId,
+    revisionId: crypto.randomUUID(),
     explanationMd: 'Bound explanation',
     choices: [
       createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
@@ -160,7 +161,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(updated?.questionStates).toEqual([
       {
         questionId,
-        questionRevisionId: null,
+        questionRevisionId: question.revisionId,
         markedForReview: false,
         latestSelectedChoiceId: 'c2',
         latestIsCorrect: true,

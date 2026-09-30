@@ -52,6 +52,15 @@ describe('fixture UUID integrity', () => {
     expectZUuid(choice.id, 'createChoice().id');
     expectZUuid(choice.questionId, 'createChoice().questionId');
     expectZUuid(question.id, 'createQuestion().id');
+    expectZUuid(question.revisionId, 'createQuestion().revisionId');
+    expectZUuid(
+      attempt.questionRevisionId,
+      'createAttempt().questionRevisionId',
+    );
+    expectZUuid(
+      createQuestion({ id: 'q1' }).revisionId,
+      "createQuestion({ id: 'q1' }).revisionId",
+    );
     expectZUuid(subscription.id, 'createSubscription().id');
     expectZUuid(subscription.userId, 'createSubscription().userId');
     expectZUuid(session.id, 'createPracticeSession().id');
@@ -63,6 +72,10 @@ describe('fixture UUID integrity', () => {
       expectZUuid(
         state.questionId,
         'createPracticeSession().questionStates[].questionId',
+      );
+      expectZUuid(
+        state.questionRevisionId,
+        'createPracticeSession().questionStates[].questionRevisionId',
       );
     }
   });
@@ -78,7 +91,7 @@ describe('fixture UUID integrity', () => {
     const attempt = await attemptRepository.insert({
       userId: crypto.randomUUID(),
       questionId: crypto.randomUUID(),
-      questionRevisionId: null,
+      questionRevisionId: crypto.randomUUID(),
       practiceSessionId: null,
       outcome: answeredOutcome(crypto.randomUUID()),
       isCorrect: true,

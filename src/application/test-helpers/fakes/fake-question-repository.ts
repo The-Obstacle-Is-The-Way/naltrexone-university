@@ -31,9 +31,38 @@ function validateStatusFilterInvariant(filters: QuestionFilters): void {
   }
 }
 
-// Each question is one revision. A test may list several revisions of a
-// question (same id, different revisionId): the first listed is the current
-// one, which every lookup except a bound session item reads.
+// Each listed question is one revision. A test may list several revisions of
+// a question (same id, different revisionId), the current one first. As the
+// Drizzle adapter composes a read, a revision keeps its content, difficulty
+// and choices and takes the rest from its question: slug, status, tags and
+// timestamps. `isCurrentRevision` follows the order, as the adapter derives it
+// from the question's current-revision pointer.
+export function listedRevisions(
+  questions: readonly Question[],
+): readonly Question[] {
+  const currentById = new Map<string, Question>();
+  return questions.map((revision) => {
+    const current = currentById.get(revision.id);
+    if (!current) {
+      currentById.set(revision.id, revision);
+      return revision.isCurrentRevision
+        ? revision
+        : { ...revision, isCurrentRevision: true };
+    }
+    return {
+      ...revision,
+      isCurrentRevision: false,
+      slug: current.slug,
+      status: current.status,
+      tags: current.tags,
+      createdAt: current.createdAt,
+      updatedAt: current.updatedAt,
+    };
+  });
+}
+
+// Every lookup except a bound session item or attempt reads the current
+// revision.
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   private readonly revisions: readonly Question[];
@@ -43,19 +72,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
   constructor(questions: readonly Question[]) {
-    const currentById = new Map<string, Question>();
-    for (const question of questions) {
-      if (!currentById.has(question.id)) {
-        currentById.set(question.id, question);
-      }
-    }
-    // As the adapter derives it from the question's current-revision pointer.
-    this.revisions = questions.map((question) => {
-      const isCurrentRevision = currentById.get(question.id) === question;
-      return question.isCurrentRevision === isCurrentRevision
-        ? question
-        : { ...question, isCurrentRevision };
-    });
+    this.revisions = listedRevisions(questions);
     this.questions = this.revisions.filter(
       (question) => question.isCurrentRevision,
     );
@@ -107,9 +124,7 @@ export class FakeQuestionRepository implements QuestionRepository {
   }
 
   private findByBinding(item: QuestionRevisionBinding): Question | null {
-    const current = this.questions.find((q) => q.id === item.questionId);
-    if (!current) return null;
-    if (item.questionRevisionId === null) return current;
+    if (!this.questions.some((q) => q.id === item.questionId)) return null;
     const bound = this.revisions.find(
       (q) =>
         q.id === item.questionId && q.revisionId === item.questionRevisionId,
@@ -120,10 +135,7 @@ export class FakeQuestionRepository implements QuestionRepository {
         `Revision ${item.questionRevisionId} is not a revision of question ${item.questionId}`,
       );
     }
-    // Publication belongs to the question, not to a revision.
-    return bound.status === current.status
-      ? bound
-      : { ...bound, status: current.status };
+    return bound;
   }
 
   async listPublishedCandidateIds(

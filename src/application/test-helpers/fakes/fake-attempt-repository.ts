@@ -14,6 +14,7 @@ import type {
 import type { Attempt, Question } from '@/src/domain/entities';
 import { createAttempt } from '@/src/domain/entities/attempt';
 import { isOmittedOutcome } from '@/src/domain/value-objects';
+import { listedRevisions } from './fake-question-repository';
 
 type InMemoryAttempt = Attempt & {
   practiceSessionId: string | null;
@@ -23,9 +24,8 @@ type InMemoryAttempt = Attempt & {
 
 export class FakeAttemptRepository implements AttemptRepository {
   private attempts: InMemoryAttempt[];
-  // Question metadata for the attempted-list filters. A test may list several
-  // revisions of a question (same id, different revisionId); the first listed
-  // is current, as in `FakeQuestionRepository`.
+  // Question metadata for the attempted-list filters, listed as for
+  // `FakeQuestionRepository`: several revisions of a question, current first.
   private readonly questions: readonly Question[] | null;
 
   constructor(
@@ -33,19 +33,26 @@ export class FakeAttemptRepository implements AttemptRepository {
     deps?: { questions?: readonly Question[] },
   ) {
     this.attempts = [...seed];
-    this.questions = deps?.questions ?? null;
+    this.questions = deps?.questions ? listedRevisions(deps.questions) : null;
   }
 
-  // ADR-021: the revision the attempt answered, else the current one.
+  // ADR-021: the revision the attempt answered. A listed question without it
+  // is a broken fixture, as the adapter's composite key allows none.
   private answeredQuestion(attempt: InMemoryAttempt): Question | undefined {
-    const questions = this.questions ?? [];
-    return (
-      questions.find(
-        (q) =>
-          q.id === attempt.questionId &&
-          q.revisionId === attempt.questionRevisionId,
-      ) ?? questions.find((q) => q.id === attempt.questionId)
+    const revisions = (this.questions ?? []).filter(
+      (q) => q.id === attempt.questionId,
     );
+    if (revisions.length === 0) return undefined;
+    const answered = revisions.find(
+      (q) => q.revisionId === attempt.questionRevisionId,
+    );
+    if (!answered) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Revision ${attempt.questionRevisionId} is not a revision of question ${attempt.questionId}`,
+      );
+    }
+    return answered;
   }
 
   async insert(input: AttemptInsertInput): Promise<Attempt> {
@@ -75,8 +82,6 @@ export class FakeAttemptRepository implements AttemptRepository {
       id: crypto.randomUUID(),
       userId: input.userId,
       questionId: input.questionId,
-      // Postgres falls back to the session item's or the current revision
-      // when none is given; the fake keeps null (test-double register).
       questionRevisionId: input.questionRevisionId,
       practiceSessionId: input.practiceSessionId,
       outcome: input.outcome,
