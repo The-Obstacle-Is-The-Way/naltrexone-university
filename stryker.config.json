@@ -10,8 +10,9 @@
     "!src/domain/**/*.test.ts",
     "!src/domain/**/index.ts",
     "!src/domain/test-helpers/**",
-    "src/application/shared/shuffled-choice-views.ts",
-    "src/application/shared/persist-subscription-observation.ts",
+    "src/application/shared/**/*.ts",
+    "!src/application/shared/**/*.test.ts",
+    "!src/application/shared/**/index.ts",
     "src/application/use-cases/validate-feedback-context.ts",
     "src/application/use-cases/start-practice-session.ts",
     "src/adapters/controllers/shared/idempotency-error-policy.ts"
