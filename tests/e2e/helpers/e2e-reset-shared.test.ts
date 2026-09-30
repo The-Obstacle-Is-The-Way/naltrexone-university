@@ -83,6 +83,13 @@ async function captureRejectedError(action: () => Promise<unknown>) {
   throw new Error('Expected action to reject.');
 }
 
+// What undici's fetch throws when the peer drops the connection.
+function connectionReset() {
+  return new TypeError('fetch failed', {
+    cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }),
+  });
+}
+
 function createSupport(factory: SharedSupportFactory) {
   return factory({
     createError,
@@ -223,11 +230,13 @@ describe('createSharedE2EResetSupport', () => {
     ).resolves.toBe('clerk_user_123');
   });
 
-  it('maps non-auth Clerk response failures to deterministic errors', async () => {
+  it('maps a Clerk failure that persists through its retries to a deterministic error', async () => {
     const support = createSupport(createSharedE2EResetSupport);
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response('unavailable', { status: 503 }));
+      .mockImplementation(
+        async () => new Response('unavailable', { status: 503 }),
+      );
 
     try {
       await expect(
@@ -239,6 +248,88 @@ describe('createSharedE2EResetSupport', () => {
         code: 'TEST:CLERK_API_UNAVAILABLE',
         message: 'Clerk API request failed with status 503.',
       });
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  // BUG-312: one dropped connection to Clerk failed an E2E test in its reset.
+  it.each([
+    ['a connection reset', () => Promise.reject(connectionReset())],
+    [
+      'a 503',
+      () => Promise.resolve(new Response('unavailable', { status: 503 })),
+    ],
+    [
+      'a 429',
+      () => Promise.resolve(new Response('slow down', { status: 429 })),
+    ],
+  ])('retries %s and resolves the user', async (_failure, fail) => {
+    const support = createSupport(createSharedE2EResetSupport);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementationOnce(fail)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+    try {
+      await expect(
+        support.resolveClerkUserIdByEmail({
+          clerkSecretKey: 'sk_test',
+          email: 'e2e@example.com',
+        }),
+      ).resolves.toBe('clerk_user_123');
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('gives up on a connection reset after three attempts', async () => {
+    const support = createSupport(createSharedE2EResetSupport);
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(() => Promise.reject(connectionReset()));
+
+    try {
+      await expect(
+        support.resolveClerkUserIdByEmail({
+          clerkSecretKey: 'sk_test',
+          email: 'e2e@example.com',
+        }),
+      ).rejects.toMatchObject({ code: 'TEST:CLERK_API_UNAVAILABLE' });
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it.each([
+    [
+      'an auth rejection',
+      () => Promise.resolve(new Response('denied', { status: 401 })),
+    ],
+    [
+      'an error with no transient cause',
+      () => Promise.reject(new Error('timeout')),
+    ],
+  ])('does not retry %s', async (_failure, fail) => {
+    const support = createSupport(createSharedE2EResetSupport);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(fail);
+
+    try {
+      await expect(
+        support.resolveClerkUserIdByEmail({
+          clerkSecretKey: 'sk_test',
+          email: 'e2e@example.com',
+        }),
+      ).rejects.toBeDefined();
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       fetchSpy.mockRestore();
     }

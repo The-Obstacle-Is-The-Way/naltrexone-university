@@ -1,9 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-29 — BUG-309 resolved and archived after its production release.
+**Last Updated:** 2026-09-30 — BUG-312 filed with its fix; BUG-311's fix merged.
 
-**Latest** — 2026-09-29: **BUG-309 (P2) is Resolved and archived.** Dark-theme small text clears WCAG AA contrast. Dark `--destructive` is now `0 91% 71%` and `--muted-foreground` `0 0% 55%`, and the destructive Button's dark hover is `/50`. The fix was #1227, promoted through #1229 with #1226 and #1228. Production was assigned at 23:59:13.515Z, and its stylesheet serves the new tokens. A guard measures each pairing on every surface the text sits on, and axe on the local production build went from 16 `color-contrast` nodes per size to 0. [BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md). BUG-304 and BUG-310 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-311.**
+**Latest** — 2026-09-30: **BUG-312 (P3) filed, fix in review; BUG-311's fix merged.** The E2E helpers' Clerk calls, before every test and in the run's credential check, made one request each. A dropped connection therefore failed a test in its reset and held a production release until a re-run (run 36737453772 after #1254). They now retry dropped connections, 429 and 5xx with the app's own retry policy, red first. [BUG-312](./bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md). BUG-311's fix, stopping an orphaned `apt-get` before the Playwright install retry, merged as #1255 (**5369368103** on `09dd4ab4`, after three findings, all fixed). Both ship in the next promotion. BUG-304, BUG-310, BUG-311 and BUG-312 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-313.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -26,7 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-311
+**Next Bug ID:** BUG-313
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -458,6 +458,8 @@ Every one of these was confirmed against the other branch's actual live registry
 |----|-------|----------|--------|---------|
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
+| [BUG-311](./bug-311-playwright-install-retry-blocked-by-orphaned-apt.md) | The Playwright install retry fails on a lock held by the timed-out apt-get | P3 | In Progress | Fix in review. When the Ubuntu mirror stalls, `timeout` cannot stop the root `apt-get` that `install-deps` started through sudo, so the single retry fails at once on apt's lists lock and the required `test` check goes red. The fix stops the leftover `apt-get` before retrying. |
+| [BUG-312](./bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md) | E2E helpers' Clerk calls do not retry a transient failure | P3 | In Progress | Fix in review. The per-test reset's Clerk lookup, and the health check's, made one request, so a dropped connection failed a test and held a production release until a re-run (run 36737453772). They now retry dropped connections, 429 and 5xx with the app's own policy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

@@ -1,9 +1,8 @@
 import postgres from 'postgres';
 import {
   CLERK_API_BASE,
-  CLERK_API_TIMEOUT_MS,
   type ClerkUserListResponse,
-  fetchWithTimeout,
+  fetchClerkWithRetry,
 } from './credential-health-check';
 
 type SharedRequiredEnvKey =
@@ -192,11 +191,9 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
 
     let response: Response;
     try {
-      response = await fetchWithTimeout(
-        url,
-        { headers: { Authorization: `Bearer ${input.clerkSecretKey}` } },
-        CLERK_API_TIMEOUT_MS,
-      );
+      response = await fetchClerkWithRetry(url, {
+        headers: { Authorization: `Bearer ${input.clerkSecretKey}` },
+      });
     } catch (error) {
       throw createError(
         clerkApiUnavailableError.code,
