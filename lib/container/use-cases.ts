@@ -44,6 +44,7 @@ import {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RecordRenewalNoticeProviderOutcomeUseCase,
   RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
   SendDueRenewalNoticesUseCase,
@@ -254,6 +255,11 @@ export function createUseCaseFactories(input: {
         gateways.createSha256Hasher(),
         primitives.logger,
         primitives.now,
+      ),
+    createRecordRenewalNoticeProviderOutcomeUseCase: () =>
+      new RecordRenewalNoticeProviderOutcomeUseCase(
+        repositories.createRenewalNoticeDeliveryRepository(),
+        primitives.logger,
       ),
     createRequeueRenewalNoticeDeliveryUseCase: () =>
       new RequeueRenewalNoticeDeliveryUseCase(

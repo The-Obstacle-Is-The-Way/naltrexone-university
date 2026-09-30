@@ -16,7 +16,30 @@ export type RenewalNoticeFailureClass =
   | 'provider_outcome_unknown'
   | 'stale_processing_claim'
   | 'notice_superseded'
-  | 'notice_deadline_passed';
+  | 'notice_deadline_passed'
+  | RenewalNoticeProviderFailureClass;
+
+// DEBT-414 F07: what the email provider later reports about a message it
+// accepted. A bounce, a send failure or a suppressed address means the notice
+// did not reach its reader.
+export type RenewalNoticeProviderFailureClass =
+  | 'provider_bounced'
+  | 'provider_send_failed'
+  | 'provider_suppressed';
+
+export type RenewalNoticeProviderOutcome =
+  | { kind: 'delivered' }
+  | {
+      kind: 'failed';
+      failureClass: RenewalNoticeProviderFailureClass;
+      failureCode: string;
+    };
+
+// 'unknown': no notice has that provider id, so the email was not a notice.
+export type RecordRenewalNoticeProviderOutcomeResult =
+  | 'recorded'
+  | 'unchanged'
+  | 'unknown';
 
 export type MarkRenewalNoticeDeliveryFailureInput = {
   id: string;
@@ -51,6 +74,19 @@ export interface RenewalNoticeDeliveryRepository {
   markOutcomeUnknown(
     input: MarkRenewalNoticeDeliveryFailureInput,
   ): Promise<RenewalNoticeDelivery>;
+  /**
+   * Records the provider's later report on an accepted notice, found by the
+   * id the provider returned on acceptance. Delivery moves `accepted` to
+   * `delivered`. A failure moves `accepted` or `delivered` to
+   * `terminal_failure`, because a late bounce means the notice did not arrive.
+   * Anything else, including a delivery report after a failure, is unchanged,
+   * so redelivered or reordered reports are harmless.
+   */
+  recordProviderOutcome(input: {
+    providerEventId: string;
+    outcome: RenewalNoticeProviderOutcome;
+    observedAt: Date;
+  }): Promise<RecordRenewalNoticeProviderOutcomeResult>;
   markStaleProcessingUnknown(input: {
     staleBefore: Date;
     observedAt: Date;

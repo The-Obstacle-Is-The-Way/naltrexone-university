@@ -3,6 +3,7 @@ import {
   ClerkAuthGateway,
   DrizzleRateLimiter,
   ResendTransactionalEmailGateway,
+  ResendWebhookNotConfiguredError,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -56,6 +57,7 @@ import {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RecordRenewalNoticeProviderOutcomeUseCase,
   RequeueRenewalNoticeDeliveryUseCase,
   SendDueRenewalNoticesUseCase,
   SetBookmarkUseCase,
@@ -289,6 +291,10 @@ describe('container factories', () => {
     const emailGateway = container.createTransactionalEmailGateway();
     expect(emailGateway).toBeInstanceOf(ResendTransactionalEmailGateway);
     expect(emailGateway.isConfigured()).toBe(false);
+    // DEBT-414 F07: unconfigured, the Resend webhook refuses every report.
+    expect(() =>
+      container.createResendWebhookVerifier()('{}', new Headers()),
+    ).toThrow(ResendWebhookNotConfiguredError);
 
     expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
       CheckEntitlementUseCase,
@@ -362,6 +368,9 @@ describe('container factories', () => {
     expect(
       container.createRequeueRenewalNoticeDeliveryUseCase(),
     ).toBeInstanceOf(RequeueRenewalNoticeDeliveryUseCase);
+    expect(
+      container.createRecordRenewalNoticeProviderOutcomeUseCase(),
+    ).toBeInstanceOf(RecordRenewalNoticeProviderOutcomeUseCase);
     expect(container.createSendDueRenewalNoticesUseCase()).toBeInstanceOf(
       SendDueRenewalNoticesUseCase,
     );

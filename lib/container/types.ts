@@ -63,6 +63,7 @@ import type {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RecordRenewalNoticeProviderOutcomeUseCase,
   RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
   SendDueRenewalNoticesUseCase,
@@ -138,6 +139,10 @@ export type GatewayFactories = {
   createRateLimiter: () => RateLimiter;
   createSha256Hasher: () => Sha256Hasher;
   createTransactionalEmailGateway: () => TransactionalEmailGateway;
+  createResendWebhookVerifier: () => (
+    rawBody: string,
+    headers: Headers,
+  ) => unknown;
 };
 
 export type UseCaseFactories = {
@@ -147,6 +152,7 @@ export type UseCaseFactories = {
   createPortalSessionUseCase: () => CreatePortalSessionUseCase;
   createTrialPaymentMethodSetupSessionUseCase: () => CreateTrialPaymentMethodSetupSessionUseCase;
   createDispatchRenewalNoticeDeliveryUseCase: () => DispatchRenewalNoticeDeliveryUseCase;
+  createRecordRenewalNoticeProviderOutcomeUseCase: () => RecordRenewalNoticeProviderOutcomeUseCase;
   createRequeueRenewalNoticeDeliveryUseCase: () => RequeueRenewalNoticeDeliveryUseCase;
   createSendDueRenewalNoticesUseCase: () => SendDueRenewalNoticesUseCase;
   createRecordRenewalConsentUseCase: () => RecordRenewalConsentUseCase;
