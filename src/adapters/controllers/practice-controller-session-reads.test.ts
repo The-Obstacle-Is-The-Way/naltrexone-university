@@ -286,6 +286,7 @@ describe('practice-controller', () => {
             {
               isAvailable: true,
               withdrawn: false,
+              superseded: false,
               questionId: '22222222-2222-2222-2222-222222222222',
               slug: 'question-1',
               stemMd: 'Stem',

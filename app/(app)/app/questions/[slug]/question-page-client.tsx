@@ -11,6 +11,7 @@ import {
   type QuestionReportDialogProps,
 } from '@/components/question/question-report-dialog';
 import { QuestionSurfaceBody } from '@/components/question/question-surface-body';
+import { QuestionUpdateNotice } from '@/components/question/question-update-notice';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -193,6 +194,10 @@ export function QuestionView(props: QuestionViewProps) {
   // Pattern Registry F-11: a question withdrawn after the learner answered it
   // stays reviewable, marked, with navigation only (ADR-021 §3).
   const isWithdrawn = isReviewMode && props.question?.withdrawn === true;
+  // Pattern Registry F-12: updated since the learner saw it; F-11 takes
+  // precedence.
+  const isSuperseded =
+    isReviewMode && !isWithdrawn && props.question?.superseded === true;
   const isSessionReviewUnansweredReveal = sessionUnansweredReveal !== null;
   const isReviewHydrationError =
     isReviewMode && reviewHydrationState === 'hydration_error';
@@ -375,8 +380,11 @@ export function QuestionView(props: QuestionViewProps) {
           onSelectChoice={props.onSelectChoice}
           feedback={questionSurfaceFeedback}
           beforeQuestionCard={
-            isWithdrawn || isSessionReviewUnansweredReveal ? (
+            isWithdrawn || isSuperseded || isSessionReviewUnansweredReveal ? (
               <>
+                {isSuperseded && props.question ? (
+                  <QuestionUpdateNotice slug={props.question.slug} />
+                ) : null}
                 {isWithdrawn ? (
                   <Card role="status" className="gap-0 p-4 text-sm">
                     <p className="font-medium text-foreground">

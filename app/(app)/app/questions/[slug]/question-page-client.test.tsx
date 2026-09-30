@@ -277,6 +277,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         selectedChoiceId={null}
@@ -311,6 +312,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         selectedChoiceId={null}
@@ -366,6 +368,7 @@ describe('QuestionView', () => {
           stemMd: question.stemMd,
           difficulty: question.difficulty,
           withdrawn: false,
+          superseded: false,
           choices: question.choices.map((choice) => ({
             id: choice.id,
             label: choice.label,
@@ -461,6 +464,7 @@ describe('QuestionView', () => {
           stemMd: 'Question stem',
           difficulty: 'easy',
           withdrawn: false,
+          superseded: false,
           choices: [
             { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A text' },
             { id: fixtureChoiceBId, label: 'B', textMd: 'Choice B text' },

@@ -9,6 +9,11 @@ export type Question = {
   readonly id: string;
   /** The revision whose content this carries (ADR-021). */
   readonly revisionId: string;
+  /**
+   * Whether that revision is still the question's current one. A review of a
+   * session item or attempt may carry an older revision (ADR-021 §3).
+   */
+  readonly isCurrentRevision: boolean;
   readonly slug: string;
   readonly stemMd: string;
   readonly explanationMd: string;

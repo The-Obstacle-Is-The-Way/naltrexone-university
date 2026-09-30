@@ -3,19 +3,19 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-30 UTC
 
-**Latest** — 2026-09-30 UTC: ADR-021 phase 2b, prerequisites. Every writer now names the revision it wrote against, so a question can safely gain a second revision; the phase 2b plan is decided ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2b-prerequisites-every-writer-names-its-revision--2026-09-30)).
+**Latest** — 2026-09-30 UTC: ADR-021 phase 2b, first step. Reviews say when a question has been updated since the learner saw it (Pattern Registry F-12), so a later answer-key correction cannot leave a review presenting the superseded key as correct ([DEBT-484](./debt-484-question-rewrite-history-identity.md#phase-2b-first-step-reviews-say-when-a-question-has-been-updated--2026-09-30)).
 - **What changes.**
-  - An attempt records the revision it was graded against, instead of the question's current revision at insert time. Red first on real Postgres: an answer graded against revision 1 after revision 2 became current was refused by `attempts_selected_choice_revision_fk`.
-  - The E2E reset binds its baseline rows to the current revision and reads that revision's choices; its baseline check requires it.
-  - The unused `questions.choices` relation, which joined on `question_id`, is removed.
-- **Plan (decided under the owner's delegation).** Reviews of an answered revision that is no longer current gain an update notice first, because an answer-key correction would otherwise show the superseded key as correct. Only then does one PR make the writers append-only (migration `0042` and the appending seed). Scoring is unchanged.
-- **Previous promotion.** #1232 (`02afeeb3`) carried #1230 (**5360039698**, no findings), which closed and archived BUG-309, and #1231 (**5360217168**, no findings), which takes Biome's configuration schema from the installed CLI, so `pnpm lint` reports no diagnostics.
-  - The promotion's proof was written into its body at 01:13:52Z, before the merge at 01:13:56Z, and its review raised no findings.
-  - Release verified: main CI **36654119048** `test` **01:26:01Z**; Ready **01:15:05.880Z**, held without alias until its check completed; production assigned **01:26:03.429Z**; matching trees (`c0921780`); healthy production.
+  - A question read carries `isCurrentRevision`, and the standalone review and completed-session feedback report `superseded`.
+  - The standalone review page and post-exam review show the update notice, with a link to the current version. A withdrawn question shows F-11 only.
+  - It renders nothing while every question has one revision. Captures on the local production build had zero axe violations.
+- **Plan.** Active-session answer feedback gains the same notice next, and then the writers become append-only.
+- **Previous promotion.** #1234 (`9c8572d5`) carried #1233 (**5360671710** on `ea7e78a3`), the phase 2b prerequisites. Its one finding was accepted: the register cites a direct test of the fake.
+  - The promotion's proof was written into its body at 02:32:59Z, before the merge at 02:33:04Z, and its review raised no findings.
+  - Release verified: main CI **36660362555** `test` **02:45:43Z**; Ready **02:34:45.726Z**, held without alias until its check completed; production assigned **02:45:46.003Z**; matching trees (`262e47e8`); healthy production.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
-  - Later, with phase 2b: whether an answer-key correction should regrade earlier attempts. Until decided, an attempt keeps its grade.
+  - Whether an answer-key correction should regrade earlier attempts. Until decided, an attempt keeps its grade.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
 

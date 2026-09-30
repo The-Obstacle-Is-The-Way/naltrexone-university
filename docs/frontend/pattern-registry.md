@@ -923,6 +923,40 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 
 **Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, and the active session page. An active session's navigator and exam Review & Submit list still show the S-2 treatment for a withdrawn item; that is the increment's next slice.
 
+
+### F-12: Update Notice (a question updated after the learner saw it)
+
+Marks a review whose question has changed since the learner saw it: a newer revision is now current (ADR-021). The review still shows the revision the learner answered, because that is the record of what they saw and were graded against. It says plainly that a newer version exists and links to it. This follows medical publishing's correction practice: the original stays readable, is marked, and points to the correction.
+
+A superseded answer key is the case that matters. Without the notice, a review would present the old key as correct. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
+
+**Review views** (the standalone review page and post-exam review): the S-1 **Status notice** that F-11 uses, first in the question region, above the stem:
+
+```text
+<Card role="status" className="gap-0 p-4 text-sm">
+```
+
+- **Heading line:** `font-medium text-foreground`: "This question has been updated."
+- **Body line:** `text-muted-foreground`: "This is the version you saw. Its answer or explanation may have changed."
+- **Action:** an L-5 Banner Inline Link, "Practice the current version", to the question's standalone page (`toQuestionRoute(slug)`), which shows the current revision.
+  - Classes: L-5's `underline font-medium transition-colors hover:text-foreground`, plus the canonical `rounded-sm ring-focus`.
+- The answer, the correct choice and the explanation show as the learner saw them.
+- Bookmark, report and rating stay available. They belong to the question, which is still published.
+
+**Precedence:** a withdrawn question shows F-11 only. It is no longer offered, so there is no current version to link to.
+
+**Not marked:**
+- **List rows** (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
+- **An active session's answer feedback** is a separate slice (DEBT-484, phase 2b plan). It must land before any question can gain a second revision.
+
+**Rules:**
+- Reuses S-1 Status notice, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
+- Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`). No new `contrast-policy.md` ledger entry is required.
+- `role="status"` announces the notice politely; it is never focused automatically.
+- Scoring is unchanged: the attempt keeps the grade it received. Whether a key correction regrades history is an owner decision recorded in DEBT-484.
+
+**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, and DEBT-484 phase 2b. In use: the standalone review page and post-exam review. It renders nothing while every question has one revision.
+
 ---
 
 ## Part 7: Metadata & Decoration
@@ -1609,4 +1643,5 @@ Compact lookup for code reviews and implementation.
 | F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive` |
 | F-4 | Toast | — | `rounded-xl` | varies by tone |
 | F-11 | Withdrawal Notice | — (non-interactive; list rows keep I-1 / I-2 hover) | `rounded-2xl` (S-1) | `border` (S-1) |
+| F-12 | Update Notice | L-5 link `hover:text-foreground` | `rounded-2xl` (S-1) | `border` (S-1) |
 | M-1 | Badge/Pill | — | `rounded-full` | `border-border/60` |

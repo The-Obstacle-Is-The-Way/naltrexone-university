@@ -31,6 +31,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -77,6 +78,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -131,6 +133,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -189,6 +192,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -241,6 +245,7 @@ describe('useQuestionPageModel (browser)', () => {
         stemMd: 'Stem',
         difficulty: 'easy',
         withdrawn: false,
+        superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
