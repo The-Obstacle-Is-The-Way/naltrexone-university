@@ -442,7 +442,7 @@ Both bugs identified during the BS-011 audit have been fixed:
 
 That conclusion applied to the 2026-03-17 audit. Current withdrawal/release and
 historical-identity gaps remain tracked in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md)
-and [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md).
+and [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md).
 
 ---
 

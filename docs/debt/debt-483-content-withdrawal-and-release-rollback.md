@@ -363,7 +363,7 @@ This record closes after ADR-021's phase 4 (releases, overlay and rollback), wit
 
 ## Related
 
-- [DEBT-484](debt-484-question-rewrite-history-identity.md)
+- [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
 - [Parked DEBT-446](../_archive/debt/debt-446-local-db-script-target-guards.md):
   existing freshness-related scope remains subject to its owner ruling; this
   record does not silently activate unrelated parked work.
