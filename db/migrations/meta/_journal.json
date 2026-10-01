@@ -316,6 +316,20 @@
       "when": 1790763215870,
       "tag": "0044_adr021_drop_legacy_question_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790855380726,
+      "tag": "0045_adr021_question_withdrawals",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1790867710536,
+      "tag": "0046_adr021_withdrawal_backfill_repair",
+      "breakpoints": true
     }
   ]
 }

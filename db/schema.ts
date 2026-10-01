@@ -776,6 +776,42 @@ export const choices = pgTable(
   }),
 );
 
+// question_withdrawals (ADR-021 decision 5): the permanent half of the
+// revocation overlay, so no release, older or newer, can make a withdrawn
+// revision selectable again. Withdrawal is per question (#953): every
+// revision of a withdrawn question has a row. Migration 0045 recorded one for
+// every revision of each question archived before it.
+export const QUESTION_WITHDRAWALS_QUESTION_REVISION_FK =
+  'question_withdrawals_question_revision_fk';
+export const questionWithdrawals = pgTable(
+  'question_withdrawals',
+  {
+    questionId: uuid('question_id').notNull(),
+    questionRevisionId: uuid('question_revision_id').notNull(),
+    reason: text('reason').notNull(),
+    authority: text('authority').notNull(),
+    effectiveAt: timestamp('effective_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.questionId, t.questionRevisionId] }),
+    questionRevisionFk: foreignKey({
+      name: QUESTION_WITHDRAWALS_QUESTION_REVISION_FK,
+      columns: [t.questionRevisionId, t.questionId],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }).onDelete('cascade'),
+    reasonChk: check(
+      'question_withdrawals_reason_chk',
+      sql`${t.reason} ~ '[^[:space:]]'`,
+    ),
+    authorityChk: check(
+      'question_withdrawals_authority_chk',
+      sql`${t.authority} ~ '[^[:space:]]'`,
+    ),
+  }),
+);
+
 // tags
 export const tags = pgTable(
   'tags',
