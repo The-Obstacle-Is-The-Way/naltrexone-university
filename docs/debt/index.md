@@ -3,16 +3,22 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-01 UTC
 
-**Latest** — 2026-10-01 UTC: DEBT-414 F15c. The renewal acknowledgment links the online cancellation route, support mail, Terms and Privacy, as the scheduled notices do ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)).
-- **Gap.** F06 gave the scheduled notices their links and left the acknowledgment's to F15. F15b added the acknowledgment's cancellation policy but no links. The acknowledgment named Terms and Privacy as plain text and never gave the online cancellation route, which California § 17602(d) requires for an online consent.
-- **Fix.** The acknowledgment renders through F06's line renderer. It links the Billing page ("Cancel online on the Billing page"), the support mail, the Terms and the Privacy page, as anchors in HTML and URLs in text, with interpolated text still escaped. No consent text or version changes; each delivery's immutable payload snapshot keeps what that message said.
-- **Receipts.** The exact-output test failed against the old template first, and a cache-free Stryker run on the use case scored 100% (61 mutants).
-- **Previous change.** DEBT-465 Part 2, wave 4f, completing the widening: #1278 (**5375621874** on `2b696631`, no findings; merged `d755a4ac`), promoted through #1279 (`1ed8ae2d`, review approved with no findings). Release verified: main CI **36825288046** `test` **06:45:22Z**; production assigned **06:45:24.774Z**; matching trees `ae7ab80b`; healthy production.
+**Latest** — 2026-10-01 UTC: DEBT-414 F15c is in production, and Massachusetts' second annual notice (F19a) is recorded as an owner decision ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)).
+- **F15c released.** The renewal acknowledgment links the online cancellation route, support mail, Terms and Privacy.
+  - #1280 (**5376219929** on `eb28f9ba`; one Minor finding, the mutation-scope wording, fixed; merged `49c673bc`), promoted through #1281 (`2d7b05c9`, review approved with no findings).
+  - Release verified: main CI **36832474107** `test` **08:00:15Z**; production assigned **08:00:18.861Z**; matching trees `3465b362`; healthy production.
+- **What remains engineering-actionable in DEBT-414.** A survey of the whole record found that only F19 is open to engineering. Every other open item waits on the owner, counsel, a tax adviser or a live dashboard.
+  - **F19a**, Massachusetts' 5–30-day notice for annual plans, is an owner decision, below. The owner's 2026-09-27 go named F01–F07 and F15, not F19, whose record says "Code/copy proposed only". It first asks whether Stripe's own renewal emails already meet the duty, which only the owner can check in production.
+  - **F19b**, calendar dates in the trial copy, changes consent evidence and, under the DEBT-478 D6 precedent, merges only on the owner's instruction.
+- **Also released.** BUG-304's fix, through #1283; the bug register's Latest records it.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
   - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **New: Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05 asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Today both annual notices go out together at 35 days.
+    - First check whether Stripe's upcoming-renewal email is enabled in production and states the amount, the date and how to cancel. If it does, it may meet the duty.
+    - If not, the recommendation is to move the annual reminder to about 25 days before renewal, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. That needs no schema change.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID remains DEBT-489.**
 

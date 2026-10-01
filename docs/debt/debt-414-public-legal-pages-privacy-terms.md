@@ -724,6 +724,13 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
 - No consent text or version changes: the acknowledgment records consent already given, and each delivery's immutable payload snapshot keeps what that message said.
 - Receipts: the exact-output test failed against the old template first, and a cache-free Stryker run on `send-renewal-acknowledgment.ts` scored 100% (61 mutants).
 
+**F19, status (2026-10-01).** A survey of this record found F19 the only open finding that engineering could act on. Every other open item waits on the owner, counsel, a tax adviser or a live dashboard. F19 is not in the owner's 2026-09-27 go (F01-F07, F15), and its own row reads "Code/copy proposed only".
+- **F19a, Massachusetts' 5–30-day notice for annual plans.** This is now an open owner decision in the register.
+  - First, check whether Stripe's upcoming-renewal email is enabled in production and states the amount, the date and how to cancel.
+  - If not, the recommendation is to move the annual reminder to about 25 days before renewal, with its own send-by limit and missed-deadline alert, and keep the renewal notice at 35 days for the 30–40-day states. That needs no schema change.
+- **F19b, calendar dates in the trial copy.** This changes consent evidence and merges only on the owner's instruction (the DEBT-478 D6 precedent).
+- **F19c and F19d, per-charge notices and the preferred channel.** These wait on a live provider specimen and on counsel.
+
 **F05, the billing portal's features set in code (2026-09-28).**
 - **Reproduction.** Every portal session used the Dashboard's default configuration. In TEST mode that configuration enables payment-method updates, with plan changes off and cancellation at period end; the August 13 record says live also enables plan changes. A trial learner without a card could therefore add one in the portal, and the trial would convert to paid without the consent record the add-card flow keeps.
 - **Profiles.** The billing use case opens the portal with a profile. It is `trial` while the subscription is in trial, or when no subscription is recorded yet (failing closed), and `paid` otherwise. A trial learner can add a first card only through the add-card flow.
