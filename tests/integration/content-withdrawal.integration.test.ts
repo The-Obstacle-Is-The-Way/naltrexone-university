@@ -26,7 +26,11 @@ afterAll(async () => {
   await closeConnection(sql);
 });
 
-function source(slug: string, status: schema.QuestionStatus = 'published') {
+function source(
+  slug: string,
+  status: schema.QuestionStatus = 'published',
+  stem = 'A synthetic withdrawal task.',
+) {
   return {
     absolutePath: `/tmp/${slug}.mdx`,
     raw: [
@@ -42,12 +46,23 @@ function source(slug: string, status: schema.QuestionStatus = 'published') {
       '  - {label: B, text: Choice B, correct: true}',
       '---',
       '## Stem',
-      'A synthetic withdrawal task.',
+      stem,
       '## Explanation',
       'A synthetic withdrawal explanation.',
       '### Reference',
       'Synthetic citation.',
     ].join('\n'),
+  };
+}
+
+// The same file under the synthetic placeholder directory.
+function placeholderSource(
+  slug: string,
+  status: schema.QuestionStatus = 'published',
+) {
+  return {
+    ...source(slug, status),
+    absolutePath: path.resolve('content/questions/placeholder', `${slug}.mdx`),
   };
 }
 
@@ -99,8 +114,38 @@ async function snapshot(questionId: string) {
     .from(schema.questionTags)
     .where(eq(schema.questionTags.questionId, questionId))
     .orderBy(schema.questionTags.tagId);
-  return { question, choices, attempts, tags };
+  const withdrawals = await db
+    .select()
+    .from(schema.questionWithdrawals)
+    .where(eq(schema.questionWithdrawals.questionId, questionId))
+    .orderBy(schema.questionWithdrawals.questionRevisionId);
+  return { question, choices, attempts, tags, withdrawals };
 }
+
+// One withdrawal per revision of the question, as snapshot() orders them.
+async function withdrawalsOfEveryRevision(
+  questionId: string,
+  record: { reason: string; authority: string },
+) {
+  const revisions = await db
+    .select({ id: schema.questionRevisions.id })
+    .from(schema.questionRevisions)
+    .where(eq(schema.questionRevisions.questionId, questionId))
+    .orderBy(schema.questionRevisions.id);
+  return revisions.map((revision) => ({
+    questionId,
+    questionRevisionId: revision.id,
+    ...record,
+    effectiveAt: expect.any(Date),
+  }));
+}
+
+const ORDER = { reason: 'Unsafe dosing guidance', authority: 'Clinical lead' };
+const ORDER_ARGS = ['--reason', ORDER.reason, '--authority', ORDER.authority];
+const SEED_RECORD = {
+  reason: 'archived in seed input',
+  authority: 'content seed',
+};
 
 function withdraw(args: string[], env = process.env) {
   return spawnSync(
@@ -115,12 +160,15 @@ describe('explicit content withdrawal command', () => {
     const question = await arrangeQuestion(true);
     const before = await snapshot(question.id);
 
-    const result = withdraw(['--qid', question.slug]);
+    const result = withdraw(['--qid', question.slug, ...ORDER_ARGS]);
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('dry-run');
     expect(result.stdout).toContain(question.slug);
+    expect(result.stdout).toContain(ORDER.reason);
+    expect(result.stdout).toContain(ORDER.authority);
     expect(result.stdout).toContain('archive=1');
+    expect(result.stdout).toContain('revisionsToWithdraw=2');
     expect(await snapshot(question.id)).toEqual(before);
   });
 
@@ -136,12 +184,15 @@ describe('explicit content withdrawal command', () => {
       first.slug,
       '--qid',
       second.slug,
+      ...ORDER_ARGS,
       '--apply',
     ]);
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('archived=2');
+    expect(result.stdout).toContain('revisionsWithdrawn=4');
     const after = await snapshot(first.id);
+    expect(before.withdrawals).toEqual([]);
     expect(after).toEqual({
       ...before,
       question: {
@@ -149,6 +200,7 @@ describe('explicit content withdrawal command', () => {
         status: 'archived',
         updatedAt: expect.any(Date),
       },
+      withdrawals: await withdrawalsOfEveryRevision(first.id, ORDER),
     });
     expect((await snapshot(second.id)).question?.status).toBe('archived');
     expect(await snapshot(untouched.id)).toEqual(untouchedBefore);
@@ -164,6 +216,7 @@ describe('explicit content withdrawal command', () => {
       question.slug,
       '--qid',
       unknown,
+      ...ORDER_ARGS,
       '--apply',
     ]);
 
@@ -172,17 +225,38 @@ describe('explicit content withdrawal command', () => {
     expect(await snapshot(question.id)).toEqual(before);
   });
 
-  it('replays withdrawal without changing archived rows again', async () => {
+  it('replays withdrawal without changing archived rows or their first record', async () => {
     const question = await arrangeQuestion(true);
     await syncQuestionsFromFiles(db, [source(question.slug, 'archived')]);
     const before = await snapshot(question.id);
 
-    const result = withdraw(['--qid', question.slug, '--apply']);
+    const result = withdraw(['--qid', question.slug, ...ORDER_ARGS, '--apply']);
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('archived=0');
     expect(result.stdout).toContain('alreadyArchived=1');
+    expect(result.stdout).toContain('revisionsWithdrawn=0');
     expect(await snapshot(question.id)).toEqual(before);
+  });
+
+  // An archive made by code older than migration 0045 recorded no withdrawal.
+  it('records the withdrawal of a question archived without one', async () => {
+    const question = await arrangeQuestion(true);
+    await db
+      .update(schema.questions)
+      .set({ status: 'archived' })
+      .where(eq(schema.questions.id, question.id));
+    const before = await snapshot(question.id);
+
+    const result = withdraw(['--qid', question.slug, ...ORDER_ARGS, '--apply']);
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain('alreadyArchived=1');
+    expect(result.stdout).toContain('revisionsWithdrawn=2');
+    expect(await snapshot(question.id)).toEqual({
+      ...before,
+      withdrawals: await withdrawalsOfEveryRevision(question.id, ORDER),
+    });
   });
 
   it.each([
@@ -191,6 +265,20 @@ describe('explicit content withdrawal command', () => {
     [['--qid', '*', '--apply'], /Invalid question QID/],
     [['--qid', 'same-id', '--qid', 'same-id'], /Duplicate question QID/],
     [['--qid', 'valid-id', '--all'], /Unknown argument/],
+    [['--qid', 'valid-id', '--authority', 'Owner'], /--reason is required/],
+    [['--qid', 'valid-id', '--reason', 'Unsafe'], /--authority is required/],
+    [
+      ['--qid', 'valid-id', '--reason', '--apply'],
+      /Missing value for --reason/,
+    ],
+    [
+      ['--qid', 'valid-id', '--authority', ' '],
+      /Missing value for --authority/,
+    ],
+    [
+      ['--qid', 'valid-id', '--reason', 'A', '--reason', 'B'],
+      /Duplicate --reason/,
+    ],
   ] as const)('rejects ambiguous arguments %j', (args, error) => {
     const result = withdraw([...args]);
     expect(result.status).toBe(1);
@@ -200,7 +288,10 @@ describe('explicit content withdrawal command', () => {
   it('requires an explicit database target without dotenv fallback', () => {
     const env = { ...process.env };
     delete env.DATABASE_URL;
-    const result = withdraw(['--qid', 'valid-id', '--apply'], env);
+    const result = withdraw(
+      ['--qid', 'valid-id', ...ORDER_ARGS, '--apply'],
+      env,
+    );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('An explicit DATABASE_URL is required');
   });
@@ -240,6 +331,84 @@ it('keeps an unchanged archived seed idempotent', async () => {
   expect(await snapshot(question.id)).toEqual(before);
 });
 
+describe('seed withdrawal records', () => {
+  it('records every revision when seed input archives a question', async () => {
+    const question = await arrangeQuestion(true);
+
+    await syncQuestionsFromFiles(db, [source(question.slug, 'archived')]);
+
+    expect((await snapshot(question.id)).withdrawals).toEqual(
+      await withdrawalsOfEveryRevision(question.id, SEED_RECORD),
+    );
+  });
+
+  it('records a revision appended to an archived question', async () => {
+    const question = await arrangeQuestion();
+    await syncQuestionsFromFiles(db, [source(question.slug, 'archived')]);
+
+    await expect(
+      syncQuestionsFromFiles(db, [
+        source(question.slug, 'archived', 'A corrected withdrawal task.'),
+      ]),
+    ).resolves.toMatchObject({ revised: 1 });
+
+    expect((await snapshot(question.id)).withdrawals).toEqual(
+      await withdrawalsOfEveryRevision(question.id, SEED_RECORD),
+    );
+  });
+
+  // An archive made by code older than migration 0045 recorded no withdrawal.
+  it('records an archived question without one when its unchanged seed is replayed', async () => {
+    const question = await arrangeQuestion();
+    await db
+      .update(schema.questions)
+      .set({ status: 'archived' })
+      .where(eq(schema.questions.id, question.id));
+
+    await expect(
+      syncQuestionsFromFiles(db, [source(question.slug, 'archived')]),
+    ).resolves.toMatchObject({ skipped: 1 });
+
+    expect((await snapshot(question.id)).withdrawals).toEqual(
+      await withdrawalsOfEveryRevision(question.id, SEED_RECORD),
+    );
+  });
+
+  it('records a question first seeded as archived', async () => {
+    const slug = `it-withdraw-${randomUUID()}`;
+
+    await expect(
+      syncQuestionsFromFiles(db, [source(slug, 'archived')]),
+    ).resolves.toMatchObject({ inserted: 1 });
+
+    const [inserted] = await db
+      .select({ id: schema.questions.id })
+      .from(schema.questions)
+      .where(eq(schema.questions.slug, slug));
+    if (!inserted) throw new Error(`Seed did not insert ${slug}`);
+    cleanup.questionIds.push(inserted.id);
+    expect((await snapshot(inserted.id)).withdrawals).toEqual(
+      await withdrawalsOfEveryRevision(inserted.id, SEED_RECORD),
+    );
+  });
+
+  it('refuses to restore a withdrawn synthetic placeholder', async () => {
+    const question = await arrangeQuestion(
+      false,
+      `placeholder-withdraw-${randomUUID()}`,
+    );
+    const result = withdraw(['--qid', question.slug, ...ORDER_ARGS, '--apply']);
+    expect(result.status, result.stderr).toBe(0);
+    const before = await snapshot(question.id);
+
+    await expect(
+      syncQuestionsFromFiles(db, [placeholderSource(question.slug)]),
+    ).rejects.toThrow(/Refusing to reactivate withdrawn question/);
+
+    expect(await snapshot(question.id)).toEqual(before);
+  });
+});
+
 it.each([
   ['dedicated path and prefix', true, true],
   ['prefix only', false, true],
@@ -251,16 +420,19 @@ it.each([
       false,
       `${prefix ? 'placeholder' : 'it'}-withdraw-${randomUUID()}`,
     );
-    await syncQuestionsFromFiles(db, [source(question.slug, 'archived')]);
+    const file = (status: schema.QuestionStatus) =>
+      dedicatedPath
+        ? placeholderSource(question.slug, status)
+        : source(question.slug, status);
+    await syncQuestionsFromFiles(db, [file('archived')]);
     const before = await snapshot(question.id);
-    const file = source(question.slug);
-    if (dedicatedPath) {
-      file.absolutePath = path.resolve(
-        'content/questions/placeholder',
-        `${question.slug}.mdx`,
-      );
-    }
-    const sync = syncQuestionsFromFiles(db, [file]);
+    // Only authored content records a withdrawal when the seed archives it.
+    expect(before.withdrawals).toEqual(
+      dedicatedPath && prefix
+        ? []
+        : await withdrawalsOfEveryRevision(question.id, SEED_RECORD),
+    );
+    const sync = syncQuestionsFromFiles(db, [file('published')]);
     if (dedicatedPath && prefix) {
       await expect(sync).resolves.toEqual({
         inserted: 0,

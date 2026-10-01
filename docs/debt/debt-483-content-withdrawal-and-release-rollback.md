@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); release milestones remain open; archived-question review, which the dated receipts below list as open, shipped under [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) (resolved 2026-09-30)
+**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); the phase 4 design is recorded 2026-10-01, and its first step, 4a, records withdrawals; releases, activation and rollback remain open; archived-question review, which the dated receipts below list as open, shipped under [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) (resolved 2026-09-30)
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -176,6 +176,8 @@ DATABASE_URL="$WITHDRAWAL_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-ques
 # Inspect the dry-run QID/count and target before explicitly applying:
 DATABASE_URL="$WITHDRAWAL_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-questions.ts --qid "example-qid" --apply
 ```
+
+*2026-10-01:* the command now also requires `--reason` and `--authority` and records each withdrawal ([phase 4a](#withdrawal-overlay-phase-4a--2026-10-01)). [Withdrawing a Question](../practice-engine/content-pipeline.md#withdrawing-a-question) has the current usage.
 
 The seed sync now refuses `archived` → `draft` or `published` while holding the
 question lock. This also protects content archived through the existing seed
@@ -360,6 +362,72 @@ as does archived-question review under DEBT-484.
 [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) decides the app's side of SPEC-007. Content becomes visible only through a verified release, recorded with its manifest hash and parent, staged invisibly and activated in one transaction that compares the active-release pointer; any failure leaves the previous release active. Withdrawals and holds are a current overlay keyed by question and revision, so a rollback to an older release never resurrects a revoked item, and today's explicit-QID withdrawal command becomes a writer to that overlay. Selection reads the active release, and `questions.status` is retired in a contract step.
 
 This record closes after ADR-021's phase 4 (releases, overlay and rollback), with the Verification above demonstrated on disposable databases. Release zero, the inventory of what is live, uses the `stored-fields-json-v1` hash form decided in the ADR on 2026-09-28, and waits for the content repository to compute that form too.
+
+## Phase 4 design — 2026-10-01
+
+ADR-021 decisions 4–6 leave the mechanism to this record. Each step below is its own reviewed PR with an N-1 answer.
+
+**Activation materializes.** Every reader already selects by `questions.status = 'published'` and reads `current_revision_id`. Phase 4 makes both derived: only an activation writes them, in one transaction, from the active release minus the overlay. Readers do not change. A reader sees the state before an activation's commit or the state after it, never a part of one. A rollback is an activation of an earlier release under the same rule, so it cannot resurrect a withdrawn revision. This is the ADR's "the legacy `status` stays in step until the release pointer is authoritative", done as a parallel change. A later contract step, outside this record, moves selection onto release items and retires `status`.
+
+**The overlay (decision 5).**
+- `question_withdrawals` is permanent. Withdrawal is per question, keeping #953's policy: every revision of a withdrawn question has a row, and a corrected replacement takes a new QID.
+- `question_holds` has the same key, with `placed_at` and a nullable `lifted_at`. An unlifted hold excludes its revision.
+
+**Releases (decision 4).**
+- `content_releases`: id, the manifest, its sha256 `manifest_hash` (unique), `parent_release_id`, and `created_at`, `verified_at`, `activated_at` receipts. A release is never changed once written.
+- `content_release_items`: `(release_id, question_id)` primary key and the item's `question_revision_id`, with a composite key to `question_revisions(id, question_id)`.
+- `content_release_pointer`: one row naming the active release.
+
+**Activation**, in one transaction:
+1. Lock the pointer row and compare the active release with the release's parent; a mismatch rejects the release as stale.
+2. Verify the stored manifest against its hash, and each item's revision hash against the manifest.
+3. Lock the affected question rows in id order, the order the seed and the withdrawal command use.
+4. Publish each item that is neither withdrawn nor held, at the item's revision. Archive every other published question. Drafts that no release names are untouched.
+5. Move the pointer and record the receipts.
+
+Any failure rolls the whole transaction back, and the previous release stays active. The first activation adopts what is live: every published question at its current revision, with no parent. That is not the ADR's release zero, which waits for the content repository to compute the hash form, and it is not called that.
+
+**The seed as release builder (decision 6).** In production, the seed stages: a new question is inserted as a draft, changed content is appended without moving the pointer, and the release records an item for each published file. A separate, explicit step activates a staged release by id. The local and test seed keeps today's direct path. Tags are not versioned (decision 1), so a tag change stays immediately visible; that residual is accepted.
+
+**Steps.**
+- **4a, the withdrawal overlay:** this design; `question_withdrawals`; the withdrawal command and the seed record withdrawals, and the seed refuses a withdrawn question.
+- **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure.
+- **4c, the release builder:** staging and activation commands for the production seed path.
+- **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
+
+**Decided here, under the owner's delegation.**
+- Withdrawal is recorded per revision but ordered per question.
+- A question no release names keeps its status if it is a draft, and is archived if it was published.
+- The manifest format is app-defined until SPEC-007 settles, and is not called SPEC-007.
+- The owner's deferred decision on scoring an item withdrawn mid-session is untouched: an active session keeps the items it bound.
+
+## Withdrawal overlay (phase 4a) — 2026-10-01
+
+**CONFIRMED red first.** With migration 0045 applied to the clone's test database, the new tests ran twice before the code changed:
+
+```bash
+pnpm test:integration tests/integration/content-withdrawal.integration.test.ts tests/integration/question-withdrawals.integration.test.ts
+```
+
+- With the command and the seed both unchanged: **18 failed / 16 passed**. Twelve cases specify the command's new interface, which the old parser rejects as unknown arguments; as in the 2026-09-20 receipt, these are red-first feature tests, not defects. The other six fail because the seed records nothing.
+- With the new command and the old seed: **8 failed / 26 passed**, each on the seed. The old seed records no archive. It also restored a synthetic placeholder that the command had withdrawn (`updated: 1`), which is the gap the new refusal closes.
+- With both changed: **34/34**.
+
+Four of the 34 cases test the migration itself and pass once 0045 is applied. The backfill, run twice, records each archived question's revisions exactly once. A withdrawal naming another question's revision is refused, and so is a blank reason or authority.
+
+Migration 0045 adds `question_withdrawals`:
+- `(question_id, question_revision_id)` primary key, with a composite key to `question_revisions(id, question_id)`, so a withdrawal cannot name another question's revision;
+- `reason` and `authority`, each required to contain a non-space character, and `effective_at`.
+
+Its backfill records every revision of each archived question: until now an archive was the only record of a withdrawal, and an operator's withdrawal cannot be told from an archive in MDX. Synthetic `placeholder-` rows are excluded, since the seed archives and restores them by design. The backfill reports its count: 0 on the clone's test database, which holds no archived authored question. Production's count will be in the log of the Vercel build that applies 0045, and the release record will give it.
+
+The withdrawal command now takes a required `--reason` and `--authority`. Under the ordered row locks it already takes, it archives each named question and records every revision not yet recorded; a recorded revision keeps its first record. The dry run reports how many revisions it would record.
+
+The seed records a withdrawal, with authority `content seed`, whenever authored input is archived. That covers a new question first seeded as archived, a revision appended to an archived question, and an unchanged replay of an archive that older code made without a record. It refuses to restore a withdrawn question, even a synthetic placeholder.
+
+**N-1:** the serving deployment neither reads nor writes the table. An archive made by the previous commit's command or seed during the deploy is recorded when it is replayed with this commit's.
+
+**Remaining:** nothing reads the overlay yet; activation (4b) is its first reader.
 
 ## Related
 

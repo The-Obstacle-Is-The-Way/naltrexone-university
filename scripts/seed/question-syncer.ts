@@ -15,6 +15,11 @@ import {
   type SeedTag,
 } from './question-parser';
 import { appendQuestionRevision } from './question-revision-writer';
+import {
+  findUnrecordedWithdrawals,
+  isQuestionWithdrawn,
+  recordWithdrawals,
+} from './question-withdrawal-writer';
 import { upsertTags, validateSeedQuestionTags } from './tag-manager';
 
 export type SeedSyncCounts = {
@@ -132,9 +137,35 @@ async function replaceQuestionTags(
     );
 }
 
+// DEBT-483: an archive in MDX is one-way, as the guard below enforces, so for
+// authored content it is a withdrawal and is recorded as one. The synthetic
+// placeholders are archived and restored by design and are never recorded.
+async function recordSeedWithdrawal(
+  tx: PostgresJsDatabase<typeof schema>,
+  questionId: string,
+  seed: SeedQuestionRep,
+  sourcePath: string,
+): Promise<void> {
+  if (
+    seed.status !== 'archived' ||
+    isSyntheticPlaceholderSource(seed.slug, sourcePath)
+  ) {
+    return;
+  }
+  await recordWithdrawals(
+    tx,
+    await findUnrecordedWithdrawals(tx, [questionId]),
+    {
+      reason: 'archived in seed input',
+      authority: 'content seed',
+    },
+  );
+}
+
 async function insertQuestion(
   db: PostgresJsDatabase<typeof schema>,
   seed: SeedQuestionRep,
+  sourcePath: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     // ADR-021 phase 3: the question points at its first revision, written
@@ -155,6 +186,7 @@ async function insertQuestion(
       revisionId,
     });
     await replaceQuestionTags(tx, created.id, seed.tags);
+    await recordSeedWithdrawal(tx, created.id, seed, sourcePath);
   });
 }
 
@@ -177,14 +209,21 @@ async function syncExistingQuestion(
         .for('update'),
       `Question disappeared during seed sync for slug "${seed.slug}"`,
     );
-    if (
-      locked.status === 'archived' &&
-      seed.status !== 'archived' &&
-      !isSyntheticPlaceholderSource(seed.slug, sourcePath)
-    ) {
-      throw new Error(
-        `Refusing to reactivate archived question "${seed.slug}" from seed input. Use a new question QID for a replacement.`,
-      );
+    if (seed.status !== 'archived') {
+      if (
+        locked.status === 'archived' &&
+        !isSyntheticPlaceholderSource(seed.slug, sourcePath)
+      ) {
+        throw new Error(
+          `Refusing to reactivate archived question "${seed.slug}" from seed input. Use a new question QID for a replacement.`,
+        );
+      }
+      // A withdrawal is permanent, even for a synthetic placeholder.
+      if (await isQuestionWithdrawn(tx, locked.id)) {
+        throw new Error(
+          `Refusing to reactivate withdrawn question "${seed.slug}" from seed input. Use a new question QID for a replacement.`,
+        );
+      }
     }
     // Required since migration 0043, so its revision always exists.
     const revision = onlyRow(
@@ -217,7 +256,6 @@ async function syncExistingQuestion(
     const tagsChanged =
       JSON.stringify(sortedTags(existingTags)) !==
       JSON.stringify(sortedTags(seed.tags));
-    if (!contentChanged && !statusChanged && !tagsChanged) return 'skipped';
 
     if (contentChanged) {
       await appendQuestionRevision(tx, locked.id, seedFields);
@@ -231,7 +269,11 @@ async function syncExistingQuestion(
     if (tagsChanged) {
       await replaceQuestionTags(tx, locked.id, seed.tags);
     }
-    return contentChanged ? 'revised' : 'updated';
+    // After any new revision, so it is recorded too. An unchanged replay
+    // records an archive that older code made without a record.
+    await recordSeedWithdrawal(tx, locked.id, seed, sourcePath);
+    if (contentChanged) return 'revised';
+    return statusChanged || tagsChanged ? 'updated' : 'skipped';
   });
 }
 
@@ -257,7 +299,7 @@ export async function syncQuestionsFromFiles(
         .limit(1);
 
       if (!existing) {
-        await insertQuestion(db, seedFromFile);
+        await insertQuestion(db, seedFromFile, file.absolutePath);
         counts.inserted += 1;
         continue;
       }
