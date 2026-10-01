@@ -88,15 +88,6 @@ export class GetAttemptedQuestionsUseCase {
       ),
     ]);
 
-    if (page.length === 0) {
-      return {
-        rows: [],
-        limit: input.limit,
-        offset: input.offset,
-        totalCount,
-      };
-    }
-
     // ADR-021: each row shows the revision its latest attempt answered, and
     // stays listed once withdrawn, since the learner attempted it (§3).
     const byBinding = await fetchOwnedQuestionsByBinding(this.questions, page);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -128,7 +129,12 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
         operator: 'operator@example.com',
         confirmedNoSend: false,
       }),
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Renewal notice requeue requires an operator and an audit reason',
+      ),
+    );
     await expect(
       useCase.execute({
         deliveryId,
@@ -152,5 +158,23 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
         confirmedNoSend: false,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('defaults to the real clock', async () => {
+    const repository = await createRepository('terminal_failure');
+    const before = Date.now();
+
+    const delivery = await new RequeueRenewalNoticeDeliveryUseCase(
+      repository,
+    ).execute({
+      deliveryId,
+      reason: 'Retry approved after provider review',
+      operator: 'operator@example.com',
+      confirmedNoSend: false,
+    });
+
+    const requeuedAt = Date.parse(delivery.requeueAudit[0]?.requeuedAt ?? '');
+    expect(requeuedAt).toBeGreaterThanOrEqual(before);
+    expect(requeuedAt).toBeLessThanOrEqual(Date.now());
   });
 });

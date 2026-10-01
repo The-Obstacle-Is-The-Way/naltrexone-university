@@ -3,7 +3,11 @@ import { FakeRenewalConsentRecordRepository } from '@/src/application/test-helpe
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import { PruneRenewalConsentsUseCase } from './prune-renewal-consents';
 
-function createConsent(sessionId: string, subscriptionId: string) {
+function createConsent(
+  sessionId: string,
+  subscriptionId: string,
+  acceptedAt = new Date('2026-08-06T12:00:00Z'),
+) {
   return newRenewalConsentRecord({
     userId: 'user_1',
     consumerReference:
@@ -27,7 +31,7 @@ function createConsent(sessionId: string, subscriptionId: string) {
     termsHash:
       'e6914e723d963b5342dee652c342fb1f748fa5fcfa8067c8d5cf79248c732eb8',
     consentSource: 'stripe_checkout',
-    acceptedAt: new Date('2026-08-06T12:00:00Z'),
+    acceptedAt,
     consentKind: 'initial_offer',
     priorAmountCents: null,
     proposedAmountCents: null,
@@ -61,5 +65,20 @@ describe('PruneRenewalConsentsUseCase', () => {
 
     await expect(useCase.execute()).resolves.toBe(0);
     expect(repository.snapshot()).toHaveLength(1);
+  });
+
+  it('defaults to the real clock', async () => {
+    const repository = new FakeRenewalConsentRecordRepository();
+    await repository.save(
+      createConsent('cs_old', 'sub_old', new Date('2020-01-01T00:00:00Z')),
+    );
+    await repository.markSubscriptionTerminated({
+      externalSubscriptionId: 'sub_old',
+      terminatedAt: new Date('2020-06-01T00:00:00Z'),
+    });
+
+    await expect(
+      new PruneRenewalConsentsUseCase(repository).execute(),
+    ).resolves.toBe(1);
   });
 });

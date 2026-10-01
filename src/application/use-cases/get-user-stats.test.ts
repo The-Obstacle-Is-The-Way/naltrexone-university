@@ -267,4 +267,28 @@ describe('GetUserStatsUseCase', () => {
       code: 'INTERNAL_ERROR',
     });
   });
+
+  it('defaults to the real clock', async () => {
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          answeredAt: new Date('2000-01-01T00:00:00Z'),
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          answeredAt: new Date(),
+        }),
+      ]),
+      new FakeQuestionRepository([createQuestion({ id: 'q1' })]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toMatchObject({
+      totalAnswered: 2,
+      answeredLast7Days: 1,
+    });
+  });
 });

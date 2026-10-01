@@ -54,6 +54,7 @@ export class GetQuestionForViewUseCase {
     if (!input.review) return this.published(input.slug);
 
     const questionId = await this.questions.findIdBySlug(input.slug);
+    // Stryker disable next-line ConditionalExpression: a slug no question has has no published question either, so the reads below also end in null
     if (!questionId) return null;
 
     const reviewed = await this.reviewedItem(
@@ -114,6 +115,7 @@ export class GetQuestionForViewUseCase {
     userId: string,
     attempt: Attempt,
   ): Promise<ReviewedItem | null> {
+    // Stryker disable next-line ConditionalExpression: a standalone attempt has no session, and a lookup without an id finds none
     if (attempt.practiceSessionId) {
       const session = await this.sessions.findByIdAndUserId(
         attempt.practiceSessionId,
