@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { parseTransactionalEmailPayloadSnapshot } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeRenewalNoticeDeliveryRepository,
@@ -53,6 +54,22 @@ function createHarness() {
     () => `33333333-3333-4333-8333-${String(++sequence).padStart(12, '0')}`,
   );
   return { hasher, repository, useCase };
+}
+
+async function sentPayload(input: {
+  consent: RenewalConsentRecord;
+  destination: string;
+}) {
+  const { hasher, useCase } = createHarness();
+  const delivery = await useCase.execute(input);
+  return parseTransactionalEmailPayloadSnapshot(
+    {
+      snapshot: delivery.payloadSnapshot,
+      hash: delivery.payloadHash,
+      destination: delivery.destination,
+    },
+    hasher,
+  );
 }
 
 describe('SendRenewalAcknowledgmentUseCase', () => {
@@ -131,7 +148,83 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
 
     await expect(
       useCase.execute({ consent, destination: '   ' }),
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Renewal acknowledgment requires a destination',
+      ),
+    );
     expect(repository.records).toEqual([]);
+  });
+
+  // The acknowledgment is the subscriber's written record of the terms they
+  // accepted, so its exact content is the behavior.
+  it('sends the exact acknowledgment text and HTML', async () => {
+    await expect(
+      sentPayload({ consent, destination: 'subscriber@example.com' }),
+    ).resolves.toEqual({
+      from: 'Addiction Boards <notices@addictionboards.com>',
+      to: 'subscriber@example.com',
+      replyTo: 'support@addictionboards.com',
+      subject: 'Your Addiction Boards subscription terms',
+      text: [
+        'Thank you for confirming your Addiction Boards subscription terms.',
+        '',
+        'Accepted renewal terms: Your subscription renews monthly at $29 until canceled.',
+        'Price and frequency: $29.00 USD every month.',
+        'Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
+        'Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
+        'How to cancel: Cancel on the Billing page in the app or email support@addictionboards.com.',
+        'Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.',
+        'Accepted: 2026-08-07T11:55:00.000Z.',
+        'Terms version: 2026-08-05.',
+        'Business contact: John H. Jung, MD, MS, sole proprietor — support@addictionboards.com.',
+        'Terms: https://addictionboards.com/terms',
+        'Privacy: https://addictionboards.com/privacy',
+      ].join('\n'),
+      html: [
+        '<p>Thank you for confirming your Addiction Boards subscription terms.</p>',
+        '<br>',
+        '<p>Accepted renewal terms: Your subscription renews monthly at $29 until canceled.</p>',
+        '<p>Price and frequency: $29.00 USD every month.</p>',
+        '<p>Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).</p>',
+        '<p>Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).</p>',
+        '<p>How to cancel: Cancel on the Billing page in the app or email support@addictionboards.com.</p>',
+        '<p>Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.</p>',
+        '<p>Accepted: 2026-08-07T11:55:00.000Z.</p>',
+        '<p>Terms version: 2026-08-05.</p>',
+        '<p>Business contact: John H. Jung, MD, MS, sole proprietor — support@addictionboards.com.</p>',
+        '<p>Terms: https://addictionboards.com/terms</p>',
+        '<p>Privacy: https://addictionboards.com/privacy</p>',
+      ].join(''),
+    });
+  });
+
+  it('states a yearly price and no trial for an annual consent without one, escaping its HTML', async () => {
+    const payload = await sentPayload({
+      consent: {
+        ...consent,
+        plan: 'annual',
+        amountCents: 22_900,
+        frequency: 'year',
+        trialEndsAt: null,
+        cancellationMethod: 'Billing page <in the app> & support email',
+      },
+      destination: 'subscriber@example.com',
+    });
+
+    expect(payload.text.split('\n')).toEqual(
+      expect.arrayContaining([
+        'Price and frequency: $229.00 USD every year.',
+        'No introductory trial was recorded.',
+        'How to cancel: Billing page <in the app> & support email',
+      ]),
+    );
+    expect(payload.html).toContain(
+      '<p>Price and frequency: $229.00 USD every year.</p><p>No introductory trial was recorded.</p>',
+    );
+    expect(payload.html).toContain(
+      '<p>How to cancel: Billing page &lt;in the app&gt; &amp; support email</p>',
+    );
   });
 });

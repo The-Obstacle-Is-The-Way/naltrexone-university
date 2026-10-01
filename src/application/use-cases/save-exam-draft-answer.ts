@@ -96,14 +96,12 @@ export class SaveExamDraftAnswerUseCase {
       );
     }
 
-    const rawCumulativeMs = input.cumulativeMs;
-    const cumulativeMs =
-      typeof rawCumulativeMs === 'number' && Number.isFinite(rawCumulativeMs)
-        ? Math.min(
-            SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
-            Math.max(0, rawCumulativeMs),
-          )
-        : 0;
+    const cumulativeMs = Number.isFinite(input.cumulativeMs)
+      ? Math.min(
+          SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+          Math.max(0, input.cumulativeMs),
+        )
+      : 0;
 
     return this.sessions.saveDraftAnswer({
       sessionId: input.sessionId,

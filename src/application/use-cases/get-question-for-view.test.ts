@@ -361,4 +361,57 @@ describe('GetQuestionForViewUseCase', () => {
       });
     },
   );
+
+  it('shows the revision the learner answered in a finished exam', async () => {
+    const { current, answered } = revisions('archived');
+    const session = sessionOver(answered, { mode: 'exam' });
+    const attempt = answerOf(answered, { practiceSessionId: session.id });
+
+    await expect(
+      view([current, answered], { attempts: [attempt], sessions: [session] })({
+        attemptId: attempt.id,
+      }),
+    ).resolves.toMatchObject({
+      question: { stemMd: 'Answered' },
+      withdrawn: true,
+    });
+  });
+
+  // The session can be deleted between the attempt read and the session
+  // read. The answer stays reviewable.
+  it('shows the revision of an answer whose session is no longer found', async () => {
+    const { current, answered } = revisions('archived');
+    const attempt = answerOf(answered, {
+      practiceSessionId: crypto.randomUUID(),
+    });
+
+    await expect(
+      view([current, answered], { attempts: [attempt] })({
+        attemptId: attempt.id,
+      }),
+    ).resolves.toMatchObject({
+      question: { stemMd: 'Answered' },
+      withdrawn: true,
+    });
+  });
+
+  // The question can be deleted after its slug is read. The view shows
+  // nothing rather than failing.
+  it('shows nothing when the question is deleted after its slug is read', async () => {
+    const { answered } = revisions('published');
+    class DeletedAfterSlugRead extends FakeQuestionRepository {
+      override async findIdBySlug() {
+        return answered.id;
+      }
+    }
+    const useCase = new GetQuestionForViewUseCase(
+      new DeletedAfterSlugRead([]),
+      new FakeAttemptRepository([answerOf(answered)]),
+      new FakePracticeSessionRepository([]),
+    );
+
+    await expect(
+      useCase.execute({ userId, slug, review: {} }),
+    ).resolves.toBeNull();
+  });
 });

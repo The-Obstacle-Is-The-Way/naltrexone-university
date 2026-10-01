@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -49,6 +50,10 @@ async function createRepository(status: RenewalNoticeDeliveryStatus) {
 }
 
 describe('RequeueRenewalNoticeDeliveryUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('requeues an unknown outcome only with no-send confirmation and preserves an audit entry', async () => {
     const repository = await createRepository('outcome_unknown');
     const useCase = new RequeueRenewalNoticeDeliveryUseCase(
@@ -128,7 +133,12 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
         operator: 'operator@example.com',
         confirmedNoSend: false,
       }),
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Renewal notice requeue requires an operator and an audit reason',
+      ),
+    );
     await expect(
       useCase.execute({
         deliveryId,
@@ -152,5 +162,24 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
         confirmedNoSend: false,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('reads the system clock when none is injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-06T19:30:00.000Z'));
+    const repository = await createRepository('terminal_failure');
+
+    const delivery = await new RequeueRenewalNoticeDeliveryUseCase(
+      repository,
+    ).execute({
+      deliveryId,
+      reason: 'Retry approved after provider review',
+      operator: 'operator@example.com',
+      confirmedNoSend: false,
+    });
+
+    expect(delivery.requeueAudit).toMatchObject([
+      { requeuedAt: '2026-08-06T19:30:00.000Z' },
+    ]);
   });
 });

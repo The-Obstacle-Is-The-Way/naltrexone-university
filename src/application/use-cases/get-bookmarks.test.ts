@@ -36,7 +36,8 @@ describe('GetBookmarksUseCase', () => {
       ]),
     );
 
-    const useCase = new GetBookmarksUseCase(bookmarks, new FakeLogger());
+    const logger = new FakeLogger();
+    const useCase = new GetBookmarksUseCase(bookmarks, logger);
 
     await expect(useCase.execute({ userId })).resolves.toEqual({
       rows: [
@@ -58,6 +59,7 @@ describe('GetBookmarksUseCase', () => {
         },
       ],
     });
+    expect(logger.warnCalls).toEqual([]);
   });
 
   it('returns unavailable row when bookmark references an unavailable question', async () => {

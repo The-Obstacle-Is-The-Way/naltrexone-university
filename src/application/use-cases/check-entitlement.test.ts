@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSubscription } from '@/src/domain/test-helpers';
 import { FakeSubscriptionRepository } from '../test-helpers/fakes';
 import { CheckEntitlementUseCase } from './check-entitlement';
 
 describe('CheckEntitlementUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('returns subscription_required when no subscription exists', async () => {
     const useCase = new CheckEntitlementUseCase(
       new FakeSubscriptionRepository(),
@@ -41,13 +45,15 @@ describe('CheckEntitlementUseCase', () => {
     });
   });
 
-  // Without an injected clock the use case reads the real time, so a period
-  // that ended in 2000 has ended.
-  it('defaults to the real clock', async () => {
+  // Without an injected clock the use case reads the system clock. Frozen
+  // before the period ends, it finds the subscription current.
+  it('reads the system clock when none is injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-01T00:00:00Z'));
     const sub = createSubscription({
       userId: 'user-1',
       status: 'active',
-      currentPeriodEnd: new Date('2000-01-01T00:00:00Z'),
+      currentPeriodEnd: new Date('2026-04-01T00:00:00Z'),
     });
 
     const result = await new CheckEntitlementUseCase(
@@ -55,8 +61,8 @@ describe('CheckEntitlementUseCase', () => {
     ).execute({ userId: 'user-1' });
 
     expect(result).toMatchObject({
-      isEntitled: false,
-      hasActiveSubscriptionPeriod: false,
+      isEntitled: true,
+      hasActiveSubscriptionPeriod: true,
     });
   });
 

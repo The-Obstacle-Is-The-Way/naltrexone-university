@@ -51,7 +51,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 - [x] Part 2 pilot: baseline and after-triage scores recorded below; zero un-triaged survivors in the nine pilot files (2026-09-27)
 - [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
-- [ ] Part 2 widening: production files across `src/domain/**` (**done 2026-09-30**, third wave below), then `src/application/{use-cases,shared}/**` (`shared` **done 2026-09-30**, wave 4a below; `use-cases`: eight of 39 in scope after wave 4b on 2026-10-01, below; 31 remain)
+- [ ] Part 2 widening: production files across `src/domain/**` (**done 2026-09-30**, third wave below), then `src/application/{use-cases,shared}/**` (`shared` **done 2026-09-30**, wave 4a below; `use-cases`: 29 of 39 in scope after wave 4c on 2026-10-01, below, by glob; the ten that remain are excluded by name until their wave)
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
 - [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
@@ -65,6 +65,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 | Mutation third wave | 2026-09-30 | Every other production file under `src/domain/**`, by glob: 21 with mutants. Baseline 87.25% (267 killed, 39 survived, of 306). After triage 100.00% (295 killed, 1 timed out, of 296 scored; 6 suppressed). The full weekly scope then scored 100.00% (763 killed, 26 timed out, 12 suppressed) in 6 min 6 s. Triage below. |
 | Mutation wave 4a | 2026-09-30 | The rest of `src/application/shared/**`, by glob: eight files. Baseline 94.85% (216 killed, 5 timed out, 11 survived and 1 without coverage, of 233). After triage 100.00% (230 killed, 2 timed out, of 232; 1 suppressed). The full weekly scope then scored 100.00% (993 killed, 28 timed out, 13 suppressed) in 7 min 9 s. Triage below. |
 | Mutation wave 4b | 2026-10-01 | Six small use cases, by name. Baseline 80.85% (76 killed, 13 survived and 5 without coverage, of 94). After triage 100.00% (92 killed, of 92; 2 suppressed). The full weekly scope, run without the incremental cache, then scored 100.00% (1,087 killed, 22 timed out, 19 suppressed) in 5 min 41 s. Triage below. |
+| Mutation wave 4c | 2026-10-01 | 21 more use cases; the folder now joins by glob, with the ten untriaged use cases excluded by name. Baseline 91.45% (385 killed, 30 survived and 6 without coverage, of 421). After triage 100.00% (405 killed, of 405; 4 suppressed), once two redundant guards and their 12 mutants were removed. The full weekly scope, run without the incremental cache, then scored 100.00% (1,489 killed, 25 timed out, 23 suppressed) in 5 min 49 s. Triage below. |
 | Mutation pilot scores | 2026-09-27 | Stryker 9.6.1, unit lane, nine files. Baseline 91.77%: 286 killed, 4 timed out, 24 survived and 2 without coverage, of 316 mutants. After triage 100.00%: 286 killed and 3 timed out, of 289 scored; 6 more are suppressed. Both are full `--force` runs. Per-file scores are in the runbook's §7; the triage is below. |
 
 ### Part 2 mutation pilot triage — 2026-09-27
@@ -100,9 +101,27 @@ Full `--force` runs over the runbook's four second-wave files: baseline 91.44% (
 | `start-practice-session.ts` | The use case's own incomplete-session check, including its message (3). The fake repository enforces the same one-incomplete-session rule as Postgres, so only a conflict that must win over empty filters distinguishes the check. | — |
 | `idempotency-error-policy.ts` | The cacheable outcomes are code-and-reason pairs: a non-`CONFLICT` error carrying a terminal-session reason is not cached (1), and the incomplete-session conflict is cached only for starting a session and only as a `CONFLICT` (4). The trial-setup helper had no unit test (1). | A three-way disposition whose two cache labels no caller distinguished, now a boolean with the reasons kept as comments (3); `new Set([])` for the billing actions, now `new Set()` (3); a `typeof` guard that `Set.has` already covers, now a set typed to accept an absent reason (1). |
 
+### Part 2 wave 4c triage — 2026-10-01
+
+Cache-free full `--force` runs over 21 more use cases: the rest of the folder up to about 160 lines each. Eleven scored 100% at baseline: `get-bookmark-question-ids.ts`, `get-bookmark-status.ts`, `get-incomplete-practice-session.ts`, `get-question-rating.ts`, `get-session-history.ts`, `practice-session-summary.ts`, `record-renewal-consent.ts`, `record-renewal-notice-provider-outcome.ts`, `set-bookmark.ts`, `set-practice-session-question-mark.ts` and `submit-question-report.ts`. Nine tests were added and five strengthened.
+
+| File | Missing test (31) | Equivalent, suppressed (2) | Redundant code removed (3) |
+|---|---|---|---|
+| `send-renewal-acknowledgment.ts` | The acknowledgment is the subscriber's written record of the terms, so a test pins its exact text and HTML (11). An annual consent without a trial states a yearly price and that no trial was recorded, with its HTML escaped (3, one without coverage). The missing-destination message (3). | — | — |
+| `rate-question.ts` | A repository that answers a rating with a report fails loudly (4, three without coverage). | — | — |
+| `get-question-for-view.ts` | An answer in a finished exam is reviewable; an answer whose session is no longer found stays reviewable; a question deleted after its slug is read shows nothing rather than failing (3). | An unknown slug has no published question either, so the reads after the guard also end in null; a standalone attempt has no session, and a lookup without an id finds none (2, each with a killed sibling). | — |
+| `requeue-renewal-notice-delivery.ts` | Without an injected clock, the requeue is stamped with the real time; the missing-evidence message (2). | — | — |
+| `prune-renewal-consents.ts`, `get-user-stats.ts` | Without an injected clock, each reads the real time (2, without coverage). | — | — |
+| `save-exam-draft-answer.ts` | A question outside the session is refused even when the session's own question is readable (1). | — | `typeof` before `Number.isFinite`, which is false for every non-number (1). |
+| `get-attempted-questions.ts` | — | — | The empty-page return: the binding fetch already returns nothing for no rows (2). |
+| `get-bookmarks.ts` | An available bookmark logs no warning (1). | — | — |
+| `get-practice-session-summary.ts` | The not-found message (1). | — | — |
+
+**Follow-up (2026-10-01, promotion #1271's review).** The three default-clock tests above, and wave 4b's entitlement one, read the real system time, so a clock step during a run could fail them. Each now freezes the system clock at a date that changes the outcome and still omits the use case's clock; the mutants stay killed. The rule is in runbook §5.
+
 ### Part 2 wave 4b triage — 2026-10-01
 
-Full `--force` runs over six small use cases, listed by name in `stryker.config.json` until the whole folder is triaged. `count-available-questions.ts` scored 100% at baseline.
+Full `--force` runs over six small use cases, listed by name in `stryker.config.json` until the whole folder is triaged (wave 4c, above, moved the folder to a glob). `count-available-questions.ts` scored 100% at baseline.
 
 | File | Missing test (17) | Equivalent, suppressed (1) |
 |---|---|---|

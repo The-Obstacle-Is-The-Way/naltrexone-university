@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeRenewalConsentRecordRepository } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import { PruneRenewalConsentsUseCase } from './prune-renewal-consents';
@@ -36,6 +36,10 @@ function createConsent(sessionId: string, subscriptionId: string) {
 }
 
 describe('PruneRenewalConsentsUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('prunes due terminated records in a bounded batch', async () => {
     const repository = new FakeRenewalConsentRecordRepository();
     await repository.save(createConsent('cs_due', 'sub_due'));
@@ -61,5 +65,21 @@ describe('PruneRenewalConsentsUseCase', () => {
 
     await expect(useCase.execute()).resolves.toBe(0);
     expect(repository.snapshot()).toHaveLength(1);
+  });
+
+  // Frozen after the record's retention ends, the system clock makes it due.
+  it('reads the system clock when none is injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2029-08-07T00:00:00Z'));
+    const repository = new FakeRenewalConsentRecordRepository();
+    await repository.save(createConsent('cs_due', 'sub_due'));
+    await repository.markSubscriptionTerminated({
+      externalSubscriptionId: 'sub_due',
+      terminatedAt: new Date('2027-01-01T00:00:00Z'),
+    });
+
+    await expect(
+      new PruneRenewalConsentsUseCase(repository).execute(),
+    ).resolves.toBe(1);
   });
 });
