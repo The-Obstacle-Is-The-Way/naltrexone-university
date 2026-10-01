@@ -3,26 +3,20 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-01 UTC
 
-**Latest** — 2026-10-01 UTC: F19a's recommendation is anchored to the cancellation deadline, and dead question reads are removed ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)).
-- **F19a correction.** Promotion #1285's review (**CHANGES_REQUESTED** on `d5b4f9d2`, one Minor finding) noted that 940 CMR 38.05(4) measures its 5–30-day window from the date the consumer must cancel to avoid the next charge, not from the renewal date. Here the two coincide: cancellation takes effect at period end, and F06's notices give the renewal instant as the cancel-before cutoff. The recommendation now says so, in DEBT-414 too. #1285 was closed unmerged so the fix ships first.
-- **Dead reads removed.**
-  - `findPublishedByIds` went from the question port, its Drizzle and fake implementations, and the request cache: no use case called it.
-  - `isVisibleStatus` had no callers and went too.
-  - The session repository's lock comment described a #951 session count that no longer exists, and now gives the lock's current reason.
-- **Docs corrected.** `content-pipeline.md` now matches the code:
-  - the renamed content files;
-  - the seed's per-question write, which appends a revision and moves the pointer;
-  - change detection, which compares canonical JSON;
-  - the seed helper's role;
-  - which reads filter on `published`.
-- **Previous change.** #1284 (**5378213585** on `5eef7fa3`; two Minor findings fixed; merged `d5b4f9d2`), on `dev` to ship in the same promotion.
+**Latest** — 2026-10-01 UTC: F19a's checklist names both delivery routes that 940 CMR 38.05(5) allows ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)).
+- **Correction.** Promotion #1287's review (**CHANGES_REQUESTED** on `493b1ec1`, one Minor finding) noted that (5) has two routes. The notice may go through a medium substantially similar to the one the consumer used to subscribe, or through a commonly used medium the consumer affirmatively chose as their preferred contact method. The checklist named only the second, which could wrongly rule out an email notice for an online signup.
+  - DEBT-414's F19a and F19d now name both routes, and the F19 row of the 2026-09-16 review gains a dated pointer.
+  - #1287 was closed unmerged so the fix ships first.
+- **Previous changes, on `dev` for the next promotion.**
+  - #1284, BUG-304's closeout (**5378213585** on `5eef7fa3`; merged `d5b4f9d2`).
+  - #1286, dead question reads removed and `content-pipeline.md` corrected (**5379026978** on `befe2e9e`; four Minor findings fixed over two rounds; merged `493b1ec1`).
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
   - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
   - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
-    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery through the consumer's chosen medium. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium the consumer affirmatively chose as their preferred contact method. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID remains DEBT-489.**
