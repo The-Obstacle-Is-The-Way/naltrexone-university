@@ -8,6 +8,12 @@ import {
   fetchOwnedQuestionsByBinding,
 } from './fetch-questions-by-binding';
 
+const brokenContract = {
+  code: 'INTERNAL_ERROR',
+  message:
+    'findByIdsForSession did not return one question per binding in order',
+};
+
 describe('fetchOwnedQuestionsByBinding', () => {
   it('keys each distinct binding to its own revision, keeps a withdrawn question and omits a missing one', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current' });
@@ -77,7 +83,7 @@ describe('fetchOwnedQuestionsByBinding', () => {
         { questionId: 'q1', questionRevisionId: current.revisionId },
         { questionId: 'q1', questionRevisionId: older.revisionId },
       ]),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    ).rejects.toMatchObject(brokenContract);
   });
 
   it.each([
@@ -88,6 +94,15 @@ describe('fetchOwnedQuestionsByBinding', () => {
     [
       'returns an extra question',
       (found: readonly Question[]) => [...found, ...found],
+    ],
+    // Each keeps its bound revision, so only the id check catches the swap.
+    [
+      "returns each question under the other's id",
+      (found: readonly Question[]) =>
+        found.map((question, index) => ({
+          ...question,
+          id: found[found.length - 1 - index]?.id ?? question.id,
+        })),
     ],
   ])('fails loudly when the repository %s', async (_label, distort) => {
     class DistortingQuestionRepository extends FakeQuestionRepository {
@@ -106,6 +121,6 @@ describe('fetchOwnedQuestionsByBinding', () => {
         { questionId: 'q1', questionRevisionId: q1.revisionId },
         { questionId: 'q2', questionRevisionId: q2.revisionId },
       ]),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    ).rejects.toMatchObject(brokenContract);
   });
 });

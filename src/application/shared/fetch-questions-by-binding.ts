@@ -38,6 +38,7 @@ export async function fetchOwnedQuestionsByBinding(
     found.map((binding, index) => {
       const question = questions[index];
       if (
+        // Stryker disable next-line OptionalChaining: the lengths match above, so every index has a question
         question?.id !== binding.questionId ||
         question.revisionId !== binding.questionRevisionId
       ) {
