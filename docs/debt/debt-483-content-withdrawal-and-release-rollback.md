@@ -367,7 +367,7 @@ This record closes after ADR-021's phase 4 (releases, overlay and rollback), wit
 
 ADR-021 decisions 4–6 leave the mechanism to this record. Each step below is its own reviewed PR with an N-1 answer.
 
-**Activation materializes.** Every reader already selects by `questions.status = 'published'` and reads `current_revision_id`. Phase 4 makes both derived: only an activation writes them, in one transaction, from the active release minus the overlay. Readers do not change. A reader sees the state before an activation's commit or the state after it, never a part of one. A rollback is an activation of an earlier release under the same rule, so it cannot resurrect a withdrawn revision. This is the ADR's "the legacy `status` stays in step until the release pointer is authoritative", done as a parallel change. A later contract step, outside this record, moves selection onto release items and retires `status`.
+**Activation materializes.** Every reader already selects by `questions.status = 'published'` and reads `current_revision_id`. Phase 4 makes both derived: once a release is active, only an activation writes them, in one transaction, from the active release minus the overlay. Readers do not change. A reader sees the state before an activation's commit or the state after it, never a part of one. A rollback is an activation of an earlier release under the same rule, so it cannot resurrect a withdrawn revision. This is the ADR's "the legacy `status` stays in step until the release pointer is authoritative", done as a parallel change. A later contract step, outside this record, moves selection onto release items and retires `status`.
 
 **The overlay (decision 5).**
 - `question_withdrawals` is permanent. Withdrawal is per question, keeping #953's policy: every revision of a withdrawn question has a row, and a corrected replacement takes a new QID.
@@ -385,14 +385,14 @@ ADR-021 decisions 4–6 leave the mechanism to this record. Each step below is i
 4. Publish each item that is neither withdrawn nor held, at the item's revision. Archive every other published question. Drafts that no release names are untouched.
 5. Move the pointer and record the receipts.
 
-Any failure rolls the whole transaction back, and the previous release stays active. The first activation adopts what is live: every published question at its current revision, with no parent. That is not the ADR's release zero, which waits for the content repository to compute the hash form, and it is not called that.
+Any failure rolls the whole transaction back, and the previous release stays active. The withdrawal command keeps archiving directly; its archive is what the next activation derives, because a withdrawn revision is never published. The first activation adopts what is live: every published question at its current revision, with no parent. That is not the ADR's release zero, which waits for the content repository to compute the hash form, and it is not called that.
 
 **The seed as release builder (decision 6).** In production, the seed stages: a new question is inserted as a draft, changed content is appended without moving the pointer, and the release records an item for each published file. A separate, explicit step activates a staged release by id. The local and test seed keeps today's direct path. Tags are not versioned (decision 1), so a tag change stays immediately visible; that residual is accepted.
 
 **Steps.**
 - **4a, the withdrawal overlay:** this design; `question_withdrawals`; the withdrawal command and the seed record withdrawals, and the seed refuses a withdrawn question.
-- **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure.
-- **4c, the release builder:** staging and activation commands for the production seed path.
+- **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure. The direct seed refuses a database that has an active release, so the seed and activation never both write `status`. No release is activated in production in this step.
+- **4c, the release builder:** staging and activation commands for the production seed path. The first production activation follows it. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
 - **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
 
 **Decided here, under the owner's delegation.**
@@ -419,7 +419,7 @@ Migration 0045 adds `question_withdrawals`:
 - `(question_id, question_revision_id)` primary key, with a composite key to `question_revisions(id, question_id)`, so a withdrawal cannot name another question's revision;
 - `reason` and `authority`, each required to contain a non-space character, and `effective_at`.
 
-Its backfill records every revision of each archived question: until now an archive was the only record of a withdrawal, and an operator's withdrawal cannot be told from an archive in MDX. Synthetic `placeholder-` rows are excluded, since the seed archives and restores them by design. The backfill reports its count: 0 on the clone's test database, which holds no archived authored question. Production's count will be in the log of the Vercel build that applies 0045, and the release record will give it.
+Its backfill records every revision of each archived question: until now an archive was the only record of a withdrawal, and an operator's withdrawal cannot be told from an archive in MDX. The ten committed placeholder fixtures in `content/questions/placeholder/` are excluded by exact slug, since the seed archives and restores them by design. The prefix alone is not enough: the seed treats a file as synthetic only if it also lives in that directory, and the database records no path. So any other `placeholder-` row is recorded (#1290 review). With the prefix test that the first draft used, the backfill case failed (2 rows instead of 4), because it skipped an authored `placeholder-` question. The backfill reports its count: 0 on the clone's test database, which holds no archived authored question. Production's count will be in the log of the Vercel build that applies 0045, and the release record will give it.
 
 The withdrawal command now takes a required `--reason` and `--authority`. Under the ordered row locks it already takes, it archives each named question and records every revision not yet recorded; a recorded revision keeps its first record. The dry run reports how many revisions it would record.
 

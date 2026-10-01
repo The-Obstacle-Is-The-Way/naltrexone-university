@@ -9,10 +9,12 @@
 -- Until now an archived question was the only record of a withdrawal, and
 -- nothing distinguishes an operator's withdrawal from an archive in MDX. The
 -- seed already refuses to bring either back, so the backfill records every
--- revision of each archived question as withdrawn. Synthetic placeholder
--- fixtures (slug placeholder-%) are excluded: the seed archives and restores
--- them by design, and this database records no source path, so the slug is
--- the only test it can apply here.
+-- revision of each archived question as withdrawn. The ten synthetic
+-- placeholder fixtures committed in content/questions/placeholder/ are
+-- excluded by exact slug: the seed archives and restores them by design. The
+-- prefix alone is not proof, because the seed counts a file as synthetic only
+-- when it also lives in that directory, and this database records no source
+-- path. Any other placeholder- slug is recorded like authored content.
 --
 -- N-1: the serving deployment neither reads nor writes this table. The
 -- previous commit's withdrawal command and seed archive without recording a
@@ -44,7 +46,19 @@ BEGIN
   SELECT r.question_id, r.id, 'archived before withdrawals were recorded', 'migration 0045'
   FROM question_revisions r
   JOIN questions q ON q.id = r.question_id
-  WHERE q.status = 'archived' AND q.slug NOT LIKE 'placeholder-%'
+  WHERE q.status = 'archived'
+    AND q.slug NOT IN (
+      'placeholder-01-naltrexone-mechanism',
+      'placeholder-02-buprenorphine-induction-timing',
+      'placeholder-03-alcohol-withdrawal-firstline',
+      'placeholder-04-opioid-overdose-antidote',
+      'placeholder-05-naltrexone-opioid-free-interval',
+      'placeholder-06-tobacco-cessation-firstline',
+      'placeholder-07-stimulant-intoxication-management',
+      'placeholder-08-psychosocial-tx-motivational-interviewing',
+      'placeholder-09-udt-interpretation',
+      'placeholder-10-opioid-use-disorder-dsm5-criteria'
+    )
   ON CONFLICT DO NOTHING;
   GET DIAGNOSTICS recorded = ROW_COUNT;
   RAISE NOTICE 'DEBT-483 withdrawal backfill: % revisions recorded', recorded;

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import {
@@ -41,6 +41,40 @@ async function arrangeQuestion(
   };
 }
 
+// A committed synthetic fixture, archived for the test. The fixture rows
+// exist when this database was seeded with placeholders; otherwise the test
+// creates one. Either way the database is left as it was.
+async function archiveFixture(slug: string) {
+  const [existing] = await db
+    .select({
+      id: schema.questions.id,
+      status: schema.questions.status,
+      updatedAt: schema.questions.updatedAt,
+    })
+    .from(schema.questions)
+    .where(eq(schema.questions.slug, slug));
+  if (!existing) {
+    const created = await arrangeQuestion('archived', slug);
+    return { id: created.id, restore: async () => {} };
+  }
+  await db
+    .update(schema.questions)
+    .set({ status: 'archived' })
+    .where(eq(schema.questions.id, existing.id));
+  return {
+    id: existing.id,
+    restore: async () => {
+      await db
+        .delete(schema.questionWithdrawals)
+        .where(eq(schema.questionWithdrawals.questionId, existing.id));
+      await db
+        .update(schema.questions)
+        .set({ status: existing.status, updatedAt: existing.updatedAt })
+        .where(eq(schema.questions.id, existing.id));
+    },
+  };
+}
+
 async function withdrawalsOf(questionIds: string[]) {
   return db
     .select()
@@ -51,35 +85,44 @@ async function withdrawalsOf(questionIds: string[]) {
 describe('DEBT-483: the withdrawal overlay (migration 0045)', () => {
   it('backfills every revision of each archived question once, and no other question', async () => {
     const archived = await arrangeQuestion('archived');
-    const published = await arrangeQuestion('published');
-    const draft = await arrangeQuestion('draft');
-    const placeholder = await arrangeQuestion(
+    // The prefix alone does not make a question synthetic (#1290 review).
+    const prefixed = await arrangeQuestion(
       'archived',
       `placeholder-${randomUUID()}`,
     );
+    const published = await arrangeQuestion('published');
+    const draft = await arrangeQuestion('draft');
+    const fixture = await archiveFixture('placeholder-01-naltrexone-mechanism');
     const backfill = readDebt483WithdrawalBackfillSql();
 
-    await sql.unsafe(backfill);
-    await sql.unsafe(backfill);
+    try {
+      await sql.unsafe(backfill);
+      await sql.unsafe(backfill);
 
-    const rows = await withdrawalsOf([
-      archived.id,
-      published.id,
-      draft.id,
-      placeholder.id,
-    ]);
-    expect(rows).toHaveLength(2);
-    expect(rows).toEqual(
-      expect.arrayContaining(
-        archived.revisionIds.map((questionRevisionId) => ({
-          questionId: archived.id,
-          questionRevisionId,
-          reason: 'archived before withdrawals were recorded',
-          authority: 'migration 0045',
-          effectiveAt: expect.any(Date),
-        })),
-      ),
-    );
+      const rows = await withdrawalsOf([
+        archived.id,
+        prefixed.id,
+        published.id,
+        draft.id,
+        fixture.id,
+      ]);
+      expect(rows).toHaveLength(4);
+      expect(rows).toEqual(
+        expect.arrayContaining(
+          [archived, prefixed].flatMap((question) =>
+            question.revisionIds.map((questionRevisionId) => ({
+              questionId: question.id,
+              questionRevisionId,
+              reason: 'archived before withdrawals were recorded',
+              authority: 'migration 0045',
+              effectiveAt: expect.any(Date),
+            })),
+          ),
+        ),
+      );
+    } finally {
+      await fixture.restore();
+    }
   });
 
   it("rejects a withdrawal naming another question's revision", async () => {
