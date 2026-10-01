@@ -6,6 +6,7 @@ import {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
+import type { Attempt, Question } from '@/src/domain/entities';
 import {
   createAttempt,
   createChoice,
@@ -87,6 +88,31 @@ function createCorrectnessComparisonFixture(input: {
       logger,
     ),
   };
+}
+
+// An exam over one question with every item unanswered, ended unless
+// `endedAt` says otherwise, and the learner's attempts in it.
+function examOver(
+  question: Question,
+  options: { attempts?: Attempt[]; endedAt?: Date | null } = {},
+) {
+  return new GetCompletedSessionQuestionsWithFeedbackUseCase(
+    new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt:
+          options.endedAt === undefined
+            ? new Date('2026-03-19T12:00:00Z')
+            : options.endedAt,
+        questionIds: [question.id],
+      }),
+    ]),
+    new FakeQuestionRepository([question]),
+    new FakeAttemptRepository(options.attempts ?? []),
+    new FakeLogger(),
+  );
 }
 
 describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
@@ -492,38 +518,17 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
   });
 
   it('throws CONFLICT when the session is still in progress', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      endedAt: null,
-      questionIds: ['q1'],
-    });
-
-    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
-      new FakePracticeSessionRepository([session]),
-      new FakeQuestionRepository([
-        createQuestion({
-          id: 'q1',
-          slug: 'q-1',
-          stemMd: 'Stem for q1',
-          difficulty: 'easy',
-        }),
-      ]),
-      new FakeAttemptRepository([]),
-      new FakeLogger(),
+    await expect(
+      examOver(createQuestion({ id: 'q1' }), { endedAt: null }).execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'Practice session must be completed before feedback can be loaded',
+      ),
     );
-
-    const error = await useCase
-      .execute({ userId, sessionId })
-      .catch((caught: unknown) => caught);
-
-    expect(error).toBeInstanceOf(ApplicationError);
-    expect(error).toMatchObject({
-      code: 'CONFLICT',
-    });
   });
 
   it('throws INTERNAL_ERROR when normalized question state is missing', async () => {
@@ -697,15 +702,22 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       ],
     });
 
+    const logger = new FakeLogger();
     const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
       new FakePracticeSessionRepository([session]),
       new FakeQuestionRepository([availableQuestion]),
       new FakeAttemptRepository([]),
-      new FakeLogger(),
+      logger,
     );
 
     const output = await useCase.execute({ userId, sessionId });
 
+    expect(logger.warnCalls).toEqual([
+      {
+        context: { questionId: 'q2' },
+        msg: 'Completed session feedback references missing question',
+      },
+    ]);
     expect(output.rows).toHaveLength(2);
     expect(output.rows[0]).toMatchObject({
       isAvailable: true,
@@ -723,5 +735,62 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       isOmitted: false,
       markedForReview: true,
     });
+  });
+
+  it('returns NOT_FOUND when the session does not exist', async () => {
+    await expect(
+      examOver(createQuestion()).execute({
+        userId: 'user-1',
+        sessionId: 'missing',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Practice session not found'),
+    );
+  });
+
+  // ADR-021 §3: an attempt in the session is enough to show a withdrawn
+  // question, even where the item's state recorded no answer.
+  it('keeps a withdrawn question reviewable when the attempt is the only record of an answer', async () => {
+    const question = createQuestion({
+      id: 'q1',
+      status: 'archived',
+      choices: [
+        createChoice({ id: 'q1-a', questionId: 'q1', isCorrect: true }),
+      ],
+    });
+    const attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q1',
+      practiceSessionId: 'session-1',
+      selectedChoiceId: 'q1-a',
+    });
+
+    await expect(
+      examOver(question, { attempts: [attempt] }).execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      rows: [{ isAvailable: true, withdrawn: true, selectedChoiceId: 'q1-a' }],
+    });
+  });
+
+  it('fails loudly for a question without a correct choice', async () => {
+    const question = createQuestion({
+      id: 'q1',
+      choices: [createChoice({ questionId: 'q1', isCorrect: false })],
+    });
+
+    await expect(
+      examOver(question).execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Question q1 has no correct choice',
+      ),
+    );
   });
 });

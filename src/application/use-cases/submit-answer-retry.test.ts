@@ -308,11 +308,12 @@ describe('SubmitAnswerUseCase', () => {
           endedAt: new Date('2026-02-01T00:00:00Z'),
         }),
       ]);
+      const logger = new FakeLogger();
       const useCase = new SubmitAnswerUseCase(
         new FakeQuestionRepository([question]),
         attempts,
         sessions,
-        new FakeLogger(),
+        logger,
       );
 
       await useCase.execute({
@@ -327,6 +328,16 @@ describe('SubmitAnswerUseCase', () => {
         retryOfAttemptId: null,
         retryOrigin: 'session_review',
         retrySessionId: 'session-review-1',
+      });
+      expect(logger.infoCalls).toContainEqual({
+        context: {
+          event: 'retry_submitted',
+          retryOrigin: 'session_review',
+          isCorrect: true,
+          hasParent: false,
+          hasRetrySessionId: true,
+        },
+        msg: 'Retry submitted',
       });
     });
 

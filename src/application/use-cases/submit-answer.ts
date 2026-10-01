@@ -135,7 +135,8 @@ export class SubmitAnswerUseCase {
       );
     }
 
-    if (retryOrigin === 'session_review' && retrySessionId !== null) {
+    // Valid provenance names a retry session only for a session-review retry.
+    if (retrySessionId !== null) {
       const retrySession = await this.sessions.findByIdAndUserId(
         retrySessionId,
         input.userId,
@@ -198,15 +199,13 @@ export class SubmitAnswerUseCase {
       throw practiceSessionAlreadyEndedError();
     }
 
-    const rawTimeSpentSeconds = input.timeSpentSeconds;
-    const timeSpentSeconds =
-      typeof rawTimeSpentSeconds === 'number' &&
-      Number.isFinite(rawTimeSpentSeconds)
-        ? Math.min(
-            SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
-            Math.max(0, rawTimeSpentSeconds),
-          )
-        : 0;
+    const rawTimeSpentSeconds = input.timeSpentSeconds ?? 0;
+    const timeSpentSeconds = Number.isFinite(rawTimeSpentSeconds)
+      ? Math.min(
+          SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
+          Math.max(0, rawTimeSpentSeconds),
+        )
+      : 0;
     const attemptInsertInput = {
       userId: input.userId,
       questionId: question.id,
@@ -258,12 +257,17 @@ export class SubmitAnswerUseCase {
       );
     }
 
+    // Only an active tutor session reaches here: exam and ended sessions are
+    // refused above, and tutor mode shows explanations. The redaction stays
+    // as a second guard on exam secrecy.
     const shouldShowExplanation =
+      // Stryker disable next-line ConditionalExpression: every session that reaches here shows explanations
       !session || sessionShouldShowExplanation(session);
     const explanationMd = shouldShowExplanation ? question.explanationMd : null;
     const choiceExplanations = shouldShowExplanation
       ? this.mapChoiceExplanations(question, input.userId)
-      : [];
+      : // Stryker disable next-line ArrayDeclaration: every session that reaches here shows explanations
+        [];
 
     return {
       attemptId: attempt.id,

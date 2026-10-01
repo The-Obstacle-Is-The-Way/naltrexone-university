@@ -172,10 +172,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
 
     let answeredCount = 0;
     const reviewSeeds: ReviewSeed[] = [];
-    for (let i = 0; i < session.questionIds.length; i += 1) {
-      const questionId = session.questionIds[i];
-      if (!questionId) continue;
-
+    for (const [i, questionId] of session.questionIds.entries()) {
       const state = requirePracticeSessionQuestionState({
         sessionId: session.id,
         questionId,

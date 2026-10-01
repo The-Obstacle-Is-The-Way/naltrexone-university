@@ -502,4 +502,85 @@ describe('GetPreviousAttemptUseCase', () => {
       message: 'Question q1 has no correct choice',
     } satisfies Partial<ApplicationError>);
   });
+
+  it('reveals the answer key of the requested item, not the session’s first', async () => {
+    const first = createQuestion({
+      id: 'q1',
+      choices: [
+        createChoice({ id: 'q1-a', questionId: 'q1', isCorrect: true }),
+      ],
+    });
+    const second = createQuestion({
+      id: 'q2',
+      choices: [
+        createChoice({ id: 'q2-a', questionId: 'q2', isCorrect: true }),
+      ],
+    });
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([]),
+      new FakeQuestionRepository([first, second]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1', 'q2'],
+          endedAt: new Date('2026-02-01T12:10:00Z'),
+        }),
+      ]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q2',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      kind: 'session_unanswered',
+      correctChoiceId: 'q2-a',
+    });
+  });
+
+  it('reviews an attempt from a finished exam, with the session’s mode', async () => {
+    const question = createQuestion({
+      id: 'q1',
+      choices: [
+        createChoice({ id: 'q1-a', questionId: 'q1', isCorrect: true }),
+      ],
+    });
+    const attempt = createAttempt({
+      userId: 'user-1',
+      questionId: 'q1',
+      practiceSessionId: 'session-1',
+      selectedChoiceId: 'q1-a',
+    });
+    const useCase = new GetPreviousAttemptUseCase(
+      new FakeAttemptRepository([attempt]),
+      new FakeQuestionRepository([question]),
+      new FakeLogger(),
+      new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          endedAt: new Date('2026-02-01T12:10:00Z'),
+        }),
+      ]),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        questionId: 'q1',
+        attemptId: attempt.id,
+      }),
+    ).resolves.toMatchObject({
+      kind: 'attempt',
+      sessionMode: 'exam',
+      attemptId: attempt.id,
+    });
+  });
 });

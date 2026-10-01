@@ -152,6 +152,26 @@ async function createUseCaseWithExistingCustomer(input: {
   };
 }
 
+// A use case on 2026-02-01, over the given repositories and renewal terms.
+function createUseCase(
+  deps: {
+    stripeCustomers?: FakeStripeCustomerRepository;
+    subscriptions?: FakeSubscriptionRepository;
+    renewalTerms?: typeof getRenewalTerms;
+  } = {},
+) {
+  const paymentGateway = createPaymentGateway();
+  const useCase = new CreateCheckoutSessionUseCase(
+    deps.stripeCustomers ?? new FakeStripeCustomerRepository(),
+    deps.subscriptions ?? new FakeSubscriptionRepository(),
+    paymentGateway,
+    new FakeLogger(),
+    () => new Date('2026-02-01T00:00:00Z'),
+    deps.renewalTerms ?? getRenewalTerms,
+  );
+  return { paymentGateway, useCase };
+}
+
 describe('CreateCheckoutSessionUseCase', () => {
   it.each([
     { status: null, expectedTrial: true, version: '2026-01-01' },
@@ -179,7 +199,12 @@ describe('CreateCheckoutSessionUseCase', () => {
             disclosureVersion: version,
           },
         }),
-      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      ).rejects.toEqual(
+        new ApplicationError(
+          'VALIDATION_ERROR',
+          'The displayed subscription offer has changed. Review the current terms before continuing.',
+        ),
+      );
       expect(payments.customerInputs).toEqual([]);
       expect(payments.checkoutInputs).toEqual([]);
     },
@@ -405,41 +430,22 @@ describe('CreateCheckoutSessionUseCase', () => {
   });
 
   it('returns ALREADY_SUBSCRIBED when a subscription is still current', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_new',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+    const { paymentGateway, useCase } = createUseCase({
+      subscriptions: new FakeSubscriptionRepository([
+        createSubscription({
+          userId: 'user-1',
+          status: 'pastDue',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+        }),
+      ]),
     });
 
-    const subscriptions = new FakeSubscriptionRepository([
-      createSubscription({
-        userId: 'user-1',
-        status: 'pastDue',
-        currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
-      }),
-    ]);
-
-    const useCase = new CreateCheckoutSessionUseCase(
-      new FakeStripeCustomerRepository(),
-      subscriptions,
-      paymentGateway,
-      new FakeLogger(),
-      () => new Date('2026-02-01T00:00:00Z'),
-      getRenewalTerms,
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toEqual(
+      new ApplicationError(
+        'ALREADY_SUBSCRIBED',
+        'Subscription already exists for this user',
+      ),
     );
-
-    await expect(
-      useCase.execute({
-        userId: 'user-1',
-        clerkUserId: 'clerk-1',
-        email: 'user@example.com',
-        plan: 'monthly',
-        successUrl:
-          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
-      }),
-    ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
 
     expect(paymentGateway.customerInputs).toEqual([]);
     expect(paymentGateway.checkoutInputs).toEqual([]);
@@ -519,35 +525,12 @@ describe('CreateCheckoutSessionUseCase', () => {
   });
 
   it('returns checkout URL and creates stripe customer mapping when missing', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_new',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-    });
-
     const stripeCustomers = new FakeStripeCustomerRepository();
+    const { paymentGateway, useCase } = createUseCase({ stripeCustomers });
 
-    const useCase = new CreateCheckoutSessionUseCase(
-      stripeCustomers,
-      new FakeSubscriptionRepository(),
-      paymentGateway,
-      new FakeLogger(),
-      () => new Date('2026-02-01T00:00:00Z'),
-      getRenewalTerms,
-    );
-
-    await expect(
-      useCase.execute({
-        userId: 'user-1',
-        clerkUserId: 'clerk-1',
-        email: 'user@example.com',
-        plan: 'monthly',
-        successUrl:
-          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout' });
+    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
+      url: 'https://stripe/checkout',
+    });
 
     await expect(stripeCustomers.findByUserId('user-1')).resolves.toEqual({
       stripeCustomerId: 'cus_new',
@@ -682,34 +665,10 @@ describe('CreateCheckoutSessionUseCase', () => {
   });
 
   it('rethrows non-CONFLICT errors from insert', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_new',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-    });
     const stripeCustomers = new FailingInsertStripeCustomerRepository();
+    const { paymentGateway, useCase } = createUseCase({ stripeCustomers });
 
-    const useCase = new CreateCheckoutSessionUseCase(
-      stripeCustomers,
-      new FakeSubscriptionRepository(),
-      paymentGateway,
-      new FakeLogger(),
-      () => new Date('2026-02-01T00:00:00Z'),
-      getRenewalTerms,
-    );
-
-    await expect(
-      useCase.execute({
-        userId: 'user-1',
-        clerkUserId: 'clerk-1',
-        email: 'user@example.com',
-        plan: 'monthly',
-        successUrl:
-          'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-        cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
-      }),
-    ).rejects.toMatchObject({
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
       message: 'Failed to persist Stripe customer mapping',
     });
@@ -719,32 +678,10 @@ describe('CreateCheckoutSessionUseCase', () => {
   });
 
   it('throws INTERNAL_ERROR with CONFLICT cause when mapping is still missing after conflict reread', async () => {
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_new',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
-    });
     const stripeCustomers = new EmptyAfterConflictStripeCustomerRepository();
+    const { paymentGateway, useCase } = createUseCase({ stripeCustomers });
 
-    const useCase = new CreateCheckoutSessionUseCase(
-      stripeCustomers,
-      new FakeSubscriptionRepository(),
-      paymentGateway,
-      new FakeLogger(),
-      () => new Date('2026-02-01T00:00:00Z'),
-      getRenewalTerms,
-    );
-
-    const promise = useCase.execute({
-      userId: 'user-1',
-      clerkUserId: 'clerk-1',
-      email: 'user@example.com',
-      plan: 'monthly',
-      successUrl:
-        'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
-      cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
-    });
+    const promise = useCase.execute(defaultCheckoutInput);
 
     await expect(promise).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
@@ -759,5 +696,62 @@ describe('CreateCheckoutSessionUseCase', () => {
     await expect(stripeCustomers.findByUserId('user-1')).resolves.toBeNull();
     expect(paymentGateway.customerInputs).toHaveLength(1);
     expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('allows checkout when the current period ends exactly now', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {
+        status: 'active',
+        currentPeriodEnd: new Date('2026-02-01T00:00:00Z'),
+      },
+    );
+
+    await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
+      url: 'https://stripe/checkout',
+    });
+    expect(paymentGateway.checkoutInputs).toHaveLength(1);
+  });
+
+  it('requires a Clerk user id to create a missing Stripe customer', async () => {
+    const { paymentGateway, useCase } = createUseCase();
+
+    await expect(
+      useCase.execute({ ...defaultCheckoutInput, clerkUserId: null }),
+    ).rejects.toEqual(
+      new ApplicationError('INTERNAL_ERROR', 'Clerk user id is required'),
+    );
+    expect(paymentGateway.customerInputs).toEqual([]);
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  // The renewal terms are the disclosure the learner consents to; terms for
+  // another plan would disclose the wrong price.
+  it('refuses renewal terms for a plan other than the one selected', async () => {
+    const { paymentGateway, useCase } = createUseCase({
+      renewalTerms: (_plan, hasTrial) => getRenewalTerms('annual', hasTrial),
+    });
+
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Checkout renewal terms do not match the selected plan',
+      ),
+    );
+    expect(paymentGateway.customerInputs).toEqual([]);
+    expect(paymentGateway.checkoutInputs).toEqual([]);
+  });
+
+  it('passes the request key to Checkout, and no request options without one', async () => {
+    const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
+      {},
+    );
+
+    await useCase.execute({ ...defaultCheckoutInput, idempotencyKey: 'req-1' });
+    await useCase.execute(defaultCheckoutInput);
+
+    expect(paymentGateway.checkoutOptions).toStrictEqual([
+      { idempotencyKey: 'req-1' },
+      undefined,
+    ]);
   });
 });
