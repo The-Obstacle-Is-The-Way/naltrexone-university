@@ -166,7 +166,7 @@ General explanation of the correct answer.
 
 ### Reference
 
-Optional citation for the explanation.
+Required citation for the explanation.
 ```
 
 **Key points:**
@@ -175,7 +175,7 @@ Optional citation for the explanation.
 - Standard: 4 choices (schema allows 2-5, but all 958 files use 4)
 - The `## Stem` and `## Explanation` sections are mandatory
 - Each wrong choice carries its own `explanation` in the frontmatter, and the correct choice carries none (enforced by `QuestionFrontmatterSchema`)
-- An optional terminal `### Reference` section in the explanation becomes the question's reference
+- A nonempty terminal `### Reference` section in the explanation is required and becomes the question's reference. Only the synthetic placeholder fixtures (a `placeholder-` QID in `content/questions/placeholder/`) may omit it
 - The legacy "Why other answers are wrong" section in the explanation is refused by the seed
 
 **Validation schema:** `lib/content/schemas.ts` — `QuestionFrontmatterSchema` (Zod)
@@ -257,7 +257,7 @@ Notes:
 | Parse explanations | `parseExplanationAndReference(explanationMd)` | `scripts/seed-helpers.ts` — splits the general explanation from a terminal `### Reference` section; per-choice explanations come from each frontmatter choice's `explanation` |
 | Canonicalize | `canonicalizeMarkdown(text)` | `lib/content/parse-mdx-question.ts` — normalizes newlines, trims trailing whitespace |
 | Compare | `canonicalQuestionRevisionJson(fields)` against the current revision's | Change detection: unchanged content is skipped; changed content appends a revision |
-| Write | One transaction per question, its row locked `FOR UPDATE`: insert, or append a revision and move `current_revision_id`; status and tags update in place | Into PostgreSQL via Drizzle |
+| Write | One transaction per question. A new question is inserted; there is no row to lock yet, so of two concurrent inserts the unique slug key refuses the second. An existing question's row is locked `FOR UPDATE` before changed content appends a revision and moves `current_revision_id`; status and tags update in place | Into PostgreSQL via Drizzle |
 
 **Critical transformation:** The seed script **sorts choices by `label`** before assigning `sortOrder`:
 
