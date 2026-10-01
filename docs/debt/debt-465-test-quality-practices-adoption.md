@@ -117,6 +117,8 @@ Cache-free full `--force` runs over 21 more use cases: the rest of the folder up
 | `get-bookmarks.ts` | An available bookmark logs no warning (1). | — | — |
 | `get-practice-session-summary.ts` | The not-found message (1). | — | — |
 
+**Follow-up (2026-10-01, promotion #1271's review).** The three default-clock tests above, and wave 4b's entitlement one, read the real system time, so a clock step during a run could fail them. Each now freezes the system clock at a date that changes the outcome and still omits the use case's clock; the mutants stay killed. The rule is in runbook §5.
+
 ### Part 2 wave 4b triage — 2026-10-01
 
 Full `--force` runs over six small use cases, listed by name in `stryker.config.json` until the whole folder is triaged (wave 4c, above, moved the folder to a glob). `count-available-questions.ts` scored 100% at baseline.

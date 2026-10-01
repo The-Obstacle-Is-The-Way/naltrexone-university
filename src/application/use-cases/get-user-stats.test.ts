@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
 import {
@@ -9,6 +9,10 @@ import {
 import { GetUserStatsUseCase } from './get-user-stats';
 
 describe('GetUserStatsUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('shows each recent attempt as the revision it graded, even of one question (ADR-021)', async () => {
     const current = createQuestion({ id: 'q1', stemMd: 'Current stem' });
     const older = createQuestion({
@@ -268,18 +272,22 @@ describe('GetUserStatsUseCase', () => {
     });
   });
 
-  it('defaults to the real clock', async () => {
+  // Frozen on 2026-02-10, the system clock puts one attempt inside the
+  // seven-day window and one outside it.
+  it('reads the system clock when none is injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-02-10T12:00:00Z'));
     const useCase = new GetUserStatsUseCase(
       new FakeAttemptRepository([
         createAttempt({
           userId: 'user-1',
           questionId: 'q1',
-          answeredAt: new Date('2000-01-01T00:00:00Z'),
+          answeredAt: new Date('2026-01-01T12:00:00Z'),
         }),
         createAttempt({
           userId: 'user-1',
           questionId: 'q1',
-          answeredAt: new Date(),
+          answeredAt: new Date('2026-02-09T12:00:00Z'),
         }),
       ]),
       new FakeQuestionRepository([createQuestion({ id: 'q1' })]),

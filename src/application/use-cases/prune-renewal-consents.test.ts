@@ -1,13 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeRenewalConsentRecordRepository } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import { PruneRenewalConsentsUseCase } from './prune-renewal-consents';
 
-function createConsent(
-  sessionId: string,
-  subscriptionId: string,
-  acceptedAt = new Date('2026-08-06T12:00:00Z'),
-) {
+function createConsent(sessionId: string, subscriptionId: string) {
   return newRenewalConsentRecord({
     userId: 'user_1',
     consumerReference:
@@ -31,7 +27,7 @@ function createConsent(
     termsHash:
       'e6914e723d963b5342dee652c342fb1f748fa5fcfa8067c8d5cf79248c732eb8',
     consentSource: 'stripe_checkout',
-    acceptedAt,
+    acceptedAt: new Date('2026-08-06T12:00:00Z'),
     consentKind: 'initial_offer',
     priorAmountCents: null,
     proposedAmountCents: null,
@@ -40,6 +36,10 @@ function createConsent(
 }
 
 describe('PruneRenewalConsentsUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('prunes due terminated records in a bounded batch', async () => {
     const repository = new FakeRenewalConsentRecordRepository();
     await repository.save(createConsent('cs_due', 'sub_due'));
@@ -67,14 +67,15 @@ describe('PruneRenewalConsentsUseCase', () => {
     expect(repository.snapshot()).toHaveLength(1);
   });
 
-  it('defaults to the real clock', async () => {
+  // Frozen after the record's retention ends, the system clock makes it due.
+  it('reads the system clock when none is injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2029-08-07T00:00:00Z'));
     const repository = new FakeRenewalConsentRecordRepository();
-    await repository.save(
-      createConsent('cs_old', 'sub_old', new Date('2020-01-01T00:00:00Z')),
-    );
+    await repository.save(createConsent('cs_due', 'sub_due'));
     await repository.markSubscriptionTerminated({
-      externalSubscriptionId: 'sub_old',
-      terminatedAt: new Date('2020-06-01T00:00:00Z'),
+      externalSubscriptionId: 'sub_due',
+      terminatedAt: new Date('2027-01-01T00:00:00Z'),
     });
 
     await expect(
