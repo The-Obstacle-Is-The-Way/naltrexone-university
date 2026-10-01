@@ -376,7 +376,7 @@ ADR-021 decisions 4–6 leave the mechanism to this record. Each step below is i
 **Releases (decision 4).**
 - `content_releases`: id, the manifest, its sha256 `manifest_hash` (unique), `parent_release_id`, and `created_at`, `verified_at`, `activated_at` receipts. A release is never changed once written.
 - `content_release_items`: `(release_id, question_id)` primary key and the item's `question_revision_id`, with a composite key to `question_revisions(id, question_id)`.
-- `content_release_pointer`: one row naming the active release.
+- `content_release_pointer`: one row naming the active release. The migration creates it with no active release, so the seed and activation can lock it before any release exists.
 
 **Activation**, in one transaction:
 1. Lock the pointer row and compare the active release with the release's parent; a mismatch rejects the release as stale.
@@ -391,7 +391,7 @@ Any failure rolls the whole transaction back, and the previous release stays act
 
 **Steps.**
 - **4a, the withdrawal overlay:** this design; `question_withdrawals`; the withdrawal command and the seed record withdrawals, and the seed refuses a withdrawn question.
-- **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure. The direct seed refuses a database that has an active release, so the seed and activation never both write `status`. No release is activated in production in this step.
+- **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure. The direct seed refuses a database that has an active release. Each seed transaction reads the pointer under a share lock, which activation's update lock excludes, so a seed write and an activation cannot interleave. Before the first activation only the seed writes `status`; after it, only activations and the withdrawal command do (#1290 review). No release is activated in production in this step.
 - **4c, the release builder:** staging and activation commands for the production seed path. The first production activation follows it. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
 - **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
 
