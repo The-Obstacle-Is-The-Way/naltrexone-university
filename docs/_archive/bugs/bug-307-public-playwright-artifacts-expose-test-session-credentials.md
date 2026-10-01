@@ -174,8 +174,10 @@ identifier was printed.
   — resolved console-log surface whose exposure history this filing corrects.
 - [BUG-306](./bug-306-required-e2e-clerk-session-loss-and-accumulation.md)
   — resolved suite-session lifecycle defect that created the backlog.
-- [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — remains Open
+- [BUG-304](bug-304-practice-session-start-no-navigation.md) — remains Open
   because its application-owned silent-handler seam still exists.
+  *(2026-10-01 forward pointer: the seam was fixed and released, and BUG-304
+  is resolved and archived; see its verified closeout.)*
 - [DEBT-471](../debt/debt-471-e2e-ci-external-fragility.md) — owns the hosted
   Checkout drift classification and non-blocking cadence.
 - [DEBT-473](../debt/debt-473-green-without-evidence.md) — owns complete CI

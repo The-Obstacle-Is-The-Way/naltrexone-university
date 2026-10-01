@@ -167,7 +167,7 @@ filed or reopened with its own evidence.
 
 ## Related
 
-- [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — the required
+- [BUG-304](bug-304-practice-session-start-no-navigation.md) — the required
   E2E investigation whose follow-up gate exposed this independent auth failure.
 - [BUG-305](./bug-305-clerk-dev-browser-credential-in-ci-logs.md) — the same
   Clerk test seam can emit sensitive runtime-generated query values after a
