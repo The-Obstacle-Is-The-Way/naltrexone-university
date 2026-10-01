@@ -527,7 +527,7 @@ The lift-record case also caught a real defect before any push. The first check,
 
 ## The release builder (phase 4c-ii) — 2026-10-01
 
-`scripts/content-release/stage-release.ts` stages the MDX bundle as a release on the active release, writing nothing a learner reads. `release-builder.ts` holds the logic.
+`scripts/content-release/stage-release.ts` stages the MDX bundle as a release on the active release. Its drafts, non-current revisions and release items are not visible to learners until activation. The exception is tags, which are not versioned (ADR-021 decision 1), so a tag change takes effect when it is staged (#1298 review). `release-builder.ts` holds the logic.
 
 **What staging writes.**
 - It checks the whole bundle first, with the seed's own preparation: every file parses, slugs are unique and tag definitions agree.

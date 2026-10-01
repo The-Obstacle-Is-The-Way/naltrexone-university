@@ -4,7 +4,7 @@
 **Last Updated:** 2026-10-01 UTC
 
 **Latest** — 2026-10-01 UTC: DEBT-483 phase 4c-ii adds the release builder, and phases 4b and 4c-i are in production ([DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)).
-- **The release builder** (`scripts/content-release/stage-release.ts`). It stages the MDX bundle as a release on the active release, in one transaction, writing nothing a learner reads:
+- **The release builder** (`scripts/content-release/stage-release.ts`). It stages the MDX bundle as a release on the active release, in one transaction. Nothing it stages is visible to learners before activation, except tag changes, which are not versioned and take effect when staged:
   - new questions are drafts;
   - changed content is a revision that does not become current, or reuses a matching one;
   - an authored `archived` file is recorded as a withdrawal;

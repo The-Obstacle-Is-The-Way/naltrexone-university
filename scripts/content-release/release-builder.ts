@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
-import { canonicalQuestionRevisionJson } from '../../lib/content/question-revision-hash';
+import { sha256Hex } from '../../lib/content/parse-mdx-question';
+import { questionRevisionContentHash } from '../../lib/content/question-revision-hash';
 import type { SeedSourceFile } from '../seed/file-reader';
 import { onlyRow } from '../seed/only-row';
 import {
-  revisionFieldsFromDb,
   revisionFieldsFromSeed,
   type SeedQuestionRep,
 } from '../seed/question-parser';
@@ -44,30 +44,29 @@ export type StageSummary = {
   items: number;
 };
 
+// A revision's content_hash is the stored-fields-json-v1 hash of exactly what
+// it holds (ADR-021), so a file matches a revision when the hashes agree.
 async function revisionForContent(
   tx: Db,
   questionId: string,
   seed: SeedQuestionRep,
 ): Promise<string | null> {
-  const wanted = canonicalQuestionRevisionJson(revisionFieldsFromSeed(seed));
-  const revisions = await tx
-    .select()
+  const [match] = await tx
+    .select({ id: schema.questionRevisions.id })
     .from(schema.questionRevisions)
-    .where(eq(schema.questionRevisions.questionId, questionId));
-  for (const revision of revisions) {
-    const choices = await tx
-      .select()
-      .from(schema.choices)
-      .where(eq(schema.choices.questionRevisionId, revision.id))
-      .orderBy(schema.choices.sortOrder);
-    if (
-      canonicalQuestionRevisionJson(revisionFieldsFromDb(revision, choices)) ===
-      wanted
-    ) {
-      return revision.id;
-    }
-  }
-  return null;
+    .where(
+      and(
+        eq(schema.questionRevisions.questionId, questionId),
+        eq(
+          schema.questionRevisions.contentHash,
+          questionRevisionContentHash(revisionFieldsFromSeed(seed), {
+            hash: sha256Hex,
+          }),
+        ),
+      ),
+    )
+    .limit(1);
+  return match?.id ?? null;
 }
 
 // DEBT-483 / ADR-021 decision 6: in production, content arrives as a staged
