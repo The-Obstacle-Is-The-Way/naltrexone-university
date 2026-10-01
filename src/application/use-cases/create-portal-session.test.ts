@@ -20,7 +20,10 @@ function createPayments() {
   });
 }
 
-async function openPortal(status: SubscriptionStatus | null) {
+async function openPortal(
+  status: SubscriptionStatus | null,
+  idempotencyKey?: string,
+) {
   const payments = createPayments();
   const stripeCustomers = new FakeStripeCustomerRepository();
   await stripeCustomers.insert(userId, 'cus_existing');
@@ -36,6 +39,7 @@ async function openPortal(status: SubscriptionStatus | null) {
   const result = await useCase.execute({
     userId,
     returnUrl: 'https://app.example.com/app/billing',
+    ...(idempotencyKey ? { idempotencyKey } : {}),
   });
   return { payments, result };
 }
@@ -59,6 +63,16 @@ describe('CreatePortalSessionUseCase', () => {
       new ApplicationError('NOT_FOUND', 'Stripe customer not found'),
     );
     expect(payments.portalInputs).toEqual([]);
+  });
+
+  it('passes a request key to the gateway, and no request options without one', async () => {
+    const keyed = await openPortal('active', 'portal-key-1');
+    const unkeyed = await openPortal('active');
+
+    expect(keyed.payments.portalOptions).toStrictEqual([
+      { idempotencyKey: 'portal-key-1' },
+    ]);
+    expect(unkeyed.payments.portalOptions).toStrictEqual([undefined]);
   });
 
   it('creates a paid-profile portal session for a paying subscriber', async () => {

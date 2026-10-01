@@ -43,6 +43,12 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
     "src/application/shared/**/*.ts",
     "!src/application/shared/**/*.test.ts",
     "!src/application/shared/**/index.ts",
+    "src/application/use-cases/check-entitlement.ts",
+    "src/application/use-cases/check-trial-saved-card.ts",
+    "src/application/use-cases/count-available-questions.ts",
+    "src/application/use-cases/create-portal-session.ts",
+    "src/application/use-cases/discard-practice-session.ts",
+    "src/application/use-cases/end-practice-session.ts",
     "src/application/use-cases/validate-feedback-context.ts",
     "src/application/use-cases/start-practice-session.ts",
     "src/adapters/controllers/shared/idempotency-error-policy.ts"
@@ -65,6 +71,7 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
 
 - **`"break": null` is policy, not an oversight.** Coverage-adjacent metrics are observational in this repo (`docs/dev/react-vitest-testing.md`); `high`/`low` only color the report. Introducing a breaking gate requires an ADR amending ADR-019 with measured baselines.
 - `incremental: true` reuses unchanged mutant results, but the initial related-test coverage run still executes on every re-run. It is for local focused loops only: Stryker 9.6.1 does not invalidate a result when an unmutated file the mutant's module imports changes, so an incremental score can be stale. Every recorded score and the weekly workflow use `--force` (#1160 review).
+- **Record scores from a run without `.stryker-incremental.json`**, as the weekly workflow does. Even with `--force`, Stryker merges cached results for mutants outside the run into its report, and a cached kill can hide a survivor. On 2026-10-01, a run with the cache present missed one equivalent mutant that wave 4a's record had counted as killed.
 - `.gitignore` covers `.stryker-tmp/`, `.stryker-incremental.json` and `reports/`. The incremental file lives at the repo root deliberately: Stryker cleans `tempDirName` between runs, so state stored inside `.stryker-tmp/` would be destroyed.
 - `pnpm test:mutation` runs `stryker run` over every target. Focused loop while fixing one module: `pnpm exec stryker run --mutate src/domain/services/grading.ts`. Add `--force` to ignore incremental results when recording a baseline.
 - The sandbox copy requires the `ignorePatterns` above because the committed agent-skill symlink trees fail copying on macOS. Do not use `--inPlace`; it mutates the working tree during the run.
@@ -84,7 +91,7 @@ Chosen 2026-08-13 for consequence-per-minute: small, fast, unit-tested, mostly p
 | `src/application/shared/persist-subscription-observation.ts` | Retry-loop bounds + version-conflict discriminator; wrong can mean a nonterminating conflict retry or a lost write | Attempt-counter reversal times out; the defensive fallback is `NoCoverage` |
 | `src/application/use-cases/validate-feedback-context.ts` (15 tests) | BUG-260 ownership/integrity boundary with a compound negated clause | Condition removal in the both-ID and retry-provenance ladder |
 
-The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). The third wave, triaged on 2026-09-30, covers every production file under `src/domain/**` through a glob, which excludes tests, barrels and test helpers, so a new domain module joins with its first run. Type-only modules produce no mutants. Wave 4a, triaged the same day, covers `src/application/shared/**` by the same kind of glob. Next come `src/application/use-cases/**`, subject to the §2 exclusions, in more than one wave.
+The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). The third wave, triaged on 2026-09-30, covers every production file under `src/domain/**` through a glob, which excludes tests, barrels and test helpers, so a new domain module joins with its first run. Type-only modules produce no mutants. Wave 4a, triaged the same day, covers `src/application/shared/**` by the same kind of glob. Next come `src/application/use-cases/**`, subject to the §2 exclusions, in more than one wave. Wave 4b, triaged on 2026-10-01, added six small use cases by name. The folder joins by glob once every file is triaged.
 
 ## 5. Triage — what each survivor means
 
@@ -181,10 +188,29 @@ Wave 4a ran on 2026-09-30 over the rest of `src/application/shared/**`:
 | `src/application/shared/transactional-email-payload.ts` | 93.18% | 100.00% |
 | **All eight files** | **94.85%** | **100.00%** |
 
+Wave 4b ran on 2026-10-01 over six use cases:
+
+| File | Baseline | After triage |
+|---|---:|---:|
+| `src/application/use-cases/check-entitlement.ts` | 94.74% | 100.00% |
+| `src/application/use-cases/check-trial-saved-card.ts` | 87.50% | 100.00% |
+| `src/application/use-cases/count-available-questions.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/create-portal-session.ts` | 81.82% | 100.00% |
+| `src/application/use-cases/discard-practice-session.ts` | 82.35% | 100.00% |
+| `src/application/use-cases/end-practice-session.ts` | 64.00% | 100.00% |
+| **All six files** | **80.85%** | **100.00%** |
+
 Modules written after the pilot join the list with their first run:
 
 | File | First run | Score |
 |---|---|---:|
 | `src/domain/services/subscription-anniversary.ts` | 2026-09-27, DEBT-414 F02 | 100.00% (39 mutants: 18 killed, 21 timed out) |
 
-The after-triage scores exclude suppressed equivalent mutants, each with its reason in the source, and the siblings those comments also cover (§5): four and two from the pilot, three and three from the third wave, and one from wave 4a, an `OptionalChaining` mutant with no sibling. The third wave's three `EqualityOperator` comments each cover two replacements of one operator; its baseline, run without the comments, shows that only the equivalent replacement survived and the other was killed. 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.
+The after-triage scores exclude suppressed equivalent mutants, each with its reason in the source, and the siblings those comments also cover (§5). By wave:
+
+- **Pilot:** four equivalent mutants and two siblings.
+- **Third wave:** three and three. Its `EqualityOperator` comments each cover two replacements of one operator; the baseline, run without the comments, shows only the equivalent replacement survived.
+- **Wave 4a:** two equivalent mutants and three siblings: an `OptionalChaining` mutant, and the `typeof` check in `transactional-email-payload.ts`, whose comment covers three killed `ConditionalExpression` siblings.
+- **Wave 4b:** one equivalent mutant and one sibling.
+
+100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.
