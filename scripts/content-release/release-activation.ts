@@ -81,12 +81,20 @@ export async function lockReleasePointer(tx: Db): Promise<string | null> {
   return readReleasePointer(tx, 'update');
 }
 
+// Reads the active release under a share lock, which waits for an
+// activation in progress.
+export async function readActiveReleaseForShare(
+  tx: Db,
+): Promise<string | null> {
+  return readReleasePointer(tx, 'share');
+}
+
 // DEBT-483 phase 4: once a release is active, only activation and the
 // withdrawal command write questions.status. The direct seed calls this first
 // in each of its transactions. The share lock waits for an activation in
 // progress, which holds the pointer for update, so the two never interleave.
 export async function assertNoActiveRelease(tx: Db): Promise<void> {
-  const active = await readReleasePointer(tx, 'share');
+  const active = await readActiveReleaseForShare(tx);
   if (active !== null) {
     throw new ReleaseActivationError(
       'RELEASE_ACTIVE',

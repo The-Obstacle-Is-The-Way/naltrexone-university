@@ -20,12 +20,18 @@ export type AppendedQuestionRevision = {
 // number and its own choice rows, and the question's current revision moves to
 // it. The caller holds the question row lock, so revision numbers cannot race.
 // A new question is written pointing at its first revision's id, given here,
-// before that revision exists; the deferred key is checked at commit.
+// before that revision exists; the deferred key is checked at commit. Staging
+// a release (DEBT-483) passes makeCurrent: false, so the revision stays
+// invisible until an activation moves the pointer to it.
 export async function appendQuestionRevision(
   tx: PostgresJsDatabase<typeof schema>,
   questionId: string,
   fields: QuestionRevisionFields,
-  options: { revisionId?: string; updatedAt?: Date } = {},
+  options: {
+    revisionId?: string;
+    updatedAt?: Date;
+    makeCurrent?: boolean;
+  } = {},
 ): Promise<AppendedQuestionRevision> {
   const [latest] = await tx
     .select({
@@ -68,13 +74,15 @@ export async function appendQuestionRevision(
     )
     .returning({ id: schema.choices.id, label: schema.choices.label });
 
-  await tx
-    .update(schema.questions)
-    .set({
-      currentRevisionId: revision.id,
-      updatedAt: options.updatedAt ?? new Date(),
-    })
-    .where(eq(schema.questions.id, questionId));
+  if (options.makeCurrent ?? true) {
+    await tx
+      .update(schema.questions)
+      .set({
+        currentRevisionId: revision.id,
+        updatedAt: options.updatedAt ?? new Date(),
+      })
+      .where(eq(schema.questions.id, questionId));
+  }
 
   return {
     revisionId: revision.id,

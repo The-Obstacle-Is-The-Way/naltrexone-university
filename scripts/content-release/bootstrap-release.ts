@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import { runHumanDatabaseCommand } from '../database-command';
 import {
   formatActivation,
+  parseApplyFlag,
   previewOrApply,
   withCommandDatabase,
 } from './command-support';
@@ -12,20 +13,6 @@ type CommandIo = {
   log?: (message: string) => void;
 };
 
-export function parseBootstrapArgs(argv: readonly string[]): {
-  apply: boolean;
-} {
-  let apply = false;
-  for (const arg of argv) {
-    if (arg === '--apply' && !apply) {
-      apply = true;
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-  return { apply };
-}
-
 // DEBT-483: the first activation adopts what is live as a release with no
 // parent. Afterwards the direct seed refuses this database, and content
 // changes only through releases. A dry run unless --apply.
@@ -33,7 +20,7 @@ export async function runBootstrapRelease(
   argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
-  const { apply } = parseBootstrapArgs(argv);
+  const { apply } = parseApplyFlag(argv);
   await runHumanDatabaseCommand({
     env,
     log,

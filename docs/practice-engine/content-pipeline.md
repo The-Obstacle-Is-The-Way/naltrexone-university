@@ -318,12 +318,14 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activa
 # Roll back: activate the earlier release, naming the one now active.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<earlier-release-id>" --expect-active "<active-release-id>"
+# Stage the MDX bundle as a release on the active release; it prints the activation to run.
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts --apply
 # Hold a question's live revision, or lift that hold with --lift.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
-Once a release is active, the direct seed refuses that database, and content changes only through releases. **Do not bootstrap production until the release builder ships** ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#operator-commands-phase-4c-i--2026-10-01)). Until it does, nothing could stage new content there.
+Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and content changes only through releases: stage, preview the activation, then activate. Staging writes drafts and non-current revisions that no learner reads, refuses a withdrawn question and a bundle with no published file, and is one transaction. **Bootstrapping production is the owner's decision**, because it changes how content is published ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
 
 A hold takes effect at once: it re-applies the active release, which archives the held question. A lift returns it, and records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
 
@@ -539,7 +541,7 @@ Before seeding, ensure the target database schema is up to date:
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
 
-The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases. No database has one yet; the first production activation follows the release builder ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-activate-roll-back-and-hold). No database has one yet, and bootstrapping production is the owner's decision ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
 
 ---
 

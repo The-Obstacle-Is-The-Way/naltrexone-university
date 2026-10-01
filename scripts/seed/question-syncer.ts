@@ -76,7 +76,7 @@ function createSeedQuestionSyncError(input: {
   );
 }
 
-function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
+export function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
   const questionPaths = new Map<string, string>();
   const tags = new Map<string, { tag: SeedTag; path: string }>();
 
@@ -115,13 +115,13 @@ function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
   });
 }
 
-function sortedTags(tags: readonly SeedTag[]): SeedTag[] {
+export function sortedTags(tags: readonly SeedTag[]): SeedTag[] {
   return [...tags]
     .sort((a, b) => a.slug.localeCompare(b.slug))
     .map(({ slug, name, kind }) => ({ slug, name, kind }));
 }
 
-async function replaceQuestionTags(
+export async function replaceQuestionTags(
   tx: PostgresJsDatabase<typeof schema>,
   questionId: string,
   tags: SeedTag[],
@@ -141,17 +141,17 @@ async function replaceQuestionTags(
 // DEBT-483: an archive in MDX is one-way, as the guard below enforces, so for
 // authored content it is a withdrawal and is recorded as one. The synthetic
 // placeholders are archived and restored by design and are never recorded.
-async function recordSeedWithdrawal(
+export async function recordSeedWithdrawal(
   tx: PostgresJsDatabase<typeof schema>,
   questionId: string,
   seed: SeedQuestionRep,
   sourcePath: string,
-): Promise<void> {
+): Promise<boolean> {
   if (
     seed.status !== 'archived' ||
     isSyntheticPlaceholderSource(seed.slug, sourcePath)
   ) {
-    return;
+    return false;
   }
   await recordWithdrawals(
     tx,
@@ -161,6 +161,7 @@ async function recordSeedWithdrawal(
       authority: 'content seed',
     },
   );
+  return true;
 }
 
 async function insertQuestion(

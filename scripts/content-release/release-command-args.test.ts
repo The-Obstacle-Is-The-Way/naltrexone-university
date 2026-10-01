@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { parseActivateArgs } from './activate-release';
-import { parseBootstrapArgs } from './bootstrap-release';
+import { parseApplyFlag } from './command-support';
 
 const RELEASE = '3f6c2a1e-8b4d-4c7a-9e2f-1a2b3c4d5e6f';
 const ACTIVE = '7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d';
 
-describe('parseBootstrapArgs', () => {
+describe('parseApplyFlag', () => {
   it('defaults to a dry run', () => {
-    expect(parseBootstrapArgs([])).toEqual({ apply: false });
+    expect(parseApplyFlag([])).toEqual({ apply: false });
   });
 
   it('applies with --apply', () => {
-    expect(parseBootstrapArgs(['--apply'])).toEqual({ apply: true });
+    expect(parseApplyFlag(['--apply'])).toEqual({ apply: true });
   });
 
   it.each([[['--apply', '--apply']], [['--release']]])('rejects %j', (argv) => {
-    expect(() => parseBootstrapArgs(argv)).toThrow(/Unknown argument/);
+    expect(() => parseApplyFlag(argv)).toThrow(/Unknown argument/);
   });
 });
 
