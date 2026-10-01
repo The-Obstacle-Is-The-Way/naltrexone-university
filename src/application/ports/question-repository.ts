@@ -40,7 +40,6 @@ export interface QuestionRepository {
    * showing content.
    */
   findIdBySlug(slug: string): Promise<string | null>;
-  findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
 
   /**
    * Returns a session item's or attempt's question regardless of

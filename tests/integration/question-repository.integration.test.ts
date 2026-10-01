@@ -43,36 +43,6 @@ describe('DrizzleQuestionRepository', () => {
     await expect(repo.findPublishedBySlug(slug)).resolves.toBeNull();
   });
 
-  it('findPublishedByIds preserves input order and excludes drafts', async () => {
-    const publishedA = await createQuestion(db, cleanup, {
-      slug: `it-pub-a-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-
-    const draft = await createQuestion(db, cleanup, {
-      slug: `it-draft-${randomUUID()}`,
-      status: 'draft',
-      difficulty: 'easy',
-    });
-
-    const publishedB = await createQuestion(db, cleanup, {
-      slug: `it-pub-b-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'hard',
-    });
-
-    const repo = new DrizzleQuestionRepository(db);
-
-    const result = await repo.findPublishedByIds([
-      publishedB.id,
-      publishedA.id,
-      draft.id,
-    ]);
-
-    expect(result.map((q) => q.id)).toEqual([publishedB.id, publishedA.id]);
-  });
-
   it('session-owned lookups return non-published questions while public lookups exclude them', async () => {
     const published = await createQuestion(db, cleanup, {
       slug: `it-session-pub-${randomUUID()}`,
@@ -93,9 +63,11 @@ describe('DrizzleQuestionRepository', () => {
     const repo = new DrizzleQuestionRepository(db);
 
     await expect(repo.findPublishedById(archived.id)).resolves.toBeNull();
-    await expect(
-      repo.findPublishedByIds([archived.id, published.id, draft.id]),
-    ).resolves.toMatchObject([{ id: published.id, status: 'published' }]);
+    await expect(repo.findPublishedById(draft.id)).resolves.toBeNull();
+    await expect(repo.findPublishedById(published.id)).resolves.toMatchObject({
+      id: published.id,
+      status: 'published',
+    });
 
     // Session items read their bound revision whatever the question's status.
     const bindingOf = (question: { id: string; revisionId: string }) => ({

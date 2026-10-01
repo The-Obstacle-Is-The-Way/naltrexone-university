@@ -1,15 +1,15 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-01 — BUG-304 fix in review.
+**Last Updated:** 2026-10-01 — BUG-304 resolved and archived.
 
-**Latest** — 2026-10-01: **BUG-304 (P3), fix in review.**
-- **What it fixes.** A Start click that reached the handler of an earlier render was refused silently: no request, no loading state, no alert. That happened after the idempotency key rotated asynchronously, or after a change and a start in one event.
-- **How.** The start now reads the learner's latest choice and the current key from refs updated with each change, so every invocation starts what was last chosen. BUG-303's guarantee holds: the earlier key is never submitted, and the newer one is never retired while it may still run.
-- **Receipts.** Red first: a browser test changes each starter control and starts in the same event. On the old code none made a request.
-- **Closes after release.** The record closes when the fix is released.
+**Latest** — 2026-10-01: **BUG-304 (P3) is Resolved and archived.**
+- **What was fixed.** A Start click that reached the handler of an earlier render was refused silently. Every start now submits the learner's latest choice under the current key, and BUG-303's key guarantees hold.
+- **Fix.** #1282 (**5377515605** on `389194ae`, no findings; merged `14a3e800`), promoted through #1283 (`73dcff85`). Codecov's patch check first found two controls untested, and the red-first test now covers every starter control.
+- **Release verified.** Main CI **36845119514** `test` **09:59:59Z**; production assigned **10:00:02.594Z**; matching trees `a789dd2c`; healthy production.
+- **Remaining.** The original 2026-08-25 click's cause stays unproven. A recurrence would now show a request, a loading state or an alert, and would be a new record.
 
-**Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
+**Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
 **Terminal-close disposition rule:** confirmed P3-or-higher findings enter Active as must-fix; confirmed P4 findings enter Parked (accepted-risk) and do not extend a mandatory fix wave.
 
@@ -460,7 +460,6 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified. The application's silent no-op path, a start handler from an earlier render, is fixed in review (2026-10-01); the record closes after its release. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
@@ -1082,6 +1081,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-304](../_archive/bugs/bug-304-practice-session-start-no-navigation.md) | A Start click that reaches the handler of an earlier render starts the learner's latest choice under the current key; no application path drops a start silently | P3 | 2026-10-01 |
 | [BUG-313](../_archive/bugs/bug-313-app-clerk-retry-misses-dropped-connections.md) | The app's Clerk reads (the signed-in user, the provisioning identity lookup) retry a dropped connection, which the Clerk SDK reports as a `ClerkAPIResponseError` with no status; tests use the real SDK's own error | P3 | 2026-09-30 |
 | [BUG-312](../_archive/bugs/bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md) | The E2E helpers' Clerk calls retry dropped connections (including undici's `UND_ERR_SOCKET`), 429 and 5xx with the app's retry policy, cancelling superseded bodies, so one dropped connection no longer fails a test in its reset or holds a release | P3 | 2026-09-30 |
 | [BUG-311](../_archive/bugs/bug-311-playwright-install-retry-blocked-by-orphaned-apt.md) | CI's Playwright install stops an `apt-get` left over from a timed-out phase (TERM, then KILL) before retrying, so the retry no longer fails on apt's lists lock | P3 | 2026-09-30 |

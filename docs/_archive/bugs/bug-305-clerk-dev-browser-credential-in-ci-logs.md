@@ -120,7 +120,7 @@ failures.
 - [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) — the
   broader required-CI credential-scope work; its implementation audit must add
   runtime-generated credentials, not only job-level `secrets.*` values.
-- [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — its exact-head
+- [BUG-304](bug-304-practice-session-start-no-navigation.md) — its exact-head
   verification exposed this independent logging defect.
 - [BUG-306](./bug-306-required-e2e-clerk-session-loss-and-accumulation.md) — the
   same per-test Clerk seam accumulated sessions without teardown and later lost

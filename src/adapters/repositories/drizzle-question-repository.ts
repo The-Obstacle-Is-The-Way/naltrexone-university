@@ -160,23 +160,6 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     return row?.id ?? null;
   }
 
-  async findPublishedByIds(ids: readonly string[]) {
-    if (ids.length === 0) return [];
-
-    const rows = await this.db.query.questions.findMany({
-      where: and(
-        inArray(questions.id, [...ids]),
-        eq(questions.status, 'published'),
-      ),
-      with: questionRelations,
-    });
-
-    const byId = new Map(rows.map((row) => [row.id, this.toDomain(row)]));
-    return ids
-      .map((id) => byId.get(id))
-      .filter((q): q is NonNullable<typeof q> => !!q);
-  }
-
   async findByIdForSession(item: QuestionRevisionBinding) {
     const [question] = await this.findByIdsForSession([item]);
     return question ?? null;

@@ -90,7 +90,7 @@ To include them: `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`
 
 ### Where do tag display names come from?
 
-You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The import script looks up display names from `lib/content/draftTaxonomy.ts` (`"Pharmacology & Neuroscience"`). You never need to write display names in drafts.
+You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The import script looks up display names from `lib/content/draft-taxonomy.ts` (`"Pharmacology & Neuroscience"`). You never need to write display names in drafts.
 
 ---
 
@@ -99,8 +99,8 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 ### Sources of Truth
 
 - **Draft question format:** `docs/content/question-format-spec.md` — single source of truth for authoring
-- **Canonical tag taxonomy:** `lib/content/draftTaxonomy.ts` (code), `docs/content/tag-taxonomy-golden-spec.md` (reference)
-- **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parseMdxQuestion.ts`
+- **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/content/tag-taxonomy-golden-spec.md` (reference)
+- **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parse-mdx-question.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
 
 ### Pipeline Scripts
@@ -109,11 +109,11 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 |--------|---------|-------------|
 | `scripts/import-draft-questions.ts` | `pnpm content:import:drafts` | Discovers `**/recall.md` + `**/vignettes.md` under `content/drafts/questions/`, splits multi-question blocks, converts each to one MDX file |
 | `scripts/draft-question-import.ts` | (library, called by above) | Parses draft YAML (`DraftFrontmatterSchema`), expands tag slugs to `{slug, name, kind}` objects via `convertDraftQuestionToMdx()` |
-| `scripts/seed.ts` | `pnpm db:seed` | Reads all `content/questions/**/*.mdx`, validates, upserts to PostgreSQL (questions, choices, tags, question_tags) |
-| `scripts/seed-helpers.ts` | (library, called by seed) | Parses "Why other answers are wrong" into per-choice explanations, computes choice sync plans |
-| `lib/content/draftTaxonomy.ts` | (library, called by import) | Canonical slug lists + display name maps for topics, substances, treatments |
+| `scripts/seed.ts` | `pnpm db:seed` | Reads all `content/questions/**/*.mdx`, validates, and syncs each question in its own transaction: a new question is inserted with its first revision; changed content appends a revision with its own choices; status and tags update in place (ADR-021) |
+| `scripts/seed-helpers.ts` | (library, called by seed) | Splits a terminal `### Reference` section from the explanation, and detects the legacy "Why other answers are wrong" section, which the seed refuses (per-choice explanations come from each frontmatter choice's `explanation`) |
+| `lib/content/draft-taxonomy.ts` | (library, called by import) | Canonical slug lists + display name maps for topics, substances, treatments |
 | `lib/content/schemas.ts` | (library, called by import + seed) | Zod schemas for MDX frontmatter validation |
-| `lib/content/parseMdxQuestion.ts` | (library, called by seed) | Extracts `## Stem` / `## Explanation` sections, canonicalizes markdown |
+| `lib/content/parse-mdx-question.ts` | (library, called by seed) | Extracts `## Stem` / `## Explanation` sections, canonicalizes markdown |
 
 ### Directory Roles
 
@@ -140,15 +140,18 @@ choices:
   - label: "A"
     text: "Choice text (supports YAML multiline >-)"
     correct: false
+    explanation: "Why A is wrong"
   - label: "B"
     text: "Correct choice text"
     correct: true
   - label: "C"
     text: "Another wrong choice"
     correct: false
+    explanation: "Why C is wrong"
   - label: "D"
     text: "Another wrong choice"
     correct: false
+    explanation: "Why D is wrong"
 ---
 
 ## Stem
@@ -161,10 +164,9 @@ General explanation of the correct answer.
 
 **Clinical pearl:** Practical takeaway.
 
-**Why other answers are wrong:**
-- A) Why A is wrong
-- C) Why C is wrong
-- D) Why D is wrong
+### Reference
+
+Required citation for the explanation.
 ```
 
 **Key points:**
@@ -172,7 +174,9 @@ General explanation of the correct answer.
 - Exactly 1 `correct: true` choice per question (enforced by Zod validation)
 - Standard: 4 choices (schema allows 2-5, but all 958 files use 4)
 - The `## Stem` and `## Explanation` sections are mandatory
-- The "Why other answers are wrong" subsection in the explanation is optional; if present, it's parsed into per-choice explanations
+- Each wrong choice carries its own `explanation` in the frontmatter, and the correct choice carries none (enforced by `QuestionFrontmatterSchema`)
+- A nonempty terminal `### Reference` section in the explanation is required and becomes the question's reference. Only the synthetic placeholder fixtures (a `placeholder-` QID in `content/questions/placeholder/`) may omit it
+- The legacy "Why other answers are wrong" section in the explanation is refused by the seed
 
 **Validation schema:** `lib/content/schemas.ts` — `QuestionFrontmatterSchema` (Zod)
 
@@ -186,7 +190,7 @@ Draft question sets live under `content/drafts/questions/**` and are imported fr
 - Must begin with `---` then `qid:` on the next line (`splitDraftQuestionsFile()` looks for `^---\\nqid:`)
 
 Notes:
-- Draft `substances[]` and `topics[]` are validated against the canonical taxonomy in `lib/content/draftTaxonomy.ts`.
+- Draft `substances[]` and `topics[]` are validated against the canonical taxonomy in `lib/content/draft-taxonomy.ts`.
 - All draft tag slugs must be **kebab-case** (`lowercase-with-dashes`).
 
 ### Import Drafts → MDX (Generated)
@@ -249,11 +253,11 @@ Notes:
 | Discover | `fast-glob('content/questions/**/*.mdx')` | Finds all MDX files |
 | Split | `gray-matter(raw)` → `{ data, content }` | Separates YAML frontmatter from body |
 | Validate | `QuestionFrontmatterSchema.parse(data)` | Zod validates frontmatter structure |
-| Extract | `parseMdxQuestionBody(content)` | `lib/content/parseMdxQuestion.ts` — extracts text between `## Stem` and `## Explanation` headings |
-| Parse explanations | `parseChoiceExplanations(explanationMd)` | `scripts/seed-helpers.ts` — splits general explanation from per-choice "Why other answers are wrong" breakdowns |
-| Canonicalize | `canonicalizeMarkdown(text)` | `lib/content/parseMdxQuestion.ts` — normalizes newlines, trims trailing whitespace |
-| Hash | `sha256Hex(canonicalJsonString(seedRep))` | Change detection — skip unchanged questions |
-| Upsert | Transaction: insert/update question, choices, tags, question_tags | Into PostgreSQL via Drizzle |
+| Extract | `parseMdxQuestionBody(content)` | `lib/content/parse-mdx-question.ts` — extracts text between `## Stem` and `## Explanation` headings |
+| Parse explanations | `parseExplanationAndReference(explanationMd)` | `scripts/seed-helpers.ts` — splits the general explanation from a terminal `### Reference` section; per-choice explanations come from each frontmatter choice's `explanation` |
+| Canonicalize | `canonicalizeMarkdown(text)` | `lib/content/parse-mdx-question.ts` — normalizes newlines, trims trailing whitespace |
+| Compare | `canonicalQuestionRevisionJson(fields)` against the current revision's | Change detection: unchanged content is skipped; changed content appends a revision |
+| Write | One transaction per question. A new question is inserted; there is no row to lock yet, so of two concurrent inserts the unique slug key refuses the second. An existing question's row is locked `FOR UPDATE` before changed content appends a revision and moves `current_revision_id`; status and tags update in place | Into PostgreSQL via Drizzle |
 
 **Critical transformation:** The seed script **sorts choices by `label`** before assigning `sortOrder`:
 
@@ -273,7 +277,7 @@ Because labels are validated as `A`–`E` and then sorted, `sortOrder` is effect
 
 ### Publishing Rule
 
-The app only serves **published** questions. `DrizzleQuestionRepository` queries always include `questions.status = 'published'`. If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
+The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status, and a withdrawn one is marked (ADR-021 §3). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
 
 ### Placeholder Questions
 
@@ -307,7 +311,7 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 | `label` | varchar(4) | Canonical authored label: A–E |
 | `textMd` | text | Choice text (raw markdown) |
 | `isCorrect` | boolean | Correctness flag |
-| `explanationMd` | text (nullable) | Per-choice explanation (parsed from "Why other answers are wrong") |
+| `explanationMd` | text (nullable) | Per-choice explanation, from the choice's frontmatter `explanation`; null for the correct choice |
 | `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D, 5=E |
 
 **Unique constraints:** `(questionRevisionId, label)` and `(questionRevisionId, sortOrder)`: no duplicate labels or ordering within a revision. A newer revision may reuse its question's labels. A choice is never updated.
@@ -420,9 +424,9 @@ All four callers of `buildShuffledChoiceViews` produce consistent shuffled label
 |------|----------|-------|--------|--------|
 | **Author** | `content/questions/**/*.mdx` | Human writes | YAML + Markdown | A–E (canonical) |
 | **Validate** | `lib/content/schemas.ts` | Frontmatter | Parsed + validated | Preserved |
-| **Extract** | `lib/content/parseMdxQuestion.ts` | MDX body | `stemMd`, `explanationMd` | N/A (body text) |
-| **Parse per-choice** | `scripts/seed-helpers.ts` | Explanation markdown | General + per-choice Map | Label keys (A-E) |
-| **Canonicalize** | `lib/content/parseMdxQuestion.ts` | Raw markdown | Normalized markdown | Preserved |
+| **Extract** | `lib/content/parse-mdx-question.ts` | MDX body | `stemMd`, `explanationMd` | N/A (body text) |
+| **Split reference** | `scripts/seed-helpers.ts` | Explanation markdown | General explanation + reference | N/A (per-choice explanations come from frontmatter) |
+| **Canonicalize** | `lib/content/parse-mdx-question.ts` | Raw markdown | Normalized markdown | Preserved |
 | **Seed to DB** | `scripts/seed.ts` | Canonical repr | DB rows | A=sortOrder 1, B=2, etc. |
 | **Query** | `drizzle-question-repository.ts` | DB rows | Domain entity | Sorted by sortOrder (A–E) |
 | **Shuffle** | `shuffled-choice-views.ts` | Domain entity + userId | Shuffled views | **New displayLabels** by position |
@@ -557,7 +561,7 @@ By default, `pnpm db:seed` **excludes** placeholder questions and archives any e
 
 - Scans `content/drafts/questions/` for files named `recall.md` and `vignettes.md`
 - Splits multi-question blocks within each file into individual questions
-- Validates tag slugs against the canonical taxonomy in `lib/content/draftTaxonomy.ts`
+- Validates tag slugs against the canonical taxonomy in `lib/content/draft-taxonomy.ts`
 - Requires an absent or empty output root (`--out`) before actual writes
 - Writes one `.mdx` file per question into that fresh output tree
 

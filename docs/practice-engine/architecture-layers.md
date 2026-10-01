@@ -31,7 +31,7 @@ All value objects provide union string types (derived from `All*` constants), va
 |-------------|--------|-------------|
 | `PracticeMode` | `'tutor'` \| `'exam'` | `shouldShowExplanationForMode()` |
 | `QuestionDifficulty` | `'easy'` \| `'medium'` \| `'hard'` | `isValidDifficulty()` |
-| `QuestionStatus` | `'draft'` \| `'published'` \| `'archived'` | `isVisibleStatus()` |
+| `QuestionStatus` | `'draft'` \| `'published'` \| `'archived'` | `isValidQuestionStatus()` |
 | `ChoiceLabel` | `'A'` \| `'B'` \| `'C'` \| `'D'` \| `'E'` | `isValidChoiceLabel()` |
 | `TagKind` | `'topic'` \| `'substance'` \| `'treatment'` \| `'diagnosis'` | `isValidTagKind()` |
 | `SubscriptionPlan` | `'monthly'` \| `'annual'` | `isValidSubscriptionPlan()` |

@@ -203,35 +203,11 @@ describe('cached-reads coverage seam', () => {
     expect(bySlug?.id).toBe('question-1');
   });
 
-  it('normalizes published batch reads while preserving caller order and dropping unknown ids', async () => {
-    const rawRepository = new FakeQuestionRepository([
-      createQuestion({ id: 'a', slug: 'question-a' }),
-      createQuestion({ id: 'b', slug: 'question-b' }),
-    ]);
-    const repository = createRequestCachedQuestionRepository(rawRepository);
-
-    const first = await repository.findPublishedByIds([
-      'b',
-      'missing',
-      'a',
-      'a',
-    ]);
-    const second = await repository.findPublishedByIds(['missing', 'a', 'b']);
-
-    expect(rawRepository.findPublishedByIdsCalls).toEqual([
-      ['a', 'b', 'missing'],
-    ]);
-    expect(first.map((question) => question.id)).toEqual(['b', 'a', 'a']);
-    expect(second.map((question) => question.id)).toEqual(['a', 'b']);
-  });
-
-  it('answers empty batch reads without reading the repository', async () => {
+  it('answers an empty session batch read without reading the repository', async () => {
     const rawRepository = new FakeQuestionRepository([]);
     const repository = createRequestCachedQuestionRepository(rawRepository);
 
-    await expect(repository.findPublishedByIds([])).resolves.toEqual([]);
     await expect(repository.findByIdsForSession([])).resolves.toEqual([]);
-    expect(rawRepository.findPublishedByIdsCalls).toEqual([]);
     expect(rawRepository.findByIdsForSessionCalls).toEqual([]);
   });
 

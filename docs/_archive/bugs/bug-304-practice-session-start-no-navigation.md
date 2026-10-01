@@ -1,6 +1,6 @@
 # BUG-304: Practice Session Start Can Click Without Navigation or Error
 
-**Status:** Open — the application's silent no-op path is fixed in review (2026-10-01); closes after its release
+**Status:** Resolved — 2026-10-01 (the application's silent no-op path is fixed and released; see the verified closeout)
 **Severity:** P3
 **Date:** 2026-08-25
 **Confirmed:** 2026-08-25 (original required-E2E failure on this clone; promotion CI then reproduced a separate navigation-observation race in the diagnostic helper)
@@ -13,7 +13,7 @@
 At 2026-08-25 03:15Z, the required Playwright case
 `tests/e2e/practice.spec.ts:378` ("resets the active question viewport after
 next and previous navigation") failed inside
-[`startSession()`](../../tests/e2e/helpers/session.ts) while waiting for the
+[`startSession()`](../../../tests/e2e/helpers/session.ts) while waiting for the
 practice-session URL after clicking **Start session**. The page remained on the
 starter form, the clicked button was active, the configuration controls were
 enabled, and the rendered alert was empty. The retry passed, and a later clean
@@ -49,11 +49,11 @@ the action was sent and what error the page rendered.
 
 ## Relevant Code Path
 
-[`practice-page-session-start.ts`](<../../app/(app)/app/practice/practice-page-session-start.ts>)
+[`practice-page-session-start.ts`](<../../../app/(app)/app/practice/practice-page-session-start.ts>)
 wraps `startPracticeSession` in
 `withTimeout(..., STANDARD_MUTATION_TIMEOUT_MS)` at lines 115-126 and navigates
 only after a successful result at lines 195-199.
-[`timeout-tiers.ts`](<../../app/(app)/app/shared/timeout-tiers.ts>) defines
+[`timeout-tiers.ts`](<../../../app/(app)/app/shared/timeout-tiers.ts>) defines
 `STANDARD_MUTATION_TIMEOUT_MS` as 15 seconds. The E2E helper waits exactly
 15 seconds for navigation, so an action timeout cannot reliably reach the
 rendered alert before the helper fails.
@@ -65,7 +65,7 @@ The source also contains a concrete no-dispatch path that fits the snapshot:
 2. React publishes the replacement `onStartSession` closure on the following
    render.
 3. A handler captured by the prior render sees a superseded owner in
-   [`use-practice-session-start.ts`](<../../app/(app)/app/practice/hooks/use-practice-session-start.ts>)
+   [`use-practice-session-start.ts`](<../../../app/(app)/app/practice/hooks/use-practice-session-start.ts>)
    and intentionally returns `Promise.resolve()` without calling the controller
    or changing UI state.
 4. The E2E helper fills the count and clicks the already-enabled Start button
@@ -259,11 +259,22 @@ but an application-owned no-op path still exists, so closing this item as merely
 
 The original 2026-08-25 click's cause stays unproven, but no application path now drops a start silently. The record closes when this fix is released.
 
+## Verified closeout — 2026-10-01 UTC
+
+- **Fix.** #1282 was merged as `14a3e800`.
+  - Codecov's patch check first found the count and difficulty paths untested, so the red-first test was extended to every starter control.
+  - CodeRabbit's approval on the earlier head was dismissed as stale and a full review requested. Exact-head approval **5377515605** on `389194ae`, with no findings.
+  - The local full gate passed on that head: 452 browser tests and 60 E2E.
+- **Release.** Promoted through #1283 (`73dcff85`).
+  - Main CI **36845119514**: `test` passed at **09:59:59Z**.
+  - Production was assigned at **10:00:02.594Z**, with matching trees `a789dd2c` and healthy production.
+- **Disposition.** The application path that dropped a Start click silently is gone: every start submits the learner's latest choice. The diagnostic blind spot and both navigation-observation races were fixed earlier (#835). The 2026-08-25 click's own cause stays unproven. A recurrence would now show a request, a loading state or an alert, and is a new record.
+
 ## Related
 
-- [DEBT-411](../_archive/debt/debt-411-local-e2e-flakiness-and-error-masking.md)
+- [DEBT-411](../debt/debt-411-local-e2e-flakiness-and-error-masking.md)
   — five practice-flow failures were previously masked during local E2E work.
-- [DEBT-323](../_archive/debt/debt-323-agent-browser-react-click-failures.md)
+- [DEBT-323](../debt/debt-323-agent-browser-react-click-failures.md)
   — practice-flow primary buttons previously produced silent no-op clicks under
   `agent-browser`; this is historical similarity, not proof of the Playwright
   cause.
@@ -271,10 +282,10 @@ The original 2026-08-25 click's cause stays unproven, but no application path no
   reselected already-active status and mode controls, rotated request ownership,
   and clicked a stale handler; both paths were fixed by waiting on current
   intent rather than retrying the click.
-- [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md)
+- [BUG-306](bug-306-required-e2e-clerk-session-loss-and-accumulation.md)
   — closed after its suite-owned lifecycle, diagnostic mitigation, and owner
   backlog containment were verified; its original auth-loss cause stays
   explicitly unproven.
-- [BUG-307](../_archive/bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+- [BUG-307](bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
   — tracks the unsafe publication of retry traces discovered while preserving
   E2E failure evidence.

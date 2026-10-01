@@ -64,9 +64,6 @@ function createThrowingQuestionRepository(
     findPublishedBySlug: async () => {
       throw new Error(errorMessage);
     },
-    findPublishedByIds: async () => {
-      throw new Error(errorMessage);
-    },
     findIdBySlug: async () => {
       throw new Error(errorMessage);
     },
