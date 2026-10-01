@@ -254,7 +254,7 @@ but an application-owned no-op path still exists, so closing this item as merely
 - **After.** The hook keeps the learner's latest choice in a ref that its setters update with each change. `onStartSession` reads that choice and the current key, so every invocation starts what was last chosen, under the newer request's key.
 - **BUG-303's property still holds.** A handler captured before a change never submits the earlier key and never retires the newer one while that request may still run. The stale-key rejection had become unreachable and went.
 - **Receipts.**
-  - Red first: a browser test that changes the status and starts in the same event made no request on the old code. It now starts the incorrect-status session and navigates.
+  - Red first: a browser test changes one starter control and starts in the same event, for each control (status, mode, count and difficulty). On the old code none made a request. Each now starts with the new value and navigates.
   - BUG-303's recovery test now pins the new contract. The captured handler submits the latest intent under the current key while the recovery card shows, and a later restart reuses that key.
 
 The original 2026-08-25 click's cause stays unproven, but no application path now drops a start silently. The record closes when this fix is released.
