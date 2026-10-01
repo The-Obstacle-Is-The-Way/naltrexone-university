@@ -1,9 +1,13 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-30 — BUG-313 resolved and archived.
+**Last Updated:** 2026-10-01 — BUG-304 fix in review.
 
-**Latest** — 2026-09-30: **BUG-313 (P3) is Resolved and archived.** The app's Clerk reads now retry a dropped connection. The fix, #1260 (**5371251023** on `3dc2ac8a`), was promoted through #1261 (`1d1fdaa0`). That promotion's two review findings were withdrawn by the reviewer: a runtime probe showed Stripe 22.6.2 defaults to two network retries, and the adapter tests fall under the error-translation exception. Release verified: main CI **36772077166** `test` **20:32:58Z**; production assigned **20:33:00.607Z**; matching trees `1c611df0`; healthy. [BUG-313](../_archive/bugs/bug-313-app-clerk-retry-misses-dropped-connections.md). BUG-304 and BUG-310 are active; BUG-310 awaits the owner's decision. **Next Bug ID is BUG-314.**
+**Latest** — 2026-10-01: **BUG-304 (P3), fix in review.**
+- **What it fixes.** A Start click that reached the handler of an earlier render was refused silently: no request, no loading state, no alert. That happened after the idempotency key rotated asynchronously, or after a change and a start in one event.
+- **How.** The start now reads the learner's latest choice and the current key from refs updated with each change, so every invocation starts what was last chosen. BUG-303's guarantee holds: the earlier key is never submitted, and the newer one is never retired while it may still run.
+- **Receipts.** Red first: a browser test that changes the status and starts in the same event made no request on the old code.
+- **Closes after release.** The record closes when the fix is released.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -456,7 +460,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
+| [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified. The application's silent no-op path, a start handler from an earlier render, is fixed in review (2026-10-01); the record closes after its release. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.

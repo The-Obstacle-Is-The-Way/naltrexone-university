@@ -55,13 +55,41 @@ type StartExecutionUncertaintyObservation = (mayStillFinish: boolean) => void;
 export function usePracticeSessionStart(
   input: UsePracticeSessionStartInput,
 ): UsePracticeSessionStartOutput {
-  const [filters, setFilters] = useState<PracticeFilters>({
+  const [filters, setFiltersState] = useState<PracticeFilters>({
     tagSlugs: [],
     difficulty: null,
     status: 'unanswered',
   });
-  const [sessionMode, setSessionMode] = useState<'tutor' | 'exam'>('tutor');
-  const [sessionCount, setSessionCount] = useState(DEFAULT_SESSION_COUNT);
+  const [sessionMode, setSessionModeState] = useState<'tutor' | 'exam'>(
+    'tutor',
+  );
+  const [sessionCount, setSessionCountState] = useState(DEFAULT_SESSION_COUNT);
+  // BUG-304: the learner's latest choice, updated with each change, so a
+  // start invoked before React re-renders still starts what was last chosen
+  // rather than the earlier render's choice.
+  const latestIntentRef = useRef({ filters, sessionMode, sessionCount });
+  const setFilters = useCallback(
+    (update: (prev: PracticeFilters) => PracticeFilters) => {
+      const value = update(latestIntentRef.current.filters);
+      latestIntentRef.current = { ...latestIntentRef.current, filters: value };
+      setFiltersState(value);
+    },
+    [],
+  );
+  const setSessionMode = useCallback((value: 'tutor' | 'exam') => {
+    latestIntentRef.current = {
+      ...latestIntentRef.current,
+      sessionMode: value,
+    };
+    setSessionModeState(value);
+  }, []);
+  const setSessionCount = useCallback((value: number) => {
+    latestIntentRef.current = {
+      ...latestIntentRef.current,
+      sessionCount: value,
+    };
+    setSessionCountState(value);
+  }, []);
   const [sessionCountInputValue, setSessionCountInputValue] = useState(
     String(DEFAULT_SESSION_COUNT),
   );
@@ -95,16 +123,10 @@ export function usePracticeSessionStart(
     setStartSessionIdempotencyKeyState(key);
   }, []);
 
+  // Claims an execution slot under the latest intent's key, which the
+  // uncertainty record always tracks: both refs change together.
   const claimStartExecutionUncertainty = useCallback(
-    (idempotencyKey: string): StartExecutionUncertaintyObservation | null => {
-      if (
-        startExecutionUncertaintyRef.current.idempotencyKey !== idempotencyKey
-      ) {
-        // A stale render may still invoke an old handler after a newer intent
-        // owns the slot. Reject it before it can submit obsolete intent or
-        // mutate the newer request's UI state.
-        return null;
-      }
+    (idempotencyKey: string): StartExecutionUncertaintyObservation => {
       const claimId = startExecutionUncertaintyRef.current.nextClaimId;
       const claimedConcurrentUncertaintyVersion =
         startExecutionUncertaintyRef.current.concurrentUncertaintyVersion;
@@ -195,7 +217,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onSessionModeChange'],
-    [setStartSessionIdempotencyKey],
+    [setSessionMode, setStartSessionIdempotencyKey],
   );
 
   const onSessionCountChange = useMemo(
@@ -206,7 +228,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }),
-    [setStartSessionIdempotencyKey],
+    [setSessionCount, setStartSessionIdempotencyKey],
   );
 
   const onSessionCountBlur = useMemo(
@@ -225,7 +247,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onToggleTag'],
-    [setStartSessionIdempotencyKey],
+    [setFilters, setStartSessionIdempotencyKey],
   );
 
   const onDifficultyChange = useMemo(
@@ -235,7 +257,7 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onDifficultyChange'],
-    [setStartSessionIdempotencyKey],
+    [setFilters, setStartSessionIdempotencyKey],
   );
 
   const onStatusChange = useMemo(
@@ -245,16 +267,16 @@ export function usePracticeSessionStart(
         setIdempotencyKey: setStartSessionIdempotencyKey,
         createIdempotencyKey: () => crypto.randomUUID(),
       }) satisfies PracticeSessionStarterProps['onStatusChange'],
-    [setStartSessionIdempotencyKey],
+    [setFilters, setStartSessionIdempotencyKey],
   );
 
+  // BUG-304: a start always submits the latest choice under its key, even
+  // when invoked through a handler captured before the latest re-render.
   const onStartSession = useCallback(() => {
-    const setConcurrentExecutionUncertainty = claimStartExecutionUncertainty(
-      startSessionIdempotencyKey,
-    );
-    if (!setConcurrentExecutionUncertainty) {
-      return Promise.resolve();
-    }
+    const idempotencyKey = startSessionIdempotencyKeyRef.current;
+    const { filters, sessionMode, sessionCount } = latestIntentRef.current;
+    const setConcurrentExecutionUncertainty =
+      claimStartExecutionUncertainty(idempotencyKey);
     const tryRetireIdempotencyKeyAfterProvenAbsence =
       captureIdempotencyKeyRetirement();
 
@@ -262,7 +284,7 @@ export function usePracticeSessionStart(
       sessionMode,
       sessionCount,
       filters,
-      idempotencyKey: startSessionIdempotencyKey,
+      idempotencyKey,
       getLatestIdempotencyKey: () => startSessionIdempotencyKeyRef.current,
       createIdempotencyKey: () => crypto.randomUUID(),
       setIdempotencyKey: setStartSessionIdempotencyKey,
@@ -284,10 +306,6 @@ export function usePracticeSessionStart(
   }, [
     captureIdempotencyKeyRetirement,
     claimStartExecutionUncertainty,
-    filters,
-    sessionMode,
-    sessionCount,
-    startSessionIdempotencyKey,
     input.isMounted,
     input.refreshIncompleteSession,
     setStartSessionIdempotencyKey,

@@ -84,6 +84,20 @@ function Probe() {
       >
         Start
       </button>
+      {/* BUG-304: a control change and a click before React re-renders. The
+          start handler invoked here is the one captured before the change. */}
+      <button
+        type="button"
+        data-testid="set-incorrect-and-start"
+        onClick={() => {
+          output.onStatusChange('incorrect');
+          void output.onStartSession().finally(() => {
+            setSettledStarts((count) => count + 1);
+          });
+        }}
+      >
+        Set incorrect and start
+      </button>
     </>
   );
 }
@@ -157,6 +171,29 @@ test('rotates the session start idempotency key when changing status', async () 
   const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
 
   expect(secondKey).not.toBe(firstKey);
+});
+
+// BUG-304: a click right after a control change used to reach the handler of
+// the earlier render, which refused it silently: no request, no loading state,
+// no error. The start uses the learner's latest choice instead.
+test('starts the latest choice when the click lands before the re-render', async () => {
+  startPracticeSession.mockResolvedValue({
+    ok: true,
+    data: { sessionId: fixtureSession1Id, requestedCount: 20, actualCount: 20 },
+  });
+
+  const screen = await render(<Probe />);
+
+  await screen.getByTestId('set-incorrect-and-start').click();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
+
+  expect(startPracticeSession).toHaveBeenCalledTimes(1);
+  expect(startPracticeSession.mock.calls[0]?.[0]).toMatchObject({
+    statuses: ['incorrect'],
+  });
+  expect(navigateToSpy).toHaveBeenCalledTimes(1);
 });
 
 test('reports thrown session start failures', async () => {

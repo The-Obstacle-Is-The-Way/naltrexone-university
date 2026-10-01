@@ -1,6 +1,6 @@
 # BUG-304: Practice Session Start Can Click Without Navigation or Error
 
-**Status:** Open
+**Status:** Open — the application's silent no-op path is fixed in review (2026-10-01); closes after its release
 **Severity:** P3
 **Date:** 2026-08-25
 **Confirmed:** 2026-08-25 (original required-E2E failure on this clone; promotion CI then reproduced a separate navigation-observation race in the diagnostic helper)
@@ -247,6 +247,17 @@ not remove that reachable application seam for a user who changes a starter
 control and immediately clicks. The original incident's cause remains unproven,
 but an application-owned no-op path still exists, so closing this item as merely
 “mitigated” would discard a real unresolved property. It stays Open.
+
+**2026-10-01, the stale-handler fix.** The application-owned no-op path the 2026-08-28 re-audit kept open is removed.
+- **Before.** `onStartSession` closed over the render's filters, mode, count and idempotency key. After a change rotated the key, a handler from the earlier render was rejected silently by its claim. It returned a resolved promise with no request, no loading state and no alert.
+- **Reachability.** A discrete click normally reaches the committed handler. But the key also rotates asynchronously after a start resolves, and a click landing before that render commits invokes the earlier handler. The same happens to a change and a start in one event.
+- **After.** The hook keeps the learner's latest choice in a ref that its setters update with each change. `onStartSession` reads that choice and the current key, so every invocation starts what was last chosen, under the newer request's key.
+- **BUG-303's property still holds.** A handler captured before a change never submits the earlier key and never retires the newer one while that request may still run. The stale-key rejection had become unreachable and went.
+- **Receipts.**
+  - Red first: a browser test that changes the status and starts in the same event made no request on the old code. It now starts the incorrect-status session and navigates.
+  - BUG-303's recovery test now pins the new contract. The captured handler submits the latest intent under the current key while the recovery card shows, and a later restart reuses that key.
+
+The original 2026-08-25 click's cause stays unproven, but no application path now drops a start silently. The record closes when this fix is released.
 
 ## Related
 
