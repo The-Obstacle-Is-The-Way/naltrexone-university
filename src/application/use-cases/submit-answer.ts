@@ -5,11 +5,7 @@ import type {
   Question,
 } from '@/src/domain/entities';
 import { isValidAttemptProvenance } from '@/src/domain/entities';
-import {
-  gradeAnswer,
-  SECONDS_PER_DAY,
-  shouldShowExplanation as sessionShouldShowExplanation,
-} from '@/src/domain/services';
+import { gradeAnswer, SECONDS_PER_DAY } from '@/src/domain/services';
 import { answeredOutcome } from '@/src/domain/value-objects';
 import { ApplicationError, practiceSessionAlreadyEndedError } from '../errors';
 import type {
@@ -257,25 +253,15 @@ export class SubmitAnswerUseCase {
       );
     }
 
-    // Only an active tutor session reaches here: exam and ended sessions are
-    // refused above, and tutor mode shows explanations. The redaction stays
-    // as a second guard on exam secrecy.
-    const shouldShowExplanation =
-      // Stryker disable next-line ConditionalExpression: every session that reaches here shows explanations
-      !session || sessionShouldShowExplanation(session);
-    const explanationMd = shouldShowExplanation ? question.explanationMd : null;
-    const choiceExplanations = shouldShowExplanation
-      ? this.mapChoiceExplanations(question, input.userId)
-      : // Stryker disable next-line ArrayDeclaration: every session that reaches here shows explanations
-        [];
-
+    // Only a standalone answer or an active tutor session reaches here: exam
+    // and ended sessions are refused above, so the result shows the answer.
     return {
       attemptId: attempt.id,
-      isCorrect: shouldShowExplanation ? grade.isCorrect : null,
-      correctChoiceId: shouldShowExplanation ? grade.correctChoiceId : null,
-      explanationMd,
-      referenceMd: shouldShowExplanation ? question.referenceMd : null,
-      choiceExplanations,
+      isCorrect: grade.isCorrect,
+      correctChoiceId: grade.correctChoiceId,
+      explanationMd: question.explanationMd,
+      referenceMd: question.referenceMd,
+      choiceExplanations: this.mapChoiceExplanations(question, input.userId),
     };
   }
 }
