@@ -158,7 +158,8 @@ export async function stageRelease(
 }
 
 // ADR-021 decision 4: activation is one transaction. It checks that the
-// active release is the one the caller expects, verifies the release, then
+// active release is the one the caller expects and, for a release never
+// active before, the release's parent; verifies the release; then
 // materializes questions.status and current_revision_id from the release
 // minus the overlay, and moves the pointer. Any failure leaves the previous
 // release active and every question as it was. A rollback is the activation
@@ -187,6 +188,23 @@ export async function activateRelease(
         'RELEASE_NOT_FOUND',
         `Release ${input.releaseId} does not exist.`,
       );
+    }
+    // A release never active before must be built on the active release, or
+    // it would drop whatever was activated since its base (ADR-021 §4). A
+    // rollback re-activates a release that was active before, so its parent
+    // is history, not a base.
+    if (release.parentReleaseId !== previousReleaseId) {
+      const [earlier] = await tx
+        .select({ id: schema.contentReleaseActivations.id })
+        .from(schema.contentReleaseActivations)
+        .where(eq(schema.contentReleaseActivations.releaseId, release.id))
+        .limit(1);
+      if (!earlier) {
+        throw new ReleaseActivationError(
+          'STALE_RELEASE',
+          `Release ${release.id} is built on ${release.parentReleaseId ?? 'none'}, but ${previousReleaseId ?? 'none'} is active.`,
+        );
+      }
     }
     const manifestHash = releaseManifestHash(
       parseReleaseManifest(release.manifest),
