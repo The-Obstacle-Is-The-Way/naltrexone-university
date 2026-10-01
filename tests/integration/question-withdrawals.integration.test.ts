@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import {
@@ -10,7 +10,10 @@ import {
   createIntegrationDb,
   createQuestion,
 } from './helpers';
-import { readDebt483WithdrawalBackfillSql } from './marked-migration-sql-test-helpers';
+import {
+  readDebt483WithdrawalBackfillRepairSql,
+  readDebt483WithdrawalBackfillSql,
+} from './marked-migration-sql-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -43,7 +46,8 @@ async function arrangeQuestion(
 
 // A committed synthetic fixture, archived for the test. The fixture rows
 // exist when this database was seeded with placeholders; otherwise the test
-// creates one. Either way the database is left as it was.
+// creates one. Either way the database is left as it was: restore() removes
+// only withdrawals the test added and keeps any recorded before it.
 async function archiveFixture(slug: string) {
   const [existing] = await db
     .select({
@@ -57,6 +61,9 @@ async function archiveFixture(slug: string) {
     const created = await arrangeQuestion('archived', slug);
     return { id: created.id, restore: async () => {} };
   }
+  const recordedBefore = (await withdrawalsOf([existing.id])).map(
+    (row) => row.questionRevisionId,
+  );
   await db
     .update(schema.questions)
     .set({ status: 'archived' })
@@ -66,7 +73,15 @@ async function archiveFixture(slug: string) {
     restore: async () => {
       await db
         .delete(schema.questionWithdrawals)
-        .where(eq(schema.questionWithdrawals.questionId, existing.id));
+        .where(
+          and(
+            eq(schema.questionWithdrawals.questionId, existing.id),
+            notInArray(
+              schema.questionWithdrawals.questionRevisionId,
+              recordedBefore,
+            ),
+          ),
+        );
       await db
         .update(schema.questions)
         .set({ status: existing.status, updatedAt: existing.updatedAt })
@@ -83,6 +98,8 @@ async function withdrawalsOf(questionIds: string[]) {
 }
 
 describe('DEBT-483: the withdrawal overlay (migration 0045)', () => {
+  // 0045 shipped to Preview excluding every placeholder- slug; 0046 repairs
+  // it (#1290 review). They run here in migration order.
   it('backfills every revision of each archived question once, and no other question', async () => {
     const archived = await arrangeQuestion('archived');
     // The prefix alone does not make a question synthetic (#1290 review).
@@ -94,10 +111,12 @@ describe('DEBT-483: the withdrawal overlay (migration 0045)', () => {
     const draft = await arrangeQuestion('draft');
     const fixture = await archiveFixture('placeholder-01-naltrexone-mechanism');
     const backfill = readDebt483WithdrawalBackfillSql();
+    const repair = readDebt483WithdrawalBackfillRepairSql();
 
     try {
-      await sql.unsafe(backfill);
-      await sql.unsafe(backfill);
+      for (const run of [backfill, repair, backfill, repair]) {
+        await sql.unsafe(run);
+      }
 
       const rows = await withdrawalsOf([
         archived.id,
@@ -109,12 +128,17 @@ describe('DEBT-483: the withdrawal overlay (migration 0045)', () => {
       expect(rows).toHaveLength(4);
       expect(rows).toEqual(
         expect.arrayContaining(
-          [archived, prefixed].flatMap((question) =>
+          (
+            [
+              [archived, 'migration 0045'],
+              [prefixed, 'migration 0046'],
+            ] as const
+          ).flatMap(([question, authority]) =>
             question.revisionIds.map((questionRevisionId) => ({
               questionId: question.id,
               questionRevisionId,
               reason: 'archived before withdrawals were recorded',
-              authority: 'migration 0045',
+              authority,
               effectiveAt: expect.any(Date),
             })),
           ),

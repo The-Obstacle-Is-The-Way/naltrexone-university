@@ -7,6 +7,8 @@ const CLEANUP_START = '-- DEBT-428/434 cleanup:start';
 const CLEANUP_END = '-- DEBT-428/434 cleanup:end';
 const WITHDRAWAL_BACKFILL_START = '-- DEBT-483 withdrawal backfill:start';
 const WITHDRAWAL_BACKFILL_END = '-- DEBT-483 withdrawal backfill:end';
+const WITHDRAWAL_REPAIR_START = '-- DEBT-483 withdrawal backfill repair:start';
+const WITHDRAWAL_REPAIR_END = '-- DEBT-483 withdrawal backfill repair:end';
 
 function extractMarkedBlocks(
   fileName: string,
@@ -117,5 +119,16 @@ export function readDebt483WithdrawalBackfillSql(
     startMarker: WITHDRAWAL_BACKFILL_START,
     endMarker: WITHDRAWAL_BACKFILL_END,
     markerDescription: 'DEBT-483 marked withdrawal backfill',
+  });
+}
+
+export function readDebt483WithdrawalBackfillRepairSql(
+  migrationsDir = join(process.cwd(), 'db/migrations'),
+): string {
+  return readSingleMarkedMigrationSql({
+    migrationsDir,
+    startMarker: WITHDRAWAL_REPAIR_START,
+    endMarker: WITHDRAWAL_REPAIR_END,
+    markerDescription: 'DEBT-483 marked withdrawal backfill repair',
   });
 }

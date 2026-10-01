@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
-**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 proceeds in steps under [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migration `0045`, 2026-10-01), records withdrawals; atomic releases, holds and the seed as a release builder remain.
+**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 proceeds in steps under [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals; atomic releases, holds and the seed as a release builder remain.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
