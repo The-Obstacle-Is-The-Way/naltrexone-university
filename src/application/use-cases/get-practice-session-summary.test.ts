@@ -60,6 +60,7 @@ describe('GetPracticeSessionSummaryUseCase', () => {
       useCase.execute({ userId: 'user-1', sessionId: 'missing' }),
     ).rejects.toMatchObject({
       code: 'NOT_FOUND',
+      message: 'Practice session not found',
     } satisfies Partial<ApplicationError>);
   });
 

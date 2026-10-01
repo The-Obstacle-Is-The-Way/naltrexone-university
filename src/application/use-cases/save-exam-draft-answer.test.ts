@@ -243,7 +243,10 @@ describe('SaveExamDraftAnswerUseCase', () => {
         questionIds: ['q-in-session'],
       }),
     ]);
+    // The session's own question is readable, so only the membership check
+    // can refuse the save.
     const questions = new FakeQuestionRepository([
+      createQuestion({ id: 'q-in-session' }),
       createQuestion({
         id: 'q-not-in-session',
         status: 'archived',

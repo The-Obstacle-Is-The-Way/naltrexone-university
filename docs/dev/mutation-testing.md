@@ -43,14 +43,19 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
     "src/application/shared/**/*.ts",
     "!src/application/shared/**/*.test.ts",
     "!src/application/shared/**/index.ts",
-    "src/application/use-cases/check-entitlement.ts",
-    "src/application/use-cases/check-trial-saved-card.ts",
-    "src/application/use-cases/count-available-questions.ts",
-    "src/application/use-cases/create-portal-session.ts",
-    "src/application/use-cases/discard-practice-session.ts",
-    "src/application/use-cases/end-practice-session.ts",
-    "src/application/use-cases/validate-feedback-context.ts",
-    "src/application/use-cases/start-practice-session.ts",
+    "src/application/use-cases/**/*.ts",
+    "!src/application/use-cases/**/*.test.ts",
+    "!src/application/use-cases/**/index.ts",
+    "!src/application/use-cases/create-checkout-session.ts",
+    "!src/application/use-cases/create-trial-payment-method-setup-session.ts",
+    "!src/application/use-cases/dispatch-renewal-notice-delivery.ts",
+    "!src/application/use-cases/finalize-exam-answers.ts",
+    "!src/application/use-cases/get-completed-session-questions-with-feedback.ts",
+    "!src/application/use-cases/get-next-question.ts",
+    "!src/application/use-cases/get-practice-session-review.ts",
+    "!src/application/use-cases/get-previous-attempt.ts",
+    "!src/application/use-cases/send-due-renewal-notices.ts",
+    "!src/application/use-cases/submit-answer.ts",
     "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
@@ -91,7 +96,7 @@ Chosen 2026-08-13 for consequence-per-minute: small, fast, unit-tested, mostly p
 | `src/application/shared/persist-subscription-observation.ts` | Retry-loop bounds + version-conflict discriminator; wrong can mean a nonterminating conflict retry or a lost write | Attempt-counter reversal times out; the defensive fallback is `NoCoverage` |
 | `src/application/use-cases/validate-feedback-context.ts` (15 tests) | BUG-260 ownership/integrity boundary with a compound negated clause | Condition removal in the both-ID and retry-provenance ladder |
 
-The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). The third wave, triaged on 2026-09-30, covers every production file under `src/domain/**` through a glob, which excludes tests, barrels and test helpers, so a new domain module joins with its first run. Type-only modules produce no mutants. Wave 4a, triaged the same day, covers `src/application/shared/**` by the same kind of glob. Next come `src/application/use-cases/**`, subject to the §2 exclusions, in more than one wave. Wave 4b, triaged on 2026-10-01, added six small use cases by name. The folder joins by glob once every file is triaged.
+The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). The third wave, triaged on 2026-09-30, covers every production file under `src/domain/**` through a glob, which excludes tests, barrels and test helpers, so a new domain module joins with its first run. Type-only modules produce no mutants. Wave 4a, triaged the same day, covers `src/application/shared/**` by the same kind of glob. Next come `src/application/use-cases/**`, subject to the §2 exclusions, in more than one wave. Wave 4b, triaged on 2026-10-01, added six small use cases by name. Wave 4c, triaged the same day, added 21 more and moved the folder to a glob. The ten use cases not yet triaged are excluded by name until their wave, so a new use case joins with its first run.
 
 ## 5. Triage — what each survivor means
 
@@ -200,6 +205,33 @@ Wave 4b ran on 2026-10-01 over six use cases:
 | `src/application/use-cases/end-practice-session.ts` | 64.00% | 100.00% |
 | **All six files** | **80.85%** | **100.00%** |
 
+Wave 4c ran on 2026-10-01 over 21 more use cases. The baselines of `get-attempted-questions.ts` and `save-exam-draft-answer.ts` include the mutants of the redundant guards that triage removed:
+
+| File | Baseline | After triage |
+|---|---:|---:|
+| `src/application/use-cases/get-attempted-questions.ts` | 93.10% | 100.00% |
+| `src/application/use-cases/get-bookmark-question-ids.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/get-bookmark-status.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/get-bookmarks.ts` | 90.91% | 100.00% |
+| `src/application/use-cases/get-incomplete-practice-session.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/get-practice-session-summary.ts` | 92.31% | 100.00% |
+| `src/application/use-cases/get-question-for-view.ts` | 93.06% | 100.00% |
+| `src/application/use-cases/get-question-rating.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/get-session-history.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/get-user-stats.ts` | 95.24% | 100.00% |
+| `src/application/use-cases/practice-session-summary.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/prune-renewal-consents.ts` | 66.67% | 100.00% |
+| `src/application/use-cases/rate-question.ts` | 78.95% | 100.00% |
+| `src/application/use-cases/record-renewal-consent.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/record-renewal-notice-provider-outcome.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/requeue-renewal-notice-delivery.ts` | 88.24% | 100.00% |
+| `src/application/use-cases/save-exam-draft-answer.ts` | 97.18% | 100.00% |
+| `src/application/use-cases/send-renewal-acknowledgment.ts` | 66.67% | 100.00% |
+| `src/application/use-cases/set-bookmark.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/set-practice-session-question-mark.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/submit-question-report.ts` | 100.00% | 100.00% |
+| **All 21 files** | **91.45%** | **100.00%** |
+
 Modules written after the pilot join the list with their first run:
 
 | File | First run | Score |
@@ -212,5 +244,6 @@ The after-triage scores exclude suppressed equivalent mutants, each with its rea
 - **Third wave:** three and three. Its `EqualityOperator` comments each cover two replacements of one operator; the baseline, run without the comments, shows only the equivalent replacement survived.
 - **Wave 4a:** two equivalent mutants and three siblings: an `OptionalChaining` mutant, and the `typeof` check in `transactional-email-payload.ts`, whose comment covers three killed `ConditionalExpression` siblings.
 - **Wave 4b:** one equivalent mutant and one sibling.
+- **Wave 4c:** two equivalent mutants and two siblings, all in `get-question-for-view.ts`. Two redundant guards were removed rather than suppressed: the empty-page return in `get-attempted-questions.ts`, since the binding fetch already returns nothing for no rows, and the `typeof` check in `save-exam-draft-answer.ts`, since `Number.isFinite` is false for every non-number.
 
 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.

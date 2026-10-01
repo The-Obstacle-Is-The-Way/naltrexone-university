@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
+import type { QuestionFeedbackRecordOptions } from '@/src/application/ports/repositories';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
   FakeQuestionFeedbackRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
+import {
+  type NewQuestionFeedback,
+  newQuestionReportFeedback,
+} from '@/src/domain/entities';
 import {
   createAttempt,
   createPracticeSession,
@@ -272,5 +277,48 @@ describe('RateQuestionUseCase', () => {
       ),
     );
     expect(feedback.recordCalls).toEqual([]);
+  });
+
+  // The repository answers a rating with the rating it stored. A report in
+  // its place breaks that contract, and the use case refuses to return it.
+  it('fails loudly when the repository answers a rating with a report', async () => {
+    class ReportingRepository extends FakeQuestionFeedbackRepository {
+      override async record(
+        event: NewQuestionFeedback,
+        options?: QuestionFeedbackRecordOptions,
+      ) {
+        return super.record(
+          newQuestionReportFeedback({
+            userId: event.userId,
+            questionId: event.questionId,
+            attemptId: event.attemptId,
+            practiceSessionId: event.practiceSessionId,
+            category: 'other',
+            comment: null,
+          }),
+          options,
+        );
+      }
+    }
+    const useCase = new RateQuestionUseCase(
+      new ReportingRepository(),
+      new FakeQuestionRepository([
+        createQuestion({ id: 'question-1', status: 'published' }),
+      ]),
+      new FakeAttemptRepository(),
+      new FakePracticeSessionRepository(),
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'question-1',
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError('INTERNAL_ERROR', 'Invalid rating replay'),
+    );
   });
 });
