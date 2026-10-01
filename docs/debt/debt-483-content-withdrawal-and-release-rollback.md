@@ -374,7 +374,7 @@ ADR-021 decisions 4–6 leave the mechanism to this record. Each step below is i
 - `question_holds` has the same key, with `placed_at` and a nullable `lifted_at`. An unlifted hold excludes its revision.
 
 **Releases (decision 4).**
-- `content_releases`: id, the manifest, its sha256 `manifest_hash` (unique), `parent_release_id`, and `created_at`, `verified_at`, `activated_at` receipts. A release is never changed once written.
+- `content_releases`: id, the manifest, its sha256 `manifest_hash`, `parent_release_id`, and `created_at`, `verified_at`, `activated_at` receipts. A release is its manifest on its base: the pair is unique (migration 0048). A release is never changed once written.
 - `content_release_items`: `(release_id, question_id)` primary key and the item's `question_revision_id`, with a composite key to `question_revisions(id, question_id)`.
 - `content_release_pointer`: one row naming the active release. The migration creates it with no active release, so the seed and activation can lock it before any release exists.
 
@@ -392,7 +392,11 @@ Any failure rolls the whole transaction back, and the previous release stays act
 **Steps.**
 - **4a, the withdrawal overlay:** this design; `question_withdrawals`; the withdrawal command and the seed record withdrawals, and the seed refuses a withdrawn question.
 - **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure. The direct seed, including its placeholder archival, refuses a database that has an active release. Each seed transaction reads the pointer under a share lock, which activation's update lock excludes, so a seed write and an activation cannot interleave. Before the first activation the seed and the withdrawal command write `status`; after it, only activations and the withdrawal command do (#1290 review). No release is activated in production in this step.
-- **4c, the release builder:** staging and activation commands for the production seed path. The first production activation follows it. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
+- **4c, the operator commands and the release builder**, as two PRs:
+  - **4c-i:** commands to bootstrap, activate (rollback included) and place and lift holds.
+  - **4c-ii:** staging for the production seed path.
+
+  The first production activation follows 4c-ii. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
 - **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
 
 **Decided here, under the owner's delegation.**
@@ -432,6 +436,94 @@ The seed records a withdrawal, with authority `content seed`, whenever authored 
 **N-1:** the serving deployment neither reads nor writes the table. An archive made by the previous commit's command or seed during the deploy is recorded when it is replayed with this commit's.
 
 **Remaining:** nothing reads the overlay yet; activation (4b) is its first reader.
+
+## Releases and activation (phase 4b) — 2026-10-01
+
+Migration 0047 adds the release tables, holds and the pointer. `scripts/content-release/` holds the activation engine. No command calls it yet, so nothing can activate a release in production in this step.
+
+**The tables.**
+- `content_releases`: the manifest, its `manifest_hash` (unique, lowercase SHA-256 hex) and `parent_release_id`. *(2026-10-01: 0048 replaced the unique hash with a unique (hash, parent) pair; see 4c.)*
+- `content_release_items`: one revision per question, with a composite key to `question_revisions(id, question_id)`.
+- Triggers reject every update to a release, its items or a withdrawal, and let a hold change only by being lifted, once. Each row records a decision. A changed release is a new release.
+- `content_release_pointer`: its one row is created with no active release, so it can be locked before any release exists.
+- `question_holds`: at most one unlifted hold per revision.
+- **A change from the design:** the verification and activation receipts are rows in `content_release_activations` (release, previous release, time), not columns on the release. A release can be activated more than once, by a rollback, and verification commits with each activation.
+
+**Locks.** 0047's header names the new tables and the foreign keys to `question_revisions`. It omits the update trigger it adds to `question_withdrawals`, a live table: `CREATE TRIGGER` takes SHARE ROW EXCLUSIVE on it until commit, which blocks only the withdrawal command and the seed (#1293 review). The note lives here because 0047 was already applied on Preview, and the migration ledger hashes the whole file, comments included.
+
+**The manifest** (`app-release-manifest-v1`) lists each item's slug and the `stored-fields-json-v1` hash of its revision, ordered by slug. Its hash is SHA-256 over sorted-key JSON, byte-identical to Python's `json.dumps(m, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`. A unit test pins a digest computed independently with Python.
+
+**Activation** runs in one transaction, in this order:
+1. It locks the pointer for update and rejects a stale release. The active release must be the one the caller expects. A release that has never been active must also be built on it, or it would drop whatever was activated since its base. A rollback re-activates a release that has an earlier receipt, so it is exempt from the parent check. *(The parent check was added after promotion #1293's review: the first version compared the pointer only with the caller's expectation. A case where a release built on an earlier base is rejected now covers it, and removing the rollback exemption fails the rollback case.)*
+2. It recomputes the manifest's hash from the stored manifest, and rebuilds the manifest from the items' slugs and revision hashes; both must match.
+3. It locks every question it changes, in id order.
+4. It publishes each item at its revision unless the item's question has any withdrawal, or its revision has an unlifted hold. Excluding on any withdrawal of the question fails closed and keeps #953's per-question policy.
+5. It archives every other published question, and leaves alone drafts that no release names.
+6. It moves the pointer and writes the receipt.
+
+The first activation, the bootstrap, holds the pointer before it reads what is live. So no seed transaction can publish in between.
+
+**The seed.** Each seed transaction, and placeholder archival, now begins by reading the pointer under a share lock. It refuses when a release is active, or when the pointer row is missing.
+
+**Decided here, under the owner's delegation.**
+- **A hold takes effect by re-applying the active release.** The hold command comes with the operator commands in 4c, and before any release is active it refuses, pointing to withdrawal. Today nothing derives `status` from the overlay, so a hold recorded then would silently do nothing.
+- **What learners see.** The app tells learners a question is withdrawn when its status is not `published` (`get-attempted-questions.ts`, `get-user-stats.ts`, `get-question-for-view.ts`). Held questions, and questions a release leaves out, therefore read as withdrawn too. For a learner that is accurate: the item has left the bank, and a held item should not be answered or graded while it is reviewed. Whether it left for good is recorded in the overlay, not shown.
+- **Identical releases.** `manifest_hash` is unique, so 4c's staging must reuse an existing release with an identical manifest rather than write a second one. *(2026-10-01, superseded: promotion #1295's review showed this was a dead end. A set staged on one base could never be staged on a newer one, because reusing the old release fails the parent check. 0048 keys a release by its manifest and its parent, and staging reuses only a release with the same manifest on the same parent.)*
+
+**Verification** (`tests/integration/content-release-activation.integration.test.ts`, 20 cases, real Postgres):
+- **Activation cases** run inside a transaction that is always rolled back, because activation archives every published question a release leaves out, and the shared test database holds the seeded corpus. They cover:
+  - publishing at an older revision; restoring an archived item; archiving an omitted question; leaving drafts alone;
+  - excluding withdrawn and held items, but not one whose hold was lifted;
+  - a rollback that does not resurrect a question withdrawn since that release;
+  - a stale release, a new release built on an earlier one, manifest-hash and item mismatches, and a missing release;
+  - a failure injected at the receipt, activation's last write, which leaves every question and the pointer as they were;
+  - the bootstrap changing nothing, and running only once;
+  - the immutability triggers, and a hold that can be lifted once and changed in no other way.
+- **Seed cases** commit the pointer, because another connection must see it. They point it at a release of one test question and never activate that release. They always put the pointer back and delete the release, and restore anything a regression would have written. They cover:
+  - the seed refusing a sync, an insert and placeholder archival, and still archiving placeholders while no release is active (in a rolled-back transaction);
+  - a seed that waits on an activation holding the pointer, then refuses;
+  - a missing pointer row.
+
+**Red first.** The suite was written before the engine and the guard.
+- With the engine in place and no seed guard, the four committed seed cases failed: **4 failed / 12 passed**, of the 16 cases the suite then had. The two trigger cases for withdrawals and holds came after, and so did the placeholder-archival success case, which #1292's patch coverage found missing. That run also archived the ten placeholder fixtures and inserted a test question in the shared database. Both were repaired at once, and those two cases now restore what a regression writes.
+- **Mutation check:** each rule was removed in turn, and every removal failed at least one case. The rules: the withdrawal exclusion, the hold exclusion, the stale check, the manifest-hash check, the items check, the bootstrap's active check, archiving omitted questions, and the guard in each of the seed's sync, insert and placeholder paths.
+
+## Operator commands (phase 4c-i) — 2026-10-01
+
+Three commands in `scripts/content-release/`, each a dry run unless `--apply`. Each needs an explicit `DATABASE_URL`, and a remote target also needs the exact `DB_TARGET_ACK`. A dry run is the real transaction, rolled back: it verifies, locks and counts exactly as the applied run would.
+- **`bootstrap-release.ts`** adopts what is live as the first release.
+- **`activate-release.ts --release <id> --expect-active <id|none>`** activates a staged release. It is also the rollback: name an earlier release and the one you expect to be active.
+- **`hold-questions.ts --qid … --reason … --authority … [--lift]`** places a hold on each question's live revision, or lifts the hold on that live revision. Both act only on the revision the active release publishes (#1296 review): a lift never records itself on a hold it did not target.
+  - It re-applies the active release in the same transaction, so the question leaves the bank, or returns to it, at once.
+  - It refuses while no release is active, a question the active release does not name, and an unknown QID.
+  - A lift records its own reason and authority.
+
+The withdrawal command shares the QID argument parser (`scripts/seed/qid-command-args.ts`).
+
+**Do not bootstrap production before 4c-ii ships.** Afterwards the direct seed refuses that database, and until the release builder exists no content could change there.
+
+**Migration 0048.**
+- **The lift record.** `lift_reason` and `lift_authority` are required exactly when `lifted_at` is set.
+- **The release identity.** A release is now its manifest on its base: (`manifest_hash`, `parent_release_id`) is unique, as two partial indexes. 0047's unique hash alone was a dead end (promotion #1295's review): a set staged on one base and never activated could never be staged on a newer one. 4c-ii's staging reuses only a release with the same manifest on the same parent.
+
+**Verification.**
+- **The commands** run in-process against a disposable database: a fresh database in the clone's own Postgres, with every migration applied, dropped afterwards (`tests/integration/disposable-database-test-helpers.ts`). The shared database cannot take a committed activation, which would archive the seeded corpus. 12 cases:
+  - the bootstrap's dry run and apply, and its refusal once a release is active;
+  - an activation's dry run and apply, and a rollback;
+  - a stale expectation;
+  - a hold's dry run, apply, repeat and lift, and a lift that leaves a hold on another revision in place;
+  - the hold's three refusals;
+  - each script's exit code on a bad argument.
+- **The activation suite** gains two cases: one for the release identity, and one for a lift without its record.
+- **Unit cases:** 16 for the shared QID parser and 14 for the bootstrap and activate parsers.
+
+**How the tests were proven.** In this step the commands were written before their tests, against the test-first rule, so the red proof is a mutation check instead. Six behaviours were removed in turn, and each removal failed at least one case:
+- re-applying the release after a hold;
+- the three refusals;
+- the lift record;
+- the dry run's rollback.
+
+The lift-record case also caught a real defect before any push. The first check, `lift_reason ~ '…'`, evaluates to NULL when the reason is NULL, and a CHECK passes on NULL, so a lift without a record was accepted. The check now tests `IS NOT NULL` explicitly. 0048 had not been pushed, so it was corrected in place, and the clone's database was reversed and re-migrated.
 
 ## Related
 

@@ -305,6 +305,28 @@ In one transaction, under the same row locks the seed takes, it archives each qu
 
 A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too, and the seed records it with authority `content seed`. Only the synthetic placeholders are archived and restored without a record. A learner who attempted a withdrawn question can still review it, with a notice (ADR-021 §3).
 
+### Releases: Bootstrap, Activate, Roll Back and Hold
+
+ADR-021 phase 4's operator commands live in `scripts/content-release/`. Like the withdrawal command, each needs an explicit `DATABASE_URL`, and a remote target also needs `DB_TARGET_ACK`. Each is a dry run unless `--apply`; the dry run is the real transaction, rolled back.
+
+```bash
+# Adopt what is live as the first release.
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts
+# Activate a staged release; name the release you expect to be active (or none).
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
+  --release "<release-id>" --expect-active "<active-release-id>"
+# Roll back: activate the earlier release, naming the one now active.
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
+  --release "<earlier-release-id>" --expect-active "<active-release-id>"
+# Hold a question's live revision, or lift that hold with --lift.
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
+  --qid "example-qid" --reason "Why" --authority "Who"
+```
+
+Once a release is active, the direct seed refuses that database, and content changes only through releases. **Do not bootstrap production until the release builder ships** ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#operator-commands-phase-4c-i--2026-10-01)). Until it does, nothing could stage new content there.
+
+A hold takes effect at once: it re-applies the active release, which archives the held question. A lift returns it, and records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
+
 ---
 
 ## 5. Database Storage
@@ -316,6 +338,8 @@ A withdrawal is permanent. The seed refuses to restore a withdrawn question, and
 **Question revisions table:** Stores the content a learner reads, as raw markdown: `stemMd`, `explanationMd`, `referenceMd`, plus `difficulty` and the `stored-fields-json-v1` content hash. A revision is never updated; changed content is a new revision (migration `0042`). Attempts and session items bind the revision they were shown and graded against (`NOT NULL` since migration `0043`).
 
 **Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Releases, which come later in ADR-021 phase 4, will never select a withdrawn revision.
+
+**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable, hash-addressed manifest, and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one receipt per activation. `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. No command activates a release yet; see [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01).
 
 **Choices table:**
 
@@ -514,6 +538,8 @@ Before seeding, ensure the target database schema is up to date:
 ```bash
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
+
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases. No database has one yet; the first production activation follows the release builder ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
 
 ---
 

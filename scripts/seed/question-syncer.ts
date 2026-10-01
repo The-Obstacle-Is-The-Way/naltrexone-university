@@ -4,6 +4,7 @@ import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import matter from 'gray-matter';
 import * as schema from '../../db/schema';
 import { canonicalQuestionRevisionJson } from '../../lib/content/question-revision-hash';
+import { assertNoActiveRelease } from '../content-release/release-activation';
 import type { SeedSourceFile } from './file-reader';
 import { onlyRow } from './only-row';
 import {
@@ -168,6 +169,7 @@ async function insertQuestion(
   sourcePath: string,
 ): Promise<void> {
   await db.transaction(async (tx) => {
+    await assertNoActiveRelease(tx);
     // ADR-021 phase 3: the question points at its first revision, written
     // next in this transaction; the deferred key is checked at commit.
     const revisionId = randomUUID();
@@ -201,6 +203,8 @@ async function syncExistingQuestion(
   sourcePath: string,
 ): Promise<'skipped' | 'updated' | 'revised'> {
   return db.transaction(async (tx) => {
+    // The pointer before the question row, the order activation takes them.
+    await assertNoActiveRelease(tx);
     const locked = onlyRow(
       await tx
         .select()
