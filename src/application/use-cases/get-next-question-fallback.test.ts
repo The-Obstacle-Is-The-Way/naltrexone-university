@@ -690,6 +690,8 @@ describe('GetNextQuestionUseCase', () => {
     );
 
     expect(result?.questionId).toBe('q1');
+    // A published read is the current revision.
+    expect(result?.superseded).toBe(false);
   });
 
   it('throws VALIDATION_ERROR when input is missing both sessionId and filters', async () => {
@@ -699,7 +701,12 @@ describe('GetNextQuestionUseCase', () => {
       getNextQuestion.execute({ userId: USER_ID } as unknown as Parameters<
         typeof getNextQuestion.execute
       >[0]),
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Either sessionId or filters must be provided',
+      ),
+    );
   });
 
   it('throws NOT_FOUND when repository returns a candidate id that cannot be loaded', async () => {

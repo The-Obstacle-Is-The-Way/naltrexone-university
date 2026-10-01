@@ -97,6 +97,8 @@ function createPayload(
   const isChangeNotice =
     notice.noticeKind === 'material_change' ||
     notice.noticeKind === 'fee_change';
+  // Stryker disable next-line StringLiteral: a change notice without a description is never queued
+  const changeDescription = notice.changeDescription ?? '';
   // DEBT-414 F06: renewal notices say renewal happens unless canceled, give
   // the exact cutoff with its zone, link the online cancellation route, and
   // restate the cancellation policy the Terms publish.
@@ -108,7 +110,7 @@ function createPayload(
             [
               `${notice.noticeKind === 'fee_change' ? 'Fee change' : 'Material change'} effective: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
             ],
-            [`Change: ${notice.changeDescription ?? ''}`],
+            [`Change: ${changeDescription}`],
           ]
         : [
             [
@@ -153,37 +155,21 @@ function createPayload(
   };
 }
 
-function validateNotice(notice: ScheduledRenewalNotice): void {
-  if (
-    notice.destination.trim().length === 0 ||
-    notice.externalSubscriptionId.trim().length === 0 ||
-    notice.disclosureVersion.trim().length === 0
-  ) {
-    throw new ApplicationError(
-      'VALIDATION_ERROR',
-      'Scheduled renewal notice identity is incomplete',
-    );
-  }
-  if (
-    Number.isNaN(notice.applicableAt.getTime()) ||
-    !Number.isInteger(notice.amountCents) ||
-    notice.amountCents < 0
-  ) {
-    throw new ApplicationError(
-      'VALIDATION_ERROR',
-      'Scheduled renewal notice terms are invalid',
-    );
-  }
-  if (
-    (notice.noticeKind === 'material_change' ||
-      notice.noticeKind === 'fee_change') &&
-    !notice.changeDescription?.trim()
-  ) {
-    throw new ApplicationError(
-      'VALIDATION_ERROR',
-      'Change notice requires a change description',
-    );
-  }
+// A notice the scheduler built from incomplete or invalid facts is counted as
+// rejected and never queued.
+function isQueueableNotice(notice: ScheduledRenewalNotice): boolean {
+  const isChangeNotice =
+    notice.noticeKind === 'material_change' ||
+    notice.noticeKind === 'fee_change';
+  return (
+    notice.destination.trim().length > 0 &&
+    notice.externalSubscriptionId.trim().length > 0 &&
+    notice.disclosureVersion.trim().length > 0 &&
+    !Number.isNaN(notice.applicableAt.getTime()) &&
+    Number.isInteger(notice.amountCents) &&
+    notice.amountCents >= 0 &&
+    (!isChangeNotice || Boolean(notice.changeDescription?.trim()))
+  );
 }
 
 export class SendDueRenewalNoticesUseCase {
@@ -221,17 +207,9 @@ export class SendDueRenewalNoticesUseCase {
     let queueFailures = 0;
     let rejectedNotices = 0;
     for (const sourceNotice of input.notices) {
-      try {
-        validateNotice(sourceNotice);
-      } catch (error) {
-        if (
-          error instanceof ApplicationError &&
-          error.code === 'VALIDATION_ERROR'
-        ) {
-          rejectedNotices += 1;
-          continue;
-        }
-        throw error;
+      if (!isQueueableNotice(sourceNotice)) {
+        rejectedNotices += 1;
+        continue;
       }
       try {
         const notice = {

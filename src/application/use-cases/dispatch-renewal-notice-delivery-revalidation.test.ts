@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -102,7 +103,7 @@ async function arrange(input: {
     () => input.currentTime ?? now,
     () => 'attempt-1',
   );
-  return { useCase, gateway, logger };
+  return { useCase, gateway, logger, repository };
 }
 
 describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
@@ -144,6 +145,11 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
     {
       label: 'the account email changed',
       arrangement: { accountEmail: 'new-address@example.com' },
+      failureCode: 'destination_changed',
+    },
+    {
+      label: 'the account no longer exists',
+      arrangement: { subscription: { userId: crypto.randomUUID() } },
       failureCode: 'destination_changed',
     },
     // #1156 review: the notice states the annual amount and yearly frequency.
@@ -310,8 +316,13 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
         failureCode: 'renewal_date_changed',
       },
       {
-        label: 'the service start or anchor is unknown',
+        label: 'the service start is unknown',
         subscription: { ...monthly, startedAt: null },
+        failureCode: 'anniversary_unknown',
+      },
+      {
+        label: 'the billing anchor is unknown',
+        subscription: { ...monthly, billingCycleAnchor: null },
         failureCode: 'anniversary_unknown',
       },
     ])(
@@ -349,5 +360,50 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
       expect(gateway.sendInputs).toEqual([]);
       expect(logger.errorCalls).toHaveLength(1);
     });
+  });
+
+  it('revalidates an annual reminder as it does a renewal notice', async () => {
+    const { useCase, gateway } = await arrange({
+      delivery: renewalNotice({ noticeKind: 'annual_reminder' }),
+      subscription: { plan: 'monthly' },
+    });
+
+    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+      delivery: {
+        status: 'terminal_failure',
+        failureClass: 'notice_superseded',
+        failureCode: 'subscription_plan_changed',
+      },
+    });
+    expect(gateway.sendInputs).toEqual([]);
+  });
+
+  // The send-by cutoff is for reminders of a renewal; a change notice has no
+  // such deadline.
+  it('sends a fee-change notice past a renewal reminder’s cutoff', async () => {
+    const { useCase, gateway } = await arrange({
+      delivery: renewalNotice({ noticeKind: 'fee_change' }),
+      currentTime: new Date(renewal.getTime() - 30 * DAY_MS + 1),
+    });
+
+    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+      delivery: { status: 'accepted' },
+    });
+    expect(gateway.sendInputs).toHaveLength(1);
+  });
+
+  it('fails loudly on a scheduled notice without an applicable date', async () => {
+    const { useCase, gateway, repository } = await arrange({});
+    const [queued] = repository.records;
+    if (!queued) throw new Error('Expected a queued notice');
+    repository.records[0] = { ...queued, applicableAt: null };
+
+    await expect(useCase.execute({ deliveryId })).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Scheduled renewal notice has no applicable date',
+      ),
+    );
+    expect(gateway.sendInputs).toEqual([]);
   });
 });

@@ -16,10 +16,7 @@
     "src/application/use-cases/**/*.ts",
     "!src/application/use-cases/**/*.test.ts",
     "!src/application/use-cases/**/index.ts",
-    "!src/application/use-cases/dispatch-renewal-notice-delivery.ts",
     "!src/application/use-cases/finalize-exam-answers.ts",
-    "!src/application/use-cases/get-next-question.ts",
-    "!src/application/use-cases/send-due-renewal-notices.ts",
     "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
