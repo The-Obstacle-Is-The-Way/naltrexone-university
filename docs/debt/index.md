@@ -3,13 +3,13 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-01 UTC
 
-**Latest** — 2026-10-01 UTC: DEBT-465 Part 2, wave 4c. Mutation testing covers 21 more use cases, and the use-cases folder joins by glob ([DEBT-465](./debt-465-test-quality-practices-adoption.md)).
-- **Scope.** `stryker.config.json` mutates `src/application/use-cases/**` by glob and excludes by name the ten use cases not yet triaged, so a new use case joins with its first run. 29 of 39 are in scope.
-- **Scores.** Baseline 91.45% (385 of 421 detected); after triage 100%.
-  - Nine tests added and five strengthened. Among them: the renewal acknowledgment, the subscriber's written record of the terms they accepted, is pinned to its exact text and HTML; an answer in a finished exam is reviewable; a rating answered with a report fails loudly; and without an injected clock, consent pruning, notice requeue and learner stats read the real time.
-  - Two redundant guards removed, with their mutants: an empty-page return the binding fetch already covers, and a `typeof` check that `Number.isFinite` already implies. Two equivalent mutants suppressed with their reasons.
-- **Full scope.** 100% (1,489 killed, 25 timed out, 23 suppressed) in under six minutes.
-- **Previous change.** Wave 4b, six small use cases: #1268 (**5373737301** on `c33e96b5`, no findings; merged `be1cd1ed`), promoted through #1269 (`e95b581c`, review approved with no findings). Release verified: main CI **36800433741** `test` **01:30:56Z**; production assigned **01:30:58.127Z**; matching trees `10228d64`; healthy production.
+**Latest** — 2026-10-01 UTC: DEBT-465 Part 2, wave 4c follow-up. The default-clock tests freeze the system clock ([DEBT-465](./debt-465-test-quality-practices-adoption.md)).
+- **Review.** Promotion #1271's review (**CHANGES_REQUESTED** on `c85132dd`, one Trivial finding) found the problem.
+  - The default-clock tests #1270 added read the real system time: for consent pruning, notice requeue and learner stats. So does the entitlement one from #1268.
+  - A clock step during a run could fail them, and the requeue test asserted wall-clock bounds.
+  - #1271 was closed unmerged so the fix ships first.
+- **Fix.** Each test still omits the use case's clock, and now freezes the system clock at a date that changes the outcome, so it proves which clock is read. The requeue test asserts the exact audit time. Stryker still kills all four default-clock mutants, and the runbook's triage section records the rule.
+- **Previous change.** Wave 4c, 21 use cases and the folder glob: #1270 (**5374024906** on `37d0944c`, no findings; merged `c85132dd`), on `dev` to ship in the same promotion as this fix.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.

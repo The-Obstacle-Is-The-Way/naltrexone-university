@@ -103,6 +103,7 @@ The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats
 Work the HTML report per file; classify every survivor and `NoCoverage` mutant:
 
 1. **Missing assertion / boundary test** → write the unit test that kills it. This is TDD debt made visible; the fix is a red test, not config.
+   A default clock (`now = () => new Date()`) survives as `() => undefined` when no test omits the clock. Such a test omits the constructor's clock and freezes the system clock with `vi.useFakeTimers({ toFake: ['Date'] })` and `vi.setSystemTime`. It freezes at a date that changes the outcome, so it proves which clock is read, and `vi.useRealTimers()` runs after each test. Never assert against wall-clock time: a clock step during a run fails the test (#1271 review).
 2. **Equivalent mutant** (provably identical behavior) → suppress narrowly with a justification:
 
    ```ts
