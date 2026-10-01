@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -8,6 +9,7 @@ import {
   createFinalizeQuestion,
   passthroughTransaction,
 } from '@/src/application/test-helpers/finalize-exam-fixtures';
+import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 import {
   EXAM_SECONDS_PER_QUESTION,
   MS_PER_SECOND,
@@ -606,6 +608,88 @@ describe('FinalizeExamAnswersUseCase', () => {
 
     expect(output).toEqual(
       projectPracticeSessionSummary(endedSession, endedSession.endedAt),
+    );
+  });
+
+  // One exam item in the given state, finalized through the use case.
+  function finalizeOneItem(
+    state: Partial<PracticeSessionQuestionState>,
+    questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]),
+  ) {
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+            ...state,
+          },
+        ],
+      }),
+    ]);
+    const result = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+      () => new Date('2026-03-17T12:00:30.000Z'),
+    ).execute({ userId: 'user-1', sessionId: 'session-1' });
+    return { attempts, result };
+  }
+
+  it('records no time for a draft whose saved duration is not a number', async () => {
+    const { attempts, result } = finalizeOneItem({
+      draftSelectedChoiceId: 'q1-correct',
+      draftSavedAt: new Date('2026-03-17T12:00:20.000Z'),
+      draftCumulativeMs: Number.NaN,
+    });
+    await result;
+
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toMatchObject([{ questionId: 'q1', timeSpentSeconds: 0 }]);
+  });
+
+  // An item answered before exam drafts existed keeps that answer; finalizing
+  // does not record it again as omitted.
+  it('leaves an item answered without a draft as it is', async () => {
+    const { attempts, result } = finalizeOneItem({
+      latestSelectedChoiceId: 'q1-correct',
+      latestIsCorrect: true,
+      latestAnsweredAt: new Date('2026-03-17T12:00:10.000Z'),
+    });
+    await result;
+
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toEqual([]);
+  });
+
+  it('fails when a drafted item’s question can no longer be read', async () => {
+    const { result } = finalizeOneItem(
+      {
+        draftSelectedChoiceId: 'q1-correct',
+        draftSavedAt: new Date('2026-03-17T12:00:20.000Z'),
+      },
+      new FakeQuestionRepository([]),
+    );
+
+    await expect(result).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Question not found'),
     );
   });
 });
