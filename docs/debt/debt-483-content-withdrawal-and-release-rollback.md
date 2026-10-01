@@ -464,7 +464,7 @@ The first activation, the bootstrap, holds the pointer before it reads what is l
 - **What learners see.** The app tells learners a question is withdrawn when its status is not `published` (`get-attempted-questions.ts`, `get-user-stats.ts`, `get-question-for-view.ts`). Held questions, and questions a release leaves out, therefore read as withdrawn too. For a learner that is accurate: the item has left the bank, and a held item should not be answered or graded while it is reviewed. Whether it left for good is recorded in the overlay, not shown.
 - **Identical releases.** `manifest_hash` is unique, so 4c's staging must reuse an existing release with an identical manifest rather than write a second one.
 
-**Verification** (`tests/integration/content-release-activation.integration.test.ts`, 18 cases, real Postgres):
+**Verification** (`tests/integration/content-release-activation.integration.test.ts`, 19 cases, real Postgres):
 - **Activation cases** run inside a transaction that is always rolled back, because activation archives every published question a release leaves out, and the shared test database holds the seeded corpus. They cover:
   - publishing at an older revision; restoring an archived item; archiving an omitted question; leaving drafts alone;
   - excluding withdrawn and held items, but not one whose hold was lifted;
@@ -474,12 +474,12 @@ The first activation, the bootstrap, holds the pointer before it reads what is l
   - the bootstrap changing nothing, and running only once;
   - the immutability triggers, and a hold that can be lifted once and changed in no other way.
 - **Seed cases** commit the pointer, because another connection must see it. They point it at a release of one test question and never activate that release. They always put the pointer back and delete the release, and restore anything a regression would have written. They cover:
-  - the seed refusing a sync, an insert and placeholder archival;
+  - the seed refusing a sync, an insert and placeholder archival, and still archiving placeholders while no release is active (in a rolled-back transaction);
   - a seed that waits on an activation holding the pointer, then refuses;
   - a missing pointer row.
 
 **Red first.** The suite was written before the engine and the guard.
-- With the engine in place and no seed guard, the four committed seed cases failed: **4 failed / 12 passed**, of the 16 cases the suite then had. The two trigger cases for withdrawals and holds came after. That run also archived the ten placeholder fixtures and inserted a test question in the shared database. Both were repaired at once, and those two cases now restore what a regression writes.
+- With the engine in place and no seed guard, the four committed seed cases failed: **4 failed / 12 passed**, of the 16 cases the suite then had. The two trigger cases for withdrawals and holds came after, and so did the placeholder-archival success case, which #1292's patch coverage found missing. That run also archived the ten placeholder fixtures and inserted a test question in the shared database. Both were repaired at once, and those two cases now restore what a regression writes.
 - **Mutation check:** each rule was removed in turn, and every removal failed at least one case. The rules: the withdrawal exclusion, the hold exclusion, the stale check, the manifest-hash check, the items check, the bootstrap's active check, archiving omitted questions, and the guard in each of the seed's sync, insert and placeholder paths.
 
 ## Related

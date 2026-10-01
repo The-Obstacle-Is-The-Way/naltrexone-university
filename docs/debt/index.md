@@ -10,7 +10,7 @@
   - The bootstrap adopts what is live. The direct seed, including its placeholder archival, now refuses a database with an active release.
   - No command calls the engine yet, so nothing activates in production. The operator commands, and the hold command, come with 4c.
   - Triggers keep releases, their items and withdrawals immutable, and let a hold only be lifted, once.
-  - 18 real-Postgres cases, including a failure injected at the last write. Without the seed guard: 4 failed / 12 passed. Removing any of ten rules failed at least one case.
+  - 19 real-Postgres cases, including a failure injected at the last write. Without the seed guard: 4 failed / 12 passed. Removing any of ten rules failed at least one case.
 - **4a released.** #1290 (**5382315489** on `b1fd97da`; seven findings fixed over five rounds; merged `970015c8`), promoted through #1291 (`c5c4f6fa`, approved with no findings).
   - Release verified: main CI **36894872716** `test` **17:01:52Z**; production assigned **17:01:54.591Z**; matching trees `81f22937`; production healthy.
   - The production build's migration log reports 0 revisions for 0045's backfill and 0 for 0046's repair: production had no archived authored question, so the overlay starts empty.

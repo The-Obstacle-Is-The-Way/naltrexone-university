@@ -864,14 +864,16 @@ export const contentReleases = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     manifest: jsonb('manifest').notNull(),
     manifestHash: varchar('manifest_hash', { length: 64 }).notNull(),
-    parentReleaseId: uuid('parent_release_id').references(
-      (): AnyPgColumn => contentReleases.id,
-    ),
+    parentReleaseId: uuid('parent_release_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => ({
+    parentReleaseFk: foreignKey({
+      columns: [t.parentReleaseId],
+      foreignColumns: [t.id],
+    }),
     manifestHashUq: uniqueIndex('content_releases_manifest_hash_uq').on(
       t.manifestHash,
     ),
@@ -887,14 +889,16 @@ export const CONTENT_RELEASE_ITEMS_QUESTION_REVISION_FK =
 export const contentReleaseItems = pgTable(
   'content_release_items',
   {
-    releaseId: uuid('release_id')
-      .notNull()
-      .references(() => contentReleases.id, { onDelete: 'cascade' }),
+    releaseId: uuid('release_id').notNull(),
     questionId: uuid('question_id').notNull(),
     questionRevisionId: uuid('question_revision_id').notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.releaseId, t.questionId] }),
+    releaseFk: foreignKey({
+      columns: [t.releaseId],
+      foreignColumns: [contentReleases.id],
+    }).onDelete('cascade'),
     questionRevisionFk: foreignKey({
       name: CONTENT_RELEASE_ITEMS_QUESTION_REVISION_FK,
       columns: [t.questionRevisionId, t.questionId],
@@ -910,12 +914,14 @@ export const contentReleasePointer = pgTable(
   'content_release_pointer',
   {
     id: boolean('id').primaryKey().default(true),
-    activeReleaseId: uuid('active_release_id').references(
-      () => contentReleases.id,
-    ),
+    activeReleaseId: uuid('active_release_id'),
     activatedAt: timestamp('activated_at', { withTimezone: true }),
   },
   (t) => ({
+    activeReleaseFk: foreignKey({
+      columns: [t.activeReleaseId],
+      foreignColumns: [contentReleases.id],
+    }),
     singleRowChk: check('content_release_pointer_single_row_chk', sql`${t.id}`),
   }),
 );
@@ -926,17 +932,21 @@ export const contentReleaseActivations = pgTable(
   'content_release_activations',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    releaseId: uuid('release_id')
-      .notNull()
-      .references(() => contentReleases.id),
-    previousReleaseId: uuid('previous_release_id').references(
-      () => contentReleases.id,
-    ),
+    releaseId: uuid('release_id').notNull(),
+    previousReleaseId: uuid('previous_release_id'),
     activatedAt: timestamp('activated_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => ({
+    releaseFk: foreignKey({
+      columns: [t.releaseId],
+      foreignColumns: [contentReleases.id],
+    }),
+    previousReleaseFk: foreignKey({
+      columns: [t.previousReleaseId],
+      foreignColumns: [contentReleases.id],
+    }),
     releaseIdIdx: index('content_release_activations_release_id_idx').on(
       t.releaseId,
     ),

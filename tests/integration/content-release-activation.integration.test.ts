@@ -606,6 +606,33 @@ describe('DEBT-483: the direct seed and an active release', () => {
     }
   });
 
+  it('still archives placeholders while no release is active', async () => {
+    const placeholder = await createQuestion(db, cleanup, {
+      slug: `placeholder-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    await withRollback(async (tx) => {
+      await tx
+        .update(schema.questions)
+        .set({ status: 'published' })
+        .where(like(schema.questions.slug, 'placeholder-%'));
+
+      const archived = await archivePlaceholderQuestions(tx);
+
+      const placeholders = await tx
+        .select({ status: schema.questions.status })
+        .from(schema.questions)
+        .where(like(schema.questions.slug, 'placeholder-%'));
+      expect(archived).toBe(placeholders.length);
+      expect(placeholders.every((row) => row.status === 'archived')).toBe(true);
+      expect(
+        (await stateOf(tx, [placeholder.id])).get(placeholder.id)?.status,
+      ).toBe('archived');
+    });
+  });
+
   it('waits for an activation in progress, then refuses', async () => {
     const question = await arrangeQuestion('published');
     const named = await arrangeQuestion('draft');
