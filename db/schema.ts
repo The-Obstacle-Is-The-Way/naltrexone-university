@@ -812,6 +812,137 @@ export const questionWithdrawals = pgTable(
   }),
 );
 
+// question_holds (ADR-021 decision 5): the temporary half of the overlay. An
+// unlifted hold keeps its revision out of every activation until it is lifted.
+// A revision has at most one unlifted hold.
+export const QUESTION_HOLDS_QUESTION_REVISION_FK =
+  'question_holds_question_revision_fk';
+export const QUESTION_HOLDS_UNLIFTED_UQ = 'question_holds_unlifted_uq';
+export const questionHolds = pgTable(
+  'question_holds',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    questionId: uuid('question_id').notNull(),
+    questionRevisionId: uuid('question_revision_id').notNull(),
+    reason: text('reason').notNull(),
+    authority: text('authority').notNull(),
+    placedAt: timestamp('placed_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    liftedAt: timestamp('lifted_at', { withTimezone: true }),
+  },
+  (t) => ({
+    questionRevisionFk: foreignKey({
+      name: QUESTION_HOLDS_QUESTION_REVISION_FK,
+      columns: [t.questionRevisionId, t.questionId],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }).onDelete('cascade'),
+    unliftedUq: uniqueIndex(QUESTION_HOLDS_UNLIFTED_UQ)
+      .on(t.questionRevisionId)
+      .where(sql`lifted_at IS NULL`),
+    reasonChk: check(
+      'question_holds_reason_chk',
+      sql`${t.reason} ~ '[^[:space:]]'`,
+    ),
+    authorityChk: check(
+      'question_holds_authority_chk',
+      sql`${t.authority} ~ '[^[:space:]]'`,
+    ),
+    liftedAfterPlacedChk: check(
+      'question_holds_lifted_after_placed_chk',
+      sql`${t.liftedAt} IS NULL OR ${t.liftedAt} >= ${t.placedAt}`,
+    ),
+  }),
+);
+
+// content_releases (ADR-021 decision 4): an immutable, hash-addressed
+// manifest and the selectable set it names. A trigger rejects every update to
+// a release or its items (migration 0047).
+export const contentReleases = pgTable(
+  'content_releases',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    manifest: jsonb('manifest').notNull(),
+    manifestHash: varchar('manifest_hash', { length: 64 }).notNull(),
+    parentReleaseId: uuid('parent_release_id').references(
+      (): AnyPgColumn => contentReleases.id,
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    manifestHashUq: uniqueIndex('content_releases_manifest_hash_uq').on(
+      t.manifestHash,
+    ),
+    manifestHashChk: check(
+      'content_releases_manifest_hash_chk',
+      sql`${t.manifestHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+  }),
+);
+
+export const CONTENT_RELEASE_ITEMS_QUESTION_REVISION_FK =
+  'content_release_items_question_revision_fk';
+export const contentReleaseItems = pgTable(
+  'content_release_items',
+  {
+    releaseId: uuid('release_id')
+      .notNull()
+      .references(() => contentReleases.id, { onDelete: 'cascade' }),
+    questionId: uuid('question_id').notNull(),
+    questionRevisionId: uuid('question_revision_id').notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.releaseId, t.questionId] }),
+    questionRevisionFk: foreignKey({
+      name: CONTENT_RELEASE_ITEMS_QUESTION_REVISION_FK,
+      columns: [t.questionRevisionId, t.questionId],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }),
+  }),
+);
+
+// The single active-release pointer. Migration 0047 creates its one row with
+// no active release, so the seed and activation can lock it before any
+// release exists.
+export const contentReleasePointer = pgTable(
+  'content_release_pointer',
+  {
+    id: boolean('id').primaryKey().default(true),
+    activeReleaseId: uuid('active_release_id').references(
+      () => contentReleases.id,
+    ),
+    activatedAt: timestamp('activated_at', { withTimezone: true }),
+  },
+  (t) => ({
+    singleRowChk: check('content_release_pointer_single_row_chk', sql`${t.id}`),
+  }),
+);
+
+// One row per activation, the release's verification and activation receipt:
+// verification and activation commit together.
+export const contentReleaseActivations = pgTable(
+  'content_release_activations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    releaseId: uuid('release_id')
+      .notNull()
+      .references(() => contentReleases.id),
+    previousReleaseId: uuid('previous_release_id').references(
+      () => contentReleases.id,
+    ),
+    activatedAt: timestamp('activated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    releaseIdIdx: index('content_release_activations_release_id_idx').on(
+      t.releaseId,
+    ),
+  }),
+);
+
 // tags
 export const tags = pgTable(
   'tags',

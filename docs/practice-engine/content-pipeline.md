@@ -317,6 +317,8 @@ A withdrawal is permanent. The seed refuses to restore a withdrawn question, and
 
 **Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Releases, which come later in ADR-021 phase 4, will never select a withdrawn revision.
 
+**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable, hash-addressed manifest, and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one receipt per activation. `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. No command activates a release yet; see [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01).
+
 **Choices table:**
 
 | Column | Type | Purpose |
@@ -514,6 +516,8 @@ Before seeding, ensure the target database schema is up to date:
 ```bash
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
+
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases. No database has one yet; the first production activation follows the release builder ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
 
 ---
 
