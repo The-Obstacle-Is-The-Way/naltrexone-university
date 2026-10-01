@@ -726,7 +726,7 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
 
 **F19, status (2026-10-01).** A survey of this record found F19 the only open finding that engineering could act on. Every other open item waits on the owner, counsel, a tax adviser or a live dashboard. F19 is not in the owner's 2026-09-27 go (F01-F07, F15), and its own row reads "Code/copy proposed only".
 - **F19a, Massachusetts' 5–30-day notice for annual plans.** This is now an open owner decision in the register.
-  - First, check whether Stripe's upcoming-renewal email is enabled in production and states the amount, the date and how to cancel.
+  - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing, 5–30 days before the cancellation deadline; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery through the consumer's chosen medium (5). Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
   - If not, the recommendation is to move the annual reminder to about 25 days before renewal, with its own send-by limit and missed-deadline alert, and keep the renewal notice at 35 days for the 30–40-day states. That needs no schema change.
 - **F19b, calendar dates in the trial copy.** This changes consent evidence and merges only on the owner's instruction (the DEBT-478 D6 precedent).
 - **F19c and F19d, per-charge notices and the preferred channel.** These wait on a live provider specimen and on counsel.

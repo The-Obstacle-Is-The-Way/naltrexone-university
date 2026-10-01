@@ -17,7 +17,7 @@
   - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
   - **New: Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05 asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Today both annual notices go out together at 35 days.
-    - First check whether Stripe's upcoming-renewal email is enabled in production and states the amount, the date and how to cancel. If it does, it may meet the duty.
+    - First check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing, 5–30 days before the cancellation deadline; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery through the consumer's chosen medium. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to move the annual reminder to about 25 days before renewal, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. That needs no schema change.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID remains DEBT-489.**
