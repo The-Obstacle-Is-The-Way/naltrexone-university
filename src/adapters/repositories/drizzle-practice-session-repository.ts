@@ -589,8 +589,9 @@ export class DrizzlePracticeSessionRepository
         // ADR-021: a shared lock on the question rows serializes this read
         // with a seed write, which takes the rows FOR UPDATE while it appends
         // a revision and moves the current pointer, so a session binds the
-        // pointer as that write committed it. Session creations do not block
-        // each other (#1208 review).
+        // pointer as that write committed it. These shared locks do not block
+        // each other, though two creations for one user can still contend at
+        // the incomplete-session unique index (#1208 review).
         const revisions = await tx
           .select({
             questionId: questions.id,

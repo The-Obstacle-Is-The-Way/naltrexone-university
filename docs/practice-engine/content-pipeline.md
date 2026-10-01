@@ -140,15 +140,18 @@ choices:
   - label: "A"
     text: "Choice text (supports YAML multiline >-)"
     correct: false
+    explanation: "Why A is wrong"
   - label: "B"
     text: "Correct choice text"
     correct: true
   - label: "C"
     text: "Another wrong choice"
     correct: false
+    explanation: "Why C is wrong"
   - label: "D"
     text: "Another wrong choice"
     correct: false
+    explanation: "Why D is wrong"
 ---
 
 ## Stem
@@ -161,10 +164,9 @@ General explanation of the correct answer.
 
 **Clinical pearl:** Practical takeaway.
 
-**Why other answers are wrong:**
-- A) Why A is wrong
-- C) Why C is wrong
-- D) Why D is wrong
+### Reference
+
+Optional citation for the explanation.
 ```
 
 **Key points:**
@@ -172,7 +174,9 @@ General explanation of the correct answer.
 - Exactly 1 `correct: true` choice per question (enforced by Zod validation)
 - Standard: 4 choices (schema allows 2-5, but all 958 files use 4)
 - The `## Stem` and `## Explanation` sections are mandatory
-- The "Why other answers are wrong" subsection in the explanation is optional; if present, it's parsed into per-choice explanations
+- Each wrong choice carries its own `explanation` in the frontmatter, and the correct choice carries none (enforced by `QuestionFrontmatterSchema`)
+- An optional terminal `### Reference` section in the explanation becomes the question's reference
+- The legacy "Why other answers are wrong" section in the explanation is refused by the seed
 
 **Validation schema:** `lib/content/schemas.ts` — `QuestionFrontmatterSchema` (Zod)
 
@@ -307,7 +311,7 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 | `label` | varchar(4) | Canonical authored label: A–E |
 | `textMd` | text | Choice text (raw markdown) |
 | `isCorrect` | boolean | Correctness flag |
-| `explanationMd` | text (nullable) | Per-choice explanation (parsed from "Why other answers are wrong") |
+| `explanationMd` | text (nullable) | Per-choice explanation, from the choice's frontmatter `explanation`; null for the correct choice |
 | `sortOrder` | integer | Canonical ordering: 1=A, 2=B, 3=C, 4=D, 5=E |
 
 **Unique constraints:** `(questionRevisionId, label)` and `(questionRevisionId, sortOrder)`: no duplicate labels or ordering within a revision. A newer revision may reuse its question's labels. A choice is never updated.
