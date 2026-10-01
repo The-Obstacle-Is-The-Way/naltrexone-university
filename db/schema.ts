@@ -814,7 +814,8 @@ export const questionWithdrawals = pgTable(
 
 // question_holds (ADR-021 decision 5): the temporary half of the overlay. An
 // unlifted hold keeps its revision out of every activation until it is lifted.
-// A revision has at most one unlifted hold.
+// A revision has at most one unlifted hold. Lifting is a decision too, so it
+// records its own reason and authority (migration 0048).
 export const QUESTION_HOLDS_QUESTION_REVISION_FK =
   'question_holds_question_revision_fk';
 export const QUESTION_HOLDS_UNLIFTED_UQ = 'question_holds_unlifted_uq';
@@ -830,6 +831,8 @@ export const questionHolds = pgTable(
       .notNull()
       .defaultNow(),
     liftedAt: timestamp('lifted_at', { withTimezone: true }),
+    liftReason: text('lift_reason'),
+    liftAuthority: text('lift_authority'),
   },
   (t) => ({
     questionRevisionFk: foreignKey({
@@ -852,9 +855,22 @@ export const questionHolds = pgTable(
       'question_holds_lifted_after_placed_chk',
       sql`${t.liftedAt} IS NULL OR ${t.liftedAt} >= ${t.placedAt}`,
     ),
+    liftRecordChk: check(
+      'question_holds_lift_record_chk',
+      // IS NOT NULL is explicit: a CHECK passes when its expression is NULL,
+      // and NULL ~ '...' is NULL.
+      sql`(${t.liftedAt} IS NULL AND ${t.liftReason} IS NULL AND ${t.liftAuthority} IS NULL)
+        OR (${t.liftedAt} IS NOT NULL
+          AND ${t.liftReason} IS NOT NULL AND ${t.liftReason} ~ '[^[:space:]]'
+          AND ${t.liftAuthority} IS NOT NULL AND ${t.liftAuthority} ~ '[^[:space:]]')`,
+    ),
   }),
 );
 
+export const CONTENT_RELEASES_MANIFEST_PARENT_UQ =
+  'content_releases_manifest_hash_parent_uq';
+export const CONTENT_RELEASES_MANIFEST_ROOT_UQ =
+  'content_releases_manifest_hash_root_uq';
 // content_releases (ADR-021 decision 4): an immutable, hash-addressed
 // manifest and the selectable set it names. A trigger rejects every update to
 // a release or its items (migration 0047).
@@ -874,9 +890,14 @@ export const contentReleases = pgTable(
       columns: [t.parentReleaseId],
       foreignColumns: [t.id],
     }),
-    manifestHashUq: uniqueIndex('content_releases_manifest_hash_uq').on(
-      t.manifestHash,
-    ),
+    // A release is its manifest on its base (migration 0048): the same
+    // content on another parent is another release.
+    manifestHashParentUq: uniqueIndex(CONTENT_RELEASES_MANIFEST_PARENT_UQ)
+      .on(t.manifestHash, t.parentReleaseId)
+      .where(sql`parent_release_id IS NOT NULL`),
+    manifestHashRootUq: uniqueIndex(CONTENT_RELEASES_MANIFEST_ROOT_UQ)
+      .on(t.manifestHash)
+      .where(sql`parent_release_id IS NULL`),
     manifestHashChk: check(
       'content_releases_manifest_hash_chk',
       sql`${t.manifestHash} ~ '^[0-9a-f]{64}$'`,

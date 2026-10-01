@@ -3,65 +3,19 @@ import { asc, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
-import { QuestionFrontmatterSchema } from '../../lib/content/schemas';
 import { runHumanDatabaseCommand } from '../database-command';
+import { parseQidCommandArgs } from './qid-command-args';
 import {
   findUnrecordedWithdrawals,
   recordWithdrawals,
-  type WithdrawalRecord,
 } from './question-withdrawal-writer';
-
-function parseArgs(argv: string[]) {
-  const qids: string[] = [];
-  const record: Partial<WithdrawalRecord> = {};
-  let apply = false;
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === '--apply' && !apply) {
-      apply = true;
-    } else if (arg === '--qid') {
-      const qid = argv[index + 1];
-      if (!qid || qid.startsWith('--')) {
-        throw new Error('Missing value for --qid');
-      }
-      if (!QuestionFrontmatterSchema.shape.slug.safeParse(qid).success) {
-        throw new Error(`Invalid question QID: ${qid}`);
-      }
-      if (qids.includes(qid)) {
-        throw new Error(`Duplicate question QID: ${qid}`);
-      }
-      qids.push(qid);
-      index += 1;
-    } else if (arg === '--reason' || arg === '--authority') {
-      const field = arg === '--reason' ? 'reason' : 'authority';
-      const value = argv[index + 1]?.trim();
-      if (!value || value.startsWith('--')) {
-        throw new Error(`Missing value for ${arg}`);
-      }
-      if (record[field] !== undefined) {
-        throw new Error(`Duplicate ${arg}`);
-      }
-      record[field] = value;
-      index += 1;
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-  if (qids.length === 0) throw new Error('At least one --qid is required');
-  const { reason, authority } = record;
-  if (reason === undefined) {
-    throw new Error('--reason is required: why the content is withdrawn');
-  }
-  if (authority === undefined) {
-    throw new Error('--authority is required: who ordered the withdrawal');
-  }
-  return { qids, apply, record: { reason, authority } };
-}
 
 export async function runContentWithdrawal(
   argv = process.argv.slice(2),
 ): Promise<void> {
-  const { qids, apply, record } = parseArgs(argv);
+  const { qids, apply, record } = parseQidCommandArgs(argv, {
+    decision: 'withdrawal',
+  });
   await runHumanDatabaseCommand({
     execute: async (databaseUrl) => {
       const sql = postgres(databaseUrl, { max: 1 });

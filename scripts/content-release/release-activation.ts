@@ -15,6 +15,8 @@ export type ReleaseItem = { questionId: string; questionRevisionId: string };
 export type ActivationSummary = {
   releaseId: string;
   previousReleaseId: string | null;
+  /** Items in the release. */
+  items: number;
   /** Questions published, or moved to their item's revision. */
   published: number;
   /** Published questions the release leaves out or excludes. */
@@ -28,6 +30,7 @@ export type ActivationSummary = {
 export type ReleaseActivationErrorCode =
   | 'POINTER_MISSING'
   | 'RELEASE_ACTIVE'
+  | 'NO_ACTIVE_RELEASE'
   | 'STALE_RELEASE'
   | 'RELEASE_NOT_FOUND'
   | 'MANIFEST_HASH_MISMATCH'
@@ -70,6 +73,12 @@ async function readReleasePointer(
     );
   }
   return pointer.activeReleaseId;
+}
+
+// Locks the pointer for update, as activation does, and returns the active
+// release.
+export async function lockReleasePointer(tx: Db): Promise<string | null> {
+  return readReleasePointer(tx, 'update');
 }
 
 // DEBT-483 phase 4: once a release is active, only activation and the
@@ -170,7 +179,7 @@ export async function activateRelease(
 ): Promise<ActivationSummary> {
   return db.transaction(async (tx) => {
     // 1. The pointer first: the seed takes it for share, in the same order.
-    const previousReleaseId = await readReleasePointer(tx, 'update');
+    const previousReleaseId = await lockReleasePointer(tx);
     if (previousReleaseId !== input.expectedActiveReleaseId) {
       throw new ReleaseActivationError(
         'STALE_RELEASE',
@@ -215,9 +224,8 @@ export async function activateRelease(
         `Release ${release.id}'s manifest does not hash to its recorded hash.`,
       );
     }
-    const itemsHash = releaseManifestHash(
-      buildReleaseManifest(await releaseEntries(tx, release.id)),
-    );
+    const entries = await releaseEntries(tx, release.id);
+    const itemsHash = releaseManifestHash(buildReleaseManifest(entries));
     if (itemsHash !== manifestHash) {
       throw new ReleaseActivationError(
         'MANIFEST_ITEMS_MISMATCH',
@@ -286,6 +294,7 @@ export async function activateRelease(
     return {
       releaseId: release.id,
       previousReleaseId,
+      items: entries.length,
       published: published.length,
       archived: archived.length,
       excludedWithdrawn: excluded.withdrawn,
@@ -299,7 +308,7 @@ export async function activateRelease(
 // no seed transaction publishes in between.
 export async function bootstrapRelease(db: Db): Promise<ActivationSummary> {
   return db.transaction(async (tx) => {
-    const active = await readReleasePointer(tx, 'update');
+    const active = await lockReleasePointer(tx);
     if (active !== null) {
       throw new ReleaseActivationError(
         'STALE_RELEASE',

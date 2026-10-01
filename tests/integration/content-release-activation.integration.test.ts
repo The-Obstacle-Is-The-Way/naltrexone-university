@@ -189,6 +189,8 @@ describe('DEBT-483: release activation', () => {
           reason: 'Under review',
           authority: 'Clinical lead',
           liftedAt: new Date(Date.now() + 1000),
+          liftReason: 'Reviewed; no error found',
+          liftAuthority: 'Clinical lead',
         },
       ]);
       const releaseId = await stageRelease(tx, {
@@ -317,6 +319,38 @@ describe('DEBT-483: release activation', () => {
       const state = await stateOf(tx, [first.id, second.id]);
       expect(state.get(first.id)?.status).toBe('published');
       expect(state.get(second.id)?.status).toBe('published');
+    });
+  });
+
+  // A release is its manifest on its base (migration 0048, #1295 review).
+  it('keys a release by its manifest and its parent', async () => {
+    const question = await arrangeQuestion('published');
+
+    await withRollback(async (tx) => {
+      const root = await stageRelease(tx, {
+        items: [item(question)],
+        parentReleaseId: null,
+      });
+      const base = await stageRelease(tx, { items: [], parentReleaseId: null });
+
+      const rebased = await stageRelease(tx, {
+        items: [item(question)],
+        parentReleaseId: base,
+      });
+
+      expect(rebased).not.toBe(root);
+      for (const [parentReleaseId, index] of [
+        [null, 'content_releases_manifest_hash_root_uq'],
+        [base, 'content_releases_manifest_hash_parent_uq'],
+      ] as const) {
+        expect(
+          await rejectionMessages(
+            tx.transaction((sp) =>
+              stageRelease(sp, { items: [item(question)], parentReleaseId }),
+            ),
+          ),
+        ).toContain(index);
+      }
     });
   });
 
@@ -525,7 +559,7 @@ describe('DEBT-483: release activation', () => {
     });
   });
 
-  it('lets a hold be lifted once and changes nothing else', async () => {
+  it('lets a hold be lifted once, with its own record, and changes nothing else', async () => {
     const question = await arrangeQuestion('published');
 
     await withRollback(async (tx) => {
@@ -535,15 +569,31 @@ describe('DEBT-483: release activation', () => {
         authority: 'Clinical lead',
       });
       const hold = eq(schema.questionHolds.questionId, question.id);
+      // Lifting is a decision with its own record (migration 0048).
+      expect(
+        await rejectionMessages(
+          tx.transaction((sp) =>
+            sp
+              .update(schema.questionHolds)
+              .set({ liftedAt: new Date(Date.now() + 1000) })
+              .where(hold),
+          ),
+        ),
+      ).toMatch(/question_holds_lift_record_chk/);
 
       await tx
         .update(schema.questionHolds)
-        .set({ liftedAt: new Date(Date.now() + 1000) })
+        .set({
+          liftedAt: new Date(Date.now() + 1000),
+          liftReason: 'Reviewed; no error found',
+          liftAuthority: 'Clinical lead',
+        })
         .where(hold);
 
       for (const change of [
         { liftedAt: new Date(Date.now() + 2000) },
         { reason: 'A rewritten reason' },
+        { liftReason: 'A rewritten lift reason' },
       ]) {
         expect(
           await rejectionMessages(
