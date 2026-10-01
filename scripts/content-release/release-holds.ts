@@ -24,11 +24,11 @@ export type HoldSummary = {
 };
 
 // DEBT-483 / ADR-021 decision 5: a hold keeps the revision the active
-// release publishes out of every activation until it is lifted. Placing or
-// lifting one re-applies the active release in the same transaction, so the
-// question leaves the bank, or returns to it, at once. With no release
-// active, nothing derives status from the overlay and a hold would change
-// nothing, so this refuses.
+// release publishes out of every activation until it is lifted. A lift, too,
+// acts only on that live revision. Placing or lifting re-applies the active
+// release in the same transaction, so the question leaves the bank, or
+// returns to it, at once. With no release active, nothing derives status from
+// the overlay and a hold would change nothing, so this refuses.
 export async function changeHolds(
   db: Db,
   change: HoldChange,
@@ -55,55 +55,55 @@ export async function changeHolds(
     }
     const questionIds = questions.map((question) => question.id);
 
-    let holds: number;
-    if (change.lift) {
-      const lifted = await tx
-        .update(schema.questionHolds)
-        .set({
-          liftedAt: sql`now()`,
-          liftReason: change.record.reason,
-          liftAuthority: change.record.authority,
-        })
-        .where(
-          and(
-            inArray(schema.questionHolds.questionId, questionIds),
-            isNull(schema.questionHolds.liftedAt),
-          ),
-        )
-        .returning({ id: schema.questionHolds.id });
-      holds = lifted.length;
-    } else {
-      const items = await tx
-        .select({
-          questionId: schema.contentReleaseItems.questionId,
-          questionRevisionId: schema.contentReleaseItems.questionRevisionId,
-        })
-        .from(schema.contentReleaseItems)
-        .where(
-          and(
-            eq(schema.contentReleaseItems.releaseId, active),
-            inArray(schema.contentReleaseItems.questionId, questionIds),
-          ),
-        );
-      const live = new Set(items.map((item) => item.questionId));
-      const outside = questions.filter((question) => !live.has(question.id));
-      if (outside.length > 0) {
-        throw new Error(
-          `Not in the active release, so nothing live to hold: ${outside.map((question) => question.slug).join(', ')}`,
-        );
-      }
-      const placed = await tx
-        .insert(schema.questionHolds)
-        .values(items.map((item) => ({ ...item, ...change.record })))
-        .onConflictDoNothing()
-        .returning({ id: schema.questionHolds.id });
-      holds = placed.length;
+    // A hold, and a lift, act on the revision the active release publishes.
+    const items = await tx
+      .select({
+        questionId: schema.contentReleaseItems.questionId,
+        questionRevisionId: schema.contentReleaseItems.questionRevisionId,
+      })
+      .from(schema.contentReleaseItems)
+      .where(
+        and(
+          eq(schema.contentReleaseItems.releaseId, active),
+          inArray(schema.contentReleaseItems.questionId, questionIds),
+        ),
+      );
+    const live = new Set(items.map((item) => item.questionId));
+    const outside = questions.filter((question) => !live.has(question.id));
+    if (outside.length > 0) {
+      throw new Error(
+        `Not in the active release, so it has no live revision: ${outside.map((question) => question.slug).join(', ')}`,
+      );
     }
+
+    const changed = change.lift
+      ? await tx
+          .update(schema.questionHolds)
+          .set({
+            liftedAt: sql`now()`,
+            liftReason: change.record.reason,
+            liftAuthority: change.record.authority,
+          })
+          .where(
+            and(
+              inArray(
+                schema.questionHolds.questionRevisionId,
+                items.map((item) => item.questionRevisionId),
+              ),
+              isNull(schema.questionHolds.liftedAt),
+            ),
+          )
+          .returning({ id: schema.questionHolds.id })
+      : await tx
+          .insert(schema.questionHolds)
+          .values(items.map((item) => ({ ...item, ...change.record })))
+          .onConflictDoNothing()
+          .returning({ id: schema.questionHolds.id });
 
     const activation = await activateRelease(tx, {
       releaseId: active,
       expectedActiveReleaseId: active,
     });
-    return { holds, activation };
+    return { holds: changed.length, activation };
   });
 }

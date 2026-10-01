@@ -316,14 +316,16 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootst
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<release-id>" --expect-active "<active-release-id>"
 # Roll back: activate the earlier release, naming the one now active.
-# Hold a question's live revision, or lift its holds with --lift.
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
+  --release "<earlier-release-id>" --expect-active "<active-release-id>"
+# Hold a question's live revision, or lift that hold with --lift.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
 Once a release is active, the direct seed refuses that database, and content changes only through releases. **Do not bootstrap production until the release builder ships** ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#operator-commands-phase-4c-i--2026-10-01)). Until it does, nothing could stage new content there.
 
-A hold takes effect at once: it re-applies the active release, which archives the held question. A lift returns it, and records its own reason and authority. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
+A hold takes effect at once: it re-applies the active release, which archives the held question. A lift returns it, and records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
 
 ---
 

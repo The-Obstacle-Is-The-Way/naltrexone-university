@@ -11,7 +11,11 @@ import {
   stageRelease,
 } from '@/scripts/content-release/release-activation';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
-import { createCleanupState, createQuestion } from './helpers';
+import {
+  addCurrentRevision,
+  createCleanupState,
+  createQuestion,
+} from './helpers';
 
 // These commands commit activations, and an activation archives every
 // published question a release leaves out. So they run against a database of
@@ -231,6 +235,43 @@ describe('hold-questions', () => {
     ]);
   });
 
+  // A lift targets the live revision, as a hold does (#1296 review).
+  it('lifts only the hold on the live revision', async () => {
+    const question = await arrange('published');
+    await bootstrapRelease(disposable.db);
+    const other = await addCurrentRevision(disposable.db, question.id);
+    await disposable.db.insert(schema.questionHolds).values({
+      questionId: question.id,
+      questionRevisionId: other.revisionId,
+      reason: 'A separate review',
+      authority: 'Clinical lead',
+    });
+    await runHoldQuestions(
+      ['--qid', question.slug, ...RECORD, '--apply'],
+      commandIo().io,
+    );
+
+    await runHoldQuestions(
+      ['--qid', question.slug, ...RECORD, '--lift', '--apply'],
+      commandIo().io,
+    );
+
+    const holds = await disposable.db
+      .select({
+        questionRevisionId: schema.questionHolds.questionRevisionId,
+        liftedAt: schema.questionHolds.liftedAt,
+      })
+      .from(schema.questionHolds)
+      .where(eq(schema.questionHolds.questionId, question.id));
+    expect(holds).toEqual(
+      expect.arrayContaining([
+        { questionRevisionId: question.revisionId, liftedAt: expect.any(Date) },
+        { questionRevisionId: other.revisionId, liftedAt: null },
+      ]),
+    );
+    expect(holds).toHaveLength(2);
+  });
+
   it('refuses a question the active release does not name', async () => {
     const draft = await arrange('draft');
     await arrange('published');
@@ -242,7 +283,7 @@ describe('hold-questions', () => {
         commandIo().io,
       ),
     ).rejects.toThrow(
-      `Not in the active release, so nothing live to hold: ${draft.slug}`,
+      `Not in the active release, so it has no live revision: ${draft.slug}`,
     );
   });
 

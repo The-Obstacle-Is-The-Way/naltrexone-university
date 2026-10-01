@@ -12,7 +12,7 @@
 - **Migration `0048`.**
   - A lift must record its reason and authority.
   - A release is keyed by its manifest and its parent. Promotion #1295's review (**CHANGES_REQUESTED** on `a7f27fa7`) showed that the unique hash alone was a dead end: a set staged on one base could never be staged on a newer one. #1295 was closed unmerged.
-- **Tests.** The commands run against a disposable database: a fresh, fully migrated one in the clone's own Postgres. 11 command cases, 2 new activation cases and 30 parser unit cases.
+- **Tests.** The commands run against a disposable database: a fresh, fully migrated one in the clone's own Postgres. 12 command cases, 2 new activation cases and 30 parser unit cases.
 - **How the tests were proven.** The commands were written before their tests in this step, so the red proof is a mutation check: removing any of six behaviours fails a case. The lift-record case caught a NULL-passing CHECK before any push.
 - **Previous changes, on `dev`.** #1292, 4b (merged `2fa8aab6`). #1294, the parent check (**5383768568** on `e78bdbb9`; merged `a7f27fa7`).
 - **Open decisions for the owner.**

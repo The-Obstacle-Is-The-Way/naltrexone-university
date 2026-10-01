@@ -493,7 +493,7 @@ The first activation, the bootstrap, holds the pointer before it reads what is l
 Three commands in `scripts/content-release/`, each a dry run unless `--apply`. Each needs an explicit `DATABASE_URL`, and a remote target also needs the exact `DB_TARGET_ACK`. A dry run is the real transaction, rolled back: it verifies, locks and counts exactly as the applied run would.
 - **`bootstrap-release.ts`** adopts what is live as the first release.
 - **`activate-release.ts --release <id> --expect-active <id|none>`** activates a staged release. It is also the rollback: name an earlier release and the one you expect to be active.
-- **`hold-questions.ts --qid … --reason … --authority … [--lift]`** places a hold on each question's live revision, or lifts every unlifted hold on it.
+- **`hold-questions.ts --qid … --reason … --authority … [--lift]`** places a hold on each question's live revision, or lifts the hold on that live revision. Both act only on the revision the active release publishes (#1296 review): a lift never records itself on a hold it did not target.
   - It re-applies the active release in the same transaction, so the question leaves the bank, or returns to it, at once.
   - It refuses while no release is active, a question the active release does not name, and an unknown QID.
   - A lift records its own reason and authority.
@@ -507,11 +507,11 @@ The withdrawal command shares the QID argument parser (`scripts/seed/qid-command
 - **The release identity.** A release is now its manifest on its base: (`manifest_hash`, `parent_release_id`) is unique, as two partial indexes. 0047's unique hash alone was a dead end (promotion #1295's review): a set staged on one base and never activated could never be staged on a newer one. 4c-ii's staging reuses only a release with the same manifest on the same parent.
 
 **Verification.**
-- **The commands** run in-process against a disposable database: a fresh database in the clone's own Postgres, with every migration applied, dropped afterwards (`tests/integration/disposable-database-test-helpers.ts`). The shared database cannot take a committed activation, which would archive the seeded corpus. 11 cases:
+- **The commands** run in-process against a disposable database: a fresh database in the clone's own Postgres, with every migration applied, dropped afterwards (`tests/integration/disposable-database-test-helpers.ts`). The shared database cannot take a committed activation, which would archive the seeded corpus. 12 cases:
   - the bootstrap's dry run and apply, and its refusal once a release is active;
   - an activation's dry run and apply, and a rollback;
   - a stale expectation;
-  - a hold's dry run, apply, repeat and lift;
+  - a hold's dry run, apply, repeat and lift, and a lift that leaves a hold on another revision in place;
   - the hold's three refusals;
   - each script's exit code on a bad argument.
 - **The activation suite** gains two cases: one for the release identity, and one for a lift without its record.
