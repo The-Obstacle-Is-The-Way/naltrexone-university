@@ -13,6 +13,9 @@
 /blob-report
 /audit-screenshots
 /artifacts
+# Vitest Browser Mode failure screenshots and attachments
+__screenshots__/
+/.vitest-attachments
 
 # next.js
 /.next/
