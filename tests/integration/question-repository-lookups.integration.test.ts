@@ -105,12 +105,6 @@ describe('DrizzleQuestionRepository lookups', () => {
     await expect(repo.findPublishedById(randomUUID())).resolves.toBeNull();
   });
 
-  it('returns an empty list from findPublishedByIds for no ids', async () => {
-    const repo = new DrizzleQuestionRepository(db);
-
-    await expect(repo.findPublishedByIds([])).resolves.toEqual([]);
-  });
-
   it('fails loudly when a stored choice carries an invalid label', async () => {
     const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,

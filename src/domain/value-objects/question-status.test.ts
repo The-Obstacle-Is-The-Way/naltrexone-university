@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AllQuestionStatuses,
-  isValidQuestionStatus,
-  isVisibleStatus,
-} from './question-status';
+import { AllQuestionStatuses, isValidQuestionStatus } from './question-status';
 
 describe('QuestionStatus', () => {
   it('contains exactly draft, published, archived', () => {
@@ -18,13 +14,5 @@ describe('QuestionStatus', () => {
 
   it('rejects unknown statuses', () => {
     expect(isValidQuestionStatus('deleted')).toBe(false);
-  });
-
-  describe('isVisibleStatus', () => {
-    it('returns true only for published', () => {
-      expect(isVisibleStatus('draft')).toBe(false);
-      expect(isVisibleStatus('published')).toBe(true);
-      expect(isVisibleStatus('archived')).toBe(false);
-    });
   });
 });

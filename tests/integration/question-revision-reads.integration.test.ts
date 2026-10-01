@@ -74,7 +74,6 @@ describe('ADR-021 phase 2a: question content reads through the current revision'
     for (const read of [
       await repository.findPublishedById(question.id),
       await repository.findPublishedBySlug(question.slug),
-      (await repository.findPublishedByIds([question.id]))[0],
       await repository.findByIdForSession(currentItem),
       (await repository.findByIdsForSession([currentItem]))[0],
     ]) {
