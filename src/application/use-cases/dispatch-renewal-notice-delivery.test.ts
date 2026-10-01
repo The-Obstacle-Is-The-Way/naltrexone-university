@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
+import type { ClaimRenewalNoticeDeliveryInput } from '@/src/application/ports/repositories';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -71,6 +73,10 @@ function createUseCase(input: {
 }
 
 describe('DispatchRenewalNoticeDeliveryUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('leaves a queued row untouched when the gateway is unconfigured', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
     await repository.saveQueued(createDelivery());
@@ -175,6 +181,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
         failureCode: 'rate_limit_exceeded',
       },
       expectedStatus: 'transient_failure',
+      expectedFailureClass: 'provider_non_acceptance',
       expectedNextAttemptAt: '2026-08-06T18:15:00.000Z',
     },
     {
@@ -183,6 +190,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
         failureCode: 'invalid_idempotent_request',
       },
       expectedStatus: 'terminal_failure',
+      expectedFailureClass: 'provider_terminal_failure',
       expectedNextAttemptAt: null,
     },
     {
@@ -191,6 +199,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
         failureCode: 'ETIMEDOUT',
       },
       expectedStatus: 'outcome_unknown',
+      expectedFailureClass: 'provider_outcome_unknown',
       expectedNextAttemptAt: null,
     },
   ])(
@@ -198,6 +207,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     async ({
       result: gatewayResult,
       expectedStatus,
+      expectedFailureClass,
       expectedNextAttemptAt,
     }) => {
       const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
@@ -214,6 +224,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
         outcome: 'attempted',
         delivery: {
           status: expectedStatus,
+          failureClass: expectedFailureClass,
           failureCode: gatewayResult.failureCode,
         },
       });
@@ -289,9 +300,9 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     const gateway = new FakeTransactionalEmailGateway({ configured: true });
     const useCase = createUseCase({ repository, gateway });
 
-    await expect(useCase.execute({ deliveryId })).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-    });
+    await expect(useCase.execute({ deliveryId })).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Renewal notice delivery not found'),
+    );
     expect(gateway.sendInputs).toEqual([]);
   });
 
@@ -339,5 +350,96 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       },
     ]);
     expect(JSON.stringify(logger.errorCalls)).not.toContain(payload.to);
+  });
+
+  it('reads the system clock and makes its own attempt ids when none are injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    const useCase = new DispatchRenewalNoticeDeliveryUseCase(
+      repository,
+      new FakeTransactionalEmailGateway({ configured: true }),
+      noticeTargets,
+      hasher,
+      new FakeLogger(),
+    );
+
+    const result = await useCase.execute({ deliveryId });
+
+    expect(result.delivery).toMatchObject({
+      status: 'accepted',
+      attemptStartedAt: now,
+      attemptId: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      ),
+    });
+  });
+
+  // Only a payload that fails its integrity checks ends the notice; any
+  // other failure is a fault to surface, not a fact about the notice.
+  it('rethrows an unexpected failure while checking the payload', async () => {
+    class UnavailableHasher extends FakeSha256Hasher {
+      override hash(): string {
+        throw new Error('hasher unavailable');
+      }
+    }
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    const useCase = new DispatchRenewalNoticeDeliveryUseCase(
+      repository,
+      new FakeTransactionalEmailGateway({ configured: true }),
+      noticeTargets,
+      new UnavailableHasher(),
+      new FakeLogger(),
+      () => now,
+      () => 'attempt-1',
+    );
+
+    await expect(useCase.execute({ deliveryId })).rejects.toThrow(
+      'hasher unavailable',
+    );
+    expect(repository.records[0]?.status).toBe('queued');
+  });
+
+  it('reports a lost claim when another worker holds a notice it would refuse', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    const claimed = await repository.claim({
+      id: deliveryId,
+      attemptId: 'other-worker',
+      startedAt: now,
+    });
+    if (!claimed) throw new Error('Expected the other worker to claim it');
+    repository.records[0] = { ...claimed, payloadHash: '0'.repeat(64) };
+    const gateway = new FakeTransactionalEmailGateway({ configured: true });
+
+    await expect(
+      createUseCase({ repository, gateway }).execute({ deliveryId }),
+    ).resolves.toEqual({ outcome: 'claim_lost', delivery: null });
+    expect(repository.records[0]?.attemptId).toBe('other-worker');
+  });
+
+  // The repository returns the claim with the attempt id it was given; a
+  // claim without one breaks that contract, and the use case refuses it.
+  it('fails loudly when a claim comes back without its attempt id', async () => {
+    class AttemptlessClaims extends FakeRenewalNoticeDeliveryRepository {
+      override async claim(input: ClaimRenewalNoticeDeliveryInput) {
+        const claimed = await super.claim(input);
+        return claimed && { ...claimed, attemptId: null };
+      }
+    }
+    const repository = new AttemptlessClaims(() => now);
+    await repository.saveQueued(createDelivery());
+    const gateway = new FakeTransactionalEmailGateway({ configured: true });
+
+    await expect(
+      createUseCase({ repository, gateway }).execute({ deliveryId }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Claimed renewal notice delivery is missing its attempt ID',
+      ),
+    );
   });
 });

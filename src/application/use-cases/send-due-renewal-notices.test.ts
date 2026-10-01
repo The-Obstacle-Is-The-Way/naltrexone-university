@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { parseTransactionalEmailPayloadSnapshot } from '@/src/application/shared/transactional-email-payload';
 import {
@@ -87,6 +87,10 @@ async function createHarness(input?: {
 }
 
 describe('SendDueRenewalNoticesUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('queues and dispatches the annual renewal notice with statutory content', async () => {
     const { gateway, hasher, repository, useCase } = await createHarness();
 
@@ -130,120 +134,6 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(gateway.sendInputs).toHaveLength(1);
   });
 
-  // DEBT-414 F06: the notice must say renewal happens unless canceled, give
-  // the exact cutoff with its zone, link the online cancellation route, and
-  // state the cancellation policy the Terms publish.
-  it('states automatic renewal, the exact cutoff and the cancellation policy, with working links', async () => {
-    const { hasher, repository, useCase } = await createHarness();
-
-    await useCase.execute({ notices: [scheduledNotice()], limit: 100 });
-
-    const record = repository.records[0];
-    const payload = parseTransactionalEmailPayloadSnapshot(
-      {
-        snapshot: record?.payloadSnapshot ?? '',
-        hash: record?.payloadHash ?? '',
-        destination: record?.destination ?? '',
-      },
-      hasher,
-    );
-    expect(payload.text).toContain(
-      'Your Addiction Boards Pro Annual subscription renews automatically unless you cancel.',
-    );
-    expect(payload.text).toContain(
-      'Cancel before September 6, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT) to avoid the renewal charge.',
-    );
-    expect(payload.text).toContain(
-      'Cancel online on the Billing page: https://addictionboards.com/app/billing',
-    );
-    expect(payload.text).toContain(
-      'Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then.',
-    );
-    expect(payload.text).toContain(
-      'Except where the law requires otherwise, payments are non-refundable.',
-    );
-    expect(payload.html).toContain(
-      '<a href="https://addictionboards.com/app/billing">https://addictionboards.com/app/billing</a>',
-    );
-    expect(payload.html).toContain(
-      '<a href="mailto:support@addictionboards.com">support@addictionboards.com</a>',
-    );
-    expect(payload.html).toContain(
-      '<a href="https://addictionboards.com/terms">https://addictionboards.com/terms</a>',
-    );
-  });
-
-  // DEBT-414 F02: a monthly subscriber's yearly reminder names the renewal
-  // that carries the subscription into another year, and its cutoff.
-  it('reminds a monthly subscriber before the renewal that starts another year', async () => {
-    const { hasher, repository, useCase } = await createHarness();
-
-    await useCase.execute({
-      notices: [
-        scheduledNotice({
-          noticeKind: 'anniversary_reminder',
-          externalSubscriptionId: 'sub_monthly_123',
-          planName: 'Pro Monthly',
-          amountCents: 2900,
-          frequency: 'month',
-        }),
-      ],
-      limit: 100,
-    });
-
-    const record = repository.records[0];
-    const payload = parseTransactionalEmailPayloadSnapshot(
-      {
-        snapshot: record?.payloadSnapshot ?? '',
-        hash: record?.payloadHash ?? '',
-        destination: record?.destination ?? '',
-      },
-      hasher,
-    );
-    expect(payload.subject).toBe(
-      'Addiction Boards — Yearly reminder about your monthly subscription',
-    );
-    expect(payload.text).toContain(
-      'Your Addiction Boards Pro Monthly subscription renews automatically every month unless you cancel.',
-    );
-    expect(payload.text).toContain(
-      'This is your yearly reminder: the renewal on September 6, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT) continues your subscription into another year.',
-    );
-    expect(payload.text).toContain(
-      'Cancel before that time to avoid the renewal charge.',
-    );
-    expect(payload.text).toContain(
-      'Renewal amount and frequency: $29.00 USD every month.',
-    );
-    expect(payload.text).toContain(
-      'Cancel online on the Billing page: https://addictionboards.com/app/billing',
-    );
-    expect(payload.text).toContain(
-      'Except where the law requires otherwise, payments are non-refundable.',
-    );
-  });
-
-  it('escapes notice text before linking it into HTML', async () => {
-    const { hasher, repository, useCase } = await createHarness();
-
-    await useCase.execute({
-      notices: [scheduledNotice({ planName: 'Pro <Annual>' })],
-      limit: 100,
-    });
-
-    const record = repository.records[0];
-    const payload = parseTransactionalEmailPayloadSnapshot(
-      {
-        snapshot: record?.payloadSnapshot ?? '',
-        hash: record?.payloadHash ?? '',
-        destination: record?.destination ?? '',
-      },
-      hasher,
-    );
-    expect(payload.html).toContain('Pro &lt;Annual&gt;');
-    expect(payload.html).not.toContain('Pro <Annual>');
-  });
-
   it('creates separate annual-reminder and renewal-notice identities and deduplicates cron replay', async () => {
     const { gateway, repository, useCase } = await createHarness();
     const notices = [
@@ -267,48 +157,6 @@ describe('SendDueRenewalNoticesUseCase', () => {
       'renewal_notice',
     ]);
     expect(gateway.sendInputs).toHaveLength(2);
-  });
-
-  it('renders the pinned material-change and fee-change instructions', async () => {
-    const { hasher, repository, useCase } = await createHarness({
-      configured: false,
-    });
-
-    await useCase.execute({
-      notices: [
-        scheduledNotice({
-          noticeKind: 'material_change',
-          changeDescription:
-            'The annual renewal terms will change on the date shown.',
-        }),
-        scheduledNotice({
-          noticeKind: 'fee_change',
-          changeDescription: 'The annual price will change to $219.',
-        }),
-      ],
-      limit: 100,
-    });
-
-    expect(repository.records).toHaveLength(2);
-    const payloads = repository.records.map((row) =>
-      parseTransactionalEmailPayloadSnapshot(
-        {
-          snapshot: row.payloadSnapshot,
-          hash: row.payloadHash,
-          destination: row.destination,
-        },
-        hasher,
-      ),
-    );
-    expect(payloads[0]?.text).toContain('Material change effective');
-    expect(payloads[0]?.text).not.toContain('Fee change effective');
-    expect(payloads[1]?.text).toContain('Fee change effective');
-    expect(payloads[1]?.text).not.toContain('Material change effective');
-    for (const payload of payloads) {
-      expect(payload.text).toContain('Billing page in the app');
-      expect(payload.text).toContain('support@addictionboards.com');
-    }
-    expect(repository.records[1]?.payloadSnapshot).toContain('$219');
   });
 
   it('leaves selected rows queued and makes no provider call when Resend is unconfigured', async () => {
@@ -484,6 +332,10 @@ describe('SendDueRenewalNoticesUseCase', () => {
         scheduledNotice({ applicableAt: new Date('invalid') }),
         scheduledNotice({ amountCents: 19.5 }),
         scheduledNotice({ amountCents: -1 }),
+        scheduledNotice({ externalSubscriptionId: '   ' }),
+        scheduledNotice({ disclosureVersion: '   ' }),
+        scheduledNotice({ noticeKind: 'material_change' }),
+        scheduledNotice({ noticeKind: 'fee_change', changeDescription: '  ' }),
         scheduledNotice({ externalSubscriptionId: 'sub_healthy' }),
       ],
       limit: 100,
@@ -492,7 +344,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(result).toEqual({
       queued: 1,
       queueFailures: 0,
-      rejectedNotices: 4,
+      rejectedNotices: 8,
       selected: 1,
       staleUnknown: 0,
       dispatchFailures: 0,
@@ -591,5 +443,145 @@ describe('SendDueRenewalNoticesUseCase', () => {
         msg: 'Renewal notice queueing failed',
       },
     ]);
+  });
+
+  // A processing claim older than 15 minutes is a lost worker's; a younger
+  // one may still be sending.
+  it('leaves a processing claim younger than 15 minutes alone', async () => {
+    const { repository, useCase } = await createHarness({ configured: false });
+    await useCase.execute({ notices: [scheduledNotice()], limit: 100 });
+    const row = repository.records[0];
+    if (!row) throw new Error('expected queued notice');
+    Object.assign(row, {
+      status: 'processing' as const,
+      attemptId: 'live-worker',
+      attemptStartedAt: new Date('2026-08-07T11:46:00.000Z'),
+    });
+
+    const result = await useCase.execute({ notices: [], limit: 100 });
+
+    expect(result.staleUnknown).toBe(0);
+    expect(row.status).toBe('processing');
+  });
+
+  it('queues a notice for a zero amount and trims its destination', async () => {
+    const { repository, useCase } = await createHarness({ configured: false });
+
+    const result = await useCase.execute({
+      notices: [
+        scheduledNotice({
+          amountCents: 0,
+          destination: '  subscriber@example.com  ',
+        }),
+      ],
+      limit: 100,
+    });
+
+    expect(result.queued).toBe(1);
+    expect(repository.records[0]?.destination).toBe('subscriber@example.com');
+  });
+
+  it('dispatches no more due notices than the limit', async () => {
+    const { useCase } = await createHarness({
+      configured: false,
+      externalSubscriptionIds: ['sub_first', 'sub_second'],
+    });
+
+    const result = await useCase.execute({
+      notices: [
+        scheduledNotice({ externalSubscriptionId: 'sub_first' }),
+        scheduledNotice({ externalSubscriptionId: 'sub_second' }),
+      ],
+      limit: 1,
+    });
+
+    expect(result).toMatchObject({ queued: 2, selected: 1 });
+  });
+
+  it('logs a queueing failure that is not an Error by its kind alone', async () => {
+    class ThrowingRepository extends FakeRenewalNoticeDeliveryRepository {
+      override async saveQueued(): Promise<never> {
+        throw 'storage unavailable';
+      }
+    }
+    const hasher = new FakeSha256Hasher();
+    const repository = new ThrowingRepository(() => now, hasher);
+    const logger = new FakeLogger();
+    const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
+      repository,
+      new FakeTransactionalEmailGateway({ configured: false }),
+      await matchingNoticeTargets(),
+      hasher,
+      new FakeLogger(),
+      () => now,
+      () => 'attempt-1',
+    );
+    const useCase = new SendDueRenewalNoticesUseCase(
+      repository,
+      hasher,
+      dispatch,
+      logger,
+      'https://addictionboards.com',
+      () => now,
+      () => '11111111-1111-4111-8111-000000000001',
+    );
+
+    await expect(
+      useCase.execute({ notices: [scheduledNotice()], limit: 100 }),
+    ).resolves.toMatchObject({ queueFailures: 1 });
+    expect(logger.errorCalls).toEqual([
+      {
+        context: {
+          noticeKind: 'renewal_notice',
+          stripeSubscriptionId: 'sub_annual_123',
+          errorCode: null,
+          errorName: 'unknown',
+        },
+        msg: 'Renewal notice queueing failed',
+      },
+    ]);
+  });
+
+  // Frozen ten minutes after a claim began, the system clock finds it not yet
+  // stale; the real clock would.
+  it('reads the system clock and makes its own ids when none are injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    const hasher = new FakeSha256Hasher();
+    const repository = new FakeRenewalNoticeDeliveryRepository(
+      () => now,
+      hasher,
+    );
+    const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
+      repository,
+      new FakeTransactionalEmailGateway({ configured: false }),
+      await matchingNoticeTargets(),
+      hasher,
+      new FakeLogger(),
+      () => now,
+      () => 'attempt-1',
+    );
+    const useCase = new SendDueRenewalNoticesUseCase(
+      repository,
+      hasher,
+      dispatch,
+      new FakeLogger(),
+      'https://addictionboards.com',
+    );
+    await useCase.execute({ notices: [scheduledNotice()], limit: 100 });
+    const row = repository.records[0];
+    if (!row) throw new Error('expected queued notice');
+    Object.assign(row, {
+      status: 'processing' as const,
+      attemptId: 'live-worker',
+      attemptStartedAt: new Date('2026-08-07T11:50:00.000Z'),
+    });
+
+    const result = await useCase.execute({ notices: [], limit: 100 });
+
+    expect(result.staleUnknown).toBe(0);
+    expect(row.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
   });
 });

@@ -118,6 +118,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       });
     } catch {
       result = {
+        // Stryker disable next-line StringLiteral: persistOutcome treats every status but accepted, transient and terminal as unknown
         status: 'outcome_unknown',
         failureCode: 'unexpected_gateway_exception',
       };
@@ -137,17 +138,18 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     failureCode: string;
   } | null> {
     if (delivery.externalSubscriptionId === null) return null;
+    const applicableAt = requireApplicableAt(delivery);
     const supersededBy = await this.supersededReason(
       delivery,
       delivery.externalSubscriptionId,
+      applicableAt,
     );
     if (supersededBy) {
       return { failureClass: 'notice_superseded', failureCode: supersededBy };
     }
     if (
       isRenewalReminder(delivery) &&
-      delivery.applicableAt !== null &&
-      this.now() > renewalNoticeSendByCutoff(delivery.applicableAt)
+      this.now() > renewalNoticeSendByCutoff(applicableAt)
     ) {
       try {
         this.logger.error(
@@ -168,6 +170,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
   private async supersededReason(
     delivery: RenewalNoticeDelivery,
     externalSubscriptionId: string,
+    applicableAt: Date,
   ): Promise<string | null> {
     const subscription =
       await this.noticeTargets.subscriptions.findByExternalSubscriptionId(
@@ -183,10 +186,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       // The annual kinds state the annual amount and yearly frequency.
       if (subscription.plan !== 'annual') return 'subscription_plan_changed';
       if (subscription.cancelAtPeriodEnd) return 'subscription_canceling';
-      if (
-        subscription.currentPeriodEnd.getTime() !==
-        delivery.applicableAt?.getTime()
-      ) {
+      if (subscription.currentPeriodEnd.getTime() !== applicableAt.getTime()) {
         return 'renewal_date_changed';
       }
     }
@@ -206,7 +206,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
         billingCycleAnchor: subscription.billingCycleAnchor,
         notBefore: this.now(),
       });
-      if (renewal.getTime() !== delivery.applicableAt?.getTime()) {
+      if (renewal.getTime() !== applicableAt.getTime()) {
         return 'renewal_date_changed';
       }
     }
@@ -297,6 +297,18 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     }
     return delivery;
   }
+}
+
+// The key shape (renewal_notice_deliveries_key_shape_chk) gives every
+// scheduled notice an applicable date; a row without one is corrupt.
+function requireApplicableAt(delivery: RenewalNoticeDelivery): Date {
+  if (delivery.applicableAt === null) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Scheduled renewal notice has no applicable date',
+    );
+  }
+  return delivery.applicableAt;
 }
 
 function isAnnualRenewalReminder(delivery: RenewalNoticeDelivery): boolean {
