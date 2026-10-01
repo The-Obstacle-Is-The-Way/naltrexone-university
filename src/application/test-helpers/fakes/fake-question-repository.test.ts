@@ -34,9 +34,10 @@ describe('FakeQuestionRepository', () => {
     const repo = new FakeQuestionRepository([published, archived, draft]);
 
     await expect(repo.findPublishedById('q-archived')).resolves.toBeNull();
-    await expect(
-      repo.findPublishedByIds(['q-draft', 'q-published', 'q-archived']),
-    ).resolves.toEqual([published]);
+    await expect(repo.findPublishedById('q-draft')).resolves.toBeNull();
+    await expect(repo.findPublishedById('q-published')).resolves.toBe(
+      published,
+    );
 
     await expect(repo.findByIdForSession(bindingOf(archived))).resolves.toEqual(
       archived,
@@ -57,7 +58,6 @@ describe('FakeQuestionRepository', () => {
     const repo = new FakeQuestionRepository([current, older]);
 
     await expect(repo.findPublishedById('q1')).resolves.toBe(current);
-    await expect(repo.findPublishedByIds(['q1'])).resolves.toEqual([current]);
     await expect(repo.findByIdForSession(bindingOf(current))).resolves.toBe(
       current,
     );

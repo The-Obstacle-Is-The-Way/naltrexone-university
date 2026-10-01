@@ -7,18 +7,6 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
 
-function getSortedUniqueQuestionIds(ids: readonly string[]): string[] {
-  return [...new Set(ids)].sort();
-}
-
-function serializeQuestionIds(ids: readonly string[]): string {
-  return JSON.stringify(ids);
-}
-
-function deserializeQuestionIds(serializedIds: string): string[] {
-  return JSON.parse(serializedIds) as string[];
-}
-
 // React's cache compares arguments by identity, so a session item is keyed by
 // its serialized binding.
 function serializeBinding(item: QuestionRevisionBinding): string {
@@ -55,11 +43,6 @@ export function createRequestCachedQuestionRepository(
   const findIdBySlug = cache(async (slug: string) =>
     questionRepository.findIdBySlug(slug),
   );
-  const findPublishedByNormalizedIds = cache(async (serializedIds: string) =>
-    questionRepository.findPublishedByIds(
-      deserializeQuestionIds(serializedIds),
-    ),
-  );
   const findBySerializedBindingForSession = cache(async (serialized: string) =>
     questionRepository.findByIdForSession(deserializeBinding(serialized)),
   );
@@ -71,23 +54,6 @@ export function createRequestCachedQuestionRepository(
     findPublishedById,
     findPublishedBySlug,
     findIdBySlug,
-    async findPublishedByIds(
-      ids: readonly string[],
-    ): Promise<readonly Question[]> {
-      const normalizedIds = getSortedUniqueQuestionIds(ids);
-      if (normalizedIds.length === 0) return [];
-
-      const questions = await findPublishedByNormalizedIds(
-        serializeQuestionIds(normalizedIds),
-      );
-      const questionById = new Map(
-        questions.map((question) => [question.id, question]),
-      );
-
-      return ids
-        .map((id) => questionById.get(id))
-        .filter((question): question is Question => question !== undefined);
-    },
     findByIdForSession(item: QuestionRevisionBinding) {
       return findBySerializedBindingForSession(serializeBinding(item));
     },

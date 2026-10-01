@@ -46,7 +46,6 @@ export {
 export {
   AllQuestionStatuses,
   isValidQuestionStatus,
-  isVisibleStatus,
   type QuestionStatus,
 } from './question-status';
 export {

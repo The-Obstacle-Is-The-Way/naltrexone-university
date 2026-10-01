@@ -66,7 +66,6 @@ export function listedRevisions(
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   private readonly revisions: readonly Question[];
-  readonly findPublishedByIdsCalls: string[][] = [];
   readonly findByIdsForSessionCalls: string[][] = [];
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
@@ -94,18 +93,6 @@ export class FakeQuestionRepository implements QuestionRepository {
 
   async findIdBySlug(slug: string): Promise<string | null> {
     return this.questions.find((q) => q.slug === slug)?.id ?? null;
-  }
-
-  async findPublishedByIds(
-    ids: readonly string[],
-  ): Promise<readonly Question[]> {
-    this.findPublishedByIdsCalls.push([...ids]);
-    const byId = new Map(
-      this.questions
-        .filter((q) => q.status === 'published')
-        .map((q) => [q.id, q]),
-    );
-    return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
   }
 
   async findByIdForSession(

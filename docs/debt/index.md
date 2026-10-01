@@ -3,22 +3,27 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-01 UTC
 
-**Latest** — 2026-10-01 UTC: DEBT-414 F15c is in production, and Massachusetts' second annual notice (F19a) is recorded as an owner decision ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)).
-- **F15c released.** The renewal acknowledgment links the online cancellation route, support mail, Terms and Privacy.
-  - #1280 (**5376219929** on `eb28f9ba`; one Minor finding, the mutation-scope wording, fixed; merged `49c673bc`), promoted through #1281 (`2d7b05c9`, review approved with no findings).
-  - Release verified: main CI **36832474107** `test` **08:00:15Z**; production assigned **08:00:18.861Z**; matching trees `3465b362`; healthy production.
-- **What remains engineering-actionable in DEBT-414.** A survey of the whole record found that only F19 is open to engineering. Every other open item waits on the owner, counsel, a tax adviser or a live dashboard.
-  - **F19a**, Massachusetts' 5–30-day notice for annual plans, is an owner decision, below. The owner's 2026-09-27 go named F01–F07 and F15, not F19, whose record says "Code/copy proposed only". It first asks whether Stripe's own renewal emails already meet the duty, which only the owner can check in production.
-  - **F19b**, calendar dates in the trial copy, changes consent evidence and, under the DEBT-478 D6 precedent, merges only on the owner's instruction.
-- **Also released.** BUG-304's fix, through #1283; the bug register's Latest records it.
+**Latest** — 2026-10-01 UTC: F19a's recommendation is anchored to the cancellation deadline, and dead question reads are removed ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)).
+- **F19a correction.** Promotion #1285's review (**CHANGES_REQUESTED** on `d5b4f9d2`, one Minor finding) noted that 940 CMR 38.05(4) measures its 5–30-day window from the date the consumer must cancel to avoid the next charge, not from the renewal date. Here the two coincide: cancellation takes effect at period end, and F06's notices give the renewal instant as the cancel-before cutoff. The recommendation now says so, in DEBT-414 too. #1285 was closed unmerged so the fix ships first.
+- **Dead reads removed.**
+  - `findPublishedByIds` went from the question port, its Drizzle and fake implementations, and the request cache: no use case called it.
+  - `isVisibleStatus` had no callers and went too.
+  - The session repository's lock comment described a #951 session count that no longer exists, and now gives the lock's current reason.
+- **Docs corrected.** `content-pipeline.md` now matches the code:
+  - the renamed content files;
+  - the seed's per-question write, which appends a revision and moves the pointer;
+  - change detection, which compares canonical JSON;
+  - the seed helper's role;
+  - which reads filter on `published`.
+- **Previous change.** #1284 (**5378213585** on `5eef7fa3`; two Minor findings fixed; merged `d5b4f9d2`), on `dev` to ship in the same promotion.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
   - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
-  - **New: Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05 asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Today both annual notices go out together at 35 days.
-    - First check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing, 5–30 days before the cancellation deadline; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery through the consumer's chosen medium. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
-    - If not, the recommendation is to move the annual reminder to about 25 days before renewal, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. That needs no schema change.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery through the consumer's chosen medium. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID remains DEBT-489.**
 
