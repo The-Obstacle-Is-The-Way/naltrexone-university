@@ -20,6 +20,7 @@ const PAYLOAD_KEYS = [
 function isTransactionalEmailPayload(
   value: unknown,
 ): value is TransactionalEmailPayload {
+  // Stryker disable next-line ConditionalExpression: a non-object primitive fails the key checks below anyway; the guard keeps Object.keys from null
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
   return (

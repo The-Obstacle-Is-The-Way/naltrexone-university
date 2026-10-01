@@ -13,6 +13,12 @@
     "src/application/shared/**/*.ts",
     "!src/application/shared/**/*.test.ts",
     "!src/application/shared/**/index.ts",
+    "src/application/use-cases/check-entitlement.ts",
+    "src/application/use-cases/check-trial-saved-card.ts",
+    "src/application/use-cases/count-available-questions.ts",
+    "src/application/use-cases/create-portal-session.ts",
+    "src/application/use-cases/discard-practice-session.ts",
+    "src/application/use-cases/end-practice-session.ts",
     "src/application/use-cases/validate-feedback-context.ts",
     "src/application/use-cases/start-practice-session.ts",
     "src/adapters/controllers/shared/idempotency-error-policy.ts"

@@ -21,6 +21,7 @@ export class CheckTrialSavedCardUseCase {
   ): Promise<CheckTrialSavedCardOutput> {
     const stripeSubscriptionId =
       await this.subscriptions.findExternalSubscriptionIdByUserId(input.userId);
+    // Stryker disable next-line ConditionalExpression: with no subscription id the lookup could only answer false; the guard skips the query
     if (!stripeSubscriptionId) return { cardSaved: false };
     return {
       cardSaved: await this.operations.hasSubscriptionDefaultSet({

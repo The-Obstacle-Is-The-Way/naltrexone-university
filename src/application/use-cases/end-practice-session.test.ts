@@ -62,7 +62,65 @@ describe('EndPracticeSessionUseCase', () => {
       useCase.execute({ userId: 'user-1', sessionId: 'session-exam' }),
     ).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
+      message: 'Active exam sessions must be finalized or discarded, not ended',
     } satisfies Partial<ApplicationError>);
+  });
+
+  it('refuses a session that is missing or already ended', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-ended',
+        userId: 'user-1',
+        mode: 'tutor',
+        endedAt: new Date('2026-02-01T00:10:00Z'),
+      }),
+      // An ended exam is refused as ended, before the active-exam rule.
+      createPracticeSession({
+        id: 'exam-ended',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt: new Date('2026-02-01T00:10:00Z'),
+      }),
+    ]);
+    const useCase = new EndPracticeSessionUseCase(sessions);
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'session-missing' }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Practice session not found',
+    });
+    for (const sessionId of ['session-ended', 'exam-ended']) {
+      await expect(
+        useCase.execute({ userId: 'user-1', sessionId }),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        message: 'Practice session already ended',
+      });
+    }
+  });
+
+  // A repository that reports a session ended without its end time breaks
+  // its contract; the use case refuses to summarize it.
+  it('fails loudly when the repository does not end the session', async () => {
+    class NotEndingRepository extends FakePracticeSessionRepository {
+      override async end(sessionId: string, userId: string) {
+        return { ...(await super.end(sessionId, userId)), endedAt: null };
+      }
+    }
+    const sessions = new NotEndingRepository([
+      buildSessionWithOneAnswered('session-tutor', 'tutor'),
+    ]);
+
+    await expect(
+      new EndPracticeSessionUseCase(sessions).execute({
+        userId: 'user-1',
+        sessionId: 'session-tutor',
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Practice session did not end',
+    });
   });
 
   it('returns tutor accuracy using total question count denominator when calculating session metrics', async () => {

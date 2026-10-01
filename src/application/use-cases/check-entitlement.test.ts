@@ -41,6 +41,25 @@ describe('CheckEntitlementUseCase', () => {
     });
   });
 
+  // Without an injected clock the use case reads the real time, so a period
+  // that ended in 2000 has ended.
+  it('defaults to the real clock', async () => {
+    const sub = createSubscription({
+      userId: 'user-1',
+      status: 'active',
+      currentPeriodEnd: new Date('2000-01-01T00:00:00Z'),
+    });
+
+    const result = await new CheckEntitlementUseCase(
+      new FakeSubscriptionRepository([sub]),
+    ).execute({ userId: 'user-1' });
+
+    expect(result).toMatchObject({
+      isEntitled: false,
+      hasActiveSubscriptionPeriod: false,
+    });
+  });
+
   it('returns true and reason null when subscription is inTrial', async () => {
     const sub = createSubscription({
       userId: 'user-1',
