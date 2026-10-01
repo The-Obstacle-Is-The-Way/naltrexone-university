@@ -86,15 +86,14 @@ function isAttemptAlreadyAnsweredConflict(error: unknown): boolean {
 export function computeFinalExamEndedAt(input: {
   now: Date;
   deadline: Date | null;
-  latestAnsweredAt: Date | null;
+  /** The latest answer time in epoch ms, or -Infinity when there is none. */
+  latestAnsweredAtMs: number;
 }): Date {
-  const { now, deadline, latestAnsweredAt } = input;
+  const { now, deadline, latestAnsweredAtMs } = input;
   if (deadline === null) {
     return now;
   }
 
-  const latestAnsweredAtMs =
-    latestAnsweredAt?.getTime() ?? Number.NEGATIVE_INFINITY;
   return new Date(
     Math.min(now.getTime(), Math.max(deadline.getTime(), latestAnsweredAtMs)),
   );
@@ -118,30 +117,10 @@ export class FinalizeExamAnswersUseCase {
   async execute(
     input: FinalizeExamAnswersInput,
   ): Promise<FinalizeExamAnswersOutput> {
-    const session = await this.sessions.findByIdAndUserId(
-      input.sessionId,
-      input.userId,
-    );
-    if (!session) {
-      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
-    }
-
-    if (session.mode !== 'exam') {
-      throw new ApplicationError(
-        'VALIDATION_ERROR',
-        'Finalize exam is only available in exam mode',
-      );
-    }
-
-    if (session.endedAt) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'Cannot finalize a completed session',
-      );
-    }
-
     const finalizationNow = this.now();
 
+    // The session is read and checked inside the transaction, so the checks
+    // hold for the writes they guard.
     const endedSession = await this.writeTransaction(async (tx) => {
       const loadedSession = await tx.sessions.findByIdAndUserId(
         input.sessionId,
@@ -179,25 +158,23 @@ export class FinalizeExamAnswersUseCase {
         : { session: loadedSession, applied: false };
       const activeSession = finalDraftApplication.session;
       const deadline = computeExamDeadline(activeSession);
-      const finalDraftFlushAfterDeadline =
-        finalDraftApplication.applied &&
-        deadline !== null &&
-        finalizationNow.getTime() >= deadline.getTime();
-      const finalAttemptAnsweredAt = finalDraftFlushAfterDeadline
+      // A final draft is applied only at or after the deadline, within its
+      // grace window (applyFinalDraftAnswer).
+      const finalAttemptAnsweredAt = finalDraftApplication.applied
         ? finalizationNow
         : computeFinalExamEndedAt({
             now: finalizationNow,
             deadline,
-            latestAnsweredAt: null,
+            latestAnsweredAtMs: Number.NEGATIVE_INFINITY,
           });
-      let latestAnsweredAt: Date | null = null;
+      // The latest answer time across the session, as epoch milliseconds.
+      let latestAnsweredAtMs = Number.NEGATIVE_INFINITY;
       const trackAnsweredAt = (answeredAt: Date | null) => {
-        if (!answeredAt) return;
-        if (
-          latestAnsweredAt === null ||
-          answeredAt.getTime() > latestAnsweredAt.getTime()
-        ) {
-          latestAnsweredAt = answeredAt;
+        if (answeredAt) {
+          latestAnsweredAtMs = Math.max(
+            latestAnsweredAtMs,
+            answeredAt.getTime(),
+          );
         }
       };
 
@@ -275,7 +252,7 @@ export class FinalizeExamAnswersUseCase {
       const effectiveEndedAt = computeFinalExamEndedAt({
         now: finalizationNow,
         deadline,
-        latestAnsweredAt,
+        latestAnsweredAtMs,
       });
       return tx.sessions.end(input.sessionId, input.userId, effectiveEndedAt);
     }).catch(async (error: unknown) => {
@@ -331,6 +308,7 @@ export class FinalizeExamAnswersUseCase {
     const deadline = computeExamDeadline(session);
     const nowMs = now.getTime();
     const isAfterGraceWindow =
+      // Stryker disable next-line ConditionalExpression: only an exam reaches here, and an exam always has a deadline
       deadline !== null &&
       nowMs > deadline.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
     if (isAfterGraceWindow) {
@@ -344,10 +322,10 @@ export class FinalizeExamAnswersUseCase {
       return { session, applied: false };
     }
 
+    // A flush past the grace window returned above.
     const isWithinGraceWindow =
-      deadline !== null &&
-      nowMs >= deadline.getTime() &&
-      nowMs <= deadline.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
+      // Stryker disable next-line ConditionalExpression: only an exam reaches here, and an exam always has a deadline
+      deadline !== null && nowMs >= deadline.getTime();
     if (!isWithinGraceWindow) {
       throw new ApplicationError(
         'CONFLICT',

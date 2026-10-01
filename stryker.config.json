@@ -16,7 +16,6 @@
     "src/application/use-cases/**/*.ts",
     "!src/application/use-cases/**/*.test.ts",
     "!src/application/use-cases/**/index.ts",
-    "!src/application/use-cases/finalize-exam-answers.ts",
     "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],

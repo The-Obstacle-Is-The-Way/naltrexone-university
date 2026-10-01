@@ -1,0 +1,686 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
+import {
+  FakeAttemptRepository,
+  FakeLogger,
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '@/src/application/test-helpers/fakes';
+import {
+  createFinalizeQuestion,
+  passthroughTransaction,
+} from '@/src/application/test-helpers/finalize-exam-fixtures';
+import { MS_PER_SECOND } from '@/src/domain/services';
+import { createPracticeSession } from '@/src/domain/test-helpers';
+import {
+  FINALIZE_FLUSH_DEADLINE_GRACE_MS,
+  FinalizeExamAnswersUseCase,
+} from './finalize-exam-answers';
+import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
+
+describe('FinalizeExamAnswersUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe('finalDraftAnswer expiry flush (BUG-254)', () => {
+    // A 1-question exam starting at 12:00:00 expires at +72s = 12:01:12.
+    const STARTED_AT = new Date('2026-03-17T12:00:00.000Z');
+    const DEADLINE_MS = STARTED_AT.getTime() + 72_000;
+
+    function createFlushSession() {
+      return createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: STARTED_AT,
+      });
+    }
+
+    function createFlushUseCase(
+      now: () => Date,
+      question = createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      logger?: FakeLogger,
+    ) {
+      const questions = new FakeQuestionRepository([question]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createFlushSession(),
+      ]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        now,
+        logger,
+      );
+      return { questions, attempts, sessions, useCase };
+    }
+
+    it('grades a correct final flush selection applied at the deadline', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 30_000,
+          },
+        }),
+      ).resolves.toMatchObject({
+        mode: 'exam',
+        questionCount: 1,
+        totals: { answered: 1, correct: 1 },
+      });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' },
+          isCorrect: true,
+          timeSpentSeconds: 30,
+        },
+      ]);
+    });
+
+    it('grades a final flush selection for a session-owned question after it leaves the published set', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong', {
+          status: 'archived',
+        }),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 30_000,
+          },
+        }),
+      ).resolves.toMatchObject({
+        totals: { answered: 1, correct: 1 },
+      });
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' },
+          isCorrect: true,
+        },
+      ]);
+    });
+
+    it('grades an incorrect final flush selection applied at the deadline', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-wrong',
+            cumulativeMs: 5_000,
+          },
+        }),
+      ).resolves.toMatchObject({
+        totals: { answered: 1, correct: 0 },
+      });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'answered', selectedChoiceId: 'q1-wrong' },
+          isCorrect: false,
+          timeSpentSeconds: 5,
+        },
+      ]);
+    });
+
+    it('applies the flush within the deadline grace window', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS + FINALIZE_FLUSH_DEADLINE_GRACE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).resolves.toMatchObject({ totals: { answered: 1, correct: 1 } });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        { outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' } },
+      ]);
+    });
+
+    it('rejects a flush before the deadline (ordinary save path still owns it)', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS - 1_000),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'CONFLICT',
+          'Final exam answer flush is only allowed at exam expiry',
+        ),
+      );
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toEqual([]);
+    });
+
+    it('drops a flush arriving after the grace window and still finalizes', async () => {
+      const logger = new FakeLogger();
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS + FINALIZE_FLUSH_DEADLINE_GRACE_MS + 1),
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+        logger,
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).resolves.toMatchObject({ totals: { answered: 0, correct: 0 } });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'omitted' },
+          isCorrect: false,
+          timeSpentSeconds: 0,
+          answeredAt: new Date(DEADLINE_MS),
+        },
+      ]);
+      expect(logger.warnCalls).toContainEqual({
+        context: {
+          sessionId: 'session-1',
+          questionId: 'q1',
+        },
+        msg: 'Dropped stale final exam draft flush after grace window',
+      });
+    });
+
+    it('drops a late flush without requiring an injected logger', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS + FINALIZE_FLUSH_DEADLINE_GRACE_MS + 1),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).resolves.toMatchObject({ totals: { answered: 0, correct: 0 } });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'omitted' },
+          isCorrect: false,
+          answeredAt: new Date(DEADLINE_MS),
+        },
+      ]);
+    });
+
+    it('rejects a flush for a question that is not in the session', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q-not-in-session',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'NOT_FOUND',
+          'Question is not part of this practice session',
+        ),
+      );
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toEqual([]);
+    });
+
+    it('rejects a flush whose selected choice does not belong to the question', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'choice-from-another-question',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError(
+          'VALIDATION_ERROR',
+          'Selected choice does not belong to the question',
+        ),
+      );
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toEqual([]);
+    });
+
+    it('rejects a flush when the session belongs to another user', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'other-user',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Practice session not found'),
+      );
+
+      await expect(
+        attempts.findBySessionId('session-1', 'other-user'),
+      ).resolves.toEqual([]);
+    });
+
+    it('clamps an oversized flush cumulativeMs before writing timeSpentSeconds', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        finalDraftAnswer: {
+          questionId: 'q1',
+          selectedChoiceId: 'q1-correct',
+          cumulativeMs: Number.MAX_SAFE_INTEGER,
+        },
+      });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
+        },
+      ]);
+    });
+
+    it('clamps oversized persisted draft state before writing timeSpentSeconds', async () => {
+      const questions = new FakeQuestionRepository([
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      ]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: STARTED_AT,
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+              draftSelectedChoiceId: 'q1-correct',
+              draftSavedAt: new Date(STARTED_AT.getTime() + 50_000),
+              draftCumulativeMs: Number.MAX_SAFE_INTEGER,
+            },
+          ],
+        }),
+      ]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => new Date(DEADLINE_MS),
+      );
+
+      await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
+        },
+      ]);
+    });
+
+    it('applies the flushed selection even when its cumulativeMs is below a persisted draft', async () => {
+      // A prior time-only draft persisted 50s; the expiry flush carries a lower
+      // cumulativeMs but a real selection. The selection must still be graded
+      // and the persisted (higher) time must win, never dropping the answer.
+      const questions = new FakeQuestionRepository([
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      ]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: STARTED_AT,
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+              draftSelectedChoiceId: null,
+              draftSavedAt: new Date(STARTED_AT.getTime() + 50_000),
+              draftCumulativeMs: 50_000,
+            },
+          ],
+        }),
+      ]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 5_000,
+          },
+        }),
+      ).resolves.toMatchObject({ totals: { answered: 1, correct: 1 } });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' },
+          isCorrect: true,
+          timeSpentSeconds: 50,
+        },
+      ]);
+    });
+
+    it('grades a null final flush as an omitted attempt with the flushed duration', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: null,
+            cumulativeMs: 12_000,
+          },
+        }),
+      ).resolves.toMatchObject({ totals: { answered: 0, correct: 0 } });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'omitted' },
+          isCorrect: false,
+          timeSpentSeconds: 12,
+        },
+      ]);
+    });
+
+    it('is idempotent: a second finalize does not double-apply the flush', async () => {
+      const { attempts, sessions, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+      );
+
+      await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        finalDraftAnswer: {
+          questionId: 'q1',
+          selectedChoiceId: 'q1-correct',
+          cumulativeMs: 10_000,
+        },
+      });
+
+      // The session has ended; a re-finalize must be rejected, not re-graded.
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-wrong',
+            cumulativeMs: 99_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('CONFLICT', 'Cannot finalize a completed session'),
+      );
+
+      const allAttempts = await attempts.findBySessionId('session-1', 'user-1');
+      expect(allAttempts).toHaveLength(1);
+      expect(allAttempts[0]).toMatchObject({
+        outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' },
+        isCorrect: true,
+      });
+
+      const endedSession = await sessions.findByIdAndUserId(
+        'session-1',
+        'user-1',
+      );
+      expect(endedSession?.questionStates[0]).toMatchObject({
+        latestSelectedChoiceId: 'q1-correct',
+        latestIsCorrect: true,
+        draftSelectedChoiceId: null,
+      });
+    });
+
+    it('applies a flush to the item it names, not the session’s first', async () => {
+      const questions = new FakeQuestionRepository([
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+        createFinalizeQuestion('q2', 'q2-correct', 'q2-wrong'),
+      ]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1', 'q2'],
+          startedAt: STARTED_AT,
+        }),
+      ]);
+      // Two questions expire at +144s.
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => new Date(STARTED_AT.getTime() + 144_000),
+      );
+
+      await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        finalDraftAnswer: {
+          questionId: 'q2',
+          selectedChoiceId: 'q2-correct',
+          cumulativeMs: 5_000,
+        },
+      });
+
+      const finalized = await attempts.findBySessionId('session-1', 'user-1');
+      expect(finalized.find((a) => a.questionId === 'q2')).toMatchObject({
+        outcome: { kind: 'answered', selectedChoiceId: 'q2-correct' },
+        isCorrect: true,
+      });
+    });
+
+    it('fails when the flushed item’s question can no longer be read', async () => {
+      const questions = new FakeQuestionRepository([]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createFlushSession(),
+      ]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 30_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Question not found'),
+      );
+    });
+
+    // The session is re-read after the flush is saved; one deleted in between
+    // ends the finalize rather than grading without it.
+    it('fails when the session disappears after the flush is saved', async () => {
+      class VanishingSessions extends FakePracticeSessionRepository {
+        private saved = false;
+
+        override async saveDraftAnswer(
+          input: Parameters<
+            FakePracticeSessionRepository['saveDraftAnswer']
+          >[0],
+        ) {
+          const state = await super.saveDraftAnswer(input);
+          this.saved = true;
+          return state;
+        }
+
+        override async findByIdAndUserId(id: string, userId: string) {
+          return this.saved ? null : super.findByIdAndUserId(id, userId);
+        }
+      }
+      const questions = new FakeQuestionRepository([
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      ]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new VanishingSessions([createFlushSession()]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => new Date(DEADLINE_MS),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 30_000,
+          },
+        }),
+      ).rejects.toEqual(
+        new ApplicationError('NOT_FOUND', 'Practice session not found'),
+      );
+    });
+  });
+});
