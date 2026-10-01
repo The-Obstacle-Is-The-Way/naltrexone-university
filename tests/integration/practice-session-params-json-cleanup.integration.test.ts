@@ -10,7 +10,7 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
-import { readDebt428434CleanupSql } from './practice-session-state-backfill-helper';
+import { readDebt428434CleanupSql } from './marked-migration-sql-test-helpers';
 
 type LegacyPracticeSessionParams = schema.PracticeSessionParams & {
   questionStates?: Array<{

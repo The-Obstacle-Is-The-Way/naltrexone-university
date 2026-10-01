@@ -14,7 +14,7 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
-import { readDebt425BackfillSql } from './practice-session-state-backfill-helper';
+import { readDebt425BackfillSql } from './marked-migration-sql-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();

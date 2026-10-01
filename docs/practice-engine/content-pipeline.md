@@ -291,6 +291,20 @@ SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
 
 This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives any existing placeholder rows in the DB (`slug LIKE 'placeholder-%'`).
 
+### Withdrawing a Question
+
+`scripts/seed/withdraw-questions.ts` withdraws questions by QID, the content slug. It needs an explicit `DATABASE_URL`, and a remote target also needs the exact `DB_TARGET_ACK`. Without `--apply` it is a dry run that reports the target, the QIDs and the counts.
+
+```bash
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-questions.ts \
+  --qid "example-qid" --reason "Why it is withdrawn" --authority "Who ordered it"
+# Check the dry run's target, QIDs and counts, then repeat the command with --apply.
+```
+
+In one transaction, under the same row locks the seed takes, it archives each question and records a withdrawal for every revision in `question_withdrawals` (migration `0045`), with the reason and authority. A revision already recorded keeps its first record.
+
+A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too, and the seed records it with authority `content seed`. Only the synthetic placeholders are archived and restored without a record. A learner who attempted a withdrawn question can still review it, with a notice (ADR-021 §3).
+
 ---
 
 ## 5. Database Storage
@@ -300,6 +314,8 @@ This excludes `content/questions/placeholder/**/*.mdx` from the seed input and a
 **Questions table:** Stores a question's identity (`slug`) and `status`, and `currentRevisionId`, the revision new practice shows (ADR-021).
 
 **Question revisions table:** Stores the content a learner reads, as raw markdown: `stemMd`, `explanationMd`, `referenceMd`, plus `difficulty` and the `stored-fields-json-v1` content hash. A revision is never updated; changed content is a new revision (migration `0042`). Attempts and session items bind the revision they were shown and graded against (`NOT NULL` since migration `0043`).
+
+**Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Releases, which come later in ADR-021 phase 4, will never select a withdrawn revision.
 
 **Choices table:**
 
@@ -567,7 +583,7 @@ By default, `pnpm db:seed` **excludes** placeholder questions and archives any e
 
 ### What it does NOT do
 
-- **Does not prune or merge existing output.** A populated destination is refused for actual writes. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; use the explicit-QID withdrawal path documented in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+- **Does not prune or merge existing output.** A populated destination is refused for actual writes. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; withdraw it explicitly, as [Withdrawing a Question](#withdrawing-a-question) describes.
 - **Does not touch the database.** Import is a local file operation only. You must run `pnpm db:seed` separately.
 - **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
 
