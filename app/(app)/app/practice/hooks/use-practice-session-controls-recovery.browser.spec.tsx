@@ -567,7 +567,10 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     expect(thirdStartKey).not.toBe(firstStartKey);
   });
 
-  it('rejects a stale start handler without changing the newer request state', async () => {
+  // BUG-304: a handler captured before the intent changed starts the latest
+  // intent under the newer request's key. It never submits the earlier key or
+  // retires the newer one while that request may still run (BUG-303).
+  it('starts the latest intent under the newer key from a handler captured before the change', async () => {
     const sessionId = '11111111-1111-4111-8111-111111111128';
     const incompleteSession = {
       sessionId,
@@ -579,6 +582,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     arrangeControlDependencies();
     getIncompletePracticeSession
       .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(ok(incompleteSession))
       .mockResolvedValueOnce(ok(incompleteSession))
       .mockResolvedValue(ok(null));
     startPracticeSession.mockResolvedValue(
@@ -622,10 +626,19 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await screen
       .getByRole('button', { name: 'start-original-handler' })
       .click();
-    expect(startPracticeSession).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() =>
+      expect(startPracticeSession).toHaveBeenCalledTimes(2),
+    );
+    expect(startPracticeSession.mock.calls[1]?.[0]).toMatchObject({
+      mode: 'exam',
+      idempotencyKey: currentStartKey,
+    });
     await expect
       .element(screen.getByTestId('session-start-status'))
       .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -636,14 +649,14 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
-      expect(startPracticeSession).toHaveBeenCalledTimes(2),
+      expect(startPracticeSession).toHaveBeenCalledTimes(3),
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
       .toHaveTextContent('2');
     const nextStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
-      1,
+      2,
     );
 
     expect(currentStartKey).toEqual(expect.stringMatching(UUID_PATTERN));

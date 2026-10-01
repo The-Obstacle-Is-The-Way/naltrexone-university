@@ -245,9 +245,7 @@ export function createSessionCountBlurHandler(input: {
 }
 
 export function createToggleTagHandler(input: {
-  setFilters: (
-    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
-  ) => void;
+  setFilters: (update: (prev: PracticeFilters) => PracticeFilters) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
 }): (slug: string) => void {
@@ -261,9 +259,7 @@ export function createToggleTagHandler(input: {
 }
 
 export function createDifficultyChangeHandler(input: {
-  setFilters: (
-    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
-  ) => void;
+  setFilters: (update: (prev: PracticeFilters) => PracticeFilters) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
 }): (difficulty: PracticeFilters['difficulty']) => void {
@@ -274,9 +270,7 @@ export function createDifficultyChangeHandler(input: {
 }
 
 export function createStatusChangeHandler(input: {
-  setFilters: (
-    next: PracticeFilters | ((prev: PracticeFilters) => PracticeFilters),
-  ) => void;
+  setFilters: (update: (prev: PracticeFilters) => PracticeFilters) => void;
   setIdempotencyKey: (key: string) => void;
   createIdempotencyKey: () => string;
 }): (status: PracticeFilters['status']) => void {
