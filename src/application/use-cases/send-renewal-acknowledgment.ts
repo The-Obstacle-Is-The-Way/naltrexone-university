@@ -6,11 +6,16 @@ import type {
 } from '@/src/application/ports';
 import {
   CANCELLATION_AND_REFUND_POLICY,
-  escapeRenewalNoticeHtml,
   formatRenewalNoticeCutoff,
+  RENEWAL_NOTICE_BILLING_PATH,
   RENEWAL_NOTICE_BUSINESS_CONTACT,
   RENEWAL_NOTICE_FROM,
   RENEWAL_NOTICE_REPLY_TO,
+  RENEWAL_NOTICE_SUPPORT_EMAIL,
+  type RenewalNoticeLine,
+  renderRenewalNoticeHtml,
+  renderRenewalNoticeText,
+  renewalNoticeLink,
 } from '@/src/application/shared/renewal-notice-email-format';
 import {
   createTransactionalEmailPayloadSnapshot,
@@ -33,40 +38,52 @@ function createPayload(input: {
   appUrl: string;
 }): TransactionalEmailPayload {
   const { consent } = input;
-  const termsUrl = new URL('/terms', input.appUrl).toString();
-  const privacyUrl = new URL('/privacy', input.appUrl).toString();
   const trial = consent.trialEndsAt
     ? `Trial ends: ${formatRenewalNoticeCutoff(consent.trialEndsAt)}.`
     : 'No introductory trial was recorded.';
-  const lines = [
-    'Thank you for confirming your Addiction Boards subscription terms.',
-    '',
-    `Accepted renewal terms: ${consent.disclosureSnapshot}`,
-    `Price and frequency: ${formatAmount(consent)}.`,
-    trial,
-    `Cancellation deadline: ${formatRenewalNoticeCutoff(consent.cancellationDeadline)}.`,
-    `How to cancel: ${consent.cancellationMethod}`,
-    `Cancellation and refunds: ${CANCELLATION_AND_REFUND_POLICY}`,
-    `Accepted: ${consent.acceptedAt.toISOString()}.`,
-    `Terms version: ${consent.termsVersion}.`,
-    `Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`,
-    `Terms: ${termsUrl}`,
-    `Privacy: ${privacyUrl}`,
+  // DEBT-414 F06's links, as a scheduled notice gives them: the online
+  // cancellation route, support mail, Terms and Privacy.
+  const lines: RenewalNoticeLine[] = [
+    ['Thank you for confirming your Addiction Boards subscription terms.'],
+    [`Accepted renewal terms: ${consent.disclosureSnapshot}`],
+    [`Price and frequency: ${formatAmount(consent)}.`],
+    [trial],
+    [
+      `Cancellation deadline: ${formatRenewalNoticeCutoff(consent.cancellationDeadline)}.`,
+    ],
+    [`How to cancel: ${consent.cancellationMethod}`],
+    [
+      'Cancel online on the Billing page: ',
+      renewalNoticeLink(
+        new URL(RENEWAL_NOTICE_BILLING_PATH, input.appUrl).toString(),
+      ),
+    ],
+    [
+      'Or email ',
+      {
+        href: `mailto:${RENEWAL_NOTICE_SUPPORT_EMAIL}`,
+        label: RENEWAL_NOTICE_SUPPORT_EMAIL,
+      },
+      ' from the email address on your account.',
+    ],
+    [`Cancellation and refunds: ${CANCELLATION_AND_REFUND_POLICY}`],
+    [`Accepted: ${consent.acceptedAt.toISOString()}.`],
+    [`Terms version: ${consent.termsVersion}.`],
+    [`Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`],
+    ['Terms: ', renewalNoticeLink(new URL('/terms', input.appUrl).toString())],
+    [
+      'Privacy: ',
+      renewalNoticeLink(new URL('/privacy', input.appUrl).toString()),
+    ],
   ];
-  const text = lines.join('\n');
-  const html = lines
-    .map((line) =>
-      line.length === 0 ? '<br>' : `<p>${escapeRenewalNoticeHtml(line)}</p>`,
-    )
-    .join('');
 
   return {
     from: RENEWAL_NOTICE_FROM,
     to: input.destination,
     replyTo: RENEWAL_NOTICE_REPLY_TO,
     subject: 'Your Addiction Boards subscription terms',
-    html,
-    text,
+    html: renderRenewalNoticeHtml(lines),
+    text: renderRenewalNoticeText(lines),
   };
 }
 

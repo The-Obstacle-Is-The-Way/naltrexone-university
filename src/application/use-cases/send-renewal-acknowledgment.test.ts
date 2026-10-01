@@ -158,7 +158,9 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
   });
 
   // The acknowledgment is the subscriber's written record of the terms they
-  // accepted, so its exact content is the behavior.
+  // accepted, so its exact content is the behavior. Like a scheduled notice
+  // (DEBT-414 F06), it links the online cancellation route, support mail,
+  // Terms and Privacy as anchors in HTML and as URLs in text.
   it('sends the exact acknowledgment text and HTML', async () => {
     await expect(
       sentPayload({ consent, destination: 'subscriber@example.com' }),
@@ -169,12 +171,13 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
       subject: 'Your Addiction Boards subscription terms',
       text: [
         'Thank you for confirming your Addiction Boards subscription terms.',
-        '',
         'Accepted renewal terms: Your subscription renews monthly at $29 until canceled.',
         'Price and frequency: $29.00 USD every month.',
         'Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
         'Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
         'How to cancel: Cancel on the Billing page in the app or email support@addictionboards.com.',
+        'Cancel online on the Billing page: https://addictionboards.com/app/billing',
+        'Or email support@addictionboards.com from the email address on your account.',
         'Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.',
         'Accepted: 2026-08-07T11:55:00.000Z.',
         'Terms version: 2026-08-05.',
@@ -184,18 +187,19 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
       ].join('\n'),
       html: [
         '<p>Thank you for confirming your Addiction Boards subscription terms.</p>',
-        '<br>',
         '<p>Accepted renewal terms: Your subscription renews monthly at $29 until canceled.</p>',
         '<p>Price and frequency: $29.00 USD every month.</p>',
         '<p>Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).</p>',
         '<p>Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).</p>',
         '<p>How to cancel: Cancel on the Billing page in the app or email support@addictionboards.com.</p>',
+        '<p>Cancel online on the Billing page: <a href="https://addictionboards.com/app/billing">https://addictionboards.com/app/billing</a></p>',
+        '<p>Or email <a href="mailto:support@addictionboards.com">support@addictionboards.com</a> from the email address on your account.</p>',
         '<p>Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.</p>',
         '<p>Accepted: 2026-08-07T11:55:00.000Z.</p>',
         '<p>Terms version: 2026-08-05.</p>',
         '<p>Business contact: John H. Jung, MD, MS, sole proprietor — support@addictionboards.com.</p>',
-        '<p>Terms: https://addictionboards.com/terms</p>',
-        '<p>Privacy: https://addictionboards.com/privacy</p>',
+        '<p>Terms: <a href="https://addictionboards.com/terms">https://addictionboards.com/terms</a></p>',
+        '<p>Privacy: <a href="https://addictionboards.com/privacy">https://addictionboards.com/privacy</a></p>',
       ].join(''),
     });
   });
