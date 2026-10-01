@@ -3,17 +3,13 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-01 UTC
 
-**Latest** — 2026-10-01 UTC: DEBT-483 phase 4b adds releases, holds and the activation engine, and phase 4a is in production ([DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)).
-- **4b, releases and activation.**
-  - Migration `0047` adds immutable, hash-addressed releases and their items; a single pointer row, created with no active release; an activation receipt log; and holds.
-  - The engine in `scripts/content-release/` activates in one transaction. It checks the pointer against the expected release, verifies the manifest against its hash and the items against the manifest, and locks the affected questions in id order. It then publishes each item that is not withdrawn or held, archives every other published question, and moves the pointer.
-  - The bootstrap adopts what is live. The direct seed, including its placeholder archival, now refuses a database with an active release.
-  - No command calls the engine yet, so nothing activates in production. The operator commands, and the hold command, come with 4c.
-  - Triggers keep releases, their items and withdrawals immutable, and let a hold only be lifted, once.
-  - 19 real-Postgres cases, including a failure injected at the last write. Without the seed guard: 4 failed / 12 passed. Removing any of ten rules failed at least one case.
-- **4a released.** #1290 (**5382315489** on `b1fd97da`; seven findings fixed over five rounds; merged `970015c8`), promoted through #1291 (`c5c4f6fa`, approved with no findings).
-  - Release verified: main CI **36894872716** `test` **17:01:52Z**; production assigned **17:01:54.591Z**; matching trees `81f22937`; production healthy.
-  - The production build's migration log reports 0 revisions for 0045's backfill and 0 for 0046's repair: production had no archived authored question, so the overlay starts empty.
+**Latest** — 2026-10-01 UTC: activation now checks that a new release is built on the active one ([DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)).
+- **Correction.** Promotion #1293's review (**CHANGES_REQUESTED** on `2fa8aab6`) found that activation compared the pointer only with the caller's expectation. It never read the release's parent, which ADR-021 §4 requires. A release built on an older base could therefore replace newer content.
+  - Now a release that has never been active must be built on the active release. A rollback, which re-activates a release with an earlier receipt, is exempt.
+  - New case: a release built on an earlier base is rejected even when the active release is named. It went red first, and removing the exemption fails the rollback case.
+  - #1293 was closed unmerged so the fix ships first.
+  - The review's second finding (0047's lock comment omits the `question_withdrawals` trigger) is recorded in DEBT-483. 0047 itself cannot change, because it is already applied on Preview and the ledger hashes the whole file.
+- **Previous change.** #1292, 4b (**5383308135** on `89a5829b`; one patch-coverage gap fixed; merged `2fa8aab6`), on `dev` for the next promotion.
 - **Open decisions for the owner.**
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.

@@ -445,10 +445,12 @@ Migration 0047 adds the release tables, holds and the pointer. `scripts/content-
 - `question_holds`: at most one unlifted hold per revision.
 - **A change from the design:** the verification and activation receipts are rows in `content_release_activations` (release, previous release, time), not columns on the release. A release can be activated more than once, by a rollback, and verification commits with each activation.
 
+**Locks.** 0047's header names the new tables and the foreign keys to `question_revisions`. It omits the update trigger it adds to `question_withdrawals`, a live table: `CREATE TRIGGER` takes SHARE ROW EXCLUSIVE on it until commit, which blocks only the withdrawal command and the seed (#1293 review). The note lives here because 0047 was already applied on Preview, and the migration ledger hashes the whole file, comments included.
+
 **The manifest** (`app-release-manifest-v1`) lists each item's slug and the `stored-fields-json-v1` hash of its revision, ordered by slug. Its hash is SHA-256 over sorted-key JSON, byte-identical to Python's `json.dumps(m, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`. A unit test pins a digest computed independently with Python.
 
 **Activation** runs in one transaction, in this order:
-1. It locks the pointer for update and rejects a stale release.
+1. It locks the pointer for update and rejects a stale release. The active release must be the one the caller expects. A release that has never been active must also be built on it, or it would drop whatever was activated since its base. A rollback re-activates a release that has an earlier receipt, so it is exempt from the parent check. *(The parent check was added after promotion #1293's review: the first version compared the pointer only with the caller's expectation. A case where a release built on an earlier base is rejected now covers it, and removing the rollback exemption fails the rollback case.)*
 2. It recomputes the manifest's hash from the stored manifest, and rebuilds the manifest from the items' slugs and revision hashes; both must match.
 3. It locks every question it changes, in id order.
 4. It publishes each item at its revision unless the item's question has any withdrawal, or its revision has an unlifted hold. Excluding on any withdrawal of the question fails closed and keeps #953's per-question policy.
@@ -464,12 +466,12 @@ The first activation, the bootstrap, holds the pointer before it reads what is l
 - **What learners see.** The app tells learners a question is withdrawn when its status is not `published` (`get-attempted-questions.ts`, `get-user-stats.ts`, `get-question-for-view.ts`). Held questions, and questions a release leaves out, therefore read as withdrawn too. For a learner that is accurate: the item has left the bank, and a held item should not be answered or graded while it is reviewed. Whether it left for good is recorded in the overlay, not shown.
 - **Identical releases.** `manifest_hash` is unique, so 4c's staging must reuse an existing release with an identical manifest rather than write a second one.
 
-**Verification** (`tests/integration/content-release-activation.integration.test.ts`, 19 cases, real Postgres):
+**Verification** (`tests/integration/content-release-activation.integration.test.ts`, 20 cases, real Postgres):
 - **Activation cases** run inside a transaction that is always rolled back, because activation archives every published question a release leaves out, and the shared test database holds the seeded corpus. They cover:
   - publishing at an older revision; restoring an archived item; archiving an omitted question; leaving drafts alone;
   - excluding withdrawn and held items, but not one whose hold was lifted;
   - a rollback that does not resurrect a question withdrawn since that release;
-  - stale-release, manifest-hash and item mismatches, and a missing release;
+  - a stale release, a new release built on an earlier one, manifest-hash and item mismatches, and a missing release;
   - a failure injected at the receipt, activation's last write, which leaves every question and the pointer as they were;
   - the bootstrap changing nothing, and running only once;
   - the immutability triggers, and a hold that can be lifted once and changed in no other way.

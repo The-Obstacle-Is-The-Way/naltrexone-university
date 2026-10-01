@@ -278,6 +278,48 @@ describe('DEBT-483: release activation', () => {
     });
   });
 
+  // ADR-021 §4: a new release must be built on the active one, or it would
+  // silently drop whatever was activated since its base (#1293 review).
+  it('rejects a new release built on an earlier release, even when the active release is named', async () => {
+    const first = await arrangeQuestion('published');
+    const second = await arrangeQuestion('published');
+
+    await withRollback(async (tx) => {
+      const base = await stageRelease(tx, {
+        items: [item(first)],
+        parentReleaseId: null,
+      });
+      await activateRelease(tx, {
+        releaseId: base,
+        expectedActiveReleaseId: null,
+      });
+      const outdated = await stageRelease(tx, {
+        items: [],
+        parentReleaseId: base,
+      });
+      const newer = await stageRelease(tx, {
+        items: [item(first), item(second)],
+        parentReleaseId: base,
+      });
+      await activateRelease(tx, {
+        releaseId: newer,
+        expectedActiveReleaseId: base,
+      });
+
+      await expect(
+        activateRelease(tx, {
+          releaseId: outdated,
+          expectedActiveReleaseId: newer,
+        }),
+      ).rejects.toMatchObject({ code: 'STALE_RELEASE' });
+
+      expect((await pointerOf(tx))?.activeReleaseId).toBe(newer);
+      const state = await stateOf(tx, [first.id, second.id]);
+      expect(state.get(first.id)?.status).toBe('published');
+      expect(state.get(second.id)?.status).toBe('published');
+    });
+  });
+
   it('rejects a stored manifest that does not hash to its recorded hash', async () => {
     const question = await arrangeQuestion('published');
 
