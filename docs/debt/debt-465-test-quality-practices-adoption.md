@@ -37,6 +37,8 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 **2026-09-27:** the pilot shipped. The dependencies, `stryker.config.json`, `pnpm test:mutation` and the weekly workflow landed, and every baseline survivor is triaged (below). The second wave followed the same day. Widening remains.
 
+**2026-10-01:** widening is complete. `stryker.config.json` mutates every production file under `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**` by glob, without exclusions, and every survivor is triaged (third wave and waves 4a–4f, below).
+
 ### Part 3 — Acceptance-test harness
 
 `docs/dev/acceptance-testing.md` §8. Install `@amiceli/vitest-cucumber`, build `tests/acceptance/support/application-driver.ts` verb-by-verb, land features #1 and #4 (session-start conflict; tutor/exam feedback split), then #2/#3/#10 (entitlement + trial). Update the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) in the first feature's PR. From then on new business rules ship their feature file first.
@@ -51,7 +53,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 - [x] Part 2 pilot: baseline and after-triage scores recorded below; zero un-triaged survivors in the nine pilot files (2026-09-27)
 - [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
-- [ ] Part 2 widening: production files across `src/domain/**` (**done 2026-09-30**, third wave below), then `src/application/{use-cases,shared}/**` (`shared` **done 2026-09-30**, wave 4a below; `use-cases`: 38 of 39 in scope after wave 4e on 2026-10-01, below, by glob; `finalize-exam-answers.ts` is excluded by name until its wave)
+- [x] Part 2 widening: every production file under `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**`, by glob, with every survivor triaged (third wave 2026-09-30; waves 4a–4f by 2026-10-01, below)
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
 - [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
@@ -68,6 +70,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 | Mutation wave 4c | 2026-10-01 | 21 more use cases; the folder now joins by glob, with the ten untriaged use cases excluded by name. Baseline 91.45% (385 killed, 30 survived and 6 without coverage, of 421). After triage 100.00% (405 killed, of 405; 4 suppressed), once two redundant guards and their 12 mutants were removed. The full weekly scope, run without the incremental cache, then scored 100.00% (1,489 killed, 25 timed out, 23 suppressed) in 5 min 49 s. Triage below. |
 | Mutation wave 4d | 2026-10-01 | Six larger use cases. Baseline 87.80% (502 killed, 2 timed out, 45 survived and 25 without coverage, of 574). After triage 100.00% (516 killed, of 516; 4 suppressed), once refactors removed 54 mutants with duplicated, redundant or unreachable code. The full weekly scope, run without the incremental cache, then scored 100.00% (2,005 killed, 25 timed out, 27 suppressed) in 6 min 35 s. Triage below. |
 | Mutation wave 4e | 2026-10-01 | Three use cases. Baseline 81.28% (441 killed, 2 timed out, 81 survived and 21 without coverage, of 545). After triage 100.00% (488 killed and 2 timed out, of 490 scored; 3 suppressed), once refactors removed 52 mutants net. The full weekly scope, run without the incremental cache, then scored 100.00% (2,494 killed, 26 timed out, 30 suppressed) in 6 min 46 s. Triage below. |
+| Mutation wave 4f | 2026-10-01 | `finalize-exam-answers.ts`, the last use case. Baseline 75.12% (160 killed, 32 survived and 21 without coverage, of 213). After triage 100.00% (162 killed, of 162; 7 suppressed), once refactors removed 44 mutants net. The full weekly scope, run without the incremental cache, then scored 100.00% (2,656 killed, 26 timed out, 37 suppressed, across 80 files) in 7 min 7 s. Triage below. |
 | Mutation pilot scores | 2026-09-27 | Stryker 9.6.1, unit lane, nine files. Baseline 91.77%: 286 killed, 4 timed out, 24 survived and 2 without coverage, of 316 mutants. After triage 100.00%: 286 killed and 3 timed out, of 289 scored; 6 more are suppressed. Both are full `--force` runs. Per-file scores are in the runbook's §7; the triage is below. |
 
 ### Part 2 mutation pilot triage — 2026-09-27
@@ -102,6 +105,19 @@ Full `--force` runs over the runbook's four second-wave files: baseline 91.44% (
 |---|---|---|
 | `start-practice-session.ts` | The use case's own incomplete-session check, including its message (3). The fake repository enforces the same one-incomplete-session rule as Postgres, so only a conflict that must win over empty filters distinguishes the check. | — |
 | `idempotency-error-policy.ts` | The cacheable outcomes are code-and-reason pairs: a non-`CONFLICT` error carrying a terminal-session reason is not cached (1), and the incomplete-session conflict is cached only for starting a session and only as a `CONFLICT` (4). The trial-setup helper had no unit test (1). | A three-way disposition whose two cache labels no caller distinguished, now a boolean with the reasons kept as comments (3); `new Set([])` for the billing actions, now `new Set()` (3); a `typeof` guard that `Set.has` already covers, now a set typed to accept an absent reason (1). |
+
+### Part 2 wave 4f triage — 2026-10-01
+
+Cache-free full `--force` runs over `finalize-exam-answers.ts`, which grades an exam when it ends. Nine tests were added and one strengthened.
+
+- **Checks repeated before the transaction.** The use case checked the session for being missing, not an exam, or already ended, before its transaction, then again inside it. The outer copy guarded nothing the inner one did not, so it went. The inner checks' existing tests now reach them. Three conflict tests had sequenced their fake's reads around the outer copy; they now use plain fakes.
+- **A flush applied after the deadline.** A final draft is applied only at or after the deadline, within its grace window. "Applied after the deadline" was therefore just "applied". Likewise, the grace window's upper bound is always met by the time it is tested, because a flush past it returns earlier.
+- **The latest answer time.** It was kept by comparing dates, and an equal date changes nothing. It is now a `Math.max` over epoch milliseconds, and `computeFinalExamEndedAt` takes it in that form.
+- **Test files.** The final-draft flush tests moved from the deadline suite to their own file, `finalize-exam-answers-final-draft.test.ts`, which leaves room under the 800-line limit.
+
+| Missing test (39) | Equivalent, suppressed (2) | Code removed or rewritten (12) |
+|---|---|---|
+| Only a second finalize's conflict, an attempt already answered in the session, becomes "already ended"; a different conflict, another code or a non-application error stays as it is (7). The already-ended error keeps that conflict as its cause (1). The missing-session, non-exam and ended-session checks, now reached by existing tests (12, nine without coverage). A draft whose saved time is not a number records none (1). An item answered before exam drafts existed is left as it is (1). A drafted item whose question can no longer be read fails (4, three without coverage). A repository that does not end the session fails loudly (4, three without coverage). A flush applies to the item it names (1). A flushed item whose question can no longer be read fails (4, three without coverage). A session that disappears after the flush is saved fails (4, three without coverage). | A flush's two deadline null checks: only an exam reaches them, and an exam always has a deadline (2, with five killed siblings). | The checks repeated before the transaction (4), the flush-after-deadline test (3), the date comparison now a `Math.max` that the new ordering test kills (4) and the always-met grace bound (1). |
 
 ### Part 2 wave 4e triage — 2026-10-01
 
