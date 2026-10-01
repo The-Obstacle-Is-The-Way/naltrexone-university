@@ -3,6 +3,7 @@ import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakeLogger,
+  FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
 import {
@@ -56,6 +57,7 @@ describe('GetPreviousAttemptUseCase', () => {
       new FakeAttemptRepository([attempt]),
       new FakeQuestionRepository([current, graded]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -105,6 +107,7 @@ describe('GetPreviousAttemptUseCase', () => {
       new FakeAttemptRepository([attempt]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     const result = await useCase.execute({
@@ -167,6 +170,7 @@ describe('GetPreviousAttemptUseCase', () => {
         }),
       ]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -217,6 +221,7 @@ describe('GetPreviousAttemptUseCase', () => {
         }),
       ]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -243,6 +248,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([]),
       logger,
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -282,6 +288,7 @@ describe('GetPreviousAttemptUseCase', () => {
         }),
       ]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -319,6 +326,7 @@ describe('GetPreviousAttemptUseCase', () => {
         }),
       ]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -419,6 +427,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     const result = await useCase.execute({ userId, questionId });
@@ -461,6 +470,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -509,6 +519,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -534,6 +545,7 @@ describe('GetPreviousAttemptUseCase', () => {
       new FailingAttemptRepository([]),
       new FakeQuestionRepository([]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(

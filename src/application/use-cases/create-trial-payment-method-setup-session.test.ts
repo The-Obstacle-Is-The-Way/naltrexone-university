@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { TrialPaymentMethodSetupOperationInput } from '@/src/application/ports/repositories';
 import {
@@ -41,20 +41,36 @@ async function createUseCase(input?: {
   currentPeriodEnd?: Date;
   operations?: FakeTrialPaymentMethodSetupOperationRepository;
   logger?: FakeLogger;
+  /** Without one, the subscription row has no Stripe subscription id. */
+  externalSubscriptionId?: string | null;
+  /** Without one, the user has no Stripe customer mapping. */
+  stripeCustomerId?: string | null;
+  /** The plan the renewal terms describe, when not the subscription's. */
+  termsPlan?: 'monthly' | 'annual';
+  /** Leaves the use case on its default clock, the system clock. */
+  systemClock?: boolean;
 }) {
+  const subscription = createSubscription({
+    userId,
+    plan: 'monthly',
+    status: input?.status ?? 'inTrial',
+    currentPeriodEnd: input?.currentPeriodEnd ?? trialEndsAt,
+  });
+  const externalSubscriptionId =
+    input?.externalSubscriptionId === undefined
+      ? 'sub_123'
+      : input.externalSubscriptionId;
   const subscriptions = new FakeSubscriptionRepository([
-    {
-      subscription: createSubscription({
-        userId,
-        plan: 'monthly',
-        status: input?.status ?? 'inTrial',
-        currentPeriodEnd: input?.currentPeriodEnd ?? trialEndsAt,
-      }),
-      externalSubscriptionId: 'sub_123',
-    },
+    externalSubscriptionId === null
+      ? subscription
+      : { subscription, externalSubscriptionId },
   ]);
   const stripeCustomers = new FakeStripeCustomerRepository();
-  await stripeCustomers.insert(userId, 'cus_123');
+  const stripeCustomerId =
+    input?.stripeCustomerId === undefined ? 'cus_123' : input.stripeCustomerId;
+  if (stripeCustomerId !== null) {
+    await stripeCustomers.insert(userId, stripeCustomerId);
+  }
   const operations =
     input?.operations ?? new FakeTrialPaymentMethodSetupOperationRepository();
   const logger = input?.logger ?? new FakeLogger();
@@ -65,7 +81,7 @@ async function createUseCase(input?: {
     operations,
     payments,
     (plan) => ({
-      plan,
+      plan: input?.termsPlan ?? plan,
       amountCents: plan === 'monthly' ? 2900 : 19900,
       currency: 'usd',
       frequency: plan === 'monthly' ? 'month' : 'year',
@@ -77,13 +93,17 @@ async function createUseCase(input?: {
         'Billing page in the app or support@addictionboards.com',
     }),
     logger,
-    () => new Date('2026-08-06T12:00:00Z'),
+    input?.systemClock ? undefined : () => new Date('2026-08-06T12:00:00Z'),
   );
 
   return { logger, operations, payments, subscriptions, useCase };
 }
 
 describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('creates a customer-less setup Session and persists the exact pending snapshot', async () => {
     const { operations, payments, useCase } = await createUseCase();
 
@@ -194,7 +214,12 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
         successUrl: 'https://app.example.com/app/billing',
         cancelUrl: 'https://app.example.com/app/billing',
       }),
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'The displayed add-card terms have changed. Review the current terms before continuing.',
+      ),
+    );
     expect(payments.trialSetupInputs).toEqual([]);
     await expect(
       operations.findBySessionId('cs_setup_123'),
@@ -217,9 +242,12 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       cancelUrl: 'https://app.example.com/cancel',
     };
 
-    await expect(active.useCase.execute(input)).rejects.toMatchObject({
-      code: 'CONFLICT',
-    });
+    await expect(active.useCase.execute(input)).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'An unexpired trial is required to add a payment method',
+      ),
+    );
     await expect(expired.useCase.execute(input)).rejects.toMatchObject({
       code: 'CONFLICT',
     });
@@ -255,5 +283,83 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     expect(JSON.stringify(logger.errorCalls)).not.toContain(
       'raw provider detail user@example.com',
     );
+  });
+
+  const setupInput = {
+    userId,
+    expectedDisclosureVersion: '2026-08-05',
+    email: 'learner@example.com',
+    successUrl: 'https://app.example.com/success',
+    cancelUrl: 'https://app.example.com/cancel',
+  };
+
+  it('fails closed when the user has no subscription', async () => {
+    const payments = createPaymentGateway();
+    const useCase = new CreateTrialPaymentMethodSetupSessionUseCase(
+      new FakeSubscriptionRepository(),
+      new FakeStripeCustomerRepository(),
+      new FakeTrialPaymentMethodSetupOperationRepository(),
+      payments,
+      () => {
+        throw new Error('No renewal terms are needed without a trial');
+      },
+      new FakeLogger(),
+      () => new Date('2026-08-06T12:00:00Z'),
+    );
+
+    await expect(useCase.execute(setupInput)).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    expect(payments.trialSetupInputs).toEqual([]);
+  });
+
+  // Frozen inside the trial, the system clock admits the request; frozen at
+  // the trial's end, it refuses it.
+  it('reads the system clock when none is injected', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-13T11:59:59Z'));
+    const inside = await createUseCase({ systemClock: true });
+    await expect(inside.useCase.execute(setupInput)).resolves.toEqual({
+      url: 'https://stripe/setup',
+    });
+
+    vi.setSystemTime(trialEndsAt);
+    const ended = await createUseCase({ systemClock: true });
+    await expect(ended.useCase.execute(setupInput)).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
+    expect(ended.payments.trialSetupInputs).toEqual([]);
+  });
+
+  it.each([
+    ['Stripe subscription id', { externalSubscriptionId: null }],
+    ['Stripe customer', { stripeCustomerId: null }],
+  ] as const)(
+    'fails before Stripe when the trial has no %s',
+    async (_missing, identifiers) => {
+      const { payments, useCase } = await createUseCase(identifiers);
+
+      await expect(useCase.execute(setupInput)).rejects.toEqual(
+        new ApplicationError(
+          'INTERNAL_ERROR',
+          'Trial billing identifiers are unavailable',
+        ),
+      );
+      expect(payments.trialSetupInputs).toEqual([]);
+    },
+  );
+
+  // The renewal terms are the disclosure the learner consents to; terms for
+  // another plan would disclose the wrong price.
+  it('refuses renewal terms for a plan other than the subscription’s', async () => {
+    const { payments, useCase } = await createUseCase({ termsPlan: 'annual' });
+
+    await expect(useCase.execute(setupInput)).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Trial renewal terms do not match the subscription plan',
+      ),
+    );
+    expect(payments.trialSetupInputs).toEqual([]);
   });
 });

@@ -330,6 +330,53 @@ describe('SubmitAnswerUseCase', () => {
       });
     });
 
+    it('reports a session-review retry in telemetry as having a retry session and no parent', async () => {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const retrySessionId = 'session-review-1';
+      const question = createQuestion({
+        id: questionId,
+        status: 'published',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+      const logger = new FakeLogger();
+      const useCase = new SubmitAnswerUseCase(
+        new FakeQuestionRepository([question]),
+        new FakeAttemptRepository(),
+        new FakePracticeSessionRepository([
+          createPracticeSession({
+            id: retrySessionId,
+            userId,
+            questionIds: [questionId],
+            endedAt: new Date('2026-02-01T00:00:00Z'),
+          }),
+        ]),
+        logger,
+      );
+
+      await useCase.execute({
+        userId,
+        questionId,
+        choiceId: 'c2',
+        retryOrigin: 'session_review',
+        retrySessionId,
+      });
+
+      expect(logger.infoCalls).toContainEqual({
+        context: {
+          event: 'retry_submitted',
+          retryOrigin: 'session_review',
+          isCorrect: true,
+          hasParent: false,
+          hasRetrySessionId: true,
+        },
+        msg: 'Retry submitted',
+      });
+    });
+
     it('throws CONFLICT when session_review retrySessionId points to an active exam session', async () => {
       const userId = 'user-1';
       const questionId = 'q1';

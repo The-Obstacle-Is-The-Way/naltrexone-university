@@ -68,14 +68,23 @@ function mapChoiceExplanations(
   }));
 }
 
+function requireCorrectChoiceId(question: Question): string {
+  const correctChoice = question.choices.find((choice) => choice.isCorrect);
+  if (!correctChoice) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      `Question ${question.id} has no correct choice`,
+    );
+  }
+  return correctChoice.id;
+}
+
 export class GetPreviousAttemptUseCase {
   constructor(
     private readonly attempts: AttemptSingleQuestionReader,
     private readonly questions: QuestionRepository,
     private readonly logger: Logger,
-    private readonly sessions: PracticeSessionReader = {
-      findByIdAndUserId: async () => null,
-    },
+    private readonly sessions: PracticeSessionReader,
   ) {}
 
   async execute(
@@ -102,7 +111,9 @@ export class GetPreviousAttemptUseCase {
           );
 
     if (!attempt) {
-      if (!input.sessionId || input.attemptId) return null;
+      // Only a session review reveals an item the learner left unanswered.
+      // Stryker disable next-line ConditionalExpression: a lookup without a session id finds no session, so the reads below also end in null
+      if (!input.sessionId) return null;
 
       const session = await this.sessions.findByIdAndUserId(
         input.sessionId,
@@ -127,23 +138,13 @@ export class GetPreviousAttemptUseCase {
       }
       if (question.status !== 'published') return null;
 
-      const correctChoice = question.choices.find((c) => c.isCorrect);
-      if (!correctChoice) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          `Question ${question.id} has no correct choice`,
-        );
-      }
-
-      const choiceExplanations = mapChoiceExplanations(question, input.userId);
-
       return {
         kind: 'session_unanswered',
         sessionMode: session.mode,
-        correctChoiceId: correctChoice.id,
+        correctChoiceId: requireCorrectChoiceId(question),
         explanationMd: question.explanationMd,
         referenceMd: question.referenceMd ?? null,
-        choiceExplanations,
+        choiceExplanations: mapChoiceExplanations(question, input.userId),
       };
     }
     if (attempt.questionId !== input.questionId) {
@@ -161,55 +162,23 @@ export class GetPreviousAttemptUseCase {
       );
     }
 
+    let sessionMode: PracticeMode | null = null;
+    // Stryker disable next-line ConditionalExpression: a standalone attempt has no session, and a lookup without an id finds none
     if (attempt.practiceSessionId) {
       const attemptSession = await this.sessions.findByIdAndUserId(
         attempt.practiceSessionId,
         input.userId,
       );
+      // An attempt inside an exam still in progress is not yet an answer to
+      // review.
       if (attemptSession?.mode === 'exam' && attemptSession.endedAt === null) {
         return null;
       }
-
-      const sessionMode = attemptSession?.mode ?? null;
-
-      // ADR-021: the revision the attempt graded.
-      const question = await this.questions.findByIdForSession(attempt);
-
-      if (!question) {
-        this.logger.warn(
-          { questionId: attempt.questionId },
-          'Previous attempt references missing question',
-        );
-        return null;
-      }
-
-      const correctChoice = question.choices.find((c) => c.isCorrect);
-      if (!correctChoice) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          `Question ${question.id} has no correct choice`,
-        );
-      }
-
-      const choiceExplanations = mapChoiceExplanations(question, input.userId);
-
-      return {
-        kind: 'attempt',
-        sessionMode,
-        attemptId: attempt.id,
-        selectedChoiceId: selectedChoiceIdOrNull(attempt.outcome),
-        isOmitted: isOmittedOutcome(attempt.outcome),
-        isCorrect: attempt.isCorrect,
-        correctChoiceId: correctChoice.id,
-        explanationMd: question.explanationMd,
-        referenceMd: question.referenceMd ?? null,
-        choiceExplanations,
-        answeredAt: attempt.answeredAt.toISOString(),
-      };
+      sessionMode = attemptSession?.mode ?? null;
     }
 
+    // ADR-021: the revision the attempt graded.
     const question = await this.questions.findByIdForSession(attempt);
-
     if (!question) {
       this.logger.warn(
         { questionId: attempt.questionId },
@@ -218,27 +187,17 @@ export class GetPreviousAttemptUseCase {
       return null;
     }
 
-    const correctChoice = question.choices.find((c) => c.isCorrect);
-    if (!correctChoice) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Question ${question.id} has no correct choice`,
-      );
-    }
-
-    const choiceExplanations = mapChoiceExplanations(question, input.userId);
-
     return {
       kind: 'attempt',
-      sessionMode: null,
+      sessionMode,
       attemptId: attempt.id,
       selectedChoiceId: selectedChoiceIdOrNull(attempt.outcome),
       isOmitted: isOmittedOutcome(attempt.outcome),
       isCorrect: attempt.isCorrect,
-      correctChoiceId: correctChoice.id,
+      correctChoiceId: requireCorrectChoiceId(question),
       explanationMd: question.explanationMd,
       referenceMd: question.referenceMd ?? null,
-      choiceExplanations,
+      choiceExplanations: mapChoiceExplanations(question, input.userId),
       answeredAt: attempt.answeredAt.toISOString(),
     };
   }

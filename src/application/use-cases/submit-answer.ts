@@ -5,11 +5,7 @@ import type {
   Question,
 } from '@/src/domain/entities';
 import { isValidAttemptProvenance } from '@/src/domain/entities';
-import {
-  gradeAnswer,
-  SECONDS_PER_DAY,
-  shouldShowExplanation as sessionShouldShowExplanation,
-} from '@/src/domain/services';
+import { gradeAnswer, SECONDS_PER_DAY } from '@/src/domain/services';
 import { answeredOutcome } from '@/src/domain/value-objects';
 import { ApplicationError, practiceSessionAlreadyEndedError } from '../errors';
 import type {
@@ -135,7 +131,8 @@ export class SubmitAnswerUseCase {
       );
     }
 
-    if (retryOrigin === 'session_review' && retrySessionId !== null) {
+    // Valid provenance names a retry session only for a session-review retry.
+    if (retrySessionId !== null) {
       const retrySession = await this.sessions.findByIdAndUserId(
         retrySessionId,
         input.userId,
@@ -198,15 +195,13 @@ export class SubmitAnswerUseCase {
       throw practiceSessionAlreadyEndedError();
     }
 
-    const rawTimeSpentSeconds = input.timeSpentSeconds;
-    const timeSpentSeconds =
-      typeof rawTimeSpentSeconds === 'number' &&
-      Number.isFinite(rawTimeSpentSeconds)
-        ? Math.min(
-            SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
-            Math.max(0, rawTimeSpentSeconds),
-          )
-        : 0;
+    const rawTimeSpentSeconds = input.timeSpentSeconds ?? 0;
+    const timeSpentSeconds = Number.isFinite(rawTimeSpentSeconds)
+      ? Math.min(
+          SUBMIT_ANSWER_MAX_TIME_SPENT_SECONDS,
+          Math.max(0, rawTimeSpentSeconds),
+        )
+      : 0;
     const attemptInsertInput = {
       userId: input.userId,
       questionId: question.id,
@@ -258,20 +253,15 @@ export class SubmitAnswerUseCase {
       );
     }
 
-    const shouldShowExplanation =
-      !session || sessionShouldShowExplanation(session);
-    const explanationMd = shouldShowExplanation ? question.explanationMd : null;
-    const choiceExplanations = shouldShowExplanation
-      ? this.mapChoiceExplanations(question, input.userId)
-      : [];
-
+    // Only a standalone answer or an active tutor session reaches here: exam
+    // and ended sessions are refused above, so the result shows the answer.
     return {
       attemptId: attempt.id,
-      isCorrect: shouldShowExplanation ? grade.isCorrect : null,
-      correctChoiceId: shouldShowExplanation ? grade.correctChoiceId : null,
-      explanationMd,
-      referenceMd: shouldShowExplanation ? question.referenceMd : null,
-      choiceExplanations,
+      isCorrect: grade.isCorrect,
+      correctChoiceId: grade.correctChoiceId,
+      explanationMd: question.explanationMd,
+      referenceMd: question.referenceMd,
+      choiceExplanations: this.mapChoiceExplanations(question, input.userId),
     };
   }
 }

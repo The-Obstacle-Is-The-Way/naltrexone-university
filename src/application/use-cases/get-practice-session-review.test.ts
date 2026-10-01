@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
   FakePracticeSessionRepository,
@@ -711,4 +712,66 @@ describe('GetPracticeSessionReviewUseCase', () => {
       },
     ]);
   });
+
+  it('returns NOT_FOUND when the session does not exist', async () => {
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([]),
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'missing' }),
+    ).rejects.toEqual(
+      new ApplicationError('NOT_FOUND', 'Practice session not found'),
+    );
+  });
+
+  // An exam item is omitted only when the ended exam finalized it without a
+  // choice: no selection, graded incorrect, at the end time. Each case breaks
+  // one of those conditions.
+  it.each([
+    ['an item of an exam still in progress', { endedAt: null }, {}],
+    ['an item never graded', {}, { latestIsCorrect: null }],
+    ['an item never finalized', {}, { latestAnsweredAt: null }],
+  ] as const)(
+    'does not mark %s omitted',
+    async (_name, sessionOverrides, stateOverrides) => {
+      const session = createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt: new Date('2026-02-06T00:10:00Z'),
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: false,
+            latestAnsweredAt: new Date('2026-02-06T00:10:00Z'),
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+            ...stateOverrides,
+          },
+        ],
+        ...sessionOverrides,
+      });
+      const useCase = new GetPracticeSessionReviewUseCase(
+        new FakePracticeSessionRepository([session]),
+        new FakeQuestionRepository([createQuestion({ id: 'q1' })]),
+        new FakeLogger(),
+      );
+
+      const review = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(review.rows).toMatchObject([
+        { questionId: 'q1', isOmitted: false },
+      ]);
+    },
+  );
 });

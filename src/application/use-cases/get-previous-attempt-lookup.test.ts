@@ -3,6 +3,7 @@ import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakeLogger,
+  FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
 import {
@@ -18,6 +19,7 @@ describe('GetPreviousAttemptUseCase', () => {
       new FakeAttemptRepository([]),
       new FakeQuestionRepository([]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -53,6 +55,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -100,6 +103,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -149,6 +153,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       logger,
+      new FakePracticeSessionRepository(),
     );
 
     const promise = useCase.execute({
@@ -157,8 +162,12 @@ describe('GetPreviousAttemptUseCase', () => {
       attemptId: 'attempt-q2',
     });
 
-    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-    await expect(promise).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(promise).rejects.toEqual(
+      new ApplicationError(
+        'NOT_FOUND',
+        'Previous attempt does not belong to the requested question',
+      ),
+    );
 
     expect(logger.warnCalls).toEqual([
       {
@@ -208,6 +217,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -261,6 +271,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
@@ -322,6 +333,7 @@ describe('GetPreviousAttemptUseCase', () => {
       ]),
       new FakeQuestionRepository([question]),
       new FakeLogger(),
+      new FakePracticeSessionRepository(),
     );
 
     await expect(
