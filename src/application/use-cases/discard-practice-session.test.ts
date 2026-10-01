@@ -58,10 +58,12 @@ describe('DiscardPracticeSessionUseCase', () => {
       }),
     ]);
 
-    await createDiscardPracticeSessionUseCase(sessions).execute({
-      userId,
-      sessionId,
-    });
+    await expect(
+      createDiscardPracticeSessionUseCase(sessions).execute({
+        userId,
+        sessionId,
+      }),
+    ).resolves.toEqual({ discarded: true });
 
     await expect(
       sessions.findByIdAndUserId(sessionId, userId),
@@ -154,7 +156,11 @@ describe('DiscardPracticeSessionUseCase', () => {
         userId: 'user-1',
         sessionId: 'session-tutor',
       }),
-    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      message:
+        'Only exam sessions can be discarded; tutor sessions must be ended',
+    });
 
     await expect(
       sessions.findByIdAndUserId('session-tutor', 'user-1'),
