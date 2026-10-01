@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { PracticeSessionConflictReasons } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import {
   ANSWERED_AT,
   answerableQuestion,
@@ -396,5 +399,68 @@ describe('GetNextQuestionUseCase', () => {
       message: 'Practice session already ended',
       details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
     });
+  });
+
+  it('refuses a question the session does not hold', async () => {
+    const { getNextQuestion } = createTestDeps({
+      questions: [
+        createSingleChoiceQuestion('q1', 'c1'),
+        createSingleChoiceQuestion('q2', 'c2'),
+      ],
+      sessions: [
+        createPracticeSession({
+          mode: 'tutor',
+          questionIds: ['q1'],
+          questionStates: [createQuestionState('q1')],
+        }),
+      ],
+    });
+
+    await expect(
+      getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q2',
+      }),
+    ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Question not found'));
+  });
+
+  it('fails loudly when an answered tutor item’s question has no correct choice', async () => {
+    const { getNextQuestion } = createTestDeps({
+      questions: [
+        createQuestion({
+          id: 'q1',
+          choices: [
+            createChoice({ id: 'c1', questionId: 'q1', isCorrect: false }),
+          ],
+        }),
+      ],
+      sessions: [
+        createPracticeSession({
+          mode: 'tutor',
+          questionIds: ['q1'],
+          questionStates: [
+            createQuestionState('q1', {
+              latestSelectedChoiceId: 'c1',
+              latestIsCorrect: false,
+              latestAnsweredAt: ANSWERED_AT,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    await expect(
+      getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+        questionId: 'q1',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'INTERNAL_ERROR',
+        'Question q1 has no correct choice',
+      ),
+    );
   });
 });

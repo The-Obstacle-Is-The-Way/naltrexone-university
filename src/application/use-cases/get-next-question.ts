@@ -111,6 +111,10 @@ export type ExpiredExamFinalizer = {
   execute: (input: { userId: string; sessionId: string }) => Promise<unknown>;
 };
 
+function isInteger(value: number | undefined): value is number {
+  return Number.isInteger(value);
+}
+
 export class GetNextQuestionUseCase {
   constructor(
     private readonly questions: QuestionRepository,
@@ -121,7 +125,7 @@ export class GetNextQuestionUseCase {
   ) {}
 
   async execute(input: GetNextQuestionInput): Promise<GetNextQuestionOutput> {
-    if ('sessionId' in input && typeof input.sessionId === 'string') {
+    if (input.sessionId !== undefined) {
       return this.executeForSession(
         input.userId,
         input.sessionId,
@@ -130,7 +134,7 @@ export class GetNextQuestionUseCase {
       );
     }
 
-    if (!('filters' in input) || !input.filters) {
+    if (!input.filters) {
       throw new ApplicationError(
         'VALIDATION_ERROR',
         'Either sessionId or filters must be provided',
@@ -210,49 +214,23 @@ export class GetNextQuestionUseCase {
       });
     });
 
-    const targetQuestionId = (() => {
-      if (typeof questionId === 'string') return questionId;
-
-      const startIndex =
-        typeof fromIndex === 'number' && Number.isInteger(fromIndex)
-          ? Math.max(-1, Math.min(fromIndex, orderedStates.length - 1))
-          : -1;
-
-      const nextUnanswered =
-        orderedStates
-          .slice(startIndex + 1)
-          .find((state) => !getEffectiveSelectedChoiceId(session, state))
-          ?.questionId ?? null;
-
-      if (nextUnanswered) return nextUnanswered;
-      if (startIndex === -1) return null;
-
-      const wrappedUnanswered =
-        orderedStates
-          .slice(0, startIndex)
-          .find((state) => !getEffectiveSelectedChoiceId(session, state))
-          ?.questionId ?? null;
-
-      if (wrappedUnanswered) return wrappedUnanswered;
-
-      const currentState = orderedStates[startIndex];
-      if (
-        currentState &&
-        !getEffectiveSelectedChoiceId(session, currentState)
-      ) {
-        return currentState.questionId;
-      }
-
-      return null;
-    })();
+    // The item asked for, or else the first unanswered item after fromIndex,
+    // wrapping around to the start and ending at fromIndex itself.
+    const startIndex = isInteger(fromIndex) ? Math.max(-1, fromIndex) : -1;
+    const targetQuestionId =
+      questionId ??
+      [
+        ...orderedStates.slice(startIndex + 1),
+        // Stryker disable next-line MethodExpression: the items after fromIndex hold no unanswered item by then, so repeating them changes nothing
+        ...orderedStates.slice(0, startIndex + 1),
+      ].find((state) => !getEffectiveSelectedChoiceId(session, state))
+        ?.questionId ??
+      null;
 
     if (!targetQuestionId) return null;
 
+    // Also undefined for a question the session does not hold.
     const targetIndex = session.questionIds.indexOf(targetQuestionId);
-    if (targetIndex === -1) {
-      throw new ApplicationError('NOT_FOUND', 'Question not found');
-    }
-
     const targetState = orderedStates[targetIndex];
     if (!targetState) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
@@ -329,7 +307,6 @@ export class GetNextQuestionUseCase {
       ...filters,
       userId,
     });
-    if (candidateIds.length === 0) return null;
 
     const now = this.now();
     const utcDayStartMs = Date.UTC(
@@ -338,7 +315,7 @@ export class GetNextQuestionUseCase {
       now.getUTCDate(),
     );
     const seed = createSeed(userId, utcDayStartMs);
-    const canonicalCandidateIds = candidateIds.slice().sort();
+    const canonicalCandidateIds = candidateIds.toSorted();
     const orderedCandidateIds = shuffleWithSeed(canonicalCandidateIds, seed);
 
     const mostRecent =
