@@ -4,7 +4,7 @@
 **Last Updated:** 2026-10-02 UTC
 
 **Latest** — 2026-10-02 UTC: follow-ups from promotion #1308's review ([DEBT-489](./debt-489-release-removes-omitted-questions.md)). #1307 merged with no findings (**5388717185** on `18102db2`; merged `4f9900fc`). Promotion #1308 (#1300–#1307) was closed unmerged to take its review's five findings:
-- The plan's withdrawal order is sorted with a total comparator. Ids are unique, so plan ids are unchanged.
+- The plan's withdrawals come from the database in id order, like its other sets, so the in-memory sort and its comparator are gone. Postgres orders UUIDs as JavaScript orders their lowercase strings, so plan ids are unchanged.
 - The release builder documents that it reads the active release's members under the pointer lock alone.
 - In the bugs register: BUG-314's attempt-lock case fails on the real deadlock under regression, its probe count is fixed, and BUG-314–317 carry the template's metadata.
 - **Open decisions for the owner.**
