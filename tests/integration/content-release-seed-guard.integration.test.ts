@@ -184,7 +184,11 @@ describe('DEBT-483: the direct seed and an active release', () => {
         .where(
           inArray(schema.questions.slug, [...SYNTHETIC_PLACEHOLDER_SLUGS]),
         );
-      expect(archived).toBe(placeholders.length);
+      // The integration database is seeded with the committed fixtures
+      // (SEED_INCLUDE_PLACEHOLDERS=true in CI and the local orchestrator), so
+      // all ten exist; without them this case would prove nothing.
+      expect(placeholders).toHaveLength(SYNTHETIC_PLACEHOLDER_SLUGS.length);
+      expect(archived).toBe(SYNTHETIC_PLACEHOLDER_SLUGS.length);
       expect(placeholders.every((row) => row.status === 'archived')).toBe(true);
       expect(
         (await stateOf(tx, [placeholder.id])).get(placeholder.id)?.status,
