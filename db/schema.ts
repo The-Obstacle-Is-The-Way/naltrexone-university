@@ -958,8 +958,20 @@ export const contentReleaseActivations = pgTable(
     activatedAt: timestamp('activated_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // DEBT-490: why the activation was made, and on whose authority, as a
+    // withdrawal or a hold records (migration 0049).
+    reason: text('reason').notNull(),
+    authority: text('authority').notNull(),
   },
   (t) => ({
+    reasonChk: check(
+      'content_release_activations_reason_chk',
+      sql`${t.reason} ~ '[^[:space:]]'`,
+    ),
+    authorityChk: check(
+      'content_release_activations_authority_chk',
+      sql`${t.authority} ~ '[^[:space:]]'`,
+    ),
     releaseFk: foreignKey({
       columns: [t.releaseId],
       foreignColumns: [contentReleases.id],

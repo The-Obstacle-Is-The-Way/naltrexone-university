@@ -11,6 +11,7 @@ import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import { runContentWithdrawal } from '@/scripts/seed/withdraw-questions';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 // DEBT-489: a release accounts for every live question. One it leaves out is
@@ -96,7 +97,11 @@ describe('DEBT-489: a release accounts for every live question', () => {
   it('refuses a new release that leaves a live question unaccounted for, changing nothing', async () => {
     const [kept, missing] = await seedLive(2);
     if (!kept || !missing) throw new Error('seed');
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     const next = await stageRelease(disposable.db, {
       items: [item(kept)],
       parentReleaseId: base,
@@ -104,6 +109,7 @@ describe('DEBT-489: a release accounts for every live question', () => {
 
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: next,
         expectedActiveReleaseId: base,
       }),
@@ -119,7 +125,11 @@ describe('DEBT-489: a release accounts for every live question', () => {
   it('accepts a named removal, and a withdrawn question left out', async () => {
     const [kept, drafted, withdrawn] = await seedLive(3);
     if (!kept || !drafted || !withdrawn) throw new Error('seed');
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     await runContentWithdrawal(
       [
         '--qid',
@@ -139,6 +149,7 @@ describe('DEBT-489: a release accounts for every live question', () => {
     });
 
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: next,
       expectedActiveReleaseId: base,
     });
@@ -153,7 +164,11 @@ describe('DEBT-489: a release accounts for every live question', () => {
   it('withdraws an archived removal when its release activates, and not before', async () => {
     const [kept, retired] = await seedLive(2);
     if (!kept || !retired) throw new Error('seed');
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     const next = await stageRelease(disposable.db, {
       items: [item(kept)],
       removals: [{ questionId: retired.questionId, kind: 'archived' }],
@@ -164,12 +179,14 @@ describe('DEBT-489: a release accounts for every live question', () => {
     // active release keeps the question live.
     expect(await withdrawalsOf(retired.questionId)).toEqual([]);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: base,
       expectedActiveReleaseId: base,
     });
     expect(await statusOf(retired.slug)).toBe('published');
 
     const summary = await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: next,
       expectedActiveReleaseId: base,
     });
@@ -179,8 +196,8 @@ describe('DEBT-489: a release accounts for every live question', () => {
     // The withdrawal names the release that made it.
     expect(await withdrawalsOf(retired.questionId)).toEqual([
       {
-        reason: `archived in content release ${next}`,
-        authority: 'content release',
+        reason: `archived in content release ${next}: ${RELEASE_DECISION.reason}`,
+        authority: RELEASE_DECISION.authority,
       },
     ]);
   });
@@ -198,7 +215,11 @@ describe('DEBT-489: a release accounts for every live question', () => {
   it('lets a rollback restore an earlier snapshot without naming newer members', async () => {
     const [kept] = await seedLive(1);
     if (!kept) throw new Error('seed');
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     // A question first added by a release: the bootstrap never named it.
     const added = `it-removal-${randomUUID()}`;
     const next = await stageReleaseFromFiles(disposable.db, [
@@ -206,12 +227,14 @@ describe('DEBT-489: a release accounts for every live question', () => {
       source(added),
     ]);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: next.releaseId,
       expectedActiveReleaseId: base,
     });
     expect(await statusOf(added)).toBe('published');
 
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: base,
       expectedActiveReleaseId: next.releaseId,
     });

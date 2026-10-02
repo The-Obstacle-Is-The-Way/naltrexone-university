@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** In Progress — fixed in code 2026-10-02 ([Fix](#fix--2026-10-02)); resolves once released
 **Priority:** P2
 **Date:** 2026-10-02
 **Resolved:** —
@@ -76,6 +76,36 @@ Each item is its own case, so that each guard is shown to work on its own:
 - **Preview.** The preview prints the reason and the authority.
 - **Plan.** The plan id does not depend on them: the same transition previewed with different reasons has the same plan id.
 - **Mutations.** Removing the reason or the authority from the receipt write, from the withdrawal, or from the preview output fails a case.
+
+## Fix — 2026-10-02
+
+Option 2, started on the owner's go-ahead (2026-10-02, "DEBT-490 now").
+
+**Migration `0049_debt490_activation_decision_record`.**
+- `content_release_activations` gains `reason` and `authority`, both `NOT NULL` and non-blank (`~ '[^[:space:]]'`, as `question_withdrawals`).
+- An existing receipt, which per the records only local databases have, gets an explicit marker, `not recorded: activated before DEBT-490` and `not recorded`, rather than a guessed decision. A notice counts those receipts in the deploy log. The defaults are dropped at once, so every new receipt must name its own.
+- The receipt also becomes immutable, through 0047's `reject_immutable_row_update_v1`, as releases, items and withdrawals are. This step was not in the Resolution above. A decision record that can be edited afterwards would undo the point of keeping it.
+- N-1: the serving deployment reads and writes none of this table. An older script that names no decision now fails on `NOT NULL`, instead of writing an unattributed receipt.
+
+**Code.**
+- `activateRelease` and `bootstrapRelease` take a `record: DecisionRecord`, the type the withdrawal and hold commands already use. They refuse a blank reason or authority before anything is locked or written (`DECISION_REQUIRED`), and the receipt records both.
+- A withdrawal made by an `archived` removal records the activation's authority, and the reason `archived in content release <release id>: <activation reason>`.
+- A hold's or a lift's re-application of the active release records `hold placed: <reason>` or `hold lifted: <reason>`, with the hold's or lift's authority.
+- `activate-release.ts` and `bootstrap-release.ts` require `--reason` and `--authority` for a preview too, as the withdrawal and hold commands do, and print `Decision: …`. The apply command they print repeats the decision, quoted for a POSIX shell, apostrophes included. The plan id does not include the decision: it records the decision, not the transition.
+- The flag parsing is shared with the QID commands (`readDecisionFlag`, `requireDecision` in `scripts/seed/qid-command-args.ts`).
+
+**Tests**, red first:
+- `content-release-attribution` covers each Verification item as its own case. It also tests the migration itself on a database migrated to 0048 with a receipt in 0048's shape: the receipt is marked, a new receipt that omits either field is refused, and an update is refused.
+- The parser and command cases cover the flags, the printed decision and the quoted apply command.
+- The activation suite reached the 800-line limit with the new fields, so its direct-seed cases moved, unchanged, to `content-release-seed-guard`.
+
+**Mutations.** Fourteen targeted mutations, and every one fails a case:
+- the migration's two marker defaults, its two dropped defaults, its two blank checks and its trigger (the first test let a kept `reason` default survive, because its insert omitted both fields; it now omits each field separately);
+- the up-front refusal;
+- the receipt's reason and its authority;
+- the withdrawal's authority;
+- the hold's decision;
+- the printed decision, for both commands (the activation's survived until its command test asserted the line).
 
 ## Related
 

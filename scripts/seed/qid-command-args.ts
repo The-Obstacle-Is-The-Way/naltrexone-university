@@ -28,6 +28,38 @@ export function readQidValue(
   return value;
 }
 
+// --reason or --authority and its value, each given once: the decision
+// record every operator command that changes the bank keeps (DEBT-490).
+export function readDecisionFlag(
+  record: Partial<DecisionRecord>,
+  arg: '--reason' | '--authority',
+  value: string | undefined,
+): void {
+  const field = arg === '--reason' ? 'reason' : 'authority';
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed.startsWith('--')) {
+    throw new Error(`Missing value for ${arg}`);
+  }
+  if (record[field] !== undefined) {
+    throw new Error(`Duplicate ${arg}`);
+  }
+  record[field] = trimmed;
+}
+
+export function requireDecision(
+  record: Partial<DecisionRecord>,
+  decision: string,
+): DecisionRecord {
+  const { reason, authority } = record;
+  if (reason === undefined) {
+    throw new Error(`--reason is required: why the ${decision}`);
+  }
+  if (authority === undefined) {
+    throw new Error(`--authority is required: who ordered the ${decision}`);
+  }
+  return { reason, authority };
+}
+
 // The operator commands that act on questions by QID (withdrawal, holds):
 // explicit QIDs, a required reason and authority for the record, and a dry
 // run unless --apply. Each flag may appear once.
@@ -49,29 +81,17 @@ export function parseQidCommandArgs(
       qids.push(readQidValue(argv[index + 1], '--qid', qids));
       index += 1;
     } else if (arg === '--reason' || arg === '--authority') {
-      const field = arg === '--reason' ? 'reason' : 'authority';
-      const value = argv[index + 1]?.trim();
-      if (!value || value.startsWith('--')) {
-        throw new Error(`Missing value for ${arg}`);
-      }
-      if (record[field] !== undefined) {
-        throw new Error(`Duplicate ${arg}`);
-      }
-      record[field] = value;
+      readDecisionFlag(record, arg, argv[index + 1]);
       index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
   if (qids.length === 0) throw new Error('At least one --qid is required');
-  const { reason, authority } = record;
-  if (reason === undefined) {
-    throw new Error(`--reason is required: why the ${options.decision}`);
-  }
-  if (authority === undefined) {
-    throw new Error(
-      `--authority is required: who ordered the ${options.decision}`,
-    );
-  }
-  return { qids, apply, lift, record: { reason, authority } };
+  return {
+    qids,
+    apply,
+    lift,
+    record: requireDecision(record, options.decision),
+  };
 }

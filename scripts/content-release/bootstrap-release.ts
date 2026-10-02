@@ -1,8 +1,15 @@
 import { pathToFileURL } from 'node:url';
 import { runHumanDatabaseCommand } from '../database-command';
 import {
+  type DecisionRecord,
+  readDecisionFlag,
+  requireDecision,
+} from '../seed/qid-command-args';
+import {
   assertPlanForApply,
   formatActivation,
+  formatDecision,
+  formatDecisionArgs,
   formatPlan,
   previewOrApply,
   readPlanId,
@@ -15,13 +22,16 @@ type CommandIo = {
   log?: (message: string) => void;
 };
 
-// --apply, and --plan with the plan id a preview printed (DEBT-489).
+// --apply, --plan with the plan id a preview printed (DEBT-489), and the
+// decision: --reason and --authority (DEBT-490).
 export function parseBootstrapArgs(argv: readonly string[]): {
   apply: boolean;
   expectedPlanId: string | undefined;
+  record: DecisionRecord;
 } {
   let apply = false;
   let expectedPlanId: string | undefined;
+  const record: Partial<DecisionRecord> = {};
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--apply' && !apply) {
@@ -29,12 +39,19 @@ export function parseBootstrapArgs(argv: readonly string[]): {
     } else if (arg === '--plan' && expectedPlanId === undefined) {
       expectedPlanId = readPlanId(argv[index + 1]);
       index += 1;
+    } else if (arg === '--reason' || arg === '--authority') {
+      readDecisionFlag(record, arg, argv[index + 1]);
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
   assertPlanForApply(apply, expectedPlanId);
-  return { apply, expectedPlanId };
+  return {
+    apply,
+    expectedPlanId,
+    record: requireDecision(record, 'bootstrap'),
+  };
 }
 
 // DEBT-483: the first activation adopts what is live as a release with no
@@ -45,22 +62,23 @@ export async function runBootstrapRelease(
   argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
-  const { apply, expectedPlanId } = parseBootstrapArgs(argv);
+  const { apply, expectedPlanId, record } = parseBootstrapArgs(argv);
   await runHumanDatabaseCommand({
     env,
     log,
     execute: (databaseUrl) =>
       withCommandDatabase(databaseUrl, async (db) => {
         const summary = await previewOrApply(db, apply, (target) =>
-          bootstrapRelease(target, { expectedPlanId }),
+          bootstrapRelease(target, { expectedPlanId, record }),
         );
         log(
           `Release bootstrap${apply ? '' : ' (dry-run)'}: ${formatActivation(summary)}`,
         );
+        log(formatDecision(record));
         for (const line of formatPlan(summary.plan)) log(line);
         if (!apply) {
           log(
-            `Apply exactly this plan: pnpm exec tsx scripts/content-release/bootstrap-release.ts --plan ${summary.plan.id} --apply`,
+            `Apply exactly this plan: pnpm exec tsx scripts/content-release/bootstrap-release.ts ${formatDecisionArgs(record)} --plan ${summary.plan.id} --apply`,
           );
         }
       }),

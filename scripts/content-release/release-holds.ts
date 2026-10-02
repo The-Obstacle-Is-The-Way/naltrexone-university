@@ -101,9 +101,14 @@ export async function changeHolds(
           .onConflictDoNothing()
           .returning({ id: schema.questionHolds.id });
 
+    // The re-application is the hold's or lift's own decision (DEBT-490).
     const activation = await activateRelease(tx, {
       releaseId: active,
       expectedActiveReleaseId: active,
+      record: {
+        reason: `hold ${change.lift ? 'lifted' : 'placed'}: ${change.record.reason}`,
+        authority: change.record.authority,
+      },
     });
     return { holds: changed.length, activation };
   });

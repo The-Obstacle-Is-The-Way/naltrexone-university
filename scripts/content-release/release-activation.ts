@@ -3,6 +3,7 @@ import { asc, eq, inArray, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
 import { onlyRow } from '../seed/only-row';
+import type { DecisionRecord } from '../seed/qid-command-args';
 import {
   findUnrecordedWithdrawals,
   recordWithdrawals,
@@ -70,7 +71,8 @@ export type ReleaseActivationErrorCode =
   | 'MANIFEST_HASH_MISMATCH'
   | 'MANIFEST_ITEMS_MISMATCH'
   | 'INCOMPLETE_RELEASE'
-  | 'PLAN_MISMATCH';
+  | 'PLAN_MISMATCH'
+  | 'DECISION_REQUIRED';
 
 export class ReleaseActivationError extends Error {
   constructor(
@@ -248,6 +250,21 @@ async function lockActivationQuestions(
   `);
 }
 
+// DEBT-490: an activation is a decision, so it names why and on whose
+// authority, as a withdrawal or a hold does. Checked before anything is
+// locked or written; the database refuses a blank one too (migration 0049).
+function assertDecision(record: DecisionRecord): void {
+  const blank = (['reason', 'authority'] as const).find(
+    (field) => !/\S/.test(record[field]),
+  );
+  if (blank !== undefined) {
+    throw new ReleaseActivationError(
+      'DECISION_REQUIRED',
+      `An activation needs a ${blank}: why it is made, and on whose authority.`,
+    );
+  }
+}
+
 // ADR-021 decision 4: activation is one transaction. It checks that the
 // active release is the one the caller expects and, for a release never
 // active before, the release's parent; verifies the release; then
@@ -262,8 +279,11 @@ export async function activateRelease(
     expectedActiveReleaseId: string | null;
     /** The plan id an operator reviewed; a different plan applies nothing. */
     expectedPlanId?: string | undefined;
+    /** Why, and on whose authority: kept on the receipt (DEBT-490). */
+    record: DecisionRecord;
   },
 ): Promise<ActivationSummary> {
+  assertDecision(input.record);
   return db.transaction(async (tx) => {
     // 1. The pointer first: every content writer takes it first.
     const previousReleaseId = await lockReleasePointer(tx);
@@ -384,8 +404,8 @@ export async function activateRelease(
       removed.filter((row) => archivedSlugs.has(row.slug)).map((row) => row.id),
     );
     await recordWithdrawals(tx, unrecorded, {
-      reason: `archived in content release ${release.id}`,
-      authority: 'content release',
+      reason: `archived in content release ${release.id}: ${input.record.reason}`,
+      authority: input.record.authority,
     });
     const withdrawnIds = new Set(unrecorded.map((row) => row.questionId));
     const withdrawn = withdrawnIds.size;
@@ -487,9 +507,12 @@ export async function activateRelease(
     await tx
       .update(schema.contentReleasePointer)
       .set({ activeReleaseId: release.id, activatedAt: sql`now()` });
-    await tx
-      .insert(schema.contentReleaseActivations)
-      .values({ releaseId: release.id, previousReleaseId });
+    await tx.insert(schema.contentReleaseActivations).values({
+      releaseId: release.id,
+      previousReleaseId,
+      reason: input.record.reason,
+      authority: input.record.authority,
+    });
 
     return {
       releaseId: release.id,
@@ -511,8 +534,9 @@ export async function activateRelease(
 // printed, it adopts nothing if what is live has changed since (DEBT-489).
 export async function bootstrapRelease(
   db: Db,
-  input: { expectedPlanId?: string | undefined } = {},
+  input: { expectedPlanId?: string | undefined; record: DecisionRecord },
 ): Promise<ActivationSummary> {
+  assertDecision(input.record);
   return db.transaction(async (tx) => {
     const active = await lockReleasePointer(tx);
     if (active !== null) {
@@ -536,6 +560,7 @@ export async function bootstrapRelease(
       releaseId,
       expectedActiveReleaseId: null,
       expectedPlanId: input.expectedPlanId,
+      record: input.record,
     });
   });
 }

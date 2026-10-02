@@ -18,6 +18,7 @@ import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { createCleanupState, createUser } from './helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 // DEBT-483's Verification, demonstrated on a disposable database: withdrawal,
@@ -100,7 +101,11 @@ describe('DEBT-483 Verification on a disposable database', () => {
   it('a withdrawal takes the question out at once and keeps it out of every later activation', async () => {
     const [withdrawn, kept] = [slug(), slug()];
     await seedLive(withdrawn, kept);
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
 
     await withdraw(withdrawn);
 
@@ -108,6 +113,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
     // Re-applying the release that still names it does not bring it back.
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: base,
         expectedActiveReleaseId: base,
       }),
@@ -117,6 +123,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
       source(kept),
     ]);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: next.releaseId,
       expectedActiveReleaseId: base,
     });
@@ -158,7 +165,9 @@ describe('DEBT-483 Verification on a disposable database', () => {
       timeSpentSeconds: 5,
     });
     const before = await disposable.db.select().from(schema.attempts);
-    await bootstrapRelease(disposable.db);
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
 
     await withdraw(qid);
 
@@ -188,7 +197,9 @@ describe('DEBT-483 Verification on a disposable database', () => {
       syncQuestionsFromFiles(disposable.db, [source(withdrawn)]),
     ).rejects.toThrow(/Refusing to reactivate archived question/);
     // After the bootstrap: staging refuses it too.
-    await bootstrapRelease(disposable.db);
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
     await expect(
       stageReleaseFromFiles(disposable.db, [source(withdrawn), source(other)]),
     ).rejects.toThrow(/Refusing to stage withdrawn question/);
@@ -199,7 +210,11 @@ describe('DEBT-483 Verification on a disposable database', () => {
   it('rejects a release staged on a base that is no longer active', async () => {
     const [first, second] = [slug(), slug()];
     await seedLive(first, second);
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     const outdated = await stageReleaseFromFiles(disposable.db, [
       source(first, { stem: 'An outdated correction.' }),
       source(second),
@@ -209,12 +224,14 @@ describe('DEBT-483 Verification on a disposable database', () => {
       source(second, { stem: 'A newer correction.' }),
     ]);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: newer.releaseId,
       expectedActiveReleaseId: base,
     });
 
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: outdated.releaseId,
         expectedActiveReleaseId: newer.releaseId,
       }),
@@ -230,13 +247,18 @@ describe('DEBT-483 Verification on a disposable database', () => {
   it('rolls back with the overlay applied: a withdrawn question and a held revision stay out', async () => {
     const [withdrawn, held] = [slug(), slug()];
     await seedLive(withdrawn, held);
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     await runHoldQuestions(['--qid', held, ...RECORD, '--apply'], io());
     const corrected = await stageReleaseFromFiles(disposable.db, [
       source(withdrawn, { stem: 'A corrected task.' }),
       source(held, { stem: 'A corrected task.' }),
     ]);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: corrected.releaseId,
       expectedActiveReleaseId: base,
     });
@@ -245,6 +267,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
     await withdraw(withdrawn);
 
     const rollback = await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: base,
       expectedActiveReleaseId: corrected.releaseId,
     });
@@ -268,7 +291,11 @@ describe('DEBT-483 Verification on a disposable database', () => {
   ])('shows a reader no part of an activation that %s', async (_name, fail) => {
     const [changed, dropped, added] = [slug(), slug(), slug()];
     await seedLive(changed, dropped);
-    const base = (await bootstrapRelease(disposable.db)).releaseId;
+    const base = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     const next = await stageReleaseFromFiles(disposable.db, [
       source(changed, { stem: 'A corrected task.' }),
       source(dropped, { status: 'draft' }),
@@ -307,6 +334,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
       const activation = activateRelease(drizzle(activator, { schema }), {
         releaseId: next.releaseId,
         expectedActiveReleaseId: base,
+        record: RELEASE_DECISION,
       });
       settled = activation.then(
         () => 'committed',
