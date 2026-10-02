@@ -4,11 +4,8 @@ import {
   readSeedQuestionFiles,
   type SeedSourceFile,
 } from '../seed/file-reader';
-import {
-  parseApplyFlag,
-  previewOrApply,
-  withCommandDatabase,
-} from './command-support';
+import { readQidValue } from '../seed/qid-command-args';
+import { previewOrApply, withCommandDatabase } from './command-support';
 import { stageReleaseFromFiles } from './release-builder';
 
 type StageIo = {
@@ -17,6 +14,28 @@ type StageIo = {
   /** The MDX bundle; by default every authored file, placeholders excluded. */
   readFiles?: () => Promise<SeedSourceFile[]>;
 };
+
+// --apply, and --remove <qid> for each live question whose file is absent on
+// purpose (DEBT-489). Each flag value is checked like a QID.
+export function parseStageArgs(argv: readonly string[]): {
+  apply: boolean;
+  remove: string[];
+} {
+  let apply = false;
+  const remove: string[] = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--apply' && !apply) {
+      apply = true;
+    } else if (arg === '--remove') {
+      remove.push(readQidValue(argv[index + 1], '--remove', remove));
+      index += 1;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+  return { apply, remove };
+}
 
 // DEBT-483: stages a release of the MDX bundle on the active release, writing
 // nothing a learner reads, and names the activation that makes it live. A
@@ -29,7 +48,7 @@ export async function runStageRelease(
     readFiles = () => readSeedQuestionFiles(false),
   }: StageIo = {},
 ): Promise<void> {
-  const { apply } = parseApplyFlag(argv);
+  const { apply, remove } = parseStageArgs(argv);
   await runHumanDatabaseCommand({
     env,
     log,
@@ -37,7 +56,7 @@ export async function runStageRelease(
       const files = await readFiles();
       await withCommandDatabase(databaseUrl, async (db) => {
         const staged = await previewOrApply(db, apply, (target) =>
-          stageReleaseFromFiles(target, files),
+          stageReleaseFromFiles(target, files, { remove }),
         );
         log(
           [
@@ -48,7 +67,8 @@ export async function runStageRelease(
             `inserted=${staged.inserted}`,
             `appended=${staged.appended}`,
             `reused=${staged.reused}`,
-            `withdrawn=${staged.withdrawn}`,
+            `removals=${staged.removals}`,
+            `withdrawals=${staged.withdrawals}`,
           ].join(' '),
         );
         if (apply) {

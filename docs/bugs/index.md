@@ -1,13 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-01 — BUG-304 resolved and archived.
+**Last Updated:** 2026-10-02 — promotion #1308 review follow-ups.
 
-**Latest** — 2026-10-01: **BUG-304 (P3) is Resolved and archived.**
-- **What was fixed.** A Start click that reached the handler of an earlier render was refused silently. Every start now submits the learner's latest choice under the current key, and BUG-303's key guarantees hold.
-- **Fix.** #1282 (**5377515605** on `389194ae`, no findings; merged `14a3e800`), promoted through #1283 (`73dcff85`). Codecov's patch check first found two controls untested, and the red-first test now covers every starter control.
-- **Release verified.** Main CI **36845119514** `test` **09:59:59Z**; production assigned **10:00:02.594Z**; matching trees `a789dd2c`; healthy production.
-- **Remaining.** The original 2026-08-25 click's cause stays unproven. A recurrence would now show a request, a loading state or an alert, and would be a new record.
+**Latest** — 2026-10-02: promotion #1308's review on BUG-314–317 ([BUG-314](./bug-314-content-hold-withdrawal-deadlock.md#promotion-review-follow-up--2026-10-02)). BUG-314's attempt-lock case now fails on the real `40P01` deadlock, not a timeout, if activation's lock regresses to `FOR UPDATE`; its probe count is corrected. BUG-314–317 gain the template's archive-convention callout and `Resolved` and `Verification receipts` fields (`—` until their promotion receipts exist). All four stay open until then.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -30,7 +26,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-314
+**Next Bug ID:** BUG-318
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -460,6 +456,10 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
+| [BUG-314](./bug-314-content-hold-withdrawal-deadlock.md) | Content writers lack one serialization boundary | P2 | Open | Hold/withdrawal deadlock and concurrent staging uniqueness failure reproduced. |
+| [BUG-315](./bug-315-placeholder-prefix-archives-authored-content.md) | Placeholder archival removes authored prefix matches | P2 | Open | One authored question archived without a withdrawal record. |
+| [BUG-316](./bug-316-content-release-test-resource-cleanup.md) | Content test failure cleanup leaks or blocks resources | P3 | Open | Failed migration leaks database; assertion cleanup blocks before releasing advisory lock. |
+| [BUG-317](./bug-317-content-release-documentation-overclaims.md) | Release guidance overstates isolation and clinical behaviour | P3 | Open | Correct staging effects, lift conditions, scoring guarantees and stale verification status. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.

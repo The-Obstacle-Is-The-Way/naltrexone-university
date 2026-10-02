@@ -3,7 +3,6 @@ import {
   sql as drizzleSql,
   eq,
   inArray,
-  like,
   TransactionRollbackError,
 } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -19,7 +18,10 @@ import {
   buildReleaseManifest,
   releaseManifestHash,
 } from '@/scripts/content-release/release-manifest';
-import { archivePlaceholderQuestions } from '@/scripts/seed/placeholder-archiver';
+import {
+  archivePlaceholderQuestions,
+  SYNTHETIC_PLACEHOLDER_SLUGS,
+} from '@/scripts/seed/placeholder-archiver';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import {
   addCurrentRevision,
@@ -225,6 +227,7 @@ describe('DEBT-483: release activation', () => {
       });
       const second = await stageRelease(tx, {
         items: [],
+        removals: [{ questionId: question.id, kind: 'draft' }],
         parentReleaseId: first,
       });
       await activateRelease(tx, {
@@ -679,7 +682,7 @@ describe('DEBT-483: the direct seed and an active release', () => {
     const placeholders = await db
       .select({ id: schema.questions.id, status: schema.questions.status })
       .from(schema.questions)
-      .where(like(schema.questions.slug, 'placeholder-%'));
+      .where(inArray(schema.questions.slug, [...SYNTHETIC_PLACEHOLDER_SLUGS]));
 
     try {
       await withActiveRelease(async () => {
@@ -698,7 +701,7 @@ describe('DEBT-483: the direct seed and an active release', () => {
     }
   });
 
-  it('still archives placeholders while no release is active', async () => {
+  it('archives committed fixtures but preserves an authored prefix match while no release is active', async () => {
     const placeholder = await createQuestion(db, cleanup, {
       slug: `placeholder-${randomUUID()}`,
       status: 'published',
@@ -709,19 +712,23 @@ describe('DEBT-483: the direct seed and an active release', () => {
       await tx
         .update(schema.questions)
         .set({ status: 'published' })
-        .where(like(schema.questions.slug, 'placeholder-%'));
+        .where(
+          inArray(schema.questions.slug, [...SYNTHETIC_PLACEHOLDER_SLUGS]),
+        );
 
       const archived = await archivePlaceholderQuestions(tx);
 
       const placeholders = await tx
         .select({ status: schema.questions.status })
         .from(schema.questions)
-        .where(like(schema.questions.slug, 'placeholder-%'));
+        .where(
+          inArray(schema.questions.slug, [...SYNTHETIC_PLACEHOLDER_SLUGS]),
+        );
       expect(archived).toBe(placeholders.length);
       expect(placeholders.every((row) => row.status === 'archived')).toBe(true);
       expect(
         (await stateOf(tx, [placeholder.id])).get(placeholder.id)?.status,
-      ).toBe('archived');
+      ).toBe('published');
     });
   });
 

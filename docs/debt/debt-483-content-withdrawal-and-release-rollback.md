@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); the phase 4 design is recorded 2026-10-01, and its first step, 4a, records withdrawals; releases, activation and rollback remain open; archived-question review, which the dated receipts below list as open, shipped under [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) (resolved 2026-09-30)
+**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); the phase 4 design is recorded 2026-10-01, and its first step, 4a, records withdrawals; releases, activation and rollback are implemented through #1300; DEBT-489, the independent audit fixes and production closeout remain open; archived-question review, which the dated receipts below list as open, shipped under [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) (resolved 2026-09-30)
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -397,7 +397,7 @@ Any failure rolls the whole transaction back, and the previous release stays act
   - **4c-ii:** staging for the production seed path, the release builder.
 
   The first production activation follows 4c-ii. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
-- **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
+- **4d, verification and closure:** the Verification suite above on disposable databases, docs and closeout. Rollback needs no command of its own: `activate-release.ts` naming an earlier release is the rollback (4c-i).
 
 **Decided here, under the owner's delegation.**
 - Withdrawal is recorded per revision but ordered per question.
@@ -451,7 +451,7 @@ Migration 0047 adds the release tables, holds and the pointer. `scripts/content-
 
 **Locks.** 0047's header names the new tables and the foreign keys to `question_revisions`. It omits the update trigger it adds to `question_withdrawals`, a live table: `CREATE TRIGGER` takes SHARE ROW EXCLUSIVE on it until commit, which blocks only the withdrawal command and the seed (#1293 review). The note lives here because 0047 was already applied on Preview, and the migration ledger hashes the whole file, comments included.
 
-**The manifest** (`app-release-manifest-v1`) lists each item's slug and the `stored-fields-json-v1` hash of its revision, ordered by slug. Its hash is SHA-256 over sorted-key JSON, byte-identical to Python's `json.dumps(m, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`. A unit test pins a digest computed independently with Python.
+**The manifest** (`app-release-manifest-v1`) lists each item's slug and the `stored-fields-json-v1` hash of its revision, ordered by slug. *(Since DEBT-489, `app-release-manifest-v2` also names every live question the release removes; see [DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02).)* Its hash is SHA-256 over sorted-key JSON, byte-identical to Python's `json.dumps(m, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`. A unit test pins a digest computed independently with Python.
 
 **Activation** runs in one transaction, in this order:
 1. It locks the pointer for update and rejects a stale release. The active release must be the one the caller expects. A release that has never been active must also be built on it, or it would drop whatever was activated since its base. A rollback re-activates a release that has an earlier receipt, so it is exempt from the parent check. *(The parent check was added after promotion #1293's review: the first version compared the pointer only with the caller's expectation. A case where a release built on an earlier base is rejected now covers it, and removing the rollback exemption fails the rollback case.)*
@@ -467,7 +467,7 @@ The first activation, the bootstrap, holds the pointer before it reads what is l
 
 **Decided here, under the owner's delegation.**
 - **A hold takes effect by re-applying the active release.** The hold command comes with the operator commands in 4c, and before any release is active it refuses, pointing to withdrawal. Today nothing derives `status` from the overlay, so a hold recorded then would silently do nothing.
-- **What learners see.** The app tells learners a question is withdrawn when its status is not `published` (`get-attempted-questions.ts`, `get-user-stats.ts`, `get-question-for-view.ts`). Held questions, and questions a release leaves out, therefore read as withdrawn too. For a learner that is accurate: the item has left the bank, and a held item should not be answered or graded while it is reviewed. Whether it left for good is recorded in the overlay, not shown.
+- **What learners see.** The app tells learners a question is withdrawn when its status is not `published` (`get-attempted-questions.ts`, `get-user-stats.ts`, `get-question-for-view.ts`). Held questions, and questions a release leaves out, therefore read as withdrawn too. The flag means the item is outside new selection; it does not distinguish a temporary hold from permanent withdrawal or release omission. Whether it left for good is recorded in the overlay, not shown. **2026-10-02 audit correction (BUG-317):** this is not a guarantee that an existing exam draft is never graded. `finalize-exam-answers.ts` still grades saved drafts against their bound revisions; the owner-deferred mid-session scoring decision remains open. Clinical approval of the single label has not been established.
 - **Identical releases.** `manifest_hash` is unique, so 4c's staging must reuse an existing release with an identical manifest rather than write a second one. *(2026-10-01, superseded: promotion #1295's review showed this was a dead end. A set staged on one base could never be staged on a newer one, because reusing the old release fails the parent check. 0048 keys a release by its manifest and its parent, and staging reuses only a release with the same manifest on the same parent.)*
 
 **Verification** (`tests/integration/content-release-activation.integration.test.ts`, 20 cases, real Postgres):
@@ -566,9 +566,62 @@ The lift-record case also caught a real defect before any push. The first check,
 - reusing a matching revision;
 - reusing an identical release.
 
+## Verification suite (phase 4d) — 2026-10-02
+
+The Verification this record asks for is demonstrated end to end in `tests/integration/content-release-verification.integration.test.ts`, against a disposable database. Each case drives the operator commands and the release engine as an operator would.
+
+| Verification | Case |
+|---|---|
+| Withdrawal | A withdrawal archives the question at once. Re-applying the release that still names it, and activating a newer release, both keep it out. |
+| Preserved attempts | A learner answered the question before it was withdrawn. Their attempt rows are unchanged, and the real history read (`GetAttemptedQuestionsUseCase` over the Drizzle repositories) still lists it, marked withdrawn, as the revision they answered. |
+| No resurrection from stale output | A stale MDX file for a withdrawn question is refused by the direct seed before releases, and by staging after the bootstrap. |
+| Rejection of stale releases | A release staged on a base that is no longer active is rejected, even with the active release named, and nothing changes. |
+| Rollback with revocation checks | A rollback to the bootstrap release keeps out a question withdrawn since and a revision held since, and reports both exclusions. |
+| No visible partial release after injected failure | A trigger pauses activation at its last write, after every question has changed, until the test releases an advisory lock. A reader on another connection sees the old state throughout. When the activation fails, the reader still sees the old state and pointer; when it commits instead, the reader sees the whole new release at once. |
+
+**Results.** 7 cases, which passed three consecutive runs locally. The withdrawal command now takes the same injectable `env` and `log` as the release commands, so it runs in-process here.
+
+**What this suite adds.** Earlier steps proved each rule red first: 4a, 4b, 4c-i by a mutation check, and 4c-ii. This suite proves them together on one fresh, fully migrated database. Its new evidence is the cross-connection visibility case and the preserved-attempts read.
+
+**Closeout.** This record closes in a docs-only follow-up once this step is released, with release receipts. *(2026-10-02: a review of the release workflow found that a release silently removes every live question its bundle omits. That is [DEBT-489](./debt-489-release-removes-omitted-questions.md), filed with a reproduction, and it gates the production bootstrap.)* The remaining tails go to the register's Deferred table:
+- the production bootstrap, which is the owner's decision;
+- the managed seed's switch to staging after that bootstrap;
+- the contract step that moves selection onto release items and retires `questions.status`;
+- ADR-021's release zero, which waits for the content repository to compute `stored-fields-json-v1`.
+
 ## Related
 
 - [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
 - [Parked DEBT-446](../_archive/debt/debt-446-local-db-script-target-guards.md):
   existing freshness-related scope remains subject to its owner ruling; this
   record does not silently activate unrelated parked work.
+
+## Independent audit follow-up — 2026-10-02
+
+[BUG-314](../bugs/bug-314-content-hold-withdrawal-deadlock.md) records real
+operator/learner deadlocks and concurrent staging failure. Its fix serializes
+content writers on the pointer, uses ordered NO KEY UPDATE question locks,
+and orders session binding SHARE locks. This supersedes the earlier share-lock
+writer description; the direct seed still commits per question.
+[BUG-315](../bugs/bug-315-placeholder-prefix-archives-authored-content.md)
+limits runtime placeholder archival to the ten exact fixture slugs.
+[BUG-316](../bugs/bug-316-content-release-test-resource-cleanup.md) repairs
+migration-failure cleanup and the visibility test's failure cleanup and wait
+identity. [BUG-317](../bugs/bug-317-content-release-documentation-overclaims.md)
+corrects operational prose without deciding a new scoring policy.
+
+Activation commits all materialized changes atomically. At READ COMMITTED,
+each reader statement sees a committed state; separate reader statements can
+straddle that commit and are not promised one transaction-wide snapshot.
+Supported content/overlay writers participate in the pointer/row-lock protocol;
+arbitrary administrator SQL is outside that proof. The immutable-row triggers
+reject UPDATE, not DELETE; no scoped runtime writer deletes release/withdrawal
+rows. This is not an authorization boundary against database-owner SQL.
+
+Staging's tag exception remains accepted, but is not its only persistent side
+effect: an authored archive records a permanent withdrawal before activation.
+DEBT-489's design review records that reproduced behaviour; its implementation
+belongs to the parallel session. *(Implemented 2026-10-02: staging records no
+withdrawal, and activation withdraws an `archived` removal; see
+[DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02).)* Neither this audit nor its fixes activate a
+release on production or Preview, and no remote ledger is claimed verified.

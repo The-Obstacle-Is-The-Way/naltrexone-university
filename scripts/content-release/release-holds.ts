@@ -41,13 +41,14 @@ export async function changeHolds(
         'No release is active, so a hold would change nothing. Withdraw the question instead, or bootstrap releases first.',
       );
     }
-    // Question rows in id order, after the pointer: activation's order.
+    // The pointer excludes content writers. Defer question row locks to
+    // activation, which locks the whole set in order; locking this subset
+    // first can deadlock with a session reader (BUG-314).
     const questions = await tx
       .select({ id: schema.questions.id, slug: schema.questions.slug })
       .from(schema.questions)
       .where(inArray(schema.questions.slug, [...change.qids]))
-      .orderBy(asc(schema.questions.id))
-      .for('update');
+      .orderBy(asc(schema.questions.id));
     const found = new Set(questions.map((question) => question.slug));
     const missing = change.qids.filter((qid) => !found.has(qid));
     if (missing.length > 0) {

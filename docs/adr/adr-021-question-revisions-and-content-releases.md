@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
-**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 proceeds in steps under [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds the seed as a release builder (decision 6). The verification suite remains, and the first production bootstrap is the owner's call.
+**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 proceeds in steps under [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds the seed as a release builder (decision 6). 4d demonstrates DEBT-483's Verification on a disposable database. [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)'s fix makes every removal explicit and binds each apply to its reviewed plan. The first production bootstrap is the owner's call.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
@@ -25,6 +25,26 @@ Constraints:
 - Attempts and session states reference choice rows through composite `(choice id, question id)` foreign keys with `ON DELETE RESTRICT`. Existing IDs must survive.
 
 ## Decision
+
+**Phase 4 implementation boundary (2026-10-02 audit).** Decisions 4–6 describe
+the target interface; #1290–#1300 implement the current command path documented
+in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+Selection still reads materialized `questions.status` and `current_revision_id`,
+not release items directly. Activation checks the caller's expected active
+release and, except for a previously activated rollback target, its parent.
+Since [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02),
+a new release must account for every question the active release names,
+unless it is withdrawn, as an item or a named removal, and an apply is bound
+to the plan its preview printed. Staging does
+not move existing revision pointers and records no withdrawal; only tags
+change the live bank before activation.
+Withdrawals exclude the whole question across revisions; holds exclude one
+revision. The emergency QID command writes the withdrawal and archives the
+question directly, without a minimal manifest. The database triggers reject
+updates to releases, items and withdrawals, but do not prohibit owner DELETE.
+The [independent audit](../bugs/assets/content-release-audit-2026-10-02.md)
+records reproductions, fixes and verification limits. These boundaries do not
+claim SPEC-007 completion or clinical scoring-policy approval.
 
 ### 1. Content lives in immutable revisions
 

@@ -5,40 +5,58 @@ import { z } from 'zod';
 // set, one entry per question: the slug and the stored-fields-json-v1 hash of
 // the revision it selects. The format is app-defined until the content
 // repository's SPEC-007 settles, and is not called SPEC-007.
-export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v1';
+//
+// DEBT-489, format v2: a release also names every live question it leaves
+// out, and why. Absence from the bundle is never a removal.
+//   archived: retired in authored MDX; activation withdraws it for good.
+//   draft:    set back to draft in MDX; out of the bank until a release names it.
+//   removed:  absent from the bundle, and named by the operator.
+export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v2';
+
+export const RELEASE_REMOVAL_KINDS = ['archived', 'draft', 'removed'] as const;
+export type ReleaseRemovalKind = (typeof RELEASE_REMOVAL_KINDS)[number];
 
 export type ReleaseManifestEntry = { slug: string; contentHash: string };
+export type ReleaseManifestRemoval = { slug: string; kind: ReleaseRemovalKind };
 
 export type ReleaseManifest = {
   format: typeof RELEASE_MANIFEST_FORMAT;
   items: ReleaseManifestEntry[];
+  removals: ReleaseManifestRemoval[];
 };
 
 const CONTENT_HASH = /^[0-9a-f]{64}$/;
 
 // Code-point order, which is Python's sort order for str.
-function compareSlugs(a: string, b: string): number {
-  if (a < b) return -1;
-  return a > b ? 1 : 0;
+function compareSlugs(a: { slug: string }, b: { slug: string }): number {
+  if (a.slug < b.slug) return -1;
+  return a.slug > b.slug ? 1 : 0;
 }
 
 export function buildReleaseManifest(
   entries: readonly ReleaseManifestEntry[],
+  removals: readonly ReleaseManifestRemoval[] = [],
 ): ReleaseManifest {
   const items = entries
     .map(({ slug, contentHash }) => ({ slug, contentHash }))
-    .sort((a, b) => compareSlugs(a.slug, b.slug));
-  items.forEach((item, index) => {
+    .sort(compareSlugs);
+  for (const item of items) {
     if (!CONTENT_HASH.test(item.contentHash)) {
       throw new Error(
         `${item.slug}: content hash must be lowercase SHA-256 hex`,
       );
     }
-    if (index > 0 && items[index - 1]?.slug === item.slug) {
-      throw new Error(`${item.slug} appears more than once in the manifest`);
+  }
+  const sortedRemovals = removals
+    .map(({ slug, kind }) => ({ slug, kind }))
+    .sort(compareSlugs);
+  const slugs = [...items, ...sortedRemovals].map(({ slug }) => slug).sort();
+  slugs.forEach((slug, index) => {
+    if (index > 0 && slugs[index - 1] === slug) {
+      throw new Error(`${slug} appears more than once in the manifest`);
     }
   });
-  return { format: RELEASE_MANIFEST_FORMAT, items };
+  return { format: RELEASE_MANIFEST_FORMAT, items, removals: sortedRemovals };
 }
 
 // Sorted keys at every level and no insignificant whitespace, byte-identical
@@ -53,6 +71,7 @@ export function canonicalReleaseManifestJson(
       contentHash,
       slug,
     })),
+    removals: manifest.removals.map(({ slug, kind }) => ({ kind, slug })),
   });
 }
 
@@ -68,6 +87,14 @@ const storedManifestSchema = z
     items: z.array(
       z.object({ slug: z.string().min(1), contentHash: z.string() }).strict(),
     ),
+    removals: z.array(
+      z
+        .object({
+          slug: z.string().min(1),
+          kind: z.enum(RELEASE_REMOVAL_KINDS),
+        })
+        .strict(),
+    ),
   })
   .strict();
 
@@ -75,11 +102,16 @@ const storedManifestSchema = z
 // must still be exactly what buildReleaseManifest writes.
 export function parseReleaseManifest(value: unknown): ReleaseManifest {
   const parsed = storedManifestSchema.parse(value);
-  const rebuilt = buildReleaseManifest(parsed.items);
-  rebuilt.items.forEach((item, index) => {
-    if (parsed.items[index]?.slug !== item.slug) {
-      throw new Error('Stored manifest entries are not in slug order');
-    }
-  });
+  const rebuilt = buildReleaseManifest(parsed.items, parsed.removals);
+  const inOrder =
+    rebuilt.items.every(
+      (item, index) => parsed.items[index]?.slug === item.slug,
+    ) &&
+    rebuilt.removals.every(
+      (removal, index) => parsed.removals[index]?.slug === removal.slug,
+    );
+  if (!inOrder) {
+    throw new Error('Stored manifest entries are not in slug order');
+  }
   return rebuilt;
 }

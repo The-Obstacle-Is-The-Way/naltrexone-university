@@ -76,6 +76,13 @@ async function activeRelease() {
 
 const RECORD = ['--reason', 'Under review', '--authority', 'Clinical lead'];
 
+// The plan id a preview printed, as an operator would copy it.
+function planIdIn(output: string): string {
+  const match = /^Plan: ([0-9a-f]{64})$/m.exec(output);
+  if (!match?.[1]) throw new Error(`No plan in:\n${output}`);
+  return match[1];
+}
+
 describe('bootstrap-release', () => {
   it('previews the bootstrap without changing anything', async () => {
     await arrange('published');
@@ -93,20 +100,26 @@ describe('bootstrap-release', () => {
     );
   });
 
-  it('adopts what is live with --apply, and only once', async () => {
+  it('adopts what is live with the plan its preview printed, and only once', async () => {
     const published = await arrange('published');
+    const preview = commandIo();
+    await runBootstrapRelease([], preview.io);
+    const plan = planIdIn(preview.output());
+    expect(preview.output()).toContain(
+      `Apply exactly this plan: pnpm exec tsx scripts/content-release/bootstrap-release.ts --plan ${plan} --apply`,
+    );
     const { io, output } = commandIo();
 
-    await runBootstrapRelease(['--apply'], io);
+    await runBootstrapRelease(['--plan', plan, '--apply'], io);
 
     expect(output()).toMatch(
       /Release bootstrap: release=\S+ previous=none items=1 published=0 archived=0/,
     );
     expect(await activeRelease()).not.toBeNull();
     expect(await statusOf(published.id)).toBe('published');
-    await expect(runBootstrapRelease(['--apply'], io)).rejects.toThrow(
-      /is active; only the first release adopts what is live/,
-    );
+    await expect(
+      runBootstrapRelease(['--plan', plan, '--apply'], io),
+    ).rejects.toThrow(/is active; only the first release adopts what is live/);
   });
 });
 
@@ -117,6 +130,7 @@ describe('activate-release', () => {
     const first = (await bootstrapRelease(disposable.db)).releaseId;
     const next = await stageRelease(disposable.db, {
       items: [{ questionId: kept.id, questionRevisionId: kept.revisionId }],
+      removals: [{ questionId: dropped.id, kind: 'draft' }],
       parentReleaseId: first,
     });
     const args = ['--release', next, '--expect-active', first];
@@ -126,16 +140,23 @@ describe('activate-release', () => {
     expect(preview.output()).toContain(
       `Release activation (dry-run): release=${next} previous=${first} items=1 published=0 archived=1`,
     );
+    expect(preview.output()).toContain(`Archive (1): ${dropped.slug}`);
     expect(await statusOf(dropped.id)).toBe('published');
     expect(await activeRelease()).toBe(first);
 
-    await runActivateRelease([...args, '--apply'], commandIo().io);
+    await runActivateRelease(
+      [...args, '--plan', planIdIn(preview.output()), '--apply'],
+      commandIo().io,
+    );
     expect(await statusOf(dropped.id)).toBe('archived');
     expect(await activeRelease()).toBe(next);
 
+    const back = ['--release', first, '--expect-active', next];
+    const rollbackPreview = commandIo();
+    await runActivateRelease(back, rollbackPreview.io);
     const rollback = commandIo();
     await runActivateRelease(
-      ['--release', first, '--expect-active', next, '--apply'],
+      [...back, '--plan', planIdIn(rollbackPreview.output()), '--apply'],
       rollback.io,
     );
     expect(rollback.output()).toContain(
@@ -150,7 +171,15 @@ describe('activate-release', () => {
 
     await expect(
       runActivateRelease(
-        ['--release', first, '--expect-active', 'none', '--apply'],
+        [
+          '--release',
+          first,
+          '--expect-active',
+          'none',
+          '--plan',
+          'c'.repeat(64),
+          '--apply',
+        ],
         commandIo().io,
       ),
     ).rejects.toThrow(`Release ${first} is active, not none as expected.`);
