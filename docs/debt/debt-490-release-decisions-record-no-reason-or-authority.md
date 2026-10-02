@@ -12,16 +12,18 @@
 
 ## Summary
 
-Every other change to what learners can practise records why it was made and on whose authority. The withdrawal and hold commands both require `--reason` and `--authority`, and a lift records its own. The release path records neither. Since [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix, a release can remove live questions, and an activation can publish, archive and permanently withdraw them. Yet:
+The withdrawal and hold commands require an operator-supplied `--reason` and `--authority`, and a lift records its own. Since [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix, a release can remove live questions, and an activation can publish, archive and permanently withdraw them. But the release path records no operator-supplied reason or authority anywhere:
 - an activation, a rollback or the bootstrap records only the release, the release it replaced and the time;
 - a `--remove` removal records only its kind, in the manifest;
-- a permanent withdrawal made by an `archived` removal records the release and a fixed authority, `content release`, not a person or a reason.
+- a permanent withdrawal made by an `archived` removal records generated metadata only: the reason `archived in content release <release id>` and the fixed authority `content release`. It names no person and no rationale.
+
+The direct seed's withdrawals for MDX archives use generated metadata the same way (see Evidence), so this is not new to releases. It matters more now because releases make removal and rollback routine operator actions.
 
 **Not live.** No production release exists. The gap becomes live with the production bootstrap, the owner's pending decision.
 
 ## How this was found
 
-On 2026-10-02 a side summary of DEBT-489's decision said that removals keep no written reason, and the owner asked whether that was true and whether it mattered. DEBT-489's [Fix](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02) had recorded a narrower decision: a removal records its intent (its kind), not a free-text reason, and a recorded reason for `--remove` was left as the owner's call. The investigation below confirms the summary. It also finds the gap is wider than removals: activations themselves are unattributed.
+On 2026-10-02 a side summary of DEBT-489's decision said that removals keep no written reason, only a generic one for permanent removals, and the owner asked whether that was true and whether it mattered. DEBT-489's [Fix](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02) had recorded a narrower decision: a removal records its intent (its kind), not a free-text reason, and a recorded reason for `--remove` was left as the owner's call. The investigation below confirms the summary. It also finds the gap is wider than removals: activations themselves are unattributed.
 
 ## Evidence
 
@@ -29,7 +31,7 @@ Code at `9db189be`:
 - **Activation receipts.** `content_release_activations` (migration `0047`, `db/schema.ts`) holds `release_id`, `previous_release_id` and `activated_at`. There is no reason, authority or operator.
 - **Releases.** `content_releases` holds `manifest`, `manifest_hash`, `parent_release_id` and `created_at`, with no author.
 - **Removals.** A manifest v2 removal is `{slug, kind}` (`scripts/content-release/release-manifest.ts`). `stage-release.ts` accepts `--remove <qid>` with no reason.
-- **Withdrawals made by a release.** `release-activation.ts` records an `archived` removal's withdrawal with reason `archived in content release <release id>` and authority `content release`.
+- **Withdrawals made by a release.** `release-activation.ts` records an `archived` removal's withdrawal with the generated reason `archived in content release <release id>` and the fixed authority `content release`.
 - **The precedent.** Before releases, the direct seed records an MDX archive the same way, with reason `archived in seed input` and authority `content seed` (`scripts/seed/question-syncer.ts`). Authored archives have never carried a person or a reason, and DEBT-489 kept that precedent.
 - **The contrast.** `withdraw-questions.ts` and `hold-questions.ts` require `--reason` and `--authority` (`scripts/seed/qid-command-args.ts`), and a lift records `lift_reason` and `lift_authority` (migration `0048`).
 - **Not shown to learners.** No application code under `src/`, `app/`, `lib/` or `components/` reads a withdrawal's or hold's reason or authority. They are an operator audit record. The gap affects accountability, not what learners see.
