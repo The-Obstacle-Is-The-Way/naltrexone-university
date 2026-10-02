@@ -394,7 +394,7 @@ Any failure rolls the whole transaction back, and the previous release stays act
 - **4b, releases and activation:** the release tables, holds, the activation transaction and the first activation, with a real-Postgres case for each rule above, including an injected failure. The direct seed, including its placeholder archival, refuses a database that has an active release. Each seed transaction reads the pointer under a share lock, which activation's update lock excludes, so a seed write and an activation cannot interleave. Before the first activation the seed and the withdrawal command write `status`; after it, only activations and the withdrawal command do (#1290 review). No release is activated in production in this step.
 - **4c, the operator commands and the release builder**, as two PRs:
   - **4c-i:** commands to bootstrap, activate (rollback included) and place and lift holds.
-  - **4c-ii:** staging for the production seed path.
+  - **4c-ii:** staging for the production seed path, the release builder.
 
   The first production activation follows 4c-ii. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
 - **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
@@ -524,6 +524,47 @@ The withdrawal command shares the QID argument parser (`scripts/seed/qid-command
 - the dry run's rollback.
 
 The lift-record case also caught a real defect before any push. The first check, `lift_reason ~ '…'`, evaluates to NULL when the reason is NULL, and a CHECK passes on NULL, so a lift without a record was accepted. The check now tests `IS NOT NULL` explicitly. 0048 had not been pushed, so it was corrected in place, and the clone's database was reversed and re-migrated.
+
+## The release builder (phase 4c-ii) — 2026-10-01
+
+`scripts/content-release/stage-release.ts` stages the MDX bundle as a release on the active release. Its drafts, non-current revisions and release items are not visible to learners until activation. The exception is tags, which are not versioned (ADR-021 decision 1), so a tag change takes effect when it is staged (#1298 review). `release-builder.ts` holds the logic.
+
+**What staging writes.**
+- It checks the whole bundle first, with the seed's own preparation: every file parses, slugs are unique and tag definitions agree.
+- In one transaction it then:
+  - takes the pointer for share and locks the bundle's existing questions in id order;
+  - inserts each new question as a draft;
+  - for changed content, appends a revision that does not become current, or reuses an existing revision with the same content;
+  - replaces tags in place where they changed (they are not versioned, ADR-021 decision 1);
+  - records an authored `archived` file as a withdrawal, as the seed does;
+  - names every `published` file as an item at the revision matching it.
+- A release with the same manifest on the same parent is reused rather than written again.
+- Activation stays a separate, explicit step. The command prints it.
+
+**What it refuses.**
+- **No active release.** Bootstrap first; until then the direct seed writes content.
+- **A withdrawn question in any file not archived.** #953: a correction takes a new QID.
+- **A bundle with no published file.** Activating it would take every question out of the bank.
+- A refusal writes nothing at all, because the stage is one transaction.
+
+**How production changes content once bootstrapped.** Stage, preview the activation with the printed command, then activate it with `--apply`. `pnpm db:seed`, and the managed seed that wraps it, refuse a database with an active release. **When to bootstrap production is an owner decision**, because it changes how content is published: until then the direct seed keeps working.
+
+**Verification.** 9 real-Postgres cases against a disposable database:
+- staging new and changed content invisibly, then activation publishing it, archiving a question whose file became a draft, and moving the changed question to its new revision;
+- reusing a matching revision and the identical release on a restage;
+- an `archived` file recorded as a withdrawal and left out;
+- a withdrawn question refused, with nothing written, not even another file's new question;
+- an empty release refused;
+- an invalid file stopping the stage before any write;
+- the command's dry run, apply and printed activation, and an unknown argument.
+
+**Red first.** The suite was written first and failed on the missing module. A mutation check then removed six rules in turn, and each removal failed a case:
+- the revision staying non-current;
+- the draft status;
+- the withdrawn refusal;
+- the empty-release refusal;
+- reusing a matching revision;
+- reusing an identical release.
 
 ## Related
 

@@ -52,3 +52,18 @@ export function formatActivation(summary: ActivationSummary): string {
     `excludedHeld=${summary.excludedHeld}`,
   ].join(' ');
 }
+
+// For commands whose only argument is --apply.
+export function parseApplyFlag(argv: readonly string[]): {
+  apply: boolean;
+} {
+  let apply = false;
+  for (const arg of argv) {
+    if (arg === '--apply' && !apply) {
+      apply = true;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+  return { apply };
+}
