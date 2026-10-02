@@ -53,3 +53,13 @@ the [audit ledger](./assets/content-release-audit-2026-10-02.md). Focused
 integration: 15 passed. Full exact-head gate, review and merge receipts are
 recorded in the PR when complete. No production promotion is claimed; this
 record remains open.
+
+## Review follow-up
+
+The first PR #1302 CI test job passed, but Codecov correctly identified the
+uncovered combined migration/cleanup-error branch (96.66% patch coverage against
+97.42%). A real-Postgres case now transfers the test database from its temporary
+creator to the local administrator before the migration throws. The creator's
+cleanup is refused; the helper must retain both errors and the original cause.
+The administrator then removes only this test's database and temporary role.
+The test bounds its catalog wait with a PostgreSQL statement timeout.
