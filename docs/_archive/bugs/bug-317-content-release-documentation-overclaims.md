@@ -1,12 +1,12 @@
 # BUG-317: Content Release Guidance Overstates Isolation and Clinical Behaviour
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-10-02
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-02
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-02-utc)
 
 ## Evidence and reproduction
 
@@ -70,7 +70,25 @@ before that fix.)*
 ## Local implementation receipt — 2026-10-02
 
 The recorded fix is implemented locally, with red/green and mutation evidence in
-the [audit ledger](./assets/content-release-audit-2026-10-02.md). Focused
+the [audit ledger](../../bugs/assets/content-release-audit-2026-10-02.md). Focused
 integration: 15 passed. Full exact-head gate, review and merge receipts are
 recorded in the PR when complete. No production promotion is claimed; this
 record remains open.
+
+## Verified closeout — 2026-10-02 UTC
+
+Release guidance states staging's effects, lift precedence and saved-draft grading as the code behaves. Documentation only; no scoring or withdrawal policy changed. Each Verification item was re-run against `main`'s code before archival (the archiving branch differs from `7dcb9331` only in documentation), with the release, withdrawal, seed and cleanup integration suites: 15 files, 163 cases, all passed.
+
+| Verification | Holds | Receipt on `main`'s code |
+| --- | --- | --- |
+| Staging's effects are stated as the code behaves | Yes, and narrowed since | After this record, DEBT-489's fix moved an authored archive's withdrawal to activation, so staging is again private except for tags; the guide says so (#1303, #1311) |
+| A lift restores eligibility only without a question-wide withdrawal | Yes | `content-pipeline.md`, Releases; the precedence is exercised by the withdrawal and rollback cases in `content-release-verification` |
+| No claim that a held item is not graded | Yes | DEBT-483's learner section and the guide no longer claim it; saved exam drafts are graded against their bound revisions (`finalize-exam-answers.ts`) |
+| Stale completion prose corrected | Yes | The register and storage paragraphs describe shipped work as shipped |
+
+**Increments.** #1302 (**5388054704** on `69733bb9`; merged `93f8104a`); dated notes were added after DEBT-489's fix in #1305, and the guidance was made exact in #1311 (**5390129377** on `08150590`; merged `9db189be`).
+
+**Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, healthy production.
+
+**Deferred, not resolved.** The clinical suitability of labelling a held or dropped question as withdrawn, for a learner who attempted it, remains the owner's question. It moves to the debt register's Deferred table, since this register has none. No scoring or labelling policy is decided here.
+

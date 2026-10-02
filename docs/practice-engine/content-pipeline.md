@@ -220,7 +220,7 @@ that tree, delete old output, withdraw database rows, or run seed. Preserve the
 current imported tree while generating and checking its replacement. A failed
 write can leave an incomplete **staging** directory; successful parsing alone is
 not a completed artifact. No atomic release/rollback interface is provided here.
-See [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+See [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
 
 The managed environment seed (`pnpm db:seed:all`) follows the same boundary through
 `scripts/prepare-seed-corpus.ts`. It imports into a fresh `content/.import-staging-*`
@@ -331,9 +331,9 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-q
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
-Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
+Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
 
-**What a release removes ([DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
+**What a release removes ([DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
 - **A member stays in the release** if its file is `published`.
 - **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove`.
 - **A withdrawn member** may be absent.
@@ -512,7 +512,7 @@ That conclusion applied to the 2026-03-17 audit. The historical-identity gap is
 closed: question revisions and history binding shipped under
 [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md), resolved 2026-09-30.
 Current withdrawal and release gaps remain tracked in
-[DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+[DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
 
 ---
 
@@ -563,7 +563,7 @@ Before seeding, ensure the target database schema is up to date:
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
 
-The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). No database has one yet, and bootstrapping production is the owner's decision ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). No database has one yet, and bootstrapping production is the owner's decision ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
 
 ---
 

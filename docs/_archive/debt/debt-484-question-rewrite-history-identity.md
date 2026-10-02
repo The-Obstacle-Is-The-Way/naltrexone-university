@@ -726,5 +726,5 @@ ADR-021's phases 1–3 are implemented, reviewed, promoted to `main` and release
 
 ## Related
 
-- [DEBT-483](../../debt/debt-483-content-withdrawal-and-release-rollback.md)
+- [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)
 - Content SPEC-005 approval hashes and SPEC-007 release identity.
