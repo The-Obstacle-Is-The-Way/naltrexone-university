@@ -170,6 +170,7 @@ All on disposable databases. Each case was red before its code existed, or fails
   - the bootstrap passing its plan on.
 
   One survives: dropping the replaced release from the plan. The stale check already refuses an apply whose active release differs from the one it names, so this entry adds no protection on its own. It stays, so that the plan names the whole transition.
+- **No fail-open exclusion.** Promotion #1306's review found that activation's completeness check excluded named removals with `NOT IN (subquery)`, which matches no row if the subquery yields a NULL. That would let the check pass silently. It could not happen then, since the manifest is validated earlier in the same transaction, but the guard no longer depends on that: every exclusion is now `NOT EXISTS`. Removing that clause fails 6 cases.
 - **A precedence trap, closed.** The first query naming the overlay's exclusions wrote `NOT ${ELIGIBLE}`, which expanded to `NOT NOT withdrawn AND NOT held`. Existing count assertions caught it at once. The fragment is now parenthesized where it is defined, so every use negates and combines it as one condition.
 
 ## Related

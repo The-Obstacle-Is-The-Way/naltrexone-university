@@ -339,7 +339,8 @@ export async function activateRelease(
     // DEBT-489: a new release accounts for every member of the active
     // release, as an item, a named removal, or a question already withdrawn.
     // Absence alone never removes a question. A rollback restores a snapshot
-    // that was live, so it is exempt.
+    // that was live, so it is exempt. Every exclusion is NOT EXISTS, never
+    // NOT IN, so a NULL cannot make the check pass silently.
     if (!isRollback && previousReleaseId !== null) {
       const unaccounted = await tx.execute<{ slug: string }>(sql`
         SELECT q.slug FROM content_release_items member
@@ -353,9 +354,10 @@ export async function activateRelease(
             SELECT 1 FROM question_withdrawals w
             WHERE w.question_id = member.question_id
           )
-          AND q.slug NOT IN (
-            SELECT jsonb_array_elements(r.manifest -> 'removals') ->> 'slug'
-            FROM content_releases r WHERE r.id = ${release.id}
+          AND NOT EXISTS (
+            SELECT 1 FROM content_releases r,
+              jsonb_array_elements(r.manifest -> 'removals') AS removal
+            WHERE r.id = ${release.id} AND removal ->> 'slug' = q.slug
           )
         ORDER BY q.slug
       `);
