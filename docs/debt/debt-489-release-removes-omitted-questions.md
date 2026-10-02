@@ -1,6 +1,6 @@
 # DEBT-489: A Release Silently Removes Every Live Question Its Bundle Omits
 
-**Status:** In Progress. Filed 2026-10-02 and fixed in code the same day ([Fix](#fix--2026-10-02)): explicit removals, staging that records no withdrawal (tags still change when staged) and an apply bound to its reviewed plan. It closes with [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md) once the fix is released. Until then it blocks the owner's decision to bootstrap production releases.
+**Status:** In Progress. Filed 2026-10-02 and fixed in code the same day ([Fix](#fix--2026-10-02)): explicit removals, staging that records no withdrawal (tags still change when staged) and an apply bound to its reviewed plan. Released 2026-10-02 through promotion #1312 (`7dcb9331`), so it no longer blocks the owner's decision to bootstrap production releases. It closes with [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md).
 **Priority:** P1
 **Date:** 2026-10-02
 **Confidence:** CONFIRMED by reproduction on a disposable database. Not live: no production release is active, so production still seeds directly.
