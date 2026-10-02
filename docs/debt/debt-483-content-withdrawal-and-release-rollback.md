@@ -397,7 +397,7 @@ Any failure rolls the whole transaction back, and the previous release stays act
   - **4c-ii:** staging for the production seed path, the release builder.
 
   The first production activation follows 4c-ii. Until then no production release is active and the direct seed runs, so content updates are never blocked (#1290 review).
-- **4d, rollback and closure:** the rollback command, the Verification suite above on disposable databases, docs and closeout.
+- **4d, verification and closure:** the Verification suite above on disposable databases, docs and closeout. Rollback needs no command of its own: `activate-release.ts` naming an earlier release is the rollback (4c-i).
 
 **Decided here, under the owner's delegation.**
 - Withdrawal is recorded per revision but ordered per question.
@@ -565,6 +565,29 @@ The lift-record case also caught a real defect before any push. The first check,
 - the empty-release refusal;
 - reusing a matching revision;
 - reusing an identical release.
+
+## Verification suite (phase 4d) — 2026-10-02
+
+The Verification this record asks for is demonstrated end to end in `tests/integration/content-release-verification.integration.test.ts`, against a disposable database. Each case drives the operator commands and the release engine as an operator would.
+
+| Verification | Case |
+|---|---|
+| Withdrawal | A withdrawal archives the question at once. Re-applying the release that still names it, and activating a newer release, both keep it out. |
+| Preserved attempts | A learner answered the question before it was withdrawn. Their attempt rows are unchanged, and the real history read (`GetAttemptedQuestionsUseCase` over the Drizzle repositories) still lists it, marked withdrawn, as the revision they answered. |
+| No resurrection from stale output | A stale MDX file for a withdrawn question is refused by the direct seed before releases, and by staging after the bootstrap. |
+| Rejection of stale releases | A release staged on a base that is no longer active is rejected, even with the active release named, and nothing changes. |
+| Rollback with revocation checks | A rollback to the bootstrap release keeps out a question withdrawn since and a revision held since, and reports both exclusions. |
+| No visible partial release after injected failure | A trigger pauses activation at its last write, after every question has changed, until the test releases an advisory lock. A reader on another connection sees the old state throughout. When the activation fails, the reader still sees the old state and pointer; when it commits instead, the reader sees the whole new release at once. |
+
+**Results.** 7 cases, which passed three consecutive runs locally. The withdrawal command now takes the same injectable `env` and `log` as the release commands, so it runs in-process here.
+
+**What this suite adds.** Earlier steps proved each rule red first: 4a, 4b, 4c-i by a mutation check, and 4c-ii. This suite proves them together on one fresh, fully migrated database. Its new evidence is the cross-connection visibility case and the preserved-attempts read.
+
+**Closeout.** This record closes in a docs-only follow-up once this step is released, with release receipts. The remaining tails go to the register's Deferred table:
+- the production bootstrap, which is the owner's decision;
+- the managed seed's switch to staging after that bootstrap;
+- the contract step that moves selection onto release items and retires `questions.status`;
+- ADR-021's release zero, which waits for the content repository to compute `stored-fields-json-v1`.
 
 ## Related
 

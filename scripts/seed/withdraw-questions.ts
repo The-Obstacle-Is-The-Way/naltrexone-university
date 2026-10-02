@@ -10,13 +10,21 @@ import {
   recordWithdrawals,
 } from './question-withdrawal-writer';
 
+type CommandIo = {
+  env?: Readonly<Record<string, string | undefined>>;
+  log?: (message: string) => void;
+};
+
 export async function runContentWithdrawal(
-  argv = process.argv.slice(2),
+  argv: readonly string[] = process.argv.slice(2),
+  { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { qids, apply, record } = parseQidCommandArgs(argv, {
     decision: 'withdrawal',
   });
   await runHumanDatabaseCommand({
+    env,
+    log,
     execute: async (databaseUrl) => {
       const sql = postgres(databaseUrl, { max: 1 });
       const db = drizzle(sql, { schema });
@@ -63,11 +71,11 @@ export async function runContentWithdrawal(
             revisions: unrecorded.length,
           };
         });
-        console.info(`Withdrawal QIDs: ${qids.join(', ')}`);
-        console.info(
+        log(`Withdrawal QIDs: ${qids.join(', ')}`);
+        log(
           `Withdrawal reason: ${record.reason} (authority: ${record.authority})`,
         );
-        console.info(
+        log(
           apply
             ? `Content withdrawal: archived=${counts.archive} alreadyArchived=${counts.alreadyArchived} revisionsWithdrawn=${counts.revisions}`
             : `Content withdrawal (dry-run): archive=${counts.archive} alreadyArchived=${counts.alreadyArchived} revisionsToWithdraw=${counts.revisions}`,

@@ -3,16 +3,17 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-01 UTC
 
-**Latest** — 2026-10-01 UTC: DEBT-483 phase 4c-ii adds the release builder, and phases 4b and 4c-i are in production ([DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)).
-- **The release builder** (`scripts/content-release/stage-release.ts`). It stages the MDX bundle as a release on the active release, in one transaction. Nothing it stages is visible to learners before activation, except tag changes, which are not versioned and take effect when staged:
-  - new questions are drafts;
-  - changed content is a revision that does not become current, or reuses a matching one;
-  - an authored `archived` file is recorded as a withdrawal;
-  - each `published` file becomes an item;
-  - an identical release on the same parent is reused.
-- **It refuses** with no active release, for a withdrawn question in a file that is not archived, and for a bundle with no published file. Activation stays a separate step, and the command prints it.
-- **Tests.** 9 disposable-database cases, written first. Removing any of six rules fails a case.
-- **4b and 4c-i released.** #1296 (**5384580887** on `545ba316`; two findings fixed; merged `65ab9bd1`) went with #1292 and #1294 through promotion #1297 (`d9ecc2c1`, approved with no findings). Release verified: main CI **36919277047** `test` **20:21:25Z**; production assigned **20:21:28.347Z**; matching trees `be951d6b`; production healthy. The production build applied 0047 and 0048, and its ledger checks matched before and after.
+**Latest** — 2026-10-02 UTC: DEBT-483's Verification is demonstrated on a disposable database, and the release builder is in production ([DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)).
+- **4d, the verification suite** (`tests/integration/content-release-verification.integration.test.ts`). It drives the operator commands and the release engine through one case per item of the Verification:
+  - withdrawal;
+  - preserved attempts, read through the real history use case;
+  - no resurrection from stale output, by the seed and by staging;
+  - rejection of a stale release;
+  - rollback with revocation checks, for a withdrawn question and a held revision;
+  - no visible partial release. A reader on another connection sees nothing of an activation paused at its last write, then either the old state after a failure or the whole new release after a commit.
+- **Results.** 7 cases, which passed three consecutive runs. The withdrawal command takes injectable `env` and `log`, like the release commands.
+- **Closeout.** DEBT-483 closes in a docs-only follow-up once this step is released, and its tails go to the Deferred table.
+- **4c-ii released.** #1298 (**5386991902** on `a622027e`; three findings fixed; merged `46345b75`) was promoted through #1299 (`6bc8fd40`, approved with no findings). Release verified: main CI **36946359614** `test` **00:41:49Z**; production assigned **00:41:51.367Z**; matching trees `441bfade`; production healthy.
 - **Open decisions for the owner.**
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and content changes only by staging a release, previewing its activation and activating it. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real.
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
