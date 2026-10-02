@@ -36,7 +36,7 @@ Each recurrence costs a closed promotion, a repair PR with its own gate and revi
 1. Red tests first:
    - the decision refuses when neither `dev` nor the PR head contains `main`, and accepts either;
    - the command reads the ancestry before posting its receipt, and never merges after a refusal.
-2. `merge-reviewed-pr.ts` reads `main`'s head, checks `dev` first and then the PR head, and records which one carries `main` in its receipt.
+2. `merge-reviewed-pr.ts` reads `main`'s head and checks the PR head first, then `dev` only when the PR head lacks `main`. It records which one carries `main` in its receipt.
 3. AGENTS.md's description of the command says it refuses a merge that would leave `dev` without `main`.
 
 ## Verification
@@ -65,6 +65,8 @@ Implemented as option 2, in the same change as this record:
 **Mutations.** Removing the refusal fails two cases, and so does removing the `dev` fallback.
 
 **Live check.** `gh api .../compare/main...dev` returned `behind_by: 1` on 2026-10-02, after promotion #1317: that is exactly the state this guard refuses to extend.
+
+**Boundary: early detection, not a lock.** The check reads `main` before the merge. If a promotion merged into `main` between that read and the merge itself, the check would describe the older `main`. That needs a promotion and a feature merge to run at the same moment. Here they are run one after the other by the same operator, but nothing in the repository enforces that. If it ever happened, the outcome is the state before this fix: `verify-promotion` refuses the next promotion, and a repair PR follows. `verify-promotion` remains the enforcement and fails closed. A cross-workflow lock would add a shared mutable resource to guard a window that already fails safe, so none is added.
 
 The record resolves once this is released.
 
