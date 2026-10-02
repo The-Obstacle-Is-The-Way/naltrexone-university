@@ -314,14 +314,15 @@ ADR-021 phase 4's operator commands live in `scripts/content-release/`. Like the
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
   --plan "<plan-id>" --apply
-# Stage the MDX bundle as a release on the active release. Every live question
-# must appear in the bundle; name one whose file is absent on purpose with --remove.
+# Stage the MDX bundle as a release on the active release. Every question the
+# active release names must appear in the bundle unless it is withdrawn; name
+# one whose file is absent on purpose with --remove.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts --apply
 # Preview its activation: it prints the plan id, every question it archives,
 # publishes or moves and withdraws, and the items a hold or withdrawal leaves out.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<release-id>" --expect-active "<active-release-id>"
-# Apply exactly the plan you reviewed. If anything changed since, nothing is applied.
+# Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<release-id>" --expect-active "<active-release-id>" --plan "<plan-id>" --apply
 # Roll back: preview and apply the earlier release the same way.
@@ -330,15 +331,15 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-q
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
-Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and content changes only through releases: stage, preview the activation, then apply its plan. **Bootstrapping production is the owner's decision**, because it changes how content is published ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
+Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
 
-**What a release removes ([DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)).** A release accounts for every live question, meaning every member of the active release, held ones included:
-- **A member stays** if its file is `published`.
+**What a release removes ([DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
+- **A member stays in the release** if its file is `published`.
 - **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove`.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
 
-**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses a withdrawn question and a bundle with no published file, and is one transaction.
+**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
 
 **Applying is bound to the reviewed plan.** The plan id covers:
 - the release and the release it replaces;
@@ -346,7 +347,7 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 - every question it archives;
 - every question it withdraws.
 
-Activation recomputes the plan under its own locks and refuses a different one. A hold, a withdrawal or any other change between preview and apply therefore means a fresh preview. A rollback is previewed and applied the same way, and still honors current holds and withdrawals: a withdrawal is permanent.
+Activation recomputes the plan under its own locks and refuses a different one. So a hold, a withdrawal, a lift, or anything else between preview and apply that changes one of those sets means a fresh preview. Tags are outside the plan: they are not versioned, so a tag change does not change it. A rollback is previewed and applied the same way, and still honors current holds and withdrawals: a withdrawal is permanent.
 
 A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
 

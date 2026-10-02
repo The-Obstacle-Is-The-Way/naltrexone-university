@@ -122,7 +122,7 @@ No release exists on Preview or production to carry the old format: per the reco
 - A bundle that leaves out any other member is refused. The error names the missing QIDs, and nothing is written.
 - `--remove` must name a member whose file is absent. A QID whose file is in the bundle, or that the active release does not name, is refused.
 - Staging records no withdrawal. An abandoned release leaves behind only what no learner sees (drafts, non-current revisions, the release itself) and its tag changes, since tags are not versioned (ADR-021 decision 1).
-- Stagings run one at a time. Since [BUG-314](../bugs/bug-314-content-hold-withdrawal-deadlock.md), every content writer takes the release pointer exclusively, so a second identical staging reuses the first's release.
+- Stagings run one at a time. Since [BUG-314](../bugs/bug-314-content-hold-withdrawal-deadlock.md), every supported content writer takes the release pointer exclusively, so a second identical staging reuses the first's release.
 
 **Activation**, under the pointer and question locks:
 - A release never active before must account for every member of the active release: as an item, as a removal, or as a withdrawn question. Otherwise it is refused (`INCOMPLETE_RELEASE`). This repeats staging's check where the release is applied, so a release staged any other way is held to it too. A rollback is exempt, because it restores a snapshot that was live before.
@@ -149,7 +149,7 @@ The plan names the release by identity rather than by row id. That lets the boot
 | Boundary | How the fix meets it | Test |
 |---|---|---|
 | Held members belong to the parent | Staging and activation compare against the active release's items, held ones included | builder: *counts a held question as live, and lets a withdrawn one be left out* |
-| Review revisions and reasons | The preview names every change, including overlay exclusions; the manifest keeps each removal's kind; reasons as decided above | plan: *names every change in the plan…*, *names the items a hold or a withdrawal leaves out* |
+| Review revisions and reasons | The preview names every change activation makes, and the overlay's exclusions; the manifest keeps each removal's kind; reasons as decided above | plan: *names every change in the plan…*, *names the items a hold or a withdrawal leaves out* |
 | One lock boundary | The plan is computed under the pointer and question locks, by the same predicates as the writes, and includes unchanged eligible revisions | plan: *refuses a plan id that no longer matches, changing nothing* |
 | Concurrent staging | A release never active before must be built on the active one; stagings are serialized (BUG-314) | activation: *rejects a new release built on an earlier release…*; concurrency: *reuses the release when identical new-only bundles stage concurrently* |
 | Rollback keeps current clinical decisions | The overlay applies to a rollback, and its plan is bound | activation: *rolls back to an earlier release without resurrecting a withdrawn question*; plan: *gives a rollback its own plan, which must match too* |

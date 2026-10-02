@@ -33,8 +33,9 @@ Selection still reads materialized `questions.status` and `current_revision_id`,
 not release items directly. Activation checks the caller's expected active
 release and, except for a previously activated rollback target, its parent.
 Since [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02),
-a new release must account for every live question, as an item or a named
-removal, and an apply is bound to the plan its preview printed. Staging does
+a new release must account for every question the active release names,
+unless it is withdrawn, as an item or a named removal, and an apply is bound
+to the plan its preview printed. Staging does
 not move existing revision pointers and records no withdrawal; only tags
 change the live bank before activation.
 Withdrawals exclude the whole question across revisions; holds exclude one
