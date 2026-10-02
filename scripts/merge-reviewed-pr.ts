@@ -287,6 +287,21 @@ export function checkFeatureMerge(
   };
 }
 
+// DEBT-491: every promotion adds a merge commit that only main has. dev must
+// keep containing main, or the next promotion cannot be verified, so a merge
+// into dev needs main in the PR head or already in dev.
+export function checkCarriesMain(ancestry: {
+  main: string;
+  headContainsMain: boolean;
+  devContainsMain?: boolean;
+}): 'head' | 'dev' {
+  if (ancestry.headContainsMain) return 'head';
+  if (ancestry.devContainsMain) return 'dev';
+  throw new Error(
+    `Merging would leave dev without main's latest promotion (${ancestry.main.slice(0, 8)}): base the branch on origin/main, or merge origin/main into it`,
+  );
+}
+
 export function exactHeadApproval(reviewPages: unknown, head: string) {
   const reviews = reviewPagesSchema.safeParse(reviewPages);
   if (!reviews.success) throw new Error('Invalid GitHub review response');
@@ -380,6 +395,31 @@ function readCompareFiles(base: string, head: string) {
   return files;
 }
 
+// behind_by counts the base's commits that the head lacks.
+const compareWithMainSchema = z.object({
+  behind_by: z.number().int().nonnegative(),
+  base_commit: z.object({ sha: z.string().regex(/^[0-9a-f]{40}$/) }),
+});
+
+function compareWithMain(base: string, head: string) {
+  return compareWithMainSchema.parse(
+    JSON.parse(gh(['api', `repos/${REPOSITORY}/compare/${base}...${head}`])),
+  );
+}
+
+// Whether main's head is in the PR head; if not, whether dev, compared with
+// the same main commit, already has it.
+export function readMainAncestry(head: string) {
+  const withHead = compareWithMain('main', head);
+  const main = withHead.base_commit.sha;
+  if (withHead.behind_by === 0) return { main, headContainsMain: true };
+  return {
+    main,
+    headContainsMain: false,
+    devContainsMain: compareWithMain(main, 'dev').behind_by === 0,
+  };
+}
+
 // Reads the carry evidence only for a Dependabot PR whose latest CodeRabbit
 // verdict is an approval on an earlier head.
 export function readDependabotCarryEvidence(
@@ -424,13 +464,17 @@ export function runMergeReviewedPr(
   );
   if (receipt.number !== Number(number))
     throw new Error('PR number changed during verification');
-  write(JSON.stringify(receipt));
+  const verified = {
+    ...receipt,
+    carriesMain: checkCarriesMain(readMainAncestry(receipt.head)),
+  };
+  write(JSON.stringify(verified));
   if (args[1] === '--merge') {
     // AGENTS.md keeps this receipt with the PR; posting it first puts it on
     // GitHub before the merge it justifies.
     gh(
       ['pr', 'comment', number, '--repo', REPOSITORY, '--body-file', '-'],
-      `Reviewed-merge receipt (\`scripts/merge-reviewed-pr.ts ${number} --merge\`), verified before merging:\n\n\`\`\`json\n${JSON.stringify(receipt)}\n\`\`\`\n`,
+      `Reviewed-merge receipt (\`scripts/merge-reviewed-pr.ts ${number} --merge\`), verified before merging:\n\n\`\`\`json\n${JSON.stringify(verified)}\n\`\`\`\n`,
     );
     write(
       gh([
@@ -441,11 +485,11 @@ export function runMergeReviewedPr(
         REPOSITORY,
         '--merge',
         '--match-head-commit',
-        receipt.head,
+        verified.head,
       ]),
     );
   }
-  return receipt;
+  return verified;
 }
 
 if (

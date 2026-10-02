@@ -700,7 +700,10 @@ threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
 ADR-020, except on a complete changed-file list confined to `package.json`,
 `pnpm-lock.yaml` and `.github/`, where Codecov cannot post and nothing is
 measured; see its 2026-09-28 amendment), green checks, and a clean, mergeable,
-non-draft PR. Incomplete/truncated thread or check data fails closed. The merge uses
+non-draft PR. Incomplete/truncated thread or check data fails closed. It also refuses a merge
+that would leave `dev` without `main`'s latest promotion merge commit: `main`'s head
+must be in the PR head or already in `dev` (DEBT-491). Base each branch made after a
+promotion on `origin/main`, or merge `origin/main` into it. The merge uses
 `--match-head-commit` so a subsequent push cannot substitute unreviewed code.
 With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
 This is mandatory operator tooling, not a claim that GitHub's zero-approval

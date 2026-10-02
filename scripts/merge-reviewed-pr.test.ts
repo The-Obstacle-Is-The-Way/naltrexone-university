@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  checkCarriesMain,
   checkFeatureMerge,
   type DependabotCarryEvidence,
   runMergeReviewedPr,
@@ -14,6 +15,12 @@ afterEach(() => vi.resetAllMocks());
 
 const HEAD = 'a'.repeat(40);
 const OLD_HEAD = 'b'.repeat(40);
+const MAIN = 'c'.repeat(40);
+const REPO = 'repos/The-Obstacle-Is-The-Way/naltrexone-university';
+// GitHub's compare of main against a ref: behind_by counts main's commits
+// the ref lacks (DEBT-491).
+const compareWithMain = (behind = 0) =>
+  JSON.stringify({ behind_by: behind, base_commit: { sha: MAIN } });
 const review = (state = 'APPROVED', commit = HEAD) => ({
   id: 123,
   user: { login: 'coderabbitai[bot]' },
@@ -408,6 +415,36 @@ describe('Dependabot approval carried across a rebase', () => {
   });
 });
 
+describe("dev keeps main's promotion history (DEBT-491)", () => {
+  it('accepts a PR head that contains main', () => {
+    expect(checkCarriesMain({ main: MAIN, headContainsMain: true })).toBe(
+      'head',
+    );
+  });
+
+  it('accepts a dev that already contains main', () => {
+    expect(
+      checkCarriesMain({
+        main: MAIN,
+        headContainsMain: false,
+        devContainsMain: true,
+      }),
+    ).toBe('dev');
+  });
+
+  it('refuses when neither the PR head nor dev contains main', () => {
+    expect(() =>
+      checkCarriesMain({
+        main: MAIN,
+        headContainsMain: false,
+        devContainsMain: false,
+      }),
+    ).toThrow(
+      `Merging would leave dev without main's latest promotion (${MAIN.slice(0, 8)}): base the branch on origin/main, or merge origin/main into it`,
+    );
+  });
+});
+
 describe('merge command', () => {
   function responses() {
     vi.mocked(execFileSync)
@@ -417,17 +454,60 @@ describe('merge command', () => {
         }),
       )
       .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce(compareWithMain())
       .mockReturnValueOnce('')
       .mockReturnValueOnce('merged');
   }
 
   it('checks without merging by default', () => {
     responses();
-    runMergeReviewedPr(['987'], () => {});
-    expect(execFileSync).toHaveBeenCalledTimes(2);
+    const receipt = runMergeReviewedPr(['987'], () => {});
+    expect(execFileSync).toHaveBeenCalledTimes(3);
     expect(vi.mocked(execFileSync).mock.calls[1]?.[1]).toEqual(
       expect.arrayContaining(['--paginate', '--slurp']),
     );
+    expect(vi.mocked(execFileSync).mock.calls[2]?.[1]).toEqual([
+      'api',
+      `${REPO}/compare/main...${HEAD}`,
+    ]);
+    expect(receipt).toMatchObject({ carriesMain: 'head' });
+  });
+
+  it("refuses a merge that would leave dev without main's promotion, before any receipt", () => {
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({
+          data: { repository: { pullRequest: pullRequest() } },
+        }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce(compareWithMain(2))
+      .mockReturnValueOnce(compareWithMain(1));
+
+    expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
+      'merge origin/main into it',
+    );
+    expect(execFileSync).toHaveBeenCalledTimes(4);
+  });
+
+  it('accepts a PR whose head lacks main when dev contains it, comparing against the same main', () => {
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({
+          data: { repository: { pullRequest: pullRequest() } },
+        }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce(compareWithMain(1))
+      .mockReturnValueOnce(compareWithMain(0));
+
+    const receipt = runMergeReviewedPr(['987'], () => {});
+
+    expect(receipt).toMatchObject({ carriesMain: 'dev' });
+    expect(vi.mocked(execFileSync).mock.calls[3]?.[1]).toEqual([
+      'api',
+      `${REPO}/compare/${MAIN}...dev`,
+    ]);
   });
 
   it('refuses an API response for another PR before merging', () => {
@@ -470,7 +550,8 @@ describe('merge command', () => {
             { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'y' },
           ],
         }),
-      );
+      )
+      .mockReturnValueOnce(compareWithMain());
 
     const receipt = runMergeReviewedPr(['987'], () => {});
 
@@ -492,12 +573,13 @@ describe('merge command', () => {
       .mockReturnValueOnce(
         JSON.stringify({ data: { repository: { pullRequest: pr } } }),
       )
-      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', HEAD)]]));
+      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', HEAD)]]))
+      .mockReturnValueOnce(compareWithMain());
 
     const receipt = runMergeReviewedPr(['987'], () => {});
 
     expect(receipt).not.toHaveProperty('carriedFrom');
-    expect(execFileSync).toHaveBeenCalledTimes(2);
+    expect(execFileSync).toHaveBeenCalledTimes(3);
   });
 
   it('refuses to carry when a compare reaches GitHub’s 300-file ceiling', () => {
@@ -560,10 +642,11 @@ describe('merge command', () => {
     expect(calls.map(([, args]) => args?.slice(0, 2))).toEqual([
       ['api', 'graphql'],
       ['api', '--paginate'],
+      ['api', `${REPO}/compare/main...${HEAD}`],
       ['pr', 'comment'],
       ['pr', 'merge'],
     ]);
-    expect(calls[2]?.[1]).toEqual([
+    expect(calls[3]?.[1]).toEqual([
       'pr',
       'comment',
       '987',
@@ -572,7 +655,7 @@ describe('merge command', () => {
       '--body-file',
       '-',
     ]);
-    expect(calls[2]?.[2]).toMatchObject({
+    expect(calls[3]?.[2]).toMatchObject({
       input: expect.stringContaining(`"head":"${HEAD}"`),
     });
   });
