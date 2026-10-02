@@ -19,6 +19,12 @@ or changed. Applied migrations 0045–0048 were not edited; their files match
 | Held/dropped means withdrawn in the UI | VERIFIED in source: `get-question-for-view`, `get-attempted-questions`, and `get-user-stats` use `status !== 'published'`. Clinical suitability is UNVERIFIED. | BUG-317 corrects the claim that holds imply no grading; finalization still grades saved drafts against bound revisions. Owner scoring decision remains deferred. |
 | Latest #1301 eligibility wording finding | REFUTED: the omission implication is true; adjacent hold guidance and storage prose already explain eligibility. | CodeRabbit accepted the source-backed adjudication, withdrew the finding and resolved its thread. Formal exact-head approval and green CI preceded merge `243fec2b`. |
 
+*(2026-10-02, after this audit: [DEBT-489's fix](../../debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02)
+in #1303 makes every removal explicit and binds each apply to its reviewed
+plan. It also moves an authored archive's withdrawal from staging to
+activation, so staging is again private except for tags. The rows above
+describe the code this audit examined.)*
+
 ## Verification matrix
 
 The full baseline integration gate passed **629 tests, 12 skipped**. Focused

@@ -8,3 +8,8 @@ export function summarizeSeedSync(
 ): string {
   return `Seed complete: inserted=${counts.inserted} updated=${counts.updated} (new revisions=${counts.revised}) skipped=${counts.skipped} (files=${fileCount})`;
 }
+
+// BUG-315: only the committed synthetic fixtures are archived, by exact QID.
+export function summarizePlaceholderArchival(archivedCount: number): string {
+  return `Archived placeholders: ${archivedCount} (the ten committed fixture QIDs)`;
+}

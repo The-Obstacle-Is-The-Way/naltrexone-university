@@ -57,6 +57,12 @@ The ADR now explicitly separates the target release interface from the current
 materialized-status path, per-question withdrawals, staging effects, missing
 plan binding and update-only immutability.
 
+*(2026-10-02, after this record's fix: [DEBT-489's fix](../debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02)
+implemented the plan binding, and staging no longer records a withdrawal; an
+`archived` file is withdrawn when its release activates. The ADR and the
+pipeline guide now describe that behaviour. The probe above describes the code
+before that fix.)*
+
 ## Local implementation receipt — 2026-10-02
 
 The recorded fix is implemented locally, with red/green and mutation evidence in

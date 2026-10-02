@@ -151,7 +151,7 @@ Behavior:
 - Placeholder files under `content/questions/placeholder/**/*.mdx` are excluded
   unless `SEED_INCLUDE_PLACEHOLDERS=true`.
 - When placeholders are excluded, `archivePlaceholderQuestions()` archives
-  existing DB rows whose slug matches `placeholder-%`.
+  the ten committed fixtures' rows, by exact QID (BUG-315).
 - Seed appends changed content, including an answer-key or difficulty change,
   as a new revision of the question (ADR-021 phase 2b), and changes status and
   tags in place. Earlier attempts and sessions keep the revision they were shown
