@@ -1,8 +1,12 @@
 # BUG-315: Placeholder Archival Removes Authored Prefix Matches
 
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
 **Status:** Open
 **Priority:** P2
 **Date:** 2026-10-02
+**Resolved:** —
+**Verification receipts:** —
 
 ## Evidence and reproduction
 

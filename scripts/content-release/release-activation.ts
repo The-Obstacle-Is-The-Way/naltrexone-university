@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
 import { onlyRow } from '../seed/only-row';
@@ -313,6 +313,7 @@ export async function activateRelease(
     const itemsHash = releaseManifestHash(
       buildReleaseManifest(entries, manifest.removals),
     );
+    // In id order, so the plan's withdrawals are, like its other sets.
     const removed = await tx
       .select({ id: schema.questions.id, slug: schema.questions.slug })
       .from(schema.questions)
@@ -321,7 +322,8 @@ export async function activateRelease(
           schema.questions.slug,
           manifest.removals.map((removal) => removal.slug),
         ),
-      );
+      )
+      .orderBy(asc(schema.questions.id));
     if (
       itemsHash !== manifestHash ||
       removed.length !== manifest.removals.length
@@ -414,9 +416,7 @@ export async function activateRelease(
         )
       ORDER BY q.id
     `);
-    const withdrawing = removed
-      .filter((row) => withdrawnIds.has(row.id))
-      .sort((a, b) => (a.id < b.id ? -1 : 1));
+    const withdrawing = removed.filter((row) => withdrawnIds.has(row.id));
     const planId = createHash('sha256')
       .update(
         JSON.stringify({

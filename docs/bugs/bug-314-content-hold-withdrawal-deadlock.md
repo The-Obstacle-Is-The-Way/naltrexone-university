@@ -1,8 +1,12 @@
 # BUG-314: Content Writers Do Not Share One Serialization Boundary
 
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
 **Status:** Open
 **Priority:** P2
 **Date:** 2026-10-02
+**Resolved:** —
+**Verification receipts:** —
 
 ## Evidence and reproduction
 
@@ -30,7 +34,7 @@ question-insert trigger. Both held the pointer for share and saw no existing
 question. Releasing the barrier produced one success and one `23505` uniqueness
 failure. Sequential reuse does not guarantee concurrent reuse.
 
-Two more real-Postgres probes establish learner-facing lock edges:
+Three more real-Postgres probes establish learner-facing lock edges:
 
 - An attempt transaction inserts the higher-ID question, acquiring its foreign
   key KEY SHARE lock, then inserts the lower question. Concurrent activation
@@ -101,3 +105,16 @@ the [audit ledger](./assets/content-release-audit-2026-10-02.md). Focused
 integration: 15 passed. Full exact-head gate, review and merge receipts are
 recorded in the PR when complete. No production promotion is claimed; this
 record remains open.
+
+## Promotion review follow-up — 2026-10-02
+
+Promotion #1308's review found that, under a regression to `FOR UPDATE`, the
+attempt case in `content-release-reader-locks` failed on its own poll timeout,
+not on the deadlock. The case now lets the attempt take its second
+foreign-key lock once activation has finished *or* is seen waiting on a lock.
+With the fix, activation never waits on the attempt's KEY SHARE lock, so it
+finishes and both transactions commit. With activation's lock set back to
+`FOR UPDATE`, the same case fails with `40P01 deadlock detected`, which is the
+defect itself. The record's probe count is also corrected: three probes, not
+two.
+

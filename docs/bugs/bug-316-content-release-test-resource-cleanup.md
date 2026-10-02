@@ -1,8 +1,12 @@
 # BUG-316: Content Release Test Failures Leak or Block Resources
 
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-10-02
+**Resolved:** —
+**Verification receipts:** —
 
 ## Evidence and reproduction
 
