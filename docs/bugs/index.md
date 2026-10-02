@@ -1,12 +1,9 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-02 — BUG-314–317 filed.
+**Last Updated:** 2026-10-02 — BUG-316's test race fixed.
 
-**Latest** — 2026-10-02: BUG-314–317 filed from a disposable-Postgres audit:
-content writer deadlock/concurrent staging, authored placeholder-prefix archival,
-test-resource cleanup, and documentation overclaims. Reproduced before fixing; implementation and review
-receipts follow in their records. No production incident is established.
+**Latest** — 2026-10-02: BUG-316's combined migration/cleanup-error test had a race, now fixed ([BUG-316](./bug-316-content-release-test-resource-cleanup.md)). After #1302 merged, the case failed CI run `36965916479` with `permission denied for database`. It transferred its database's ownership before drizzle's migrator had created its schema. Reproduced in 12 of 24 concurrent local runs; the test now waits until the injected migration is running, and 24 concurrent runs then passed. BUG-314–317 stay open until their promotion receipts exist.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
