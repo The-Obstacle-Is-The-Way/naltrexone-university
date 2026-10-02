@@ -58,14 +58,14 @@ const HELD = sql`EXISTS (
 )`;
 const ELIGIBLE = sql`NOT ${WITHDRAWN} AND NOT ${HELD}`;
 
-async function readReleasePointer(
-  tx: Db,
-  strength: 'update' | 'share',
-): Promise<string | null> {
+// All supported content writers acquire this lock before any question row.
+// Serializing these operator transactions also covers nested hold activation
+// and concurrent staging of questions that do not exist yet (BUG-314).
+export async function lockReleasePointer(tx: Db): Promise<string | null> {
   const [pointer] = await tx
     .select({ activeReleaseId: schema.contentReleasePointer.activeReleaseId })
     .from(schema.contentReleasePointer)
-    .for(strength);
+    .for('update');
   if (!pointer) {
     throw new ReleaseActivationError(
       'POINTER_MISSING',
@@ -75,26 +75,12 @@ async function readReleasePointer(
   return pointer.activeReleaseId;
 }
 
-// Locks the pointer for update, as activation does, and returns the active
-// release.
-export async function lockReleasePointer(tx: Db): Promise<string | null> {
-  return readReleasePointer(tx, 'update');
-}
-
-// Reads the active release under a share lock, which waits for an
-// activation in progress.
-export async function readActiveReleaseForShare(
-  tx: Db,
-): Promise<string | null> {
-  return readReleasePointer(tx, 'share');
-}
-
 // DEBT-483 phase 4: once a release is active, only activation and the
 // withdrawal command write questions.status. The direct seed calls this first
-// in each of its transactions. The share lock waits for an activation in
-// progress, which holds the pointer for update, so the two never interleave.
+// in each transaction. Its exclusive pointer lock serializes it with every
+// other supported content writer before any question row is locked.
 export async function assertNoActiveRelease(tx: Db): Promise<void> {
-  const active = await readActiveReleaseForShare(tx);
+  const active = await lockReleasePointer(tx);
   if (active !== null) {
     throw new ReleaseActivationError(
       'RELEASE_ACTIVE',
@@ -174,6 +160,25 @@ export async function stageRelease(
   });
 }
 
+// A hold defers its question locks to this full, ordered activation set.
+// NO KEY UPDATE protects status/revision writes without
+// blocking learner attempt foreign-key KEY SHARE locks (BUG-314).
+async function lockActivationQuestions(
+  tx: Db,
+  releaseId: string,
+): Promise<void> {
+  await tx.execute(sql`
+    SELECT id FROM questions
+    WHERE status = 'published'
+      OR id IN (
+        SELECT question_id FROM content_release_items
+        WHERE release_id = ${releaseId}
+      )
+    ORDER BY id
+    FOR NO KEY UPDATE
+  `);
+}
+
 // ADR-021 decision 4: activation is one transaction. It checks that the
 // active release is the one the caller expects and, for a release never
 // active before, the release's parent; verifies the release; then
@@ -186,7 +191,7 @@ export async function activateRelease(
   input: { releaseId: string; expectedActiveReleaseId: string | null },
 ): Promise<ActivationSummary> {
   return db.transaction(async (tx) => {
-    // 1. The pointer first: the seed takes it for share, in the same order.
+    // 1. The pointer first: every content writer takes it first.
     const previousReleaseId = await lockReleasePointer(tx);
     if (previousReleaseId !== input.expectedActiveReleaseId) {
       throw new ReleaseActivationError(
@@ -243,16 +248,7 @@ export async function activateRelease(
 
     // 3. Lock every question this changes, in id order: the order the seed
     // and the withdrawal command lock them.
-    await tx.execute(sql`
-      SELECT id FROM questions
-      WHERE status = 'published'
-        OR id IN (
-          SELECT question_id FROM content_release_items
-          WHERE release_id = ${release.id}
-        )
-      ORDER BY id
-      FOR UPDATE
-    `);
+    await lockActivationQuestions(tx, release.id);
 
     // 4. Materialize. Drafts no release names are left as they are.
     const excluded = onlyRow(

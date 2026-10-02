@@ -587,11 +587,12 @@ export class DrizzlePracticeSessionRepository
         if (!row) return undefined;
 
         // ADR-021: a shared lock on the question rows serializes this read
-        // with a seed write, which takes the rows FOR UPDATE while it appends
+        // with a content write, which takes NO KEY UPDATE while it appends
         // a revision and moves the current pointer, so a session binds the
         // pointer as that write committed it. These shared locks do not block
-        // each other, though two creations for one user can still contend at
-        // the incomplete-session unique index (#1208 review).
+        // each other. ID ordering matches the content writers (BUG-314),
+        // preventing cycles across a batch. Two creations for one user can still
+        // contend at the incomplete-session unique index (#1208 review).
         const revisions = await tx
           .select({
             questionId: questions.id,
@@ -599,6 +600,7 @@ export class DrizzlePracticeSessionRepository
           })
           .from(questions)
           .where(inArray(questions.id, params.questionIds))
+          .orderBy(asc(questions.id))
           .for('share');
 
         const stateRows = await tx

@@ -264,6 +264,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
   it.each([
     ['fails', true],
     ['commits', false],
+    ['observation fails', false],
   ])('shows a reader no part of an activation that %s', async (_name, fail) => {
     const [changed, dropped, added] = [slug(), slug(), slug()];
     await seedLive(changed, dropped);
@@ -275,31 +276,38 @@ describe('DEBT-483 Verification on a disposable database', () => {
     const lockKey = 483;
     const holder = postgres(disposable.url, { max: 1, onnotice: () => {} });
     const activator = postgres(disposable.url, { max: 1, onnotice: () => {} });
-    await disposable.db.execute(
-      `CREATE FUNCTION it_pause_activation() RETURNS trigger LANGUAGE plpgsql AS $$
+    const observationFailure = new Error('injected observation failure');
+    let observedFailure: unknown;
+    let settled: Promise<unknown> | undefined;
+    try {
+      const [backend] = await activator<
+        { pid: number }[]
+      >`SELECT pg_backend_pid() AS pid`;
+      if (!backend) throw new Error('Activation backend is missing');
+      await disposable.db.execute(
+        `CREATE FUNCTION it_pause_activation() RETURNS trigger LANGUAGE plpgsql AS $$
        BEGIN
          PERFORM pg_advisory_lock(${lockKey});
          PERFORM pg_advisory_unlock(${lockKey});
          ${fail ? "RAISE EXCEPTION 'injected failure';" : ''}
          RETURN NEW;
        END $$`,
-    );
-    await disposable.db.execute(
-      `CREATE TRIGGER it_pause_activation BEFORE INSERT ON content_release_activations
+      );
+      await disposable.db.execute(
+        `CREATE TRIGGER it_pause_activation BEFORE INSERT ON content_release_activations
        FOR EACH ROW EXECUTE FUNCTION it_pause_activation()`,
-    );
-    const before = {
-      [changed]: { status: 'published', stemMd: 'Original clinical task.' },
-      [dropped]: { status: 'published', stemMd: 'Original clinical task.' },
-      [added]: { status: 'draft', stemMd: 'Original clinical task.' },
-    };
-    try {
+      );
+      const before = {
+        [changed]: { status: 'published', stemMd: 'Original clinical task.' },
+        [dropped]: { status: 'published', stemMd: 'Original clinical task.' },
+        [added]: { status: 'draft', stemMd: 'Original clinical task.' },
+      };
       await holder`SELECT pg_advisory_lock(${lockKey})`;
       const activation = activateRelease(drizzle(activator, { schema }), {
         releaseId: next.releaseId,
         expectedActiveReleaseId: base,
       });
-      const settled = activation.then(
+      settled = activation.then(
         () => 'committed',
         (error: unknown) => error,
       );
@@ -307,12 +315,17 @@ describe('DEBT-483 Verification on a disposable database', () => {
         .poll(async () => {
           const [row] = await holder<{ waiting: boolean }[]>`
             SELECT EXISTS (
-              SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted
+              SELECT 1 FROM pg_locks
+              WHERE pid = ${backend.pid}
+                AND locktype = 'advisory' AND objid = ${lockKey}
+                AND NOT granted
             ) AS waiting
           `;
           return row?.waiting;
         })
         .toBe(true);
+
+      if (_name === 'observation fails') throw observationFailure;
 
       // Paused after every question changed: the reader sees none of it.
       expect(await stateOf(changed, dropped, added)).toEqual(before);
@@ -339,17 +352,27 @@ describe('DEBT-483 Verification on a disposable database', () => {
         });
         expect(await activeRelease()).toBe(next.releaseId);
       }
+    } catch (error) {
+      if (_name !== 'observation fails') throw error;
+      observedFailure = error;
     } finally {
-      await disposable.db.execute(
-        'DROP TRIGGER IF EXISTS it_pause_activation ON content_release_activations',
-      );
-      await disposable.db.execute(
-        'DROP FUNCTION IF EXISTS it_pause_activation()',
-      );
-      await Promise.allSettled([
-        holder.end({ timeout: 5 }),
-        activator.end({ timeout: 5 }),
-      ]);
+      try {
+        await holder`SELECT pg_advisory_unlock_all()`;
+        await settled;
+        await disposable.db.execute(
+          'DROP TRIGGER IF EXISTS it_pause_activation ON content_release_activations',
+        );
+        await disposable.db.execute(
+          'DROP FUNCTION IF EXISTS it_pause_activation()',
+        );
+      } finally {
+        await Promise.allSettled([
+          holder.end({ timeout: 5 }),
+          activator.end({ timeout: 5 }),
+        ]);
+      }
     }
+    if (_name === 'observation fails')
+      expect(observedFailure).toBe(observationFailure);
   });
 });

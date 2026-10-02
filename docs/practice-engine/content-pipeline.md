@@ -289,7 +289,7 @@ To exclude placeholders from your runtime database:
 SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
 ```
 
-This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives any existing placeholder rows in the DB (`slug LIKE 'placeholder-%'`).
+This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives only the ten committed fixture slugs listed in `scripts/seed/placeholder-archiver.ts`. An authored question is not synthetic merely because its slug starts with `placeholder-` (BUG-315).
 
 ### Withdrawing a Question
 
@@ -301,7 +301,7 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-question
 # Check the dry run's target, QIDs and counts, then repeat the command with --apply.
 ```
 
-In one transaction, under the same row locks the seed takes, it archives each question and records a withdrawal for every revision in `question_withdrawals` (migration `0045`), with the reason and authority. A revision already recorded keeps its first record.
+In one transaction, after locking the release pointer and then the question rows in ID order, it archives each question and records a withdrawal for every revision in `question_withdrawals` (migration `0045`), with the reason and authority. A revision already recorded keeps its first record.
 
 A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too, and the seed records it with authority `content seed`. Only the synthetic placeholders are archived and restored without a record. A learner who attempted a withdrawn question can still review it, with a notice (ADR-021 §3).
 
@@ -325,9 +325,9 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-q
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
-Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and content changes only through releases: stage, preview the activation, then activate. Staging writes drafts, non-current revisions and release items that no learner sees before activation. The one exception is tags: they are not versioned, so a tag change takes effect when staged. Staging refuses a withdrawn question and a bundle with no published file, and is one transaction. **A release removes every live question it does not name.** A stale or partial bundle that passes staging validation can stage without an omission warning, and activating it archives every question whose file was missing. The preview rolls back its transaction: its `archived=` count neither binds apply nor verifies the archive set. A hold, withdrawal or other content change before apply can change the result, even with the same count. Wait for [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)'s explicit removals and plan-bound apply before adopting this production workflow. Rollback also honors current holds and withdrawals; it cannot undo a permanent withdrawal recorded during staging. **Bootstrapping production is the owner's decision, and waits for DEBT-489**, because it changes how content is published ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
+Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and content changes only through releases: stage, preview the activation, then activate. Staging writes drafts, non-current revisions and release items that no learner sees before activation. Tags are not versioned, so a tag change takes effect when staged. An authored `archived` file also records a permanent question-wide withdrawal during staging: abandoning the staged release does not undo that overlay, and re-applying any release observes it. Staging refuses a withdrawn question and a bundle with no published file, and is one transaction. **A release removes every live question it does not name.** A stale or partial bundle that passes staging validation can stage without an omission warning, and activating it archives every question whose file was missing. The preview rolls back its transaction: its `archived=` count neither binds apply nor verifies the archive set. A hold, withdrawal or other content change before apply can change the result, even with the same count. Wait for [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)'s explicit removals and plan-bound apply before adopting this production workflow. Rollback also honors current holds and withdrawals; it cannot undo a permanent withdrawal recorded during staging. **Bootstrapping production is the owner's decision, and waits for DEBT-489**, because it changes how content is published ([DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
 
-A hold takes effect at once: it re-applies the active release, which archives the held question. A lift returns it, and records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
+A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
 
 ---
 
@@ -339,7 +339,7 @@ A hold takes effect at once: it re-applies the active release, which archives th
 
 **Question revisions table:** Stores the content a learner reads, as raw markdown: `stemMd`, `explanationMd`, `referenceMd`, plus `difficulty` and the `stored-fields-json-v1` content hash. A revision is never updated; changed content is a new revision (migration `0042`). Attempts and session items bind the revision they were shown and graded against (`NOT NULL` since migration `0043`).
 
-**Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Releases, which come later in ADR-021 phase 4, will never select a withdrawn revision.
+**Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Activation excludes a question with any recorded withdrawal, regardless of which revision its release names.
 
 **Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable, hash-addressed manifest, and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one receipt per activation. `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-activate-roll-back-and-hold).
 
