@@ -9,6 +9,25 @@ export type QidCommandArgs = {
   record: DecisionRecord;
 };
 
+// A QID given after a flag: present, shaped like a content slug, and not
+// already given.
+export function readQidValue(
+  value: string | undefined,
+  flag: string,
+  given: readonly string[],
+): string {
+  if (!value || value.startsWith('--')) {
+    throw new Error(`Missing value for ${flag}`);
+  }
+  if (!QuestionFrontmatterSchema.shape.slug.safeParse(value).success) {
+    throw new Error(`Invalid question QID: ${value}`);
+  }
+  if (given.includes(value)) {
+    throw new Error(`Duplicate question QID: ${value}`);
+  }
+  return value;
+}
+
 // The operator commands that act on questions by QID (withdrawal, holds):
 // explicit QIDs, a required reason and authority for the record, and a dry
 // run unless --apply. Each flag may appear once.
@@ -27,17 +46,7 @@ export function parseQidCommandArgs(
     } else if (arg === '--lift' && options.allowLift && !lift) {
       lift = true;
     } else if (arg === '--qid') {
-      const qid = argv[index + 1];
-      if (!qid || qid.startsWith('--')) {
-        throw new Error('Missing value for --qid');
-      }
-      if (!QuestionFrontmatterSchema.shape.slug.safeParse(qid).success) {
-        throw new Error(`Invalid question QID: ${qid}`);
-      }
-      if (qids.includes(qid)) {
-        throw new Error(`Duplicate question QID: ${qid}`);
-      }
-      qids.push(qid);
+      qids.push(readQidValue(argv[index + 1], '--qid', qids));
       index += 1;
     } else if (arg === '--reason' || arg === '--authority') {
       const field = arg === '--reason' ? 'reason' : 'authority';

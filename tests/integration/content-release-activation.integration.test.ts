@@ -227,6 +227,7 @@ describe('DEBT-483: release activation', () => {
       });
       const second = await stageRelease(tx, {
         items: [],
+        removals: [{ questionId: question.id, kind: 'draft' }],
         parentReleaseId: first,
       });
       await activateRelease(tx, {

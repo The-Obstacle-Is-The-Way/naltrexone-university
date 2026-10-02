@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
+import { runHoldQuestions } from '@/scripts/content-release/hold-questions';
 import {
   activateRelease,
   bootstrapRelease,
@@ -9,6 +10,7 @@ import {
 import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder';
 import { runStageRelease } from '@/scripts/content-release/stage-release';
 import type { SeedSourceFile } from '@/scripts/seed/file-reader';
+import { runContentWithdrawal } from '@/scripts/seed/withdraw-questions';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { createCleanupState, createQuestion } from './helpers';
 import { source } from './seed-test-helpers';
@@ -91,7 +93,8 @@ describe('DEBT-483: staging a release from MDX', () => {
       inserted: 1,
       appended: 2,
       items: 2,
-      withdrawn: 0,
+      removals: 1,
+      withdrawals: 0,
       reusedRelease: false,
     });
     // Nothing a learner reads has changed yet.
@@ -133,38 +136,53 @@ describe('DEBT-483: staging a release from MDX', () => {
     expect(await revisionsOf(question.id)).toHaveLength(2);
   });
 
-  it('records an archive in MDX as a withdrawal and leaves the question out', async () => {
+  // DEBT-489: staging has no lasting side effect. An archived file is a
+  // removal that withdraws the question only when its release activates.
+  it('withdraws an archived file when its release activates, not when it is staged', async () => {
     const question = await arrangeLive();
     const kept = await arrangeLive();
     const active = await bootstrap();
+    const withdrawalsOfQuestion = () =>
+      disposable.db
+        .select({ authority: schema.questionWithdrawals.authority })
+        .from(schema.questionWithdrawals)
+        .where(eq(schema.questionWithdrawals.questionId, question.id));
 
     const staged = await stageReleaseFromFiles(disposable.db, [
       source(question.slug, { status: 'archived' }),
       source(kept.slug),
     ]);
 
-    expect(staged).toMatchObject({ items: 1, withdrawn: 1 });
-    expect(
-      await disposable.db
-        .select({ authority: schema.questionWithdrawals.authority })
-        .from(schema.questionWithdrawals)
-        .where(eq(schema.questionWithdrawals.questionId, question.id)),
-    ).toEqual(expect.arrayContaining([{ authority: 'content seed' }]));
+    expect(staged).toMatchObject({ items: 1, removals: 1, withdrawals: 1 });
+    expect(await withdrawalsOfQuestion()).toEqual([]);
+    // Abandoning the staged release leaves the question live.
+    await activateRelease(disposable.db, {
+      releaseId: active,
+      expectedActiveReleaseId: active,
+    });
+    expect((await questionBySlug(question.slug))?.status).toBe('published');
     await activateRelease(disposable.db, {
       releaseId: staged.releaseId,
       expectedActiveReleaseId: active,
     });
     expect((await questionBySlug(question.slug))?.status).toBe('archived');
+    expect(await withdrawalsOfQuestion()).toEqual(
+      expect.arrayContaining([{ authority: 'content release' }]),
+    );
   });
 
   it('refuses to stage a withdrawn question as published, writing nothing at all', async () => {
     const question = await arrangeLive();
     const kept = await arrangeLive();
-    await bootstrap();
-    await stageReleaseFromFiles(disposable.db, [
+    const active = await bootstrap();
+    const retiring = await stageReleaseFromFiles(disposable.db, [
       source(question.slug, { status: 'archived' }),
       source(kept.slug),
     ]);
+    await activateRelease(disposable.db, {
+      releaseId: retiring.releaseId,
+      expectedActiveReleaseId: active,
+    });
     const revisions = await revisionsOf(question.id);
     const releases = await disposable.db.select().from(schema.contentReleases);
     const added = `it-builder-${randomUUID()}`;
@@ -173,6 +191,7 @@ describe('DEBT-483: staging a release from MDX', () => {
     await expect(
       stageReleaseFromFiles(disposable.db, [
         source(added),
+        source(kept.slug),
         source(question.slug, { stem: 'A corrected clinical task.' }),
       ]),
     ).rejects.toThrow(/Refusing to stage withdrawn question/);
@@ -182,6 +201,88 @@ describe('DEBT-483: staging a release from MDX', () => {
     expect(await disposable.db.select().from(schema.contentReleases)).toEqual(
       releases,
     );
+  });
+
+  // DEBT-489: absence from the bundle is never a removal.
+  it('refuses a bundle that leaves out live questions, naming them and writing nothing', async () => {
+    const live = await Promise.all([1, 2, 3, 4, 5].map(() => arrangeLive()));
+    await bootstrap();
+    const releases = await disposable.db.select().from(schema.contentReleases);
+    const missing = live
+      .slice(2)
+      .map((question) => question.slug)
+      .sort();
+
+    await expect(
+      stageReleaseFromFiles(
+        disposable.db,
+        live.slice(0, 2).map((question) => source(question.slug)),
+      ),
+    ).rejects.toThrow(
+      `The bundle leaves out live questions: ${missing.join(', ')}`,
+    );
+
+    expect(await disposable.db.select().from(schema.contentReleases)).toEqual(
+      releases,
+    );
+  });
+
+  it('stages a removal the operator names', async () => {
+    const kept = await arrangeLive();
+    const removed = await arrangeLive();
+    const active = await bootstrap();
+
+    const staged = await stageReleaseFromFiles(
+      disposable.db,
+      [source(kept.slug)],
+      { remove: [removed.slug] },
+    );
+    await activateRelease(disposable.db, {
+      releaseId: staged.releaseId,
+      expectedActiveReleaseId: active,
+    });
+
+    expect(staged).toMatchObject({ items: 1, removals: 1, withdrawals: 0 });
+    expect((await questionBySlug(removed.slug))?.status).toBe('archived');
+  });
+
+  it('counts a held question as live, and lets a withdrawn one be left out', async () => {
+    const kept = await arrangeLive();
+    const held = await arrangeLive();
+    const withdrawn = await arrangeLive();
+    await bootstrap();
+    const record = ['--reason', 'Under review', '--authority', 'Clinical lead'];
+    const io = { env: { DATABASE_URL: disposable.url }, log: () => {} };
+    await runHoldQuestions(['--qid', held.slug, ...record, '--apply'], io);
+    await runContentWithdrawal(
+      ['--qid', withdrawn.slug, ...record, '--apply'],
+      io,
+    );
+
+    await expect(
+      stageReleaseFromFiles(disposable.db, [source(kept.slug)]),
+    ).rejects.toThrow(`The bundle leaves out live questions: ${held.slug}`);
+    await expect(
+      stageReleaseFromFiles(disposable.db, [
+        source(kept.slug),
+        source(held.slug),
+      ]),
+    ).resolves.toMatchObject({ items: 2, removals: 0 });
+  });
+
+  it.each([
+    ['in the bundle', true],
+    ['not in the active release', false],
+  ])('refuses a removal of a question %s', async (_name, inBundle) => {
+    const kept = await arrangeLive();
+    await bootstrap();
+    const other = inBundle ? kept.slug : `it-builder-${randomUUID()}`;
+
+    await expect(
+      stageReleaseFromFiles(disposable.db, [source(kept.slug)], {
+        remove: [other],
+      }),
+    ).rejects.toThrow(`Cannot remove ${other}`);
   });
 
   // Activating a release with no items would archive every question.

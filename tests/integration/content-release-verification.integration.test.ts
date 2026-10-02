@@ -271,6 +271,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
     const base = (await bootstrapRelease(disposable.db)).releaseId;
     const next = await stageReleaseFromFiles(disposable.db, [
       source(changed, { stem: 'A corrected task.' }),
+      source(dropped, { status: 'draft' }),
       source(added),
     ]);
     const lockKey = 483;
