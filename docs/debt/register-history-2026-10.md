@@ -2,6 +2,30 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-02 UTC: DEBT-483 and DEBT-489 are resolved and archived ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc), [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md#verified-closeout--2026-10-02-utc)).
+- **What shipped.** ADR-021 phase 4 is in production: withdrawals, releases, activation, rollback, holds and the operator commands, with DEBT-489's explicit removals and plan-bound apply.
+- **Re-verified on `main`'s code** before archival, with this branch differing only in documentation: 15 integration files (163 cases) and 12 script unit files (120 cases) passed. Each record's closeout maps its Verification items to the cases.
+- **Release.** Promotion #1312 (`7dcb9331`): main CI **36991253547**, production assigned **09:55:02.296Z**, trees `d1e952d0`.
+- **Deferred, with revive triggers:**
+  - the production bootstrap (the owner's decision, recommended after DEBT-490);
+  - the managed seed's switch to staging;
+  - the contract step (selection on release items);
+  - ADR-021's release zero;
+  - from BUG-317, the clinical suitability of the withdrawn label for held or dropped questions.
+- **DEBT-490 filed.** #1313 merged after three valid wording findings were fixed (**5392612637** on `50144865`; merged `f12e715e`).
+- **The bugs register** archives BUG-314–317 in the same change.
+- **Open decisions for the owner.**
+  - **When to bootstrap production content releases (DEBT-483).** [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix is now in production, so it no longer blocks. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and after [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md), so the first production activation records who decided it and why.
+  - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
+  - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
+  - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID is DEBT-491.**
+
 **Earlier** — 2026-10-02 UTC: DEBT-490 is filed: release removals and activations record no reason or authority ([DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md)). The owner asked whether removals really keep no written reason, as a side summary of DEBT-489's decision said. None records an operator-supplied reason, and the gap is wider:
 - An activation, rollback or bootstrap records only the release, the release it replaced and the time.
 - A `--remove` removal records only its kind.
