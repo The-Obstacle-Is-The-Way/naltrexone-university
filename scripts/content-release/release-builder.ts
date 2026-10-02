@@ -7,13 +7,13 @@ import { questionRevisionContentHash } from '../../lib/content/question-revision
 import type { SeedSourceFile } from '../seed/file-reader';
 import { onlyRow } from '../seed/only-row';
 import {
+  isSyntheticPlaceholderSource,
   revisionFieldsFromSeed,
   type SeedQuestionRep,
 } from '../seed/question-parser';
 import { appendQuestionRevision } from '../seed/question-revision-writer';
 import {
   prepareSeedQuestions,
-  recordSeedWithdrawal,
   replaceQuestionTags,
   sortedTags,
 } from '../seed/question-syncer';
@@ -21,9 +21,14 @@ import {
   lockReleasePointer,
   ReleaseActivationError,
   type ReleaseItem,
+  type ReleaseRemoval,
   stageRelease,
 } from './release-activation';
-import { buildReleaseManifest, releaseManifestHash } from './release-manifest';
+import {
+  buildReleaseManifest,
+  type ReleaseManifestRemoval,
+  releaseManifestHash,
+} from './release-manifest';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -38,10 +43,12 @@ export type StageSummary = {
   appended: number;
   /** Files whose content matched an existing revision. */
   reused: number;
-  /** Authored files archived in MDX, each recorded as a withdrawal. */
-  withdrawn: number;
   /** Published files: the release's items. */
   items: number;
+  /** Live questions the release leaves out on purpose (DEBT-489). */
+  removals: number;
+  /** Of those, authored archives: withdrawn when the release activates. */
+  withdrawals: number;
 };
 
 // A revision's content_hash is the stored-fields-json-v1 hash of exactly what
@@ -76,9 +83,16 @@ async function revisionForContent(
 // file, and is built on the active release. Activation, a separate step,
 // makes it live. Tags are not versioned (decision 1), so they change in place.
 // The whole stage is one transaction, so it is staged entirely or not at all.
+//
+// DEBT-489: the release accounts for every live question, every member of
+// the active release, held ones included. A member leaves only as a named
+// removal: its file set to draft or archived, or its QID given in `remove`.
+// A member already withdrawn may be absent. Staging records no withdrawal; an
+// archived file is a removal that activation turns into one.
 export async function stageReleaseFromFiles(
   db: Db,
   files: readonly SeedSourceFile[],
+  options: { remove?: readonly string[] } = {},
 ): Promise<StageSummary> {
   const prepared = prepareSeedQuestions(files);
   return db.transaction(async (tx) => {
@@ -98,6 +112,14 @@ export async function stageReleaseFromFiles(
       .orderBy(asc(schema.questions.id))
       .for('no key update');
     const idBySlug = new Map(existing.map((row) => [row.slug, row.id]));
+    const members = await tx
+      .select({ id: schema.questions.id, slug: schema.questions.slug })
+      .from(schema.contentReleaseItems)
+      .innerJoin(
+        schema.questions,
+        eq(schema.questions.id, schema.contentReleaseItems.questionId),
+      )
+      .where(eq(schema.contentReleaseItems.releaseId, active));
 
     // #953: a withdrawn question is never brought back; a correction takes a
     // new QID.
@@ -105,10 +127,10 @@ export async function stageReleaseFromFiles(
       .selectDistinct({ questionId: schema.questionWithdrawals.questionId })
       .from(schema.questionWithdrawals)
       .where(
-        inArray(
-          schema.questionWithdrawals.questionId,
-          existing.map((row) => row.id),
-        ),
+        inArray(schema.questionWithdrawals.questionId, [
+          ...existing.map((row) => row.id),
+          ...members.map((row) => row.id),
+        ]),
       );
     const withdrawnIds = new Set(withdrawn.map((row) => row.questionId));
     const revived = prepared
@@ -124,7 +146,41 @@ export async function stageReleaseFromFiles(
       );
     }
 
-    const summary = { inserted: 0, appended: 0, reused: 0, withdrawn: 0 };
+    const inBundle = new Set(slugs);
+    const memberSlugs = new Set(members.map((row) => row.slug));
+    for (const qid of options.remove ?? []) {
+      if (inBundle.has(qid)) {
+        throw new Error(
+          `Cannot remove ${qid}: its file is in the bundle. Set its status to draft or archived instead.`,
+        );
+      }
+      if (!memberSlugs.has(qid)) {
+        throw new Error(
+          `Cannot remove ${qid}: the active release does not name it.`,
+        );
+      }
+    }
+    const named = new Set(options.remove ?? []);
+    const missing = members
+      .filter(
+        (row) =>
+          !inBundle.has(row.slug) &&
+          !named.has(row.slug) &&
+          !withdrawnIds.has(row.id),
+      )
+      .map((row) => row.slug)
+      .sort();
+    if (missing.length > 0) {
+      throw new Error(
+        `The bundle leaves out live questions: ${missing.join(', ')}. Add their files, set their status to draft or archived, or name them with --remove.`,
+      );
+    }
+
+    const memberIds = new Set(members.map((row) => row.id));
+    const removals: (ReleaseRemoval & { slug: string })[] = members
+      .filter((row) => named.has(row.slug))
+      .map((row) => ({ questionId: row.id, slug: row.slug, kind: 'removed' }));
+    const summary = { inserted: 0, appended: 0, reused: 0 };
     const items: ReleaseItem[] = [];
     for (const { file, seedFromFile: seed } of prepared) {
       let questionId = idBySlug.get(seed.slug);
@@ -171,11 +227,15 @@ export async function stageReleaseFromFiles(
         }
         await replaceTagsIfChanged(tx, questionId, seed);
       }
-      if (await recordSeedWithdrawal(tx, questionId, seed, file.absolutePath)) {
-        summary.withdrawn += 1;
-      }
       if (seed.status === 'published') {
         items.push({ questionId, questionRevisionId: revisionId });
+      } else if (
+        seed.status === 'archived' &&
+        !isSyntheticPlaceholderSource(seed.slug, file.absolutePath)
+      ) {
+        removals.push({ questionId, slug: seed.slug, kind: 'archived' });
+      } else if (memberIds.has(questionId)) {
+        removals.push({ questionId, slug: seed.slug, kind: 'draft' });
       }
     }
     if (items.length === 0) {
@@ -184,15 +244,31 @@ export async function stageReleaseFromFiles(
       );
     }
 
-    const reused = await existingRelease(tx, items, active);
+    const reused = await existingRelease(
+      tx,
+      items,
+      removals.map(({ slug, kind }) => ({ slug, kind })),
+      active,
+    );
     const releaseId =
-      reused ?? (await stageRelease(tx, { items, parentReleaseId: active }));
+      reused ??
+      (await stageRelease(tx, {
+        items,
+        removals: removals.map(({ questionId, kind }) => ({
+          questionId,
+          kind,
+        })),
+        parentReleaseId: active,
+      }));
     return {
       releaseId,
       parentReleaseId: active,
       reusedRelease: reused !== null,
       ...summary,
       items: items.length,
+      removals: removals.length,
+      withdrawals: removals.filter((removal) => removal.kind === 'archived')
+        .length,
     };
   });
 }
@@ -223,6 +299,7 @@ async function replaceTagsIfChanged(
 async function existingRelease(
   tx: Db,
   items: readonly ReleaseItem[],
+  removals: readonly ReleaseManifestRemoval[],
   parentReleaseId: string,
 ): Promise<string | null> {
   const entries = await tx
@@ -241,15 +318,13 @@ async function existingRelease(
         items.map((item) => item.questionRevisionId),
       ),
     );
+  const manifest = buildReleaseManifest(entries, removals);
   const [release] = await tx
     .select({ id: schema.contentReleases.id })
     .from(schema.contentReleases)
     .where(
       and(
-        eq(
-          schema.contentReleases.manifestHash,
-          releaseManifestHash(buildReleaseManifest(entries)),
-        ),
+        eq(schema.contentReleases.manifestHash, releaseManifestHash(manifest)),
         eq(schema.contentReleases.parentReleaseId, parentReleaseId),
       ),
     );

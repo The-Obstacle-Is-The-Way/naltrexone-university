@@ -2,8 +2,11 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { runHumanDatabaseCommand } from '../database-command';
 import {
+  assertPlanForApply,
   formatActivation,
+  formatPlan,
   previewOrApply,
+  readPlanId,
   withCommandDatabase,
 } from './command-support';
 import { activateRelease } from './release-activation';
@@ -24,10 +27,12 @@ function releaseIdArg(value: string | undefined, message: string): string {
 export function parseActivateArgs(argv: readonly string[]): {
   releaseId: string;
   expectedActiveReleaseId: string | null;
+  expectedPlanId: string | undefined;
   apply: boolean;
 } {
   let releaseId: string | undefined;
   let expectedActiveReleaseId: string | null | undefined;
+  let expectedPlanId: string | undefined;
   let apply = false;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -46,6 +51,9 @@ export function parseActivateArgs(argv: readonly string[]): {
           ? null
           : releaseIdArg(value, '--expect-active needs a release id, or none');
       index += 1;
+    } else if (arg === '--plan' && expectedPlanId === undefined) {
+      expectedPlanId = readPlanId(value);
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -58,7 +66,8 @@ export function parseActivateArgs(argv: readonly string[]): {
       '--expect-active is required: the release you expect to be active, or none',
     );
   }
-  return { releaseId, expectedActiveReleaseId, apply };
+  assertPlanForApply(apply, expectedPlanId);
+  return { releaseId, expectedActiveReleaseId, expectedPlanId, apply };
 }
 
 // DEBT-483: activates a staged release, or rolls back by activating an
@@ -80,6 +89,12 @@ export async function runActivateRelease(
         log(
           `Release activation${apply ? '' : ' (dry-run)'}: ${formatActivation(summary)}`,
         );
+        for (const line of formatPlan(summary.plan)) log(line);
+        if (!apply) {
+          log(
+            `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --release ${input.releaseId} --expect-active ${input.expectedActiveReleaseId ?? 'none'} --plan ${summary.plan.id} --apply`,
+          );
+        }
       }),
   });
 }

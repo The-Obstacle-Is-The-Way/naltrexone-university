@@ -451,7 +451,7 @@ Migration 0047 adds the release tables, holds and the pointer. `scripts/content-
 
 **Locks.** 0047's header names the new tables and the foreign keys to `question_revisions`. It omits the update trigger it adds to `question_withdrawals`, a live table: `CREATE TRIGGER` takes SHARE ROW EXCLUSIVE on it until commit, which blocks only the withdrawal command and the seed (#1293 review). The note lives here because 0047 was already applied on Preview, and the migration ledger hashes the whole file, comments included.
 
-**The manifest** (`app-release-manifest-v1`) lists each item's slug and the `stored-fields-json-v1` hash of its revision, ordered by slug. Its hash is SHA-256 over sorted-key JSON, byte-identical to Python's `json.dumps(m, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`. A unit test pins a digest computed independently with Python.
+**The manifest** (`app-release-manifest-v1`) lists each item's slug and the `stored-fields-json-v1` hash of its revision, ordered by slug. *(Since DEBT-489, `app-release-manifest-v2` also names every live question the release removes; see [DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02).)* Its hash is SHA-256 over sorted-key JSON, byte-identical to Python's `json.dumps(m, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`. A unit test pins a digest computed independently with Python.
 
 **Activation** runs in one transaction, in this order:
 1. It locks the pointer for update and rejects a stale release. The active release must be the one the caller expects. A release that has never been active must also be built on it, or it would drop whatever was activated since its base. A rollback re-activates a release that has an earlier receipt, so it is exempt from the parent check. *(The parent check was added after promotion #1293's review: the first version compared the pointer only with the caller's expectation. A case where a release built on an earlier base is rejected now covers it, and removing the rollback exemption fails the rollback case.)*
@@ -621,5 +621,7 @@ rows. This is not an authorization boundary against database-owner SQL.
 Staging's tag exception remains accepted, but is not its only persistent side
 effect: an authored archive records a permanent withdrawal before activation.
 DEBT-489's design review records that reproduced behaviour; its implementation
-belongs to the parallel session. Neither this audit nor its fixes activate a
+belongs to the parallel session. *(Implemented 2026-10-02: staging records no
+withdrawal, and activation withdraws an `archived` removal; see
+[DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02).)* Neither this audit nor its fixes activate a
 release on production or Preview, and no remote ledger is claimed verified.
