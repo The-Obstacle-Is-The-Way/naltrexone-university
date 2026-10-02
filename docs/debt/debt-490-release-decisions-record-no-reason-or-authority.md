@@ -67,10 +67,15 @@ Option 2, before the production bootstrap, so that the first production release 
 
 ## Verification
 
-- An activation, a rollback and a bootstrap each record a reason and an authority on their receipt.
-- A withdrawal made by an `archived` removal records the activation's authority.
-- The commands refuse `--apply` without `--reason` and `--authority`.
-- Removing either field from the receipt write fails a case.
+Each item is its own case, so that each guard is shown to work on its own:
+- **Function boundary.** `activateRelease` refuses a missing reason, and separately a missing authority, and writes nothing. So does `bootstrapRelease`.
+- **Command boundary.** `activate-release.ts` and `bootstrap-release.ts` refuse `--apply` without `--reason`, and separately without `--authority`.
+- **Receipts.** An activation, a rollback and a bootstrap each record the reason and the authority on their receipt.
+- **Holds.** A hold's or a lift's re-application of the active release records the hold's or lift's own reason and authority.
+- **Withdrawals.** A withdrawal made by an `archived` removal records the activation's authority, and a reason that contains both the release id and the activation's reason.
+- **Preview.** The preview prints the reason and the authority.
+- **Plan.** The plan id does not depend on them: the same transition previewed with different reasons has the same plan id.
+- **Mutations.** Removing the reason or the authority from the receipt write, from the withdrawal, or from the preview output fails a case.
 
 ## Related
 
