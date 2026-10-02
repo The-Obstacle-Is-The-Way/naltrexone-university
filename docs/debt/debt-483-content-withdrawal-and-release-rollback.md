@@ -583,7 +583,7 @@ The Verification this record asks for is demonstrated end to end in `tests/integ
 
 **What this suite adds.** Earlier steps proved each rule red first: 4a, 4b, 4c-i by a mutation check, and 4c-ii. This suite proves them together on one fresh, fully migrated database. Its new evidence is the cross-connection visibility case and the preserved-attempts read.
 
-**Closeout.** This record closes in a docs-only follow-up once this step is released, with release receipts. The remaining tails go to the register's Deferred table:
+**Closeout.** This record closes in a docs-only follow-up once this step is released, with release receipts. *(2026-10-02: a review of the release workflow found that a release silently removes every live question its bundle omits. That is [DEBT-489](./debt-489-release-removes-omitted-questions.md), filed with a reproduction, and it gates the production bootstrap.)* The remaining tails go to the register's Deferred table:
 - the production bootstrap, which is the owner's decision;
 - the managed seed's switch to staging after that bootstrap;
 - the contract step that moves selection onto release items and retires `questions.status`;
