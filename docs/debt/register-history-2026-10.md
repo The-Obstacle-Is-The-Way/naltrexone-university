@@ -2,6 +2,25 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-02 UTC: the Releases guidance says exactly what the code does ([DEBT-489](./debt-489-release-removes-omitted-questions.md)). #1309 merged with no findings (**5389805721** on `56b4cbdb`; merged `ff322388`). Promotion #1310 (#1300–#1309) was closed unmerged to take two findings on the pipeline guide. A self-review of the same section, DEBT-489's Fix and ADR-021's boundary paragraph then found four more overclaims of the same kind. Now:
+- Staging refuses to *revive* a withdrawn question; an `archived` file for one is a removal.
+- A fresh preview is needed when something changes the planned sets. Tags are outside the plan.
+- The bundle must name every question the active release names, unless withdrawn.
+- Authored content changes only through releases; withdrawals and holds still act directly.
+- The completeness rule applies to a new release; a rollback is exempt.
+- "Every content writer" now reads "every supported content writer", as BUG-314 scopes it.
+- **Open decisions for the owner.**
+  - **When to bootstrap production content releases (DEBT-483).** Not before [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix is released. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real.
+  - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
+  - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
+  - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and the promotion of #1300–#1309 with it were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-490.**
+
 **Earlier** — 2026-10-02 UTC: follow-ups from promotion #1308's review ([DEBT-489](./debt-489-release-removes-omitted-questions.md)). #1307 merged with no findings (**5388717185** on `18102db2`; merged `4f9900fc`). Promotion #1308 (#1300–#1307) was closed unmerged to take its review's five findings:
 - The plan's withdrawals come from the database in id order, like its other sets, so the in-memory sort and its comparator are gone. Postgres orders UUIDs as JavaScript orders their lowercase strings, so plan ids are unchanged.
 - The release builder documents that it reads the active release's members under the pointer lock alone.

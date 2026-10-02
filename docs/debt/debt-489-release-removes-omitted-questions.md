@@ -1,6 +1,6 @@
 # DEBT-489: A Release Silently Removes Every Live Question Its Bundle Omits
 
-**Status:** In Progress. Filed 2026-10-02 and fixed in code the same day ([Fix](#fix--2026-10-02)): explicit removals, staging that records no withdrawal (tags still change when staged) and an apply bound to its reviewed plan. It closes with [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md) once the fix is released. Until then it blocks the owner's decision to bootstrap production releases.
+**Status:** In Progress. Filed 2026-10-02 and fixed in code the same day ([Fix](#fix--2026-10-02)): explicit removals, staging that records no withdrawal (tags still change when staged) and an apply bound to its reviewed plan. Released 2026-10-02 through promotion #1312 (`7dcb9331`), so it no longer blocks the owner's decision to bootstrap production releases. It closes with [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md).
 **Priority:** P1
 **Date:** 2026-10-02
 **Confidence:** CONFIRMED by reproduction on a disposable database. Not live: no production release is active, so production still seeds directly.
@@ -143,6 +143,8 @@ The plan names the release by identity rather than by row id. That lets the boot
 **What needs no plan.** A hold or a lift re-applies the active release inside its own transaction, under the same locks, and cannot activate any other release. Every apply of `activate-release.ts`, rollbacks included, needs a plan.
 
 **Decided: a removal records its intent, not a free-text reason.** The review asked to preserve each removal's intent and reason. The manifest records the intent (the kind). For the permanent case, the withdrawal record names the release, and the authored reason lives in the content repository's history of that file. A `draft` or `removed` question can come back in a later release, so it is not a clinical record. If the owner wants a recorded reason for `--remove`, it can become a manifest field before the production bootstrap, while no release exists there.
+
+*(2026-10-02, after the owner asked about this decision: the gap is wider than removals. Activations, rollbacks and the bootstrap record no operator-supplied reason or authority either, while the withdrawal and hold commands require both. Filed as [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md), with a recommendation to attribute every activation before the production bootstrap.)*
 
 **The review's boundaries:**
 
