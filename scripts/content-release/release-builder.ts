@@ -18,9 +18,9 @@ import {
   sortedTags,
 } from '../seed/question-syncer';
 import {
+  lockReleasePointer,
   ReleaseActivationError,
   type ReleaseItem,
-  readActiveReleaseForShare,
   stageRelease,
 } from './release-activation';
 import { buildReleaseManifest, releaseManifestHash } from './release-manifest';
@@ -82,8 +82,8 @@ export async function stageReleaseFromFiles(
 ): Promise<StageSummary> {
   const prepared = prepareSeedQuestions(files);
   return db.transaction(async (tx) => {
-    // The pointer for share, then the question rows: activation's order.
-    const active = await readActiveReleaseForShare(tx);
+    // The pointer exclusively, then question rows: every content writer's order.
+    const active = await lockReleasePointer(tx);
     if (active === null) {
       throw new ReleaseActivationError(
         'NO_ACTIVE_RELEASE',
@@ -96,7 +96,7 @@ export async function stageReleaseFromFiles(
       .from(schema.questions)
       .where(inArray(schema.questions.slug, slugs))
       .orderBy(asc(schema.questions.id))
-      .for('update');
+      .for('no key update');
     const idBySlug = new Map(existing.map((row) => [row.slug, row.id]));
 
     // #953: a withdrawn question is never brought back; a correction takes a

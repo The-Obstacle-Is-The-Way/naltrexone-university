@@ -26,6 +26,23 @@ Constraints:
 
 ## Decision
 
+**Phase 4 implementation boundary (2026-10-02 audit).** Decisions 4–6 describe
+the target interface; #1290–#1300 implement the current command path documented
+in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+Selection still reads materialized `questions.status` and `current_revision_id`,
+not release items directly. Activation checks the caller's expected active
+release and, except for a previously activated rollback target, its parent;
+the reviewed eligibility-plan binding remains [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md).
+Staging does not move existing revision pointers, but tags and authored
+withdrawals can affect the live bank independently of activating that stage.
+Withdrawals exclude the whole question across revisions; holds exclude one
+revision. The emergency QID command writes the withdrawal and archives the
+question directly, without a minimal manifest. The database triggers reject
+updates to releases, items and withdrawals, but do not prohibit owner DELETE.
+The [independent audit](../bugs/assets/content-release-audit-2026-10-02.md)
+records reproductions, fixes and verification limits. These boundaries do not
+claim SPEC-007 completion or clinical scoring-policy approval.
+
 ### 1. Content lives in immutable revisions
 
 - A new `question_revisions` table holds everything a learner reads: `stem_md`, `explanation_md`, `reference_md` and `difficulty`, plus `canonicalization_version` and `content_hash` (in the `stored-fields-json-v1` form defined below).

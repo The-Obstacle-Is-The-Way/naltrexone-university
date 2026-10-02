@@ -3,6 +3,7 @@ import { asc, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
+import { lockReleasePointer } from '../content-release/release-activation';
 import { runHumanDatabaseCommand } from '../database-command';
 import { parseQidCommandArgs } from './qid-command-args';
 import {
@@ -30,6 +31,7 @@ export async function runContentWithdrawal(
       const db = drizzle(sql, { schema });
       try {
         const counts = await db.transaction(async (tx) => {
+          await lockReleasePointer(tx);
           // The seed writer takes the same row lock. Consistent ordering also
           // prevents overlapping withdrawal batches from locking in reverse.
           const questions = await tx
@@ -41,7 +43,7 @@ export async function runContentWithdrawal(
             .from(schema.questions)
             .where(inArray(schema.questions.slug, qids))
             .orderBy(asc(schema.questions.id))
-            .for('update');
+            .for('no key update');
           const found = new Set(questions.map((question) => question.slug));
           const missing = qids.filter((qid) => !found.has(qid));
           if (missing.length > 0) {

@@ -211,7 +211,7 @@ async function syncExistingQuestion(
         .select()
         .from(schema.questions)
         .where(eq(schema.questions.id, questionId))
-        .for('update'),
+        .for('no key update'),
       `Question disappeared during seed sync for slug "${seed.slug}"`,
     );
     if (seed.status !== 'archived') {
