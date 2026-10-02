@@ -1,13 +1,15 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); the phase 4 design is recorded 2026-10-01, and its first step, 4a, records withdrawals; releases, activation and rollback are implemented through #1300; DEBT-489, the independent audit fixes and production closeout remain open; archived-question review, which the dated receipts below list as open, shipped under [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) (resolved 2026-09-30)
+**Status:** Resolved — 2026-10-02; ADR-021 phase 4 (4a–4d) promoted and release-verified, with DEBT-489's fix and BUG-314–317; every Verification item re-run against `main`'s code before archival; the production bootstrap and three follow-on steps stay Deferred on their triggers
 **Priority:** P1
 **Date:** 2026-09-20
+**Resolved:** 2026-10-02
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-02-utc)
 **Confidence:** CONFIRMED implementation gap; production incident not established
 
 ## Evidence
 
-**2026-09-21 release readback.** #952/#953/#954's merge commits (`31d3a718`, `8da15de2`, `65bd70c0`) are ancestors of deployed main `76e65e9c`, not merely dev-only safeguards. Their source heads have formal exact-head CodeRabbit approvals and successful CI; the release passed main CI `35562531386`. This supersedes pending-release qualifications in the dated receipts below, but does not close this debt. `scripts/seed-environment-runtime.ts:108-123` still dry-runs, deletes the managed imported tree, then regenerates it; question sync still commits per question. Immutable release/freshness/atomic activation/rollback and the archived-question review seam remain open. The static invalid-file case and explicit QID withdrawal are already implemented and must not be repeated as new work. [Shared audit ledger](./assets/active-audit-2026-09-21/verification.md).
+**2026-09-21 release readback.** #952/#953/#954's merge commits (`31d3a718`, `8da15de2`, `65bd70c0`) are ancestors of deployed main `76e65e9c`, not merely dev-only safeguards. Their source heads have formal exact-head CodeRabbit approvals and successful CI; the release passed main CI `35562531386`. This supersedes pending-release qualifications in the dated receipts below, but does not close this debt. `scripts/seed-environment-runtime.ts:108-123` still dry-runs, deletes the managed imported tree, then regenerates it; question sync still commits per question. Immutable release/freshness/atomic activation/rollback and the archived-question review seam remain open. The static invalid-file case and explicit QID withdrawal are already implemented and must not be repeated as new work. [Shared audit ledger](../../debt/assets/active-audit-2026-09-21/verification.md).
 
 The original snapshot and reproduction plan below predate the initial safeguard.
 The dated receipt records the synthetic database tests subsequently executed.
@@ -116,7 +118,7 @@ base `269ffeec` changed ancestry only: its tree matches tested parent `d8bf8adc`
 PR #952 merged as `31d3a718` after exact-head CodeRabbit approval
 `5261750605` on `936de53e`, zero unresolved threads, and CI run `35537614430`
 (4,421 unit / 411 browser / 330 integration +6 skips / 44 E2E, no retries).
-The [reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot) separates this dev merge from the later release readback.
+The [reconciliation snapshot](../../debt/assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot) separates this dev merge from the later release readback.
 
 **CONFIRMED local corpus compatibility:** a read-only census using
 `readSeedQuestionFiles(true)` and `parseSeedQuestionFile(raw, absolutePath)`
@@ -177,7 +179,7 @@ DATABASE_URL="$WITHDRAWAL_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-ques
 DATABASE_URL="$WITHDRAWAL_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-questions.ts --qid "example-qid" --apply
 ```
 
-*2026-10-01:* the command now also requires `--reason` and `--authority` and records each withdrawal ([phase 4a](#withdrawal-overlay-phase-4a--2026-10-01)). [Withdrawing a Question](../practice-engine/content-pipeline.md#withdrawing-a-question) has the current usage.
+*2026-10-01:* the command now also requires `--reason` and `--authority` and records each withdrawal ([phase 4a](#withdrawal-overlay-phase-4a--2026-10-01)). [Withdrawing a Question](../../practice-engine/content-pipeline.md#withdrawing-a-question) has the current usage.
 
 The seed sync now refuses `archived` → `draft` or `published` while holding the
 question lock. This also protects content archived through the existing seed
@@ -213,7 +215,7 @@ skips), production build and **44 authenticated E2E** tests with no retries.
 PR #953 merged as `8da15de2` after exact-head CodeRabbit approval
 `5261806134` on `0aeda526`, zero unresolved threads and CI run `35538749320`
 (4,421 unit / 411 browser / 349 integration +6 skips / 44 E2E, no retries).
-The [reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot) separates this dev merge from the later release readback.
+The [reconciliation snapshot](../../debt/assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot) separates this dev merge from the later release readback.
 
 **Remaining limits:** withdrawal preserves stored history but does not make all
 archived questions reviewable through today's published-only application queries
@@ -286,7 +288,7 @@ merged as `65bd70c0` at 22:09:06 UTC after review `5261882451` approved exact
 head `844cc5cb`, zero unresolved threads and green [CI 35540192530](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35540192530).
 The [closeout](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/954#issuecomment-5753029651)
 separates the superseded cancelled CI run from the successful final run. The
-[reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot)
+[reconciliation snapshot](../../debt/assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot)
 records the release-evidence boundary; the implementation limits below remain open.
 
 The managed caller still removes the imported tree between validation and
@@ -296,7 +298,7 @@ file. This PR preserves its existing non-writing preflight rather than changing
 that owned file. A passing manual staging test does not prove managed seeding is
 transactional or that its delete-before-regenerate window is closed.
 
-[Content pipeline operations](../practice-engine/content-pipeline.md#import-drafts--mdx-generated)
+[Content pipeline operations](../../practice-engine/content-pipeline.md#import-drafts--mdx-generated)
 now prescribe a fresh temporary directory **outside** the seed glob, followed by
 artifact review and a separate deliberate placement of approved MDX. The previous
 procedure deleted the current imported tree before regeneration; the new procedure
@@ -359,7 +361,7 @@ as does archived-question review under DEBT-484.
 
 ## Decision — 2026-09-27
 
-[ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) decides the app's side of SPEC-007. Content becomes visible only through a verified release, recorded with its manifest hash and parent, staged invisibly and activated in one transaction that compares the active-release pointer; any failure leaves the previous release active. Withdrawals and holds are a current overlay keyed by question and revision, so a rollback to an older release never resurrects a revoked item, and today's explicit-QID withdrawal command becomes a writer to that overlay. Selection reads the active release, and `questions.status` is retired in a contract step.
+[ADR-021](../../adr/adr-021-question-revisions-and-content-releases.md) decides the app's side of SPEC-007. Content becomes visible only through a verified release, recorded with its manifest hash and parent, staged invisibly and activated in one transaction that compares the active-release pointer; any failure leaves the previous release active. Withdrawals and holds are a current overlay keyed by question and revision, so a rollback to an older release never resurrects a revoked item, and today's explicit-QID withdrawal command becomes a writer to that overlay. Selection reads the active release, and `questions.status` is retired in a contract step.
 
 This record closes after ADR-021's phase 4 (releases, overlay and rollback), with the Verification above demonstrated on disposable databases. Release zero, the inventory of what is live, uses the `stored-fields-json-v1` hash form decided in the ADR on 2026-09-28, and waits for the content repository to compute that form too.
 
@@ -591,8 +593,8 @@ The Verification this record asks for is demonstrated end to end in `tests/integ
 
 ## Related
 
-- [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
-- [Parked DEBT-446](../_archive/debt/debt-446-local-db-script-target-guards.md):
+- [DEBT-484](./debt-484-question-rewrite-history-identity.md)
+- [Parked DEBT-446](./debt-446-local-db-script-target-guards.md):
   existing freshness-related scope remains subject to its owner ruling; this
   record does not silently activate unrelated parked work.
 
@@ -625,3 +627,28 @@ belongs to the parallel session. *(Implemented 2026-10-02: staging records no
 withdrawal, and activation withdraws an `archived` removal; see
 [DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02).)* Neither this audit nor its fixes activate a
 release on production or Preview, and no remote ledger is claimed verified.
+
+## Verified closeout — 2026-10-02 UTC
+
+ADR-021 phase 4 is implemented, reviewed, promoted to `main` and release-verified: the withdrawal overlay (4a), releases and activation (4b), the operator commands (4c-i), the release builder (4c-ii) and the verification suite (4d). [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s explicit removals and plan-bound apply, and the independent audit's fixes ([BUG-314](../bugs/bug-314-content-hold-withdrawal-deadlock.md)–[BUG-317](../bugs/bug-317-content-release-documentation-overclaims.md)), shipped with it. Each dated section above carries its step's receipts; their "Next" and "Closeout" lines are historical execution notes, superseded by this section. Every Verification item was re-run against `main`'s code before archival: the archiving branch differs from `7dcb9331` only in documentation. The 15 release, withdrawal, seed and cleanup integration files (163 cases) and the 12 script unit files (120 cases) passed.
+
+| Verification | Holds | Receipt on `main`'s code |
+| --- | --- | --- |
+| Withdrawal | Yes | `content-release-verification`: *a withdrawal takes the question out at once and keeps it out of every later activation*. The withdrawal command's own cases are in `content-withdrawal`. |
+| Preserved attempts | Yes | `content-release-verification`: *preserves a learner's attempt on a withdrawn question, and their review of it*, through the real history read. |
+| No resurrection from stale output | Yes | `content-release-verification`: *never resurrects a withdrawn question from stale output*, by the direct seed before releases and by staging after the bootstrap. |
+| Rejection of stale releases | Yes | `content-release-verification`: *rejects a release staged on a base that is no longer active*; `content-release-activation`: *rejects a new release built on an earlier release, even when the active release is named*. Since DEBT-489, an apply is also refused when its reviewed plan has changed (`content-release-plan`). |
+| Rollback with revocation checks | Yes | `content-release-verification`: *rolls back with the overlay applied: a withdrawn question and a held revision stay out*. A rollback has its own plan, which must match (`content-release-plan`). |
+| No visible partial release after injected failure | Yes | `content-release-verification`: *shows a reader no part of an activation that fails*, *…that commits* and *…that observation fails* (BUG-316 repaired its cleanup and wait identity). |
+| No production credentials in the content repository | Yes, by design | The release and withdrawal commands take their target from the operator's `DATABASE_URL`, and a remote target also needs `DB_TARGET_ACK` (`scripts/database-command.ts`). The content repository connects to no database; release zero, its first release, is Deferred below. |
+
+**Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, and `/api/health` reported `ok` with the database reachable. Promotions #1304, #1306, #1308 and #1310 were closed unmerged to take their reviews' findings first, through #1305, #1307, #1309 and #1311.
+
+**Deferred, not resolved.** Four tails move to the register's Deferred table, with revive triggers:
+1. **The production bootstrap.** Adopting what is live as production's first release is the owner's decision. The recommendation is to do it after [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md), so the first production activation records who decided it and why.
+2. **The managed seed's switch to staging.** Once a release is active, the managed seed refuses that database; it must then stage a release instead.
+3. **The contract step.** Selection still reads the materialized `questions.status` and `current_revision_id`. Reading release items directly, and retiring `questions.status`, is ADR-021's contract step.
+4. **ADR-021's release zero.** The content repository builds the first release once it computes `stored-fields-json-v1` (SPEC-007).
+
+The owner's decision on withdrawn-item scoring stays Deferred under [DEBT-484](./debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc).
+

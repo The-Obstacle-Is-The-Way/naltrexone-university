@@ -162,4 +162,4 @@ readback, not additional body-validator implementation.
 ## Related
 
 - [DEBT-485](./debt-485-import-output-path-traversal.md)
-- [DEBT-483](../../debt/debt-483-content-withdrawal-and-release-rollback.md)
+- [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md)

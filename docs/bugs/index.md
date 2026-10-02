@@ -1,9 +1,15 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-02 — promotion #1308 review follow-ups.
+**Last Updated:** 2026-10-02 — BUG-314–317 resolved and archived.
 
-**Latest** — 2026-10-02: promotion #1308's review on BUG-314–317 ([BUG-314](./bug-314-content-hold-withdrawal-deadlock.md#promotion-review-follow-up--2026-10-02)). BUG-314's attempt-lock case now fails on the real `40P01` deadlock, not a timeout, if activation's lock regresses to `FOR UPDATE`; its probe count is corrected. BUG-314–317 gain the template's archive-convention callout and `Resolved` and `Verification receipts` fields (`—` until their promotion receipts exist). All four stay open until then.
+**Latest** — 2026-10-02: **BUG-314–317 are resolved and archived** ([BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md#verified-closeout--2026-10-02-utc)).
+- **Shipped.** Content writers serialize on the release pointer, and content and session locks are ordered (BUG-314, P2). Placeholder archival is limited to the ten committed fixtures (BUG-315, P2). Disposable test databases clean up after failures (BUG-316, P3). Release guidance matches the code (BUG-317, P3).
+- **History.** BUG-314 and BUG-315 were in shipped code; no production incident is established.
+- **Fixes.** #1302 (**5388054704** on `69733bb9`; merged `93f8104a`), with follow-ups in #1305, #1309 and #1311.
+- **Re-verified** on `main`'s code before archival: 15 integration files, 163 cases.
+- **Released** through promotion #1312 (`7dcb9331`): main CI **36991253547**, production assigned **09:55:02.296Z**, trees `d1e952d0`.
+- **Deferred.** BUG-317's open owner question, whether the withdrawn label suits held or dropped questions, moves to the debt register's Deferred table. This register has none.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -456,10 +462,6 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-314](./bug-314-content-hold-withdrawal-deadlock.md) | Content writers lack one serialization boundary | P2 | Open | Hold/withdrawal deadlock and concurrent staging uniqueness failure reproduced. |
-| [BUG-315](./bug-315-placeholder-prefix-archives-authored-content.md) | Placeholder archival removes authored prefix matches | P2 | Open | One authored question archived without a withdrawal record. |
-| [BUG-316](./bug-316-content-release-test-resource-cleanup.md) | Content test failure cleanup leaks or blocks resources | P3 | Open | Failed migration leaks database; assertion cleanup blocks before releasing advisory lock. |
-| [BUG-317](./bug-317-content-release-documentation-overclaims.md) | Release guidance overstates isolation and clinical behaviour | P3 | Open | Correct staging effects, lift conditions, scoring guarantees and stale verification status. |
 | [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
@@ -1081,6 +1083,10 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md) | Release guidance states staging's effects, lift precedence and saved-draft grading as the code behaves; the clinical suitability of the withdrawn label is Deferred in the debt register | P3 | 2026-10-02 |
+| [BUG-316](../_archive/bugs/bug-316-content-release-test-resource-cleanup.md) | A failed disposable-database migration leaves nothing behind and keeps both errors; the visibility test cleans up after a failure and waits on its own activation; the combined-error case's race is fixed | P3 | 2026-10-02 |
+| [BUG-315](../_archive/bugs/bug-315-placeholder-prefix-archives-authored-content.md) | Placeholder archival archives only the ten committed fixture QIDs; an authored question whose QID starts with `placeholder-` stays published | P2 | 2026-10-02 |
+| [BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md) | Every supported content writer serializes on the release pointer; content rows lock `FOR NO KEY UPDATE` in id order and session creation locks in id order, so holds, withdrawals, activation and learner sessions no longer deadlock | P2 | 2026-10-02 |
 | [BUG-304](../_archive/bugs/bug-304-practice-session-start-no-navigation.md) | A Start click that reaches the handler of an earlier render starts the learner's latest choice under the current key; no application path drops a start silently | P3 | 2026-10-01 |
 | [BUG-313](../_archive/bugs/bug-313-app-clerk-retry-misses-dropped-connections.md) | The app's Clerk reads (the signed-in user, the provisioning identity lookup) retry a dropped connection, which the Clerk SDK reports as a `ClerkAPIResponseError` with no status; tests use the real SDK's own error | P3 | 2026-09-30 |
 | [BUG-312](../_archive/bugs/bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md) | The E2E helpers' Clerk calls retry dropped connections (including undici's `UND_ERR_SOCKET`), 429 and 5xx with the app's retry policy, cancelling superseded bodies, so one dropped connection no longer fails a test in its reset or holds a release | P3 | 2026-09-30 |

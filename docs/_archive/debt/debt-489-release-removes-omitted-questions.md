@@ -1,8 +1,10 @@
 # DEBT-489: A Release Silently Removes Every Live Question Its Bundle Omits
 
-**Status:** In Progress. Filed 2026-10-02 and fixed in code the same day ([Fix](#fix--2026-10-02)): explicit removals, staging that records no withdrawal (tags still change when staged) and an apply bound to its reviewed plan. It closes with [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md) once the fix is released. Until then it blocks the owner's decision to bootstrap production releases.
+**Status:** Resolved — 2026-10-02; explicit removals, staging that records no withdrawal and a plan-bound apply promoted and release-verified, with every Verification bullet re-run against `main`'s code before archival; the attribution of release decisions continues as [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md)
 **Priority:** P1
 **Date:** 2026-10-02
+**Resolved:** 2026-10-02
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-02-utc)
 **Confidence:** CONFIRMED by reproduction on a disposable database. Not live: no production release is active, so production still seeds directly.
 
 ## Summary
@@ -144,6 +146,8 @@ The plan names the release by identity rather than by row id. That lets the boot
 
 **Decided: a removal records its intent, not a free-text reason.** The review asked to preserve each removal's intent and reason. The manifest records the intent (the kind). For the permanent case, the withdrawal record names the release, and the authored reason lives in the content repository's history of that file. A `draft` or `removed` question can come back in a later release, so it is not a clinical record. If the owner wants a recorded reason for `--remove`, it can become a manifest field before the production bootstrap, while no release exists there.
 
+*(2026-10-02, after the owner asked about this decision: the gap is wider than removals. Activations, rollbacks and the bootstrap record no operator-supplied reason or authority either, while the withdrawal and hold commands require both. Filed as [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md), with a recommendation to attribute every activation before the production bootstrap.)*
+
 **The review's boundaries:**
 
 | Boundary | How the fix meets it | Test |
@@ -176,5 +180,31 @@ All on disposable databases. Each case was red before its code existed, or fails
 ## Related
 
 - [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md), whose phase 4 built the release system.
-- [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md), decisions 4–6.
-- [`content-pipeline.md` §16](../practice-engine/content-pipeline.md), stale clones.
+- [ADR-021](../../adr/adr-021-question-revisions-and-content-releases.md), decisions 4–6.
+- [`content-pipeline.md` §16](../../practice-engine/content-pipeline.md), stale clones.
+
+## Verified closeout — 2026-10-02 UTC
+
+The [Fix](#fix--2026-10-02) is implemented, reviewed, promoted to `main` and release-verified. Every Verification bullet above was re-run against `main`'s code before archival: the archiving branch differs from `7dcb9331` only in documentation. The 15 release, withdrawal, seed and cleanup integration files (163 cases) and the 12 script unit files (120 cases) passed.
+
+| Verification | Holds | Receipt on `main`'s code |
+| --- | --- | --- |
+| A partial bundle is refused at staging, naming the missing questions and writing nothing | Yes | `content-release-builder`: *refuses a bundle that leaves out live questions, naming them and writing nothing* |
+| `archived`, `draft` and `--remove` removals stage | Yes | `content-release-builder`: *withdraws an archived file when its release activates, not when it is staged*, *stages a removal the operator names*, and the draft removal in *stages new and changed content invisibly, and activation then publishes it* |
+| Activation refuses an incomplete new release and exempts a rollback | Yes | `content-release-removals`: *refuses a new release that leaves a live question unaccounted for, changing nothing*; *lets a rollback restore an earlier snapshot without naming newer members* |
+| The apply is bound to its plan, for a rollback and the bootstrap too | Yes | `content-release-plan`: all six cases |
+| Mutations | 12 of 13 killed | As recorded above, on the fix's head; #1307 and #1309 then removed the `NOT IN` and the in-memory sort, each with its own receipt |
+
+**Increments.**
+- #1301 filed this record (**5387614524** on `d2ab40e7`; merged `243fec2b`).
+- #1303 implemented the fix (**5388234899** on `ad9702f0`, no findings; merged `68743700`).
+- The promotion reviews' findings were fixed first:
+  - #1305 corrected the documentation (**5388559241** on `fe9beea1`; merged `e2d61472`);
+  - #1307 made the completeness check `NOT EXISTS` (**5388717185** on `18102db2`; merged `4f9900fc`);
+  - #1309 ordered the plan's withdrawals in the database (**5389805721** on `56b4cbdb`; merged `ff322388`);
+  - #1311 made the Releases guidance exact (**5390129377** on `08150590`; merged `9db189be`).
+
+**Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, and `/api/health` reported `ok` with the database reachable.
+
+**Continues as DEBT-490, not Deferred.** Release decisions record no operator-supplied reason or authority. That is [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md), an Active record recommended before the production bootstrap.
+

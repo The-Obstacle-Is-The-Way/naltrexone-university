@@ -1,12 +1,12 @@
 # BUG-314: Content Writers Do Not Share One Serialization Boundary
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-10-02
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-02
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-02-utc)
 
 ## Evidence and reproduction
 
@@ -101,7 +101,7 @@ exact-head review remain required. No implementation changed at filing.
 ## Local implementation receipt — 2026-10-02
 
 The recorded fix is implemented locally, with red/green and mutation evidence in
-the [audit ledger](./assets/content-release-audit-2026-10-02.md). Focused
+the [audit ledger](../../bugs/assets/content-release-audit-2026-10-02.md). Focused
 integration: 15 passed. Full exact-head gate, review and merge receipts are
 recorded in the PR when complete. No production promotion is claimed; this
 record remains open.
@@ -117,4 +117,19 @@ finishes and both transactions commit. With activation's lock set back to
 `FOR UPDATE`, the same case fails with `40P01 deadlock detected`, which is the
 defect itself. The record's probe count is also corrected: three probes, not
 two.
+
+## Verified closeout — 2026-10-02 UTC
+
+Every supported content writer takes the release pointer exclusively before any question row. Content writers lock question rows `FOR NO KEY UPDATE` in id order, a hold defers its row locks to activation, and session creation takes its `FOR SHARE` locks in id order. This is a runtime change to shipped code; no production incident is established. Each Verification item was re-run against `main`'s code before archival (the archiving branch differs from `7dcb9331` only in documentation), with the release, withdrawal, seed and cleanup integration suites: 15 files, 163 cases, all passed.
+
+| Verification | Holds | Receipt on `main`'s code |
+| --- | --- | --- |
+| Hold versus withdrawal batch: no deadlock | Yes | `content-release-concurrency`: *allows a hold and overlapping withdrawal batch to finish without deadlock* |
+| Identical concurrent stagings reuse one release | Yes | `content-release-concurrency`: *reuses the release when identical new-only bundles stage concurrently* |
+| Activation does not wait on a learner attempt's foreign-key lock | Yes | `content-release-reader-locks`: *activates while a learner attempt transaction holds question foreign-key locks*; under a regression to `FOR UPDATE` it fails with `40P01` (#1309) |
+| Session creation locks in id order, and completes beside a hold | Yes | `content-release-reader-locks`: *locks session questions in ascending order even with a reversed heap and requested order*; *completes a hold and a concurrent real session creation without deadlock* |
+
+**Increments.** #1302 (**5388054704** on `69733bb9`; merged `93f8104a`); the attempt-lock case was strengthened in #1309 (**5389805721** on `56b4cbdb`; merged `ff322388`).
+
+**Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, healthy production.
 
