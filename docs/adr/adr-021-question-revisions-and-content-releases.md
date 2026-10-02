@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
-**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 proceeds in steps under [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds the seed as a release builder (decision 6). 4d demonstrates DEBT-483's Verification on a disposable database. [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md)'s fix makes every removal explicit and binds each apply to its reviewed plan. The first production bootstrap is the owner's call.
+**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 is in production as of 2026-10-02 ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc), resolved), built in steps from its [design](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds the seed as a release builder (decision 6). 4d demonstrates DEBT-483's Verification on a disposable database. [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix makes every removal explicit and binds each apply to its reviewed plan. The first production bootstrap, the managed seed's switch to staging, the contract step and release zero are Deferred; the bootstrap is the owner's call, recommended after [DEBT-490](../debt/debt-490-release-decisions-record-no-reason-or-authority.md).
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
@@ -16,7 +16,7 @@ Two P1 records describe the same missing structure.
   - The #951 guard refuses substantive rewrites once graded history exists. It does not store revisions.
   - It does not protect a learner who is viewing an ungraded item while the seed changes it.
   - It does not make a withdrawn question reviewable, because every history read filters on `status = 'published'`.
-- [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md): content becomes visible question by question. The seed commits per question, and withdrawal is an explicit per-QID command. There is no release identity, no all-or-nothing activation and no rollback that respects revocations.
+- [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md): content becomes visible question by question. The seed commits per question, and withdrawal is an explicit per-QID command. There is no release identity, no all-or-nothing activation and no rollback that respects revocations.
 
 The content repository's SPEC-007 defines the cross-repository release interface: an immutable, hash-addressed manifest; staging and one atomic activation; explicit withdrawals and holds; a revocation overlay; rollback. It assigns *verification and activation* to the app. This record decides the app's side of that contract.
 
@@ -28,11 +28,11 @@ Constraints:
 
 **Phase 4 implementation boundary (2026-10-02 audit).** Decisions 4–6 describe
 the target interface; #1290–#1300 implement the current command path documented
-in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+in [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
 Selection still reads materialized `questions.status` and `current_revision_id`,
 not release items directly. Activation checks the caller's expected active
 release and, except for a previously activated rollback target, its parent.
-Since [DEBT-489](../debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02),
+Since [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02),
 a new release must account for every question the active release names,
 unless it is withdrawn, as an item or a named removal, and an apply is bound
 to the plan its preview printed. Staging does
@@ -141,6 +141,6 @@ The app stores parsed fields after two transformations, draft → MDX → rows, 
 
 ## Related
 
-- [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md), [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
+- [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md), [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
 - [Migration Authoring](../dev/migration-authoring.md)
 - Content repository: SPEC-005, SPEC-007, ADR-001 (repository boundary)

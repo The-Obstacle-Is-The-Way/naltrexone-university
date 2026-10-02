@@ -1,12 +1,12 @@
 # BUG-316: Content Release Test Failures Leak or Block Resources
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-10-02
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-02
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-02-utc)
 
 ## Evidence and reproduction
 
@@ -53,7 +53,7 @@ Keep open until required merge/promotion receipts exist.
 ## Local implementation receipt — 2026-10-02
 
 The recorded fix is implemented locally, with red/green and mutation evidence in
-the [audit ledger](./assets/content-release-audit-2026-10-02.md). Focused
+the [audit ledger](../../bugs/assets/content-release-audit-2026-10-02.md). Focused
 integration: 15 passed. Full exact-head gate, review and merge receipts are
 recorded in the PR when complete. No production promotion is claimed; this
 record remains open.
@@ -96,4 +96,18 @@ the migrator's setup is done. The wait allows 10 s, the migration's statement
 timeout is 15 s, and the case's own timeout is 20 s, to allow for CI load.
 After the fix: 24 runs, 6 at a time, none failed, and no database or role was
 left behind before or after.
+
+## Verified closeout — 2026-10-02 UTC
+
+A disposable database is dropped when its migration fails, keeping both errors when cleanup fails too. The visibility test releases and settles activation before its cleanup, and its wait names its own backend and key. Tests only; no runtime path. Each Verification item was re-run against `main`'s code before archival (the archiving branch differs from `7dcb9331` only in documentation), with the release, withdrawal, seed and cleanup integration suites: 15 files, 163 cases, all passed.
+
+| Verification | Holds | Receipt on `main`'s code |
+| --- | --- | --- |
+| A failed migration leaves no database behind | Yes | `disposable-database-cleanup`: *drops a disposable database when its migration fails* |
+| Both errors survive when cleanup also fails | Yes | `disposable-database-cleanup`: *preserves the migration error when database cleanup also fails*, whose race was fixed in #1305 (12 of 24 concurrent runs failed before, none after) |
+| The visibility test cleans up after a failure and waits on its own activation | Yes | `content-release-verification`: *shows a reader no part of an activation that fails*, *…that commits* and *…that observation fails* |
+
+**Increments.** #1302 (**5388054704** on `69733bb9`; merged `93f8104a`); the combined-error race was fixed in #1305 (**5388559241** on `fe9beea1`; merged `e2d61472`).
+
+**Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, healthy production.
 

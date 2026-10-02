@@ -12,7 +12,7 @@
 
 ## Summary
 
-The withdrawal and hold commands require an operator-supplied `--reason` and `--authority`, and a lift records its own. Since [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix, a release can remove live questions, and an activation can publish, archive and permanently withdraw them. But the release path records no operator-supplied reason or authority anywhere:
+The withdrawal and hold commands require an operator-supplied `--reason` and `--authority`, and a lift records its own. Since [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix, a release can remove live questions, and an activation can publish, archive and permanently withdraw them. But the release path records no operator-supplied reason or authority anywhere:
 - an activation, a rollback or the bootstrap records only the release, the release it replaced and the time;
 - a `--remove` removal records only its kind, in the manifest;
 - a permanent withdrawal made by an `archived` removal records generated metadata only: the reason `archived in content release <release id>` and the fixed authority `content release`. It names no person and no rationale.
@@ -23,7 +23,7 @@ The direct seed's withdrawals for MDX archives use generated metadata the same w
 
 ## How this was found
 
-On 2026-10-02 a side summary of DEBT-489's decision said that removals keep no written reason, only a generic one for permanent removals, and the owner asked whether that was true and whether it mattered. DEBT-489's [Fix](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02) had recorded a narrower decision: a removal records its intent (its kind), not a free-text reason, and a recorded reason for `--remove` was left as the owner's call. The investigation below confirms the summary. It also finds the gap is wider than removals: activations themselves are unattributed.
+On 2026-10-02 a side summary of DEBT-489's decision said that removals keep no written reason, only a generic one for permanent removals, and the owner asked whether that was true and whether it mattered. DEBT-489's [Fix](../_archive/debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02) had recorded a narrower decision: a removal records its intent (its kind), not a free-text reason, and a recorded reason for `--remove` was left as the owner's call. The investigation below confirms the summary. It also finds the gap is wider than removals: activations themselves are unattributed.
 
 ## Evidence
 
@@ -79,7 +79,7 @@ Each item is its own case, so that each guard is shown to work on its own:
 
 ## Related
 
-- [DEBT-489](./debt-489-release-removes-omitted-questions.md): its Fix's decision on removal reasons, which this record widens.
-- [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md): ADR-021 phase 4, which built the release path.
+- [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md): its Fix's decision on removal reasons, which this record widens.
+- [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md): ADR-021 phase 4, which built the release path.
 - [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md), decision 4.
 - [`content-pipeline.md`, Releases](../practice-engine/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold).

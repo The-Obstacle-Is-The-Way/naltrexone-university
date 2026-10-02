@@ -2,7 +2,9 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-02: BUG-316's combined migration/cleanup-error test had a race, now fixed ([BUG-316](./bug-316-content-release-test-resource-cleanup.md)). After #1302 merged, the case failed CI run `36965916479` with `permission denied for database`. It transferred its database's ownership before drizzle's migrator had created its schema. Reproduced in 12 of 24 concurrent local runs; the test now waits until the injected migration is running, and 24 concurrent runs then passed. BUG-314–317 stay open until their promotion receipts exist.
+**Earlier** — 2026-10-02: promotion #1308's review on BUG-314–317 ([BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md#promotion-review-follow-up--2026-10-02)). BUG-314's attempt-lock case now fails on the real `40P01` deadlock, not a timeout, if activation's lock regresses to `FOR UPDATE`; its probe count is corrected. BUG-314–317 gain the template's archive-convention callout and `Resolved` and `Verification receipts` fields (`—` until their promotion receipts exist). All four stay open until then.
+
+**Earlier** — 2026-10-02: BUG-316's combined migration/cleanup-error test had a race, now fixed ([BUG-316](../_archive/bugs/bug-316-content-release-test-resource-cleanup.md)). After #1302 merged, the case failed CI run `36965916479` with `permission denied for database`. It transferred its database's ownership before drizzle's migrator had created its schema. Reproduced in 12 of 24 concurrent local runs; the test now waits until the injected migration is running, and 24 concurrent runs then passed. BUG-314–317 stay open until their promotion receipts exist.
 
 **Earlier** — 2026-10-02: BUG-314–317 filed from a disposable-Postgres audit:
 content writer deadlock/concurrent staging, authored placeholder-prefix archival,
