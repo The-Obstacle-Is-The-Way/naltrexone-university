@@ -2,6 +2,8 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-02: BUG-316's combined migration/cleanup-error test had a race, now fixed ([BUG-316](./bug-316-content-release-test-resource-cleanup.md)). After #1302 merged, the case failed CI run `36965916479` with `permission denied for database`. It transferred its database's ownership before drizzle's migrator had created its schema. Reproduced in 12 of 24 concurrent local runs; the test now waits until the injected migration is running, and 24 concurrent runs then passed. BUG-314–317 stay open until their promotion receipts exist.
+
 **Earlier** — 2026-10-02: BUG-314–317 filed from a disposable-Postgres audit:
 content writer deadlock/concurrent staging, authored placeholder-prefix archival,
 test-resource cleanup, and documentation overclaims. Reproduced before fixing; implementation and review

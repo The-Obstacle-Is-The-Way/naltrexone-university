@@ -416,7 +416,7 @@ export async function activateRelease(
     `);
     const withdrawing = removed
       .filter((row) => withdrawnIds.has(row.id))
-      .sort((a, b) => (a.id < b.id ? -1 : 1));
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     const planId = createHash('sha256')
       .update(
         JSON.stringify({

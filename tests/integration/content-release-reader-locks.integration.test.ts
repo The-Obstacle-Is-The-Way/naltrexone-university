@@ -66,6 +66,10 @@ it('activates while a learner attempt transaction holds question foreign-key loc
       );
     runs.push(write);
     await ready.promise;
+    const [activatorBackend] = await activator<
+      { pid: number }[]
+    >`SELECT pg_backend_pid() AS pid`;
+    if (!activatorBackend) throw new Error('Missing backend');
     let activated = false;
     runs.push(
       activateRelease(drizzle(activator, { schema }), {
@@ -79,7 +83,20 @@ it('activates while a learner attempt transaction holds question foreign-key loc
         (error: unknown) => error,
       ),
     );
-    await expect.poll(() => activated).toBe(true);
+    // Let the attempt take its second foreign-key lock once activation has
+    // finished, or is waiting on a lock. With an activation lock that
+    // conflicts with KEY SHARE, the second case is the BUG-314 cycle, and this
+    // fails on the real deadlock rather than on a timeout.
+    await expect
+      .poll(async () => {
+        if (activated) return true;
+        const [row] = await monitor<{ waiting: boolean }[]>`
+          SELECT wait_event_type = 'Lock' AS waiting
+          FROM pg_stat_activity WHERE pid = ${activatorBackend.pid}
+        `;
+        return row?.waiting === true;
+      })
+      .toBe(true);
     release.resolve();
     expect(await Promise.all(runs)).toEqual(['written', 'activated']);
   } finally {

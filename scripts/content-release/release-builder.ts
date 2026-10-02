@@ -112,6 +112,9 @@ export async function stageReleaseFromFiles(
       .orderBy(asc(schema.questions.id))
       .for('no key update');
     const idBySlug = new Map(existing.map((row) => [row.slug, row.id]));
+    // The active release's members are read without a row lock: the
+    // exclusive pointer lock above already keeps every other content writer
+    // out, and activation locks the whole set again before it writes.
     const members = await tx
       .select({ id: schema.questions.id, slug: schema.questions.slug })
       .from(schema.contentReleaseItems)

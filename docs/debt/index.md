@@ -3,8 +3,10 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-02 UTC
 
-**Latest** — 2026-10-02 UTC: DEBT-489's completeness check no longer depends on a distant invariant ([DEBT-489](./debt-489-release-removes-omitted-questions.md#verification)). #1305 merged (**5388559241** on `fe9beea1`; merged `e2d61472`) after a second round: two valid findings fixed, BUG-316's racy test fixed, and one finding declined with evidence and withdrawn. Promotion #1306 (#1300–#1305) was closed unmerged, to take its review's one finding:
-- Activation's completeness check excluded named removals with `NOT IN (subquery)`, which matches nothing if the subquery yields a NULL, so the check would pass silently. That was unreachable, because the manifest is validated earlier in the same transaction, but this is the guard against silent removal. Every exclusion is now `NOT EXISTS`. Removing the clause fails 6 cases; the 68 release cases pass.
+**Latest** — 2026-10-02 UTC: follow-ups from promotion #1308's review ([DEBT-489](./debt-489-release-removes-omitted-questions.md)). #1307 merged with no findings (**5388717185** on `18102db2`; merged `4f9900fc`). Promotion #1308 (#1300–#1307) was closed unmerged to take its review's five findings:
+- The plan's withdrawal order is sorted with a total comparator. Ids are unique, so plan ids are unchanged.
+- The release builder documents that it reads the active release's members under the pointer lock alone.
+- In the bugs register: BUG-314's attempt-lock case fails on the real deadlock under regression, its probe count is fixed, and BUG-314–317 carry the template's metadata.
 - **Open decisions for the owner.**
   - **When to bootstrap production content releases (DEBT-483).** Not before [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix is released. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real.
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
@@ -15,7 +17,7 @@
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and the promotion of #1300–#1305 with it were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-490.**
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and the promotion of #1300–#1307 with it were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-490.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md), [2026-06](./register-history-2026-06.md).
 
