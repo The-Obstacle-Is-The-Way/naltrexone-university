@@ -63,3 +63,8 @@ creator to the local administrator before the migration throws. The creator's
 cleanup is refused; the helper must retain both errors and the original cause.
 The administrator then removes only this test's database and temporary role.
 The test bounds its catalog wait with a PostgreSQL statement timeout.
+
+CodeRabbit's follow-up environment-isolation finding was valid: the new test's
+manual DATABASE_URL reset preserved its value, but did not follow the mandatory
+`.claude/rules/test-isolation.md` snapshot/afterEach pattern. The test now uses
+the shared helpers so the whole original environment is restored.

@@ -3,8 +3,17 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import postgres from 'postgres';
-import { expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
+
+const ORIGINAL_ENV = snapshotProcessEnv();
+afterEach(() => {
+  restoreProcessEnv(ORIGINAL_ENV);
+});
 
 it('drops a disposable database when its migration fails', async () => {
   const admin = postgres(process.env.DATABASE_URL ?? '', {
@@ -139,7 +148,6 @@ it('preserves the migration error when database cleanup also fails', async () =>
     });
     expect(error.errors[1]).toMatchObject({ code: '42501' });
   } finally {
-    process.env.DATABASE_URL = originalUrl;
     try {
       // The migration's statement timeout also bounds this wait if the
       // administrator failed before transferring ownership.
