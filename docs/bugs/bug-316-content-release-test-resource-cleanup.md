@@ -68,3 +68,28 @@ CodeRabbit's follow-up environment-isolation finding was valid: the new test's
 manual DATABASE_URL reset preserved its value, but did not follow the mandatory
 `.claude/rules/test-isolation.md` snapshot/afterEach pattern. The test now uses
 the shared helpers so the whole original environment is restored.
+
+## A race in the combined-error case — 2026-10-02
+
+After #1302 merged, the combined migration/cleanup-error case failed in CI run
+`36965916479` on #1305, a docs-only PR. The migration's error was
+`permission denied for database it_disposable_…`, not the injected failure.
+The same case had failed once in 8 local combined runs earlier that day, with
+no output captured.
+
+**Cause.** The test waited only until the role-owned database existed, then
+transferred its ownership. Drizzle's migrator first creates its own schema as
+the creating role, before the injected migration's wait loop runs. When the
+transfer won that race, the role had lost CREATE on the database, and the
+migration failed on permission instead.
+
+**Reproduced before fixing.** 24 runs, 6 at a time: 12 failed, each with
+that permission error.
+
+**Fix.** The test transfers ownership only once a backend of its temporary
+role is running the injected migration, as `pg_stat_activity` shows. By then
+the migrator's setup is done. The wait allows 10 s, the migration's statement
+timeout is 15 s, and the case's own timeout is 20 s, to allow for CI load.
+After the fix: 24 runs, 6 at a time, none failed, and no database or role was
+left behind before or after.
+

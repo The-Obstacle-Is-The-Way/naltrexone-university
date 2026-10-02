@@ -2,6 +2,27 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-02 UTC: DEBT-489 is fixed in code: a release removes a live question only when told to, and every apply is bound to the plan its preview printed ([DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02)).
+- **The fix:**
+  - Manifest v2 names every live question a release removes, and how: `archived` (a permanent withdrawal, recorded when the release activates), `draft`, or `removed` with `--remove <qid>`.
+  - Staging refuses a bundle that leaves out a live question, held ones included, and names them. It records no withdrawal, so an abandoned release leaves none behind. Activation repeats the check for any release never active before.
+  - The activation preview prints a plan id and every change: archived, published or moved, withdrawn, and left out by a hold or a withdrawal. `--apply` needs `--plan`, and a plan that changed since the preview applies nothing. The bootstrap is bound the same way.
+  - A withdrawal made by an `archived` removal names the release that made it.
+- **Evidence.** Each case was red before its code existed, or fails under a mutation of that code. 12 of 13 targeted mutations fail a case; the record explains the one that survives.
+- **The independent review's PRs merged first:** #1301 filed DEBT-489 (**5387614524** on `d2ab40e7`; merged `243fec2b`); #1302 fixed BUG-314–317 (**5388054704** on `69733bb9`; merged `93f8104a`), which serializes every content writer on the release pointer. This fix builds on that.
+- **Not live.** No production release is active.
+- **Open decisions for the owner.**
+  - **When to bootstrap production content releases (DEBT-483).** Not before [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix, above, is released. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real.
+  - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
+  - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
+  - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-490.**
+
 **Earlier** — 2026-10-02 UTC: DEBT-489 is filed, because a content release silently removes every live question its bundle omits. DEBT-483's verification suite is merged ([DEBT-489](./debt-489-release-removes-omitted-questions.md)).
 - **DEBT-489 (P1).** The finding:
   - A release is built only from the MDX files present when it is staged, and activation archives every live question it does not name.

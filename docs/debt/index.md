@@ -3,17 +3,14 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-02 UTC
 
-**Latest** — 2026-10-02 UTC: DEBT-489 is fixed in code: a release removes a live question only when told to, and every apply is bound to the plan its preview printed ([DEBT-489](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02)).
-- **The fix:**
-  - Manifest v2 names every live question a release removes, and how: `archived` (a permanent withdrawal, recorded when the release activates), `draft`, or `removed` with `--remove <qid>`.
-  - Staging refuses a bundle that leaves out a live question, held ones included, and names them. It records no withdrawal, so an abandoned release leaves none behind. Activation repeats the check for any release never active before.
-  - The activation preview prints a plan id and every change: archived, published or moved, withdrawn, and left out by a hold or a withdrawal. `--apply` needs `--plan`, and a plan that changed since the preview applies nothing. The bootstrap is bound the same way.
-  - A withdrawal made by an `archived` removal names the release that made it.
-- **Evidence.** Each case was red before its code existed, or fails under a mutation of that code. 12 of 13 targeted mutations fail a case; the record explains the one that survives.
-- **The independent review's PRs merged first:** #1301 filed DEBT-489 (**5387614524** on `d2ab40e7`; merged `243fec2b`); #1302 fixed BUG-314–317 (**5388054704** on `69733bb9`; merged `93f8104a`), which serializes every content writer on the release pointer. This fix builds on that.
-- **Not live.** No production release is active.
+**Latest** — 2026-10-02 UTC: documentation corrections from promotion #1304's review ([DEBT-489](./debt-489-release-removes-omitted-questions.md)). #1303, DEBT-489's fix, merged with no actionable findings (**5388234899** on `ad9702f0`; merged `68743700`). Promotion #1304 (#1300–#1303) was closed unmerged: its review found three stale documentation claims, and a sweep found the same kind left after BUG-315. This increment corrects them:
+- DEBT-489's status no longer says staging has no side effects: staging records no withdrawal, but tags still change when staged.
+- BUG-317 and the audit ledger get dated notes: plan binding is implemented, and staging no longer records a withdrawal.
+- The pipeline guide qualifies the direct seed by release state: its withdrawal recording and the advice to reseed apply only while no release is active.
+- Placeholder archival is described as the ten committed fixtures, by exact QID, and only while no release is active, in the pipeline guide, the taxonomy guide and the seed's own log line, which now comes from a tested summary function.
+- **A racy test, fixed.** #1302's combined migration/cleanup-error case failed this PR's CI on a permission error. The test transferred ownership of its database before the migrator had set up. It is recorded and fixed under [BUG-316](../bugs/bug-316-content-release-test-resource-cleanup.md): 12 of 24 concurrent runs failed before the fix, none after.
 - **Open decisions for the owner.**
-  - **When to bootstrap production content releases (DEBT-483).** Not before [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix, above, is released. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real.
+  - **When to bootstrap production content releases (DEBT-483).** Not before [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix is released. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real.
   - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
   - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
   - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
@@ -22,7 +19,7 @@
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-490.**
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and the promotion of #1300–#1303 with it were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-490.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md), [2026-06](./register-history-2026-06.md).
 

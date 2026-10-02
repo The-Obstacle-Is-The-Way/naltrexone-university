@@ -106,7 +106,7 @@ it('preserves the migration error when database cleanup also fails', async () =>
     await writeFile(
       path.join(folder, '0000_bad.sql'),
       `
-      SET LOCAL statement_timeout = '3s';
+      SET LOCAL statement_timeout = '15s';
       DO $$ BEGIN
         WHILE (SELECT pg_get_userbyid(datdba) = current_user FROM pg_database WHERE datname = current_database()) LOOP
           PERFORM pg_sleep(0.01);
@@ -122,14 +122,22 @@ it('preserves the migration error when database cleanup also fails', async () =>
     attempted = createDisposableDatabase({ migrationsFolder: folder }).catch(
       (error: unknown) => error,
     );
+    // Transfer ownership only once the migration is inside its wait loop.
+    // Before that, the migrator still creates its own schema as the creator,
+    // and losing ownership first fails it on permission instead (BUG-316).
     await expect
-      .poll(async () => {
-        const rows = await admin<{ datname: string }[]>`
-        SELECT datname FROM pg_database WHERE pg_get_userbyid(datdba) = ${role}
-      `;
-        databaseName = rows[0]?.datname;
-        return rows.length;
-      })
+      .poll(
+        async () => {
+          const rows = await admin<{ datname: string }[]>`
+          SELECT datname FROM pg_stat_activity
+          WHERE usename = ${role} AND state = 'active'
+            AND query LIKE '%injected migration failure%'
+        `;
+          databaseName = rows[0]?.datname;
+          return rows.length;
+        },
+        { timeout: 10_000 },
+      )
       .toBe(1);
     if (!databaseName || !/^it_disposable_[0-9a-f]{32}$/.test(databaseName)) {
       throw new Error('Unexpected disposable database name');
@@ -167,4 +175,4 @@ it('preserves the migration error when database cleanup also fails', async () =>
       await rm(folder, { recursive: true, force: true });
     }
   }
-});
+}, 20_000);

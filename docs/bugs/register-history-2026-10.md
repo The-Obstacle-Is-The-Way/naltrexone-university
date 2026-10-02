@@ -2,6 +2,11 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-02: BUG-314–317 filed from a disposable-Postgres audit:
+content writer deadlock/concurrent staging, authored placeholder-prefix archival,
+test-resource cleanup, and documentation overclaims. Reproduced before fixing; implementation and review
+receipts follow in their records. No production incident is established.
+
 **Earlier** — 2026-10-01: **BUG-304 (P3) is Resolved and archived.**
 - **What was fixed.** A Start click that reached the handler of an earlier render was refused silently. Every start now submits the learner's latest choice under the current key, and BUG-303's key guarantees hold.
 - **Fix.** #1282 (**5377515605** on `389194ae`, no findings; merged `14a3e800`), promoted through #1283 (`73dcff85`). Codecov's patch check first found two controls untested, and the red-first test now covers every starter control.

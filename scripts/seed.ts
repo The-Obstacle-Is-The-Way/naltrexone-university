@@ -5,7 +5,10 @@ import * as schema from '../db/schema';
 import { readSeedQuestionFiles } from './seed/file-reader';
 import { archivePlaceholderQuestions } from './seed/placeholder-archiver';
 import { syncQuestionsFromFiles } from './seed/question-syncer';
-import { summarizeSeedSync } from './seed/seed-summary';
+import {
+  summarizePlaceholderArchival,
+  summarizeSeedSync,
+} from './seed/seed-summary';
 
 export async function runSeed(databaseUrl: string): Promise<void> {
   const includePlaceholders = process.env.SEED_INCLUDE_PLACEHOLDERS === 'true';
@@ -20,9 +23,7 @@ export async function runSeed(databaseUrl: string): Promise<void> {
 
     if (!includePlaceholders) {
       const archivedCount = await archivePlaceholderQuestions(db);
-      console.info(
-        `Archived placeholders: ${archivedCount} (slug LIKE "placeholder-%")`,
-      );
+      console.info(summarizePlaceholderArchival(archivedCount));
     }
   } finally {
     await sql.end({ timeout: 5 });

@@ -303,7 +303,7 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-question
 
 In one transaction, after locking the release pointer and then the question rows in ID order, it archives each question and records a withdrawal for every revision in `question_withdrawals` (migration `0045`), with the reason and authority. A revision already recorded keeps its first record.
 
-A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too, and the seed records it with authority `content seed`. Only the synthetic placeholders are archived and restored without a record. A learner who attempted a withdrawn question can still review it, with a notice (ADR-021 §3).
+A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too. Before a release is active, the seed records it with authority `content seed`. Once one is active, the seed refuses the database, and an `archived` file becomes a withdrawal only when the release that stages it is activated, with authority `content release` (see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold)). Only the synthetic placeholders are archived and restored without a record. A learner who attempted a withdrawn question can still review it, with a notice (ADR-021 §3).
 
 ### Releases: Bootstrap, Stage, Activate, Roll Back and Hold
 
@@ -568,7 +568,7 @@ The seed refuses a database with an active content release (ADR-021 phase 4b). O
 
 ## 15. When to Reseed
 
-Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sync with the MDX source files. Common triggers:
+Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sync with the MDX source files, as long as no content release is active there. Once one is, the seed refuses that database: stage a release, preview its activation and apply its plan instead (see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold)). Common triggers:
 
 | Trigger | Why Reseed Is Needed |
 |---------|---------------------|
@@ -586,7 +586,7 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 The seed script is idempotent: running it again with the same MDX content skips every unchanged question and writes nothing.
 
-**Important:** By default, every `pnpm db:seed` run also archives any `placeholder-%` rows unless `SEED_INCLUDE_PLACEHOLDERS=true`. That placeholder archival is a deliberate side effect and runs on every invocation.
+**Important:** By default, every `pnpm db:seed` run against a database with no active content release also archives the ten committed placeholder fixtures, by exact QID, unless `SEED_INCLUDE_PLACEHOLDERS=true`. An authored question whose QID merely starts with `placeholder-` is left alone (BUG-315). That placeholder archival is a deliberate side effect of every such run. Once a release is active, the seed refuses the database before it archives anything.
 
 ### How it works
 
@@ -616,7 +616,7 @@ So `updated` greater than `new revisions` means metadata changed. Check `status`
 
 ### What about placeholders?
 
-By default, `pnpm db:seed` **excludes** placeholder questions and archives any existing `placeholder-%` rows in the DB. This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`.
+By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`.
 
 ---
 
