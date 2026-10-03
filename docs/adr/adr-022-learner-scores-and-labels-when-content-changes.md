@@ -112,7 +112,7 @@ Stored grades are never regraded. Mapping an old selection onto a new revision's
 
 ## Amendment — 2026-10-03
 
-Decided under the owner's 2026-10-03 delegation, after a review notice asked whether learners' past scores should change after the fact ([DEBT-494](../debt/debt-494-read-time-scores-owner-confirmation.md)).
+Decided under the owner's 2026-10-03 delegation, after a review notice asked whether learners' past scores should change after the fact ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md)).
 
 **What changed.** Decision 3 treated two questions as one: whether the learner had a fair chance at an item, and whether its content is still trusted. The first is a fact about the moment the session ended, and cannot be reconstructed later. The second can change at any time. Decision 3's rule is replaced by:
 
@@ -126,7 +126,7 @@ Decided under the owner's 2026-10-03 delegation, after a review notice asked whe
 - **The disclosure names the amended reasons:** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." Pattern Registry F-13 changes with the code that applies the amended rule (DEBT-493).
 - **An item that became unavailable during its session does not count,** answered or not, unless it was a tutor answer already given. A lift after the session ends does not restore it, because the learner could not reach it. A lift before the session ends restores it only if its question is available again when the session ends.
 - **No second "score when taken" value.** Once retirement is out, a past score moves only for a disclosed clinical reason. Showing the superseded value would invite learners to rely on a score that counted flawed content.
-- **Storage.** Each session item records the fair-chance fact when its session ends, in one nullable column. A session that ended before the column existed is recorded once, when the column is added, from the bank as it stands then: an item on a question unpublished by then had no fair chance unless a tutor answer gave it one. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again, and a later retirement changes none of them ([DEBT-494](../debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)).
+- **Storage.** Each session item records the fair-chance fact when its session ends, in one nullable column. A session that ended before the column existed is recorded once, when the column is added, from the bank as it stands then: an item on a question unpublished by then had no fair chance unless a tutor answer gave it one. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again, and a later retirement changes none of them ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)).
 - **Decision 5 is unchanged in effect:** an exam item unavailable at submission does not count. The active notice says "It won't count toward your score." only where that is true, so not for a tutor answer already given on a question retired since.
 
 **Alternatives rejected**, in addition to those below:

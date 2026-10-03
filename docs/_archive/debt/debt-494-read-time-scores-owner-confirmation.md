@@ -1,18 +1,18 @@
 # DEBT-494: Past Scores Change After the Fact
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — decided 2026-10-03 under the owner's delegation ([Decision](#decision--2026-10-03)); ADR-022 amended, implementation tracked by DEBT-493. Close once the amendment is promoted.
+**Status:** Resolved — 2026-10-03 UTC; decided under the owner's delegation, ADR-022 amended and released ([Verified closeout](#verified-closeout--2026-10-03-utc)). The rest of the amended rule's implementation continues under DEBT-493.
 **Priority:** P2
 **Date:** 2026-10-03
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-03
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
 ## Summary
 
-[ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 3 scores at read time. An item counts toward a score only while its question is available, and, from DEBT-493 increment 4, only while its answer key is unchanged. So a learner's past scores move when content changes, with nothing new answered:
+[ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 3 scores at read time. An item counts toward a score only while its question is available, and, from DEBT-493 increment 4, only while its answer key is unchanged. So a learner's past scores move when content changes, with nothing new answered:
 - a completed session's score in History and on its summary page;
 - the Dashboard's overall and seven-day accuracy.
 
@@ -55,7 +55,7 @@ Investigated on 2026-10-03, against `main` at `bad0ad67` and the DEBT-493 branch
 
 ## Decision — 2026-10-03
 
-None of the four options as written. ADR-022 Decision 3 merged two questions that have different answers, so it is amended ([ADR-022 Amendment](../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)):
+None of the four options as written. ADR-022 Decision 3 merged two questions that have different answers, so it is amended ([ADR-022 Amendment](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)):
 
 - **Did the learner have a fair chance at the item?** This is a fact about the moment the session ended. It cannot be rebuilt later, so it is recorded then: the question was available at the end, or the learner had already answered it in tutor mode.
 - **Is the content still trusted?** This can change at any time. A withdrawn, held or key-corrected item stops counting when that is known, with a disclosure.
@@ -69,7 +69,7 @@ An item counts when both hold.
 - A second "score when taken" value (option D) is not built. Past scores now move only for disclosed clinical reasons, and showing the superseded value would invite reliance on a score that counted flawed content.
 - Freezing (option B) would keep counting unsafe items.
 
-**Effect on DEBT-493.** History scores are in production under Decision 3's rule, which excludes retired questions. Dashboard accuracy and the session summary's writer were built on the same rule and are not shipped. All three move to the amended rule, after a step that records the fair-chance fact when a session ends. DEBT-493's [Progress](./debt-493-learner-scores-and-labels-when-content-changes.md#progress) holds the revised plan.
+**Effect on DEBT-493.** History scores are in production under Decision 3's rule, which excludes retired questions. Dashboard accuracy and the session summary's writer were built on the same rule and are not shipped. All three move to the amended rule, after a step that records the fair-chance fact when a session ends. DEBT-493's [Progress](../../debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress) holds the revised plan.
 
 ## Consequences and cost, verified — 2026-10-03
 
@@ -96,8 +96,23 @@ The backfill fills only items not yet recorded, so running it again changes noth
 - **Lock scope.** ADD COLUMN takes an ACCESS EXCLUSIVE lock on `practice_session_question_states`, and Drizzle holds it until the migration's transaction commits, so reads and writes of the table wait while the backfill updates every ended item, whose row locks are held to the same commit. The nullable column has no default, so adding it rewrites no row. This is accepted as a small-table cost at this product's scale, as 0026 accepts it for `practice_sessions`. It is recorded here, not in the migration: pushing the PR head had already applied 0050 to the shared Preview database, and an applied migration is never edited.
 - **Deployed-code compatibility.** The column is additive and nullable. The code serving during the deploy neither reads nor writes it, and sessions it ends in that window stay null, which reads as a fair chance. A marked block, `-- DEBT-494 fair-chance backfill`, is executed against arranged rows in `session-fair-chance-backfill.integration.test.ts`.
 
+## Verified closeout — 2026-10-03 UTC
+
+- **Decided** in #1343: ADR-022 Amendment (CodeRabbit **5401280322** on `88742b65`; merged `b356e948`).
+- **Implemented** in two PRs:
+  - #1344: the fair chance recorded at session end, migration 0050 (**5401592073** on `e944799b`; merged `3a91c476`);
+  - #1346: History and Dashboard accuracy on the amended rule (**5401855796** on `b7cad958`; merged `279f8d59`).
+- **Released** through promotion #1347 (`2c4113e1`):
+  - main CI **37142019278**, `test` passed **18:01:19Z**;
+  - production assigned **18:01:21.391Z**;
+  - `main` and `dev` trees `b94976cf`;
+  - production health 200 (`{"ok":true,"db":true}`).
+- **The production backfill ran as written.** The production build log records `DEBT-494 fair-chance backfill: 466 items recorded`, and the migration ledger's post-check matched the checkout exactly.
+- **An earlier promotion, #1345, was closed unmerged.** CodeRabbit found comments that still said sessions ended before 0050 are unrecorded; #1346 corrected them.
+- **The record's scope is complete.** It asked for the decision and its documentation. The session summary's writer, Review & Submit with the active notice, and key corrections continue under [DEBT-493](../../debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress).
+
 ## Related
 
-- [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decision 3 and Consequences
-- [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md): the implementation, increment 2
-- [Pattern Registry](../frontend/pattern-registry.md) F-13: the unscored disclosure
+- [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decision 3 and Consequences
+- [DEBT-493](../../debt/debt-493-learner-scores-and-labels-when-content-changes.md): the implementation, increment 2
+- [Pattern Registry](../../frontend/pattern-registry.md) F-13: the unscored disclosure
