@@ -9,6 +9,7 @@ import {
   isNull,
   sql,
 } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
@@ -55,6 +56,8 @@ class CorruptPracticeSessionRowError extends ApplicationError {
   }
 }
 
+// Each session item's question, for its score (ADR-022 Decision 3).
+const itemQuestions = alias(questions, 'item_questions');
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -479,9 +482,15 @@ export class DrizzlePracticeSessionRepository
             answered: sql<number>`
               count(${practiceSessionQuestionStates.latestSelectedChoiceId})::int
             `,
-            correct: sql<number>`
+            // ADR-022 Decision 3: an item counts toward the score only while
+            // its question is published, read now.
+            scored: sql<number>`
+              count(*) filter (where ${itemQuestions.status} = 'published')::int
+            `,
+            scoredCorrect: sql<number>`
               count(*) filter (
-                where ${practiceSessionQuestionStates.latestSelectedChoiceId} is not null
+                where ${itemQuestions.status} = 'published'
+                  and ${practiceSessionQuestionStates.latestSelectedChoiceId} is not null
                   and ${practiceSessionQuestionStates.latestIsCorrect} is true
               )::int
             `,
@@ -502,6 +511,10 @@ export class DrizzlePracticeSessionRepository
               eq(practiceSessionQuestionStates.position, 0),
               eq(questions.status, 'published'),
             ),
+          )
+          .leftJoin(
+            itemQuestions,
+            eq(itemQuestions.id, practiceSessionQuestionStates.questionId),
           )
           .where(this.completedSessionCondition(userId, mode))
           .groupBy(practiceSessions.id)
@@ -533,7 +546,8 @@ export class DrizzlePracticeSessionRepository
               questionCount: params.questionIds.length,
               firstQuestionSlug: row.firstQuestionSlug,
               answered: row.answered,
-              correct: row.correct,
+              scored: row.scored,
+              scoredCorrect: row.scoredCorrect,
               startedAt: row.startedAt,
               endedAt: row.endedAt,
             });

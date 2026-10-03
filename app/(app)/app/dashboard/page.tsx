@@ -6,6 +6,7 @@ import {
   questionAvailabilityHeading,
   questionAvailabilityLabel,
 } from '@/components/question/question-availability-notice';
+import { UnscoredDisclosure } from '@/components/question/unscored-disclosure';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
@@ -167,18 +168,23 @@ export function DashboardView({
                         </span>
                       </div>
                       <div className="mt-2 text-sm text-foreground">
+                        {/* ADR-022 Decision 3: over the scored items only. */}
                         <span className="font-medium">
-                          {row.correct}/{row.questionCount} correct
+                          {row.correct}/{row.scored} correct
                         </span>
                         <span className="text-muted-foreground">
                           {' '}
                           (
-                          {row.mode === 'exam' || row.answered > 0
+                          {row.scored > 0 &&
+                          (row.mode === 'exam' || row.answered > 0)
                             ? formatPercent(row.accuracy)
                             : '—'}
                           )
                         </span>
                       </div>
+                      <UnscoredDisclosure
+                        count={row.questionCount - row.scored}
+                      />
                     </Link>
                   </li>
                 );

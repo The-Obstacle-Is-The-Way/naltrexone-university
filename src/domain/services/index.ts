@@ -15,6 +15,11 @@ export {
   selectNextQuestionId,
 } from './question-selection';
 export {
+  computeSessionScore,
+  countsTowardScore,
+  type SessionScore,
+} from './scoring';
+export {
   computeSessionProgress,
   getNextQuestionId,
   type SessionProgress,
