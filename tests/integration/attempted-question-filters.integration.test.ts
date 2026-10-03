@@ -173,9 +173,10 @@ describe('attempted-question filters against real Postgres', () => {
   // DEBT-493 increment 5, ADR-022 Decision 1: a question no longer available
   // keeps its place in History under a difficulty or tag filter, by the
   // revision answered and its tags, as it does unfiltered. Two hard questions,
-  // one then withdrawn, and an easy one, each tagged and answered on the day
-  // given.
-  async function arrangeWithdrawnAmongTagged(days: {
+  // one tagged and then withdrawn, one untagged, and an easy tagged one, each
+  // answered on the day given; so the difficulty filter, the tag filter and
+  // both together each give a different set.
+  async function arrangeFilterQuestions(days: {
     withdrawn: string;
     kept: string;
     easy: string;
@@ -186,12 +187,18 @@ describe('attempted-question filters against real Postgres', () => {
       kind: 'topic',
     });
     const [withdrawn, kept, easy] = await Promise.all(
-      (['hard', 'hard', 'easy'] as const).map((difficulty) =>
+      (
+        [
+          ['hard', [tag.id]],
+          ['hard', []],
+          ['easy', [tag.id]],
+        ] as const
+      ).map(([difficulty, tagIds]) =>
         createQuestion(db, cleanup, {
           slug: `it-attempt-filter-${randomUUID()}`,
           status: 'published',
           difficulty,
-          tagIds: [tag.id],
+          tagIds,
         }),
       ),
     );
@@ -215,16 +222,16 @@ describe('attempted-question filters against real Postgres', () => {
 
   it.each([
     ['difficulty', { difficulty: 'hard' as const }, ['withdrawn', 'kept']],
-    ['tag', { tagSlug: 'tag' }, ['withdrawn', 'kept', 'easy']],
+    ['tag', { tagSlug: 'tag' }, ['withdrawn', 'easy']],
     [
       'difficulty and tag',
       { difficulty: 'hard' as const, tagSlug: 'tag' },
-      ['withdrawn', 'kept'],
+      ['withdrawn'],
     ],
   ] as const)(
     'keeps a question no longer available under a %s filter',
     async (_name, filter, expectedKeys) => {
-      const arranged = await arrangeWithdrawnAmongTagged({
+      const arranged = await arrangeFilterQuestions({
         withdrawn: '2026-01-03',
         kept: '2026-01-02',
         easy: '2026-01-01',
@@ -254,7 +261,7 @@ describe('attempted-question filters against real Postgres', () => {
   // The easy question is the most recent, so recency, difficulty, and the old
   // rule that sorted an unpublished question last each give a different order.
   it('sorts a question no longer available by the difficulty answered', async () => {
-    const { user, withdrawn, kept, easy } = await arrangeWithdrawnAmongTagged({
+    const { user, withdrawn, kept, easy } = await arrangeFilterQuestions({
       withdrawn: '2026-01-02',
       kept: '2026-01-01',
       easy: '2026-01-03',
