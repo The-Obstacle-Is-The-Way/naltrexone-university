@@ -2,6 +2,16 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03 UTC: DEBT-495 filed. `braces`' denial-of-service advisory (Dependabot alert #77) has no fixed release, so its risk is accepted with recheck triggers ([DEBT-495](./debt-495-braces-dos-advisory-without-fixed-release.md)).
+- **Why accepted.** Only repository-fixed glob patterns in operator scripts and test scans reach `braces`. Nothing from a request, a learner or the network becomes a glob. No pin or override can close it, since no fixed release exists.
+- **Next for it.** Once this record is on `main`, alert #77 is dismissed as `tolerable_risk` pointing to it, and the record is archived as Accepted, with its recheck triggers in the Deferred table.
+- **Released since the last entry.** #1351 (DEBT-493 increment 4, key corrections, **5402602114** on `1593fd4d`; merged `3e56a7e1`) went out through promotion #1352 (`e45cc86b`):
+  - main CI **37152718792** `test` passed **20:59:35Z**;
+  - production assigned **20:59:37.767Z**;
+  - trees `35e6b826`, healthy production.
+- **Next.** DEBT-493 increment 5, bookmarks and History filters. DEBT-495 closes as Accepted once it is on `main`, and DEBT-493 once its fifth increment is in production.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-495.
+
 **Earlier** — 2026-10-03 UTC: DEBT-493 increment 4, key corrections. An answer graded on an answer key corrected since leaves every score, its review says so, and the Incorrect filter offers its question again ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.**
   - Reviewing an answer whose key was corrected since, on post-exam review or the review page, shows a caution in place of "This question has been updated": "The answer to this question was corrected after you answered. This attempt isn't scored." It links to the corrected question.

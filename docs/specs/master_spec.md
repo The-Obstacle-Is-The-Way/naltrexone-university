@@ -839,9 +839,12 @@ export type UserStatsOutput = {
 ```ts
 export const GetAttemptedQuestionsInputSchema = z.object({
   limit: z.number().int().min(1).max(MAX_PAGINATION_LIMIT),
-  offset: z.number().int().min(0),
+  offset: z.number().int().min(0).max(MAX_PAGINATION_OFFSET),
   result: z.enum(['correct', 'incorrect']).optional(),
   source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
+  difficulty: zDifficulty.optional(),
+  tagSlug: z.string().min(1).optional(),
+  sort: z.enum(['recent', 'incorrect-first', 'correct-first', 'difficulty']).optional(),
 }).strict();
 ```
 
@@ -851,6 +854,7 @@ export const GetAttemptedQuestionsInputSchema = z.object({
 export type AttemptedQuestionRow =
   | {
       isAvailable: true;
+      availability: QuestionAvailability; // ADR-022 Decision 1
       questionId: string;
       isCorrect: boolean;
       sessionId: string | null;
@@ -863,6 +867,7 @@ export type AttemptedQuestionRow =
     }
   | {
       isAvailable: false;
+      availability: UnavailableQuestionAvailability | null; // label only (ADR-022 Decision 2); null when missing
       questionId: string;
       isCorrect: boolean;
       sessionId: string | null;
@@ -890,10 +895,10 @@ export type GetAttemptedQuestionsOutput = {
 * For each question the user has attempted, find the most recent attempt per question.
 * If `result` filter is provided (`'correct'` or `'incorrect'`), only include questions where the most recent attempt matches.
 * If `source` filter is provided (`'tutor'`, `'exam'`, or `'adhoc'`), only include questions where the most recent attempt has the matching session context (`adhoc` = no session).
-* Resolve question metadata from published questions when available.
-* Available rows return `isAvailable:true` with `slug`, `stemMd`, `difficulty`, `tagSlugs`, and `isCorrect`; unavailable rows return `isAvailable:false` for graceful degradation when questions are unpublished/removed.
+* If `difficulty` or `tagSlug` is provided, match the difficulty of the revision the most recent attempt answered and the question's tags, whatever the question's state now, so a question no longer available keeps its place under a filter (DEBT-493 increment 5). `sort: 'difficulty'` orders by that difficulty, hardest first, ties by recency.
+* A row the learner answered shows the revision answered, with the question's `availability` (ADR-022 Decision 1). A row the learner never answered on a question no longer available returns `isAvailable:false` with the state for its label and no content (Decision 2).
 * Include `sessionId` and `sessionMode` for each row from the attempt/session context (`null` for ad-hoc attempts).
-* Order by most recent attempt desc.
+* Order by `sort`: most recent attempt first by default (`recent`); `incorrect-first` and `correct-first` put that latest result first, then most recent; `difficulty` as above.
 * Apply limit/offset.
 * Return `totalCount` for pagination.
 
@@ -946,6 +951,7 @@ export type BookmarkRow =
     }
   | {
       isAvailable: false;
+      availability: UnavailableQuestionAvailability | null; // label only (ADR-022 Decision 2); null when missing
       questionId: string;
       bookmarkedAt: string; // ISO
     };
@@ -966,7 +972,7 @@ export type GetBookmarksOutput = {
 * Select bookmarks for user ordered by `created_at DESC`.
 * Resolve question metadata from published questions when available.
 * Available rows return `isAvailable:true` with `slug`, `stemMd`, and `difficulty`.
-* Unavailable rows return `isAvailable:false` for graceful degradation when questions are unpublished/removed.
+* Unavailable rows return `isAvailable:false` with the question's `availability` (withdrawn, under review or retired) for its label, read by id since a bookmark binds no revision, or `null` when the question no longer exists. They show no content (ADR-022 Decisions 1 and 2).
 * Return list preserving bookmark order.
 
 ---

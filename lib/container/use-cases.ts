@@ -336,6 +336,7 @@ export function createUseCaseFactories(input: {
     createGetBookmarksUseCase: () =>
       new GetBookmarksUseCase(
         repositories.createBookmarkRepository(),
+        repositories.createQuestionRepository(),
         primitives.logger,
       ),
     createGetBookmarkQuestionIdsUseCase: () =>

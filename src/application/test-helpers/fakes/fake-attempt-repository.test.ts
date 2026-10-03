@@ -329,7 +329,9 @@ describe('FakeAttemptRepository', () => {
       );
     });
 
-    it('sorts by the difficulty each attempt answered, with unpublished questions and ties last by recency', async () => {
+    // DEBT-493 increment 5: a question no longer published sorts by the
+    // difficulty answered, as the filters read it.
+    it("sorts by the difficulty each attempt answered, whatever the question's state, ties by recency", async () => {
       const hard = createQuestion({ id: 'q_hard', difficulty: 'hard' });
       const medium = createQuestion({ id: 'q_medium', difficulty: 'medium' });
       // ADR-021: now hard, but answered while it was easy.
@@ -379,14 +381,16 @@ describe('FakeAttemptRepository', () => {
       });
 
       expect(rows.map((row) => row.questionId)).toEqual([
+        'q_draft',
         'q_hard',
         'q_medium',
-        'q_draft',
         'q_revised',
       ]);
     });
 
-    it('filters by difficulty and tagSlug using question metadata', async () => {
+    // DEBT-493 increment 5: a question no longer published keeps its place
+    // under a filter, as it does unfiltered.
+    it("filters by difficulty and tagSlug using question metadata, whatever the question's state", async () => {
       const qEasy = createQuestion({
         id: 'q_easy',
         difficulty: 'easy',
@@ -444,6 +448,7 @@ describe('FakeAttemptRepository', () => {
           difficulty: 'hard',
         }),
       ).resolves.toMatchObject([
+        { questionId: qHardDraft.id },
         { questionId: qHardOpioids.id },
         { questionId: qHardAlcohol.id },
       ]);
@@ -453,6 +458,7 @@ describe('FakeAttemptRepository', () => {
           tagSlug: 'opioids',
         }),
       ).resolves.toMatchObject([
+        { questionId: qHardDraft.id },
         { questionId: qHardOpioids.id },
         { questionId: qEasy.id },
       ]);
@@ -462,29 +468,32 @@ describe('FakeAttemptRepository', () => {
           difficulty: 'hard',
           tagSlug: 'opioids',
         }),
-      ).resolves.toMatchObject([{ questionId: qHardOpioids.id }]);
+      ).resolves.toMatchObject([
+        { questionId: qHardDraft.id },
+        { questionId: qHardOpioids.id },
+      ]);
 
       await expect(
         repo.countAttemptedQuestionsByUserId('user-1', {
           difficulty: 'hard',
         }),
-      ).resolves.toBe(2);
+      ).resolves.toBe(3);
       await expect(
         repo.countAttemptedQuestionsByUserId('user-1', {
           tagSlug: 'opioids',
         }),
-      ).resolves.toBe(2);
+      ).resolves.toBe(3);
       await expect(
         repo.countAttemptedQuestionsByUserId('user-1', {
           difficulty: 'hard',
           tagSlug: 'opioids',
         }),
-      ).resolves.toBe(1);
+      ).resolves.toBe(2);
     });
 
-    // ADR-021: the adapter filters by the question's status and tags and the
-    // answered revision's difficulty.
-    it("filters by the question's status and tags and the difficulty the attempt answered", async () => {
+    // ADR-021: the adapter filters by the question's tags and the answered
+    // revision's difficulty.
+    it("filters by the question's tags and the difficulty the attempt answered", async () => {
       const current = createQuestion({
         id: 'q1',
         status: 'published',
