@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice) and increment 4 (key corrections) ([Progress](#progress)); increment 5 remains
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice), increment 4 (key corrections) and increment 5 (bookmarks and History filters) ([Progress](#progress)); the record closes once all of it is in production
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -193,6 +193,14 @@ In increments, each test-first.
   - The client recovered on retry: it rotates the key, meets the completed-session conflict, and reads the summary.
   - Finalize now scores the summary inside its transaction, the one that records each item's fair chance, so a failed read rolls the finalization back.
   - A case proves the summary is read through the transaction; it was red first.
+
+**Increment 5: bookmarks and History filters, 2026-10-03.** One label on every surface.
+- **Bookmarks.** A bookmarked question no longer available names its state, withdrawn, under review or retired, with F-11's heading and label in the tonal row it already used. It shows no content, since a bookmark is not an answer (Decision 2). A question that no longer exists keeps "[Question no longer available]".
+  - A bookmark binds no revision, so the use case reads availability by id. `QuestionRepository.findAvailabilityByIds` derives it as every other read does. The availability contract now reads each of its nine scenarios by id too, plus an unknown id, on the fake and on real Postgres.
+  - The warning log now fires only for a bookmark whose question is missing. A withdrawn or retired question is an expected state, not a fault.
+- **History filters.** A difficulty or tag filter matched only published questions, so a question no longer available vanished from History once a filter was applied, though it is listed unfiltered. Both the adapter and the fake now match the difficulty of the revision answered and the question's tags, whatever its state, and the difficulty sort places it by that difficulty. Difficulty and tags are not the content Decision 2 protects, so filtering by them reveals nothing it forbids.
+- **Evidence.** Thirteen targeted mutations each fail a case, across the use case, the page, both repositories, the request cache and both filters. The page's first case checked text only and would have passed with the heading and the label swapped; it now checks each slot.
+
 
 ## Verification
 

@@ -1,5 +1,6 @@
 import type { Question } from '@/src/domain/entities';
 import type {
+  QuestionAvailability,
   QuestionDifficulty,
   QuestionProgressStatus,
 } from '@/src/domain/value-objects';
@@ -65,6 +66,16 @@ export interface QuestionRepository {
   findByIdsForSession(
     items: readonly QuestionRevisionBinding[],
   ): Promise<readonly Question[]>;
+
+  /**
+   * Returns each question's availability by id, whatever its status, derived
+   * as every other read derives it (ADR-022 Decision 1). An id with no
+   * question is left out. It reveals no content, so it serves a reference
+   * that binds no revision, such as a bookmark.
+   */
+  findAvailabilityByIds(
+    questionIds: readonly string[],
+  ): Promise<ReadonlyMap<string, QuestionAvailability>>;
 
   /**
    * Return candidate question ids for "next question" selection.

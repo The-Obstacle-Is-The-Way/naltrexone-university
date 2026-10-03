@@ -74,6 +74,9 @@ function createThrowingQuestionRepository(
     findByIdsForSession: async () => {
       throw new Error(errorMessage);
     },
+    findAvailabilityByIds: async () => {
+      throw new Error(errorMessage);
+    },
     listPublishedCandidateIds: async () => {
       throw new Error(errorMessage);
     },

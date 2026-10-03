@@ -932,7 +932,7 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 - Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong. A learner-facing reason is not shown: a withdrawal's recorded reason is written for the clinical audit (ADR-022).
 - `role="status"` announces the notice politely; it is never focused automatically.
 
-**Source:** ADR-021 §3, DEBT-484 phase 2a increment 5, and ADR-022 (DEBT-493 parts A to C and E, and increment 3). In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, the navigators and Review & Submit list, and the active session page. Bookmarks still show the S-2 treatment for an unavailable question; DEBT-493 increment 5 gives them the label.
+**Source:** ADR-021 §3, DEBT-484 phase 2a increment 5, and ADR-022 (DEBT-493 parts A to C and E, and increments 3 and 5). In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, the navigators and Review & Submit list, the active session page, and Bookmarks. A bookmark binds no revision, so its row names the state with the heading and label alone, inside the S-2 tonal row it already used; it shows no content, as for an item never answered. A question that no longer exists keeps the S-2 wording, "[Question no longer available]".
 
 
 ### F-12: Update Notice (a question updated after the learner saw it)

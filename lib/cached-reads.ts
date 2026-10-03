@@ -81,6 +81,9 @@ export function createRequestCachedQuestionRepository(
         .map((item) => questionByBinding.get(serializeBinding(item)))
         .filter((question): question is Question => question !== undefined);
     },
+    findAvailabilityByIds(questionIds) {
+      return questionRepository.findAvailabilityByIds(questionIds);
+    },
     listPublishedCandidateIds(filters) {
       return questionRepository.listPublishedCandidateIds(filters);
     },

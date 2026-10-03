@@ -8,6 +8,7 @@ import type { Question } from '@/src/domain/entities';
 import { answerKeyChanged } from '@/src/domain/services';
 import {
   deriveQuestionAvailability,
+  type QuestionAvailability,
   type QuestionDifficulty,
 } from '@/src/domain/value-objects';
 
@@ -153,6 +154,17 @@ export class FakeQuestionRepository implements QuestionRepository {
     return items
       .map((item) => this.findByBinding(item))
       .filter((q): q is Question => !!q);
+  }
+
+  async findAvailabilityByIds(
+    questionIds: readonly string[],
+  ): Promise<ReadonlyMap<string, QuestionAvailability>> {
+    const availabilityById = new Map<string, QuestionAvailability>();
+    for (const id of questionIds) {
+      const question = this.questions.find((q) => q.id === id);
+      if (question) availabilityById.set(id, question.availability);
+    }
+    return availabilityById;
   }
 
   private findByBinding(item: QuestionRevisionBinding): Question | null {
