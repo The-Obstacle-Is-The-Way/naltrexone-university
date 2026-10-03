@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits';
 import {
+  EndPracticeSessionOutputSchema,
   FinalizeExamAnswersInputSchema,
+  FinalizeExamAnswersOutputSchema,
   SaveExamDraftAnswerInputSchema,
 } from './practice-schemas';
 
@@ -133,5 +135,55 @@ describe('FinalizeExamAnswersInputSchema', () => {
         }),
       ]),
     );
+  });
+});
+
+// DEBT-493 / ADR-022 Decision 3: a session's score counts only its scored
+// items. End and finalize outputs are cached by idempotency key for 24 hours,
+// so the reader accepts the scored count before any writer sends it
+// (deployment-procedure.md, keyed-action output compatibility).
+describe('End and finalize outputs: scored totals', () => {
+  const output = (totals: Record<string, number>) => ({
+    sessionId: crypto.randomUUID(),
+    mode: 'exam',
+    questionCount: 10,
+    endedAt: '2026-10-03T00:00:00.000Z',
+    totals: {
+      answered: 8,
+      correct: 5,
+      accuracy: 0.5,
+      durationSeconds: 600,
+      ...totals,
+    },
+  });
+
+  it.each([
+    ['EndPracticeSessionOutputSchema', EndPracticeSessionOutputSchema],
+    ['FinalizeExamAnswersOutputSchema', FinalizeExamAnswersOutputSchema],
+  ] as const)('%s reads both cached shapes', (_name, schema) => {
+    // Today's writers, and rows they have already cached.
+    expect(schema.safeParse(output({})).success).toBe(true);
+    // The next writer, which counts only scored items.
+    expect(
+      schema.safeParse(output({ scored: 9, accuracy: 5 / 9 })).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['more scored items than questions', { scored: 11 }, 'scored'],
+    ['more correct answers than scored items', { scored: 4 }, 'correct'],
+  ] as const)('rejects %s', (_case, totals, path) => {
+    const result = EndPracticeSessionOutputSchema.safeParse(output(totals));
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path.at(-1))).toContain(
+      path,
+    );
+  });
+
+  it('keeps the totals strict', () => {
+    expect(
+      EndPracticeSessionOutputSchema.safeParse(output({ unscored: 1 })).success,
+    ).toBe(false);
   });
 });

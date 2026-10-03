@@ -143,6 +143,12 @@ export const EndPracticeSessionOutputSchema = z
       .object({
         answered: z.number().int().min(0),
         correct: z.number().int().min(0),
+        /**
+         * DEBT-493 / ADR-022 Decision 3: the items that count toward the
+         * score. Optional while writers that predate it may have cached
+         * outputs (24-hour idempotency TTL); absent means every item counts.
+         */
+        scored: z.number().int().min(0).optional(),
         accuracy: z.number().min(0).max(1),
         durationSeconds: z.number().int().min(0),
       })
@@ -155,6 +161,13 @@ export const EndPracticeSessionOutputSchema = z
             path: ['correct'],
           });
         }
+        if (totals.scored !== undefined && totals.correct > totals.scored) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'correct must be <= scored',
+            path: ['correct'],
+          });
+        }
       }),
   })
   .strict()
@@ -164,6 +177,16 @@ export const EndPracticeSessionOutputSchema = z
         code: z.ZodIssueCode.custom,
         message: 'answered must be <= questionCount',
         path: ['totals', 'answered'],
+      });
+    }
+    if (
+      value.totals.scored !== undefined &&
+      value.totals.scored > value.questionCount
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'scored must be <= questionCount',
+        path: ['totals', 'scored'],
       });
     }
   });
