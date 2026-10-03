@@ -32,7 +32,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
 - **Open decisions for the owner.**
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. The recommendation is to bootstrap once DEBT-492 is released and the next content import is ready to go through the release path, so the first staged release is real.
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
-  - **Massachusetts' second annual notice (DEBT-414 F19a)**, unchanged from the [previous stanza](./register-history-2026-10.md): it waits on counsel.
+  - **Massachusetts' second annual notice (DEBT-414 F19a)**, unchanged from the previous stanza, below: it waits on counsel.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
 
