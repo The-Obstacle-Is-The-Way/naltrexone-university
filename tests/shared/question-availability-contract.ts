@@ -21,7 +21,10 @@ export type QuestionAvailabilitySeed = {
 
 /** A question with two revisions, the second current, seeded as asked. */
 export type SeededQuestion = {
-  repository: Pick<QuestionRepository, 'findByIdsForSession'>;
+  repository: Pick<
+    QuestionRepository,
+    'findByIdsForSession' | 'findAvailabilityByIds'
+  >;
   questionId: string;
   currentRevisionId: string;
   earlierRevisionId: string;
@@ -135,5 +138,34 @@ export function runQuestionAvailabilityContract(
         ]);
       },
     );
+
+    // A bookmark binds no revision, so it reads availability by question
+    // (DEBT-493 increment 5).
+    it.each(questionAvailabilityContractScenarios)(
+      '$name, read by id',
+      async ({ seed, expected }) => {
+        const harness = await createHarness();
+        const seeded = await harness.seed(seed);
+
+        const read = await seeded.repository.findAvailabilityByIds([
+          seeded.questionId,
+        ]);
+
+        expect([...read]).toEqual([[seeded.questionId, expected]]);
+      },
+    );
+
+    it('leaves out an id with no question', async () => {
+      const harness = await createHarness();
+      const seeded = await harness.seed({ status: 'published' });
+      const missingId = crypto.randomUUID();
+
+      const read = await seeded.repository.findAvailabilityByIds([
+        missingId,
+        seeded.questionId,
+      ]);
+
+      expect([...read]).toEqual([[seeded.questionId, 'available']]);
+    });
   });
 }

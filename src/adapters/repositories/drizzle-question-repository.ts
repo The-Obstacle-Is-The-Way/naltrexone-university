@@ -40,6 +40,7 @@ import {
   deriveQuestionAvailability,
   isValidChoiceLabel,
   NO_QUESTION_OVERLAY,
+  type QuestionAvailability,
   type QuestionOverlay,
   type QuestionProgressStatus,
 } from '@/src/domain/value-objects';
@@ -181,6 +182,27 @@ export class DrizzleQuestionRepository implements QuestionRepository {
 
   async findByIdsForSession(items: readonly QuestionRevisionBinding[]) {
     return this.findByBindings(items);
+  }
+
+  async findAvailabilityByIds(questionIds: readonly string[]) {
+    if (questionIds.length === 0)
+      return new Map<string, QuestionAvailability>();
+    const rows = await this.db
+      .select({ id: questions.id, status: questions.status })
+      .from(questions)
+      .where(inArray(questions.id, [...questionIds]));
+    const overlays = await this.overlaysOf(
+      rows.filter((row) => row.status !== 'published').map((row) => row.id),
+    );
+    return new Map(
+      rows.map((row) => [
+        row.id,
+        deriveQuestionAvailability(
+          row.status,
+          overlays.get(row.id) ?? NO_QUESTION_OVERLAY,
+        ),
+      ]),
+    );
   }
 
   // ADR-021: a session item or attempt shows the revision it is bound to.

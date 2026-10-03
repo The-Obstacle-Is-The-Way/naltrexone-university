@@ -233,6 +233,17 @@ describe('cached-reads coverage seam', () => {
     expect(rawRepository.countPublishedCandidateIdsCalls).toEqual([filters]);
   });
 
+  it('passes availability reads by id straight through', async () => {
+    const rawRepository = new FakeQuestionRepository([
+      createQuestion({ id: 'a', slug: 'question-a' }),
+    ]);
+    const repository = createRequestCachedQuestionRepository(rawRepository);
+
+    await expect(repository.findAvailabilityByIds(['a'])).resolves.toEqual(
+      new Map([['a', 'available']]),
+    );
+  });
+
   it('deduplicates tag list reads through the request cache wrapper', async () => {
     class CountingTagRepository extends FakeTagRepository {
       listAllCallCount = 0;
