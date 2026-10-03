@@ -352,7 +352,7 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 
 Activation recomputes the plan under its own locks and refuses a different one. So a hold, a withdrawal, a lift, or anything else between preview and apply that changes one of those sets means a fresh preview. Tags are outside the plan: they are not versioned, so a tag change does not change it. A rollback is previewed and applied the same way, and still honors current holds and withdrawals: a withdrawal is permanent.
 
-**Every activation is attributed ([DEBT-490](../debt/debt-490-release-decisions-record-no-reason-or-authority.md)).**
+**Every activation is attributed ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md)).**
 - **The receipt.** An activation, a rollback and the bootstrap each record their `--reason` and `--authority` on an immutable receipt, as the withdrawal and hold commands record theirs.
 - **Withdrawals.** A withdrawal made by an `archived` removal records the activation's authority, and its reason names the release.
 - **Holds.** A hold's or a lift's re-application of the active release records the hold's own decision.

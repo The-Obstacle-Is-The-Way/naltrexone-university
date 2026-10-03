@@ -1,18 +1,18 @@
 # DEBT-490: Release Removals and Activations Record No Reason or Authority
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — fixed in code 2026-10-02 ([Fix](#fix--2026-10-02)); resolves once released
+**Status:** Resolved — 2026-10-03 UTC (fixed in code 2026-10-02, release-verified 2026-10-03); every activation, rollback and bootstrap records its reason and authority on an immutable receipt, promoted and release-verified, with migration `0049` applied in production and its suites re-run on `main`'s code before archival
 **Priority:** P2
 **Date:** 2026-10-02
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-03
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
 ## Summary
 
-The withdrawal and hold commands require an operator-supplied `--reason` and `--authority`, and a lift records its own. Since [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix, a release can remove live questions, and an activation can publish, archive and permanently withdraw them. But the release path records no operator-supplied reason or authority anywhere:
+The withdrawal and hold commands require an operator-supplied `--reason` and `--authority`, and a lift records its own. Since [DEBT-489](./debt-489-release-removes-omitted-questions.md)'s fix, a release can remove live questions, and an activation can publish, archive and permanently withdraw them. But the release path records no operator-supplied reason or authority anywhere:
 - an activation, a rollback or the bootstrap records only the release, the release it replaced and the time;
 - a `--remove` removal records only its kind, in the manifest;
 - a permanent withdrawal made by an `archived` removal records generated metadata only: the reason `archived in content release <release id>` and the fixed authority `content release`. It names no person and no rationale.
@@ -23,7 +23,7 @@ The direct seed's withdrawals for MDX archives use generated metadata the same w
 
 ## How this was found
 
-On 2026-10-02 a side summary of DEBT-489's decision said that removals keep no written reason, only a generic one for permanent removals, and the owner asked whether that was true and whether it mattered. DEBT-489's [Fix](../_archive/debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02) had recorded a narrower decision: a removal records its intent (its kind), not a free-text reason, and a recorded reason for `--remove` was left as the owner's call. The investigation below confirms the summary. It also finds the gap is wider than removals: activations themselves are unattributed.
+On 2026-10-02 a side summary of DEBT-489's decision said that removals keep no written reason, only a generic one for permanent removals, and the owner asked whether that was true and whether it mattered. DEBT-489's [Fix](./debt-489-release-removes-omitted-questions.md#fix--2026-10-02) had recorded a narrower decision: a removal records its intent (its kind), not a free-text reason, and a recorded reason for `--remove` was left as the owner's call. The investigation below confirms the summary. It also finds the gap is wider than removals: activations themselves are unattributed.
 
 ## Evidence
 
@@ -109,7 +109,34 @@ Option 2, started on the owner's go-ahead (2026-10-02, "DEBT-490 now").
 
 ## Related
 
-- [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md): its Fix's decision on removal reasons, which this record widens.
-- [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md): ADR-021 phase 4, which built the release path.
-- [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md), decision 4.
-- [`content-pipeline.md`, Releases](../practice-engine/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold).
+- [DEBT-489](./debt-489-release-removes-omitted-questions.md): its Fix's decision on removal reasons, which this record widens.
+- [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md): ADR-021 phase 4, which built the release path.
+- [ADR-021](../../adr/adr-021-question-revisions-and-content-releases.md), decision 4.
+- [`content-pipeline.md`, Releases](../../practice-engine/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold).
+
+## Verified closeout — 2026-10-03 UTC
+
+| Verification | Holds | Receipt |
+| --- | --- | --- |
+| Function boundary: a missing reason, and separately a missing authority, is refused by `activateRelease` and by `bootstrapRelease`, writing nothing | Yes | `content-release-attribution`: *refuses an activation without a reason / an authority, writing nothing*; *refuses a bootstrap without a reason / an authority, writing nothing* |
+| Command boundary: `--reason` and `--authority` each required | Yes | `release-command-args.test.ts`: the activation's and the bootstrap's `--reason is required` / `--authority is required` cases |
+| Receipts for an activation, a rollback and the bootstrap | Yes | *records the reason and authority of the bootstrap, an activation and a rollback on each receipt* |
+| A hold's or a lift's re-application records its own decision | Yes | *records a hold's and a lift's own reason and authority when they re-apply the release* |
+| An archived removal's withdrawal carries the activation's authority, and a reason naming the release and the activation's reason | Yes | *withdraws an archived removal on the activation's authority, naming the release and its reason* |
+| The preview prints the decision | Yes | `content-release-commands`: both commands' `Decision: …` lines, and the shell-quoted apply command |
+| The plan id does not depend on the decision | Yes | *gives the same transition the same plan id whatever its reason* |
+| Mutations | 14 of 14 fail a case | Recorded in the Fix section |
+
+The suites were re-run on `main`'s code before archival, on a branch based on `main` at `a9a98421`: the attribution, commands and seed-guard integration files (30 cases) and the script unit files (127 cases) passed.
+
+**Increment.** #1322 (**5398018105** on `71fe7e13`; merged `81ffd15a`). One review finding was fixed: a moved placeholder-archival case could pass vacuously, and now asserts all ten fixtures.
+
+**Release.** Promotion #1323 (`a9a98421`, merged **00:29:08Z** on 2026-10-03 UTC after a passing `verify-promotion` receipt): main CI **37082256459** `test` passed **00:42:26Z**, production assigned **00:42:28.423Z**, trees `b18dd7dd`, healthy production.
+
+**The migration in production.** The production build's log shows:
+- the pre-check: "Applied migration content matches the checkout";
+- 0049's notice: **"0 existing receipts marked not recorded"**, so production had never activated a release;
+- the post-check: "Ledger and migration content exactly match the checkout".
+
+The production bootstrap no longer waits on this record; it remains the owner's decision.
+
