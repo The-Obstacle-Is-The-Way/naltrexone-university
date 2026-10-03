@@ -10,7 +10,7 @@
   - main CI **37152718792** `test` passed **20:59:35Z**;
   - production assigned **20:59:37.767Z**;
   - trees `35e6b826`, healthy production.
-- **Next.** DEBT-493 increment 5, bookmarks and History filters; then DEBT-493 and DEBT-495 close.
+- **Next.** DEBT-493 increment 5, bookmarks and History filters. DEBT-495 closes as Accepted once it is on `main`, and DEBT-493 once its fifth increment is in production.
 - **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-495.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
