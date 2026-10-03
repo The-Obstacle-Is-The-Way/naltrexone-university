@@ -1,15 +1,12 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-02 — BUG-314–317 resolved and archived.
+**Last Updated:** 2026-10-03 — BUG-310 decided.
 
-**Latest** — 2026-10-02: **BUG-314–317 are resolved and archived** ([BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md#verified-closeout--2026-10-02-utc)).
-- **Shipped.** Content writers serialize on the release pointer, and content and session locks are ordered (BUG-314, P2). Placeholder archival is limited to the ten committed fixtures (BUG-315, P2). Disposable test databases clean up after failures (BUG-316, P3). Release guidance matches the code (BUG-317, P3).
-- **History.** BUG-314 and BUG-315 were in shipped code; no production incident is established.
-- **Fixes.** #1302 (**5388054704** on `69733bb9`; merged `93f8104a`), with follow-ups in #1305, #1309 and #1311.
-- **Re-verified** on `main`'s code before archival: 15 integration files, 163 cases.
-- **Released** through promotion #1312 (`7dcb9331`): main CI **36991253547**, production assigned **09:55:02.296Z**, trees `d1e952d0`.
-- **Deferred.** BUG-317's open owner question, whether the withdrawn label suits held or dropped questions, moves to the debt register's Deferred table. This register has none.
+**Latest** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
+- **Decision.** The trial add-card Checkout offers cards only (`payment_method_types: ['card']` on the setup Session). Its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic payment methods: its copy says "payment method", and access waits on the subscription's status.
+- **Next.** The fix, test-first, is the next code PR.
+- **BUG-317's deferred question**, whether the withdrawn label suits held or dropped questions, is decided by [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). Its row leaves the debt register's Deferred table.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -462,7 +459,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | Open | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Owner decision: restrict to card (recommended), a card-only Stripe configuration, or card-neutral copy. |
+| [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | In Progress | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Decided 2026-10-03: cards only on the setup Session, and completion attaches only a succeeded card SetupIntent. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

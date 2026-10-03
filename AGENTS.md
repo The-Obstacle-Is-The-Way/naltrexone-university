@@ -287,7 +287,8 @@ pnpm db:test:reset          # Wipe and restart test database
 # Database
 pnpm db:generate            # Generate migration from schema changes
 pnpm db:migrate             # Apply migrations to database
-pnpm db:seed                # Seed database with content
+pnpm db:seed                # Seed database with content (refused once a content release is active;
+                            # then stage-release.ts, see docs/practice-engine/content-pipeline.md)
 pnpm db:studio              # Open Drizzle Studio GUI
 ```
 
@@ -703,7 +704,10 @@ measured; see its 2026-09-28 amendment), green checks, and a clean, mergeable,
 non-draft PR. Incomplete/truncated thread or check data fails closed. It also refuses a merge
 that would leave `dev` without `main`'s latest promotion merge commit: `main`'s head
 must be in the PR head or already in `dev` (DEBT-491). Base each branch made after a
-promotion on `origin/main`, or merge `origin/main` into it. The merge uses
+promotion on `origin/main`, or merge `origin/main` into it. This check is early
+detection, not a lock: `dev` can move between the check and the merge, and
+`--match-head-commit` pins only the PR head; `verify-promotion` remains the
+enforcement and fails closed. The merge uses
 `--match-head-commit` so a subsequent push cannot substitute unreviewed code.
 With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
 This is mandatory operator tooling, not a claim that GitHub's zero-approval
