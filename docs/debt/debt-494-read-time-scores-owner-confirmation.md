@@ -71,6 +71,26 @@ An item counts when both hold.
 
 **Effect on DEBT-493.** History scores are in production under Decision 3's rule, which excludes retired questions. Dashboard accuracy and the session summary's writer were built on the same rule and are not shipped. All three move to the amended rule, after a step that records the fair-chance fact when a session ends. DEBT-493's [Progress](./debt-493-learner-scores-and-labels-when-content-changes.md#progress) holds the revised plan.
 
+## Consequences and cost, verified — 2026-10-03
+
+A second review notice the same day summarized the decision's cost: it reopens finished and released work, needs a permanent database change, and treats sessions that ended before that change as having had a fair chance. The owner asked for it to be checked. Each claim, against the code and DEBT-493's plan:
+
+| Claim | Finding |
+|---|---|
+| Retired questions keep counting, and an item counts only if the learner had a fair chance | Accurate: the Decision above. |
+| A fair chance can only be captured when a session ends, so it needs a new, permanent field | Accurate. Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`; applied migrations are never edited here. |
+| Sessions that ended before the change are treated as having had a fair chance | Accurate as first written, and corrected; see below. |
+| History, released today, changes again | Accurate. A question retired since counts again. For sessions that ended before 0050, see below. |
+| Dashboard accuracy, which passed its gate, won't ship as built | Accurate. It was built on the earlier rule and held; it ships on the amended rule. |
+| Several more pull requests | Accurate: four (the fair chance; history and dashboard; the session summary; Review & Submit with the active notice), then the closeouts. |
+
+**The correction: sessions that ended before 0050.** Reading an unrecorded item as a fair chance would have counted, against the learner, an exam item that became unreachable during the session. It would also have changed the scores those sessions already show, which leave out every unpublished question (DEBT-493 step 2). So 0050 records them once, when it runs, from the bank as it stands then: an item on a question unpublished by then had no fair chance unless a tutor answer gave it one.
+- Those sessions keep the scores they show, except that a tutor answer on a question retired before 0050 counts again, which the amended rule intends.
+- A later retirement changes none of them.
+- A session that ends after 0050 runs, but before the new code serves, is left unrecorded and reads as a fair chance. Migrations run at the start of the Vercel build (`vercel.json`), so that window lasts one build.
+
+The backfill fills only items not yet recorded, so running it again changes nothing. A marked block, `-- DEBT-494 fair-chance backfill`, is executed against arranged rows in `session-fair-chance-backfill.integration.test.ts`.
+
 ## Related
 
 - [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decision 3 and Consequences

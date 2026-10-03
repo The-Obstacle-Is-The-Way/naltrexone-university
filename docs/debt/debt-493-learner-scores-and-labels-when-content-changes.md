@@ -136,10 +136,10 @@ In increments, each test-first.
 
 **Increment 2 revised, step 1: the fair chance is recorded when a session ends, 2026-10-03.** Nothing reads it yet.
 - **Domain.** `hadFairChanceAtEnd`: an item's question is available when the session ends or, in tutor mode, the learner had already answered it. Session items carry `fairChanceAtEnd`, null while the session is active and for a session that ended before it was recorded.
-- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. It is additive, with no backfill: an earlier session's past availability is not kept, so null reads as a fair chance.
+- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. An earlier session's past availability is not kept, so 0050 records sessions that already ended once, from the bank as it stands when it runs; those sessions keep the scores they show ([DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)). Null remains only while a session is active, or for one that ends in the window before the new code serves, and reads as a fair chance.
 - **Writer.** The adapter ends a session and records every item in one statement, two data-modifying CTEs, so the record commits with the end whether `end` runs alone or inside finalize's transaction. The concurrency test that interleaves a competing end now hooks that statement.
 - **Contract.** `session-end-fair-chance-contract.ts` runs a tutor and an exam scenario against the fake and the adapter on real Postgres: nothing is recorded while active, and the ended session and a fresh read agree.
-- **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule.
+- **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule. The backfill is a marked block executed against arranged rows, twice, in `session-fair-chance-backfill.integration.test.ts`.
 
 ## Verification
 
