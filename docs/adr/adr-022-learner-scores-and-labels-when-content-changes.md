@@ -1,6 +1,6 @@
 # ADR-022: Learner Scores and Labels When Content Changes
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03))
 **Date:** 2026-10-03
 **Implementation:** Not yet implemented; tracked by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md).
 **Decision Makers:** The owner, who on 2026-10-03 asked for every remaining decision that can be settled in code to be decided from first principles, "like the best software engineers in the world and the best physicians in the world who are designing this question bank", and executed. This record decides the three questions [ADR-021](./adr-021-question-revisions-and-content-releases.md) left to the owner: withdrawn-item scoring, answer-key regrade, and how an unavailable question is labeled ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md#verified-closeout--2026-10-02-utc)).
@@ -56,6 +56,8 @@ An unavailable question's stem, key and explanation are shown only to a learner 
 
 ### 3. One scoring rule, everywhere a score is computed
 
+> **Amended 2026-10-03.** The rule below is replaced by the [Amendment](#amendment--2026-10-03): retired questions keep counting, and whether the learner had a fair chance at an item is recorded when the session ends. The surfaces it applies to and key corrections are unchanged. The disclosure keeps its form, but its reasons change: retirement is no longer one, and an item removed during its session is.
+
 > An item counts toward a score only while its question is **Available** and, if it was answered, the answer key of the revision it was graded against is **still the current key**.
 
 An item that does not count leaves both the numerator and the denominator. This applies to:
@@ -100,13 +102,38 @@ Stored grades are never regraded. Mapping an old selection onto a new revision's
 ## Consequences
 
 - **Every score becomes correct as content changes,** and consistent across surfaces. Learners are told why an item no longer counts.
-- **A learner's past session score can change** when a question in it is withdrawn, held, retired or key-corrected later, or when a hold lifts. This is intended, and it is disclosed.
+- **A learner's past session score can change** when a question in it is withdrawn, held, retired or key-corrected later, or when a hold lifts. This is intended, and it is disclosed. (Amended 2026-10-03: retirement no longer changes a past score; see the [Amendment](#amendment--2026-10-03).)
 - **Read paths gain the availability and key-correction derivations.**
   - Availability needs two small lookups, made only for questions that are not published, so reads of published questions cost nothing more: withdrawals by their primary key, and unlifted holds through the question's revisions, since holds have no index that leads with the question (DEBT-493).
   - The key-correction check compares the correct choice of two revisions.
   - Aggregate queries (history, dashboard) gain the same predicates. DEBT-493 measures their cost before shipping.
 - **The domain gains an availability value** in place of the boolean "withdrawn". F-11 and F-12 in the Pattern Registry are revised to match.
 - **ADR-021 is unchanged.** Revisions and stored grades stay immutable; this record defines how they are read.
+
+## Amendment — 2026-10-03
+
+Decided under the owner's 2026-10-03 delegation, after a review notice asked whether learners' past scores should change after the fact ([DEBT-494](../debt/debt-494-read-time-scores-owner-confirmation.md)).
+
+**What changed.** Decision 3 treated two questions as one: whether the learner had a fair chance at an item, and whether its content is still trusted. The first is a fact about the moment the session ended, and cannot be reconstructed later. The second can change at any time. Decision 3's rule is replaced by:
+
+> An item counts toward a score when **(1)** the learner had a fair chance at it, and **(2)** its content is not now in doubt.
+> - **A fair chance** is recorded when the session ends: the item's question was available then, or, in tutor mode, the learner had already answered it. A tutor answer is graded when it is given, on content then available. An exam draft becomes final only at submission. An attempt outside a session was answered on an available question.
+> - **In doubt** means withdrawn, under review, or, for an answered item, its graded key since corrected (Decision 4). It is read when the score is read.
+
+**Consequences.**
+- **Retiring a question no longer changes any past score.** Retirement is curation: the content was not found wrong, so answers to it stay valid measurements.
+- **A past score changes only when the content's validity changes:** a withdrawal, a hold or its lift, or a key correction. The score says so (Pattern Registry F-13). This is the psychometric practice of removing a flawed item, applied when the flaw is found.
+- **The disclosure names the amended reasons:** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." Pattern Registry F-13 changes with the code that applies the amended rule (DEBT-493).
+- **An item that became unavailable during its session does not count,** answered or not, unless it was a tutor answer already given. A lift after the session ends does not restore it, because the learner could not reach it. A lift before the session ends restores it only if its question is available again when the session ends.
+- **No second "score when taken" value.** Once retirement is out, a past score moves only for a disclosed clinical reason. Showing the superseded value would invite learners to rely on a score that counted flawed content.
+- **Storage.** Each session item records the fair-chance fact when its session ends, in one nullable column. A session that ended before the column existed is recorded once, when the column is added, from the bank as it stands then: an item on a question unpublished by then had no fair chance unless a tutor answer gave it one. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again, and a later retirement changes none of them ([DEBT-494](../debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)).
+- **Decision 5 is unchanged in effect:** an exam item unavailable at submission does not count. The active notice says "It won't count toward your score." only where that is true, so not for a tutor answer already given on a question retired since.
+
+**Alternatives rejected**, in addition to those below:
+- **Keep Decision 3 as written** (DEBT-494 option A). Every retirement would quietly lower past denominators for every learner who saw the question, for no validity reason.
+- **Freeze each session's score when it ends** (option B). A question later withdrawn as unsafe would keep counting.
+- **Show both the current score and the score when taken** (option D). See above.
+- **Count retired items without recording the fair-chance fact** (option C as first written). An item retired mid-session would count against a learner who could not reach it, unless its timing were rebuilt from history the system does not keep.
 
 ## Alternatives rejected
 

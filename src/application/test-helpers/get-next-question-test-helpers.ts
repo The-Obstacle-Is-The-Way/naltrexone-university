@@ -107,6 +107,7 @@ export function createQuestionState(
     draftSelectedChoiceId: null,
     draftSavedAt: null,
     draftCumulativeMs: 0,
+    fairChanceAtEnd: null,
     ...overrides,
   };
 }

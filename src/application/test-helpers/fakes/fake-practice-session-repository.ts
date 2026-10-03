@@ -10,11 +10,14 @@ import type { PracticeSession } from '@/src/domain/entities';
 import {
   computeSessionScore,
   computeSessionStats,
+  countsTowardScore,
+  hadFairChanceAtEnd,
 } from '@/src/domain/services';
 import { defaultRevisionIdOf } from '@/src/domain/test-helpers';
 import type {
   AnswerOutcome,
   PracticeMode,
+  QuestionAvailability,
   QuestionDifficulty,
 } from '@/src/domain/value-objects';
 import { selectedChoiceIdOrNull } from '@/src/domain/value-objects';
@@ -37,14 +40,22 @@ export class FakePracticeSessionRepository
     private readonly options: {
       publishedQuestionSlugsById?: ReadonlyMap<string, string>;
       /**
-       * Questions that are not published now: their items do not count
-       * toward a history score (ADR-022 Decision 3).
+       * Each question's state now; a question not listed is available. A
+       * session ending now records an item's fair chance from it, and a
+       * history score leaves out an item whose content is in doubt
+       * (ADR-022 Amendment). A test may change the map between the two.
        */
-      unpublishedQuestionIds?: ReadonlySet<string>;
+      availabilityByQuestionId?: ReadonlyMap<string, QuestionAvailability>;
     } = {},
   ) {
     this.sessions = seed.map((session) =>
       this.withNormalizedQuestionStates(session),
+    );
+  }
+
+  private availabilityOf(questionId: string): QuestionAvailability {
+    return (
+      this.options.availabilityByQuestionId?.get(questionId) ?? 'available'
     );
   }
 
@@ -64,6 +75,7 @@ export class FakePracticeSessionRepository
           | 'draftSelectedChoiceId'
           | 'draftSavedAt'
           | 'draftCumulativeMs'
+          | 'fairChanceAtEnd'
         >
       >,
   ): PracticeSession['questionStates'][number] {
@@ -80,6 +92,7 @@ export class FakePracticeSessionRepository
       draftSelectedChoiceId: state.draftSelectedChoiceId ?? null,
       draftSavedAt: state.draftSavedAt ?? null,
       draftCumulativeMs: state.draftCumulativeMs ?? 0,
+      fairChanceAtEnd: state.fairChanceAtEnd ?? null,
     };
   }
 
@@ -210,7 +223,10 @@ export class FakePracticeSessionRepository
         const { scored, correct: scoredCorrect } = computeSessionScore(
           session.questionStates,
           (state) =>
-            !this.options.unpublishedQuestionIds?.has(state.questionId),
+            countsTowardScore({
+              fairChanceAtEnd: state.fairChanceAtEnd,
+              availability: this.availabilityOf(state.questionId),
+            }),
         );
         return [
           {
@@ -454,9 +470,19 @@ export class FakePracticeSessionRepository
       );
     }
 
+    // ADR-022 Amendment (DEBT-494): the statement that ends the session
+    // records, for each item, whether the learner had a fair chance at it.
     const ended: PracticeSession = {
       ...existing,
       endedAt: explicitEndedAt ?? new Date(),
+      questionStates: existing.questionStates.map((state) => ({
+        ...state,
+        fairChanceAtEnd: hadFairChanceAtEnd({
+          mode: existing.mode,
+          answered: state.latestSelectedChoiceId !== null,
+          availability: this.availabilityOf(state.questionId),
+        }),
+      })),
     };
     this.updateSession(id, () => ended);
     return ended;

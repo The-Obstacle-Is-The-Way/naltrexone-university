@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices) fixed in code 2026-10-03 ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's steps 1–2 (the scored-total reader, history scores), fixed in code 2026-10-03; increment 2 revised the same day for the amended rule (DEBT-494) ([Progress](#progress)); the rest open
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -125,11 +125,36 @@ In increments, each test-first.
 - **Cost.** On the local integration database, 50 completed sessions of 20 items, a 20-row page, median of five warm `EXPLAIN (ANALYZE)` runs: 1.075 ms before, 1.407 ms after.
 - **Evidence.** Twelve targeted mutations each fail a case, across the adapter, the fake, the use case, the History and Dashboard views, the disclosure and the domain rule.
 
+**Increment 2 revised: the amended scoring rule, 2026-10-03.** [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03) amends Decision 3 ([ADR-022 Amendment](../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)). An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, from increment 4, key-corrected. Retired questions keep counting.
+- **What changes.** History scores, released in step 2, exclude retired questions; they will count them again. Dashboard accuracy and the session summary's writer were built on step 2's rule and were not shipped; they move to the amended rule first.
+- **The revised steps:**
+  1. **Record the fair chance when a session ends.** A nullable column on each session item, written by the statement that ends the session, for end and finalize alike. Sessions that already ended are recorded once, by the migration, from the bank as it stands when it runs. Nothing reads it yet.
+  2. **History and dashboard on the amended rule.** The disclosure names the new reason: "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected."
+  3. **The session summary's writer** on the same rule, with the post-exam header.
+  4. **Review & Submit and the active session's notice** (increment 3 and part E). "It won't count toward your score." shows only where it is true.
+  5. Increment 4 adds key corrections to the in-doubt half.
+
+**Increment 2 revised, step 1: the fair chance is recorded when a session ends, 2026-10-03.** Nothing reads it yet.
+- **Domain.** `hadFairChanceAtEnd`: an item's question is available when the session ends or, in tutor mode, the learner had already answered it. Session items carry `fairChanceAtEnd`, null while the session is active, or for one ended in the deploy window before the writer served.
+- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. An earlier session's past availability is not kept, so 0050 records sessions that already ended once, from the bank as it stands when it runs. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again ([DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)). Null remains only while a session is active, or for one that ends in the window before the new code serves, and reads as a fair chance.
+- **Writer.** The adapter ends a session and records every item in one statement, two data-modifying CTEs, so the record commits with the end whether `end` runs alone or inside finalize's transaction. The concurrency test that interleaves a competing end now hooks that statement.
+- **Contract.** `session-end-fair-chance-contract.ts` runs a tutor and an exam scenario against the fake and the adapter on real Postgres: nothing is recorded while active, and the ended session and a fresh read agree.
+- **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule. The backfill is a marked block executed against arranged rows, twice, in `session-fair-chance-backfill.integration.test.ts`.
+
+**Increment 2 revised, step 2: history and dashboard on the amended rule, 2026-10-03.**
+- **The rule.** The domain's `countsTowardScore` counts an item when its recorded fair chance is not false and its content is not in doubt (`contentInDoubt`: withdrawn or under review; a question that no longer exists, too). Its SQL twin, `countsTowardScoreSql`, is shared by both queries; it reads the hold and withdrawal overlay only for a question not published.
+- **History** (released in step 2 under the earlier rule) counts a retired question again. It leaves out an item without a fair chance, even once its question returns.
+- **Dashboard accuracy** ships for the first time, on the amended rule. Total answered, answered in seven days and the streak still count every answer. An attempt in a session reads its item's recorded fair chance; an attempt outside a session had one.
+- **Disclosure.** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." Retirement is no longer a reason.
+- **Contracts.** The history score runs four scenarios and the attempt score six, on the fakes and real Postgres. Retired questions keep counting, withdrawn and held ones do not, a hold lifted before retirement leaves no doubt, and an item with no fair chance is left out even once its question returns. The fake session repository now takes each question's state (`availabilityByQuestionId`) in place of a set of unpublished ids, so a test can change the bank between a session's end and the read.
+- **Cost.** On the local integration database, a learner with 2,000 answers over 300 questions, 20 of them retired and 10 withdrawn, median of 40 warm `EXPLAIN (ANALYZE)` runs: the dashboard's all-time read takes 2.31 ms and its seven-day read 0.73 ms, against 0.29 ms and 0.08 ms for the correct counts it replaces. It runs both once per load.
+- **Evidence.** Seven targeted mutations of the SQL each fail a real-Postgres case: the withdrawal and hold checks, the lifted-hold filter, the fair-chance default, the history's fair-chance column, and the dashboard's join to its session item. Twelve more across the domain, the fakes and the use case each fail a unit case.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.
 - **Exposure.** An unanswered exam item that becomes unavailable reveals no content.
-- **Scores.** Session accuracy, the post-exam header, history and dashboard accuracy exclude unavailable and key-corrected items, and include an item again when a hold lifts and its question is published, unless its key was corrected. Activity counts are unchanged.
+- **Scores.** Session accuracy, the post-exam header, history and dashboard accuracy count an item only when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, for an answered item, key-corrected (ADR-022 Amendment). Retiring a question changes no past score. A hold lifted after the session ends restores only an item that had a fair chance; a lift before the end gives the item its chance only if its question is available again when the session ends. Activity counts are unchanged.
 - **The submit warning** counts only scored items.
 - **Key corrections.** A key-corrected attempt shows the correction notice, is unscored, and its question appears in the Incorrect filter. A wording-only revision keeps F-12 and stays scored.
 - **Real Postgres.** An integration case finalizes an exam containing a withdrawn item end to end; none exists today.
@@ -140,3 +165,4 @@ In increments, each test-first.
 - [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md): the decisions.
 - [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md): immutable revisions.
 - [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) and [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md): the deferred decisions this record executes.
+- [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md): the decision that amends Decision 3, so past scores change only when content validity changes.

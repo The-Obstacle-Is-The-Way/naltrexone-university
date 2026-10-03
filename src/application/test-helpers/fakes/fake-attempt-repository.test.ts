@@ -65,13 +65,9 @@ describe('FakeAttemptRepository', () => {
       ]);
 
       await expect(repo.countByUserId('user-1')).resolves.toBe(2);
-      await expect(repo.countCorrectByUserId('user-1')).resolves.toBe(1);
 
       const since = new Date('2026-02-02T00:00:00Z');
       await expect(repo.countByUserIdSince('user-1', since)).resolves.toBe(1);
-      await expect(
-        repo.countCorrectByUserIdSince('user-1', since),
-      ).resolves.toBe(0);
     });
   });
 

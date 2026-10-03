@@ -22,20 +22,23 @@ describe('GetUserStatsUseCase', () => {
       stemMd: 'Older stem',
     });
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          questionRevisionId: older.revisionId,
-          answeredAt: new Date('2026-02-01T10:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          questionRevisionId: current.revisionId,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            questionRevisionId: older.revisionId,
+            answeredAt: new Date('2026-02-01T10:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            questionRevisionId: current.revisionId,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        { questions: [current, older] },
+      ),
       new FakeQuestionRepository([current, older]),
       new FakeLogger(),
       () => new Date('2026-02-01T12:00:00Z'),
@@ -70,7 +73,28 @@ describe('GetUserStatsUseCase', () => {
     });
 
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([q1Attempt, q2Attempt, q3Attempt]),
+      new FakeAttemptRepository([q1Attempt, q2Attempt, q3Attempt], {
+        questions: [
+          createQuestion({
+            id: 'q1',
+            slug: 'q-1',
+            stemMd: 'Stem for q1',
+            difficulty: 'easy',
+          }),
+          createQuestion({
+            id: 'q2',
+            slug: 'q-2',
+            stemMd: 'Stem for q2',
+            difficulty: 'medium',
+          }),
+          createQuestion({
+            id: 'q3',
+            slug: 'q-3',
+            stemMd: 'Stem for q3',
+            difficulty: 'hard',
+          }),
+        ],
+      }),
       new FakeQuestionRepository([
         createQuestion({
           id: 'q1',
@@ -98,8 +122,12 @@ describe('GetUserStatsUseCase', () => {
     await expect(useCase.execute({ userId: 'user-1' })).resolves.toEqual({
       totalAnswered: 3,
       accuracyOverall: 2 / 3,
+      scoredOverall: 3,
+      unscoredQuestionsOverall: 0,
       answeredLast7Days: 2,
       accuracyLast7Days: 1 / 2,
+      scoredLast7Days: 2,
+      unscoredQuestionsLast7Days: 0,
       currentStreakDays: 2,
       recentActivity: [
         {
@@ -154,15 +182,18 @@ describe('GetUserStatsUseCase', () => {
       stemMd: 'Possibly unsafe stem',
     });
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          outcome: omittedOutcome(),
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            outcome: omittedOutcome(),
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        { questions: [withdrawn] },
+      ),
       new FakeQuestionRepository([withdrawn], {
         withdrawals: [
           {
@@ -187,15 +218,18 @@ describe('GetUserStatsUseCase', () => {
     const now = new Date('2026-02-01T12:00:00Z');
     const live = createQuestion({ id: 'q1', stemMd: 'Live stem' });
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          outcome: omittedOutcome(),
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            outcome: omittedOutcome(),
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        { questions: [live] },
+      ),
       new FakeQuestionRepository([live]),
       new FakeLogger(),
       () => now,
@@ -217,13 +251,16 @@ describe('GetUserStatsUseCase', () => {
       stemMd: 'Answered stem',
     });
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        { questions: [withdrawn] },
+      ),
       new FakeQuestionRepository([withdrawn], {
         withdrawals: [
           {
@@ -254,14 +291,17 @@ describe('GetUserStatsUseCase', () => {
     const logger = new FakeLogger();
 
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: orphanedQuestionId,
-          isCorrect: true,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: orphanedQuestionId,
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+        ],
+        { questions: [] },
+      ),
       new FakeQuestionRepository([]),
       logger,
       () => now,
@@ -290,16 +330,28 @@ describe('GetUserStatsUseCase', () => {
     const now = new Date('2026-02-01T12:00:00Z');
 
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          practiceSessionId: 'session-1',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-          sessionMode: 'exam',
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            practiceSessionId: 'session-1',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+            sessionMode: 'exam',
+          }),
+        ],
+        {
+          questions: [
+            createQuestion({
+              id: 'q1',
+              slug: 'q-1',
+              stemMd: 'Stem for q1',
+              difficulty: 'easy',
+            }),
+          ],
+        },
+      ),
       new FakeQuestionRepository([
         createQuestion({
           id: 'q1',
@@ -349,18 +401,21 @@ describe('GetUserStatsUseCase', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-02-10T12:00:00Z'));
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          answeredAt: new Date('2026-01-01T12:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          answeredAt: new Date('2026-02-09T12:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            answeredAt: new Date('2026-01-01T12:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            answeredAt: new Date('2026-02-09T12:00:00Z'),
+          }),
+        ],
+        { questions: [createQuestion({ id: 'q1' })] },
+      ),
       new FakeQuestionRepository([createQuestion({ id: 'q1' })]),
       new FakeLogger(),
     );
@@ -377,20 +432,23 @@ describe('GetUserStatsUseCase', () => {
     const held = createQuestion({ id: 'q-held', status: 'archived' });
     const withdrawn = createQuestion({ id: 'q-withdrawn', status: 'archived' });
     const useCase = new GetUserStatsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q-held',
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q-withdrawn',
-          outcome: omittedOutcome(),
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T10:00:00Z'),
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-held',
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-withdrawn',
+            outcome: omittedOutcome(),
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T10:00:00Z'),
+          }),
+        ],
+        { questions: [held, withdrawn] },
+      ),
       new FakeQuestionRepository([held, withdrawn], {
         holds: [
           {
@@ -424,5 +482,54 @@ describe('GetUserStatsUseCase', () => {
         availability: 'withdrawn',
       }),
     ]);
+  });
+
+  // ADR-022 Decision 3: accuracy counts only scored attempts. Total answered,
+  // answered in seven days and the streak count every attempt: activity.
+  it('leaves a withdrawn question out of accuracy, not out of activity', async () => {
+    const now = new Date('2026-02-01T12:00:00Z');
+    const questions = [
+      createQuestion({ id: 'q-right' }),
+      createQuestion({ id: 'q-wrong' }),
+      createQuestion({
+        id: 'q-withdrawn',
+        status: 'archived',
+        availability: 'withdrawn',
+      }),
+    ];
+    const answer = (questionId: string, isCorrect: boolean, hour: number) =>
+      createAttempt({
+        userId: 'user-1',
+        questionId,
+        isCorrect,
+        answeredAt: new Date(Date.UTC(2026, 1, 1, hour)),
+      });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository(
+        [
+          answer('q-right', true, 11),
+          answer('q-wrong', false, 10),
+          answer('q-withdrawn', true, 9),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
+      new FakeLogger(),
+      () => now,
+    );
+
+    // 1 of 2 scored: not 2 of 3 (counting the withdrawn answer) and not
+    // 1 of 3 (dividing by every answer).
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toMatchObject({
+      totalAnswered: 3,
+      accuracyOverall: 0.5,
+      scoredOverall: 2,
+      unscoredQuestionsOverall: 1,
+      answeredLast7Days: 3,
+      accuracyLast7Days: 0.5,
+      scoredLast7Days: 2,
+      unscoredQuestionsLast7Days: 1,
+      currentStreakDays: 1,
+    });
   });
 });

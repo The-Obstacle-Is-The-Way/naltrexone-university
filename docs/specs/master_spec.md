@@ -730,7 +730,7 @@ export type EndPracticeSessionOutput = {
 
 1. Load session by id and user_id.
 2. If `ended_at` is not null: return `CONFLICT`.
-3. Set `ended_at = now()`.
+3. Set `ended_at = now()` and, in the same statement, record each item's `fair_chance_at_end` (ADR-022 Amendment, DEBT-494): its question is published now, or, in tutor mode, the learner already answered it.
 4. Compute summary:
 
    * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
@@ -760,14 +760,19 @@ export const GetUserStatsInputSchema = z.object({}).strict();
 
 ```ts
 export type UserStatsOutput = {
-  totalAnswered: number;
-  accuracyOverall: number;     // 0..1
-  answeredLast7Days: number;
-  accuracyLast7Days: number;   // 0..1
+  totalAnswered: number;              // every attempt (activity)
+  accuracyOverall: number;            // 0..1, correct / scored
+  scoredOverall: number;              // attempts that count (ADR-022 as amended)
+  unscoredQuestionsOverall: number;   // questions whose attempts accuracy leaves out
+  answeredLast7Days: number;          // every attempt in the window (activity)
+  accuracyLast7Days: number;          // 0..1, correct / scored in the window
+  scoredLast7Days: number;
+  unscoredQuestionsLast7Days: number;
   currentStreakDays: number;   // consecutive UTC days with >=1 attempt, ending today
   recentActivity: Array<
     | {
         isAvailable: true;
+        availability: QuestionAvailability;  // ADR-022 Decision 1
         attemptId: string;
         answeredAt: string;        // ISO
         questionId: string;
@@ -780,6 +785,7 @@ export type UserStatsOutput = {
       }
     | {
         isAvailable: false;
+        availability: UnavailableQuestionAvailability | null;  // label only (ADR-022 Decision 2)
         attemptId: string;
         answeredAt: string;        // ISO
         questionId: string;
@@ -799,9 +805,10 @@ export type UserStatsOutput = {
 
 **Behavior:**
 
-* `totalAnswered` = count attempts for user
-* `accuracyOverall` = correct / total (0 if total=0)
-* last 7 days window uses `answered_at >= now() - 7 days`
+* `totalAnswered` = count attempts for user; total answered, answered in seven days and the streak count every attempt: they are activity, not scores
+* `scoredOverall` = count of attempts that count (ADR-022 Decision 3, as amended by DEBT-494): the learner had a fair chance at it (an attempt in a session reads its item's `fair_chance_at_end`; null, and an attempt outside a session, is a fair chance) and its question's content is not now in doubt (withdrawn or under review). A retired question keeps counting. `unscoredQuestionsOverall` = count of distinct questions with an attempt left out
+* `accuracyOverall` = correct / scored (0 if scored = 0); the dashboard shows "—" when nothing is scored and says how many questions aren't scored
+* last 7 days window uses `answered_at >= now() - 7 days`; the seven-day fields apply the same rules to the attempts in the window
 * streak is computed in UTC from attempts in last 60 days:
 
   * create set of `YYYY-MM-DD` dates in UTC where attempts exist
@@ -1093,7 +1100,7 @@ export type SessionHistoryRow = {
   mode: 'tutor' | 'exam';
   questionCount: number;
   answered: number;
-  scored: number;         // items whose question is published now (ADR-022)
+  scored: number;         // items that count (ADR-022 as amended)
   correct: number;        // scored items answered correctly
   accuracy: number;       // 0..1
   durationSeconds: number;
@@ -1122,7 +1129,7 @@ export type GetSessionHistoryOutput = {
 2. For each session, compute stats from persisted `practice_session_question_states`:
    * `questionCount` = total questions in session
    * `answered` = count where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
-   * `scored` = count of items whose question is published when history is read (ADR-022 Decision 3); an unpublished item leaves both counts below, answered or not
+   * `scored` = count of items that count (ADR-022 Decision 3, as amended by DEBT-494): the learner had a fair chance at the item, recorded as `fair_chance_at_end` when the session ended (null is a fair chance), and its question's content is not now in doubt (withdrawn or under review); a retired question keeps counting. An item left out leaves both counts below, answered or not
    * `correct` = count of scored items where `latestIsCorrect === true`
    * `accuracy` = correct / scored (0 if scored = 0); the UI shows "—" when nothing is scored, and says how many questions aren't scored
    * `durationSeconds` = floor((ended_at - started_at) / 1000)

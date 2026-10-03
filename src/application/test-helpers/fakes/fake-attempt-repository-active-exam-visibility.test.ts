@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createQuestion } from '@/src/domain/test-helpers';
 import { FakeAttemptRepository } from './fake-attempt-repository';
 import {
   makeAttempt,
@@ -87,6 +88,14 @@ function legacyExamSeed(
   return attempt;
 }
 
+// Every seed's question, published, so a read that needs question metadata
+// (a score) sees the same visibility as the rest.
+function withQuestions(seeds: readonly VisibilitySeedAttempt[]) {
+  return new FakeAttemptRepository(seeds, {
+    questions: seeds.map((seed) => createQuestion({ id: seed.questionId })),
+  });
+}
+
 describe('FakeAttemptRepository', () => {
   describe('active-exam visibility fidelity', () => {
     it('keeps legacy exam-shaped seeds visible when sessionEndedAt is omitted', async () => {
@@ -108,9 +117,9 @@ describe('FakeAttemptRepository', () => {
         mixed: 3,
       },
       {
-        name: 'countCorrectByUserId',
-        read: (repo: FakeAttemptRepository) =>
-          repo.countCorrectByUserId(userId),
+        name: 'scoreByUserId',
+        read: async (repo: FakeAttemptRepository) =>
+          (await repo.scoreByUserId(userId, null)).scored,
         empty: 0,
         visible: 1,
         mixed: 3,
@@ -124,12 +133,10 @@ describe('FakeAttemptRepository', () => {
         mixed: 3,
       },
       {
-        name: 'countCorrectByUserIdSince',
-        read: (repo: FakeAttemptRepository) =>
-          repo.countCorrectByUserIdSince(
-            userId,
-            new Date('2026-04-25T00:00:00Z'),
-          ),
+        name: 'scoreByUserId since',
+        read: async (repo: FakeAttemptRepository) =>
+          (await repo.scoreByUserId(userId, new Date('2026-04-25T00:00:00Z')))
+            .scored,
         empty: 0,
         visible: 1,
         mixed: 3,
@@ -144,7 +151,7 @@ describe('FakeAttemptRepository', () => {
       },
     ])('$name', ({ read, empty, visible, mixed }) => {
       it('hides active-exam attempts', async () => {
-        const repo = new FakeAttemptRepository([activeExamSeed()]);
+        const repo = withQuestions([activeExamSeed()]);
 
         await expect(read(repo)).resolves.toBe(empty);
       });
@@ -154,13 +161,13 @@ describe('FakeAttemptRepository', () => {
         ['tutor', tutorSeed],
         ['standalone', standaloneSeed],
       ])('keeps %s attempts visible', async (_name, seed) => {
-        const repo = new FakeAttemptRepository([seed()]);
+        const repo = withQuestions([seed()]);
 
         await expect(read(repo)).resolves.toBe(visible);
       });
 
       it('hides only active-exam attempts from a mixed seed', async () => {
-        const repo = new FakeAttemptRepository([
+        const repo = withQuestions([
           activeExamSeed(),
           endedExamSeed(),
           tutorSeed(),
@@ -173,7 +180,7 @@ describe('FakeAttemptRepository', () => {
 
     describe('listRecentByUserId', () => {
       it('hides active-exam attempts', async () => {
-        const repo = new FakeAttemptRepository([activeExamSeed()]);
+        const repo = withQuestions([activeExamSeed()]);
 
         await expect(repo.listRecentByUserId(userId, 10)).resolves.toEqual([]);
       });
@@ -211,7 +218,7 @@ describe('FakeAttemptRepository', () => {
 
     describe('listAnsweredAtByUserIdSince', () => {
       it('hides active-exam attempts', async () => {
-        const repo = new FakeAttemptRepository([activeExamSeed()]);
+        const repo = withQuestions([activeExamSeed()]);
 
         await expect(
           repo.listAnsweredAtByUserIdSince(

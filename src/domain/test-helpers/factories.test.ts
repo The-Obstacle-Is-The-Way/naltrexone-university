@@ -93,6 +93,7 @@ describe('createPracticeSession', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
       {
         questionId: 'question-2',
@@ -104,6 +105,7 @@ describe('createPracticeSession', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
     ]);
   });

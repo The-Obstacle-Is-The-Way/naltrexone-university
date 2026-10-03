@@ -44,6 +44,7 @@ import {
   toDomainQuestionState,
   updatePracticeSessionQuestionState,
 } from './practice-session-question-state-updater';
+import { countsTowardScoreSql } from './shared/score-eligibility-sql';
 
 type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
@@ -56,8 +57,12 @@ class CorruptPracticeSessionRowError extends ApplicationError {
   }
 }
 
-// Each session item's question, for its score (ADR-022 Decision 3).
+// Each session item's question, for its score (ADR-022 Amendment).
 const itemQuestions = alias(questions, 'item_questions');
+const itemCounts = countsTowardScoreSql({
+  fairChanceAtEnd: practiceSessionQuestionStates.fairChanceAtEnd,
+  question: itemQuestions,
+});
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -482,14 +487,15 @@ export class DrizzlePracticeSessionRepository
             answered: sql<number>`
               count(${practiceSessionQuestionStates.latestSelectedChoiceId})::int
             `,
-            // ADR-022 Decision 3: an item counts toward the score only while
-            // its question is published, read now.
+            // ADR-022 Amendment (DEBT-494): an item counts when the learner
+            // had a fair chance at it, recorded when the session ended, and
+            // its question's content is not now in doubt.
             scored: sql<number>`
-              count(*) filter (where ${itemQuestions.status} = 'published')::int
+              count(*) filter (where ${itemCounts})::int
             `,
             scoredCorrect: sql<number>`
               count(*) filter (
-                where ${itemQuestions.status} = 'published'
+                where ${itemCounts}
                   and ${practiceSessionQuestionStates.latestSelectedChoiceId} is not null
                   and ${practiceSessionQuestionStates.latestIsCorrect} is true
               )::int
@@ -822,17 +828,34 @@ export class DrizzlePracticeSessionRepository
       return this.toDomainFromRow(db, existingRow);
     });
     const endedAt = explicitEndedAt ?? this.now();
-    const [updated] = await this.db
-      .update(practiceSessions)
-      .set({ endedAt })
-      .where(
-        and(
-          eq(practiceSessions.id, id),
-          eq(practiceSessions.userId, userId),
-          isNull(practiceSessions.endedAt),
-        ),
+    // ADR-022 Amendment (DEBT-494): the statement that ends the session also
+    // records, for each item, whether the learner had a fair chance at it: its
+    // question is published now, or a tutor answer already gave it one, as
+    // the domain's hadFairChanceAtEnd decides. One statement, so the record
+    // and the end commit together in every caller's transaction context.
+    const ended = await this.db.execute<{
+      question_id: string | null;
+      fair_chance_at_end: boolean | null;
+    }>(sql`
+      WITH ended AS (
+        UPDATE ${practiceSessions}
+        SET ended_at = ${sql.param(endedAt, practiceSessions.endedAt)}
+        WHERE id = ${id} AND user_id = ${userId} AND ended_at IS NULL
+        RETURNING id, mode
+      ), recorded AS (
+        UPDATE ${practiceSessionQuestionStates} AS state
+        SET fair_chance_at_end =
+          question.status = 'published'
+          OR (ended.mode = 'tutor' AND state.latest_selected_choice_id IS NOT NULL)
+        FROM ended, ${questions} AS question
+        WHERE state.practice_session_id = ended.id
+          AND question.id = state.question_id
+        RETURNING state.question_id, state.fair_chance_at_end
       )
-      .returning();
+      SELECT recorded.question_id, recorded.fair_chance_at_end
+      FROM ended LEFT JOIN recorded ON true
+    `);
+    const updated = ended.length > 0;
 
     // Per-context contract: standalone READ COMMITTED can reach this branch
     // after a concurrent committed end, and the fresh top-level re-read below
@@ -858,6 +881,16 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    return { ...existingSession, endedAt };
+    const fairChanceByQuestionId = new Map(
+      ended.map((row) => [row.question_id, row.fair_chance_at_end]),
+    );
+    return {
+      ...existingSession,
+      endedAt,
+      questionStates: existingSession.questionStates.map((state) => ({
+        ...state,
+        fairChanceAtEnd: fairChanceByQuestionId.get(state.questionId) ?? null,
+      })),
+    };
   }
 }

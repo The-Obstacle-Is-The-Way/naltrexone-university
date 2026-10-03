@@ -14,6 +14,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
+  practiceSessionQuestionStates,
   practiceSessions,
   questionRevisions,
   questions,
@@ -31,6 +32,7 @@ import type {
   AttemptInsertInput,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
+  AttemptScore,
   PageOptions,
   RecentAttempt,
 } from '@/src/application/ports/repositories';
@@ -47,6 +49,7 @@ import {
 } from './postgres-errors';
 import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
+import { countsTowardScoreSql } from './shared/score-eligibility-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
 
@@ -341,23 +344,57 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return this.countWhere(userId);
   }
 
-  async countCorrectByUserId(userId: string): Promise<number> {
-    return this.countWhere(userId, eq(attempts.isCorrect, true));
-  }
-
   async countByUserIdSince(userId: string, since: Date): Promise<number> {
     return this.countWhere(userId, gte(attempts.answeredAt, since));
   }
 
-  async countCorrectByUserIdSince(
+  // ADR-022 Amendment (DEBT-494): accuracy counts an attempt when the
+  // learner had a fair chance at it, recorded on its session item when the
+  // session ended (an attempt outside a session had one), and its question's
+  // content is not now in doubt. The attempts left out are counted by
+  // question.
+  async scoreByUserId(
     userId: string,
-    since: Date,
-  ): Promise<number> {
-    return this.countWhere(
-      userId,
-      eq(attempts.isCorrect, true),
-      gte(attempts.answeredAt, since),
-    );
+    since: Date | null,
+  ): Promise<AttemptScore> {
+    const counts = countsTowardScoreSql({
+      fairChanceAtEnd: practiceSessionQuestionStates.fairChanceAtEnd,
+      question: questions,
+    });
+    const [row] = await this.db
+      .select({
+        scored: sql<number>`count(*) filter (where ${counts})::int`,
+        correct: sql<number>`count(*) filter (where ${counts} and ${attempts.isCorrect})::int`,
+        unscoredQuestions: sql<number>`count(distinct ${attempts.questionId}) filter (where not ${counts})::int`,
+      })
+      .from(attempts)
+      .innerJoin(questions, eq(questions.id, attempts.questionId))
+      .leftJoin(
+        practiceSessions,
+        eq(attempts.practiceSessionId, practiceSessions.id),
+      )
+      .leftJoin(
+        practiceSessionQuestionStates,
+        and(
+          eq(
+            practiceSessionQuestionStates.practiceSessionId,
+            attempts.practiceSessionId,
+          ),
+          eq(practiceSessionQuestionStates.questionId, attempts.questionId),
+        ),
+      )
+      .where(
+        and(
+          eq(attempts.userId, userId),
+          getActiveExamVisibilityCondition(),
+          since === null ? undefined : gte(attempts.answeredAt, since),
+        ),
+      );
+    return {
+      scored: row?.scored ?? 0,
+      correct: row?.correct ?? 0,
+      unscoredQuestions: row?.unscoredQuestions ?? 0,
+    };
   }
 
   async listRecentByUserId(

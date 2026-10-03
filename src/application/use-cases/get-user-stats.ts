@@ -19,7 +19,7 @@ import {
 /**
  * Dashboard "last 7 days" accuracy window.
  *
- * SSOT: docs/specs/spec-015-dashboard.md ("Last 7 days accuracy").
+ * SSOT: docs/specs/master_spec.md § 4.5.7 (`getUserStats`).
  */
 const STATS_WINDOW_DAYS = 7;
 
@@ -43,10 +43,19 @@ export type GetUserStatsInput = {
 };
 
 export type UserStatsOutput = {
+  /** Every attempt: an activity count. */
   totalAnswered: number;
+  /** Correct over scored attempts (ADR-022 Decision 3). */
   accuracyOverall: number; // 0..1
+  /** Attempts that count (ADR-022 Decision 3, as amended by DEBT-494). */
+  scoredOverall: number;
+  /** Questions whose attempts accuracy leaves out. */
+  unscoredQuestionsOverall: number;
+  /** Every attempt in seven days: an activity count. */
   answeredLast7Days: number;
   accuracyLast7Days: number; // 0..1
+  scoredLast7Days: number;
+  unscoredQuestionsLast7Days: number;
   currentStreakDays: number; // consecutive UTC days with >=1 attempt, ending today
   recentActivity: Array<
     | {
@@ -95,24 +104,30 @@ export class GetUserStatsUseCase {
 
     const [
       totalAnswered,
-      correctOverall,
+      scoreOverall,
       answeredLast7Days,
-      correctLast7Days,
+      scoreLast7Days,
       attemptsLast60Days,
       recentAttempts,
     ] = await Promise.all([
       this.attempts.countByUserId(input.userId),
-      this.attempts.countCorrectByUserId(input.userId),
+      this.attempts.scoreByUserId(input.userId, null),
       this.attempts.countByUserIdSince(input.userId, since7Days),
-      this.attempts.countCorrectByUserIdSince(input.userId, since7Days),
+      this.attempts.scoreByUserId(input.userId, since7Days),
       this.attempts.listAnsweredAtByUserIdSince(input.userId, since60Days),
       this.attempts.listRecentByUserId(input.userId, RECENT_ACTIVITY_LIMIT),
     ]);
 
-    const accuracyOverall = computeAccuracy(totalAnswered, correctOverall);
+    // ADR-022 Decision 3: accuracy counts only the scored attempts. Total
+    // answered, answered in seven days and the streak count every attempt:
+    // they are activity, not scores.
+    const accuracyOverall = computeAccuracy(
+      scoreOverall.scored,
+      scoreOverall.correct,
+    );
     const accuracyLast7Days = computeAccuracy(
-      answeredLast7Days,
-      correctLast7Days,
+      scoreLast7Days.scored,
+      scoreLast7Days.correct,
     );
     const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
@@ -171,8 +186,12 @@ export class GetUserStatsUseCase {
     return {
       totalAnswered,
       accuracyOverall,
+      scoredOverall: scoreOverall.scored,
+      unscoredQuestionsOverall: scoreOverall.unscoredQuestions,
       answeredLast7Days,
       accuracyLast7Days,
+      scoredLast7Days: scoreLast7Days.scored,
+      unscoredQuestionsLast7Days: scoreLast7Days.unscoredQuestions,
       currentStreakDays,
       recentActivity,
     };

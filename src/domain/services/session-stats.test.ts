@@ -22,6 +22,7 @@ describe('computeSessionStats', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
       {
         questionId: 'q2',
@@ -33,6 +34,7 @@ describe('computeSessionStats', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
       {
         questionId: 'q3',
@@ -44,6 +46,7 @@ describe('computeSessionStats', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
       {
         questionId: 'q4',
@@ -55,6 +58,7 @@ describe('computeSessionStats', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
     ];
 

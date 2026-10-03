@@ -13,11 +13,11 @@ describe('UnscoredDisclosure', () => {
   it.each([
     [
       2,
-      "2 questions aren't scored: withdrawn, under review, retired, or their answer was corrected.",
+      "2 questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected.",
     ],
     [
       1,
-      "1 question isn't scored: withdrawn, under review, retired, or its answer was corrected.",
+      "1 question isn't scored: withdrawn, under review, removed mid-session, or its answer was corrected.",
     ],
   ])('says how many of the questions are not scored (%i)', (count, text) => {
     const doc = new DOMParser().parseFromString(

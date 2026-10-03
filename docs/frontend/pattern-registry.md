@@ -975,13 +975,13 @@ A superseded answer key is the case that matters. Without the notice, a review w
 
 ### F-13: Unscored Disclosure (a score that leaves items out)
 
-States how many questions a score leaves out ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 3). A score counts only the items whose question is available and whose key was not corrected since the learner answered, so a learner who sees a smaller denominator is told why.
+States how many questions a score leaves out ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 3, as amended 2026-10-03). A score counts an item when the learner had a fair chance at it, recorded when its session ended, and its content is not now in doubt: withdrawn, under review, or its key corrected since the learner answered. A learner who sees a smaller denominator is told why.
 
 ```text
 <p className="text-xs text-muted-foreground">
 ```
 
-- **Copy:** "N questions aren't scored: withdrawn, under review, retired, or their answer was corrected." For one: "1 question isn't scored: withdrawn, under review, retired, or its answer was corrected." It names every reason, not the item's own: a score summarizes many items.
+- **Copy:** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." For one: "1 question isn't scored: withdrawn, under review, removed mid-session, or its answer was corrected." It names every reason, not the item's own: a score summarizes many items. A retired question is not a reason: retirement changes no score (DEBT-494).
 - **Placement:** directly below the score it qualifies, inside the same row or card. Nothing renders when every question is scored.
 - **The score beside it** reads `correct/scored`, and shows "—" for accuracy when nothing is scored.
 
@@ -989,7 +989,7 @@ States how many questions a score leaves out ([ADR-022](../adr/adr-022-learner-s
 - Reuses the dense helper-copy style (`text-xs text-muted-foreground`, the 12.3 pairing at a smaller size). There is no new surface, token or color pair.
 - Informational, not a warning: nothing is wrong, and the learner has nothing to do.
 
-**Source:** ADR-022 Decision 3 and DEBT-493 increment 2. The component is `UnscoredDisclosure` (`components/question/unscored-disclosure.tsx`). In use: History's session rows and the Dashboard's recent sessions; the session summary, the post-exam header and the dashboard's accuracy cards follow in the next steps.
+**Source:** ADR-022 Decision 3, as amended by DEBT-494, and DEBT-493 increment 2. The component is `UnscoredDisclosure` (`components/question/unscored-disclosure.tsx`). In use: History's session rows, the Dashboard's recent sessions and its two accuracy cards, where the count is of questions, not attempts; the session summary and the post-exam header follow in the next steps.
 
 ---
 

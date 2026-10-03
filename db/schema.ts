@@ -1112,6 +1112,11 @@ export const practiceSessionQuestionStates = pgTable(
     // ADR-021: the revision this session item shows, bound at session
     // creation (NOT NULL since 0043).
     questionRevisionId: uuid('question_revision_id').notNull(),
+    // ADR-022 Amendment (DEBT-494): whether the learner had a fair chance at
+    // the item, written by the statement that ends the session; 0050 recorded
+    // the sessions already ended. Null while the session is active, and for
+    // one ended in the build window before the writer served.
+    fairChanceAtEnd: boolean('fair_chance_at_end'),
     version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

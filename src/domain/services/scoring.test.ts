@@ -1,21 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import type { PracticeSessionQuestionState } from '../entities';
-import { computeSessionScore, countsTowardScore } from './scoring';
+import {
+  computeSessionScore,
+  contentInDoubt,
+  countsTowardScore,
+  hadFairChanceAtEnd,
+} from './scoring';
 
-// ADR-022 Decision 3: an item counts toward a score only while its question
-// is available. (Increment 4 adds: and the key it was graded against is still
-// the current key.)
+// ADR-022 Amendment (DEBT-494): an item counts when the learner had a fair
+// chance at it, recorded at session end, and its content is not now in doubt:
+// withdrawn or under review. (Increment 4 adds a corrected key.) Retirement is
+// curation, not doubt.
+describe('contentInDoubt', () => {
+  it.each([
+    ['available', false],
+    ['retired', false],
+    ['withdrawn', true],
+    ['under_review', true],
+    [null, true],
+  ] as const)('a question %s is in doubt: %s', (availability, inDoubt) => {
+    expect(contentInDoubt(availability)).toBe(inDoubt);
+  });
+});
+
 describe('countsTowardScore', () => {
   it.each([
-    ['available', true],
-    ['withdrawn', false],
-    ['under_review', false],
-    ['retired', false],
-    [null, false],
+    [null, 'available', true],
+    [true, 'available', true],
+    [true, 'retired', true],
+    [null, 'retired', true],
+    [false, 'available', false],
+    [false, 'retired', false],
+    [true, 'withdrawn', false],
+    [true, 'under_review', false],
+    [true, null, false],
   ] as const)(
-    'counts an item whose question is %s: %s',
-    (availability, counts) => {
-      expect(countsTowardScore(availability)).toBe(counts);
+    'with a fair chance %s, counts an item whose question is %s: %s',
+    (fairChanceAtEnd, availability, counts) => {
+      expect(countsTowardScore({ fairChanceAtEnd, availability })).toBe(counts);
     },
   );
 });
@@ -38,6 +60,7 @@ function state(
     draftSelectedChoiceId: null,
     draftSavedAt: null,
     draftCumulativeMs: 0,
+    fairChanceAtEnd: null,
   };
 }
 
@@ -78,4 +101,32 @@ describe('computeSessionScore', () => {
       correct: 0,
     });
   });
+});
+
+// ADR-022 Amendment (DEBT-494): whether the learner had a fair chance at a
+// session item, recorded when its session ends. Its question was available
+// then, or, in tutor mode, the learner had already answered it: a tutor answer
+// is graded when given. An exam draft is final only at submission.
+describe('hadFairChanceAtEnd', () => {
+  it.each([
+    ['tutor', false, 'available', true],
+    ['tutor', true, 'available', true],
+    ['tutor', true, 'retired', true],
+    ['tutor', true, 'withdrawn', true],
+    ['tutor', false, 'retired', false],
+    ['tutor', false, 'under_review', false],
+    ['exam', true, 'available', true],
+    ['exam', false, 'available', true],
+    ['exam', true, 'retired', false],
+    ['exam', false, 'withdrawn', false],
+    ['tutor', false, null, false],
+    ['exam', true, null, false],
+  ] as const)(
+    'in %s mode, answered: %s, question %s at the end: %s',
+    (mode, answered, availability, fairChance) => {
+      expect(hadFairChanceAtEnd({ mode, answered, availability })).toBe(
+        fairChance,
+      );
+    },
+  );
 });

@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createSessionHistoryRow } from '@/src/application/test-helpers/view-rows';
+import {
+  createSessionHistoryRow,
+  createUserStatsOutput,
+} from '@/src/application/test-helpers/view-rows';
 import type { UserStatsOutput } from '@/src/application/use-cases';
 
 let DashboardView: typeof import('./page').DashboardView;
@@ -16,14 +19,12 @@ function renderActivity(row: ActivityRow) {
   return new DOMParser().parseFromString(
     renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 1,
-          accuracyOverall: 0,
           answeredLast7Days: 1,
-          accuracyLast7Days: 0,
           currentStreakDays: 1,
           recentActivity: [row],
-        }}
+        })}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -82,14 +83,7 @@ describe('Dashboard recent activity: question availability', () => {
     const doc = new DOMParser().parseFromString(
       renderToStaticMarkup(
         <DashboardView
-          stats={{
-            totalAnswered: 0,
-            accuracyOverall: 0,
-            answeredLast7Days: 0,
-            accuracyLast7Days: 0,
-            currentStreakDays: 0,
-            recentActivity: [],
-          }}
+          stats={createUserStatsOutput()}
           sessionHistoryResult={{
             ok: true,
             data: {
@@ -114,7 +108,7 @@ describe('Dashboard recent activity: question availability', () => {
 
     expect(doc.body.textContent).toContain('2/3 correct');
     expect(doc.body.textContent).toContain(
-      "1 question isn't scored: withdrawn, under review, retired, or its answer was corrected.",
+      "1 question isn't scored: withdrawn, under review, removed mid-session, or its answer was corrected.",
     );
   });
 });

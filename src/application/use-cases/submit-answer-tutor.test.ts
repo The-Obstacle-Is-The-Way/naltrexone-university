@@ -169,6 +169,7 @@ describe('SubmitAnswerUseCase', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
     ]);
   });
