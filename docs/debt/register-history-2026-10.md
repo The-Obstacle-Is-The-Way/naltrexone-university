@@ -2,7 +2,7 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-03 UTC: DEBT-490 is resolved and archived ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md#verified-closeout--2026-10-03-utc)).
+**Earlier** — 2026-10-03 UTC (forward pointer: the Latest stanza above decides the scoring, payment-method and regrade questions listed here): DEBT-490 is resolved and archived ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md#verified-closeout--2026-10-03-utc)).
 - **What shipped.** Every release activation, rollback and bootstrap records why it was made and on whose authority, on an immutable receipt.
 - **Merged.** #1322 (**5398018105** on `71fe7e13`; merged `81ffd15a`).
 - **Released** through promotion #1323 (`a9a98421`): main CI **37082256459** `test` passed **00:42:26Z**, production assigned **00:42:28.423Z**, trees `b18dd7dd`, healthy production.

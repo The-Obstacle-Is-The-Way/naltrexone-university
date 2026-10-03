@@ -35,7 +35,7 @@ Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verificat
 
 Every procedure uses this skeleton (copy from `docs/qa/index.md` → Template):
 
-- **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (runs pre-promotion when `yes`), `Promoted to` (E2E spec path once promoted, else `—`).
+- **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
 - **Steps table:** `| # | Action | Expected |` — one operator checkpoint per row, with explicit actions and verifiable expectations. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
 - **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/frontend/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
 - **Viewports:** default to the established audit pair — **1600×1000 desktop** and **390×844 mobile** — unless the procedure states otherwise.
@@ -64,13 +64,13 @@ Rules of engagement (restating the standing mandates):
 | Target | Use for | Cautions |
 |---|---|---|
 | Local dev (`pnpm dev`, `NEXT_PUBLIC_APP_URL`) | Default for per-PR runs | Host exactness for Clerk cookies (`localhost` ≠ `127.0.0.1`) |
-| Vercel preview (`*.vercel.app`, any non-`main` branch) | Pre-promotion runs; anything involving Stripe test mode + webhooks | Clerk dev-mode quirk: the redirect back from Stripe Checkout can land on sign-in — environment behavior, not a bug (`docs/dev/deployment-environments.md`) |
+| Vercel preview (`*.vercel.app`, any non-`main` branch) | Gated runs; anything involving Stripe test mode + webhooks | Clerk dev-mode quirk: the redirect back from Stripe Checkout can land on sign-in — environment behavior, not a bug (`docs/dev/deployment-environments.md`) |
 | Production (`https://addictionboards.com`) | Post-deploy smoke only | **Signed-out/read-only checks by default.** Mutating flows use live Stripe and the real user base — production mutation is owner-initiated only |
 
 ## When procedures run
 
 1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR (this operationalizes the existing "Add screenshots/GIFs for UI changes" rule in `AGENTS.md`).
-2. **Pre-promotion (dev → main):** the procedures marked `Promotion gate: yes` in the register, against the dev preview.
+2. **Gated runs:** the procedures marked `Promotion gate: yes` in the register, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
 3. **Post-deploy smoke:** the production-safe subset, against `addictionboards.com`.
 
 ## Lifecycle and promotion

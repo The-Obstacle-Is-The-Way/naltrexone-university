@@ -70,7 +70,7 @@ Decided under the owner's 2026-10-03 delegation ("deciding all that we need to d
 
 **Part 4 is kept and re-scoped.**
 - **It closes a real gap:** route-level UI that no automated lane reaches. That covers Clerk sign-in and sign-up, error, 404 and loading states, a mobile sweep, an accessibility sweep, account deletion, exam-timer expiry, and history filters at the route level.
-- **The cadence changes.** As a per-promotion gate (15–20 minutes each, with no named executor) it does not fit how often this repository promotes. The procedures run before the production bootstrap and before any release that changes their flows.
+- **The cadence changes.** As a per-promotion gate (15–20 minutes each, with no named executor) it does not fit how often this repository promotes. The procedures run before the production bootstrap and before any release that changes their flows. `docs/dev/qa-procedures.md` says so from this decision on.
 - **The gap list in `docs/dev/qa-procedures.md` is updated.** Paid Checkout and the portal round trip are now in the daily hosted smoke.
 
 **ADR-019** is amended to match, and moves from Proposed to Accepted for what shipped.
@@ -83,7 +83,7 @@ Decided under the owner's 2026-10-03 delegation ("deciding all that we need to d
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
 - [x] Part 2 widening: every production file under `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**`, by glob, with every survivor triaged (third wave 2026-09-30; waves 4a–4f by 2026-10-01, below)
 - [ ] Part 3 (replaced 2026-10-03): the rule-to-test register lists the 17 rules with the tests that prove each, and a renamed or deleted test fails its check
-- [ ] Part 4 (re-scoped 2026-10-03): QA-001 and QA-002 Active, each with two evidenced runs; their cadence and the gap list are updated; operator-checklist item 8 references the register
+- [ ] Part 4 (re-scoped 2026-10-03): QA-001 and QA-002 Active, each with two evidenced runs; the gap list is updated (the cadence was updated with the decision); operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
 
 ### Baselines (fill on first runs — no invented numbers)
