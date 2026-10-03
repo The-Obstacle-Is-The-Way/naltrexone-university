@@ -898,7 +898,7 @@ export type GetAttemptedQuestionsOutput = {
 * If `difficulty` or `tagSlug` is provided, match the difficulty of the revision the most recent attempt answered and the question's tags, whatever the question's state now, so a question no longer available keeps its place under a filter (DEBT-493 increment 5). `sort: 'difficulty'` orders by that difficulty, hardest first, ties by recency.
 * A row the learner answered shows the revision answered, with the question's `availability` (ADR-022 Decision 1). A row the learner never answered on a question no longer available returns `isAvailable:false` with the state for its label and no content (Decision 2).
 * Include `sessionId` and `sessionMode` for each row from the attempt/session context (`null` for ad-hoc attempts).
-* Order by most recent attempt desc.
+* Order by `sort`: most recent attempt first by default (`recent`); `incorrect-first` and `correct-first` put that latest result first, then most recent; `difficulty` as above.
 * Apply limit/offset.
 * Return `totalCount` for pagination.
 

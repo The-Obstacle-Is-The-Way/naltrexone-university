@@ -172,8 +172,14 @@ describe('attempted-question filters against real Postgres', () => {
 
   // DEBT-493 increment 5, ADR-022 Decision 1: a question no longer available
   // keeps its place in History under a difficulty or tag filter, by the
-  // revision answered and its tags, as it does unfiltered.
-  it('keeps a question no longer available under difficulty and tag filters, and sorts it by the difficulty answered', async () => {
+  // revision answered and its tags, as it does unfiltered. Two hard questions,
+  // one then withdrawn, and an easy one, each tagged and answered on the day
+  // given.
+  async function arrangeWithdrawnAmongTagged(days: {
+    withdrawn: string;
+    kept: string;
+    easy: string;
+  }) {
     const user = await createUser(db, cleanup);
     const tag = await createTag(db, cleanup, {
       slug: `it-attempt-filter-tag-${randomUUID()}`,
@@ -191,9 +197,9 @@ describe('attempted-question filters against real Postgres', () => {
     );
     if (!withdrawn || !kept || !easy) throw new Error('questions');
     for (const [current, day] of [
-      [easy, '2026-01-01'],
-      [kept, '2026-01-02'],
-      [withdrawn, '2026-01-03'],
+      [withdrawn, days.withdrawn],
+      [kept, days.kept],
+      [easy, days.easy],
     ] as const) {
       await answer({
         userId: user.id,
@@ -204,33 +210,61 @@ describe('attempted-question filters against real Postgres', () => {
       });
     }
     await setQuestionState(db, withdrawn, 'withdrawn');
+    return { user, tag, withdrawn, kept, easy };
+  }
 
-    for (const filters of [
-      { difficulty: 'hard' as const },
-      { tagSlug: tag.slug },
-      { difficulty: 'hard' as const, tagSlug: tag.slug },
-    ]) {
-      const expected =
-        'difficulty' in filters
-          ? [withdrawn.id, kept.id]
-          : [withdrawn.id, kept.id, easy.id];
+  it.each([
+    ['difficulty', { difficulty: 'hard' as const }, ['withdrawn', 'kept']],
+    ['tag', { tagSlug: 'tag' }, ['withdrawn', 'kept', 'easy']],
+    [
+      'difficulty and tag',
+      { difficulty: 'hard' as const, tagSlug: 'tag' },
+      ['withdrawn', 'kept'],
+    ],
+  ] as const)(
+    'keeps a question no longer available under a %s filter',
+    async (_name, filter, expectedKeys) => {
+      const arranged = await arrangeWithdrawnAmongTagged({
+        withdrawn: '2026-01-03',
+        kept: '2026-01-02',
+        easy: '2026-01-01',
+      });
+      const filters = {
+        ...filter,
+        ...('tagSlug' in filter ? { tagSlug: arranged.tag.slug } : {}),
+      };
+      const expected = expectedKeys.map((key) => arranged[key].id);
+
       await expect(
-        attempts.listAttemptedQuestionsByUserId(user.id, 10, 0, filters),
+        attempts.listAttemptedQuestionsByUserId(
+          arranged.user.id,
+          10,
+          0,
+          filters,
+        ),
       ).resolves.toEqual(
         expected.map((questionId) => expect.objectContaining({ questionId })),
       );
       await expect(
-        attempts.countAttemptedQuestionsByUserId(user.id, filters),
+        attempts.countAttemptedQuestionsByUserId(arranged.user.id, filters),
       ).resolves.toBe(expected.length);
-    }
+    },
+  );
 
-    const byDifficulty = await attempts.listAttemptedQuestionsByUserId(
-      user.id,
-      10,
-      0,
-      { sort: 'difficulty' },
-    );
-    expect(byDifficulty.map((row) => row.questionId)).toEqual([
+  // The easy question is the most recent, so recency, difficulty, and the old
+  // rule that sorted an unpublished question last each give a different order.
+  it('sorts a question no longer available by the difficulty answered', async () => {
+    const { user, withdrawn, kept, easy } = await arrangeWithdrawnAmongTagged({
+      withdrawn: '2026-01-02',
+      kept: '2026-01-01',
+      easy: '2026-01-03',
+    });
+
+    const rows = await attempts.listAttemptedQuestionsByUserId(user.id, 10, 0, {
+      sort: 'difficulty',
+    });
+
+    expect(rows.map((row) => row.questionId)).toEqual([
       withdrawn.id,
       kept.id,
       easy.id,
