@@ -88,13 +88,17 @@ runAttemptScoreContract('FakeAttemptRepository', async () => ({
             ...question,
             revisionId: crypto.randomUUID(),
             stemMd: '# Reworded stem',
-            choices:
-              revisedAfter === 'key'
-                ? question.choices.map((choice) => ({
-                    ...choice,
-                    isCorrect: !choice.isCorrect,
-                  }))
-                : question.choices,
+            choices: question.choices.map((choice) => {
+              if (revisedAfter === 'key') {
+                return { ...choice, isCorrect: !choice.isCorrect };
+              }
+              const reworded =
+                (revisedAfter === 'key text' && choice.isCorrect) ||
+                (revisedAfter === 'distractor' && !choice.isCorrect);
+              return reworded
+                ? { ...choice, textMd: `${choice.textMd}, reworded` }
+                : choice;
+            }),
           };
           return [current, question];
         }),

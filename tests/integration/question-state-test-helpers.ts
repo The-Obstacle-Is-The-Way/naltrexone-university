@@ -56,35 +56,37 @@ export async function setQuestionState(
   }
 }
 
-// Gives a question a new current revision (ADR-021): with another correct
-// choice, so an answer graded on the old one is key-corrected (ADR-022
-// Decision 4), or with only its stem reworded, which keeps the key.
-// `createQuestion`'s first revision keys B, "Choice B".
+export type QuestionRevisionChange = 'key' | 'key text' | 'stem' | 'distractor';
+
+// Gives a question a new current revision (ADR-021). `createQuestion`'s first
+// revision keys B, "Choice B". A change of key (another correct choice, or the
+// correct choice reworded) makes an answer graded on the old revision
+// key-corrected (ADR-022 Decision 4); a reworded stem or distractor keeps it.
 export async function reviseQuestion(
   db: IntegrationDb,
   question: { id: string },
-  change: 'key' | 'stem',
+  change: QuestionRevisionChange,
 ): Promise<void> {
   if (change === 'key') {
     await addCurrentRevision(db, question.id);
     return;
   }
   await appendQuestionRevision(db, question.id, {
-    stemMd: '# Reworded stem',
+    stemMd: change === 'stem' ? '# Reworded stem' : '# Stem',
     explanationMd: '# Explanation',
     referenceMd: null,
     difficulty: 'easy',
     choices: [
       {
         label: 'A',
-        textMd: 'Choice A',
+        textMd: change === 'distractor' ? 'Choice A, reworded' : 'Choice A',
         isCorrect: false,
         explanationMd: null,
         sortOrder: 1,
       },
       {
         label: 'B',
-        textMd: 'Choice B',
+        textMd: change === 'key text' ? 'Choice B, reworded' : 'Choice B',
         isCorrect: true,
         explanationMd: null,
         sortOrder: 2,

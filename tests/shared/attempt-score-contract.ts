@@ -28,7 +28,7 @@ export type ScoredAttemptSeed = {
    * After the attempts, the question gained a current revision: with another
    * correct choice (its key corrected), or with only its stem reworded.
    */
-  revisedAfter?: 'key' | 'stem';
+  revisedAfter?: 'key' | 'key text' | 'stem' | 'distractor';
 };
 
 export type AttemptScoreHarness = {
@@ -152,6 +152,27 @@ const scenarios: readonly Scenario[] = [
     ],
     sinceDaysAgo: null,
     expected: { scored: 2, correct: 1, unscoredQuestions: 1 },
+  },
+  {
+    name: "reads the key as the correct choices' text: rewording the correct choice corrects it, rewording a distractor does not",
+    attempts: [
+      {
+        question: 't',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'key text',
+      },
+      {
+        question: 'd',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'distractor',
+      },
+    ],
+    sinceDaysAgo: null,
+    expected: { scored: 1, correct: 1, unscoredQuestions: 1 },
   },
 ];
 
