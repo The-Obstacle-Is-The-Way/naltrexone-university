@@ -97,6 +97,37 @@ describe('FinalizeExamAnswersUseCase', () => {
     expect(now).toHaveBeenCalledTimes(1);
   });
 
+  // Read after the commit, a failed summary read returned an error for a
+  // finalization that had committed (CodeRabbit, promotion #1350).
+  it('scores the summary in the transaction that ends the session', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      new FakeQuestionRepository([]),
+      new FakeAttemptRepository(),
+      sessions,
+      passthroughTransaction(
+        new FakeQuestionRepository([
+          createFinalizeQuestion('q1', 'q1-correct'),
+        ]),
+        new FakeAttemptRepository(),
+        sessions,
+      ),
+      () => new Date('2026-03-17T12:00:10.000Z'),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'session-1' }),
+    ).resolves.toMatchObject({ totals: { answered: 0, scored: 1 } });
+  });
+
   it('finalizes drafted answers and records omitted exam questions as incorrect attempts', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-17T12:30:00.000Z'));
