@@ -91,6 +91,8 @@ In increments, each test-first.
 - **Contract.** There was no fake↔real contract for the question repository, only a dated waiver. `question-availability-contract.ts` now runs nine scenarios against both, the adapter on real Postgres, reading each question through both of its revisions. The register cites it.
 - **Evidence.** The precedence table, and the contract on both sides. Five targeted mutations each fail a scenario: the adapter skipping the overlay, counting lifted holds or ignoring the overlay, and the fake counting lifted holds or ignoring withdrawals.
 
+- **A race in the contract's test, found by promotion CI (2026-10-03).** Promotion #1335 failed: the real-Postgres contract lifted its hold with the client clock (`new Date()`, millisecond precision). Within the placement's millisecond, the lift sorted before the database's microsecond `placed_at`, and `question_holds_lifted_after_placed_chk` refused it. It passed locally by chance. The test now takes the lift time from the row (`placed_at + interval '1 second'`). The fixed file passed fifteen consecutive local runs, and a one-off probe confirmed that a client-clock lift in the placement's millisecond is refused. Production code was unaffected: the hold command lifts with the database's clock. #1335 was closed unmerged, and the parts are promoted after the fix.
+
 **Increment 1, part C: labels and notices, 2026-10-03.** The boolean "withdrawn" is replaced by availability on every review and list output, and each surface shows ADR-022's label and notice.
 - **Outputs.** Rows from the completed-session feedback, the session review, History and the Dashboard, and the question view's DTO, carry `availability` in place of `withdrawn`.
   - A row that shows content carries the question's state.

@@ -3,16 +3,10 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-03 UTC
 
-**Latest** — 2026-10-03 UTC: DEBT-493's part C is fixed in code. Learners now see ADR-022's labels and notices: Withdrawn, Under review or Retired, each with its own notice ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
-- **What learners see.**
-  - A withdrawn or under-review question carries a clinical caution. A retired one carries a neutral notice.
-  - Lists and navigators show the state's label.
-  - An item the learner never answered names its state, with no content.
-  - The single "withdrawn" wording, and the generic "[Question no longer available]" for a question that still exists, are gone from these surfaces.
-- **Outputs.** The boolean `withdrawn` is replaced by `availability` on every review and list output, and each read decides availability from it, not from `status`.
-- **Still to come.** The active session's notice (part E), Review & Submit's scoring warning and every score (increments 2 and 3), key corrections (increment 4), and bookmarks (increment 5).
-- **Evidence.** Cases for each state on each surface. Fifteen targeted mutations confirm that each case fails without its change. Pattern Registry F-11 is rewritten.
-- **Merged since the last entry.** #1333 (DEBT-493 part B, **5399789430** on `18d1e76a`; merged `8475778f`). #1332, #1333 and this increment are released together.
+**Latest** — 2026-10-03 UTC: promotion #1335 failed on a race in a test written for DEBT-493 part B, which is now fixed ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+- **The failure.** The availability contract's real-Postgres run lifted a hold with the client clock, at millisecond precision. Within the placement's millisecond, the lift sorted before the database's microsecond `placed_at`, and the lifted-after-placed check refused it. It was a test defect; production lifts use the database's clock.
+- **The fix.** The lift time comes from the row. The fixed file passed fifteen consecutive runs, and a probe confirmed the old form fails in the same millisecond. The cause was documented on #1335 before anything was re-run, and #1335 was closed unmerged.
+- **Merged since the last entry.** #1334 (DEBT-493 part C, **5399950118** on `059b5e27`; merged `97aa3b24`). #1332, #1333, #1334 and this fix are promoted together next.
 - **What remains Active.** DEBT-414, DEBT-465, DEBT-492 (fixed in code, resolves once released) and DEBT-493.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. The recommendation is to bootstrap once DEBT-492, now fixed in code, is released, and the next content import is ready to go through the release path, so the first staged release is real.
