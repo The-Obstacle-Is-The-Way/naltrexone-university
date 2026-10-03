@@ -1,6 +1,6 @@
 # DEBT-493: Learner Scores and Labels Do Not Reflect Content Changes
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice), increment 4 (key corrections) and increment 5 (bookmarks and History filters) ([Progress](#progress)); the record closes once all of it is in production
 **Priority:** P1
@@ -12,7 +12,7 @@
 
 ## Summary
 
-[ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides how a learner's scores and labels follow content changes. Today they don't:
+[ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides how a learner's scores and labels follow content changes. Today they don't:
 - **Labels.** A question held for clinical review, one retired, and one withdrawn as unsafe all read "withdrawn".
 - **Exams.** An exam item withdrawn mid-session is scored, even when the learner could not change or answer it.
 - **Exposure.** An unanswered exam item that is later withdrawn reveals its possibly unsafe content.
@@ -125,7 +125,7 @@ In increments, each test-first.
 - **Cost.** On the local integration database, 50 completed sessions of 20 items, a 20-row page, median of five warm `EXPLAIN (ANALYZE)` runs: 1.075 ms before, 1.407 ms after.
 - **Evidence.** Twelve targeted mutations each fail a case, across the adapter, the fake, the use case, the History and Dashboard views, the disclosure and the domain rule.
 
-**Increment 2 revised: the amended scoring rule, 2026-10-03.** [DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03) amends Decision 3 ([ADR-022 Amendment](../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)). An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, from increment 4, key-corrected. Retired questions keep counting.
+**Increment 2 revised: the amended scoring rule, 2026-10-03.** [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03) amends Decision 3 ([ADR-022 Amendment](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)). An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, from increment 4, key-corrected. Retired questions keep counting.
 - **What changes.** History scores, released in step 2, exclude retired questions; they will count them again. Dashboard accuracy and the session summary's writer were built on step 2's rule and were not shipped; they move to the amended rule first.
 - **The revised steps:**
   1. **Record the fair chance when a session ends.** A nullable column on each session item, written by the statement that ends the session, for end and finalize alike. Sessions that already ended are recorded once, by the migration, from the bank as it stands when it runs. Nothing reads it yet.
@@ -136,7 +136,7 @@ In increments, each test-first.
 
 **Increment 2 revised, step 1: the fair chance is recorded when a session ends, 2026-10-03.** Nothing reads it yet.
 - **Domain.** `hadFairChanceAtEnd`: an item's question is available when the session ends or, in tutor mode, the learner had already answered it. Session items carry `fairChanceAtEnd`, null while the session is active, or for one ended in the deploy window before the writer served.
-- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. An earlier session's past availability is not kept, so 0050 records sessions that already ended once, from the bank as it stands when it runs. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)). Null remains only while a session is active, or for one that ends in the window before the new code serves, and reads as a fair chance.
+- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. An earlier session's past availability is not kept, so 0050 records sessions that already ended once, from the bank as it stands when it runs. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again ([DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)). Null remains only while a session is active, or for one that ends in the window before the new code serves, and reads as a fair chance.
 - **Writer.** The adapter ends a session and records every item in one statement, two data-modifying CTEs, so the record commits with the end whether `end` runs alone or inside finalize's transaction. The concurrency test that interleaves a competing end now hooks that statement.
 - **Contract.** `session-end-fair-chance-contract.ts` runs a tutor and an exam scenario against the fake and the adapter on real Postgres: nothing is recorded while active, and the ended session and a fresh read agree.
 - **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule. The backfill is a marked block executed against arranged rows, twice, in `session-fair-chance-backfill.integration.test.ts`.
@@ -214,7 +214,7 @@ In increments, each test-first.
 
 ## Related
 
-- [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md): the decisions.
-- [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md): immutable revisions.
-- [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) and [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md): the deferred decisions this record executes.
-- [DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md): the decision that amends Decision 3, so past scores change only when content validity changes.
+- [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md): the decisions.
+- [ADR-021](../../adr/adr-021-question-revisions-and-content-releases.md): immutable revisions.
+- [DEBT-484](./debt-484-question-rewrite-history-identity.md) and [BUG-317](../bugs/bug-317-content-release-documentation-overclaims.md): the deferred decisions this record executes.
+- [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md): the decision that amends Decision 3, so past scores change only when content validity changes.

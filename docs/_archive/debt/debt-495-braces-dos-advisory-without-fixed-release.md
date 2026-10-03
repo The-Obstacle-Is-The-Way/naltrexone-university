@@ -1,6 +1,6 @@
 # DEBT-495: braces Denial-of-Service Advisory With No Fixed Release
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — the risk is accepted under the owner's delegation (2026-10-03). Once this record is on `main`, Dependabot alert #77 is dismissed as `tolerable_risk` pointing here, and the record is archived as Accepted, with the recheck triggers below in the Deferred table
 **Priority:** P3
@@ -42,4 +42,4 @@ Investigated on 2026-10-03, against `main` at `2c4113e1`, and rechecked against 
 
 ## Related
 
-- [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md) §F: the same unused Solana tree, for `stream-json`.
+- [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md) §F: the same unused Solana tree, for `stream-json`.

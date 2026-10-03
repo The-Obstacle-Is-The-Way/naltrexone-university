@@ -2,7 +2,7 @@
 
 **Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03))
 **Date:** 2026-10-03
-**Implementation:** Partially implemented; the remaining work is tracked by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md).
+**Implementation:** Partially implemented; the remaining work is tracked by [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md).
 **Decision Makers:** The owner, who on 2026-10-03 asked for every remaining decision that can be settled in code to be decided from first principles, "like the best software engineers in the world and the best physicians in the world who are designing this question bank", and executed. This record decides the three questions [ADR-021](./adr-021-question-revisions-and-content-releases.md) left to the owner: withdrawn-item scoring, answer-key regrade, and how an unavailable question is labeled ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md#verified-closeout--2026-10-02-utc)).
 **Depends On:** ADR-021 (immutable revisions; attempts bind the revision they were graded against).
 
@@ -146,5 +146,5 @@ Decided under the owner's 2026-10-03 delegation, after a review notice asked whe
 ## Related
 
 - [ADR-021](./adr-021-question-revisions-and-content-releases.md): immutable revisions and releases.
-- [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md): the implementation.
+- [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md): the implementation.
 - [Pattern Registry](../frontend/pattern-registry.md): F-11 (withdrawal notice) and F-12 (updated notice), revised by DEBT-493.

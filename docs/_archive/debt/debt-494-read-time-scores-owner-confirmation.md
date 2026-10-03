@@ -69,7 +69,7 @@ An item counts when both hold.
 - A second "score when taken" value (option D) is not built. Past scores now move only for disclosed clinical reasons, and showing the superseded value would invite reliance on a score that counted flawed content.
 - Freezing (option B) would keep counting unsafe items.
 
-**Effect on DEBT-493.** History scores are in production under Decision 3's rule, which excludes retired questions. Dashboard accuracy and the session summary's writer were built on the same rule and are not shipped. All three move to the amended rule, after a step that records the fair-chance fact when a session ends. DEBT-493's [Progress](../../debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress) holds the revised plan.
+**Effect on DEBT-493.** History scores are in production under Decision 3's rule, which excludes retired questions. Dashboard accuracy and the session summary's writer were built on the same rule and are not shipped. All three move to the amended rule, after a step that records the fair-chance fact when a session ends. DEBT-493's [Progress](./debt-493-learner-scores-and-labels-when-content-changes.md#progress) holds the revised plan.
 
 ## Consequences and cost, verified — 2026-10-03
 
@@ -109,10 +109,10 @@ The backfill fills only items not yet recorded, so running it again changes noth
   - production health 200 (`{"ok":true,"db":true}`).
 - **The production backfill ran as written.** The production build log records `DEBT-494 fair-chance backfill: 466 items recorded`, and the migration ledger's post-check matched the checkout exactly.
 - **An earlier promotion, #1345, was closed unmerged.** CodeRabbit found comments that still said sessions ended before 0050 are unrecorded; #1346 corrected them.
-- **The record's scope is complete.** It asked for the decision and its documentation. The session summary's writer, Review & Submit with the active notice, and key corrections continue under [DEBT-493](../../debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress).
+- **The record's scope is complete.** It asked for the decision and its documentation. The session summary's writer, Review & Submit with the active notice, and key corrections continue under [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress).
 
 ## Related
 
 - [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decision 3 and Consequences
-- [DEBT-493](../../debt/debt-493-learner-scores-and-labels-when-content-changes.md): the implementation, increment 2
+- [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md): the implementation, increment 2
 - [Pattern Registry](../../frontend/pattern-registry.md) F-13: the unscored disclosure

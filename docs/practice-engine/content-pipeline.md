@@ -277,7 +277,7 @@ Because labels are validated as `A`–`E` and then sorted, `sortOrder` is effect
 
 ### Publishing Rule
 
-The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. Today any question that is no longer published is labeled withdrawn, a temporary hold included; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides separate labels for withdrawn, under review and retired, implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
+The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. Today any question that is no longer published is labeled withdrawn, a temporary hold included; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides separate labels for withdrawn, under review and retired, implemented by [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
 
 ### Placeholder Questions
 
