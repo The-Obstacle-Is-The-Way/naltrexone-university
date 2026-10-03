@@ -1,5 +1,5 @@
 import type { PracticeSessionQuestionState } from '../entities';
-import type { QuestionAvailability } from '../value-objects';
+import type { PracticeMode, QuestionAvailability } from '../value-objects';
 
 /**
  * ADR-022 Decision 3: an item counts toward a score only while its question
@@ -37,4 +37,22 @@ export function computeSessionScore(
         state.latestSelectedChoiceId !== null && state.latestIsCorrect === true,
     ).length,
   };
+}
+
+/**
+ * ADR-022 Amendment (DEBT-494): whether the learner had a fair chance at a
+ * session item, recorded when its session ends, since it cannot be rebuilt
+ * later. Its question was available then, or, in tutor mode, the learner had
+ * already answered it: a tutor answer is graded when given, on content then
+ * available. An exam draft is final only at submission.
+ */
+export function hadFairChanceAtEnd(input: {
+  mode: PracticeMode;
+  answered: boolean;
+  availability: QuestionAvailability | null;
+}): boolean {
+  return (
+    input.availability === 'available' ||
+    (input.mode === 'tutor' && input.answered)
+  );
 }

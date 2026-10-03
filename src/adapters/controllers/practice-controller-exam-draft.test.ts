@@ -10,8 +10,13 @@ import { createDeps } from './test-helpers/practice-controller-test-helpers';
 // receives it.
 const BOUND_REVISION_ID = '55555555-5555-5555-5555-555555555555';
 
-function withoutRevision<T extends { questionRevisionId: string }>({
+// The fields the client sees: the bound revision (ADR-021) and the fair-chance
+// record (DEBT-494) are internal.
+function withoutRevision<
+  T extends { questionRevisionId: string; fairChanceAtEnd: boolean | null },
+>({
   questionRevisionId: _boundRevision,
+  fairChanceAtEnd: _fairChance,
   ...visible
 }: T) {
   return visible;
@@ -83,6 +88,7 @@ describe('practice-controller', () => {
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: MAX_DRAFT_CUMULATIVE_MS,
+        fairChanceAtEnd: null,
       } as const;
       const deps = createDeps({ saveDraftOutput });
       const expectedOutput = {
@@ -124,6 +130,7 @@ describe('practice-controller', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: 15_000,
+        fairChanceAtEnd: null,
       } as const;
       const deps = createDeps({ saveDraftOutput });
 
@@ -206,6 +213,7 @@ describe('practice-controller', () => {
         draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: 50_000,
+        fairChanceAtEnd: null,
       } as const;
 
       const deps = createDeps({ saveDraftOutput });
@@ -317,6 +325,7 @@ describe('practice-controller', () => {
           draftSelectedChoiceId: '33333333-3333-3333-3333-333333333333',
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs: -1,
+          fairChanceAtEnd: null,
         },
       });
 

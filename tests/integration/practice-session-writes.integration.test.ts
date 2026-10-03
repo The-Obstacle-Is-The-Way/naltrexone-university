@@ -126,7 +126,12 @@ function interleaveBeforeRootUpdate(
   return new Proxy(target, {
     get(obj, property, receiver) {
       const value = Reflect.get(obj, property, receiver);
-      if (property === 'update' && typeof value === 'function') {
+      // The guarded end is one statement, run through execute since it also
+      // records each item's fair chance (DEBT-494).
+      if (
+        (property === 'update' || property === 'execute') &&
+        typeof value === 'function'
+      ) {
         return (...args: unknown[]) =>
           deferUntil(value.apply(obj, args) as object, beforeUpdate);
       }
@@ -172,6 +177,7 @@ describe('DrizzlePracticeSessionRepository create', () => {
       draftSelectedChoiceId: null,
       draftSavedAt: null,
       draftCumulativeMs: 0,
+      fairChanceAtEnd: null,
     });
     expect(created).toEqual({
       id: expect.any(String),

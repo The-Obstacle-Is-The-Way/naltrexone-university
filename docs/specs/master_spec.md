@@ -730,7 +730,7 @@ export type EndPracticeSessionOutput = {
 
 1. Load session by id and user_id.
 2. If `ended_at` is not null: return `CONFLICT`.
-3. Set `ended_at = now()`.
+3. Set `ended_at = now()` and, in the same statement, record each item's `fair_chance_at_end` (ADR-022 Amendment, DEBT-494): its question is published now, or, in tutor mode, the learner already answered it.
 4. Compute summary:
 
    * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
