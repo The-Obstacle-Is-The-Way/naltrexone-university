@@ -130,6 +130,7 @@ describe('renderPracticeSessionExamResults', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -184,6 +185,7 @@ describe('renderPracticeSessionExamResults', () => {
         questionCount: 1,
         totals: {
           answered: 1,
+          scored: 1,
           correct: 0,
           accuracy: 0,
           durationSeconds: 120,

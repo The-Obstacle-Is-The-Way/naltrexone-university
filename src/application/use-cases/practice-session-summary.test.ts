@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import type { PracticeSession } from '@/src/domain/entities';
 import { createPracticeSession } from '@/src/domain/test-helpers';
+import type { QuestionAvailability } from '@/src/domain/value-objects';
 import { projectPracticeSessionSummary } from './practice-session-summary';
+
+function everyAvailable(
+  session: PracticeSession,
+): ReadonlyMap<string, QuestionAvailability> {
+  return new Map(
+    session.questionIds.map((questionId) => [questionId, 'available']),
+  );
+}
 
 describe('projectPracticeSessionSummary', () => {
   it('returns stable totals when no questions were answered', () => {
@@ -30,13 +40,16 @@ describe('projectPracticeSessionSummary', () => {
       endedAt,
     });
 
-    expect(projectPracticeSessionSummary(session, endedAt)).toEqual({
+    expect(
+      projectPracticeSessionSummary(session, endedAt, everyAvailable(session)),
+    ).toEqual({
       sessionId: 'session-1',
       mode: 'tutor',
       questionCount: 2,
       endedAt: '2026-02-01T00:10:00.000Z',
       totals: {
         answered: 0,
+        scored: 2,
         correct: 0,
         accuracy: 0,
         durationSeconds: 600,
@@ -44,7 +57,7 @@ describe('projectPracticeSessionSummary', () => {
     });
   });
 
-  it('returns total question count as the accuracy denominator when the session ends early', () => {
+  it('counts every scored item in the accuracy denominator, answered or not, when the session ends early', () => {
     const endedAt = new Date('2026-02-01T00:10:00Z');
     const session = createPracticeSession({
       id: 'session-2',
@@ -78,10 +91,13 @@ describe('projectPracticeSessionSummary', () => {
       endedAt,
     });
 
-    expect(projectPracticeSessionSummary(session, endedAt)).toMatchObject({
+    expect(
+      projectPracticeSessionSummary(session, endedAt, everyAvailable(session)),
+    ).toMatchObject({
       questionCount: 3,
       totals: {
         answered: 1,
+        scored: 3,
         correct: 1,
         accuracy: 1 / 3,
         durationSeconds: 600,
@@ -101,13 +117,16 @@ describe('projectPracticeSessionSummary', () => {
       endedAt,
     });
 
-    expect(projectPracticeSessionSummary(session, endedAt)).toEqual({
+    expect(
+      projectPracticeSessionSummary(session, endedAt, everyAvailable(session)),
+    ).toEqual({
       sessionId: 'session-3',
       mode: 'tutor',
       questionCount: 0,
       endedAt: '2026-02-01T00:00:30.000Z',
       totals: {
         answered: 0,
+        scored: 0,
         correct: 0,
         accuracy: 0,
         durationSeconds: 30,
@@ -135,9 +154,9 @@ describe('projectPracticeSessionSummary', () => {
       endedAt,
     });
 
-    expect(() => projectPracticeSessionSummary(session, endedAt)).toThrow(
-      /missing normalized question state/,
-    );
+    expect(() =>
+      projectPracticeSessionSummary(session, endedAt, everyAvailable(session)),
+    ).toThrow(/missing normalized question state/);
   });
 
   it('returns canonical totals when persisted state includes out-of-band rows', () => {
@@ -174,14 +193,104 @@ describe('projectPracticeSessionSummary', () => {
       endedAt,
     });
 
-    expect(projectPracticeSessionSummary(session, endedAt)).toMatchObject({
+    expect(
+      projectPracticeSessionSummary(session, endedAt, everyAvailable(session)),
+    ).toMatchObject({
       questionCount: 2,
       totals: {
         answered: 1,
+        scored: 2,
         correct: 1,
         accuracy: 0.5,
         durationSeconds: 600,
       },
     });
+  });
+
+  // ADR-022 Decision 3: an item counts toward the score only while its
+  // question is available. It leaves both counts, answered or not, and stays
+  // answered: that is activity.
+  // ADR-022 Amendment (DEBT-494): an item counts when the learner had a fair
+  // chance at it, recorded at the session's end, and its content is not in
+  // doubt. A question retired since keeps counting.
+  it('leaves out an item without a fair chance or in doubt, answered or not, and keeps a retired one', () => {
+    const endedAt = new Date('2026-02-01T00:10:00Z');
+    const item = (
+      questionId: string,
+      answer: boolean | null,
+      fairChanceAtEnd: boolean,
+    ) => ({
+      questionId,
+      markedForReview: false,
+      latestSelectedChoiceId: answer === null ? null : `choice-${questionId}`,
+      latestIsCorrect: answer,
+      latestAnsweredAt:
+        answer === null ? null : new Date('2026-02-01T00:03:00Z'),
+      fairChanceAtEnd,
+    });
+    const session = createPracticeSession({
+      mode: 'exam',
+      questionIds: [
+        'q-right',
+        'q-withdrawn',
+        'q-retired',
+        'q-removed',
+        'q-wrong',
+      ],
+      questionStates: [
+        item('q-right', true, true),
+        item('q-withdrawn', true, true),
+        item('q-retired', null, true),
+        item('q-removed', true, false),
+        item('q-wrong', false, true),
+      ],
+      startedAt: new Date('2026-02-01T00:00:00Z'),
+      endedAt,
+    });
+
+    expect(
+      projectPracticeSessionSummary(
+        session,
+        endedAt,
+        new Map<string, QuestionAvailability>([
+          ['q-right', 'available'],
+          ['q-withdrawn', 'withdrawn'],
+          ['q-retired', 'retired'],
+          ['q-removed', 'available'],
+          ['q-wrong', 'available'],
+        ]),
+      ).totals,
+    ).toEqual({
+      answered: 4,
+      scored: 3,
+      correct: 1,
+      accuracy: 1 / 3,
+      durationSeconds: 600,
+    });
+  });
+
+  it('scores an item whose question it cannot find as in doubt', () => {
+    const endedAt = new Date('2026-02-01T00:10:00Z');
+    const session = createPracticeSession({
+      mode: 'tutor',
+      questionIds: ['q-found', 'q-missing'],
+      questionStates: ['q-found', 'q-missing'].map((questionId) => ({
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: `choice-${questionId}`,
+        latestIsCorrect: true,
+        latestAnsweredAt: new Date('2026-02-01T00:03:00Z'),
+      })),
+      startedAt: new Date('2026-02-01T00:00:00Z'),
+      endedAt,
+    });
+
+    expect(
+      projectPracticeSessionSummary(
+        session,
+        endedAt,
+        new Map<string, QuestionAvailability>([['q-found', 'available']]),
+      ).totals,
+    ).toMatchObject({ answered: 2, scored: 1, correct: 1, accuracy: 1 });
   });
 });

@@ -45,9 +45,14 @@ describe('FinalizeExamAnswersUseCase', () => {
     ) {
       const questions = new FakeQuestionRepository([question]);
       const attempts = new FakeAttemptRepository();
-      const sessions = new FakePracticeSessionRepository([
-        createFlushSession(),
-      ]);
+      const sessions = new FakePracticeSessionRepository(
+        [createFlushSession()],
+        {
+          availabilityByQuestionId: new Map([
+            [question.id, question.availability],
+          ]),
+        },
+      );
       const useCase = new FinalizeExamAnswersUseCase(
         questions,
         attempts,
@@ -110,8 +115,9 @@ describe('FinalizeExamAnswersUseCase', () => {
             cumulativeMs: 30_000,
           },
         }),
+        // Graded, and answered, but not scored (ADR-022 Decision 3).
       ).resolves.toMatchObject({
-        totals: { answered: 1, correct: 1 },
+        totals: { answered: 1, scored: 0, correct: 0 },
       });
       await expect(
         attempts.findBySessionId('session-1', 'user-1'),

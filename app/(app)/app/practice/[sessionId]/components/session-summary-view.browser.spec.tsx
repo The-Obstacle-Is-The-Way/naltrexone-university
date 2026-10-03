@@ -16,6 +16,7 @@ function createTutorSummary() {
     questionCount: 1,
     totals: {
       answered: 1,
+      scored: 1,
       correct: 1,
       accuracy: 1,
       durationSeconds: 30,
@@ -51,6 +52,7 @@ test('renders summary totals and per-question breakdown', async () => {
         questionCount: 10,
         totals: {
           answered: 10,
+          scored: 10,
           correct: 7,
           accuracy: 0.7,
           durationSeconds: 123,
@@ -135,6 +137,7 @@ test('omits the removed practice-missed CTA when all exam answers are correct', 
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 2,
           accuracy: 1,
           durationSeconds: 30,
@@ -181,6 +184,7 @@ test('uses New Session as the primary CTA when no reviewable slug exists', async
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 30,
@@ -230,6 +234,7 @@ test('renders loading and error states for summary review', async () => {
         questionCount: 1,
         totals: {
           answered: 1,
+          scored: 1,
           correct: 1,
           accuracy: 1,
           durationSeconds: 30,
@@ -253,6 +258,7 @@ test('renders only the New Session action for tutor summaries', async () => {
         questionCount: 1,
         totals: {
           answered: 1,
+          scored: 1,
           correct: 1,
           accuracy: 1,
           durationSeconds: 30,
@@ -289,6 +295,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 30,
@@ -357,6 +364,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 30,

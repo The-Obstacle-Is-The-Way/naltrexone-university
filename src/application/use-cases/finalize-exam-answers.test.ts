@@ -182,6 +182,7 @@ describe('FinalizeExamAnswersUseCase', () => {
       endedAt: examDeadline.toISOString(),
       totals: {
         answered: 3,
+        scored: 4,
         correct: 2,
         accuracy: 0.5,
         durationSeconds: 4 * EXAM_SECONDS_PER_QUESTION,
@@ -336,27 +337,30 @@ describe('FinalizeExamAnswersUseCase', () => {
       }),
     ]);
     const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([
-      createPracticeSession({
-        id: 'session-1',
-        userId: 'user-1',
-        mode: 'exam',
-        questionIds: ['q1'],
-        startedAt: new Date('2026-03-17T12:00:00.000Z'),
-        questionStates: [
-          {
-            questionId: 'q1',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-            draftSelectedChoiceId: 'q1-correct',
-            draftSavedAt: new Date('2026-03-17T12:00:30.000Z'),
-            draftCumulativeMs: 30_000,
-          },
-        ],
-      }),
-    ]);
+    const sessions = new FakePracticeSessionRepository(
+      [
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: new Date('2026-03-17T12:00:00.000Z'),
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+              draftSelectedChoiceId: 'q1-correct',
+              draftSavedAt: new Date('2026-03-17T12:00:30.000Z'),
+              draftCumulativeMs: 30_000,
+            },
+          ],
+        }),
+      ],
+      { availabilityByQuestionId: new Map([['q1', 'retired']]) },
+    );
     const useCase = new FinalizeExamAnswersUseCase(
       questions,
       attempts,
@@ -373,9 +377,11 @@ describe('FinalizeExamAnswersUseCase', () => {
       sessionId: 'session-1',
       mode: 'exam',
       questionCount: 1,
+      // Graded, and answered, but not scored (ADR-022 Decision 3).
       totals: {
         answered: 1,
-        correct: 1,
+        scored: 0,
+        correct: 0,
       },
     });
     await expect(
@@ -399,27 +405,30 @@ describe('FinalizeExamAnswersUseCase', () => {
       }),
     ]);
     const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([
-      createPracticeSession({
-        id: 'session-1',
-        userId: 'user-1',
-        mode: 'exam',
-        questionIds: ['q1'],
-        startedAt: new Date('2026-03-17T12:00:00.000Z'),
-        questionStates: [
-          {
-            questionId: 'q1',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-            draftSelectedChoiceId: null,
-            draftSavedAt: null,
-            draftCumulativeMs: 12_000,
-          },
-        ],
-      }),
-    ]);
+    const sessions = new FakePracticeSessionRepository(
+      [
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: new Date('2026-03-17T12:00:00.000Z'),
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+              draftSelectedChoiceId: null,
+              draftSavedAt: null,
+              draftCumulativeMs: 12_000,
+            },
+          ],
+        }),
+      ],
+      { availabilityByQuestionId: new Map([['q1', 'retired']]) },
+    );
     const useCase = new FinalizeExamAnswersUseCase(
       questions,
       attempts,
@@ -433,9 +442,11 @@ describe('FinalizeExamAnswersUseCase', () => {
         sessionId: 'session-1',
       }),
     ).resolves.toMatchObject({
-      totals: { answered: 0, correct: 0 },
+      totals: { answered: 0, scored: 0, correct: 0 },
     });
-    expect(questions.findByIdsForSessionCalls).toEqual([]);
+    // One read, the summary's, for the item's availability (ADR-022
+    // Decision 3); grading read nothing.
+    expect(questions.findByIdsForSessionCalls).toEqual([['q1']]);
     await expect(
       attempts.findBySessionId('session-1', 'user-1'),
     ).resolves.toMatchObject([
@@ -493,6 +504,7 @@ describe('FinalizeExamAnswersUseCase', () => {
       questionCount: 1,
       totals: {
         answered: 0,
+        scored: 1,
         correct: 0,
       },
     });
@@ -607,7 +619,11 @@ describe('FinalizeExamAnswersUseCase', () => {
     }
 
     expect(output).toEqual(
-      projectPracticeSessionSummary(endedSession, endedSession.endedAt),
+      projectPracticeSessionSummary(
+        endedSession,
+        endedSession.endedAt,
+        new Map(endedSession.questionIds.map((id) => [id, 'available'])),
+      ),
     );
   });
 

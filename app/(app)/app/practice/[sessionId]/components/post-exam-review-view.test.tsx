@@ -39,6 +39,7 @@ beforeAll(async () => {
 });
 
 function renderView(input?: {
+  summary?: ReturnType<typeof createSummary>;
   rows?: ReviewRow[];
   row?: GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
   currentQuestionId?: string | null;
@@ -51,15 +52,18 @@ function renderView(input?: {
   const answered = rows.filter((row) => row.isAnswered).length;
   const correct = rows.filter((row) => row.isCorrect === true).length;
   const questionCount = rows.length;
-  const summary = createSummary({
-    questionCount,
-    totals: {
-      answered,
-      correct,
-      accuracy: questionCount === 0 ? 0 : correct / questionCount,
-      durationSeconds: 120,
-    },
-  });
+  const summary =
+    input?.summary ??
+    createSummary({
+      questionCount,
+      totals: {
+        answered,
+        scored: questionCount,
+        correct,
+        accuracy: questionCount === 0 ? 0 : correct / questionCount,
+        durationSeconds: 120,
+      },
+    });
   const html = renderToStaticMarkup(
     <PostExamReviewView
       summary={summary}
@@ -597,5 +601,62 @@ describe('PostExamReviewView', () => {
     ).toHaveLength(1);
 
     expect(viewSummaryButton?.getAttribute('data-variant')).toBe('outline');
+  });
+
+  // ADR-022 Decision 3, Pattern Registry F-13: "X of N correct" counts only
+  // the items whose question is available, and says how many it leaves out.
+  it('scores the header over the scored items and says how many are left out', () => {
+    const scoreBanner = getScoreBanner(
+      renderView({
+        summary: createSummary({
+          questionCount: 3,
+          totals: {
+            answered: 3,
+            scored: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }),
+      }),
+    );
+
+    expect(
+      scoreBanner.querySelector('h1')?.nextElementSibling?.textContent,
+    ).toBe('50%');
+    expect(scoreBanner.textContent).toContain(
+      '1 of 2 correct · Review each question with detailed feedback.',
+    );
+    expect(scoreBanner.textContent).toContain(
+      "1 question isn't scored: withdrawn, under review, removed mid-session, or its answer was corrected.",
+    );
+  });
+
+  it('reads — when no item is scored', () => {
+    const scoreBanner = getScoreBanner(
+      renderView({
+        summary: createSummary({
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            scored: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 120,
+          },
+        }),
+      }),
+    );
+
+    expect(
+      scoreBanner.querySelector('h1')?.nextElementSibling?.textContent,
+    ).toBe('—');
+    expect(scoreBanner.textContent).toContain(
+      "2 questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected.",
+    );
+  });
+
+  it('says nothing more when every item is scored', () => {
+    expect(getScoreBanner(renderView()).textContent).not.toContain('scored:');
   });
 });

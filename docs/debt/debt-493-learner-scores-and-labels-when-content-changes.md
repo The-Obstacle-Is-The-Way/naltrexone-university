@@ -150,6 +150,17 @@ In increments, each test-first.
 - **Cost.** On the local integration database, a learner with 2,000 answers over 300 questions, 20 of them retired and 10 withdrawn, median of 40 warm `EXPLAIN (ANALYZE)` runs: the dashboard's all-time read takes 2.31 ms and its seven-day read 0.73 ms, against 0.29 ms and 0.08 ms for the correct counts it replaces. It runs both once per load.
 - **Evidence.** Seven targeted mutations of the SQL each fail a real-Postgres case: the withdrawal and hold checks, the lifted-hold filter, the fair-chance default, the history's fair-chance column, and the dashboard's join to its session item. Twelve more across the domain, the fakes and the use case each fail a unit case.
 
+**Increment 2 revised, step 3: the session summary's writer, 2026-10-03.** The end, finalize and summary reads score a session by the amended rule, and send `totals.scored`.
+- **Writer.** The summary reads each item's availability through `findByIdsForSession`, the path the availability contract already proves, so there is no new port. It counts an item when its recorded fair chance is not false and its content is not in doubt, with the domain's `computeSessionScore` and `countsTowardScore`, as History does. Answered stays every answer. An item whose question it cannot find is in doubt.
+- **Reads.** End and finalize score the session as it ends, after recording each item's fair chance. The summary read scores it as the bank stands at the read, so a later withdrawal, hold or lift shows on reload. End and the summary read now take the question repository; finalize already had it.
+- **Cached outputs.** A summary cached before this writer is replayed with `scored = questionCount`, which is what its writer counted. The schema fills it in, so every type downstream carries a required `scored`. The reader that accepts the field (step 1 of the original plan) is in production, so a rollback to it reads this writer's rows. The mapping is removed one full 24-hour TTL after the last earlier writer left production.
+- **Views.** The summary's Accuracy card and the post-exam header read "—" when nothing is scored and carry Pattern Registry F-13's disclosure. The header reads "X of scored correct".
+- **Every surface agrees.** A real-Postgres case finalizes an exam over four items, with one question held before submission. The summary at submission, the summary read, History and the Dashboard score each step alike:
+  - three items at submission;
+  - two after a second question is held and a third retired;
+  - three once both holds lift, since the item held before submission never had a fair chance.
+- **Fixtures.** Existing summary fixtures carry `scored` equal to their question count: every item in them counts, as before. Two deliberately invalid fixtures keep one invalid field. The finalize cases whose question leaves the bank before submission give the session fake the same bank state, so the item is graded but not scored.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.

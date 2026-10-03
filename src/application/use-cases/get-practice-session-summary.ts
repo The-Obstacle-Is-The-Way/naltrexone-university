@@ -1,8 +1,11 @@
 import { ApplicationError } from '../errors';
-import type { PracticeSessionRepository } from '../ports/repositories';
+import type {
+  PracticeSessionRepository,
+  QuestionRepository,
+} from '../ports/repositories';
 import {
   type PracticeSessionSummary,
-  projectPracticeSessionSummary,
+  summarizePracticeSession,
 } from './practice-session-summary';
 
 export type GetPracticeSessionSummaryInput = {
@@ -13,7 +16,10 @@ export type GetPracticeSessionSummaryInput = {
 export type GetPracticeSessionSummaryOutput = PracticeSessionSummary;
 
 export class GetPracticeSessionSummaryUseCase {
-  constructor(private readonly sessions: PracticeSessionRepository) {}
+  constructor(
+    private readonly sessions: PracticeSessionRepository,
+    private readonly questions: QuestionRepository,
+  ) {}
 
   async execute(
     input: GetPracticeSessionSummaryInput,
@@ -30,6 +36,6 @@ export class GetPracticeSessionSummaryUseCase {
       throw new ApplicationError('CONFLICT', 'Practice session has not ended');
     }
 
-    return projectPracticeSessionSummary(session, session.endedAt);
+    return summarizePracticeSession(this.questions, session, session.endedAt);
   }
 }

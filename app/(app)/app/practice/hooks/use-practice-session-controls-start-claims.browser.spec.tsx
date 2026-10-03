@@ -121,6 +121,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         endedAt: '2026-07-17T01:00:00.000Z',
         totals: {
           answered: 0,
+          scored: 20,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,
@@ -412,6 +413,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         endedAt: '2026-07-17T01:00:00.000Z',
         totals: {
           answered: 0,
+          scored: 20,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,

@@ -83,6 +83,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -251,6 +252,7 @@ test('renders a loading state while post-exam review is hydrating inside the ses
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -294,6 +296,7 @@ test('renders retry and summary actions when post-exam review hydration fails', 
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,

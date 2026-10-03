@@ -36,6 +36,7 @@ describe('practice-session-page-logic', () => {
       questionCount: 10,
       totals: {
         answered: 10,
+        scored: 10,
         correct: 7,
         accuracy: 0.7,
         durationSeconds: 123,
@@ -401,7 +402,13 @@ describe('practice-session-page-logic', () => {
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'tutor',
           questionCount: 1,
-          totals: { answered: 1, correct: 1, accuracy: 1, durationSeconds: 1 },
+          totals: {
+            answered: 1,
+            scored: 1,
+            correct: 1,
+            accuracy: 1,
+            durationSeconds: 1,
+          },
         }),
       );
       await promise;
