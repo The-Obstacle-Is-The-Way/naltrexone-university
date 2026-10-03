@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Resolved — 2026-10-03; the trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved, promoted and release-verified, with its suites re-run on `main`'s code before archival
+**Status:** Resolved — 2026-10-03. The trial add-card setup offers only cards, and its completion attaches a payment method only when Stripe saved a card. The fix was promoted and release-verified, and its suites were re-run on `main`'s code before archival.
 **Priority:** P3
 **Date:** 2026-09-29
 **Resolved:** 2026-10-03

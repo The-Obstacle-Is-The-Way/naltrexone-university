@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Resolved — 2026-10-03; staging takes only the pointer, a revert must be named and is named in the plan, a question that replaces a held revision is named, and the printed activation command carries the decision, promoted and release-verified, with its suites re-run on `main`'s code before archival
+**Status:** Resolved — 2026-10-03. Staging takes only the pointer; a revert must be named, and the plan names it; a question that replaces a held revision is named; and the printed activation command carries the decision. The fix was promoted and release-verified, and its suites were re-run on `main`'s code before archival.
 **Priority:** P2
 **Date:** 2026-10-03
 **Resolved:** 2026-10-03
