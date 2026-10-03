@@ -88,7 +88,7 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     expect(planned.plan).toMatchObject({
       id: expect.stringMatching(/^[0-9a-f]{64}$/),
       archive: [dropped, retired].sort(),
-      changed: [kept],
+      update: [kept],
       withdraw: [retired],
     });
     await expect(

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
+import { parseActivateArgs } from '@/scripts/content-release/activate-release';
 import { runHoldQuestions } from '@/scripts/content-release/hold-questions';
 import {
   activateRelease,
@@ -355,9 +356,20 @@ describe('stage-release command', () => {
     expect(output).toContain(
       `Release staging: release=${staged?.id} parent=${active}`,
     );
-    expect(output).toContain(
-      `activate-release.ts --release ${staged?.id} --expect-active ${active}`,
+    // DEBT-492 gap 4: the printed command names the decision activation
+    // requires, and its parser accepts it once the placeholders are filled.
+    const command = output.match(/activate-release\.ts (.+)$/m)?.[1] ?? '';
+    expect(command).toBe(
+      `--release ${staged?.id} --expect-active ${active} --reason "<why>" --authority "<who>"`,
     );
+    const argv = (command.match(/"[^"]*"|\S+/g) ?? []).map((word) =>
+      word.replace(/^"(.*)"$/, '$1'),
+    );
+    expect(parseActivateArgs(argv)).toMatchObject({
+      releaseId: staged?.id,
+      expectedActiveReleaseId: active,
+      record: { reason: '<why>', authority: '<who>' },
+    });
   });
 
   it('rejects an unknown argument', async () => {

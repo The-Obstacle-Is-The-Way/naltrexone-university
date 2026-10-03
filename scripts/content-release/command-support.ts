@@ -81,7 +81,10 @@ export function formatPlan(plan: ActivationPlan): string[] {
   return [
     `Plan: ${plan.id}`,
     formatNames('Archive', plan.archive),
-    formatNames('Publish or move', plan.changed),
+    formatNames('Publish', plan.publish),
+    formatNames('Update to a newer revision', plan.update),
+    formatNames('Revert to an earlier revision', plan.revert),
+    formatNames('Replaces a held revision', plan.replacesHeld),
     formatNames('Withdraw for good', plan.withdraw),
     formatNames('Left out, held', plan.excludedHeld),
     formatNames('Left out, withdrawn', plan.excludedWithdrawn),
