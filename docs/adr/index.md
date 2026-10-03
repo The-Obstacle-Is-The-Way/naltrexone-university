@@ -38,7 +38,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
-| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted | 2026-10-03 |
+| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03) | 2026-10-03 |
 
 ## ADR Statuses
 
@@ -206,7 +206,7 @@ Learner-visible question content lives in immutable revisions; attempts and sess
 
 ### ADR-022: Learner Scores and Labels When Content Changes
 
-A question a learner answered is in one of four states, derived at read time from its status, withdrawals and unlifted holds: available, withdrawn, under review or retired. Each has its own label, and each unavailable state has a clinical caution where its content may be wrong. Its content is shown only to a learner who answered it. One scoring rule applies everywhere: an item counts only while its question is available and, if answered, its graded revision's answer key is still current. A key correction is detected, disclosed and re-practiced, and stored grades are never rewritten. Decides DEBT-484's deferred scoring and regrade questions and BUG-317's label question; implemented by DEBT-493.
+A question a learner answered is in one of four states, derived at read time from its status, withdrawals and unlifted holds: available, withdrawn, under review or retired. Each has its own label, and each unavailable state has a clinical caution where its content may be wrong. Its content is shown only to a learner who answered it. One scoring rule applies everywhere: an item counts only while its question is available and, if answered, its graded revision's answer key is still current. A key correction is detected, disclosed and re-practiced, and stored grades are never rewritten. Decides DEBT-484's deferred scoring and regrade questions and BUG-317's label question; implemented by DEBT-493. **Amended 2026-10-03** (DEBT-494): an item counts when the learner had a fair chance at it, recorded at session end, and its content is not now in doubt, so retiring a question changes no past score.
 
 ---
 

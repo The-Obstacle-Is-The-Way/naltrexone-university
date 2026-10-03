@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices) fixed in code 2026-10-03 ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's steps 1–2 (the scored-total reader, history scores), fixed in code 2026-10-03; increment 2 revised the same day for the amended rule (DEBT-494) ([Progress](#progress)); the rest open
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -125,6 +125,15 @@ In increments, each test-first.
 - **Cost.** On the local integration database, 50 completed sessions of 20 items, a 20-row page, median of five warm `EXPLAIN (ANALYZE)` runs: 1.075 ms before, 1.407 ms after.
 - **Evidence.** Twelve targeted mutations each fail a case, across the adapter, the fake, the use case, the History and Dashboard views, the disclosure and the domain rule.
 
+**Increment 2 revised: the amended scoring rule, 2026-10-03.** [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03) amends Decision 3 ([ADR-022 Amendment](../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)). An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, from increment 4, key-corrected. Retired questions keep counting.
+- **What changes.** History scores, released in step 2, exclude retired questions; they will count them again. Dashboard accuracy and the session summary's writer were built on step 2's rule and were not shipped; they move to the amended rule first.
+- **The revised steps:**
+  1. **Record the fair chance when a session ends.** A nullable column on each session item, written by the statement that ends the session, for end and finalize alike. A session that ended before it existed reads as a fair chance throughout. Nothing reads it yet.
+  2. **History and dashboard on the amended rule.** The disclosure names the new reason: "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected."
+  3. **The session summary's writer** on the same rule, with the post-exam header.
+  4. **Review & Submit and the active session's notice** (increment 3 and part E). "It won't count toward your score." shows only where it is true.
+  5. Increment 4 adds key corrections to the in-doubt half.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.
@@ -140,3 +149,4 @@ In increments, each test-first.
 - [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md): the decisions.
 - [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md): immutable revisions.
 - [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) and [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md): the deferred decisions this record executes.
+- [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md): the decision that amends Decision 3, so past scores change only when content validity changes.
