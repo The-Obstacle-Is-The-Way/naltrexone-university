@@ -5,7 +5,7 @@
 Scripted, repeatable test procedures that exercise the system **at the UI** — the third leg of the test triad this repo is adopting (see `docs/adr/adr-019-test-quality-practices.md`):
 
 1. **Unit tests** (TDD, colocated) prevent regressions in logic.
-2. **Acceptance tests** (`docs/dev/acceptance-testing.md`) keep business rules separated from the UI.
+2. **The rule-to-test register** (`docs/dev/acceptance-testing.md`; it replaces the Gherkin acceptance tests, not adopted on 2026-10-03) names each business rule and the tests that prove it below the UI.
 3. **QA procedures** (this doc + the `docs/qa/` register) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
 
 A QA procedure is a numbered, versioned markdown script (`docs/qa/qa-NNN-slug.md`) that a human, an agent, or a Playwright-assisted run can execute against a running app, with explicit expected results and evidence capture.

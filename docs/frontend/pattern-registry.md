@@ -883,7 +883,7 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 
 ### F-11: Withdrawal Notice (withdrawn question the learner attempted)
 
-Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. *(Decided 2026-10-03: [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) replaces this single label with withdrawn, under review and retired, each with its own caution; DEBT-493 revises this entry when it ships.)* ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
+Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. *(Decided 2026-10-03: [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) replaces this single label with withdrawn, under review and retired, each with its own notice (a caution for the first two); DEBT-493 revises this entry when it ships.)* ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
 
 **Review views** (standalone review, post-exam review, completed-session feedback) — an S-1 **Status notice** placed first in the question region, above the stem:
 

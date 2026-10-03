@@ -1,6 +1,8 @@
 # Acceptance Testing (Gherkin)
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-10-03
+
+> **Not adopted (2026-10-03).** Do not install `@amiceli/vitest-cucumber` or build `tests/acceptance/`. [ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03) and [DEBT-465's decision](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03) replace this harness with a **rule-to-test register**: each business rule in plain language, linked to the tests that prove it, with a documentation check that fails when one of those tests is deleted or renamed. This file becomes that register when DEBT-465 Part 3 is done. Until then, the design below is kept as the record of what was considered, and §6's rules are the register's starting list.
 
 Executable specifications of user-visible business rules, written in Gherkin (`Given / When / Then`), bound to the **application layer** through the existing fakes — never through the UI. Proposed by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 3.
 

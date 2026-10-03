@@ -39,14 +39,14 @@ These are the principles a clinician-educator and a careful engineer would hold 
 
 A question is in exactly one learner-facing state. The runtime derives it from `questions.status`, `question_withdrawals` and unlifted `question_holds`, with this precedence (the same as activation's eligibility):
 
-| State | When | Label | Caution |
+| State | When | Label | Notice |
 |---|---|---|---|
 | **Available** | `status = 'published'` | — | — |
 | **Withdrawn** | not published, and a withdrawal is recorded for the question | Withdrawn | "This question was withdrawn. Its answer and explanation may be inaccurate or outdated, so don't rely on them." |
 | **Under review** | not published, no withdrawal, and an unlifted hold on a revision of the question | Under review | "This question is under review. Its answer or explanation may change, so don't rely on them until it returns." |
 | **Retired** | not published, with neither | Retired | "This question has been retired from the bank." |
 
-A withdrawal is permanent and wins over a hold. When a hold lifts, the question is *Available* again if the active release publishes it; otherwise it reads as *Withdrawn* or *Retired*, by the same precedence. A retired question's content was not found wrong, so it carries no caution.
+A withdrawal is permanent and wins over a hold. When a hold lifts, the question is *Available* again if the active release publishes it; otherwise it reads as *Withdrawn* or *Retired*, by the same precedence. The Withdrawn and Under review notices are clinical cautions. A retired question's content was not found wrong, so its notice is neutral and carries no caution.
 
 The label replaces today's single "Withdrawn". It also replaces the three wordings for an unavailable question ("[Question no longer available]", "Question no longer available.", "This question was removed or unpublished.") on every surface where the learner answered it: review, post-exam review, the session breakdown, history, the dashboard, bookmarks, the navigator, and Review & Submit. A learner-facing reason text is not shown: a withdrawal's recorded reason is written for the clinical audit, not for learners. A learner-facing erratum field is a possible later addition.
 
@@ -66,7 +66,7 @@ An item that does not count leaves both the numerator and the denominator. This 
 
 **Activity counts are not scores.** "Total answered" and the streak count the work the learner did, so they keep counting every attempt.
 
-**Scores are derived at read time** from the immutable attempts and the current state of the content. No stored grade is rewritten, and no new column is needed. A later withdrawal, hold, lift or key correction is therefore reflected on every surface at once. When a hold lifts and the question is published again, its items count again.
+**Scores are derived at read time** from the immutable attempts and the current state of the content. No stored grade is rewritten, and no new column is needed. A later withdrawal, hold, lift or key correction is therefore reflected on every surface at once. When a hold lifts and the question is published again, its items count once more, except an attempt whose key was corrected.
 
 **Disclosure.** Where a session or a list has unscored items, it says so: "N questions aren't scored: withdrawn, under review, retired, or their answer was corrected."
 
