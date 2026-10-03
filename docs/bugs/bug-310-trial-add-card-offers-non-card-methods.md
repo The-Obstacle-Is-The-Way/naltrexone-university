@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** In Progress — decided 2026-10-03 under the owner's delegation: option (a), plus a setup-success check
 **Priority:** P3
 **Date:** 2026-09-29
 **Resolved:** —
@@ -53,8 +53,30 @@ What production learners see depends on the production Dashboard's enabled metho
 
 The paid subscription Checkout's methods are a separate business choice and are not part of this record.
 
+## Decision — 2026-10-03
+
+Decided under the owner's 2026-10-03 delegation ("deciding all that we need to decide … anything that can be done in code"), after a read-only investigation against `main` at `94b3b87a`.
+
+**Option (a): this Session offers card only.** The reasons:
+- **The flow's purpose is a card.** The dialog, the Billing copy, the saved-card banner and the stored consent text (`trialPaymentDisclosure`, which the acknowledgment email quotes verbatim) all say "card".
+- **Renewal on other methods is untested.** The method saved here renews the trial off-session at its end, and the app has never designed or tested that for Klarna, Cash App Pay or Amazon Pay.
+- **Wallets are unaffected.** Card-backed wallets stay available under `card`.
+- **Why not (b) or (c).** Option (b) puts the same limit in Stripe settings that differ per environment and are not reviewed with the code. Option (c) would need a new consent version and a renewal design for every method.
+
+**Also: the setup must have succeeded, and on a card.** The completion handler retrieves the SetupIntent but checks neither its status nor its method's type (`stripe-webhook-processor.ts`, the setup completion path). It then attaches the method as the trial's renewal method, and Billing says "Your card is saved." The handler will require `status === 'succeeded'` and a `card` payment method, and otherwise record nothing and attach nothing. With card-only this should never trigger, but the handler should not rely on the Session's parameters.
+
+**The paid subscription Checkout keeps dynamic methods.** The difference from this flow:
+- Its copy and consent say "payment method", and Terms §4 says "Your payment method is charged at each renewal".
+- Stripe offers in subscription mode only methods that support recurring billing.
+- Access already waits on the subscription's status: `incomplete` grants no access, and the success page shows "Payment processing" (`stripe-subscription-status.ts`, `checkout-success-sync.tsx`). So a method that settles later never grants access early.
+
+Nothing is changed there, and this rationale is recorded so that the choice is no longer implicit.
+
 ## Verification
 
-- [ ] Owner decision recorded
-- [ ] Implementation per the decision, red first
+- [x] Owner decision recorded (2026-10-03, delegated)
+- [ ] Implementation per the decision, red first:
+  - the setup Session sends `payment_method_types: ['card']`, pinned in the adapter test;
+  - the hosted journey asserts card is the only method offered;
+  - setup completion refuses a SetupIntent that has not succeeded, or whose method is not a card.
 - [ ] Production release verified; record resolved and archived

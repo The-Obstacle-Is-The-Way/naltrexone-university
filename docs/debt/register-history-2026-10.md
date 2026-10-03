@@ -2,6 +2,25 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03 UTC (forward pointer: the Latest stanza above decides the scoring, payment-method and regrade questions listed here): DEBT-490 is resolved and archived ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md#verified-closeout--2026-10-03-utc)).
+- **What shipped.** Every release activation, rollback and bootstrap records why it was made and on whose authority, on an immutable receipt.
+- **Merged.** #1322 (**5398018105** on `71fe7e13`; merged `81ffd15a`).
+- **Released** through promotion #1323 (`a9a98421`): main CI **37082256459** `test` passed **00:42:26Z**, production assigned **00:42:28.423Z**, trees `b18dd7dd`, healthy production.
+- **Migration `0049` in production.** The build log's ledger pre- and post-checks matched. Its notice counted **0** existing receipts, so production had never activated a release.
+- **Re-verified.** The record's suites were re-run on `main`'s code before archival.
+- **What remains Active.** DEBT-414 and DEBT-465, both waiting on owner decisions.
+- **Open decisions for the owner.**
+  - **When to bootstrap production content releases (DEBT-483).** [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix is now in production, so it no longer blocks. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, Since [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md) is released, the first production activation will record who decided it and why; nothing in engineering blocks the bootstrap now.
+  - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
+  - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
+  - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **2 Active records; Next Debt ID is DEBT-492.**
+
 **Earlier** — 2026-10-02 UTC: DEBT-490 is fixed in code, on the owner's go-ahead: every activation records why, and on whose authority ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md#fix--2026-10-02)).
 - **Migration `0049`.** Activation receipts gain a non-blank `reason` and `authority`. An existing receipt gets an explicit "not recorded" marker, with a notice that counts them, and the defaults are dropped at once. Receipts become immutable, like releases, items and withdrawals.
 - **Code.**

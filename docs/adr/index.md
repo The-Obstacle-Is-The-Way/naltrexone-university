@@ -35,9 +35,10 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted | 2026-02-07 |
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted | 2026-02-07 |
 | [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
-| [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Proposed | 2026-08-13 |
+| [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
+| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted | 2026-10-03 |
 
 ## ADR Statuses
 
@@ -193,7 +194,7 @@ Generic `retry()` with exponential backoff for transient external errors. Only r
 
 ### ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-Four practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, Gherkin acceptance tests bound to the application layer via the existing fakes (`tests/acceptance/`), and a `docs/qa/` register of scripted UI QA procedures. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/dev/`.
+Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and a `docs/qa/` register of scripted UI QA procedures, run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/dev/`.
 
 ### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
 
@@ -202,6 +203,10 @@ No per-lane `coverage.thresholds` or project target. The existing `codecov/patch
 ### ADR-021: Immutable Question Revisions and Atomic Content Releases
 
 Learner-visible question content lives in immutable revisions; attempts and session states bind the revision they showed, so grading and review never re-read rewritten content, and a withdrawn question stays reviewable, with a notice, by learners who attempted it. Content becomes visible through verified releases activated in one transaction, with withdrawals and holds kept as a current overlay that rollback cannot resurrect. Five expand/contract phases; release zero hashes `stored-fields-json-v1`, the stored fields as sorted-key JSON (decided 2026-09-28). Closes DEBT-484 after phases 1–3 and DEBT-483 after phase 4.
+
+### ADR-022: Learner Scores and Labels When Content Changes
+
+A question a learner answered is in one of four states, derived at read time from its status, withdrawals and unlifted holds: available, withdrawn, under review or retired. Each has its own label, and each unavailable state has a clinical caution where its content may be wrong. Its content is shown only to a learner who answered it. One scoring rule applies everywhere: an item counts only while its question is available and, if answered, its graded revision's answer key is still current. A key correction is detected, disclosed and re-practiced, and stored grades are never rewritten. Decides DEBT-484's deferred scoring and regrade questions and BUG-317's label question; implemented by DEBT-493.
 
 ---
 

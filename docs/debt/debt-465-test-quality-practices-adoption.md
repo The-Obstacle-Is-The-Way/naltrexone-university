@@ -1,6 +1,6 @@
 # DEBT-465: Advanced Test-Quality Practices Adoption (CRAP Report, Mutation Testing, Acceptance Tests, UI QA Procedures)
 
-**Status:** Open
+**Status:** Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, and Part 4 re-scoped, by the 2026-10-03 decision below
 **Priority:** P2
 **Date:** 2026-08-13
 **Source:** [ADR-019](../adr/adr-019-test-quality-practices.md) (Proposed) + the 2026-08-13 audit of the test estate
@@ -43,9 +43,37 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 `docs/dev/acceptance-testing.md` §8. Install `@amiceli/vitest-cucumber`, build `tests/acceptance/support/application-driver.ts` verb-by-verb, land features #1 and #4 (session-start conflict; tutor/exam feedback split), then #2/#3/#10 (entitlement + trial). Update the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) in the first feature's PR. From then on new business rules ship their feature file first.
 
+**Not adopted (decision, 2026-10-03).** See [Decision — 2026-10-03](#decision--2026-10-03). It is replaced by a rule-to-test register; no harness and no new dependency.
+
 ### Part 4 — UI QA register activation
 
 `docs/dev/qa-procedures.md` + `docs/qa/index.md`. Execute QA-001 and QA-002 twice each — complete end-to-end runs, in modes able to perform every step including the `⚠ human/PW` ones, per `docs/dev/qa-procedures.md`'s two-evidenced-runs gate — promote them Draft → Active with evidence in `docs/qa/assets/`, then file the backlog procedures (sign-up/first-run, error/404/loading, mobile sweep, a11y sweep, account-deletion-with-disposable-account, …) as they're needed by real PRs. Wire the per-PR "touched-surface procedure + screenshots" habit into review expectations.
+
+**Re-scoped (decision, 2026-10-03).** The procedures run before the production bootstrap and before a release that changes their flows, not before every promotion. See [Decision — 2026-10-03](#decision--2026-10-03).
+
+## Decision — 2026-10-03
+
+Decided under the owner's 2026-10-03 delegation ("deciding all that we need to decide … anything that can be done in code"), after a read-only review of what each part would add to today's test estate. That estate is:
+- 51 use-case unit files, at a 100% mutation score across `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**`;
+- 91 integration files on real Postgres;
+- 77 browser specs;
+- 28 E2E spec files;
+- 4 daily Stripe-hosted journeys.
+
+**Part 3 is not adopted.**
+- **The 17 candidate rules are already proven.**
+  - Twelve of them (#1, #3–#10, #14–#16) are domain or use-case rules, already pinned by mutation-proven unit tests.
+  - The other five (#2, #11–#13, #17) live in adapters or controllers. They are already covered on real Postgres and in E2E, and re-testing them over fakes would be *lower* fidelity, against DEBT-472's own rule.
+- **The "rule moves into a component" guard does not hold.** A scenario run against the use case cannot see a rule *duplicated* in a hook. It only catches the rule's removal from the use case, which mutation-proven tests already catch.
+- **The remaining value is readability.** It would come at the price of a new dependency, whose code-generation entry point is broken, and a second test vocabulary.
+- **The replacement keeps that value at little cost:** a **rule-to-test register** in `docs/dev/acceptance-testing.md`. It names each business rule in plain language and links the tests that prove it, so a clinician can read what the system guarantees. A rule whose tests are deleted or renamed fails a documentation check.
+
+**Part 4 is kept and re-scoped.**
+- **It closes a real gap:** route-level UI that no automated lane reaches. That covers Clerk sign-in and sign-up, error, 404 and loading states, a mobile sweep, an accessibility sweep, account deletion, exam-timer expiry, and history filters at the route level.
+- **The cadence changes.** As a per-promotion gate (15–20 minutes each, with no named executor) it does not fit how often this repository promotes. The procedures run before the production bootstrap and before any release that changes their flows. `docs/dev/qa-procedures.md` says so from this decision on.
+- **The gap list in `docs/dev/qa-procedures.md` is updated.** Paid Checkout and the portal round trip are now in the daily hosted smoke.
+
+**ADR-019** is amended to match, and moves from Proposed to Accepted for what shipped.
 
 ## Verification
 
@@ -54,8 +82,8 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 - [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
 - [x] Part 2 widening: every production file under `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**`, by glob, with every survivor triaged (third wave 2026-09-30; waves 4a–4f by 2026-10-01, below)
-- [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
-- [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
+- [ ] Part 3 (replaced 2026-10-03): the rule-to-test register lists the 17 rules with the tests that prove each, and a renamed or deleted test fails its check
+- [ ] Part 4 (re-scoped 2026-10-03): QA-001 and QA-002 Active, each with two evidenced runs; the gap list is updated (the cadence was updated with the decision); operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
 
 ### Baselines (fill on first runs — no invented numbers)

@@ -23,7 +23,7 @@ Numbered, versioned scripts that test the system **at the UI** — by a human, a
 ## Statuses
 
 - **Draft** — written, not yet executed end-to-end twice
-- **Active** — validated by runs; part of the per-PR / pre-promotion / smoke rotation
+- **Active** — validated by runs; part of the per-PR / gated-run / smoke rotation
 - **Resolved** — scoped work completed and promoted with receipts; archive under the canonical convention. Executing a reusable Active procedure does not close it.
 - **Superseded** — promoted to a Playwright spec (see `Promoted to`) or retired
 

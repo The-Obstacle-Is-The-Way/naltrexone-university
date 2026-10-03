@@ -1,0 +1,123 @@
+# ADR-022: Learner Scores and Labels When Content Changes
+
+**Status:** Accepted
+**Date:** 2026-10-03
+**Implementation:** Not yet implemented; tracked by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md).
+**Decision Makers:** The owner, who on 2026-10-03 asked for every remaining decision that can be settled in code to be decided from first principles, "like the best software engineers in the world and the best physicians in the world who are designing this question bank", and executed. This record decides the three questions [ADR-021](./adr-021-question-revisions-and-content-releases.md) left to the owner: withdrawn-item scoring, answer-key regrade, and how an unavailable question is labeled ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md#verified-closeout--2026-10-02-utc)).
+**Depends On:** ADR-021 (immutable revisions; attempts bind the revision they were graded against).
+
+---
+
+## Context
+
+ADR-021 made content immutable: an attempt and a session item bind the revision the learner saw, and a stored grade is never rewritten. It left open what a learner's *score* should be once that content changes, and what a learner should be told. A read-only investigation on 2026-10-03, against `main` at `94b3b87a`, established:
+
+1. **The runtime cannot tell why a question is unavailable.** Every learner surface decides availability from `questions.status !== 'published'` alone. No runtime code reads `question_withdrawals` or `question_holds`. So a question permanently withdrawn as unsafe, one held for clinical review, and one retired for editorial reasons all read "This question has been withdrawn." When a hold lifts, the label silently disappears.
+2. **Exam scoring penalizes what the learner cannot change.**
+   - A saved draft on an exam item that is withdrawn mid-session is graded silently at finalization, though the learner can no longer reach the item to change it.
+   - An unanswered withdrawn item becomes an omitted attempt scored incorrect, and Review & Submit warns it "will be scored as incorrect" with no way to avoid that.
+   - Every score (session accuracy, the post-exam "X of N", history, dashboard accuracy) counts attempts on withdrawn questions.
+3. **Content can be revealed to a learner who never answered it.** An omitted exam item that is later withdrawn becomes fully reviewable, key and explanation included. Withdrawn content may be unsafe, and ADR-021 §3 intended it to be visible only to learners who answered it.
+4. **A corrected answer key leaves stored grades misleading, with no regrade.** Every read path uses the grade stored at answer time against the old key. So the "Incorrect" practice filter misleads both ways:
+   - a learner who picked the old, wrong key is never re-served the question, and keeps the wrong fact;
+   - a learner who picked the now-correct answer is told they were wrong.
+
+   The F-12 notice ("This question has been updated") fires for any change, so a typo fix and a key flip look the same.
+
+## Principles
+
+These are the principles a clinician-educator and a careful engineer would hold a question bank to:
+
+- **A score measures knowledge against content that stands.** An item whose content was found wrong or unsafe, is under clinical review, or whose key was corrected after the learner answered, is not a valid measurement. It should neither penalize nor credit the learner. Psychometric practice for high-stakes examinations is the same: a flawed item is removed from scoring.
+- **History is facts; scores are views.** What a learner saw and chose, and the grade given at the time, are immutable facts (ADR-021). A score is derived from those facts and from what is known *now* about the content. When the knowledge changes, every score changes at once, consistently and visibly. Nothing is rewritten in place.
+- **Tell the learner what happened and what to do.** Medical publishing issues an erratum, not a silent edit. When content a learner relied on is withdrawn or corrected, the learner is told at the point they revisit it, with a plain clinical caution.
+- **Unsafe content is shown only to someone who already saw it,** and then with a caution.
+
+## Decision
+
+### 1. Four availability states, derived at read time
+
+A question is in exactly one learner-facing state. The runtime derives it from `questions.status`, `question_withdrawals` and unlifted `question_holds`, with this precedence (the same as activation's eligibility):
+
+| State | When | Label | Notice |
+|---|---|---|---|
+| **Available** | `status = 'published'` | — | — |
+| **Withdrawn** | not published, and a withdrawal is recorded for the question | Withdrawn | "This question was withdrawn. Its answer and explanation may be inaccurate or outdated, so don't rely on them." |
+| **Under review** | not published, no withdrawal, and an unlifted hold on a revision of the question | Under review | "This question is under review. Its answer or explanation may change, so don't rely on them until it returns." |
+| **Retired** | not published, with neither | Retired | "This question has been retired from the bank." |
+
+A withdrawal is permanent and wins over a hold. When a hold lifts, the question is *Available* again if the active release publishes it; otherwise it reads as *Withdrawn* or *Retired*, by the same precedence. The Withdrawn and Under review notices are clinical cautions. A retired question's content was not found wrong, so its notice is neutral and carries no caution.
+
+The label replaces today's single "Withdrawn". It also replaces the three wordings for an unavailable question ("[Question no longer available]", "Question no longer available.", "This question was removed or unpublished.") on every surface where the learner answered it: review, post-exam review, the session breakdown, history, the dashboard, bookmarks, the navigator, and Review & Submit. A learner-facing reason text is not shown: a withdrawal's recorded reason is written for the clinical audit, not for learners. A learner-facing erratum field is a possible later addition.
+
+### 2. Content is revealed only to a learner who answered
+
+An unavailable question's stem, key and explanation are shown only to a learner who **answered** it, that is, selected a choice. An omitted attempt is not an answer. An exam item the learner left unanswered, which became unavailable, shows only its label. This sharpens ADR-021 §3's "attempted" to "answered", which is what that section intended.
+
+### 3. One scoring rule, everywhere a score is computed
+
+> An item counts toward a score only while its question is **Available** and, if it was answered, the answer key of the revision it was graded against is **still the current key**.
+
+An item that does not count leaves both the numerator and the denominator. This applies to:
+- session accuracy and the post-exam "X of N correct";
+- history session scores;
+- dashboard accuracy, overall and over seven days;
+- the Review & Submit warning, which counts only scored unanswered items. Unavailable items are listed as "Won't be scored".
+
+**Activity counts are not scores.** "Total answered" and the streak count the work the learner did, so they keep counting every attempt.
+
+**Scores are derived at read time** from the immutable attempts and the current state of the content. No stored grade is rewritten, and no new column is needed. A later withdrawal, hold, lift or key correction is therefore reflected on every surface at once. When a hold lifts and the question is published again, its items count once more, except an attempt whose key was corrected.
+
+**Disclosure.** Where a session or a list has unscored items, it says so: "N questions aren't scored: withdrawn, under review, retired, or their answer was corrected."
+
+**Retired items do not count either.** Their content was not found wrong, but the learner can no longer revisit them, and a single rule ("scores count only the current bank's valid items") is easier to trust and verify than one with a timing exception for items retired mid-session. Retirement is rare in this bank.
+
+### 4. Answer-key corrections are detected, disclosed and re-practiced
+
+An answered attempt is **key-corrected** when the current revision's correct choice differs, by label or by text, from the correct choice of the revision the attempt was graded against. This comparison is complete for single-best-answer items: a different correct answer always changes the correct choice's label or text. It is conservative: reordering or rewording the correct option also counts, at the cost of one unscored attempt and one re-practice prompt, which is harmless.
+
+A key-corrected attempt:
+- **does not count toward any score** (Decision 3);
+- **shows a distinct notice** instead of F-12's generic "updated": "The answer to this question was corrected after you answered. This attempt isn't scored. Practice the corrected question.";
+- **is included in the "Incorrect" practice filter**, so a learner who may have learned the old answer re-learns the corrected one.
+
+Stored grades are never regraded. Mapping an old selection onto a new revision's choices would be a guess, because choice identities differ between revisions. Excluding the attempt and prompting re-practice gives the learner the right outcome without inventing a grade.
+
+### 5. Exams: an item that becomes unavailable mid-session
+
+- The item stays in the session. Its saved draft, if any, is kept and graded at finalization as today, since the record is immutable. By Decision 3 it does not count, whatever the grade.
+- The active notice gains: "It won't count toward your score."
+- The navigator and Review & Submit show the item's label instead of "[Question no longer available]".
+- The submit warning counts only items that will be scored.
+- Tutor sessions are unchanged: answering an unavailable item is refused, and Decision 3 excludes it from the session's accuracy.
+
+### 6. What is not decided here
+
+- **The production bootstrap** is the owner's operational decision.
+- **Learner-facing erratum text** (what was wrong, and the correct fact) needs an authoring field. It is a possible later addition.
+- **Tag- or category-level performance and readiness** do not exist today. When added, they follow Decision 3.
+
+## Consequences
+
+- **Every score becomes correct as content changes,** and consistent across surfaces. Learners are told why an item no longer counts.
+- **A learner's past session score can change** when a question in it is withdrawn, held, retired or key-corrected later, or when a hold lifts. This is intended, and it is disclosed.
+- **Read paths gain the availability and key-correction derivations.**
+  - Availability needs two `EXISTS` lookups against small, indexed tables.
+  - The key-correction check compares the correct choice of two revisions.
+  - Aggregate queries (history, dashboard) gain the same predicates. DEBT-493 measures their cost before shipping.
+- **The domain gains an availability value** in place of the boolean "withdrawn". F-11 and F-12 in the Pattern Registry are revised to match.
+- **ADR-021 is unchanged.** Revisions and stored grades stay immutable; this record defines how they are read.
+
+## Alternatives rejected
+
+- **Keep today's behavior.** It penalizes learners for unsafe or flawed content they could not change, and leaves a corrected key's grades misleading.
+- **Store an "excluded" flag at finalization.** A later withdrawal or key correction would not reach earlier sessions, and a lifted hold would not restore a score. Every surface would need the flag kept in step.
+- **Regrade stored attempts against the new key.** This guesses a mapping between different revisions' choices, and destroys the original grade.
+- **Count retired items** (content not flawed). This needs a timing exception for items retired mid-session that the learner could not answer. A single rule is simpler to trust.
+- **Show the withdrawal's recorded reason to learners.** It is written for the clinical audit, not for learners. An erratum field is the right vehicle, later.
+
+## Related
+
+- [ADR-021](./adr-021-question-revisions-and-content-releases.md): immutable revisions and releases.
+- [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md): the implementation.
+- [Pattern Registry](../frontend/pattern-registry.md): F-11 (withdrawal notice) and F-12 (updated notice), revised by DEBT-493.

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
-**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 is in production as of 2026-10-02 ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc), resolved), built in steps from its [design](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds the seed as a release builder (decision 6). 4d demonstrates DEBT-483's Verification on a disposable database. [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix makes every removal explicit and binds each apply to its reviewed plan. The first production bootstrap, the managed seed's switch to staging, the contract step and release zero are Deferred; the bootstrap is the owner's call, and [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md), its recommended prerequisite, is released.
+**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 is in production as of 2026-10-02 ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc), resolved), built in steps from its [design](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md)) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred, and [DEBT-492](../debt/debt-492-release-safety-before-production-bootstrap.md)'s release-safety gaps are to be closed before the bootstrap; the bootstrap is the owner's call, and [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md), its recommended prerequisite, is released.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
@@ -27,22 +27,22 @@ Constraints:
 ## Decision
 
 **Phase 4 implementation boundary (2026-10-02 audit).** Decisions 4–6 describe
-the target interface; #1290–#1300 implement the current command path documented
+the target interface; #1290–#1300, with the DEBT-489 and DEBT-490 changes since, implement the current command path documented
 in [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
 Selection still reads materialized `questions.status` and `current_revision_id`,
 not release items directly. Activation checks the caller's expected active
 release and, except for a previously activated rollback target, its parent.
 Since [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02),
 a new release must account for every question the active release names,
-unless it is withdrawn, as an item or a named removal, and an apply is bound
-to the plan its preview printed. Staging does
+unless it is withdrawn, as an item or a named removal, and an operator's apply is bound
+to the plan its preview printed. A hold's or lift's re-application of the active release is not plan-bound. Staging does
 not move existing revision pointers and records no withdrawal; only tags
 change the live bank before activation. Since [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md),
 each activation's immutable receipt records its reason and authority.
 Withdrawals exclude the whole question across revisions; holds exclude one
 revision. The emergency QID command writes the withdrawal and archives the
 question directly, without a minimal manifest. The database triggers reject
-updates to releases, items and withdrawals, but do not prohibit owner DELETE.
+updates to releases, items, withdrawals and activation receipts, but do not prohibit owner DELETE.
 The [independent audit](../bugs/assets/content-release-audit-2026-10-02.md)
 records reproductions, fixes and verification limits. These boundaries do not
 claim SPEC-007 completion or clinical scoring-policy approval.
@@ -77,18 +77,18 @@ claim SPEC-007 completion or clinical scoring-policy approval.
 - Its selectable set is recorded in `content_release_items` as `(question_id, question_revision_id)` pairs.
 - Staging writes revisions and items invisibly.
 - Activation is one transaction. It compares the single active-release pointer against `parent_release_id` and the verified eligibility revision, then swaps it. On any failure the previous release stays active.
-- New-question selection reads the active release's items instead of `status = 'published'`. `questions.status` then becomes derived and is retired in a contract step.
+- New-question selection reads the active release's items instead of `status = 'published'`. `questions.status` then becomes derived and is retired in a contract step. *(Amended 2026-10-03: not pursued. Activation maintains `questions.status` and `current_revision_id` as the materialized projection of the active release, in one transaction, and selection reads that projection. See the amendment below.)*
 
 ### 5. Withdrawals and holds are a current overlay
 
-- Withdrawals and holds live in their own tables, keyed by `(question_id, question_revision_id)` with reason, authority and effective time. They are independent of any manifest.
+- Withdrawals and holds live in their own tables, naming `(question_id, question_revision_id)` with reason, authority and effective time. A withdrawal row is unique per pair; a hold has its own id, with at most one unlifted hold per revision. They are independent of any manifest.
 - Selection excludes overlaid revisions even under an older release, so rollback never resurrects a revoked item.
 - Emergency withdrawal uses the same path with a minimal manifest.
 - The existing explicit-QID withdrawal command becomes a writer to this overlay.
 
 ### 6. The seed becomes a release builder
 
-Today's MDX seed stays the local and test fixture path. In production, content changes arrive only as verified releases. The seed's per-question transactions and the #951 guard are superseded by revisions (a rewrite is a new revision) and by atomic activation. Neither is relabeled as atomic before these structures exist.
+Today's MDX seed stays the local and test fixture path. In production, once it is bootstrapped, content changes arrive only as verified releases. The seed's per-question transactions and the #951 guard are superseded by revisions (a rewrite is a new revision) and by atomic activation. Neither is relabeled as atomic before these structures exist.
 
 ## Phasing
 
@@ -100,7 +100,7 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 | 2a | Readers switch, with one revision still per question. Selection, grading and every review read resolve content and choices through a revision: the session state's or attempt's bound revision, else the question's current one. Sessions bind each item's revision at creation and attempts bind the revision they graded; the `(choice, revision)` unique key and composite foreign keys land here. The seed refreshes revision 1 only while no incomplete session binds it; the #951 guard still governs graded history, so a correction waits for active sessions to end rather than changing content under them (#1177 review). A bounded, batched job binds every older session state and attempt to its question's revision 1. Add the withdrawal notice for attempted withdrawn questions. The migration re-runs the sweep first. | Old code still reads the legacy columns and choices by `question_id`, which is correct while every question has exactly one revision. |
 | 2b | Writers become append-only, in a later deploy than 2a. The migration first verifies that no session state or attempt is unbound, and fails loudly if any is, so no older row can later resolve to a newer revision (#1177 review). A content change is then a new revision with its own choice rows, per-revision label and sort-order keys replace the per-question ones, and a trigger rejects every update to a revision. | N-1 is phase 2a, whose readers already use revisions and bind every new row. The seed refuses to append a revision until the 2b migration has committed, so no legacy reader can meet two revisions' choices (#1177 review). |
 | 3 | Contract: `NOT NULL` revision columns after a verified sweep; drop the legacy text columns from `questions`. | Only after N-1 code that reads legacy columns can no longer serve. |
-| 4 | Releases, staging, atomic activation, the withdrawal and hold overlay, and rollback. Selection reads the active release. | The legacy `status` stays in step until the release pointer is authoritative. |
+| 4 | Releases, staging, atomic activation, the withdrawal and hold overlay, and rollback. Selection reads the active release's materialized projection (`questions.status`, `current_revision_id`); retiring the column is not pursued (amendment 2026-10-03). | The legacy `status` stays in step until the release pointer is authoritative. |
 | 5 | Release zero, the inventory of what is live, hashed in `stored-fields-json-v1`. | Read-only export. |
 
 ### Phase 2b order: the update notice before appending (2026-09-30)
@@ -139,6 +139,21 @@ The app stores parsed fields after two transformations, draft → MDX → rows, 
 - DEBT-483 closes after phase 4. Release zero follows once the content repository computes `stored-fields-json-v1` too.
 - Every history read path changes in phase 2a. Each gains a real-Postgres case, and the existing unavailable-row UI becomes the withdrawal-notice UI.
 - Revisit this record if SPEC-007's manifest fields change, or if the content repository cannot adopt `stored-fields-json-v1`.
+
+## Amendment — 2026-10-03: the contract step is not pursued
+
+Decided under the owner's 2026-10-03 delegation. Decision 4's last bullet planned for selection to read release items directly, with `questions.status` retired in a contract step.
+
+**Not pursued.** Activation already maintains `questions.status` and `current_revision_id` as the materialized projection of the active release minus the overlay. It does so in the same transaction that moves the pointer, so readers never see a half-applied release (DEBT-483 phase 4d's visibility case). This is a standard derived read model: one writer, consistent with its source, cheap to read.
+
+Reading release items directly would:
+- add the pointer, items and overlay subqueries to every hot selection query;
+- require every database the app serves, Preview, development, CI and E2E included, to have an active release, forcing automatic activations on test databases;
+- need its own two-deploy sequence.
+
+No driver for it has been identified. The one benefit cited, telling held, removed and withdrawn questions apart, is delivered without it by [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md), which derives availability from the status and the overlay tables.
+
+**Reopen if** a reader needs release membership that the projection cannot express.
 
 ## Related
 

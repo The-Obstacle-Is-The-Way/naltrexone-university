@@ -883,7 +883,7 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 
 ### F-11: Withdrawal Notice (withdrawn question the learner attempted)
 
-Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
+Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. *(Decided 2026-10-03: [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) replaces this single label with withdrawn, under review and retired, each with its own notice (a caution for the first two); DEBT-493 revises this entry when it ships.)* ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
 
 **Review views** (standalone review, post-exam review, completed-session feedback) — an S-1 **Status notice** placed first in the question region, above the stem:
 
@@ -895,7 +895,7 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 - **Body line:** `text-muted-foreground` — "You can still review your answer. It no longer appears in new practice."
 - The answer, the correct choice and the explanation show as the learner answered them. Bookmark, report and rating actions stay hidden, as for unavailable rows.
 
-**List rows** (History attempted list, Dashboard recent activity, Session breakdown, Review & Submit list):
+**List rows** (History attempted list, Dashboard recent activity, Session breakdown). The active session's navigator and Review & Submit list still show the S-2 unavailable treatment; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) gives them the label:
 
 - The row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
 - Its metadata reads `Withdrawn` where an available row shows the difficulty, in the same metadata style.
@@ -905,7 +905,7 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 
 - **Heading line:** "This question was withdrawn after your session began."
 - **Body line:** "It can't be answered here. Continue to the next question."
-- The item cannot be answered or submitted. How such an item counts toward the session's score is an open decision recorded in DEBT-484; the notice makes no claim about scoring.
+- The item cannot be answered or submitted. Today the notice makes no claim about scoring. [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides that an unavailable item does not count toward any score, and adds "It won't count toward your score." to this notice; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) implements it.
 - The action bar offers navigation only:
   - `Previous` when an earlier question is available, and `Next` when a later one is.
   - Otherwise, the session's end action: `Review & Submit` in an exam, `End session` in tutor mode.
@@ -921,12 +921,12 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
 - Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and `text-foreground` for the heading line. No new color pair, so no new `contrast-policy.md` ledger entry is required.
 - `role="status"` announces the notice politely; it is never focused automatically.
 
-**Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, and the active session page. An active session's navigator and exam Review & Submit list still show the S-2 treatment for a withdrawn item; that is the increment's next slice.
+**Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, and the active session page. An active session's navigator and exam Review & Submit list still show the S-2 treatment for a withdrawn item; the label there waited on the scoring decision, which ADR-022 made, and DEBT-493 implements it.
 
 
 ### F-12: Update Notice (a question updated after the learner saw it)
 
-Marks a review whose question has changed since the learner saw it: a newer revision is now current (ADR-021). The review still shows the revision the learner answered, because that is the record of what they saw and were graded against. It says plainly that a newer version exists and links to it. This follows medical publishing's correction practice: the original stays readable, is marked, and points to the correction.
+Marks a review whose question has changed since the learner saw it: the revision they answered is no longer the current one (ADR-021). Usually a newer revision is current; after a rollback or a stale revert, an older one can be. The review still shows the revision the learner answered, because that is the record of what they saw and were graded against. It says plainly that the question has been updated and links to the current version. This follows medical publishing's correction practice: the original stays readable, is marked, and points to the correction.
 
 A superseded answer key is the case that matters. Without the notice, a review would present the old key as correct. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
 
@@ -958,7 +958,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - Reuses S-1 Status notice, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
 - Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`). No new `contrast-policy.md` ledger entry is required.
 - `role="status"` announces the notice politely; it is never focused automatically.
-- Scoring is unchanged: the attempt keeps the grade it received. Whether a key correction regrades history is an owner decision recorded in DEBT-484.
+- Scoring is unchanged today: the attempt keeps the grade it received. [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides that a stored grade is never regraded. An attempt whose answer key was corrected is excluded from scores instead, with its own notice in place of this one; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) implements it.
 
 **Source:** ADR-021 §3, the 2026-09-30 phase 2b order, and DEBT-484 phase 2b. In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`). It renders nothing while every question has one revision.
 
