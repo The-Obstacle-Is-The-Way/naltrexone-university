@@ -5,7 +5,7 @@
 
 **Latest** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 1. Each session item records whether the learner had a fair chance at it when its session ends ([DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03), [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.** Nothing yet: no score reads the record. Scores move to the amended rule in the next steps.
-- **Storage.** Migration 0050 adds `practice_session_question_states.fair_chance_at_end`, written by the statement that ends a session. Sessions that already ended are recorded once, by the migration, from the bank as it stands when it runs, so they keep the scores they show.
+- **Storage.** Migration 0050 adds `practice_session_question_states.fair_chance_at_end`, written by the statement that ends a session. Sessions that already ended are recorded once, by the migration, from the bank as it stands when it runs. No score reads it yet; once scores do, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again.
 - **A second notice on DEBT-494's cost** was checked claim by claim. Every claim was accurate, and the one consequence worth correcting, how sessions ended before 0050 are read, is corrected by that backfill.
 - **Released since the last entry.** None. #1343 (the DEBT-494 decision, **5401280322** on `88742b65`; merged `b356e948`) is on `dev` and is promoted with this step.
 - **Next.** History and dashboard accuracy on the amended rule, then the session summary's writer, then Review & Submit and the active session's notice.
