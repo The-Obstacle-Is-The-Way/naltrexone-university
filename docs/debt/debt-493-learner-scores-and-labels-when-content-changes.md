@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice) ([Progress](#progress)); increments 4 and 5 remain
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
