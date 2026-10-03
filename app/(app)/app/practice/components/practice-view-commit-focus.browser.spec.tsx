@@ -60,6 +60,7 @@ function TutorCommitFocusHarness() {
             },
           ],
           superseded: false,
+          answerKeyChanged: false,
           session: null,
         }}
         selectedChoiceId={fixtureChoiceAId}

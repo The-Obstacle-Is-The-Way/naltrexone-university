@@ -78,10 +78,17 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
   });
 
   // Pattern Registry F-12: a newer revision replaced the one the session was
-  // bound to. A question no longer available is not marked updated.
+  // bound to. A question no longer available is not marked updated. The
+  // current revision has another key (ADR-022 Decision 4).
   it.each([
-    ['published', { availability: 'available', superseded: true }],
-    ['archived', { availability: 'retired', superseded: false }],
+    [
+      'published',
+      { availability: 'available', superseded: true, answerKeyChanged: true },
+    ],
+    [
+      'archived',
+      { availability: 'retired', superseded: false, answerKeyChanged: false },
+    ],
   ] as const)(
     'marks a row of a %s question whose bound revision is no longer current',
     async (status, marks) => {

@@ -56,6 +56,12 @@ export type NextQuestion = {
    * its item was bound to (Pattern Registry F-12).
    */
   superseded: boolean;
+  /**
+   * The current revision keys another answer than the one shown, so an
+   * answer here is graded on a corrected key and won't be scored (ADR-022
+   * Decision 4).
+   */
+  answerKeyChanged: boolean;
   session: null | {
     sessionId: string;
     mode: PracticeMode;
@@ -293,6 +299,7 @@ export class GetNextQuestionUseCase {
       difficulty: question.difficulty,
       choices,
       superseded: !question.isCurrentRevision,
+      answerKeyChanged: question.answerKeyChanged,
       session: {
         sessionId: session.id,
         mode: session.mode,
@@ -363,6 +370,7 @@ export class GetNextQuestionUseCase {
       difficulty: question.difficulty,
       choices,
       superseded: !question.isCurrentRevision,
+      answerKeyChanged: question.answerKeyChanged,
       session: null,
     };
   }

@@ -67,6 +67,7 @@ test('renders active question branch with navigator and navigation callback', as
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
         superseded: false,
+        answerKeyChanged: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -122,6 +123,7 @@ test('does not render Review & Submit in the active exam-question header', async
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
         superseded: false,
+        answerKeyChanged: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -171,6 +173,7 @@ test('keeps End session in the active tutor-question header', async () => {
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
         superseded: false,
+        answerKeyChanged: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -252,6 +255,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
         difficulty: 'easy',
         choices: [{ id: 'c1', label: 'A', textMd: 'Choice A', sortOrder: 1 }],
         superseded: false,
+        answerKeyChanged: false,
         session: null,
       }}
       selectedChoiceId={null}
@@ -359,6 +363,7 @@ test('passes the tutor Submit affordance through to the question surface', async
           { id: fixtureChoiceId, label: 'A', textMd: 'Choice A', sortOrder: 1 },
         ],
         superseded: false,
+        answerKeyChanged: false,
         session: null,
       }}
       selectedChoiceId={fixtureChoiceId}

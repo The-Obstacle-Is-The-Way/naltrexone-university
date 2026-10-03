@@ -7,6 +7,7 @@ import {
 import type { Attempt, PracticeSession, Question } from '@/src/domain/entities';
 import {
   createAttempt,
+  createChoice,
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
@@ -104,6 +105,7 @@ describe('GetQuestionForViewUseCase', () => {
     await expect(view([current])()).resolves.toEqual({
       question: current,
       superseded: false,
+      answerKeyChanged: false,
     });
   });
 
@@ -119,6 +121,44 @@ describe('GetQuestionForViewUseCase', () => {
       superseded: true,
     });
   });
+
+  // ADR-022 Decision 4: an answer graded on a key corrected since is said as
+  // such; an omitted attempt had no answer to correct.
+  it.each([
+    ['answered', true],
+    ['omitted', false],
+  ] as const)(
+    'says the key was corrected for a review of an %s attempt on a revision with another key: %s',
+    async (kind, keyCorrected) => {
+      const { current, answered } = revisions('published');
+      const keyed = (question: Question, correctLabel: 'A' | 'B') => ({
+        ...question,
+        choices: (['A', 'B'] as const).map((label, index) =>
+          createChoice({
+            questionId: question.id,
+            label,
+            textMd: `Choice ${label}`,
+            isCorrect: label === correctLabel,
+            sortOrder: index + 1,
+          }),
+        ),
+      });
+
+      await expect(
+        view([keyed(current, 'A'), keyed(answered, 'B')], {
+          attempts: [
+            answerOf(
+              answered,
+              kind === 'omitted' ? { outcome: omittedOutcome() } : {},
+            ),
+          ],
+        })({}),
+      ).resolves.toMatchObject({
+        superseded: true,
+        answerKeyChanged: keyCorrected,
+      });
+    },
+  );
 
   it('does not mark a review of the current revision as updated', async () => {
     const { current } = revisions('published');

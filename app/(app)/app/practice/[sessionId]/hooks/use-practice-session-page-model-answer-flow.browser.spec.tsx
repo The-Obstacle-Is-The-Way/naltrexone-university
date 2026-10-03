@@ -118,6 +118,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         difficulty: 'easy',
         choices: [CHOICE_1],
         superseded: false,
+        answerKeyChanged: false,
         session: {
           sessionId: BROWSER_SESSION_ID,
           mode: 'tutor',
@@ -187,6 +188,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         difficulty: 'easy',
         choices: [CHOICE_1],
         superseded: false,
+        answerKeyChanged: false,
         session: {
           sessionId: BROWSER_SESSION_ID,
           mode: 'tutor',
@@ -251,6 +253,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -271,6 +274,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -331,6 +335,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -370,6 +375,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -441,6 +447,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1, CHOICE_2],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'tutor',
@@ -463,6 +470,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_3],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'tutor',
@@ -485,6 +493,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1, CHOICE_2],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'tutor',
@@ -618,6 +627,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         difficulty: 'easy',
         choices: [CHOICE_1, CHOICE_2],
         superseded: false,
+        answerKeyChanged: false,
         session: {
           sessionId: BROWSER_SESSION_ID,
           mode: 'exam',
