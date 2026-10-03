@@ -121,6 +121,31 @@ describe('GetBookmarksUseCase', () => {
     },
   );
 
+  it('gives no label to a question published again between the two reads', async () => {
+    const userId = 'user-1';
+    const bookmarks = new FakeBookmarkRepository([
+      { userId, questionId: 'q1', createdAt: new Date('2026-02-01T00:00:00Z') },
+    ]);
+    const logger = new FakeLogger();
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      new FakeQuestionRepository([createQuestion({ id: 'q1' })]),
+      logger,
+    );
+
+    await expect(useCase.execute({ userId })).resolves.toEqual({
+      rows: [
+        {
+          isAvailable: false,
+          availability: null,
+          questionId: 'q1',
+          bookmarkedAt: '2026-02-01T00:00:00.000Z',
+        },
+      ],
+    });
+    expect(logger.warnCalls).toEqual([]);
+  });
+
   it('returns an unlabelled row and warns when the bookmarked question is missing', async () => {
     const userId = 'user-1';
     const orphanedQuestionId = 'q-orphaned';

@@ -414,8 +414,8 @@ describe('app/(app)/app/bookmarks', () => {
         .parseFromString(html, 'text/html')
         .querySelector('li');
 
-      expect(item?.textContent).toContain(heading);
-      expect(item?.textContent).toContain(label);
+      expect(item?.querySelector('.font-medium')?.textContent).toBe(heading);
+      expect(item?.querySelector('.text-xs span')?.textContent).toBe(label);
       expect(item?.textContent).not.toContain('[Question no longer available]');
       expect(item?.textContent).not.toContain('removed or unpublished');
       expect(item?.textContent).not.toContain('Unavailable');
