@@ -57,4 +57,4 @@ Before creating new types, check:
 - `src/application/ports/` for port interfaces
 - `src/application/test-helpers/fakes/` for existing fakes
 
-## ADRs: `docs/adr/` (ADR-001 through ADR-018 and ADR-020 accepted; ADR-019 proposed; ADR-021 accepted)
+## ADRs: `docs/adr/` (ADR-001 through ADR-022 accepted; ADR-019 as amended 2026-10-03; `docs/adr/index.md` lists each status)
