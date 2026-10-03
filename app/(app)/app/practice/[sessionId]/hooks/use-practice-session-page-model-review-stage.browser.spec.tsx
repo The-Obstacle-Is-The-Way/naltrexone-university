@@ -103,6 +103,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
             isAvailable: true,
             availability: 'available',
             superseded: false,
+            answerKeyChanged: false,
             questionId: BROWSER_QUESTION_1_ID,
             slug: 'question-1',
             stemMd: 'Question 1',
@@ -125,6 +126,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
             isAvailable: true,
             availability: 'available',
             superseded: false,
+            answerKeyChanged: false,
             questionId: BROWSER_QUESTION_2_ID,
             slug: 'question-2',
             stemMd: 'Question 2',
@@ -253,6 +255,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         difficulty: 'easy',
         choices: [CHOICE_1],
         superseded: false,
+        answerKeyChanged: false,
         session: {
           sessionId: BROWSER_SESSION_ID,
           mode: 'exam',
@@ -356,6 +359,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',
@@ -376,6 +380,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           difficulty: 'easy',
           choices: [CHOICE_1],
           superseded: false,
+          answerKeyChanged: false,
           session: {
             sessionId: BROWSER_SESSION_ID,
             mode: 'exam',

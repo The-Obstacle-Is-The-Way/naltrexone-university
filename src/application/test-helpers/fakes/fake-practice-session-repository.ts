@@ -46,6 +46,12 @@ export class FakePracticeSessionRepository
        * (ADR-022 Amendment). A test may change the map between the two.
        */
       availabilityByQuestionId?: ReadonlyMap<string, QuestionAvailability>;
+      /**
+       * Questions whose current answer key differs from the revision their
+       * items are bound to (ADR-022 Decision 4): an answered item on one is
+       * left out of its history score.
+       */
+      answerKeyChangedQuestionIds?: ReadonlySet<string>;
     } = {},
   ) {
     this.sessions = seed.map((session) =>
@@ -226,6 +232,12 @@ export class FakePracticeSessionRepository
             countsTowardScore({
               fairChanceAtEnd: state.fairChanceAtEnd,
               availability: this.availabilityOf(state.questionId),
+              keyCorrected:
+                state.latestSelectedChoiceId !== null &&
+                (this.options.answerKeyChangedQuestionIds?.has(
+                  state.questionId,
+                ) ??
+                  false),
             }),
         );
         return [

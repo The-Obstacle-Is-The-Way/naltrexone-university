@@ -241,6 +241,9 @@ export class FakeAttemptRepository implements AttemptRepository {
           ? false
           : null,
         availability: question.availability,
+        // The answered revision's key against the current one.
+        keyCorrected:
+          !isOmittedOutcome(attempt.outcome) && question.answerKeyChanged,
       });
       if (counts) {
         scored += 1;

@@ -24,6 +24,7 @@ const SESSION_NOTICE =
 function renderItem(input: {
   mode: 'tutor' | 'exam';
   superseded: boolean;
+  answerKeyChanged?: boolean;
 }): Document {
   const props: PracticeViewProps = {
     sessionInfo: {
@@ -35,7 +36,11 @@ function renderItem(input: {
       isMarkedForReview: false,
     },
     loadState: { status: 'ready' },
-    question: { ...createQuestionProps(), superseded: input.superseded },
+    question: {
+      ...createQuestionProps(),
+      superseded: input.superseded,
+      answerKeyChanged: input.answerKeyChanged ?? false,
+    },
     selectedChoiceId: null,
     isAnswered: false,
     submitResult: null,
@@ -84,5 +89,24 @@ describe('PracticeView: a session item updated since the session began', () => {
     expect(
       sessionNotice(renderItem({ mode: 'tutor', superseded: false })),
     ).toBe(null);
+  });
+
+  // ADR-022 Decision 4: the current revision keys another answer, so an
+  // answer here is graded on a corrected key and won't be scored.
+  it('says the answer was corrected, in place of the update notice, when its key changed', () => {
+    const doc = renderItem({
+      mode: 'tutor',
+      superseded: true,
+      answerKeyChanged: true,
+    });
+
+    const notice = Array.from(doc.querySelectorAll('[role="status"]')).find(
+      (element) =>
+        element.textContent?.includes(
+          'The answer to this question was corrected after your session began.',
+        ),
+    );
+    expect(notice?.getAttribute('data-tone')).toBe('caution');
+    expect(sessionNotice(doc)).toBeNull();
   });
 });

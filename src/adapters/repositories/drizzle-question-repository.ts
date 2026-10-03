@@ -35,6 +35,7 @@ import type {
   QuestionRepository,
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
+import { answerKeyChanged } from '@/src/domain/services';
 import {
   deriveQuestionAvailability,
   isValidChoiceLabel,
@@ -45,6 +46,12 @@ import {
 import type { DrizzleDb } from '../shared/database-types';
 import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
+import {
+  answeredRevisionsSql,
+  answerKeyCorrectedSql,
+  keyCorrectedRevisionsOn,
+  keyCorrectedRevisionsSql,
+} from './shared/score-eligibility-sql';
 
 function isNonEmptyArray<T>(
   values: readonly T[],
@@ -269,6 +276,8 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       .select({
         questionId: attempts.questionId,
         isCorrect: attempts.isCorrect,
+        questionRevisionId: attempts.questionRevisionId,
+        selectedChoiceId: attempts.selectedChoiceId,
         attemptRank: latestAttemptRankSql({
           questionId: attempts.questionId,
           answeredAt: attempts.answeredAt,
@@ -314,15 +323,26 @@ export class DrizzleQuestionRepository implements QuestionRepository {
         );
       case 'incorrect': {
         const latestAttemptRows = this.latestAttemptRowsSubquery(userId);
+        // ADR-022 Decision 4: a latest answer graded on a key corrected since
+        // is practised again, whatever its stored grade.
         return inArray(
           questions.id,
           this.db
             .select({ questionId: latestAttemptRows.questionId })
             .from(latestAttemptRows)
+            .leftJoin(
+              keyCorrectedRevisionsSql(answeredRevisionsSql(userId)),
+              keyCorrectedRevisionsOn(latestAttemptRows.questionRevisionId),
+            )
             .where(
               and(
                 eq(latestAttemptRows.attemptRank, 1),
-                eq(latestAttemptRows.isCorrect, false),
+                or(
+                  eq(latestAttemptRows.isCorrect, false),
+                  answerKeyCorrectedSql(
+                    sql`${latestAttemptRows.selectedChoiceId} is not null`,
+                  ),
+                ),
               ),
             ),
         );
@@ -415,6 +435,12 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       id: row.id,
       revisionId: content.id,
       isCurrentRevision: content.id === row.currentRevisionId,
+      // ADR-022 Decision 4: the current revision is loaded with the question,
+      // so the comparison costs no query.
+      answerKeyChanged:
+        content.id !== row.currentRevisionId &&
+        row.currentRevision !== null &&
+        answerKeyChanged(content.choices, row.currentRevision.choices),
       slug: row.slug,
       stemMd: content.stemMd,
       explanationMd: content.explanationMd,

@@ -64,6 +64,11 @@ export type GetQuestionBySlugOutput = {
   availability: QuestionAvailability;
   /** Updated since the learner saw it (Pattern Registry F-12). */
   superseded: boolean;
+  /**
+   * The learner answered this revision and its answer key was corrected
+   * since (ADR-022 Decision 4).
+   */
+  answerKeyChanged: boolean;
 };
 
 export type QuestionViewControllerDeps = {
@@ -146,6 +151,7 @@ export const getQuestionBySlug = createAction({
       })),
       availability: question.availability,
       superseded: view.superseded,
+      answerKeyChanged: view.answerKeyChanged,
     };
   },
 });

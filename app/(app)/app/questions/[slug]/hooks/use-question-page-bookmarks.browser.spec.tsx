@@ -29,6 +29,7 @@ function createQuestion(): GetQuestionBySlugOutput {
     difficulty: 'easy',
     availability: 'available',
     superseded: false,
+    answerKeyChanged: false,
     choices: [
       { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
     ],

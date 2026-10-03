@@ -59,4 +59,45 @@ describe('QuestionUpdateNotice (Pattern Registry F-12)', () => {
     );
     expect(doc.querySelector('a')).toBeNull();
   });
+
+  // ADR-022 Decision 4: a key corrected since the learner answered is a
+  // clinical caution, not a routine update.
+  describe('when the answer key was corrected', () => {
+    it('says the attempt is not scored and links to the corrected question', () => {
+      const doc = parseHtml(
+        renderToStaticMarkup(
+          <QuestionUpdateNotice variant="review" slug="q-key" keyCorrected />,
+        ),
+      );
+
+      const status = doc.querySelector('[role="status"]');
+      expect(status?.getAttribute('data-tone')).toBe('caution');
+      expect(status?.textContent).toContain(
+        'The answer to this question was corrected after you answered.',
+      );
+      expect(status?.textContent).toContain("This attempt isn't scored.");
+      expect(status?.textContent).not.toContain('has been updated');
+      expect(findAnchorByHref(doc, toQuestionRoute('q-key'))?.textContent).toBe(
+        'Practice the corrected question',
+      );
+    });
+
+    it('tells a learner in a session that this answer will not be scored', () => {
+      const doc = parseHtml(
+        renderToStaticMarkup(
+          <QuestionUpdateNotice variant="session" keyCorrected />,
+        ),
+      );
+
+      const status = doc.querySelector('[role="status"]');
+      expect(status?.getAttribute('data-tone')).toBe('caution');
+      expect(status?.textContent).toContain(
+        'The answer to this question was corrected after your session began.',
+      );
+      expect(status?.textContent).toContain(
+        "This session shows the earlier version, so your answer here won't be scored.",
+      );
+      expect(doc.querySelector('a')).toBeNull();
+    });
+  });
 });

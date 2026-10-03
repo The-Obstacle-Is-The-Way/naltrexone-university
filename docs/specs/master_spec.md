@@ -737,7 +737,7 @@ export type EndPracticeSessionOutput = {
 4. Compute summary:
 
    * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
-   * `scored` = count of the session's items that count, answered or not (ADR-022 Decision 3, as amended by DEBT-494): the item's recorded `fair_chance_at_end` is not false, and its question's content is not now in doubt (withdrawn or under review); an item whose question cannot be found is in doubt
+   * `scored` = count of the session's items that count, answered or not (ADR-022 Decision 3, as amended by DEBT-494): the item's recorded `fair_chance_at_end` is not false, and its question's content is not now in doubt (withdrawn or under review, or, for an answered item, its graded revision's answer key since corrected, ADR-022 Decision 4); an item whose question cannot be found is in doubt
    * `correct` = count of scored items with a selected choice where `latestIsCorrect === true`
    * `accuracy` = correct / scored (0 if scored = 0); the summary and the post-exam header ("X of scored correct") show "—" when nothing is scored and say how many questions aren't scored
    * duration = floor((ended_at - started_at)/1000)
@@ -811,7 +811,7 @@ export type UserStatsOutput = {
 **Behavior:**
 
 * `totalAnswered` = count attempts for user; total answered, answered in seven days and the streak count every attempt: they are activity, not scores
-* `scoredOverall` = count of attempts that count (ADR-022 Decision 3, as amended by DEBT-494): the learner had a fair chance at it (an attempt in a session reads its item's `fair_chance_at_end`; null, and an attempt outside a session, is a fair chance) and its question's content is not now in doubt (withdrawn or under review). A retired question keeps counting. `unscoredQuestionsOverall` = count of distinct questions with an attempt left out
+* `scoredOverall` = count of attempts that count (ADR-022 Decision 3, as amended by DEBT-494): the learner had a fair chance at it (an attempt in a session reads its item's `fair_chance_at_end`; null, and an attempt outside a session, is a fair chance) and its question's content is not now in doubt (withdrawn or under review, or, for an answered attempt, its graded revision's answer key since corrected, ADR-022 Decision 4). A retired question keeps counting. `unscoredQuestionsOverall` = count of distinct questions with an attempt left out
 * `accuracyOverall` = correct / scored (0 if scored = 0); the dashboard shows "—" when nothing is scored and says how many questions aren't scored
 * last 7 days window uses `answered_at >= now() - 7 days`; the seven-day fields apply the same rules to the attempts in the window
 * streak is computed in UTC from attempts in last 60 days:
@@ -1139,7 +1139,7 @@ export type GetSessionHistoryOutput = {
 2. For each session, compute stats from persisted `practice_session_question_states`:
    * `questionCount` = total questions in session
    * `answered` = count where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
-   * `scored` = count of items that count (ADR-022 Decision 3, as amended by DEBT-494): the learner had a fair chance at the item, recorded as `fair_chance_at_end` when the session ended (null is a fair chance), and its question's content is not now in doubt (withdrawn or under review); a retired question keeps counting. An item left out leaves both counts below, answered or not
+   * `scored` = count of items that count (ADR-022 Decision 3, as amended by DEBT-494): the learner had a fair chance at the item, recorded as `fair_chance_at_end` when the session ended (null is a fair chance), and its question's content is not now in doubt (withdrawn or under review, or, for an answered item, its graded revision's answer key since corrected, ADR-022 Decision 4); a retired question keeps counting. An item left out leaves both counts below, answered or not
    * `correct` = count of scored items where `latestIsCorrect === true`
    * `accuracy` = correct / scored (0 if scored = 0); the UI shows "—" when nothing is scored, and says how many questions aren't scored
    * `durationSeconds` = floor((ended_at - started_at) / 1000)

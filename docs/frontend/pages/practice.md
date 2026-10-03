@@ -95,7 +95,7 @@ The lower stack is not mutually exclusive:
 | Element | Component / Pattern | Pattern ID | Source | Notes |
 |---------|-------------------|------------|--------|-------|
 | Label | `<div>` | — | `:166` | `text-sm font-medium text-foreground` — "Status" |
-| Control | `<SegmentedControl>` | I-5 | `:170` | Options: Unanswered, Incorrect, Bookmarked |
+| Control | `<SegmentedControl>` | I-5 | `:170` | Options: Unanswered, Incorrect, Bookmarked. Incorrect offers a question whose latest answer was wrong, or was graded on an answer key corrected since (ADR-022 Decision 4) |
 
 #### Difficulty Selector
 

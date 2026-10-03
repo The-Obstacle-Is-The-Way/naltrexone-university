@@ -70,6 +70,7 @@ function toGetQuestionBySlugOutput(
     difficulty: question.difficulty,
     availability: 'available' as const,
     superseded: false,
+    answerKeyChanged: false,
     choices: question.choices.map((c) => ({
       id: c.id,
       label: c.label,

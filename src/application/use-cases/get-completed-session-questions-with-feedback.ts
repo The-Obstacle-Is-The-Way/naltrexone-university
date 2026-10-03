@@ -42,6 +42,11 @@ export type AvailableCompletedSessionQuestionWithFeedbackRow = {
    * question was updated after the session (Pattern Registry F-12).
    */
   superseded: boolean;
+  /**
+   * ADR-022 Decision 4: the learner answered this revision and its answer key
+   * was corrected since. Not set for a question no longer available.
+   */
+  answerKeyChanged: boolean;
   questionId: string;
   slug: string;
   stemMd: string;
@@ -249,6 +254,11 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
           superseded:
             question.availability === 'available' &&
             !question.isCurrentRevision,
+          // ADR-022 Decision 4: an answer graded on a key corrected since.
+          answerKeyChanged:
+            question.availability === 'available' &&
+            row.isAnswered &&
+            question.answerKeyChanged,
           questionId: question.id,
           slug: question.slug,
           stemMd: question.stemMd,

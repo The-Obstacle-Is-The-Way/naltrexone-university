@@ -2,13 +2,31 @@ import { describe, expect, it } from 'vitest';
 import type { PracticeSession } from '@/src/domain/entities';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import type { QuestionAvailability } from '@/src/domain/value-objects';
-import { projectPracticeSessionSummary } from './practice-session-summary';
+import {
+  type ItemQuestion,
+  projectPracticeSessionSummary,
+} from './practice-session-summary';
 
 function everyAvailable(
   session: PracticeSession,
-): ReadonlyMap<string, QuestionAvailability> {
+): ReadonlyMap<string, ItemQuestion> {
   return new Map(
-    session.questionIds.map((questionId) => [questionId, 'available']),
+    session.questionIds.map((questionId) => [
+      questionId,
+      { availability: 'available', answerKeyChanged: false },
+    ]),
+  );
+}
+
+// Each item's question by its state, with its key unchanged.
+function itemQuestions(
+  entries: readonly (readonly [string, QuestionAvailability])[],
+): ReadonlyMap<string, ItemQuestion> {
+  return new Map(
+    entries.map(([questionId, availability]) => [
+      questionId,
+      { availability, answerKeyChanged: false },
+    ]),
   );
 }
 
@@ -252,7 +270,7 @@ describe('projectPracticeSessionSummary', () => {
       projectPracticeSessionSummary(
         session,
         endedAt,
-        new Map<string, QuestionAvailability>([
+        itemQuestions([
           ['q-right', 'available'],
           ['q-withdrawn', 'withdrawn'],
           ['q-retired', 'retired'],
@@ -289,8 +307,61 @@ describe('projectPracticeSessionSummary', () => {
       projectPracticeSessionSummary(
         session,
         endedAt,
-        new Map<string, QuestionAvailability>([['q-found', 'available']]),
+        itemQuestions([['q-found', 'available']]),
       ).totals,
     ).toMatchObject({ answered: 2, scored: 1, correct: 1, accuracy: 1 });
+  });
+
+  // ADR-022 Decision 4: an answered item whose graded key was since corrected
+  // leaves the score; an unanswered one has no key to correct.
+  it('leaves out an answer whose key was corrected since, but not an unanswered item', () => {
+    const endedAt = new Date('2026-02-01T00:10:00Z');
+    const session = createPracticeSession({
+      mode: 'tutor',
+      questionIds: ['q-corrected', 'q-unanswered', 'q-kept'],
+      questionStates: [
+        {
+          questionId: 'q-corrected',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-corrected',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:03:00Z'),
+        },
+        {
+          questionId: 'q-unanswered',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+        {
+          questionId: 'q-kept',
+          markedForReview: false,
+          latestSelectedChoiceId: 'choice-kept',
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:04:00Z'),
+        },
+      ],
+      startedAt: new Date('2026-02-01T00:00:00Z'),
+      endedAt,
+    });
+
+    expect(
+      projectPracticeSessionSummary(
+        session,
+        endedAt,
+        new Map([
+          [
+            'q-corrected',
+            { availability: 'available', answerKeyChanged: true },
+          ],
+          [
+            'q-unanswered',
+            { availability: 'available', answerKeyChanged: true },
+          ],
+          ['q-kept', { availability: 'available', answerKeyChanged: false }],
+        ]),
+      ).totals,
+    ).toMatchObject({ answered: 2, scored: 2, correct: 1, accuracy: 0.5 });
   });
 });

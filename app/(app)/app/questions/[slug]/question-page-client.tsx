@@ -394,6 +394,7 @@ export function QuestionView(props: QuestionViewProps) {
                   <QuestionUpdateNotice
                     variant="review"
                     slug={props.question.slug}
+                    keyCorrected={props.question.answerKeyChanged}
                   />
                 ) : null}
                 {unavailability ? (

@@ -32,6 +32,7 @@ export function createReviewRow(
     isAvailable: true,
     availability: 'available',
     superseded: false,
+    answerKeyChanged: false,
     questionId: 'question-1',
     slug: 'question-1',
     stemMd: 'Question stem',

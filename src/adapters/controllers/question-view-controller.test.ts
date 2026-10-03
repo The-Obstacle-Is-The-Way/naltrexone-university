@@ -9,6 +9,7 @@ import {
   createQuestion,
   createUser,
 } from '@/src/domain/test-helpers';
+import { answeredOutcome } from '@/src/domain/value-objects';
 import { getQuestionBySlug } from './question-view-controller';
 import { createQuestionViewControllerDeps } from './test-helpers/question-view-controller-test-helpers';
 
@@ -178,6 +179,7 @@ describe('question-view-controller', () => {
           choices: mapChoicesForOutput(question, userId),
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
         },
       });
     });
@@ -215,7 +217,53 @@ describe('question-view-controller', () => {
           stemMd: 'Answered',
           availability: 'available',
           superseded: true,
+          answerKeyChanged: false,
         },
+      });
+    });
+
+    // ADR-022 Decision 4: the revision answered keys another answer than the
+    // current one, so the review says the key was corrected.
+    it('returns a question whose key was corrected since the learner answered it', async () => {
+      const user = createUser();
+      const keyed = (revisionId: string, correct: 'A' | 'B') =>
+        createQuestion({
+          id: questionId,
+          revisionId,
+          slug: 'q-key',
+          choices: (['A', 'B'] as const).map((label, index) =>
+            createChoice({
+              questionId,
+              label,
+              textMd: `Choice ${label}`,
+              isCorrect: label === correct,
+              sortOrder: index + 1,
+            }),
+          ),
+        });
+      const questionId = crypto.randomUUID();
+      const current = keyed(crypto.randomUUID(), 'A');
+      const answered = keyed(crypto.randomUUID(), 'B');
+      const attempt = createAttempt({
+        userId: user.id,
+        questionId,
+        questionRevisionId: answered.revisionId,
+        outcome: answeredOutcome(answered.choices[1]?.id ?? ''),
+      });
+      const deps = createQuestionViewControllerDeps({
+        user,
+        attempts: [attempt],
+        questionRepository: new FakeQuestionRepository([current, answered]),
+      });
+
+      const result = await getQuestionBySlug(
+        { slug: 'q-key', review: { attemptId: attempt.id } },
+        deps as never,
+      );
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { superseded: true, answerKeyChanged: true },
       });
     });
 
@@ -372,6 +420,7 @@ describe('question-view-controller', () => {
           choices: mapChoicesForOutput(question, userId),
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
         },
       });
     });

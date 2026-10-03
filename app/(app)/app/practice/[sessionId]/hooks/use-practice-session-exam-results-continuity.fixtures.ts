@@ -44,6 +44,7 @@ export function createPostExamReviewRow(input: {
     isAvailable: true,
     availability: 'available',
     superseded: false,
+    answerKeyChanged: false,
     questionId: input.questionId,
     slug: `${input.questionId}-slug`,
     stemMd: `Stem for ${input.questionId}`,

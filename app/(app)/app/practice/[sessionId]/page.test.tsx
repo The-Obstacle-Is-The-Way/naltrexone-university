@@ -137,6 +137,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
           ],
           superseded: false,
+          answerKeyChanged: false,
           session: null,
         }}
         selectedChoiceId={null}
@@ -361,6 +362,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
           ],
           superseded: false,
+          answerKeyChanged: false,
           session: null,
         }}
         selectedChoiceId={null}
@@ -446,6 +448,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           difficulty: 'easy',
           choices: [],
           superseded: false,
+          answerKeyChanged: false,
           session: null,
         },
         new Set([fixtureQuestion1Id2]),

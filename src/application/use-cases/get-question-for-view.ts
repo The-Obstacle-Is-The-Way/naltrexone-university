@@ -28,6 +28,12 @@ export type GetQuestionForViewOutput = {
    * question was updated after the learner saw it (Pattern Registry F-12).
    */
   superseded: boolean;
+  /**
+   * ADR-022 Decision 4: the learner answered the revision shown, and its
+   * answer key was corrected since. Never set outside a review, or for a
+   * question no longer available, which has its own notice.
+   */
+  answerKeyChanged: boolean;
 } | null;
 
 type ReviewedItem = {
@@ -77,12 +83,16 @@ export class GetQuestionForViewUseCase {
     return {
       question,
       superseded: available && !question.isCurrentRevision,
+      answerKeyChanged:
+        available && reviewed.answered && question.answerKeyChanged,
     };
   }
 
   private async published(slug: string): Promise<GetQuestionForViewOutput> {
     const question = await this.questions.findPublishedBySlug(slug);
-    return question ? { question, superseded: false } : null;
+    return question
+      ? { question, superseded: false, answerKeyChanged: false }
+      : null;
   }
 
   // The learner's own item under review, or null when they have none. Every

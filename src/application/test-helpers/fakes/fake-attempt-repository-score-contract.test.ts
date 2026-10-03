@@ -1,4 +1,8 @@
-import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
+import {
+  createAttempt,
+  createChoice,
+  createQuestion,
+} from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
 import {
   runAttemptScoreContract,
@@ -13,6 +17,16 @@ function createQuestionNow(now: ScoredAttemptSeed['now']) {
     id: crypto.randomUUID(),
     status: now === 'available' ? 'published' : 'archived',
     availability: now,
+    // Keyed B, so a revision can change the key.
+    choices: [
+      createChoice({ label: 'A', textMd: 'Choice A' }),
+      createChoice({
+        label: 'B',
+        textMd: 'Choice B',
+        isCorrect: true,
+        sortOrder: 2,
+      }),
+    ],
   });
 }
 
@@ -62,7 +76,34 @@ runAttemptScoreContract('FakeAttemptRepository', async () => ({
           sessionEndedAt: practiceSessionId ? now : null,
         };
       }),
-      { questions: [...questionByKey.values()], itemsWithoutFairChance },
+      {
+        // A question revised since is listed with its new current revision
+        // first, then the revision its attempts answered.
+        questions: [...questionByKey].flatMap(([key, question]) => {
+          const revisedAfter = attempts.find(
+            (attempt) => attempt.question === key,
+          )?.revisedAfter;
+          if (!revisedAfter) return [question];
+          const current = {
+            ...question,
+            revisionId: crypto.randomUUID(),
+            stemMd: '# Reworded stem',
+            choices: question.choices.map((choice) => {
+              if (revisedAfter === 'key') {
+                return { ...choice, isCorrect: !choice.isCorrect };
+              }
+              const reworded =
+                (revisedAfter === 'key text' && choice.isCorrect) ||
+                (revisedAfter === 'distractor' && !choice.isCorrect);
+              return reworded
+                ? { ...choice, textMd: `${choice.textMd}, reworded` }
+                : choice;
+            }),
+          };
+          return [current, question];
+        }),
+        itemsWithoutFairChance,
+      },
     );
     return { repository, userId, now };
   },

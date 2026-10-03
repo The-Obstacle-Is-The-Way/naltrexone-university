@@ -121,7 +121,7 @@ export class FinalizeExamAnswersUseCase {
 
     // The session is read and checked inside the transaction, so the checks
     // hold for the writes they guard.
-    const endedSession = await this.writeTransaction(async (tx) => {
+    return this.writeTransaction(async (tx) => {
       const loadedSession = await tx.sessions.findByIdAndUserId(
         input.sessionId,
         input.userId,
@@ -254,21 +254,27 @@ export class FinalizeExamAnswersUseCase {
         deadline,
         latestAnsweredAtMs,
       });
-      return tx.sessions.end(input.sessionId, input.userId, effectiveEndedAt);
+      const endedSession = await tx.sessions.end(
+        input.sessionId,
+        input.userId,
+        effectiveEndedAt,
+      );
+      const endedAt = endedSession.endedAt;
+      if (!endedAt) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Practice session did not end',
+        );
+      }
+
+      // Scored in the transaction that records each item's fair chance, so
+      // a failed read rolls the finalization back rather than failing after
+      // it commits.
+      return summarizePracticeSession(tx.questions, endedSession, endedAt);
     }).catch(async (error: unknown) => {
       await this.throwAlreadyEndedForDoubleFinalizeLoser(input, error);
       throw error;
     });
-
-    const endedAt = endedSession.endedAt;
-    if (!endedAt) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Practice session did not end',
-      );
-    }
-
-    return summarizePracticeSession(this.questions, endedSession, endedAt);
   }
 
   private async throwAlreadyEndedForDoubleFinalizeLoser(
