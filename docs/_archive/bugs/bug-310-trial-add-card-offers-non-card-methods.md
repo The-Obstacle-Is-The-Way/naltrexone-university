@@ -1,12 +1,12 @@
 # BUG-310: Trial Add-Card Checkout Offers Payment Methods That Are Not Cards
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — fixed in code 2026-10-03 as decided (option (a), plus a setup-success check); release pending
+**Status:** Resolved — 2026-10-03; the trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved, promoted and release-verified, with its suites re-run on `main`'s code before archival
 **Priority:** P3
 **Date:** 2026-09-29
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-03
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
@@ -35,7 +35,7 @@ Stripe's hosted Checkout changed its layout on 2026-09-29, and the hosted E2E he
 
 ## Why this is a decision, not a quick fix
 
-DEBT-414 made the opposite choice on purpose. Its design for this setup Session says: "Do not add `payment_method_types`; preserve dynamic payment methods" ([DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md)). The Session's unit test pins that choice: `expect(params).not.toHaveProperty('payment_method_types')`.
+DEBT-414 made the opposite choice on purpose. Its design for this setup Session says: "Do not add `payment_method_types`; preserve dynamic payment methods" ([DEBT-414](../../debt/debt-414-public-legal-pages-privacy-terms.md)). The Session's unit test pins that choice: `expect(params).not.toHaveProperty('payment_method_types')`.
 
 Dynamic payment methods let the owner manage methods in the Stripe Dashboard without a code change. That choice was made before the evidence that the Dashboard's enabled methods put non-card methods on this card flow. So the fix overturns a recorded design decision in a payment and consent flow, and belongs to the owner.
 
@@ -83,7 +83,7 @@ Implemented as decided, each change red first.
   - The webhook retrieves the SetupIntent with its payment method expanded, and requires `status: 'succeeded'` and a `card` payment method.
   - Anything else fails the event before any write, with a logged error naming the SetupIntent's status and the method's type. Nothing is attached or recorded. The route answers 400, and Stripe shows the delivery as failed and retries it.
 - **The hosted journey checks what Stripe was told.**
-  - The add-card evidence step retrieves the completed Session from Stripe and asserts that its `payment_method_types` is `['card']`. It asserts the Session rather than the rendered page, whose markup is Stripe's and changes ([DEBT-471](../_archive/debt/debt-471-e2e-ci-external-fragility.md)); Stripe renders the page from the Session.
+  - The add-card evidence step retrieves the completed Session from Stripe and asserts that its `payment_method_types` is `['card']`. It asserts the Session rather than the rendered page, whose markup is Stripe's and changes ([DEBT-471](../debt/debt-471-e2e-ci-external-fragility.md)); Stripe renders the page from the Session.
   - The same step replays Stripe's actual `checkout.session.completed` event through the signed webhook route, so the expansion and both checks run against real Stripe.
 - **Evidence.**
   - The setup-completion cases moved, unchanged apart from the expanded SetupIntent, to their own file, as the expiration cases already were. Four refusal cases are new.
@@ -97,4 +97,16 @@ Implemented as decided, each change red first.
   - the setup Session sends `payment_method_types: ['card']`, pinned in the adapter test;
   - the hosted journey asserts that Stripe's Session offers only card;
   - setup completion refuses a SetupIntent that has not succeeded, or whose method is not a card.
-- [ ] Production release verified; record resolved and archived
+- [x] Production release verified; record resolved and archived (see Verified closeout)
+
+## Verified closeout — 2026-10-03 UTC
+
+- **Merged.** #1329 (CodeRabbit **5399437013** on `b3addce5`; merged `d6cf5602`). The decision was recorded in #1326.
+- **Released** through promotion #1331 (`6411d7e8`):
+  - main CI **37107592388**, `test` passed **08:01:47Z**;
+  - production assigned **08:01:50.199Z**;
+  - `main` and `dev` trees `6f4e2ff9`;
+  - production health 200 (`{"ok":true,"db":true}`).
+- **Real Stripe.** The hosted Stripe lane's `stripe-hosted-trial-add-card` journey ran in every local full gate from #1329's head on. It saves a real card in TEST mode, asserts that Stripe's Session offers only `card`, and replays Stripe's actual `checkout.session.completed` event through the signed webhook route, where the new SetupIntent checks accept it.
+- **Re-verified** on `main`'s code before archival: `src/adapters/gateways/stripe/` is identical on `main` and `dev`, and its 27 suites (275 tests) pass.
+- **Not verified in production Stripe.** No production checkout was made, by policy (TEST mode only). The live Session's `payment_method_types` comes from the same code path the hosted journey exercises.

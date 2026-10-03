@@ -2,7 +2,16 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
+**Earlier** — 2026-10-03: BUG-310 is fixed in code, as decided ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#fix--2026-10-03)).
+- **The setup Session offers only cards.** `payment_method_types: ['card']` on the trial add-card Session; paid Checkout keeps dynamic methods, now pinned by a test.
+- **Setup completion accepts only a card that Stripe saved.** The webhook retrieves the SetupIntent with its payment method expanded and requires `status: 'succeeded'` and a `card`. Anything else fails the event before any write, with a logged error; nothing is attached or recorded.
+- **The hosted journey checks the Session Stripe recorded**, and replays Stripe's actual completion event through the signed webhook route, so both checks run against real Stripe.
+- **Evidence.** Nine targeted mutations each fail a case.
+- **The decision is released.** #1326 recorded it (**5399102258** on `e02322f8`; merged `8c999ccf`). It reached production with #1327 through promotion #1328 (`220b95c7`): main CI **37102616298** `test` passed **06:32:10Z**, production assigned **06:32:11.842Z**, trees `22a83f23`, healthy production.
+
+This entry was written before this increment's own checks ran; its local full gate runs on its head before it is pushed, and the next entry records its merge and release.
+
+**Earlier** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
 - **Decision.** The trial add-card Checkout offers cards only (`payment_method_types: ['card']` on the setup Session). Its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic payment methods: its copy says "payment method", and access waits on the subscription's status.
 - **Next.** The fix, test-first, is the next code PR.
 - **BUG-317's deferred question**, whether the withdrawn label suits held or dropped questions, is decided by [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). Its row leaves the debt register's Deferred table.

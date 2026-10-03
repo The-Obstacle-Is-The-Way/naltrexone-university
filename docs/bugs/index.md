@@ -1,16 +1,14 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-03 — BUG-310 fixed in code.
+**Last Updated:** 2026-10-03 — BUG-310 resolved and archived.
 
-**Latest** — 2026-10-03: BUG-310 is fixed in code, as decided ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#fix--2026-10-03)).
-- **The setup Session offers only cards.** `payment_method_types: ['card']` on the trial add-card Session; paid Checkout keeps dynamic methods, now pinned by a test.
-- **Setup completion accepts only a card that Stripe saved.** The webhook retrieves the SetupIntent with its payment method expanded and requires `status: 'succeeded'` and a `card`. Anything else fails the event before any write, with a logged error; nothing is attached or recorded.
-- **The hosted journey checks the Session Stripe recorded**, and replays Stripe's actual completion event through the signed webhook route, so both checks run against real Stripe.
-- **Evidence.** Nine targeted mutations each fail a case.
-- **The decision is released.** #1326 recorded it (**5399102258** on `e02322f8`; merged `8c999ccf`). It reached production with #1327 through promotion #1328 (`220b95c7`): main CI **37102616298** `test` passed **06:32:10Z**, production assigned **06:32:11.842Z**, trees `22a83f23`, healthy production.
-
-This entry was written before this increment's own checks ran; its local full gate runs on its head before it is pushed, and the next entry records its merge and release.
+**Latest** — 2026-10-03: BUG-310 is resolved and archived ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#verified-closeout--2026-10-03-utc)).
+- **Shipped.** The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved. Paid Checkout keeps dynamic methods.
+- **Merged.** #1329 (**5399437013** on `b3addce5`; merged `d6cf5602`).
+- **Released** through promotion #1331 (`6411d7e8`): main CI **37107592388** `test` passed **08:01:47Z**, production assigned **08:01:50.199Z**, trees `6f4e2ff9`, healthy production.
+- **Re-verified** on `main`'s code before archival: the 27 Stripe adapter suites pass, and the hosted add-card journey passed against real Stripe in TEST mode in every gate since.
+- **What remains.** There are no active bugs.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -461,9 +459,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 ## Active Bugs
 
-| ID | Title | Severity | Status | Summary |
-|----|-------|----------|--------|---------|
-| [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | In Progress | The setup Session kept dynamic payment methods (DEBT-414's recorded choice), so the card flow could save Cash App Pay, Klarna or Amazon Pay as the renewal method. Fixed in code 2026-10-03: cards only on the setup Session, and completion attaches only a succeeded card SetupIntent; resolves once released. |
+There are no active bugs.
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 
@@ -1084,6 +1080,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md) | The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved (`status: 'succeeded'`, a `card` payment method); paid Checkout keeps dynamic methods, as decided | P3 | 2026-10-03 |
 | [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md) | Release guidance states staging's effects, lift precedence and saved-draft grading as the code behaves; the clinical suitability of the withdrawn label is Deferred in the debt register | P3 | 2026-10-02 |
 | [BUG-316](../_archive/bugs/bug-316-content-release-test-resource-cleanup.md) | A failed disposable-database migration leaves nothing behind and keeps both errors; the visibility test cleans up after a failure and waits on its own activation; the combined-error case's race is fixed | P3 | 2026-10-02 |
 | [BUG-315](../_archive/bugs/bug-315-placeholder-prefix-archives-authored-content.md) | Placeholder archival archives only the ten committed fixture QIDs; an authored question whose QID starts with `placeholder-` stays published | P2 | 2026-10-02 |
