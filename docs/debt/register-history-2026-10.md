@@ -2,6 +2,20 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03 UTC: promotion #1335 failed on a race in a test written for DEBT-493 part B, which is now fixed ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+- **The failure.** The availability contract's real-Postgres run lifted a hold with the client clock, at millisecond precision. Within the placement's millisecond, the lift sorted before the database's microsecond `placed_at`, and the lifted-after-placed check refused it. It was a test defect; production lifts use the database's clock.
+- **The fix.** The lift time comes from the row. The fixed file passed fifteen consecutive runs, and a probe confirmed the old form fails in the same millisecond. The cause was documented on #1335 before anything was re-run, and #1335 was closed unmerged.
+- **Merged since the last entry.** #1334 (DEBT-493 part C, **5399950118** on `059b5e27`; merged `97aa3b24`). #1332, #1333, #1334 and this fix are promoted together next.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-492 (fixed in code, resolves once released) and DEBT-493.
+- **Open decisions for the owner.** Unchanged:
+  - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. The recommendation is to bootstrap once DEBT-492, now fixed in code, is released, and the next content import is ready to go through the release path, so the first staged release is real.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
+
 **Earlier** — 2026-10-03 UTC: DEBT-493's part C is fixed in code. Learners now see ADR-022's labels and notices: Withdrawn, Under review or Retired, each with its own notice ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.**
   - A withdrawn or under-review question carries a clinical caution. A retired one carries a neutral notice.
@@ -37,7 +51,7 @@ This entry was written before this increment's own checks ran. Its local full ga
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
 
-**Earlier** — 2026-10-03 UTC: DEBT-492 is fixed in code: the four release gaps to close before the production bootstrap ([DEBT-492](./debt-492-release-safety-before-production-bootstrap.md#fix--2026-10-03)).
+**Earlier** — 2026-10-03 UTC: DEBT-492 is fixed in code: the four release gaps to close before the production bootstrap ([DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md#fix--2026-10-03)).
 - **Staging takes only the pointer.** It no longer locks the bundle's question rows, so learners can start sessions while a stage runs. A real session start under a 2-second lock timeout, made while a stage is paused mid-transaction, timed out before the fix and completes after it.
 - **A revert is named.** Staging refuses a file that would move its question back to an earlier revision, which can undo an answer-key correction, unless the operator names it with `--revert <qid>`. The plan replaces "Publish or move" with "Publish", "Update to a newer revision" and "Revert to an earlier revision"; a rollback is not refused, but its plan names each revert. Activation does not repeat the check, a change from the record's Resolution: a new release must be built on the active release, so staging's check still holds at activation, and the bound plan names every revert.
 - **"Replaces a held revision".** The plan names a question that has an unlifted hold on another revision, while the release changes it.
@@ -95,7 +109,7 @@ This entry was written before this increment's own checks ran. Its local full ga
 
   It settles the three Deferred decisions from DEBT-484 and BUG-317.
 - **[DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md)** (P1) implements ADR-022 in five increments.
-- **[DEBT-492](./debt-492-release-safety-before-production-bootstrap.md)** (P2) records four release gaps to close before the production bootstrap:
+- **[DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md)** (P2) records four release gaps to close before the production bootstrap:
   - staging's row locks can time out learners' session starts;
   - a stale bundle silently reverts a correction;
   - a held question can return with new content unflagged;

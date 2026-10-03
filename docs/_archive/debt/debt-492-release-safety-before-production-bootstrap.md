@@ -1,12 +1,12 @@
 # DEBT-492: Release Safety Gaps to Close Before the Production Bootstrap
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — fixed in code 2026-10-03 ([Fix](#fix--2026-10-03)); resolves once released
+**Status:** Resolved — 2026-10-03; staging takes only the pointer, a revert must be named and is named in the plan, a question that replaces a held revision is named, and the printed activation command carries the decision, promoted and release-verified, with its suites re-run on `main`'s code before archival
 **Priority:** P2
 **Date:** 2026-10-03
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-03
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
@@ -95,9 +95,21 @@ Each gap was closed red first.
 - The command printed by `stage-release.ts` is accepted by `activate-release.ts`'s parser.
 - Each refusal and each new plan line, when removed, fails a case.
 
+## Verified closeout — 2026-10-03 UTC
+
+- **Merged.** #1332 (CodeRabbit **5399706589** on `46e33282`; merged `0c13db5f`).
+- **Released** through promotion #1337 (`c8104a36`), which also carried #1333, #1334 and #1336:
+  - main CI **37115406018**, `test` passed **10:18:42Z**;
+  - production assigned **10:18:44.050Z**;
+  - `main` and `dev` trees `b40af874`;
+  - production health 200 (`{"ok":true,"db":true}`).
+- **An earlier promotion, #1335, was closed unmerged.** Its CI failed on a race in a test written for DEBT-493 (#1333), not on this record's work. #1336 fixed the test.
+- **Re-verified** on `main`'s code before archival: `scripts/content-release/` and its suites are identical on `main`, and the integration lane passes (689, 12 skipped), including `content-release-reverts`, `content-release-reader-locks` and `content-release-builder`.
+- **Not live until the bootstrap.** No production release exists yet, so these protections act from the owner's bootstrap on. The bootstrap no longer waits on this record.
+
 ## Related
 
-- [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md): explicit removals and the plan binding. This record is the same principle (no silent change) applied to revisions and holds.
-- [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md): attributed activations, whose printed command gap 4 fixes.
-- [BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md): content writers serialize on the pointer.
-- [`content-pipeline.md`, Releases](../practice-engine/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold).
+- [DEBT-489](./debt-489-release-removes-omitted-questions.md): explicit removals and the plan binding. This record is the same principle (no silent change) applied to revisions and holds.
+- [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md): attributed activations, whose printed command gap 4 fixes.
+- [BUG-314](../bugs/bug-314-content-hold-withdrawal-deadlock.md): content writers serialize on the pointer.
+- [`content-pipeline.md`, Releases](../../practice-engine/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold).
