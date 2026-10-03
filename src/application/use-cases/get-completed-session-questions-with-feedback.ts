@@ -92,8 +92,6 @@ type ReviewSeed = {
   isOmitted: boolean;
   markedForReview: boolean;
   selectedChoiceId: string | null;
-  /** The learner has an attempt at the item or an answer recorded for it. */
-  attempted: boolean;
 };
 
 function unavailableRow(
@@ -156,7 +154,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
 
     // The learner's own session items, whatever their status now: a question
     // withdrawn since stays reviewable, as bound and marked, where the learner
-    // attempted it (ADR-021 §3).
+    // answered it (ADR-021 §3, ADR-022 Decision 2).
     const questionById = await fetchSessionOwnedQuestionsById(
       this.questions,
       session.questionStates,
@@ -207,7 +205,6 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         isOmitted,
         markedForReview: state.markedForReview,
         selectedChoiceId,
-        attempted: attempt !== undefined || state.latestAnsweredAt !== null,
       });
     }
 
@@ -216,9 +213,10 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       getQuestionId: (row) => row.questionId,
       questionsById: questionById,
       available: (row, question): CompletedSessionQuestionWithFeedbackRow => {
-        // ADR-021 §3: a withdrawn question shows only to a learner who
-        // attempted it; an item left unanswered stays unavailable.
-        if (question.status !== 'published' && !row.attempted) {
+        // ADR-022 Decision 2: a question no longer published shows only to a
+        // learner who answered it; an item left unanswered or omitted stays
+        // unavailable.
+        if (question.status !== 'published' && !row.isAnswered) {
           return unavailableRow(row);
         }
         const shuffledChoices = buildShuffledChoiceViews(

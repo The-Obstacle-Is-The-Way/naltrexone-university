@@ -21,7 +21,7 @@ export type GetPracticeSessionReviewInput = {
 
 export type AvailablePracticeSessionReviewRow = {
   isAvailable: true;
-  /** Withdrawn since the learner attempted it in this ended session (ADR-021 §3). */
+  /** Withdrawn since the learner answered it in this ended session (ADR-021 §3, ADR-022 Decision 2). */
   withdrawn: boolean;
   questionId: string;
   slug: string;
@@ -95,8 +95,9 @@ export class GetPracticeSessionReviewUseCase {
     }
 
     // The learner's own session items as bound, whatever their status now; a
-    // withdrawn one shows only where the learner attempted it and the session
-    // is over (ADR-021 §3).
+    // withdrawn one shows only where the learner answered it and the session
+    // is over (ADR-021 §3). An omitted item is not an answer (ADR-022
+    // Decision 2).
     const questionById = await fetchSessionOwnedQuestionsById(
       this.questions,
       session.questionStates,
@@ -111,7 +112,7 @@ export class GetPracticeSessionReviewUseCase {
       isCorrect: boolean | null;
       isOmitted: boolean;
       markedForReview: boolean;
-      attempted: boolean;
+      answered: boolean;
     };
 
     let answeredCount = 0;
@@ -138,7 +139,7 @@ export class GetPracticeSessionReviewUseCase {
         isCorrect: shouldShowCorrectness ? state.latestIsCorrect : null,
         isOmitted,
         markedForReview: state.markedForReview,
-        attempted: state.latestAnsweredAt !== null,
+        answered: state.latestSelectedChoiceId !== null,
       });
     }
 
@@ -148,7 +149,7 @@ export class GetPracticeSessionReviewUseCase {
       questionsById: questionById,
       available: (row, question): PracticeSessionReviewRow => {
         const withdrawn = question.status !== 'published';
-        if (withdrawn && !(session.endedAt !== null && row.attempted)) {
+        if (withdrawn && !(session.endedAt !== null && row.answered)) {
           return unavailableRow(row);
         }
         return {

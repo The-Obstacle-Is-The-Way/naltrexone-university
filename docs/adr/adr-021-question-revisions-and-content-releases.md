@@ -66,7 +66,7 @@ claim SPEC-007 completion or clinical scoring-policy approval.
 ### 3. Review reads the bound revision, including for withdrawn questions
 
 - History, session review, previous-attempt and bookmark reads resolve content through the attempt's or session state's revision, not through `status = 'published'`.
-- A withdrawn question stays reviewable **by learners who attempted it**, and every such view carries a visible withdrawal notice.
+- A withdrawn question stays reviewable **by learners who attempted it**, and every such view carries a visible withdrawal notice. *([ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) Decision 2 sharpens "attempted" to "answered": an omitted attempt is not an answer.)*
   - This follows medical publishing's retraction practice (COPE): the record stays available and is clearly marked, never silently removed.
   - It needs a documented Pattern Registry entry before the UI lands.
 - Learners who never attempted a withdrawn question never see it.

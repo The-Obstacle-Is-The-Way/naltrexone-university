@@ -5,6 +5,7 @@ import type {
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
 import type { Attempt, Question } from '@/src/domain/entities';
+import { isOmittedOutcome } from '@/src/domain/value-objects';
 
 export type GetQuestionForViewInput = {
   userId: string;
@@ -29,7 +30,8 @@ export type GetQuestionForViewOutput = {
 
 type ReviewedItem = {
   binding: QuestionRevisionBinding;
-  attempted: boolean;
+  /** The learner selected a choice; an omitted attempt is not an answer. */
+  answered: boolean;
 };
 
 type PracticeSessionReader = Pick<
@@ -67,8 +69,9 @@ export class GetQuestionForViewUseCase {
     const question = await this.questions.findByIdForSession(reviewed.binding);
     if (!question) return null;
     const withdrawn = question.status !== 'published';
-    // ADR-021 §3: only a learner who attempted a withdrawn question sees it.
-    if (withdrawn && !reviewed.attempted) return null;
+    // ADR-022 Decision 2: only a learner who answered a question no longer
+    // published sees it.
+    if (withdrawn && !reviewed.answered) return null;
     return {
       question,
       withdrawn,
@@ -83,8 +86,8 @@ export class GetQuestionForViewUseCase {
 
   // The learner's own item under review, or null when they have none. Every
   // read is scoped to the learner, so another learner's ids resolve to null.
-  // An item is attempted when the learner has an attempt at it; an unanswered
-  // item of a finished session is not.
+  // An item is answered when the learner's attempt at it selected a choice;
+  // an omitted attempt and an unanswered item of a finished session are not.
   private async reviewedItem(
     userId: string,
     questionId: string,
@@ -123,7 +126,7 @@ export class GetQuestionForViewUseCase {
       );
       if (session?.mode === 'exam' && session.endedAt === null) return null;
     }
-    return { binding: attempt, attempted: true };
+    return { binding: attempt, answered: !isOmittedOutcome(attempt.outcome) };
   }
 
   // As `GetPreviousAttemptUseCase` resolves a session review: the learner's
@@ -146,6 +149,6 @@ export class GetQuestionForViewUseCase {
     const item = session.questionStates.find(
       (state) => state.questionId === questionId,
     );
-    return item ? { binding: item, attempted: false } : null;
+    return item ? { binding: item, answered: false } : null;
   }
 }
