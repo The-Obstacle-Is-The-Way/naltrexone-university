@@ -3,20 +3,15 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-03 UTC
 
-**Latest** — 2026-10-03 UTC: DEBT-493 increment 4, key corrections. An answer graded on an answer key corrected since leaves every score, its review says so, and the Incorrect filter offers its question again ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
-- **What learners see.**
-  - Reviewing an answer whose key was corrected since, on post-exam review or the review page, shows a caution in place of "This question has been updated": "The answer to this question was corrected after you answered. This attempt isn't scored." It links to the corrected question.
-  - During a session, an item whose key was corrected after the session began says so, and that an answer to it won't be scored.
-  - The session summary, History and Dashboard accuracy leave such answers out, and F-13 names the reason. Rewording a stem or a distractor changes nothing.
-  - The Incorrect filter offers the question again, whatever the answer's stored grade.
-- **How.** The domain's `answerKeyChanged` compares the correct choices' labels and text between the revision an answer was graded on and the current one. The scores join the set of the learner's superseded revisions whose key was corrected, built once per read. Compared row by row, the check tipped the dashboard's read past Postgres's JIT threshold, 42.2 ms against 3.07 ms without it; it now takes 4.86 ms.
-- **Also.** Finalize scores the summary inside its transaction, so a failed read rolls back instead of failing after the commit. CodeRabbit raised it on promotion #1350; it found no stranded session, since the client's retry recovers the summary.
-- **Released since the last entry.** #1348 (the session summary's writer) and #1349 (Review & Submit and the active notice, **5402382182** on `75a0c6b1`; merged `57b0a70d`) went out through promotion #1350 (`953b0bd6`):
-  - main CI **37149290256** `test` passed **20:02:31Z**;
-  - production assigned **20:02:33.800Z**;
-  - trees `832379b8`, healthy production.
-- **Next.** Increment 5, bookmarks and History filters.
-- **What remains Active.** DEBT-414, DEBT-465 and DEBT-493.
+**Latest** — 2026-10-03 UTC: DEBT-495 filed. `braces`' denial-of-service advisory (Dependabot alert #77) has no fixed release, so its risk is accepted with recheck triggers ([DEBT-495](./debt-495-braces-dos-advisory-without-fixed-release.md)).
+- **Why accepted.** Only repository-fixed glob patterns in operator scripts and test scans reach `braces`. Nothing from a request, a learner or the network becomes a glob. No pin or override can close it, since no fixed release exists.
+- **Next for it.** Once this record is on `main`, alert #77 is dismissed as `tolerable_risk` pointing to it, and the record is archived as Accepted, with its recheck triggers in the Deferred table.
+- **Released since the last entry.** #1351 (DEBT-493 increment 4, key corrections, **5402602114** on `1593fd4d`; merged `3e56a7e1`) went out through promotion #1352 (`e45cc86b`):
+  - main CI **37152718792** `test` passed **20:59:35Z**;
+  - production assigned **20:59:37.767Z**;
+  - trees `35e6b826`, healthy production.
+- **Next.** DEBT-493 increment 5, bookmarks and History filters; then DEBT-493 and DEBT-495 close.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-495.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
@@ -24,7 +19,7 @@
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID is DEBT-495.**
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-496.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md), [2026-06](./register-history-2026-06.md).
 
