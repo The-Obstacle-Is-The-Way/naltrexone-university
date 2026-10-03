@@ -89,35 +89,42 @@ export class GetAttemptedQuestionsUseCase {
     ]);
 
     // ADR-021: each row shows the revision its latest attempt answered, and
-    // stays listed once withdrawn, since the learner attempted it (§3).
+    // stays listed once withdrawn, since the learner attempted it (§3). Its
+    // content shows only if that attempt answered it (ADR-022 Decision 2).
     const byBinding = await fetchOwnedQuestionsByBinding(this.questions, page);
+    const unavailable = (
+      attempted: (typeof page)[number],
+    ): AttemptedQuestionRow => ({
+      isAvailable: false,
+      questionId: attempted.questionId,
+      isCorrect: attempted.isCorrect,
+      sessionId: attempted.sessionId,
+      sessionMode: attempted.sessionMode,
+      lastAnsweredAt: attempted.answeredAt.toISOString(),
+    });
 
     const rows = enrichWithQuestion({
       rows: page,
       getQuestionId: (attempted) => attempted.questionId,
       questionsById: byBinding,
       getLookupKey: bindingKey,
-      available: (attempted, question): AttemptedQuestionRow => ({
-        isAvailable: true,
-        withdrawn: question.status !== 'published',
-        questionId: question.id,
-        isCorrect: attempted.isCorrect,
-        sessionId: attempted.sessionId,
-        sessionMode: attempted.sessionMode,
-        slug: question.slug,
-        stemMd: question.stemMd,
-        difficulty: question.difficulty,
-        tagSlugs: question.tags.map((tag) => tag.slug),
-        lastAnsweredAt: attempted.answeredAt.toISOString(),
-      }),
-      unavailable: (attempted): AttemptedQuestionRow => ({
-        isAvailable: false,
-        questionId: attempted.questionId,
-        isCorrect: attempted.isCorrect,
-        sessionId: attempted.sessionId,
-        sessionMode: attempted.sessionMode,
-        lastAnsweredAt: attempted.answeredAt.toISOString(),
-      }),
+      available: (attempted, question): AttemptedQuestionRow =>
+        question.status !== 'published' && attempted.isOmitted
+          ? unavailable(attempted)
+          : {
+              isAvailable: true,
+              withdrawn: question.status !== 'published',
+              questionId: question.id,
+              isCorrect: attempted.isCorrect,
+              sessionId: attempted.sessionId,
+              sessionMode: attempted.sessionMode,
+              slug: question.slug,
+              stemMd: question.stemMd,
+              difficulty: question.difficulty,
+              tagSlugs: question.tags.map((tag) => tag.slug),
+              lastAnsweredAt: attempted.answeredAt.toISOString(),
+            },
+      unavailable,
       logger: this.logger,
       missingQuestionMessage: 'Attempted question references missing question',
     });

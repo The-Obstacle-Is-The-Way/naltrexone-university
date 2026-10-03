@@ -87,12 +87,18 @@ describe('GetPracticeSessionReviewUseCase', () => {
       status: 'archived',
       stemMd: 'Answered stem',
     });
-    function reviewOf(input: { ended: boolean; answered: boolean }) {
+    // `omitted`: an exam finalized the item unanswered, recording it as
+    // omitted and incorrect with an answer time.
+    function reviewOf(input: {
+      ended: boolean;
+      answered: boolean;
+      omitted?: boolean;
+    }) {
       const logger = new FakeLogger();
       const session = createPracticeSession({
         id: 'session-1',
         userId: 'user-1',
-        mode: 'tutor',
+        mode: input.omitted ? 'exam' : 'tutor',
         endedAt: input.ended ? new Date('2026-09-01T00:00:00Z') : null,
         questionIds: ['q1'],
         questionStates: [
@@ -100,10 +106,11 @@ describe('GetPracticeSessionReviewUseCase', () => {
             questionId: 'q1',
             markedForReview: false,
             latestSelectedChoiceId: input.answered ? 'c1' : null,
-            latestIsCorrect: input.answered ? false : null,
-            latestAnsweredAt: input.answered
-              ? new Date('2026-08-31T00:00:00Z')
-              : null,
+            latestIsCorrect: input.answered || input.omitted ? false : null,
+            latestAnsweredAt:
+              input.answered || input.omitted
+                ? new Date('2026-08-31T00:00:00Z')
+                : null,
           },
         ],
       });
@@ -136,6 +143,11 @@ describe('GetPracticeSessionReviewUseCase', () => {
     it.each([
       ['left unanswered in an ended session', { ended: true, answered: false }],
       ['in a session still in progress', { ended: false, answered: true }],
+      // ADR-022 Decision 2: an omitted item is not an answer.
+      [
+        'omitted by an ended exam',
+        { ended: true, answered: false, omitted: true },
+      ],
     ])(
       'stays unavailable, without a missing-question warning, when %s',
       async (_name, input) => {

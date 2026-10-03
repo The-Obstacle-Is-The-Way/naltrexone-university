@@ -39,6 +39,8 @@ export type AttemptedQuestionSummary = {
   questionRevisionId: string;
   answeredAt: Date;
   isCorrect: boolean;
+  /** The latest attempt selected no choice (ADR-022 Decision 2). */
+  isOmitted: boolean;
   sessionId: string | null;
   sessionMode: PracticeMode | null;
 };

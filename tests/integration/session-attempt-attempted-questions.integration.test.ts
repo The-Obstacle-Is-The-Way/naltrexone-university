@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
-import { answeredOutcome } from '@/src/domain/value-objects';
+import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -214,6 +214,56 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       { result: 'incorrect' },
     );
     expect(incorrectOnly.map((m) => m.questionId)).toEqual([q1.id]);
+  });
+
+  // ADR-022 Decision 2: History hides a question no longer published from a
+  // learner whose latest attempt at it was omitted, so the listing says so.
+  it('reports whether each latest attempt was omitted', async () => {
+    const user = await createUser(db, cleanup);
+    const [answered, omitted] = await Promise.all(
+      ['answered', 'omitted'].map((kind) =>
+        createQuestion(db, cleanup, {
+          slug: `it-attempted-${kind}-${randomUUID()}`,
+          status: 'published',
+          difficulty: 'easy',
+        }),
+      ),
+    );
+    if (!answered || !omitted) throw new Error('questions');
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: answered.id,
+      questionRevisionId: answered.revisionId,
+      practiceSessionId: null,
+      outcome: answeredOutcome(answered.incorrectChoiceId),
+      isCorrect: false,
+      timeSpentSeconds: 1,
+    });
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: omitted.id,
+      questionRevisionId: omitted.revisionId,
+      practiceSessionId: null,
+      outcome: omittedOutcome(),
+      isCorrect: false,
+      timeSpentSeconds: 0,
+    });
+
+    const attempted = await attemptRepo.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+    );
+
+    expect(
+      attempted.map(({ questionId, isOmitted }) => ({ questionId, isOmitted })),
+    ).toEqual(
+      expect.arrayContaining([
+        { questionId: answered.id, isOmitted: false },
+        { questionId: omitted.id, isOmitted: true },
+      ]),
+    );
   });
 
   it('supports attempted-question difficulty filter and accurate counts', async () => {
@@ -554,6 +604,7 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
         questionRevisionId: incorrectRevisionId,
         answeredAt: new Date('2026-02-05T00:00:00.000Z'),
         isCorrect: false,
+        isOmitted: false,
         sessionId: null,
         sessionMode: null,
       },

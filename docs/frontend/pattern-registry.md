@@ -187,7 +187,7 @@ group rounded-xl bg-foreground/5
 rounded-xl bg-foreground/5 p-3
 ```
 
-**Used in:** Dashboard unavailable activity rows (question no longer available). After ADR-021 increment 5, a withdrawn question the learner attempted uses F-11 instead.
+**Used in:** Dashboard unavailable activity rows (question no longer available). After ADR-021 increment 5, a withdrawn question the learner answered uses F-11 instead; an omitted attempt is not an answer (ADR-022 Decision 2).
 
 **Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
 
@@ -196,7 +196,7 @@ rounded-xl bg-foreground/5 p-3
 rounded-2xl bg-foreground/[0.08] p-4
 ```
 
-**Used in:** History questions unavailable rows, bookmarks unavailable rows. After ADR-021 increment 5, only for a question the learner never attempted; an attempted withdrawn question uses F-11.
+**Used in:** History questions unavailable rows, bookmarks unavailable rows. After ADR-021 increment 5, only for a question the learner never answered; an answered withdrawn question uses F-11. An omitted attempt is not an answer (ADR-022 Decision 2).
 
 **Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
 
@@ -881,7 +881,7 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 
 **Source:** `app/(app)/app/layout.tsx` (trial countdown banner)
 
-### F-11: Withdrawal Notice (withdrawn question the learner attempted)
+### F-11: Withdrawal Notice (withdrawn question the learner answered)
 
 Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. *(Decided 2026-10-03: [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) replaces this single label with withdrawn, under review and retired, each with its own notice (a caution for the first two); DEBT-493 revises this entry when it ships.)* ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
 
@@ -913,7 +913,7 @@ Marks a question that was withdrawn (its `status` is no longer `published`) afte
   - Exam `Mark for review` is hidden for the item.
 - A question withdrawn while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back withdrawn, shows this notice instead of an error.
 
-**Never attempted** (for example, only bookmarked): unchanged S-2 unavailable row (`[Question no longer available]`). The learner never answered it, so its content is not shown.
+**Never answered** (left unanswered, omitted by an exam's finalization, or only bookmarked): unchanged S-2 unavailable row (`[Question no longer available]`). The learner never answered it, so its content is not shown ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 2; an omitted attempt is not an answer).
 
 **Rules:**
 - Reuses S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`), I-1/I-2 rows and the existing metadata style; no new surface, token or opacity value.

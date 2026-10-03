@@ -10,6 +10,7 @@ import {
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
+import { omittedOutcome } from '@/src/domain/value-objects';
 import {
   type GetQuestionForViewInput,
   GetQuestionForViewUseCase,
@@ -155,6 +156,31 @@ describe('GetQuestionForViewUseCase', () => {
       withdrawn: true,
     });
   });
+
+  // ADR-022 Decision 2: an omitted attempt is not an answer, so it reveals
+  // nothing of a question no longer published.
+  it.each([
+    ['the latest attempt', () => ({})],
+    ['a named session', (sessionId: string) => ({ sessionId })],
+  ] as const)(
+    'shows no withdrawn question for an omitted attempt reached through %s',
+    async (_case, review) => {
+      const { current, answered } = revisions('archived');
+      const session = sessionOver(answered);
+      const omitted = answerOf(answered, {
+        outcome: omittedOutcome(),
+        isCorrect: false,
+        practiceSessionId: session.id,
+      });
+
+      await expect(
+        view([current, answered], {
+          attempts: [omitted],
+          sessions: [session],
+        })(review(session.id)),
+      ).resolves.toBeNull();
+    },
+  );
 
   it('shows the revision the learner answered for a question still published', async () => {
     const { current, answered } = revisions('published');

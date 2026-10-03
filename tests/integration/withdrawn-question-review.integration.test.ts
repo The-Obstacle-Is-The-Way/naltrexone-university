@@ -6,6 +6,7 @@ import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-at
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { FinalizeExamAnswersUseCase } from '@/src/application/use-cases/finalize-exam-answers';
 import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from '@/src/application/use-cases/get-completed-session-questions-with-feedback';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
@@ -595,5 +596,107 @@ describe('ADR-021 §3: an active session reaches a withdrawn item as withdrawn, 
         }),
       });
     }
+  });
+});
+
+// ADR-022 Decision 2: an exam item the learner left unanswered is finalized as
+// an omitted attempt. An omitted attempt is not an answer, so once the
+// question is withdrawn, no read reveals its content: not the stem, the key or
+// the explanation.
+describe('ADR-022 Decision 2: an omitted exam item withdrawn since reveals nothing', () => {
+  it('finalizes an exam with an unanswered item, then hides it from every review once withdrawn', async () => {
+    const question = await createPublishedQuestion('omitted');
+    const user = await createUser(db, cleanup);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    await new FinalizeExamAnswersUseCase(
+      new DrizzleQuestionRepository(db),
+      attempts,
+      sessions,
+      (fn) =>
+        db.transaction((tx) =>
+          fn({
+            questions: new DrizzleQuestionRepository(tx),
+            attempts: new DrizzleAttemptRepository(tx),
+            sessions: new DrizzlePracticeSessionRepository(tx),
+          }),
+        ),
+    ).execute({ userId: user.id, sessionId: session.id });
+    await withdraw(question.id);
+    const questions = new DrizzleQuestionRepository(db);
+    const reader = { userId: user.id, sessionId: session.id };
+
+    const feedback = await new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      sessions,
+      questions,
+      attempts,
+      new FakeLogger(),
+    ).execute(reader);
+    const review = await new GetPracticeSessionReviewUseCase(
+      sessions,
+      questions,
+      new FakeLogger(),
+    ).execute(reader);
+    const history = await new GetAttemptedQuestionsUseCase(
+      attempts,
+      questions,
+      new FakeLogger(),
+    ).execute({ userId: user.id, limit: 10, offset: 0 });
+    const stats = await new GetUserStatsUseCase(
+      attempts,
+      questions,
+      new FakeLogger(),
+    ).execute({ userId: user.id });
+
+    expect(feedback.rows).toEqual([
+      expect.objectContaining({ isAvailable: false, isOmitted: true }),
+    ]);
+    expect(review.rows).toEqual([
+      expect.objectContaining({ isAvailable: false, isOmitted: true }),
+    ]);
+    expect(history.rows).toEqual([
+      expect.objectContaining({ isAvailable: false, questionId: question.id }),
+    ]);
+    expect(stats.recentActivity).toEqual([
+      expect.objectContaining({ isAvailable: false, questionId: question.id }),
+    ]);
+    for (const row of [
+      ...feedback.rows,
+      ...review.rows,
+      ...history.rows,
+      ...stats.recentActivity,
+    ]) {
+      expect(row).not.toHaveProperty('stemMd');
+    }
+    await expect(
+      questionForView().execute({
+        userId: user.id,
+        slug: question.slug,
+        review: { sessionId: session.id },
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      questionForView().execute({
+        userId: user.id,
+        slug: question.slug,
+        review: {},
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      new GetPreviousAttemptUseCase(
+        attempts,
+        questions,
+        new FakeLogger(),
+        sessions,
+      ).execute({ userId: user.id, questionId: question.id }),
+    ).resolves.toBeNull();
   });
 });

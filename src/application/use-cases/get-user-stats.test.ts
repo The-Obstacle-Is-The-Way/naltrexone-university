@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
+import { omittedOutcome } from '@/src/domain/value-objects';
 import {
   FakeAttemptRepository,
   FakeLogger,
@@ -140,6 +141,62 @@ describe('GetUserStatsUseCase', () => {
           difficulty: 'hard',
           isCorrect: true,
         },
+      ],
+    });
+  });
+
+  // ADR-022 Decision 2: an omitted attempt is not an answer.
+  it('shows recent activity omitted on a question withdrawn since as unavailable', async () => {
+    const now = new Date('2026-02-01T12:00:00Z');
+    const withdrawn = createQuestion({
+      id: 'q1',
+      status: 'archived',
+      stemMd: 'Possibly unsafe stem',
+    });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          outcome: omittedOutcome(),
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([withdrawn]),
+      new FakeLogger(),
+      () => now,
+    );
+
+    const { recentActivity } = await useCase.execute({ userId: 'user-1' });
+
+    expect(recentActivity).toEqual([
+      expect.objectContaining({ isAvailable: false, questionId: 'q1' }),
+    ]);
+    expect(recentActivity[0]).not.toHaveProperty('stemMd');
+  });
+
+  it('shows recent activity omitted on a question still published as available', async () => {
+    const now = new Date('2026-02-01T12:00:00Z');
+    const live = createQuestion({ id: 'q1', stemMd: 'Live stem' });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q1',
+          outcome: omittedOutcome(),
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([live]),
+      new FakeLogger(),
+      () => now,
+    );
+
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toMatchObject({
+      recentActivity: [
+        { isAvailable: true, stemMd: 'Live stem', withdrawn: false },
       ],
     });
   });

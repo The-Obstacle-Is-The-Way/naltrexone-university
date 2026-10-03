@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** In Progress — increment 1's first part, Decision 2, fixed in code 2026-10-03 ([Progress](#progress)); the rest open
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -68,6 +68,21 @@ In increments, each test-first.
    - Include the question in the Incorrect filter.
    - Revise Pattern Registry F-12.
 5. **Consistency.** One label on every surface, bookmarks included, and unavailable attempted questions kept under History filters.
+
+## Progress
+
+**Increment 1, part A — Decision 2, 2026-10-03.** An unavailable question's content now shows only to a learner who answered it, using today's status-based availability. It needed no new type, and it closed a live exposure, so it shipped first.
+- **The leak.** Six reads revealed an unavailable question's content on an omitted attempt (an exam item left unanswered and finalized as omitted):
+  - `get-previous-attempt.ts` returned the key and explanation, with no availability check at all;
+  - `get-question-for-view.ts` and `get-completed-session-questions-with-feedback.ts` counted any attempt as "attempted";
+  - `get-practice-session-review.ts` counted the omitted item's recorded answer time;
+  - History and the Dashboard listed the omitted attempt's stem.
+- **The fix.** Each read now requires an answer: a selected choice. History's attempt listing reports `isOmitted` (adapter and fake, each tested). An omitted attempt on a question still published is unchanged.
+- **Evidence.**
+  - A red unit case per read, and cases that an answered attempt still reveals and that a published question stays visible.
+  - A real-Postgres case finalizes an exam with an unanswered item, withdraws the question, and asserts that none of the six reads reveals its stem, key or explanation. It is the first integration case to finalize an exam containing a question withdrawn since.
+  - Each read's fix was red first. Six further targeted mutations each fail a case, two of them only after the published-question cases were added.
+- **Suites split.** The completed-feedback and History suites were at the 800-line limit, so their content-change and filter cases moved, unchanged, to their own files.
 
 ## Verification
 
