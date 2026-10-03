@@ -3,12 +3,12 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-03 UTC
 
-**Latest** — 2026-10-03 UTC: DEBT-492 is resolved and archived ([DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md#verified-closeout--2026-10-03-utc)), and BUG-310 is archived in the bugs register.
-- **What shipped.** Staging takes only the pointer. A revert must be named, and the plan names it. A question that replaces a held revision is named. The printed activation command carries the decision.
-- **Released** through promotion #1337 (`c8104a36`), which also carried DEBT-493 parts B and C and the test fix in #1336: main CI **37115406018** `test` passed **10:18:42Z**, production assigned **10:18:44.050Z**, trees `b40af874`, healthy production. Learners now see ADR-022's labels and notices.
-- **Merged.** #1336 (**5400102185** on `6a0e9dfb`; merged `2efb2b59`). It fixed the test race that closed #1335.
-- **The bootstrap** now waits on nothing in engineering.
-- **What remains Active.** DEBT-414 (one owner decision, below), DEBT-465 and DEBT-493.
+**Latest** — 2026-10-03 UTC: DEBT-493 increment 2 (scoring) begins with its reader step ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+- **Why a reader first.** Decision 3 makes a session's score count only its scored items, so the end and finalize outputs gain `totals.scored`. Those outputs are cached by idempotency key for 24 hours under strict schemas. The reader must accept the new field in production before any writer sends it.
+- **This step.** The schemas accept an optional `scored`, bounded by the question count, with `correct` bounded by it. Both cached shapes parse, and two targeted mutations each fail a case.
+- **Next.** History scores, dashboard accuracy and the session summary's writer, each excluding unavailable items from both numerator and denominator. Then Review & Submit, and Decision 5's sentence.
+- **Merged since the last entry.** #1338 (BUG-310 and DEBT-492 closeouts, **5400466027** on `86b8ffb9`; merged `2269955d`).
+- **What remains Active.** DEBT-414, DEBT-465 and DEBT-493.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
