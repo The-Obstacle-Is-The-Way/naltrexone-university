@@ -48,6 +48,7 @@ describe('view-row factories', () => {
       questionCount: 10,
       firstQuestionSlug: 'q-1',
       answered: 10,
+      scored: 10,
       correct: 9,
       accuracy: 0.8,
       durationSeconds: 1200,

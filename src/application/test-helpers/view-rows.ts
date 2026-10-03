@@ -54,5 +54,7 @@ export function createSessionHistoryRow(
     startedAt: '2026-02-07T00:00:00.000Z',
     endedAt: '2026-02-07T00:20:00.000Z',
     ...overrides,
+    // Every question is published unless a case says otherwise.
+    scored: overrides.scored ?? overrides.questionCount ?? 10,
   };
 }

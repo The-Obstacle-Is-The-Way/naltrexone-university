@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { ErrorCard } from '@/components/error-card';
+import { UnscoredDisclosure } from '@/components/question/unscored-disclosure';
 import { Button } from '@/components/ui/button';
 import {
   tabSwitchContainerClasses,
@@ -178,9 +179,10 @@ export function HistorySessionsTab({
           const isSelected =
             historySessions.selectedSessionId === row.sessionId;
           const endedOn = formatDate(row.endedAt);
-          const fractionDenominator = row.questionCount;
-          const fractionLabel = `${row.correct}/${fractionDenominator}`;
-          const accuracyLabel = formatSessionAccuracy(row.accuracy);
+          // ADR-022 Decision 3: the score is over the scored items only.
+          const fractionLabel = `${row.correct}/${row.scored}`;
+          const accuracyLabel =
+            row.scored > 0 ? formatSessionAccuracy(row.accuracy) : '—';
           const durationLabel = formatSessionDurationDisplay(
             row.durationSeconds,
           );
@@ -269,6 +271,7 @@ export function HistorySessionsTab({
                   />
                 </Button>
               </div>
+              <UnscoredDisclosure count={row.questionCount - row.scored} />
 
               {isSelected ? (
                 /* biome-ignore lint/a11y/useSemanticElements: Spec requires explicit role wiring for disclosure region. */

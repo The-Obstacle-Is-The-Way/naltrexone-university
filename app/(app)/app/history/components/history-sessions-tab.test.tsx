@@ -98,6 +98,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: 'q-1',
             answered: 10,
+            scored: 10,
             correct: 8,
             accuracy: 0.8,
             durationSeconds: 1200,
@@ -136,6 +137,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: 'q-1',
             answered: 10,
+            scored: 10,
             correct: 8,
             accuracy: 0.8,
             durationSeconds: 1200,
@@ -207,6 +209,7 @@ describe('HistorySessionsTab', () => {
       mode: 'exam' as const,
       questionCount: 10,
       answered: 10,
+      scored: 10,
       correct: 8,
       accuracy: 0.8,
       durationSeconds: 1200,
@@ -258,6 +261,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: 'q-1',
             answered: 10,
+            scored: 10,
             correct: 8,
             accuracy: 0.8,
             durationSeconds: 1200,
@@ -307,6 +311,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: null,
             answered: 10,
+            scored: 10,
             correct: 8,
             accuracy: 0.8,
             durationSeconds: 1200,
@@ -419,6 +424,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: null,
             answered: 10,
+            scored: 10,
             correct: 8,
             accuracy: 0.8,
             durationSeconds: 1200,
@@ -447,6 +453,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: 'q-exam',
             answered: 0,
+            scored: 10,
             correct: 0,
             accuracy: 0,
             durationSeconds: 1200,
@@ -476,6 +483,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: 'q-tutor',
             answered: 0,
+            scored: 10,
             correct: 0,
             accuracy: 0,
             durationSeconds: 180,
@@ -505,6 +513,7 @@ describe('HistorySessionsTab', () => {
             questionCount: 10,
             firstQuestionSlug: 'q-long',
             answered: 10,
+            scored: 10,
             correct: 8,
             accuracy: 0.8,
             durationSeconds: 7_230,
@@ -581,5 +590,63 @@ describe('HistorySessionsTab', () => {
 
     expect(html).toContain('data-error-card="true"');
     expect(html).toContain('Unable to load sessions.');
+  });
+
+  // ADR-022 Decision 3: the score counts only scored items, and says how many
+  // it leaves out.
+  it('scores a session over its scored items and discloses the rest', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
+          makeSessionHistoryRow({
+            questionCount: 10,
+            answered: 9,
+            scored: 8,
+            correct: 6,
+            accuracy: 0.75,
+          }),
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const doc = parseHtml(
+      renderToStaticMarkup(<HistorySessionsTab result={result} />),
+    );
+
+    expect(doc.body.textContent).toContain('6/8 correct (75%)');
+    expect(doc.body.textContent).toContain(
+      "2 questions aren't scored: withdrawn, under review, retired, or their answer was corrected.",
+    );
+  });
+
+  it('shows no score when nothing in the session is scored', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [
+          makeSessionHistoryRow({
+            questionCount: 2,
+            answered: 2,
+            scored: 0,
+            correct: 0,
+            accuracy: 0,
+          }),
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      },
+    };
+
+    const doc = parseHtml(
+      renderToStaticMarkup(<HistorySessionsTab result={result} />),
+    );
+
+    expect(doc.body.textContent).toContain('0/0 correct (—)');
+    expect(doc.body.textContent).toContain("2 questions aren't scored");
   });
 });

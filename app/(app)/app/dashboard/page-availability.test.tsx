@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { createSessionHistoryRow } from '@/src/application/test-helpers/view-rows';
 import type { UserStatsOutput } from '@/src/application/use-cases';
 
 let DashboardView: typeof import('./page').DashboardView;
@@ -74,5 +75,46 @@ describe('Dashboard recent activity: question availability', () => {
       '[Question no longer available]',
     );
     expect(doc.querySelectorAll('a[href*="q-held"]')).toHaveLength(0);
+  });
+
+  // ADR-022 Decision 3: a recent session's score counts only scored items.
+  it('scores a recent session over its scored items and discloses the rest', () => {
+    const doc = new DOMParser().parseFromString(
+      renderToStaticMarkup(
+        <DashboardView
+          stats={{
+            totalAnswered: 0,
+            accuracyOverall: 0,
+            answeredLast7Days: 0,
+            accuracyLast7Days: 0,
+            currentStreakDays: 0,
+            recentActivity: [],
+          }}
+          sessionHistoryResult={{
+            ok: true,
+            data: {
+              rows: [
+                createSessionHistoryRow({
+                  questionCount: 4,
+                  answered: 4,
+                  scored: 3,
+                  correct: 2,
+                  accuracy: 2 / 3,
+                }),
+              ],
+              total: 1,
+              limit: 3,
+              offset: 0,
+            },
+          }}
+        />,
+      ),
+      'text/html',
+    );
+
+    expect(doc.body.textContent).toContain('2/3 correct');
+    expect(doc.body.textContent).toContain(
+      "1 question isn't scored: withdrawn, under review, retired, or its answer was corrected.",
+    );
   });
 });

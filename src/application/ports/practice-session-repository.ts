@@ -15,7 +15,13 @@ export type CompletedPracticeSessionHistorySummary = {
   questionCount: number;
   firstQuestionSlug: string | null;
   answered: number;
-  correct: number;
+  /**
+   * The items that count toward the session's score: those whose question is
+   * published when this is read (ADR-022 Decision 3).
+   */
+  scored: number;
+  /** The scored items answered correctly. */
+  scoredCorrect: number;
   startedAt: Date;
   endedAt: Date;
 };
