@@ -11,8 +11,10 @@ import {
   createCleanupState,
   createIntegrationDb,
   createQuestion,
+  createTag,
   createUser,
 } from './helpers';
+import { setQuestionState } from './question-state-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -167,4 +169,71 @@ describe('attempted-question filters against real Postgres', () => {
       ).resolves.toBe(1);
     },
   );
+
+  // DEBT-493 increment 5, ADR-022 Decision 1: a question no longer available
+  // keeps its place in History under a difficulty or tag filter, by the
+  // revision answered and its tags, as it does unfiltered.
+  it('keeps a question no longer available under difficulty and tag filters, and sorts it by the difficulty answered', async () => {
+    const user = await createUser(db, cleanup);
+    const tag = await createTag(db, cleanup, {
+      slug: `it-attempt-filter-tag-${randomUUID()}`,
+      kind: 'topic',
+    });
+    const [withdrawn, kept, easy] = await Promise.all(
+      (['hard', 'hard', 'easy'] as const).map((difficulty) =>
+        createQuestion(db, cleanup, {
+          slug: `it-attempt-filter-${randomUUID()}`,
+          status: 'published',
+          difficulty,
+          tagIds: [tag.id],
+        }),
+      ),
+    );
+    if (!withdrawn || !kept || !easy) throw new Error('questions');
+    for (const [current, day] of [
+      [easy, '2026-01-01'],
+      [kept, '2026-01-02'],
+      [withdrawn, '2026-01-03'],
+    ] as const) {
+      await answer({
+        userId: user.id,
+        question: current,
+        isCorrect: true,
+        sessionId: null,
+        answeredAt: new Date(`${day}T00:00:00Z`),
+      });
+    }
+    await setQuestionState(db, withdrawn, 'withdrawn');
+
+    for (const filters of [
+      { difficulty: 'hard' as const },
+      { tagSlug: tag.slug },
+      { difficulty: 'hard' as const, tagSlug: tag.slug },
+    ]) {
+      const expected =
+        'difficulty' in filters
+          ? [withdrawn.id, kept.id]
+          : [withdrawn.id, kept.id, easy.id];
+      await expect(
+        attempts.listAttemptedQuestionsByUserId(user.id, 10, 0, filters),
+      ).resolves.toEqual(
+        expected.map((questionId) => expect.objectContaining({ questionId })),
+      );
+      await expect(
+        attempts.countAttemptedQuestionsByUserId(user.id, filters),
+      ).resolves.toBe(expected.length);
+    }
+
+    const byDifficulty = await attempts.listAttemptedQuestionsByUserId(
+      user.id,
+      10,
+      0,
+      { sort: 'difficulty' },
+    );
+    expect(byDifficulty.map((row) => row.questionId)).toEqual([
+      withdrawn.id,
+      kept.id,
+      easy.id,
+    ]);
+  });
 });

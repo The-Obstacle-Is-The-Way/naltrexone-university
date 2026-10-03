@@ -122,14 +122,11 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       conditions.push(eq(practiceSessions.mode, sourceFilter));
     }
 
+    // DEBT-493 increment 5: difficulty is the revision answered's and tags are
+    // the question's, whatever its state now, so a question no longer
+    // available keeps its place under a filter, as it does unfiltered.
     const difficulty = filters?.difficulty ?? null;
     const tagSlug = filters?.tagSlug ?? null;
-    if (difficulty || tagSlug) {
-      // Attempted-question difficulty/tags are derived from published question metadata.
-      // This matches History's available-row semantics (unpublished questions have no metadata).
-      conditions.push(eq(questions.status, 'published'));
-    }
-
     if (difficulty) {
       conditions.push(eq(answeredRevision.difficulty, difficulty));
     }
@@ -176,8 +173,8 @@ export class DrizzleAttemptRepository implements AttemptRepository {
 
     return [
       asc(sql<number>`CASE
-        WHEN ${questions.status} = 'published' AND ${answeredRevision.difficulty} = 'hard' THEN 0
-        WHEN ${questions.status} = 'published' AND ${answeredRevision.difficulty} = 'medium' THEN 1
+        WHEN ${answeredRevision.difficulty} = 'hard' THEN 0
+        WHEN ${answeredRevision.difficulty} = 'medium' THEN 1
         ELSE 2
       END`),
       ...byRecency,

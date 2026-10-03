@@ -360,8 +360,8 @@ export class FakeAttemptRepository implements AttemptRepository {
 
     return filteredBySource.filter((attempt) => {
       const question = this.answeredQuestion(attempt);
+      // DEBT-493 increment 5: whatever the question's state, as the adapter.
       if (!question) return false;
-      if (question.status !== 'published') return false;
 
       if (difficulty && question.difficulty !== difficulty) return false;
       if (tagSlug && !question.tags.some((tag) => tag.slug === tagSlug))
@@ -409,10 +409,7 @@ export class FakeAttemptRepository implements AttemptRepository {
 
   private getDifficultySortRank(attempt: InMemoryAttempt): number {
     const question = this.answeredQuestion(attempt);
-    const difficulty =
-      question && question.status === 'published'
-        ? question.difficulty
-        : 'easy';
+    const difficulty = question?.difficulty ?? 'easy';
     if (difficulty === 'hard') return 0;
     if (difficulty === 'medium') return 1;
     return 2;
