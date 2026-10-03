@@ -52,8 +52,14 @@ export type ActivationPlan = {
   id: string;
   /** Questions that leave the bank. */
   archive: string[];
-  /** Questions published, or moved to another revision. */
-  changed: string[];
+  /** Questions published that are not live now (DEBT-492: split by kind). */
+  publish: string[];
+  /** Live questions moved to a newer revision. */
+  update: string[];
+  /** Questions moved back to an earlier revision than their current one. */
+  revert: string[];
+  /** Items whose question has an unlifted hold on another revision. */
+  replacesHeld: string[];
   /** Questions withdrawn for good. */
   withdraw: string[];
   /** Items left out because their revision has an unlifted hold. */
@@ -411,17 +417,32 @@ export async function activateRelease(
     const withdrawn = withdrawnIds.size;
 
     // The plan: what the statements below will do, under the same locks.
+    // DEBT-492: each change is named by kind. A revert is a move to a lower
+    // revision number than the question's current one, whatever its status;
+    // a hold binds one revision, so an item can replace a held revision.
     const publishing = await tx.execute<{
       question_id: string;
       question_revision_id: string;
       slug: string;
-      changed: boolean;
+      change: 'publish' | 'update' | 'revert' | null;
+      replaces_held: boolean;
     }>(sql`
       SELECT i.question_id, i.question_revision_id, q.slug,
-        (q.status <> 'published'
-          OR q.current_revision_id <> i.question_revision_id) AS changed
+        CASE
+          WHEN ir.revision_number < cr.revision_number THEN 'revert'
+          WHEN q.status <> 'published' THEN 'publish'
+          WHEN q.current_revision_id <> i.question_revision_id THEN 'update'
+        END AS change,
+        EXISTS (
+          SELECT 1 FROM question_holds h
+          WHERE h.question_id = i.question_id
+            AND h.lifted_at IS NULL
+            AND h.question_revision_id <> i.question_revision_id
+        ) AS replaces_held
       FROM content_release_items i
       JOIN questions q ON q.id = i.question_id
+      JOIN question_revisions ir ON ir.id = i.question_revision_id
+      LEFT JOIN question_revisions cr ON cr.id = q.current_revision_id
       WHERE i.release_id = ${release.id} AND ${ELIGIBLE}
       ORDER BY i.question_id
     `);
@@ -470,7 +491,12 @@ export async function activateRelease(
     const plan: ActivationPlan = {
       id: planId,
       archive: bySlug(archiving),
-      changed: bySlug(publishing.filter((row) => row.changed)),
+      publish: bySlug(publishing.filter((row) => row.change === 'publish')),
+      update: bySlug(publishing.filter((row) => row.change === 'update')),
+      revert: bySlug(publishing.filter((row) => row.change === 'revert')),
+      replacesHeld: bySlug(
+        publishing.filter((row) => row.change !== null && row.replaces_held),
+      ),
       withdraw: bySlug(withdrawing),
       excludedHeld: bySlug(excluded.filter((row) => !row.withdrawn)),
       excludedWithdrawn: bySlug(excluded.filter((row) => row.withdrawn)),

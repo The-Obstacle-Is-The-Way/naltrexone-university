@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open
+**Status:** In Progress — fixed in code 2026-10-03 ([Fix](#fix--2026-10-03)); resolves once released
 **Priority:** P2
 **Date:** 2026-10-03
 **Resolved:** —
@@ -60,10 +60,37 @@ Red tests first for each.
 3. **A held question returning with new content is named.** The plan lists "Replaces a held revision" for any item whose question has an unlifted hold on another revision. The operator approves it knowingly, through the plan.
 4. **The printed activation command includes `--reason "<why>" --authority "<who>"`.**
 
+## Fix — 2026-10-03
+
+Each gap was closed red first.
+
+1. **Staging takes only the pointer.**
+   - `stageReleaseFromFiles` no longer locks the bundle's question rows. Its remaining writes to existing questions are revisions, choices and tags, whose foreign keys take only `FOR KEY SHARE`, which a session start's `FOR SHARE` does not conflict with.
+   - The new reader-lock case pauses a stage mid-transaction, after every lock it takes, and starts a real learner session on the bundle's questions with a 2-second lock timeout. Before the fix, the session start timed out with `canceling statement due to lock timeout`; now it completes while the stage is still paused. The BUG-314 concurrency cases stay green.
+2. **A revert is named.**
+   - Staging refuses a published file whose revision is older than its question's current one, naming each such question. `--revert <qid>` allows it, and staging refuses a `--revert` for a question the bundle does not move back.
+   - The plan replaces "Publish or move" with three lines: "Publish" (not live now), "Update to a newer revision" and "Revert to an earlier revision". A revert is a lower revision number than the question's current one, whatever its status, so a held or rolled-back question is named too. A rollback is not refused, but its plan names each revert.
+   - **Activation does not repeat the check, a change from the Resolution above.** A release never active before must be built on the active release (`STALE_RELEASE`), and only staging creates releases. So the revisions a release names, relative to what is live, are those staging checked. The manifest would also have to record which reverts were named, a format change that adds no protection. The bound plan, which now names every revert, is the remaining safeguard.
+3. **"Replaces a held revision".** The plan lists an item whose question has an unlifted hold on another revision. It is listed only while the release changes that question, so a dormant hold on a superseded revision is not named again.
+4. **The printed command** includes `--reason "<why>" --authority "<who>"`. A case parses it with `activate-release.ts`'s parser.
+
+**Evidence.**
+- `content-release-reverts` holds gaps 2 and 3's eleven cases. Gap 1's case is in `content-release-reader-locks`, and gap 4's in `content-release-builder`.
+- Eleven targeted mutations each fail a case:
+  - the restored row lock;
+  - the unnamed-revert refusal and the named-revert validation;
+  - `<` widened to `<=`;
+  - the order of the revert and publish branches;
+  - the replaced-hold revision comparison, its unlifted condition and its changed-only filter;
+  - the revert line's label;
+  - `--revert` passed through the stage command;
+  - the printed decision flags.
+- The first mutation run left the branch order and the unlifted condition alive. Two cases were added (a revert of a held question, and a lifted hold on another revision), and both mutants now fail.
+
 ## Verification
 
 - A session-start lock succeeds while a stage is in progress. Restoring the row lock fails that case.
-- Staging refuses an unnamed revert and stages a named one. Activation refuses an unnamed revert in a new release and allows a rollback.
+- Staging refuses an unnamed revert and stages a named one. A rollback is allowed and its plan names each revert. (Activation does not repeat the check; see Fix.)
 - The preview names reverts, updates and replaced held revisions separately.
 - The command printed by `stage-release.ts` is accepted by `activate-release.ts`'s parser.
 - Each refusal and each new plan line, when removed, fails a case.

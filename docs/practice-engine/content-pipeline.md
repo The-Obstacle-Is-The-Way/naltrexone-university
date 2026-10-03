@@ -318,10 +318,12 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootst
   --reason "Why" --authority "Who" --plan "<plan-id>" --apply
 # Stage the MDX bundle as a release on the active release. Every question the
 # active release names must appear in the bundle unless it is withdrawn; name
-# one whose file is absent on purpose with --remove.
+# one whose file is absent on purpose with --remove, and one whose file moves
+# it back to an earlier revision on purpose with --revert.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts --apply
 # Preview its activation: it prints the plan id, every question it archives,
-# publishes or moves and withdraws, and the items a hold or withdrawal leaves out.
+# publishes, updates, reverts or withdraws, any that replace a held revision,
+# and the items a hold or withdrawal leaves out.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
 # Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
@@ -341,9 +343,9 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 - **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `archived`, or the withdrawal command, for content that must never return.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
-- **The check guards removals only.** A stale file whose content matches an earlier revision moves its question *back* to that revision, which can undo an answer-key correction. The plan lists it only under "Publish or move", which does not tell a revert from an edit. Until [DEBT-492](../debt/debt-492-release-safety-before-production-bootstrap.md) makes reverts explicit, stage only from the newest approved bundle and check every name in that list. A rollback likewise restores earlier revisions, and archives questions added since.
+- **A revert is named ([DEBT-492](../debt/debt-492-release-safety-before-production-bootstrap.md)).** A file whose content matches an earlier revision moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so it is not refused, but its plan names each revert; it also archives questions added since.
 
-**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
+**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
 
 **Applying is bound to the reviewed plan.** The plan id covers:
 - the release and the release it replaces;
@@ -359,7 +361,7 @@ Activation recomputes the plan under its own locks and refuses a different one. 
 - **Holds.** A hold's or a lift's re-application of the active release records the hold's own decision.
 - **The plan.** The plan id does not include the decision, so the same transition keeps the same plan whatever its reason.
 
-A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. **A hold binds the revision, not the question:** a release that names a *different* revision of a held question publishes it, listed under "Publish or move" (DEBT-492 adds a named line for it). To keep a question out whatever its content, withdraw it. Holds and lifts re-apply the active release without a plan check; their preview prints counts. While no release is active, a hold would change nothing, so the command refuses. To take a question out temporarily before the bootstrap, set its file to `draft` and seed; withdraw only if it must never return.
+A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. **A hold binds the revision, not the question:** a release that names a *different* revision of a held question publishes it, and its plan names it under "Replaces a held revision" (DEBT-492). To keep a question out whatever its content, withdraw it. Holds and lifts re-apply the active release without a plan check; their preview prints counts. While no release is active, a hold would change nothing, so the command refuses. To take a question out temporarily before the bootstrap, set its file to `draft` and seed; withdraw only if it must never return.
 
 ---
 
