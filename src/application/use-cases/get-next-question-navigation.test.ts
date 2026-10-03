@@ -402,12 +402,17 @@ describe('GetNextQuestionUseCase', () => {
     );
   });
 
-  // ADR-021 §3 and Pattern Registry F-11: a question withdrawn after the
-  // session began is returned as withdrawn, with its place in the session and
-  // none of its content, so the page can say so and move on.
-  describe('an item whose question was withdrawn since the session began', () => {
-    function withdrawnItemDeps() {
-      const withdrawn = createQuestion({
+  // ADR-021 §3, ADR-022 Decision 5 and Pattern Registry F-11: a question
+  // that became unavailable after the session began is returned as
+  // unavailable, with its state, its place in the session and none of its
+  // content, so the page can say so and move on.
+  describe('an item whose question became unavailable since the session began', () => {
+    function unavailableItemDeps(
+      overlay?: NonNullable<
+        Parameters<typeof createTestDeps>[0]
+      >['questionOverlay'],
+    ) {
+      const unavailable = createQuestion({
         id: 'q2',
         status: 'archived',
         choices: [createChoice({ id: 'c2', questionId: 'q2' })],
@@ -424,12 +429,16 @@ describe('GetNextQuestionUseCase', () => {
         ],
       });
       return createTestDeps({
-        questions: [createSingleChoiceQuestion('q1', 'c1'), withdrawn],
+        questions: [createSingleChoiceQuestion('q1', 'c1'), unavailable],
+        questionOverlay: overlay,
         sessions: [session],
       });
     }
-    const withdrawnItem = {
-      withdrawn: true,
+    // Unanswered, so it would not count if the session ended now.
+    const unavailableItem = (availability: string) => ({
+      unavailable: true,
+      availability,
+      countsIfEndedNow: false,
       questionId: 'q2',
       session: {
         sessionId: SESSION_ID,
@@ -439,30 +448,58 @@ describe('GetNextQuestionUseCase', () => {
         deadlineAt: null,
         isMarkedForReview: true,
       },
-    };
-
-    it('is returned without its content when the next unanswered item', async () => {
-      const { getNextQuestion } = withdrawnItemDeps();
-
-      await expect(
-        getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
-      ).resolves.toEqual(withdrawnItem);
     });
+    const revisionId = createQuestion({ id: 'q2' }).revisionId;
 
-    it('is refused by the answerable-question narrowing in tests', async () => {
-      const { getNextQuestion } = withdrawnItemDeps();
-      const output = await getNextQuestion.execute({
-        userId: USER_ID,
-        sessionId: SESSION_ID,
+    it.each([
+      [
+        'withdrawn',
+        { withdrawals: [{ questionId: 'q2', questionRevisionId: revisionId }] },
+      ],
+      [
+        'under_review',
+        {
+          holds: [
+            { questionId: 'q2', questionRevisionId: revisionId, lifted: false },
+          ],
+        },
+      ],
+      ['retired', undefined],
+    ] as const)(
+      'is returned %s, without its content, when the next unanswered item',
+      async (availability, overlay) => {
+        const { getNextQuestion } = unavailableItemDeps(overlay);
+
+        await expect(
+          getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+        ).resolves.toEqual(unavailableItem(availability));
+      },
+    );
+
+    // ADR-022 Amendment: a tutor answer given before the question was retired
+    // keeps its fair chance, so the item still counts.
+    it('says a tutor answer already given on a retired question still counts', async () => {
+      const retired = createQuestion({
+        id: 'q2',
+        status: 'archived',
+        choices: [createChoice({ id: 'c2', questionId: 'q2' })],
       });
-
-      expect(() => answerableQuestion(output)).toThrow(
-        'Expected an answerable question, got a withdrawn item',
-      );
-    });
-
-    it('is returned without its content when requested by id', async () => {
-      const { getNextQuestion } = withdrawnItemDeps();
+      const { getNextQuestion } = createTestDeps({
+        questions: [createSingleChoiceQuestion('q1', 'c1'), retired],
+        sessions: [
+          createPracticeSession({
+            questionIds: ['q1', 'q2'],
+            questionStates: [
+              createQuestionState('q1'),
+              createQuestionState('q2', {
+                latestSelectedChoiceId: 'c2',
+                latestIsCorrect: true,
+                latestAnsweredAt: ANSWERED_AT,
+              }),
+            ],
+          }),
+        ],
+      });
 
       await expect(
         getNextQuestion.execute({
@@ -470,7 +507,35 @@ describe('GetNextQuestionUseCase', () => {
           sessionId: SESSION_ID,
           questionId: 'q2',
         }),
-      ).resolves.toEqual(withdrawnItem);
+      ).resolves.toMatchObject({
+        unavailable: true,
+        availability: 'retired',
+        countsIfEndedNow: true,
+      });
+    });
+
+    it('is refused by the answerable-question narrowing in tests', async () => {
+      const { getNextQuestion } = unavailableItemDeps();
+      const output = await getNextQuestion.execute({
+        userId: USER_ID,
+        sessionId: SESSION_ID,
+      });
+
+      expect(() => answerableQuestion(output)).toThrow(
+        'Expected an answerable question, got an unavailable item',
+      );
+    });
+
+    it('is returned without its content when requested by id', async () => {
+      const { getNextQuestion } = unavailableItemDeps();
+
+      await expect(
+        getNextQuestion.execute({
+          userId: USER_ID,
+          sessionId: SESSION_ID,
+          questionId: 'q2',
+        }),
+      ).resolves.toEqual(unavailableItem('retired'));
     });
   });
 

@@ -22,6 +22,8 @@ function createNavigator(
     mode: 'exam',
     totalCount: rows.length,
     answeredCount: rows.filter((row) => row.isAnswered).length,
+    scoredUnansweredCount:
+      rows.length - rows.filter((row) => row.isAnswered).length,
     markedCount: rows.filter((row) => row.markedForReview).length,
     rows,
   };

@@ -35,6 +35,7 @@ import type {
 import type {
   GetNextQuestionOutput,
   NextQuestion,
+  UnavailableSessionQuestion,
 } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -73,8 +74,11 @@ export async function loadNextQuestion(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
-  /** The current item when its question was withdrawn since the session began. */
-  setWithdrawnQuestionId: (questionId: string | null) => void;
+  /**
+   * The current item when its question became unavailable since the session
+   * began (ADR-022 Decision 5).
+   */
+  setUnavailableItem: (item: UnavailableSessionItem | null) => void;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
@@ -98,15 +102,19 @@ export async function loadNextQuestion(input: {
     setSubmitResult: input.setSubmitResult,
     setSubmitRequestToken: input.setSubmitRequestToken,
     setQuestionLoadedAt: input.setQuestionLoadedAt,
-    // ADR-021 §3: a withdrawn item has its place in the session but no
+    // ADR-021 §3: an unavailable item has its place in the session but no
     // content, so it is recorded apart from the question (Pattern Registry F-11).
     setQuestion: (loaded) => {
-      if (loaded && 'withdrawn' in loaded) {
-        input.setWithdrawnQuestionId(loaded.questionId);
+      if (loaded && 'unavailable' in loaded) {
+        input.setUnavailableItem({
+          questionId: loaded.questionId,
+          availability: loaded.availability,
+          countsIfEndedNow: loaded.countsIfEndedNow,
+        });
         input.setQuestion(null);
         return;
       }
-      input.setWithdrawnQuestionId(null);
+      input.setUnavailableItem(null);
       input.setQuestion(loaded);
     },
     onLoaded: (loaded) => {
@@ -136,7 +144,7 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
-  setWithdrawnQuestionId: (questionId: string | null) => void;
+  setUnavailableItem: (item: UnavailableSessionItem | null) => void;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
@@ -153,15 +161,22 @@ export function createLoadNextQuestionAction(input: {
 }
 
 /** What a session needs to reload its current item (ADR-021 §3). */
+/** An active session's item whose question became unavailable (F-11). */
+export type UnavailableSessionItem = Pick<
+  UnavailableSessionQuestion,
+  'questionId' | 'availability' | 'countsIfEndedNow'
+>;
+
 export type SessionQuestionReload = Omit<
   Parameters<typeof loadNextQuestion>[0],
   'questionId' | 'fromIndex'
 >;
 
-// ADR-021 §3: a not-found answer may mean the question was withdrawn while it
-// was open. Ask for the item first; only if it comes back withdrawn does the
-// page load it, so any other not-found answer keeps its error untouched.
-async function reloadWithdrawnQuestion(
+// ADR-021 §3: a not-found answer may mean the question became unavailable
+// while it was open. Ask for the item first; only if it comes back unavailable
+// does the page load it, so any other not-found answer keeps its error
+// untouched.
+async function reloadUnavailableQuestion(
   reload: SessionQuestionReload,
   questionId: string,
 ): Promise<boolean> {
@@ -174,7 +189,7 @@ async function reloadWithdrawnQuestion(
   } catch {
     return false;
   }
-  if (!probe.ok || !probe.data || !('withdrawn' in probe.data)) return false;
+  if (!probe.ok || !probe.data || !('unavailable' in probe.data)) return false;
   await loadNextQuestion({ ...reload, questionId });
   return true;
 }
@@ -249,7 +264,7 @@ export async function submitAnswerForQuestion(input: {
     },
     recoverEndedSessionConflict: input.recoverEndedSessionConflict,
     recoverQuestionNotFound: reload
-      ? () => reloadWithdrawnQuestion(reload, fingerprintQuestionId)
+      ? () => reloadUnavailableQuestion(reload, fingerprintQuestionId)
       : undefined,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,

@@ -28,6 +28,7 @@ test('renders Previous button in the session answering branch', async () => {
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
+        scoredUnansweredCount: 2,
         markedCount: 0,
         rows: [
           {
@@ -108,6 +109,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
+        scoredUnansweredCount: 2,
         markedCount: 0,
         rows: [
           {
@@ -282,6 +284,7 @@ test('routes the last exam-question footer Review & Submit button through onEndS
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           createReviewRow({
@@ -346,6 +349,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
+        scoredUnansweredCount: 2,
         markedCount: 0,
         rows: [
           {
@@ -429,6 +433,7 @@ test('routes the last tutor-question footer End session button through onEndSess
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -526,6 +531,7 @@ test('clicking Next in a completed session navigates to the next available quest
         mode: 'tutor',
         totalCount: 4,
         answeredCount: 4,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           createReviewRow({
@@ -620,6 +626,7 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
         mode: 'tutor',
         totalCount: 3,
         answeredCount: 1,
+        scoredUnansweredCount: 2,
         markedCount: 0,
         rows: [
           createReviewRow({
@@ -707,6 +714,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 0,
+        scoredUnansweredCount: 2,
         markedCount: 0,
         rows: [
           {

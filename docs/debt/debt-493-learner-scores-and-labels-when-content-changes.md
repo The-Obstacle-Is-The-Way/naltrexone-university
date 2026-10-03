@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice) ([Progress](#progress)); increments 4 and 5 remain
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -160,6 +160,12 @@ In increments, each test-first.
   - two after a second question is held and a third retired;
   - three once both holds lift, since the item held before submission never had a fair chance.
 - **Fixtures.** Existing summary fixtures carry `scored` equal to their question count: every item in them counts, as before. Two deliberately invalid fixtures keep one invalid field. The finalize cases whose question leaves the bank before submission give the session fake the same bank state, so the item is graded but not scored.
+
+**Increment 2 revised, step 4: Review & Submit and the active notice (increment 3 and part E), 2026-10-03.** All three scores now follow the amended rule, so Decision 5's sentence is true where it is shown.
+- **The prediction.** The domain's `countsIfEndedNow` says whether an active session's item would count if the session ended now: the fair chance its end would record, and its content not in doubt.
+- **Review & Submit.** The review output's `scoredUnansweredCount` counts the unanswered items that would count, and the submit warning names only those. An item that would not count is listed as "Won't be scored".
+- **The active notice.** An item whose question became unavailable during the session comes back as `unavailable`, with its state and `countsIfEndedNow`, in place of the `withdrawn` marker, which misnamed a held or retired question. The notice names the state: withdrawn, placed under review, or retired from the bank, "after your session began". It adds "It won't count toward your score." unless the item still counts, as a tutor answer already given on a question retired since does.
+- **Evidence.** Mutations across the review count, the row marker, the warning, the marker's state and prediction, the page logic, the page view and the notice; each fails a case. Three survived the first run: a warning with unanswered but no scored items, and the prediction carried through the page logic and the page view. Cases now cover each.
 
 ## Verification
 

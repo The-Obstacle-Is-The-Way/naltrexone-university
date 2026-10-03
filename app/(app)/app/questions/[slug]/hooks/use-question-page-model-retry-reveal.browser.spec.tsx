@@ -44,6 +44,7 @@ describe('useQuestionPageModel (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -152,6 +153,7 @@ describe('useQuestionPageModel (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [
           {

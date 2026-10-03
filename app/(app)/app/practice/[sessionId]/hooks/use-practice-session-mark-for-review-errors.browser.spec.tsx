@@ -36,6 +36,7 @@ const initialReview: GetPracticeSessionReviewOutput = {
   mode: 'exam',
   totalCount: 1,
   answeredCount: 0,
+  scoredUnansweredCount: 0,
   markedCount: 0,
   rows: [
     {

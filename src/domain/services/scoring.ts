@@ -74,3 +74,19 @@ export function hadFairChanceAtEnd(input: {
     (input.mode === 'tutor' && input.answered)
   );
 }
+
+/**
+ * An active session's item, as it would count if the session ended now
+ * (ADR-022 Decision 5, as amended): the fair chance its end would record, and
+ * its content not in doubt. Review & Submit and the active notice use it.
+ */
+export function countsIfEndedNow(input: {
+  mode: PracticeMode;
+  answered: boolean;
+  availability: QuestionAvailability | null;
+}): boolean {
+  return countsTowardScore({
+    fairChanceAtEnd: hadFairChanceAtEnd(input),
+    availability: input.availability,
+  });
+}

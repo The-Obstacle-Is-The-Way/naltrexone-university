@@ -27,12 +27,13 @@ import {
 export const USER_ID = 'user-1';
 
 // A read that returned an answerable question (or none), not an item whose
-// question was withdrawn since the session began (ADR-021 §3).
+// question became unavailable since the session began (ADR-021 §3,
+// ADR-022 Decision 5).
 export function answerableQuestion(
   output: GetNextQuestionOutput,
 ): NextQuestion | null {
-  if (output && 'withdrawn' in output) {
-    throw new Error('Expected an answerable question, got a withdrawn item');
+  if (output && 'unavailable' in output) {
+    throw new Error('Expected an answerable question, got an unavailable item');
   }
   return output;
 }
@@ -45,6 +46,7 @@ export const EMPTY_FILTERS: QuestionFilters = {
 
 type TestDepsOverrides = {
   questions?: ConstructorParameters<typeof FakeQuestionRepository>[0];
+  questionOverlay?: ConstructorParameters<typeof FakeQuestionRepository>[1];
   attempts?: ConstructorParameters<typeof FakeAttemptRepository>[0];
   sessions?: ConstructorParameters<typeof FakePracticeSessionRepository>[0];
   now?: () => Date;
@@ -54,7 +56,10 @@ type TestDepsOverrides = {
 };
 
 export function createTestDeps(overrides: TestDepsOverrides = {}) {
-  const questionRepo = new FakeQuestionRepository(overrides.questions ?? []);
+  const questionRepo = new FakeQuestionRepository(
+    overrides.questions ?? [],
+    overrides.questionOverlay,
+  );
   const attemptRepo = new FakeAttemptRepository(overrides.attempts ?? []);
   const sessionRepo = new FakePracticeSessionRepository(
     overrides.sessions ?? [],

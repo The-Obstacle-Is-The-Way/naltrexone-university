@@ -86,6 +86,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -149,6 +150,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -226,6 +228,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           mode: 'tutor',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -294,6 +297,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -346,6 +350,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {

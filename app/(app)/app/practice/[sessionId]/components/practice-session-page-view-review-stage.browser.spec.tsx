@@ -19,6 +19,7 @@ test('renders exam review branch and triggers review actions', async () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -348,6 +349,7 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {

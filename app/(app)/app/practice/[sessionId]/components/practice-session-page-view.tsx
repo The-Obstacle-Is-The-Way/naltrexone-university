@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
+import type { UnavailableSessionItem } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import {
   PracticeView,
@@ -52,8 +53,11 @@ export type PracticeSessionPageViewProps = {
   sessionInfo: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
-  /** The current item when its question was withdrawn since the session began. */
-  withdrawnQuestionId?: string | null | undefined;
+  /**
+   * The current item when its question became unavailable since the session
+   * began (ADR-022 Decision 5).
+   */
+  unavailableItem?: UnavailableSessionItem | null | undefined;
   selectedChoiceId: string | null;
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
@@ -89,9 +93,9 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
   const reviewLoadState = props.reviewLoadState ?? { status: 'idle' };
   const navigator = props.navigator ?? null;
   const navigatorLoadState = props.navigatorLoadState ?? { status: 'idle' };
-  // ADR-021 §3: a withdrawn item has no question, but keeps its place.
+  // ADR-021 §3: an unavailable item has no question, but keeps its place.
   const currentQuestionId =
-    props.question?.questionId ?? props.withdrawnQuestionId ?? null;
+    props.question?.questionId ?? props.unavailableItem?.questionId ?? null;
   const questionPanelId = useId();
   const questionAreaRef = useRef<HTMLElement | null>(null);
   const shouldRestoreQuestionPanelRef = useRef(false);
@@ -279,8 +283,13 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       examTimer={props.examTimer}
       loadState={props.loadState}
       question={props.question}
-      isQuestionWithdrawn={
-        props.question === null && (props.withdrawnQuestionId ?? null) !== null
+      unavailable={
+        props.question === null && props.unavailableItem
+          ? {
+              availability: props.unavailableItem.availability,
+              countsIfEndedNow: props.unavailableItem.countsIfEndedNow,
+            }
+          : null
       }
       selectedChoiceId={props.selectedChoiceId}
       isAnswered={props.isAnswered}

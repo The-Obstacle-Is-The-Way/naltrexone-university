@@ -3,6 +3,7 @@ import type { PracticeSessionQuestionState } from '../entities';
 import {
   computeSessionScore,
   contentInDoubt,
+  countsIfEndedNow,
   countsTowardScore,
   hadFairChanceAtEnd,
 } from './scoring';
@@ -127,6 +128,26 @@ describe('hadFairChanceAtEnd', () => {
       expect(hadFairChanceAtEnd({ mode, answered, availability })).toBe(
         fairChance,
       );
+    },
+  );
+});
+
+// An active session's item, as it would count if the session ended now: the
+// Review & Submit warning and the active notice say so (ADR-022 Decision 5,
+// as amended).
+describe('countsIfEndedNow', () => {
+  it.each([
+    ['exam', false, 'available', true],
+    ['exam', true, 'retired', false],
+    ['exam', false, 'retired', false],
+    ['tutor', true, 'retired', true],
+    ['tutor', true, 'withdrawn', false],
+    ['tutor', false, 'retired', false],
+    ['tutor', false, 'available', true],
+  ] as const)(
+    'in %s mode, answered: %s, question %s: counts %s',
+    (mode, answered, availability, counts) => {
+      expect(countsIfEndedNow({ mode, answered, availability })).toBe(counts);
     },
   );
 });

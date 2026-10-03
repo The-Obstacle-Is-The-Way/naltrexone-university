@@ -18,6 +18,7 @@ test('renders active question branch with navigator and navigation callback', as
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [
           {
@@ -202,6 +203,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [
           {

@@ -566,7 +566,7 @@ describe('ADR-021 §3: the session breakdown keeps a withdrawn item the learner 
   });
 });
 
-describe('ADR-021 §3: an active session reaches a withdrawn item as withdrawn, with no content', () => {
+describe('ADR-021 §3, ADR-022 Decision 5: an active session reaches a withdrawn item as unavailable and withdrawn, with no content', () => {
   it('returns the item by id, and as the next unanswered item, with its place in the session', async () => {
     const first = await createPublishedQuestion('active-first');
     const second = await createPublishedQuestion('active-second');
@@ -601,7 +601,10 @@ describe('ADR-021 §3: an active session reaches a withdrawn item as withdrawn, 
 
     for (const item of [byId, sequential]) {
       expect(item).toEqual({
-        withdrawn: true,
+        unavailable: true,
+        availability: 'withdrawn',
+        // Unanswered and withdrawn: it would not count.
+        countsIfEndedNow: false,
         questionId: second.id,
         session: expect.objectContaining({
           sessionId: session.id,

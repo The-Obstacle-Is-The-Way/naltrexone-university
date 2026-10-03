@@ -17,6 +17,7 @@ export {
 export {
   computeSessionScore,
   contentInDoubt,
+  countsIfEndedNow,
   countsTowardScore,
   hadFairChanceAtEnd,
   type SessionScore,

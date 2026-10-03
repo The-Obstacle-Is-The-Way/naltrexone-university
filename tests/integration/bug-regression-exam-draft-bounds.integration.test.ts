@@ -127,6 +127,7 @@ function createPracticeControllerDepsForBug238(input: {
       mode: 'exam',
       totalCount: 1,
       answeredCount: 0,
+      scoredUnansweredCount: 1,
       markedCount: 0,
       rows: [],
     }),

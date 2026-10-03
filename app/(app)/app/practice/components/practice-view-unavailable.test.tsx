@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import type { UnavailableQuestionAvailability } from '@/src/domain/value-objects';
 import './practice-view-test-helpers';
 
 const { fixtureSession1Id } = vi.hoisted(() => ({
@@ -18,13 +19,15 @@ beforeAll(async () => {
 
 const noop = () => undefined;
 
-// ADR-021 §3, Pattern Registry F-11: an item whose question was withdrawn
-// after the session began shows the active-session notice and offers
-// navigation only.
-function renderWithdrawn(input: {
+// ADR-021 §3, ADR-022 Decision 5, Pattern Registry F-11: an item whose
+// question became unavailable after the session began shows the
+// active-session notice for its state and offers navigation only.
+function renderUnavailable(input: {
   mode: 'tutor' | 'exam';
   hasNextQuestion: boolean;
   hasPreviousQuestion?: boolean;
+  availability?: UnavailableQuestionAvailability;
+  countsIfEndedNow?: boolean;
 }): Document {
   const props: PracticeViewProps = {
     sessionInfo: {
@@ -37,7 +40,10 @@ function renderWithdrawn(input: {
     },
     loadState: { status: 'ready' },
     question: null,
-    isQuestionWithdrawn: true,
+    unavailable: {
+      availability: input.availability ?? 'withdrawn',
+      countsIfEndedNow: input.countsIfEndedNow ?? false,
+    },
     selectedChoiceId: null,
     isAnswered: false,
     submitResult: null,
@@ -69,20 +75,53 @@ function buttonLabels(root: Element | null): string[] {
   );
 }
 
-describe('PracticeView for a question withdrawn during the session', () => {
-  it('shows the active-session withdrawal notice instead of an error or an empty state', () => {
-    const doc = renderWithdrawn({ mode: 'exam', hasNextQuestion: true });
+describe('PracticeView for a question that became unavailable during the session', () => {
+  it.each([
+    ['withdrawn', 'This question was withdrawn after your session began.'],
+    [
+      'under_review',
+      'This question was placed under review after your session began.',
+    ],
+    [
+      'retired',
+      'This question was retired from the bank after your session began.',
+    ],
+  ] as const)(
+    'names the state, %s, in the notice, instead of an error or an empty state',
+    (availability, heading) => {
+      const doc = renderUnavailable({
+        mode: 'exam',
+        hasNextQuestion: true,
+        availability,
+      });
+      const notice = doc.querySelector('[role="status"]');
+
+      expect(notice?.textContent).toContain(heading);
+      // ADR-022 Decision 5.
+      expect(notice?.textContent).toContain(
+        "It can't be answered here. It won't count toward your score. Continue to the next question.",
+      );
+      expect(doc.querySelector('[role="alert"]')).toBeNull();
+      expect(doc.body.textContent).not.toContain('No more questions found.');
+      expect(doc.querySelectorAll('input[type="radio"]')).toHaveLength(0);
+    },
+  );
+
+  // ADR-022 Amendment: a tutor answer already given on a question retired
+  // since still counts, so the notice does not say otherwise.
+  it('does not say the item will not count when it still will', () => {
+    const doc = renderUnavailable({
+      mode: 'tutor',
+      hasNextQuestion: true,
+      availability: 'retired',
+      countsIfEndedNow: true,
+    });
     const notice = doc.querySelector('[role="status"]');
 
     expect(notice?.textContent).toContain(
-      'This question was withdrawn after your session began.',
-    );
-    expect(notice?.textContent).toContain(
       "It can't be answered here. Continue to the next question.",
     );
-    expect(doc.querySelector('[role="alert"]')).toBeNull();
-    expect(doc.body.textContent).not.toContain('No more questions found.');
-    expect(doc.querySelectorAll('input[type="radio"]')).toHaveLength(0);
+    expect(notice?.textContent).not.toContain('count toward your score');
   });
 
   it.each([
@@ -93,7 +132,7 @@ describe('PracticeView for a question withdrawn during the session', () => {
   ] as const)(
     'in %s mode with a later question available: %s, offers %j',
     (mode, hasNextQuestion, labels) => {
-      const doc = renderWithdrawn({ mode, hasNextQuestion });
+      const doc = renderUnavailable({ mode, hasNextQuestion });
 
       expect(
         buttonLabels(doc.querySelector('[data-testid="bottom-action-bar"]')),
@@ -101,8 +140,8 @@ describe('PracticeView for a question withdrawn during the session', () => {
     },
   );
 
-  it('offers only Next on a withdrawn first item', () => {
-    const doc = renderWithdrawn({
+  it('offers only Next on an unavailable first item', () => {
+    const doc = renderUnavailable({
       mode: 'tutor',
       hasNextQuestion: true,
       hasPreviousQuestion: false,
@@ -114,7 +153,7 @@ describe('PracticeView for a question withdrawn during the session', () => {
   });
 
   it('offers no mark for review, since the item cannot be answered', () => {
-    const doc = renderWithdrawn({ mode: 'exam', hasNextQuestion: true });
+    const doc = renderUnavailable({ mode: 'exam', hasNextQuestion: true });
 
     expect(
       buttonLabels(

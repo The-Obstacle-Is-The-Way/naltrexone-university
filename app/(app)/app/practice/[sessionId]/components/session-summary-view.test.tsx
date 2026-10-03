@@ -191,6 +191,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -265,6 +266,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -310,6 +312,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -360,6 +363,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -411,6 +415,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -490,6 +495,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {

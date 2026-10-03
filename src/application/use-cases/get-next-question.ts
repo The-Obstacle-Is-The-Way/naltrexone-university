@@ -1,6 +1,7 @@
 import type { Question } from '@/src/domain/entities';
 import {
   computeExamDeadline,
+  countsIfEndedNow,
   createSeed,
   isExamExpired,
   selectNextQuestionId,
@@ -10,6 +11,7 @@ import {
 import type {
   PracticeMode,
   QuestionDifficulty,
+  UnavailableQuestionAvailability,
 } from '@/src/domain/value-objects';
 import { ApplicationError, practiceSessionAlreadyEndedError } from '../errors';
 import type {
@@ -85,12 +87,20 @@ export type GetNextQuestionInput =
     };
 
 /**
- * A session item whose question was withdrawn after the session began
- * (ADR-021 §3): its place in the session and none of its content, so the page
- * can show the withdrawal notice (Pattern Registry F-11) and move on.
+ * A session item whose question became unavailable after the session began
+ * (ADR-021 §3, ADR-022 Decision 5): its state, its place in the session and
+ * none of its content, so the page can show the notice (Pattern Registry F-11)
+ * and move on.
  */
-export type WithdrawnSessionQuestion = {
-  withdrawn: true;
+export type UnavailableSessionQuestion = {
+  unavailable: true;
+  availability: UnavailableQuestionAvailability;
+  /**
+   * Whether the item would count toward the score if the session ended now
+   * (ADR-022 Decision 5, as amended): only a tutor answer already given, on a
+   * question retired since.
+   */
+  countsIfEndedNow: boolean;
   questionId: string;
   session: {
     sessionId: string;
@@ -104,7 +114,7 @@ export type WithdrawnSessionQuestion = {
 
 export type GetNextQuestionOutput =
   | NextQuestion
-  | WithdrawnSessionQuestion
+  | UnavailableSessionQuestion
   | null;
 
 export type ExpiredExamFinalizer = {
@@ -236,16 +246,23 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    // The item shows the revision it was bound to (ADR-021). A question
-    // withdrawn since the session began can't be answered, so it comes back
-    // with its place in the session and none of its content (§3, F-11).
+    // The item shows the revision it was bound to (ADR-021). A question that
+    // became unavailable since the session began can't be answered, so it
+    // comes back with its state, its place in the session and none of its
+    // content (§3, ADR-022 Decision 5, F-11).
     const question = await this.questions.findByIdForSession(targetState);
     if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
-    if (question.status !== 'published') {
+    if (question.availability !== 'available') {
       return {
-        withdrawn: true,
+        unavailable: true,
+        availability: question.availability,
+        countsIfEndedNow: countsIfEndedNow({
+          mode: session.mode,
+          answered: targetState.latestSelectedChoiceId !== null,
+          availability: question.availability,
+        }),
         questionId: question.id,
         session: {
           sessionId: session.id,

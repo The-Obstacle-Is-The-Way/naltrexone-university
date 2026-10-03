@@ -164,4 +164,67 @@ describe('GetPracticeSessionReviewUseCase: content changed since', () => {
       }),
     ]);
   });
+
+  // ADR-022 Decision 5: Review & Submit warns only about the unanswered
+  // items that will be scored; one no longer available won't be.
+  it('counts the scored items left unanswered in an active exam', async () => {
+    const questions = ['q-open', 'q-drafted', 'q-held', 'q-withdrawn'].map(
+      (id) =>
+        createQuestion({
+          id,
+          status:
+            id === 'q-open' || id === 'q-drafted' ? 'published' : 'archived',
+        }),
+    );
+    const state = (questionId: string, drafted: boolean) => ({
+      questionId,
+      markedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSelectedChoiceId: drafted ? `choice-${questionId}` : null,
+      draftSavedAt: drafted ? new Date('2026-08-31T00:00:00Z') : null,
+      draftCumulativeMs: drafted ? 5_000 : 0,
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      endedAt: null,
+      questionIds: questions.map((question) => question.id),
+      questionStates: [
+        state('q-open', false),
+        state('q-drafted', true),
+        state('q-held', false),
+        state('q-withdrawn', true),
+      ],
+    });
+    const useCase = new GetPracticeSessionReviewUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository(questions, {
+        holds: [
+          {
+            questionId: 'q-held',
+            questionRevisionId: questions[2]?.revisionId ?? '',
+            lifted: false,
+          },
+        ],
+        withdrawals: [
+          {
+            questionId: 'q-withdrawn',
+            questionRevisionId: questions[3]?.revisionId ?? '',
+          },
+        ],
+      }),
+      new FakeLogger(),
+    );
+
+    await expect(
+      useCase.execute({ userId: 'user-1', sessionId: 'session-1' }),
+    ).resolves.toMatchObject({
+      totalCount: 4,
+      answeredCount: 2,
+      scoredUnansweredCount: 1,
+    });
+  });
 });

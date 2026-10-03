@@ -166,6 +166,7 @@ export function createDeps(overrides?: {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [],
       },

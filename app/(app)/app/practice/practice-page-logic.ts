@@ -43,12 +43,12 @@ export { statusDisplayLabel } from './practice-page-types';
 export type LoadState = AsyncLoadStateWithIdle;
 
 // Quick practice reads by filters, which never return a session item; a
-// withdrawn session item here is a broken contract (ADR-021 §3).
+// session item here, unavailable or not, is a broken contract (ADR-021 §3).
 export function toPracticeQuestionResult(
   result: ActionResult<GetNextQuestionOutput>,
 ): ActionResult<NextQuestion | null> {
   if (!result.ok) return result;
-  if (result.data && 'withdrawn' in result.data) {
+  if (result.data && 'unavailable' in result.data) {
     return {
       ok: false,
       error: {

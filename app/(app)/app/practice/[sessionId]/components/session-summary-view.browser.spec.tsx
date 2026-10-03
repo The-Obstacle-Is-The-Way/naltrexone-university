@@ -63,6 +63,7 @@ test('renders summary totals and per-question breakdown', async () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -148,6 +149,7 @@ test('omits the removed practice-missed CTA when all exam answers are correct', 
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -195,6 +197,7 @@ test('uses New Session as the primary CTA when no reviewable slug exists', async
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -306,6 +309,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -375,6 +379,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {

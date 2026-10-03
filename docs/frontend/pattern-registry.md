@@ -910,28 +910,29 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 - Its metadata shows the state's label where an available row shows the difficulty, in the same metadata style. Only a difficulty is capitalized; a label keeps its own case.
 - A row with no difficulty slot, such as a session breakdown row, shows the label before its result, in the style the row already uses for its `Unanswered` label (`shrink-0 text-muted-foreground`).
 
-**Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered".
+**Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered". The Review & Submit list also marks such an item "Won't be scored", and the submit warning counts only the unanswered items that would count if the exam ended now.
 
 **Never answered** (left unanswered, or omitted by an exam's finalization): the row or card names the state in a sentence, the notice heading alone, in place of S-2's generic text (`[Question no longer available]`, "Question no longer available.", "This question was removed or unpublished."). No content shows and there is nothing to caution against, so the tone is neutral (`labelOnly`). S-2's generic text remains only for a question that no longer exists.
 
-**Active session** (a question that became unavailable after the session began): the same Status notice, in place of the F-3 `Question not found` error card. Its copy is still the earlier withdrawal-only wording; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) part E names the state and adds "It won't count toward your score." (ADR-022 Decision 5).
+**Active session** (a question that became unavailable after the session began): the same Status notice, in place of the F-3 `Question not found` error card. It names the state, and says the item won't count where that is true (ADR-022 Decision 5, as amended).
 
-- **Heading line:** "This question was withdrawn after your session began."
-- **Body line:** "It can't be answered here. Continue to the next question."
+- **Heading line,** by state: "This question was withdrawn after your session began.", "This question was placed under review after your session began." or "This question was retired from the bank after your session began."
+- **Body line:** "It can't be answered here. It won't count toward your score. Continue to the next question." The middle sentence is left out for a tutor answer already given on a question retired since, which still counts.
+- The notice is neutral in every state: no content shows, so there is nothing to caution against.
 - The item cannot be answered or submitted.
 - The action bar offers navigation only:
   - `Previous` when an earlier question is available, and `Next` when a later one is.
   - Otherwise, the session's end action: `Review & Submit` in an exam, `End session` in tutor mode.
   - The learner can always move on; the page never leaves them at the unavailable item with no way forward.
   - Exam `Mark for review` is hidden for the item.
-- A question withdrawn while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back unavailable, shows this notice instead of an error.
+- A question that becomes unavailable while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back unavailable, shows this notice instead of an error.
 
 **Rules:**
 - Reuses the S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`) for neutral notices, and, for cautions, the warning-tinted inline status card the unanswered reveal already uses (`border-warning/50 bg-warning/5`, `text-foreground`). No new surface, token, opacity value or color pair, so no new `contrast-policy.md` ledger entry is required.
 - Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong. A learner-facing reason is not shown: a withdrawal's recorded reason is written for the clinical audit (ADR-022).
 - `role="status"` announces the notice politely; it is never focused automatically.
 
-**Source:** ADR-021 §3, DEBT-484 phase 2a increment 5, and ADR-022 (DEBT-493 parts A to C). In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, the navigators and Review & Submit list, and the active session page. Bookmarks still show the S-2 treatment for an unavailable question; DEBT-493 increment 5 gives them the label.
+**Source:** ADR-021 §3, DEBT-484 phase 2a increment 5, and ADR-022 (DEBT-493 parts A to C and E, and increment 3). In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, the navigators and Review & Submit list, and the active session page. Bookmarks still show the S-2 treatment for an unavailable question; DEBT-493 increment 5 gives them the label.
 
 
 ### F-12: Update Notice (a question updated after the learner saw it)
