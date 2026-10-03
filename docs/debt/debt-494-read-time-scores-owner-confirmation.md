@@ -89,7 +89,12 @@ A second review notice the same day summarized the decision's cost: it reopens f
 - A later retirement changes none of them.
 - A session that ends after 0050 runs, but before the new code serves, is left unrecorded and reads as a fair chance. Migrations run at the start of the Vercel build (`vercel.json`), so that window lasts one build.
 
-The backfill fills only items not yet recorded, so running it again changes nothing. A marked block, `-- DEBT-494 fair-chance backfill`, is executed against arranged rows in `session-fair-chance-backfill.integration.test.ts`.
+The backfill fills only items not yet recorded, so running it again changes nothing.
+
+**Migration review (`docs/dev/migration-authoring.md`).**
+- **Pre-flight data proof.** The backfill updates every item of every session ended before it runs. It cannot fail on any row: it sets an unconstrained nullable boolean, with no cast, key or check. The local integration database held 2 such items on 2026-10-03. Deploy-target databases are not read from a development session, by the owner's standing rule, so their counts are the migration's own `RAISE NOTICE`, in each deploy's build log.
+- **Lock scope.** The migration's comment states it: an ACCESS EXCLUSIVE lock on `practice_session_question_states`, held to commit, through a backfill of every ended item. This is accepted as a small-table cost at this product's scale, as 0026 accepts it for `practice_sessions`.
+- **Deployed-code compatibility.** The column is additive and nullable. The code serving during the deploy neither reads nor writes it, and sessions it ends in that window stay null, which reads as a fair chance. A marked block, `-- DEBT-494 fair-chance backfill`, is executed against arranged rows in `session-fair-chance-backfill.integration.test.ts`.
 
 ## Related
 
