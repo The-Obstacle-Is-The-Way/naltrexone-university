@@ -19,8 +19,9 @@ export type SessionHistoryRow = {
   firstQuestionSlug: string | null;
   answered: number;
   /**
-   * The items that count toward the score: those whose question is
-   * published now (ADR-022 Decision 3).
+   * The items that count toward the score: the learner had a fair chance at
+   * them and their content is not now in doubt (ADR-022 Decision 3, as
+   * amended by DEBT-494).
    */
   scored: number;
   /** The scored items answered correctly. */
