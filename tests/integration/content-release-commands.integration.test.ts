@@ -16,6 +16,7 @@ import {
   createCleanupState,
   createQuestion,
 } from './helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 
 // These commands commit activations, and an activation archives every
 // published question a release leaves out. So they run against a database of
@@ -75,6 +76,14 @@ async function activeRelease() {
 }
 
 const RECORD = ['--reason', 'Under review', '--authority', 'Clinical lead'];
+// DEBT-490: the release commands name their decision too.
+const DECISION = [
+  '--reason',
+  "Clinician's request",
+  '--authority',
+  'Content lead',
+];
+const DECISION_ARGS = `--reason 'Clinician'\\''s request' --authority 'Content lead'`;
 
 // The plan id a preview printed, as an operator would copy it.
 function planIdIn(output: string): string {
@@ -90,9 +99,12 @@ describe('bootstrap-release', () => {
     await arrange('draft');
     const { io, output } = commandIo();
 
-    await runBootstrapRelease([], io);
+    await runBootstrapRelease(DECISION, io);
 
     expect(output()).toContain('Release bootstrap (dry-run): ');
+    expect(output()).toContain(
+      "Decision: Clinician's request (authority: Content lead)",
+    );
     expect(output()).toContain('items=2 published=0 archived=0');
     expect(await activeRelease()).toBeNull();
     expect(await disposable.db.select().from(schema.contentReleases)).toEqual(
@@ -103,14 +115,14 @@ describe('bootstrap-release', () => {
   it('adopts what is live with the plan its preview printed, and only once', async () => {
     const published = await arrange('published');
     const preview = commandIo();
-    await runBootstrapRelease([], preview.io);
+    await runBootstrapRelease(DECISION, preview.io);
     const plan = planIdIn(preview.output());
     expect(preview.output()).toContain(
-      `Apply exactly this plan: pnpm exec tsx scripts/content-release/bootstrap-release.ts --plan ${plan} --apply`,
+      `Apply exactly this plan: pnpm exec tsx scripts/content-release/bootstrap-release.ts ${DECISION_ARGS} --plan ${plan} --apply`,
     );
     const { io, output } = commandIo();
 
-    await runBootstrapRelease(['--plan', plan, '--apply'], io);
+    await runBootstrapRelease([...DECISION, '--plan', plan, '--apply'], io);
 
     expect(output()).toMatch(
       /Release bootstrap: release=\S+ previous=none items=1 published=0 archived=0/,
@@ -118,7 +130,7 @@ describe('bootstrap-release', () => {
     expect(await activeRelease()).not.toBeNull();
     expect(await statusOf(published.id)).toBe('published');
     await expect(
-      runBootstrapRelease(['--plan', plan, '--apply'], io),
+      runBootstrapRelease([...DECISION, '--plan', plan, '--apply'], io),
     ).rejects.toThrow(/is active; only the first release adopts what is live/);
   });
 });
@@ -127,13 +139,17 @@ describe('activate-release', () => {
   it('previews an activation, applies it, and rolls back to the earlier release', async () => {
     const kept = await arrange('published');
     const dropped = await arrange('published');
-    const first = (await bootstrapRelease(disposable.db)).releaseId;
+    const first = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
     const next = await stageRelease(disposable.db, {
       items: [{ questionId: kept.id, questionRevisionId: kept.revisionId }],
       removals: [{ questionId: dropped.id, kind: 'draft' }],
       parentReleaseId: first,
     });
-    const args = ['--release', next, '--expect-active', first];
+    const args = ['--release', next, '--expect-active', first, ...DECISION];
 
     const preview = commandIo();
     await runActivateRelease(args, preview.io);
@@ -141,6 +157,12 @@ describe('activate-release', () => {
       `Release activation (dry-run): release=${next} previous=${first} items=1 published=0 archived=1`,
     );
     expect(preview.output()).toContain(`Archive (1): ${dropped.slug}`);
+    expect(preview.output()).toContain(
+      "Decision: Clinician's request (authority: Content lead)",
+    );
+    expect(preview.output()).toContain(
+      `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --release ${next} --expect-active ${first} ${DECISION_ARGS} --plan ${planIdIn(preview.output())} --apply`,
+    );
     expect(await statusOf(dropped.id)).toBe('published');
     expect(await activeRelease()).toBe(first);
 
@@ -151,7 +173,7 @@ describe('activate-release', () => {
     expect(await statusOf(dropped.id)).toBe('archived');
     expect(await activeRelease()).toBe(next);
 
-    const back = ['--release', first, '--expect-active', next];
+    const back = ['--release', first, '--expect-active', next, ...DECISION];
     const rollbackPreview = commandIo();
     await runActivateRelease(back, rollbackPreview.io);
     const rollback = commandIo();
@@ -167,7 +189,11 @@ describe('activate-release', () => {
 
   it('changes nothing when the expected release is not the active one', async () => {
     await arrange('published');
-    const first = (await bootstrapRelease(disposable.db)).releaseId;
+    const first = (
+      await bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+      })
+    ).releaseId;
 
     await expect(
       runActivateRelease(
@@ -176,6 +202,7 @@ describe('activate-release', () => {
           first,
           '--expect-active',
           'none',
+          ...DECISION,
           '--plan',
           'c'.repeat(64),
           '--apply',
@@ -202,7 +229,9 @@ describe('hold-questions', () => {
 
   it('holds the live revision, takes the question out at once, and lifts the hold', async () => {
     const question = await arrange('published');
-    await bootstrapRelease(disposable.db);
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
     const hold = ['--qid', question.slug, ...RECORD];
 
     const preview = commandIo();
@@ -267,7 +296,9 @@ describe('hold-questions', () => {
   // A lift targets the live revision, as a hold does (#1296 review).
   it('lifts only the hold on the live revision', async () => {
     const question = await arrange('published');
-    await bootstrapRelease(disposable.db);
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
     const other = await addCurrentRevision(disposable.db, question.id);
     await disposable.db.insert(schema.questionHolds).values({
       questionId: question.id,
@@ -304,7 +335,9 @@ describe('hold-questions', () => {
   it('refuses a question the active release does not name', async () => {
     const draft = await arrange('draft');
     await arrange('published');
-    await bootstrapRelease(disposable.db);
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
 
     await expect(
       runHoldQuestions(
@@ -318,7 +351,9 @@ describe('hold-questions', () => {
 
   it('refuses an unknown QID without holding the known one', async () => {
     const question = await arrange('published');
-    await bootstrapRelease(disposable.db);
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
     const unknown = `it-missing-${randomUUID()}`;
 
     await expect(

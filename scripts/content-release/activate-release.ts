@@ -2,8 +2,15 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { runHumanDatabaseCommand } from '../database-command';
 import {
+  type DecisionRecord,
+  readDecisionFlag,
+  requireDecision,
+} from '../seed/qid-command-args';
+import {
   assertPlanForApply,
   formatActivation,
+  formatDecision,
+  formatDecisionArgs,
   formatPlan,
   previewOrApply,
   readPlanId,
@@ -28,11 +35,13 @@ export function parseActivateArgs(argv: readonly string[]): {
   releaseId: string;
   expectedActiveReleaseId: string | null;
   expectedPlanId: string | undefined;
+  record: DecisionRecord;
   apply: boolean;
 } {
   let releaseId: string | undefined;
   let expectedActiveReleaseId: string | null | undefined;
   let expectedPlanId: string | undefined;
+  const record: Partial<DecisionRecord> = {};
   let apply = false;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -54,6 +63,9 @@ export function parseActivateArgs(argv: readonly string[]): {
     } else if (arg === '--plan' && expectedPlanId === undefined) {
       expectedPlanId = readPlanId(value);
       index += 1;
+    } else if (arg === '--reason' || arg === '--authority') {
+      readDecisionFlag(record, arg, value);
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
@@ -67,7 +79,13 @@ export function parseActivateArgs(argv: readonly string[]): {
     );
   }
   assertPlanForApply(apply, expectedPlanId);
-  return { releaseId, expectedActiveReleaseId, expectedPlanId, apply };
+  return {
+    releaseId,
+    expectedActiveReleaseId,
+    expectedPlanId,
+    record: requireDecision(record, 'activation'),
+    apply,
+  };
 }
 
 // DEBT-483: activates a staged release, or rolls back by activating an
@@ -89,10 +107,11 @@ export async function runActivateRelease(
         log(
           `Release activation${apply ? '' : ' (dry-run)'}: ${formatActivation(summary)}`,
         );
+        log(formatDecision(input.record));
         for (const line of formatPlan(summary.plan)) log(line);
         if (!apply) {
           log(
-            `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --release ${input.releaseId} --expect-active ${input.expectedActiveReleaseId ?? 'none'} --plan ${summary.plan.id} --apply`,
+            `Apply exactly this plan: pnpm exec tsx scripts/content-release/activate-release.ts --release ${input.releaseId} --expect-active ${input.expectedActiveReleaseId ?? 'none'} ${formatDecisionArgs(input.record)} --plan ${summary.plan.id} --apply`,
           );
         }
       }),

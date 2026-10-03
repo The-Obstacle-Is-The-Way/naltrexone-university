@@ -13,6 +13,7 @@ import type { SeedSourceFile } from '@/scripts/seed/file-reader';
 import { runContentWithdrawal } from '@/scripts/seed/withdraw-questions';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { createCleanupState, createQuestion } from './helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 // Staging commits drafts and revisions, and these cases activate what they
@@ -64,7 +65,11 @@ async function revisionsOf(questionId: string) {
 }
 
 async function bootstrap() {
-  return (await bootstrapRelease(disposable.db)).releaseId;
+  return (
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    })
+  ).releaseId;
 }
 
 describe('DEBT-483: staging a release from MDX', () => {
@@ -106,6 +111,7 @@ describe('DEBT-483: staging a release from MDX', () => {
     expect((await questionBySlug(dropped.slug))?.status).toBe('published');
 
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: staged.releaseId,
       expectedActiveReleaseId: active,
     });
@@ -157,17 +163,19 @@ describe('DEBT-483: staging a release from MDX', () => {
     expect(await withdrawalsOfQuestion()).toEqual([]);
     // Abandoning the staged release leaves the question live.
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: active,
       expectedActiveReleaseId: active,
     });
     expect((await questionBySlug(question.slug))?.status).toBe('published');
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: staged.releaseId,
       expectedActiveReleaseId: active,
     });
     expect((await questionBySlug(question.slug))?.status).toBe('archived');
     expect(await withdrawalsOfQuestion()).toEqual(
-      expect.arrayContaining([{ authority: 'content release' }]),
+      expect.arrayContaining([{ authority: RELEASE_DECISION.authority }]),
     );
   });
 
@@ -180,6 +188,7 @@ describe('DEBT-483: staging a release from MDX', () => {
       source(kept.slug),
     ]);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: retiring.releaseId,
       expectedActiveReleaseId: active,
     });
@@ -238,6 +247,7 @@ describe('DEBT-483: staging a release from MDX', () => {
       { remove: [removed.slug] },
     );
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: staged.releaseId,
       expectedActiveReleaseId: active,
     });

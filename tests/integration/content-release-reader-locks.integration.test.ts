@@ -13,6 +13,7 @@ import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/dr
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { createCleanupState, createUser } from './helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
@@ -28,7 +29,9 @@ async function arrange() {
     source('audit-second'),
   ]);
   const user = await createUser(disposable.db, createCleanupState());
-  const base = await bootstrapRelease(disposable.db);
+  const base = await bootstrapRelease(disposable.db, {
+    record: RELEASE_DECISION,
+  });
   return { user, base };
 }
 it('activates while a learner attempt transaction holds question foreign-key locks', async () => {
@@ -75,6 +78,7 @@ it('activates while a learner attempt transaction holds question foreign-key loc
       activateRelease(drizzle(activator, { schema }), {
         releaseId: next.releaseId,
         expectedActiveReleaseId: base.releaseId,
+        record: RELEASE_DECISION,
       }).then(
         () => {
           activated = true;
