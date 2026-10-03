@@ -49,7 +49,10 @@ import {
 } from './postgres-errors';
 import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
-import { countsTowardScoreSql } from './shared/score-eligibility-sql';
+import {
+  answerKeyCorrectedSql,
+  countsTowardScoreSql,
+} from './shared/score-eligibility-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
 
@@ -360,6 +363,11 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     const counts = countsTowardScoreSql({
       fairChanceAtEnd: practiceSessionQuestionStates.fairChanceAtEnd,
       question: questions,
+      keyCorrected: answerKeyCorrectedSql({
+        answered: sql`${attempts.selectedChoiceId} is not null`,
+        gradedRevisionId: attempts.questionRevisionId,
+        currentRevisionId: questions.currentRevisionId,
+      }),
     });
     const [row] = await this.db
       .select({

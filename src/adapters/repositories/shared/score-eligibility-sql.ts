@@ -1,5 +1,5 @@
 import { type AnyColumn, type SQL, sql } from 'drizzle-orm';
-import { questionHolds, questionWithdrawals } from '@/db/schema';
+import { choices, questionHolds, questionWithdrawals } from '@/db/schema';
 
 type QuestionColumns = { id: AnyColumn; status: AnyColumn };
 
@@ -33,6 +33,35 @@ export function contentInDoubtSql(question: QuestionColumns): SQL {
 export function countsTowardScoreSql(input: {
   fairChanceAtEnd: AnyColumn;
   question: QuestionColumns;
+  /** `answerKeyCorrectedSql` for the item or attempt. */
+  keyCorrected: SQL;
 }): SQL {
-  return sql`(coalesce(${input.fairChanceAtEnd}, true) and not ${contentInDoubtSql(input.question)})`;
+  return sql`(coalesce(${input.fairChanceAtEnd}, true) and not ${contentInDoubtSql(input.question)} and not ${input.keyCorrected})`;
+}
+
+function answerKeyOf(revisionId: AnyColumn): SQL {
+  return sql`(
+    select string_agg(
+      ${choices.label} || chr(31) || ${choices.textMd},
+      chr(30) order by ${choices.label}, ${choices.textMd}
+    )
+    from ${choices}
+    where ${choices.questionRevisionId} = ${revisionId}
+      and ${choices.isCorrect}
+  )`;
+}
+
+/**
+ * ADR-022 Decision 4: the SQL twin of an answered item whose
+ * `answerKeyChanged` holds. The key is each correct choice's label and text.
+ * It is compared only when the graded revision is not the current one.
+ */
+export function answerKeyCorrectedSql(input: {
+  answered: SQL;
+  gradedRevisionId: AnyColumn;
+  currentRevisionId: AnyColumn;
+}): SQL {
+  return sql`(${input.answered}
+    and ${input.gradedRevisionId} <> ${input.currentRevisionId}
+    and ${answerKeyOf(input.gradedRevisionId)} is distinct from ${answerKeyOf(input.currentRevisionId)})`;
 }

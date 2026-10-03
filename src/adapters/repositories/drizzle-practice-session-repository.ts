@@ -44,7 +44,10 @@ import {
   toDomainQuestionState,
   updatePracticeSessionQuestionState,
 } from './practice-session-question-state-updater';
-import { countsTowardScoreSql } from './shared/score-eligibility-sql';
+import {
+  answerKeyCorrectedSql,
+  countsTowardScoreSql,
+} from './shared/score-eligibility-sql';
 
 type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
@@ -62,6 +65,11 @@ const itemQuestions = alias(questions, 'item_questions');
 const itemCounts = countsTowardScoreSql({
   fairChanceAtEnd: practiceSessionQuestionStates.fairChanceAtEnd,
   question: itemQuestions,
+  keyCorrected: answerKeyCorrectedSql({
+    answered: sql`${practiceSessionQuestionStates.latestSelectedChoiceId} is not null`,
+    gradedRevisionId: practiceSessionQuestionStates.questionRevisionId,
+    currentRevisionId: itemQuestions.currentRevisionId,
+  }),
 });
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository

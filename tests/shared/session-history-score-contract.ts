@@ -20,6 +20,11 @@ export type HistoryScoreItem = {
   now: QuestionStateNow;
   /** The question left the bank before the session ended. */
   removedBeforeEnd?: boolean;
+  /**
+   * After the session, the question gained a current revision: with another
+   * correct choice (its key corrected), or with only its stem reworded.
+   */
+  revisedAfter?: 'key' | 'stem';
 };
 
 export type SessionHistoryScoreHarness = {
@@ -83,6 +88,17 @@ const scenarios: readonly Scenario[] = [
       { answer: 'unanswered', now: 'retired', removedBeforeEnd: true },
     ],
     expected: { answered: 1, scored: 1, scoredCorrect: 1 },
+  },
+  {
+    name: 'leaves out an answer whose key was corrected since, but keeps an unanswered item and a reworded stem',
+    mode: 'tutor',
+    items: [
+      { answer: 'correct', now: 'available', revisedAfter: 'key' },
+      { answer: 'incorrect', now: 'available', revisedAfter: 'key' },
+      { answer: 'unanswered', now: 'available', revisedAfter: 'key' },
+      { answer: 'correct', now: 'available', revisedAfter: 'stem' },
+    ],
+    expected: { answered: 3, scored: 2, scoredCorrect: 1 },
   },
 ];
 

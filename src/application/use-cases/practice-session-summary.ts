@@ -32,10 +32,17 @@ export type PracticeSessionSummary = {
   };
 };
 
+/** What a score needs to know of an item's question, read now. */
+export type ItemQuestion = {
+  availability: QuestionAvailability;
+  /** The bound revision's key differs from the current one (Decision 4). */
+  answerKeyChanged: boolean;
+};
+
 export function projectPracticeSessionSummary(
   session: PracticeSession,
   endedAt: Date,
-  availabilityByQuestionId: ReadonlyMap<string, QuestionAvailability>,
+  itemQuestionById: ReadonlyMap<string, ItemQuestion>,
 ): PracticeSessionSummary {
   const questionCount = session.questionIds.length;
   const stateByQuestionId = createPracticeSessionStateMap(session);
@@ -50,12 +57,17 @@ export function projectPracticeSessionSummary(
   // ADR-022 Amendment (DEBT-494): an item counts when the learner had a fair
   // chance at it, recorded when the session ended, and its content is not
   // now in doubt. One whose question the read cannot find is in doubt.
-  const { scored, correct } = computeSessionScore(orderedStates, (state) =>
-    countsTowardScore({
+  const { scored, correct } = computeSessionScore(orderedStates, (state) => {
+    const question = itemQuestionById.get(state.questionId);
+    return countsTowardScore({
       fairChanceAtEnd: state.fairChanceAtEnd,
-      availability: availabilityByQuestionId.get(state.questionId) ?? null,
-    }),
-  );
+      availability: question?.availability ?? null,
+      // ADR-022 Decision 4: an answer graded on a key corrected since.
+      keyCorrected:
+        state.latestSelectedChoiceId !== null &&
+        question?.answerKeyChanged === true,
+    });
+  });
 
   return {
     sessionId: session.id,
@@ -91,7 +103,10 @@ export async function summarizePracticeSession(
     new Map(
       [...questionById].map(([questionId, question]) => [
         questionId,
-        question.availability,
+        {
+          availability: question.availability,
+          answerKeyChanged: question.answerKeyChanged,
+        },
       ]),
     ),
   );

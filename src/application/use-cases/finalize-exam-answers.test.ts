@@ -622,7 +622,12 @@ describe('FinalizeExamAnswersUseCase', () => {
       projectPracticeSessionSummary(
         endedSession,
         endedSession.endedAt,
-        new Map(endedSession.questionIds.map((id) => [id, 'available'])),
+        new Map(
+          endedSession.questionIds.map((id) => [
+            id,
+            { availability: 'available', answerKeyChanged: false },
+          ]),
+        ),
       ),
     );
   });

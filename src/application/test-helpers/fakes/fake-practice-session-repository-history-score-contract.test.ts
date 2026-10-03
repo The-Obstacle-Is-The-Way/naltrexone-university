@@ -39,6 +39,11 @@ runSessionHistoryScoreContract('FakePracticeSessionRepository', async () => ({
     );
     const repository = new FakePracticeSessionRepository([session], {
       availabilityByQuestionId: availability,
+      answerKeyChangedQuestionIds: new Set(
+        questionIds.filter(
+          (_id, index) => items[index]?.revisedAfter === 'key',
+        ),
+      ),
     });
     await repository.end(session.id, userId, new Date('2026-10-01T10:30:00Z'));
     for (const [index, id] of questionIds.entries()) {

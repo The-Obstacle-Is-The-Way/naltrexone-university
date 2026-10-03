@@ -27,8 +27,17 @@ export function contentInDoubt(
 export function countsTowardScore(input: {
   fairChanceAtEnd: boolean | null;
   availability: QuestionAvailability | null;
+  /**
+   * The item was answered, and the key it was graded against was since
+   * corrected (ADR-022 Decision 4). An unanswered item's key never matters.
+   */
+  keyCorrected?: boolean;
 }): boolean {
-  return input.fairChanceAtEnd !== false && !contentInDoubt(input.availability);
+  return (
+    input.fairChanceAtEnd !== false &&
+    !contentInDoubt(input.availability) &&
+    input.keyCorrected !== true
+  );
 }
 
 export type SessionScore = {

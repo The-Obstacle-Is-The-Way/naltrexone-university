@@ -1,6 +1,7 @@
 import { and, sql as drizzleSql, eq, isNull } from 'drizzle-orm';
 import * as schema from '@/db/schema';
-import type { IntegrationDb } from './helpers';
+import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
+import { addCurrentRevision, type IntegrationDb } from './helpers';
 
 export type QuestionStateNow =
   | 'available'
@@ -53,4 +54,41 @@ export async function setQuestionState(
         ),
       );
   }
+}
+
+// Gives a question a new current revision (ADR-021): with another correct
+// choice, so an answer graded on the old one is key-corrected (ADR-022
+// Decision 4), or with only its stem reworded, which keeps the key.
+// `createQuestion`'s first revision keys B, "Choice B".
+export async function reviseQuestion(
+  db: IntegrationDb,
+  question: { id: string },
+  change: 'key' | 'stem',
+): Promise<void> {
+  if (change === 'key') {
+    await addCurrentRevision(db, question.id);
+    return;
+  }
+  await appendQuestionRevision(db, question.id, {
+    stemMd: '# Reworded stem',
+    explanationMd: '# Explanation',
+    referenceMd: null,
+    difficulty: 'easy',
+    choices: [
+      {
+        label: 'A',
+        textMd: 'Choice A',
+        isCorrect: false,
+        explanationMd: null,
+        sortOrder: 1,
+      },
+      {
+        label: 'B',
+        textMd: 'Choice B',
+        isCorrect: true,
+        explanationMd: null,
+        sortOrder: 2,
+      },
+    ],
+  });
 }
