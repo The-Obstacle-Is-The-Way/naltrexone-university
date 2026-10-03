@@ -257,7 +257,7 @@ Notes:
 | Parse explanations | `parseExplanationAndReference(explanationMd)` | `scripts/seed-helpers.ts` — splits the general explanation from a terminal `### Reference` section; per-choice explanations come from each frontmatter choice's `explanation` |
 | Canonicalize | `canonicalizeMarkdown(text)` | `lib/content/parse-mdx-question.ts` — normalizes newlines, trims trailing whitespace |
 | Compare | `canonicalQuestionRevisionJson(fields)` against the current revision's | Change detection: unchanged content is skipped; changed content appends a revision |
-| Write | One transaction per question. A new question is inserted; there is no row to lock yet, so of two concurrent inserts the unique slug key refuses the second. An existing question's row is locked `FOR UPDATE` before changed content appends a revision and moves `current_revision_id`; status and tags update in place | Into PostgreSQL via Drizzle |
+| Write | One transaction per question. A new question is inserted; there is no row to lock yet, so of two concurrent inserts the unique slug key refuses the second. The transaction takes the release pointer, then locks the existing question's row `FOR NO KEY UPDATE`, before changed content appends a revision and moves `current_revision_id`; status and tags update in place | Into PostgreSQL via Drizzle |
 
 **Critical transformation:** The seed script **sorts choices by `label`** before assigning `sortOrder`:
 
@@ -277,7 +277,7 @@ Because labels are validated as `A`–`E` and then sorted, `sortOrder` is effect
 
 ### Publishing Rule
 
-The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status, and a withdrawn one is marked (ADR-021 §3). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
+The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. Today any question that is no longer published is labeled withdrawn, a temporary hold included; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides separate labels for withdrawn, under review and retired, implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
 
 ### Placeholder Questions
 
@@ -303,7 +303,7 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/seed/withdraw-question
 
 In one transaction, after locking the release pointer and then the question rows in ID order, it archives each question and records a withdrawal for every revision in `question_withdrawals` (migration `0045`), with the reason and authority. A revision already recorded keeps its first record.
 
-A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too. Before a release is active, the seed records it with authority `content seed`. Once one is active, the seed refuses the database, and an `archived` file becomes a withdrawal only when the release that stages it is activated, with authority `content release` (see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold)). Only the synthetic placeholders are archived and restored without a record. A learner who attempted a withdrawn question can still review it, with a notice (ADR-021 §3).
+A withdrawal is permanent. The seed refuses to restore a withdrawn question, and a corrected replacement takes a new QID. Archiving a question in MDX is a withdrawal too. Before a release is active, the seed records it with authority `content seed`. Once one is active, the seed refuses the database, and an `archived` file becomes a withdrawal only when the release that stages it is activated, with that activation's authority and a reason naming the release (see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold)). Only the synthetic placeholders are archived and restored without a record. A learner who answered a withdrawn question can still review it, with a notice (ADR-021 §3; ADR-022 limits this to learners who answered).
 
 ### Releases: Bootstrap, Stage, Activate, Roll Back and Hold
 
@@ -338,9 +338,10 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 
 **What a release removes ([DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
 - **A member stays in the release** if its file is `published`.
-- **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove`.
+- **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `archived`, or the withdrawal command, for content that must never return.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
+- **The check guards removals only.** A stale file whose content matches an earlier revision moves its question *back* to that revision, which can undo an answer-key correction. The plan lists it only under "Publish or move", which does not tell a revert from an edit. Until [DEBT-492](../debt/debt-492-release-safety-before-production-bootstrap.md) makes reverts explicit, stage only from the newest approved bundle and check every name in that list. A rollback likewise restores earlier revisions, and archives questions added since.
 
 **Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
 
@@ -358,7 +359,7 @@ Activation recomputes the plan under its own locks and refuses a different one. 
 - **Holds.** A hold's or a lift's re-application of the active release records the hold's own decision.
 - **The plan.** The plan id does not include the decision, so the same transition keeps the same plan whatever its reason.
 
-A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
+A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. **A hold binds the revision, not the question:** a release that names a *different* revision of a held question publishes it, listed under "Publish or move" (DEBT-492 adds a named line for it). To keep a question out whatever its content, withdraw it. Holds and lifts re-apply the active release without a plan check; their preview prints counts. While no release is active, a hold would change nothing, so the command refuses. To take a question out temporarily before the bootstrap, set its file to `draft` and seed; withdraw only if it must never return.
 
 ---
 
@@ -370,9 +371,9 @@ A hold takes effect at once: it re-applies the active release, which archives th
 
 **Question revisions table:** Stores the content a learner reads, as raw markdown: `stemMd`, `explanationMd`, `referenceMd`, plus `difficulty` and the `stored-fields-json-v1` content hash. A revision is never updated; changed content is a new revision (migration `0042`). Attempts and session items bind the revision they were shown and graded against (`NOT NULL` since migration `0043`).
 
-**Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Activation excludes a question with any recorded withdrawal, regardless of which revision its release names.
+**Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row, except a revision staged after the withdrawal, which gets its row when its release is activated; selection is unaffected, because the check is question-wide. Activation excludes a question with any recorded withdrawal, regardless of which revision its release names.
 
-**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable, hash-addressed manifest, which names the release's items and every live question it removes (DEBT-489), and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one immutable receipt per activation, with its reason and authority (migration `0049`). `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold).
+**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable (UPDATE is rejected; DELETE is not, so this is not an authorization boundary), hash-addressed manifest, which names the release's items and every question it removes (DEBT-489): each live question left out, and every `archived` file in the bundle, which activation withdraws, and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one immutable receipt per activation, with its reason and authority (migration `0049`). `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold).
 
 **Choices table:**
 
@@ -572,7 +573,7 @@ Before seeding, ensure the target database schema is up to date:
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
 
-The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). No database has one yet, and bootstrapping production is the owner's decision ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). Neither Preview nor production has one yet (migration 0049's production notice counted no activation receipts), and bootstrapping production is the owner's decision ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
 
 ---
 
@@ -583,12 +584,12 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 | Trigger | Why Reseed Is Needed |
 |---------|---------------------|
 | **After `pnpm db:migrate`** (schema changes) | Migrations may alter enums or constraints that require fresh data insertion. |
-| **After MDX content changes** (new questions, updated tags, edited frontmatter) | The seed script is the only path from MDX files to database rows. |
+| **After MDX content changes** (new questions, updated tags, edited frontmatter) | While no release is active, the seed is the path from MDX files to database rows; once one is, `stage-release.ts` is. |
 | **After tag taxonomy changes** (SPEC-033, renamed slugs, new kinds) | Taxonomy migrations include tag data cleanup (see SPEC-033 §14). Run `pnpm db:migrate` first, then `pnpm db:seed`. |
 | **After switching Neon branches** | Different branches may have different data states. |
 | **After `pnpm db:test:reset`** | Test DB is wiped; seed restores content. |
 
-**Important:** The seed is **not** automatically run by Vercel, CI, or `pnpm db:migrate`. It is always a manual operator step. See `docs/dev/deployment-procedure.md` for the full deployment flow.
+**Important:** The seed is **not** automatically run against a deployed database by Vercel, CI or `pnpm db:migrate`. CI seeds only its own throwaway database. It is always a manual operator step. See `docs/dev/deployment-procedure.md` for the full deployment flow.
 
 ---
 
@@ -601,7 +602,7 @@ The seed script is idempotent: running it again with the same MDX content skips 
 ### How it works
 
 1. **Slug is the identity key.** Each question is looked up by `slug`. If the slug exists, the question is compared; if not, it's inserted with revision 1.
-2. **Canonical comparison with the current revision.** The seed locks the question and compares the file's canonical content with the question's current revision, canonicalized the same way. If the content, status and tags all match, the question is **skipped entirely**: no writes, no `updatedAt` bump.
+2. **Canonical comparison with the current revision.** The seed locks the question and compares the file's canonical content with the question's current revision, canonicalized the same way. If the content, status and tags all match, the question is **skipped**: no revision and no `updatedAt` bump. One exception: replaying an `archived` file records any revision's missing withdrawal row.
 3. **Changed content is appended, never updated** (ADR-021 phase 2b). A changed stem, explanation, reference, difficulty, choice or answer key becomes a new revision with its own choice rows, and the question's current revision moves to it. Earlier attempts and sessions keep the revision they answered. Status and tags change in place.
 4. **Tags are upserted** via `upsertTags()`: existing tags are reused by slug, and a tag whose name or kind differs is refused.
 
@@ -618,7 +619,7 @@ You may have multiple local clones of the repo (e.g., `naltrexone-university`, `
 
 **The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, the older files win:
 - **Content** (stem, explanation, reference, difficulty, choices or answer key) is appended as a **new current revision**. Learners who saw the newer version get an update notice. The seed counts it under both `updated` and `new revisions`.
-- **Status and tags** change **in place**, with no revision. A stale status can change what learners see: a question that is `published` in B but `draft` in A disappears from new practice. (The seed refuses to reactivate an archived question.) The seed counts these under `updated` only.
+- **Status and tags** change **in place**, with no revision. A stale status can change what learners see: a question that is `published` in B but `draft` in A disappears from new practice. (The seed refuses to reactivate an archived question.) **A stale `archived` status is a permanent withdrawal and cannot be undone by reseeding.** The seed counts these under `updated` only.
 
 So `updated` greater than `new revisions` means metadata changed. Check `status` before seeding from any clone but the newest.
 

@@ -2,6 +2,59 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03 UTC: every open decision that code can settle is decided and recorded, under the owner's 2026-10-03 delegation, after a read-only adversarial review of the scoring, release, payment and test-practice paths. Two records are filed. No code changes in this increment.
+- **[ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)** decides how a learner's scores and labels follow content changes:
+  - four availability states (Available, Withdrawn, Under review, Retired), derived at read time;
+  - an unavailable question's content is shown only to a learner who answered it;
+  - one scoring rule: an item counts only while its question is available and the key it was graded against is still the current key;
+  - a corrected key is disclosed and re-practiced, never regraded.
+
+  It settles the three Deferred decisions from DEBT-484 and BUG-317.
+- **[DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md)** (P1) implements ADR-022 in five increments.
+- **[DEBT-492](./debt-492-release-safety-before-production-bootstrap.md)** (P2) records four release gaps to close before the production bootstrap:
+  - staging's row locks can time out learners' session starts;
+  - a stale bundle silently reverts a correction;
+  - a held question can return with new content unflagged;
+  - `stage-release.ts` prints an activation command that activation refuses.
+- **[BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03) is decided.** The trial add-card flow offers cards only, and its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic methods.
+- **[DEBT-465](./debt-465-test-quality-practices-adoption.md#decision--2026-10-03) and [ADR-019](../adr/adr-019-test-quality-practices.md) are amended.**
+  - Part 3's Gherkin harness is not adopted: its 17 candidate rules are already pinned by mutation-proven or real-infrastructure tests. A rule-to-test register replaces it.
+  - Part 4's QA procedures run before the production bootstrap and before a release that changes their flows, not before every promotion.
+- **[ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) is amended.** Its contract step is not pursued. The materialized `questions.status` stays the one runtime read model, kept in step by activation.
+- **Documentation corrected against the code:**
+  - the pipeline guide: the seed's lock order, what a hold binds, what the plan binding does not cover, and that a stale `archived` status is a permanent withdrawal;
+  - ADR-021's implementation line, hold key and boundary;
+  - Pattern Registry F-11 and F-12;
+  - `AGENTS.md`: the seed's refusal, and DEBT-491's check as early detection, not a lock.
+- **Deferred rows removed.** DEBT-484's withdrawn-item scoring and answer-key regrade, and BUG-317's withdrawn label, are now DEBT-493. DEBT-483's contract step is not pursued. The bootstrap row now waits on DEBT-492.
+- **What remains Active.** DEBT-414 (one owner decision, below), DEBT-465, DEBT-492 and DEBT-493.
+- **Next.** One PR at a time, each test-first: BUG-310, then DEBT-492, then DEBT-493, then DEBT-465.
+- **Open decisions for the owner.**
+  - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. The recommendation is to bootstrap once DEBT-492 is released and the next content import is ready to go through the release path, so the first staged release is real.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a)**, unchanged from the previous stanza, below: it waits on counsel.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
+
+**Earlier** — 2026-10-03 UTC (forward pointer: the Latest stanza above decides the scoring, payment-method and regrade questions listed here): DEBT-490 is resolved and archived ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md#verified-closeout--2026-10-03-utc)).
+- **What shipped.** Every release activation, rollback and bootstrap records why it was made and on whose authority, on an immutable receipt.
+- **Merged.** #1322 (**5398018105** on `71fe7e13`; merged `81ffd15a`).
+- **Released** through promotion #1323 (`a9a98421`): main CI **37082256459** `test` passed **00:42:26Z**, production assigned **00:42:28.423Z**, trees `b18dd7dd`, healthy production.
+- **Migration `0049` in production.** The build log's ledger pre- and post-checks matched. Its notice counted **0** existing receipts, so production had never activated a release.
+- **Re-verified.** The record's suites were re-run on `main`'s code before archival.
+- **What remains Active.** DEBT-414 and DEBT-465, both waiting on owner decisions.
+- **Open decisions for the owner.**
+  - **When to bootstrap production content releases (DEBT-483).** [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix is now in production, so it no longer blocks. Bootstrapping adopts what is live as the first release. After that, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Withdrawals, holds and rollback then work against releases. Until then the direct seed keeps working. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, Since [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md) is released, the first production activation will record who decided it and why; nothing in engineering blocks the bootstrap now.
+  - Scoring of an exam item withdrawn mid-session (Deferred). The active-session navigator and Review & Submit rows wait on it.
+  - Payment methods: the trial add-card flow ([BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md); restricting it to card is recommended) and the paid subscription Checkout.
+  - Whether an answer-key correction should regrade earlier attempts (Deferred). Until decided, an attempt keeps its grade.
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **2 Active records; Next Debt ID is DEBT-492.**
+
 **Earlier** — 2026-10-02 UTC: DEBT-490 is fixed in code, on the owner's go-ahead: every activation records why, and on whose authority ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md#fix--2026-10-02)).
 - **Migration `0049`.** Activation receipts gain a non-blank `reason` and `authority`. An existing receipt gets an explicit "not recorded" marker, with a notice that counts them, and the defaults are dropped at once. Receipts become immutable, like releases, items and withdrawals.
 - **Code.**

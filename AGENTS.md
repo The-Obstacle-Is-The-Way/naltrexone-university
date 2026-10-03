@@ -287,7 +287,8 @@ pnpm db:test:reset          # Wipe and restart test database
 # Database
 pnpm db:generate            # Generate migration from schema changes
 pnpm db:migrate             # Apply migrations to database
-pnpm db:seed                # Seed database with content
+pnpm db:seed                # Seed database with content (refused once a content release is active;
+                            # then stage-release.ts, see docs/practice-engine/content-pipeline.md)
 pnpm db:studio              # Open Drizzle Studio GUI
 ```
 
@@ -355,7 +356,7 @@ Framework code lives in:
 
 4. **Composition root** - Dependencies are wired at entry points via `lib/container.ts`, `lib/container/**`, and `lib/controller-helpers.ts`, not ad hoc imports inside use cases.
 
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-021; `docs/adr/index.md` lists each status).
+See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-022; `docs/adr/index.md` lists each status).
 
 ## Tech Stack
 
@@ -423,7 +424,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Hosted-provider compatibility tests:** `tests/e2e/stripe-hosted-*.spec.ts` (scheduled/manual only; never required PR CI)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
 - **Shared test support:** in `src/**`, it lives in the layer's `test-helpers/` directory. `app/**` and `components/**` colocate `*-test-helpers.ts(x)`, `*.fixtures.ts` and `*.browser.probes.tsx` files beside their suites, since every folder under `app/` is a route segment. The full table is in `.claude/rules/testing.md` → Test Support Locations, and `tests/test-support-location-policy.test.ts` enforces the `src/` rule.
-- **Test-quality practices (ADR-019, tracked as DEBT-465):** the CRAP report (`pnpm quality:crap` — `docs/dev/code-quality-metrics.md`) and mutation testing (`pnpm test:mutation`, plus the weekly Mutation workflow — `docs/dev/mutation-testing.md`) are in use. Gherkin acceptance tests (`tests/acceptance/` — `docs/dev/acceptance-testing.md`) and UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`) are planned. All metrics observational — no numeric gates without a new ADR.
+- **Test-quality practices (ADR-019, tracked as DEBT-465):** the CRAP report (`pnpm quality:crap` — `docs/dev/code-quality-metrics.md`) and mutation testing (`pnpm test:mutation`, plus the weekly Mutation workflow — `docs/dev/mutation-testing.md`) are in use. Gherkin acceptance tests are not adopted (ADR-019, amended 2026-10-03); a rule-to-test register in `docs/dev/acceptance-testing.md` replaces them. The rule-to-test register and UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`) are planned. All metrics observational — no numeric gates without a new ADR.
 
 ### Playwright E2E Conventions
 
@@ -703,7 +704,10 @@ measured; see its 2026-09-28 amendment), green checks, and a clean, mergeable,
 non-draft PR. Incomplete/truncated thread or check data fails closed. It also refuses a merge
 that would leave `dev` without `main`'s latest promotion merge commit: `main`'s head
 must be in the PR head or already in `dev` (DEBT-491). Base each branch made after a
-promotion on `origin/main`, or merge `origin/main` into it. The merge uses
+promotion on `origin/main`, or merge `origin/main` into it. This check is early
+detection, not a lock: `dev` can move between the check and the merge, and
+`--match-head-commit` pins only the PR head; `verify-promotion` remains the
+enforcement and fails closed. The merge uses
 `--match-head-commit` so a subsequent push cannot substitute unreviewed code.
 With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
 This is mandatory operator tooling, not a claim that GitHub's zero-approval
@@ -862,7 +866,7 @@ approaches the budget, move historical sections out rather than raising it.
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 and ADR-020 accepted; ADR-019 proposed; ADR-021 accepted)
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-022 accepted; ADR-019 as amended 2026-10-03)
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register
 - `docs/qa/index.md` — UI QA procedure register (QA-NNN scripted UI verification; method in `docs/dev/qa-procedures.md`)

@@ -1,6 +1,6 @@
 # ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-**Status:** Proposed
+**Status:** Accepted, as amended 2026-10-03 (Parts 1, 2 and 4; Part 3 not adopted)
 **Date:** 2026-08-13
 **Decision Makers:** Owner
 **Depends On:** ADR-003 (Testing Strategy), ADR-001 (Clean Architecture Layers)
@@ -59,6 +59,17 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 - The four runbooks are canonical; `docs/dev/index.md` routes to them; the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) gain the `tests/acceptance/` row in the PR that lands the first feature.
 - No numeric quality gate may be added to CI or configs without a new ADR referencing this section. Nonzero report-infrastructure exits remain required so missing evidence cannot be recorded as a successful baseline.
 - Standard PR review (CodeRabbit mandatory) applies to every adoption PR.
+
+## Amendment — 2026-10-03
+
+Decided under the owner's 2026-10-03 delegation, after a review of what each part adds to the test estate. The rationale is in [DEBT-465](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03).
+
+- **Parts 1 and 2 are adopted** and in production: the CRAP report, and mutation testing at 100% across the domain and application layers.
+- **Part 3 (Gherkin acceptance tests) is not adopted.**
+  - Its candidate rules are already proven by mutation-proven unit tests and by real-Postgres and E2E tests. Re-testing adapter rules over fakes would lower fidelity.
+  - It is replaced by a rule-to-test register: plain-language rules linked to the tests that prove them, with a documentation check.
+- **Part 4 (UI QA procedures) is adopted,** with the procedures run before the production bootstrap and before releases that change their flows, not before every promotion.
+- **The Compliance rule against numeric gates without a new ADR is unchanged.**
 
 ## References
 
