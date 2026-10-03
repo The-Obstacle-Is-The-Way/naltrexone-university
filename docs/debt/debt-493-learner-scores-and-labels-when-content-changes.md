@@ -138,7 +138,7 @@ In increments, each test-first.
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.
 - **Exposure.** An unanswered exam item that becomes unavailable reveals no content.
-- **Scores.** Session accuracy, the post-exam header, history and dashboard accuracy exclude unavailable and key-corrected items, and include an item again when a hold lifts and its question is published, unless its key was corrected. Activity counts are unchanged.
+- **Scores.** Session accuracy, the post-exam header, history and dashboard accuracy count an item only when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, for an answered item, key-corrected (ADR-022 Amendment). Retiring a question changes no past score. A hold lifted after the session ends restores only an item that had a fair chance; a lift before the end gives the item its chance. Activity counts are unchanged.
 - **The submit warning** counts only scored items.
 - **Key corrections.** A key-corrected attempt shows the correction notice, is unscored, and its question appears in the Incorrect filter. A wording-only revision keeps F-12 and stays scored.
 - **Real Postgres.** An integration case finalizes an exam containing a withdrawn item end to end; none exists today.

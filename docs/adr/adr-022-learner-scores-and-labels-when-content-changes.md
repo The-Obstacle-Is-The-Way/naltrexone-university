@@ -56,7 +56,7 @@ An unavailable question's stem, key and explanation are shown only to a learner 
 
 ### 3. One scoring rule, everywhere a score is computed
 
-> **Amended 2026-10-03.** The rule below is replaced by the [Amendment](#amendment--2026-10-03): retired questions keep counting, and whether the learner had a fair chance at an item is recorded when the session ends. The surfaces it applies to, the disclosure and key corrections are unchanged.
+> **Amended 2026-10-03.** The rule below is replaced by the [Amendment](#amendment--2026-10-03): retired questions keep counting, and whether the learner had a fair chance at an item is recorded when the session ends. The surfaces it applies to and key corrections are unchanged. The disclosure keeps its form, but its reasons change: retirement is no longer one, and an item removed during its session is.
 
 > An item counts toward a score only while its question is **Available** and, if it was answered, the answer key of the revision it was graded against is **still the current key**.
 
@@ -123,6 +123,7 @@ Decided under the owner's 2026-10-03 delegation, after a review notice asked whe
 **Consequences.**
 - **Retiring a question no longer changes any past score.** Retirement is curation: the content was not found wrong, so answers to it stay valid measurements.
 - **A past score changes only when the content's validity changes:** a withdrawal, a hold or its lift, or a key correction. The score says so (Pattern Registry F-13). This is the psychometric practice of removing a flawed item, applied when the flaw is found.
+- **The disclosure names the amended reasons:** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." Pattern Registry F-13 changes with the code that applies the amended rule (DEBT-493).
 - **An item that became unavailable during its session does not count,** answered or not, unless it was a tutor answer already given. A lift after the session ends does not restore it, because the learner could not reach it. A lift before the session ends does.
 - **No second "score when taken" value.** Once retirement is out, a past score moves only for a disclosed clinical reason. Showing the superseded value would invite learners to rely on a score that counted flawed content.
 - **Storage.** Each session item records the fair-chance fact when its session ends, in one nullable column. A session that ended before the column existed reads as a fair chance throughout, since nothing can tell otherwise.

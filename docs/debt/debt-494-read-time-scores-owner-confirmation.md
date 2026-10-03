@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Decided 2026-10-03 under the owner's delegation ([Decision](#decision--2026-10-03)); ADR-022 amended, implementation tracked by DEBT-493. Close once the amendment is promoted.
+**Status:** In Progress — decided 2026-10-03 under the owner's delegation ([Decision](#decision--2026-10-03)); ADR-022 amended, implementation tracked by DEBT-493. Close once the amendment is promoted.
 **Priority:** P2
 **Date:** 2026-10-03
 **Resolved:** —
