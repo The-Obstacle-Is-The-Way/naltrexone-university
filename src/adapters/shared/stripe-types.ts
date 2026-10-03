@@ -47,6 +47,7 @@ export type CheckoutSessionCreateParams =
   | (CheckoutSessionCreateParamsBase & {
       mode: 'setup';
       currency: string;
+      payment_method_types?: Array<'card'>;
       // Prefills the email field; a setup Session names no customer.
       customer_email?: string;
     });
@@ -81,7 +82,9 @@ export type StripeCheckoutSession = {
 
 export type StripeSetupIntent = {
   id: string;
-  payment_method?: string | { id: string } | null;
+  status?: string;
+  // An object, with its type, when retrieved with `expand: ['payment_method']`.
+  payment_method?: string | { id: string; type?: string } | null;
 };
 
 export type StripePaymentMethod = {
@@ -254,7 +257,10 @@ export type StripeClient = {
     ): Promise<StripeSubscription>;
   };
   setupIntents: {
-    retrieve(setupIntentId: string): Promise<StripeSetupIntent>;
+    retrieve(
+      setupIntentId: string,
+      params?: { expand?: string[] },
+    ): Promise<StripeSetupIntent>;
   };
   paymentMethods: {
     retrieve(paymentMethodId: string): Promise<StripePaymentMethod>;

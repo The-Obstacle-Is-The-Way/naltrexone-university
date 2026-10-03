@@ -9,7 +9,10 @@ import {
   fetchOwnedQuestionsByBinding,
 } from '@/src/application/shared/fetch-questions-by-binding';
 import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import {
+  isOmittedOutcome,
+  type QuestionDifficulty,
+} from '@/src/domain/value-objects';
 
 /**
  * Dashboard "last 7 days" accuracy window.
@@ -107,11 +110,24 @@ export class GetUserStatsUseCase {
     const currentStreakDays = computeStreak(attemptsLast60Days, now);
 
     // ADR-021: each attempt shows the revision it graded; two attempts of one
-    // question can differ. A question withdrawn since stays listed (§3).
+    // question can differ. A question withdrawn since stays listed (§3), its
+    // content shown only if the attempt answered it (ADR-022 Decision 2).
     const byBinding = await fetchOwnedQuestionsByBinding(
       this.questions,
       recentAttempts,
     );
+
+    const unavailable = (
+      attempt: (typeof recentAttempts)[number],
+    ): UserStatsOutput['recentActivity'][number] => ({
+      isAvailable: false,
+      attemptId: attempt.id,
+      answeredAt: attempt.answeredAt.toISOString(),
+      questionId: attempt.questionId,
+      sessionId: attempt.practiceSessionId,
+      sessionMode: attempt.sessionMode,
+      isCorrect: attempt.isCorrect,
+    });
 
     const recentActivity = enrichWithQuestion({
       rows: recentAttempts,
@@ -121,28 +137,23 @@ export class GetUserStatsUseCase {
       available: (
         attempt,
         question,
-      ): UserStatsOutput['recentActivity'][number] => ({
-        isAvailable: true,
-        withdrawn: question.status !== 'published',
-        attemptId: attempt.id,
-        answeredAt: attempt.answeredAt.toISOString(),
-        questionId: attempt.questionId,
-        sessionId: attempt.practiceSessionId,
-        sessionMode: attempt.sessionMode,
-        slug: question.slug,
-        stemMd: question.stemMd,
-        difficulty: question.difficulty,
-        isCorrect: attempt.isCorrect,
-      }),
-      unavailable: (attempt): UserStatsOutput['recentActivity'][number] => ({
-        isAvailable: false,
-        attemptId: attempt.id,
-        answeredAt: attempt.answeredAt.toISOString(),
-        questionId: attempt.questionId,
-        sessionId: attempt.practiceSessionId,
-        sessionMode: attempt.sessionMode,
-        isCorrect: attempt.isCorrect,
-      }),
+      ): UserStatsOutput['recentActivity'][number] =>
+        question.status !== 'published' && isOmittedOutcome(attempt.outcome)
+          ? unavailable(attempt)
+          : {
+              isAvailable: true,
+              withdrawn: question.status !== 'published',
+              attemptId: attempt.id,
+              answeredAt: attempt.answeredAt.toISOString(),
+              questionId: attempt.questionId,
+              sessionId: attempt.practiceSessionId,
+              sessionMode: attempt.sessionMode,
+              slug: question.slug,
+              stemMd: question.stemMd,
+              difficulty: question.difficulty,
+              isCorrect: attempt.isCorrect,
+            },
+      unavailable,
       logger: this.logger,
       missingQuestionMessage: 'Recent activity references missing question',
     });

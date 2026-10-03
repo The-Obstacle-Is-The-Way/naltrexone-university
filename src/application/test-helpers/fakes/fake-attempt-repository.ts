@@ -256,6 +256,7 @@ export class FakeAttemptRepository implements AttemptRepository {
         questionRevisionId: a.questionRevisionId,
         answeredAt: a.answeredAt,
         isCorrect: a.isCorrect,
+        isOmitted: isOmittedOutcome(a.outcome),
         sessionId: a.practiceSessionId,
         sessionMode: a.sessionMode ?? null,
       }));

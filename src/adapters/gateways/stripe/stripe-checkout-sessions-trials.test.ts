@@ -386,7 +386,8 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     });
     expect(params).not.toHaveProperty('customer');
     expect(params).not.toHaveProperty('line_items');
-    expect(params).not.toHaveProperty('payment_method_types');
+    // BUG-310: the flow saves a card, so the Session offers only cards.
+    expect(params).toHaveProperty('payment_method_types', ['card']);
     if (!params) throw new Error('Expected Checkout Session params');
     const metadata = params.metadata;
     if (!metadata) throw new Error('Expected signed consent metadata');

@@ -237,13 +237,25 @@ async function getTrialPaymentMethodSetupCompletion(input: {
   }
 
   const { setupIntents } = input.stripe;
-  const setupIntent = stripeSetupIntentSchema.safeParse(
-    await setupIntents.retrieve(expandableId(parsed.data.setup_intent)),
+  const retrieved = await setupIntents.retrieve(
+    expandableId(parsed.data.setup_intent),
+    { expand: ['payment_method'] },
   );
+  const setupIntent = stripeSetupIntentSchema.safeParse(retrieved);
   if (!setupIntent.success) {
+    const paymentMethod = retrieved.payment_method;
+    input.logger.error(
+      {
+        eventId: input.event.id,
+        setupIntentStatus: retrieved.status,
+        paymentMethodType:
+          typeof paymentMethod === 'object' ? paymentMethod?.type : undefined,
+      },
+      'Stripe trial setup did not save a card',
+    );
     throw new ApplicationError(
       'INVALID_WEBHOOK_PAYLOAD',
-      'Stripe SetupIntent has no completed payment method',
+      'Stripe trial setup did not save a card',
     );
   }
 
@@ -261,7 +273,7 @@ async function getTrialPaymentMethodSetupCompletion(input: {
     disclosureVersion: metadata.consent_disclosure_version,
     termsVersion: metadata.consent_terms_version,
     termsHash: metadata.consent_terms_hash,
-    stripePaymentMethodId: expandableId(setupIntent.data.payment_method),
+    stripePaymentMethodId: setupIntent.data.payment_method.id,
     acceptedAt: eventAcceptedAt(input.event),
   };
 }

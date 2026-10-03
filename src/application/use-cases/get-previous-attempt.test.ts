@@ -534,6 +534,54 @@ describe('GetPreviousAttemptUseCase', () => {
     });
   });
 
+  // ADR-022 Decision 2: an unavailable question's content is shown only to a
+  // learner who answered it. An omitted attempt is not an answer.
+  describe('a question no longer published', () => {
+    function arrange(outcome: ReturnType<typeof omittedOutcome> | 'answered') {
+      const userId = 'user-1';
+      const questionId = 'q1';
+      const question = createQuestion({
+        id: questionId,
+        status: 'archived',
+        explanationMd: 'Possibly unsafe explanation.',
+        choices: [
+          createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+          createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+        ],
+      });
+      const useCase = new GetPreviousAttemptUseCase(
+        new FakeAttemptRepository([
+          createAttempt({
+            id: 'attempt-1',
+            userId,
+            questionId,
+            ...(outcome === 'answered'
+              ? { selectedChoiceId: 'c1' }
+              : { outcome }),
+            isCorrect: false,
+          }),
+        ]),
+        new FakeQuestionRepository([question]),
+        new FakeLogger(),
+        new FakePracticeSessionRepository(),
+      );
+      return () => useCase.execute({ userId, questionId });
+    }
+
+    it('reveals nothing for an omitted attempt', async () => {
+      await expect(arrange(omittedOutcome())()).resolves.toBeNull();
+    });
+
+    it('still reveals the revision a learner answered', async () => {
+      await expect(arrange('answered')()).resolves.toMatchObject({
+        kind: 'attempt',
+        selectedChoiceId: 'c1',
+        correctChoiceId: 'c2',
+        explanationMd: 'Possibly unsafe explanation.',
+      });
+    });
+  });
+
   it('propagates repository failures', async () => {
     class FailingAttemptRepository extends FakeAttemptRepository {
       override async findLatestByUserAndQuestion(): Promise<never> {

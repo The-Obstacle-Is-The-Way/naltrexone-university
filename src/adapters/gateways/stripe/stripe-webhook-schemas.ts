@@ -137,10 +137,14 @@ export const stripeTrialPaymentMethodSetupSessionSchema =
 export const stripeExpiredTrialPaymentMethodSetupSessionSchema =
   stripeTrialPaymentMethodSetupSessionBaseSchema.passthrough();
 
+// BUG-310: only a card that Stripe saved becomes a trial's renewal method.
 export const stripeSetupIntentSchema = z
   .object({
     id: z.string().min(1),
-    payment_method: stripeExpandableIdSchema,
+    status: z.literal('succeeded'),
+    payment_method: z
+      .object({ id: z.string().min(1), type: z.literal('card') })
+      .passthrough(),
   })
   .passthrough();
 

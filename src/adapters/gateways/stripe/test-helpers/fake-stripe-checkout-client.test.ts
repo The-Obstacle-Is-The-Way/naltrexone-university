@@ -619,6 +619,26 @@ describe('FakeStripeCheckoutClient', () => {
     ]);
   });
 
+  it('records each SetupIntent retrieval with its params, returning the seeded intent as is', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const seeded = {
+      id: 'seti_fake',
+      status: 'succeeded',
+      payment_method: { id: 'pm_fake', type: 'card' },
+    };
+    stripe.seedSetupIntent(seeded);
+
+    await expect(
+      stripe.setupIntents.retrieve('seti_fake', { expand: ['payment_method'] }),
+    ).resolves.toEqual(seeded);
+    await stripe.setupIntents.retrieve('seti_fake');
+
+    expect(stripe.setupIntents.retrieveRequests).toEqual([
+      { setupIntentId: 'seti_fake', params: { expand: ['payment_method'] } },
+      { setupIntentId: 'seti_fake' },
+    ]);
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);

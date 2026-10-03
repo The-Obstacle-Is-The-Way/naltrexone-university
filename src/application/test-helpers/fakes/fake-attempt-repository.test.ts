@@ -310,6 +310,29 @@ describe('FakeAttemptRepository', () => {
   });
 
   describe('listAttemptedQuestionsByUserId (attempted-question filters)', () => {
+    it('reports whether each latest attempt was omitted', async () => {
+      const repo = new FakeAttemptRepository([
+        makeAttempt({ id: 'attempt-answered', questionId: 'q_answered' }),
+        makeAttempt({
+          id: 'attempt-omitted',
+          questionId: 'q_omitted',
+          outcome: omittedOutcome(),
+          isCorrect: false,
+        }),
+      ]);
+
+      const rows = await repo.listAttemptedQuestionsByUserId(userId, 10, 0);
+
+      expect(
+        rows.map(({ questionId, isOmitted }) => ({ questionId, isOmitted })),
+      ).toEqual(
+        expect.arrayContaining([
+          { questionId: 'q_answered', isOmitted: false },
+          { questionId: 'q_omitted', isOmitted: true },
+        ]),
+      );
+    });
+
     it('sorts by the difficulty each attempt answered, with unpublished questions and ties last by recency', async () => {
       const hard = createQuestion({ id: 'q_hard', difficulty: 'hard' });
       const medium = createQuestion({ id: 'q_medium', difficulty: 'medium' });

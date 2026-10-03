@@ -70,6 +70,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         answeredAt: attempts.answeredAt,
         practiceSessionId: attempts.practiceSessionId,
         isCorrect: attempts.isCorrect,
+        isOmitted: attempts.isOmitted,
         attemptRank: latestAttemptRankSql({
           questionId: attempts.questionId,
           answeredAt: attempts.answeredAt,
@@ -437,6 +438,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         questionRevisionId: latestAttemptRows.questionRevisionId,
         answeredAt: latestAttemptRows.answeredAt,
         isCorrect: latestAttemptRows.isCorrect,
+        isOmitted: latestAttemptRows.isOmitted,
         sessionId: latestAttemptRows.practiceSessionId,
         sessionMode: practiceSessions.mode,
       })
@@ -471,6 +473,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
         questionRevisionId: row.questionRevisionId,
         answeredAt: row.answeredAt,
         isCorrect: row.isCorrect,
+        isOmitted: row.isOmitted,
         sessionId: row.sessionId,
         sessionMode: row.sessionMode,
       });
