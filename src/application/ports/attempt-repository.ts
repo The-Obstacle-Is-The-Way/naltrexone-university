@@ -81,9 +81,11 @@ export interface AttemptSessionReader {
 }
 
 /**
- * ADR-022 Decision 3: the attempts that count toward accuracy, those whose
- * question is published when read, the correct ones among them, and how many
- * questions the attempts left out are on.
+ * ADR-022 Decision 3, as amended by DEBT-494: the attempts that count toward
+ * accuracy (the learner had a fair chance at the attempt, and its question's
+ * content is not now withdrawn or under review; a retired question counts),
+ * the correct ones among them, and how many questions the attempts left out
+ * are on.
  */
 export type AttemptScore = {
   scored: number;

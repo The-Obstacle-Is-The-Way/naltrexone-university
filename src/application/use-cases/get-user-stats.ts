@@ -47,7 +47,7 @@ export type UserStatsOutput = {
   totalAnswered: number;
   /** Correct over scored attempts (ADR-022 Decision 3). */
   accuracyOverall: number; // 0..1
-  /** Attempts whose question is published now. */
+  /** Attempts that count (ADR-022 Decision 3, as amended by DEBT-494). */
   scoredOverall: number;
   /** Questions whose attempts accuracy leaves out. */
   unscoredQuestionsOverall: number;

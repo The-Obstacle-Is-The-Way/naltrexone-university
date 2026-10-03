@@ -208,9 +208,10 @@ export class FakeAttemptRepository implements AttemptRepository {
     ).length;
   }
 
-  // ADR-022 Decision 3. An attempt counts while its question is published.
-  // An attempt whose question is not listed counts neither way, as the
-  // adapter's cascade leaves no attempt without its question.
+  // ADR-022 Decision 3, as amended by DEBT-494: an attempt counts when its
+  // session item had a fair chance and its question's content is not in
+  // doubt. An attempt whose question is not listed counts neither way, as
+  // the adapter's cascade leaves no attempt without its question.
   async scoreByUserId(
     userId: string,
     since: Date | null,
