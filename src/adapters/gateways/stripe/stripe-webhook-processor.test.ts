@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
@@ -12,7 +11,6 @@ const priceIds: StripePriceIds = {
 };
 
 const appUserId = crypto.randomUUID();
-const consentStateSecret = 'dedicated-consent-state-secret-32-bytes';
 
 type WebhookEvent = Parameters<FakeStripeCheckoutClient['setWebhookEvent']>[0] &
   object;
@@ -38,7 +36,7 @@ function subscriptionFixture(id = 'sub_123') {
 }
 
 // The fake hands back the injected event (recording the verification call)
-// and serves seeded Subscriptions and SetupIntents by id; the event shapes
+// and serves seeded Subscriptions by id; the event shapes
 // stay hand-built test data, as they were.
 function createStripe(input: {
   event?: WebhookEvent;
@@ -54,14 +52,11 @@ function createStripe(input: {
 
 function processEvent(
   stripe: FakeStripeCheckoutClient,
-  overrides: { logger?: FakeLogger; consentStateSecret?: string } = {},
+  overrides: { logger?: FakeLogger } = {},
 ) {
   return processStripeWebhookEvent({
     stripe,
     webhookSecret: 'whsec_test',
-    ...(overrides.consentStateSecret
-      ? { consentStateSecret: overrides.consentStateSecret }
-      : {}),
     rawBody: '{}',
     signature: 'sig_test',
     priceIds,
@@ -71,59 +66,6 @@ function processEvent(
     resolveCheckoutDisclosure: () => null,
     sha256Hasher: new NobleSha256Hasher(),
   });
-}
-
-function signSetupMetadata(metadata: Record<string, string>): string {
-  const sorted = Object.fromEntries(
-    Object.entries(metadata).sort(([left], [right]) =>
-      left.localeCompare(right),
-    ),
-  );
-  return createHmac('sha256', consentStateSecret)
-    .update(JSON.stringify(sorted))
-    .digest('hex');
-}
-
-function createCompletedSetupSession(overrides?: {
-  terms?: 'accepted' | 'required';
-  signature?: string;
-}) {
-  const metadata = {
-    consent_user_id: appUserId,
-    consent_customer_id: 'cus_123',
-    consent_subscription_id: 'sub_123',
-    consent_plan: 'monthly',
-    consent_amount_cents: '2900',
-    consent_currency: 'usd',
-    consent_frequency: 'month',
-    consent_trial_ends_at: '2026-08-13T12:00:00.000Z',
-    consent_disclosure_version: '2026-08-05',
-    consent_terms_version: '2026-08-05',
-    consent_terms_hash: 'terms-hash',
-  };
-  return {
-    id: 'cs_setup_123',
-    mode: 'setup',
-    setup_intent: 'seti_123',
-    consent: { terms_of_service: overrides?.terms ?? 'accepted' },
-    metadata: {
-      ...metadata,
-      consent_state_signature:
-        overrides?.signature ?? signSetupMetadata(metadata),
-    },
-  };
-}
-
-function setupCompletionEvent(
-  session: ReturnType<typeof createCompletedSetupSession>,
-  created?: number,
-): WebhookEvent {
-  return {
-    id: 'evt_setup',
-    type: 'checkout.session.completed',
-    ...(created === undefined ? {} : { created }),
-    data: { object: session },
-  };
 }
 
 function consentCheckoutEvent(
@@ -201,82 +143,6 @@ function subscriptionUpdateFor(externalSubscriptionId: string) {
 }
 
 describe('processStripeWebhookEvent', () => {
-  it('normalizes an accepted, signed setup completion and resolves its payment method', async () => {
-    const stripe = createStripe({
-      event: setupCompletionEvent(createCompletedSetupSession(), 1_775_649_600),
-    });
-    stripe.seedSetupIntent({ id: 'seti_123', payment_method: 'pm_123' });
-
-    await expect(processEvent(stripe, { consentStateSecret })).resolves.toEqual(
-      {
-        eventId: 'evt_setup',
-        type: 'checkout.session.completed',
-        trialPaymentMethodSetupCompletion: {
-          sessionId: 'cs_setup_123',
-          userId: appUserId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          amountCents: 2900,
-          currency: 'usd',
-          frequency: 'month',
-          trialEndsAt: new Date('2026-08-13T12:00:00.000Z'),
-          disclosureVersion: '2026-08-05',
-          termsVersion: '2026-08-05',
-          termsHash: 'terms-hash',
-          stripePaymentMethodId: 'pm_123',
-          acceptedAt: new Date('2026-04-08T12:00:00.000Z'),
-        },
-      },
-    );
-    expect(stripe.setupIntents.retrieveCalls).toEqual(['seti_123']);
-    expect(stripe.subscriptions.retrieveCalls).toEqual([]);
-    expect(stripe.webhookCalls).toEqual([
-      { rawBody: '{}', signature: 'sig_test', secret: 'whsec_test' },
-    ]);
-  });
-
-  it('fails a setup completion closed when the dedicated consent-state secret is unavailable', async () => {
-    const stripe = createStripe({
-      event: setupCompletionEvent(createCompletedSetupSession()),
-    });
-
-    await expect(processEvent(stripe)).rejects.toMatchObject({
-      code: 'INTERNAL_ERROR',
-      message: 'Trial consent-state verification is not configured',
-    });
-  });
-
-  it('rejects a setup completion without accepted Terms before resolving the payment method', async () => {
-    const stripe = createStripe({
-      event: setupCompletionEvent(
-        createCompletedSetupSession({ terms: 'required' }),
-      ),
-    });
-    stripe.seedSetupIntent({ id: 'seti_123', payment_method: 'pm_123' });
-
-    await expect(
-      processEvent(stripe, { consentStateSecret }),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-    expect(stripe.setupIntents.retrieveCalls).toEqual([]);
-  });
-
-  it('rejects setup metadata with an invalid server signature before resolving the payment method', async () => {
-    // A well-formed but wrong signature: the metadata schema accepts it, so
-    // the server-side HMAC check is what rejects the Session.
-    const stripe = createStripe({
-      event: setupCompletionEvent(
-        createCompletedSetupSession({ signature: '0'.repeat(64) }),
-      ),
-    });
-    stripe.seedSetupIntent({ id: 'seti_123', payment_method: 'pm_123' });
-
-    await expect(
-      processEvent(stripe, { consentStateSecret }),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-    expect(stripe.setupIntents.retrieveCalls).toEqual([]);
-  });
-
   it('maps a constructEvent failure to INVALID_WEBHOOK_SIGNATURE', async () => {
     const logger = new FakeLogger();
     // No event is injected, so the fake's constructEvent throws. This pins the

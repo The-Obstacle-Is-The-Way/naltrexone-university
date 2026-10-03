@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — decided 2026-10-03 under the owner's delegation: option (a), plus a setup-success check
+**Status:** In Progress — fixed in code 2026-10-03 as decided (option (a), plus a setup-success check); release pending
 **Priority:** P3
 **Date:** 2026-09-29
 **Resolved:** —
@@ -72,11 +72,29 @@ Decided under the owner's 2026-10-03 delegation ("deciding all that we need to d
 
 Nothing is changed there, and this rationale is recorded so that the choice is no longer implicit.
 
+## Fix — 2026-10-03
+
+Implemented as decided, each change red first.
+- **The setup Session offers only cards.**
+  - `createStripeTrialPaymentMethodSetupSession` sends `payment_method_types: ['card']`, pinned in `stripe-checkout-sessions-trials.test.ts`.
+  - A Session created before the change and replayed under the same key is a parameter mismatch, which the existing recovery path handles under the request-fingerprint key.
+  - `stripe-checkout-sessions.test.ts` pins paid Checkout's dynamic methods.
+- **Setup completion accepts only a card that Stripe saved.**
+  - The webhook retrieves the SetupIntent with its payment method expanded, and requires `status: 'succeeded'` and a `card` payment method.
+  - Anything else fails the event before any write, with a logged error naming the SetupIntent's status and the method's type. Nothing is attached or recorded. The route answers 400, and Stripe shows the delivery as failed and retries it.
+- **The hosted journey checks what Stripe was told.**
+  - The add-card evidence step retrieves the completed Session from Stripe and asserts that its `payment_method_types` is `['card']`. It asserts the Session rather than the rendered page, whose markup is Stripe's and changes ([DEBT-471](../_archive/debt/debt-471-e2e-ci-external-fragility.md)); Stripe renders the page from the Session.
+  - The same step replays Stripe's actual `checkout.session.completed` event through the signed webhook route, so the expansion and both checks run against real Stripe.
+- **Evidence.**
+  - The setup-completion cases moved, unchanged apart from the expanded SetupIntent, to their own file, as the expiration cases already were. Four refusal cases are new.
+  - Nine targeted mutations each fail a case: the card-only parameter, the status check, the card type, the expanded-object requirement, the expand request, the log message, each of the two logged fields, and the fake's recorded params.
+  - The fake records each SetupIntent retrieval's params; the contract register says that it models no expansion.
+
 ## Verification
 
 - [x] Owner decision recorded (2026-10-03, delegated)
-- [ ] Implementation per the decision, red first:
+- [x] Implementation per the decision, red first (see Fix):
   - the setup Session sends `payment_method_types: ['card']`, pinned in the adapter test;
-  - the hosted journey asserts card is the only method offered;
+  - the hosted journey asserts that Stripe's Session offers only card;
   - setup completion refuses a SetupIntent that has not succeeded, or whose method is not a card.
 - [ ] Production release verified; record resolved and archived
