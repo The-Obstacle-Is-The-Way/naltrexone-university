@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { sql as drizzleSql, eq } from 'drizzle-orm';
 import { afterAll, afterEach } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
@@ -61,7 +61,11 @@ runQuestionAvailabilityContract('DrizzleQuestionRepository', async () => ({
         await db
           .update(schema.questionHolds)
           .set({
-            liftedAt: new Date(),
+            // From the row, not the client clock: a client time has
+            // millisecond precision, so within the same millisecond it sorts
+            // before the database's microsecond placed_at, and the
+            // lifted-after-placed check refuses it.
+            liftedAt: drizzleSql`${schema.questionHolds.placedAt} + interval '1 second'`,
             liftReason: 'Contract test lift',
             liftAuthority: 'Test suite',
           })
