@@ -311,9 +311,11 @@ ADR-021 phase 4's operator commands live in `scripts/content-release/`. Like the
 
 ```bash
 # Adopt what is live as the first release (once). Preview it, then apply the plan it printed.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts
+# Every bootstrap and activation names why, and on whose authority (DEBT-490).
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
-  --plan "<plan-id>" --apply
+  --reason "Why" --authority "Who"
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
+  --reason "Why" --authority "Who" --plan "<plan-id>" --apply
 # Stage the MDX bundle as a release on the active release. Every question the
 # active release names must appear in the bundle unless it is withdrawn; name
 # one whose file is absent on purpose with --remove.
@@ -321,10 +323,11 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-
 # Preview its activation: it prints the plan id, every question it archives,
 # publishes or moves and withdraws, and the items a hold or withdrawal leaves out.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
-  --release "<release-id>" --expect-active "<active-release-id>"
+  --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
 # Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
-  --release "<release-id>" --expect-active "<active-release-id>" --plan "<plan-id>" --apply
+  --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
+  --plan "<plan-id>" --apply
 # Roll back: preview and apply the earlier release the same way.
 # Hold a question's live revision, or lift that hold with --lift.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
@@ -349,6 +352,12 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 
 Activation recomputes the plan under its own locks and refuses a different one. So a hold, a withdrawal, a lift, or anything else between preview and apply that changes one of those sets means a fresh preview. Tags are outside the plan: they are not versioned, so a tag change does not change it. A rollback is previewed and applied the same way, and still honors current holds and withdrawals: a withdrawal is permanent.
 
+**Every activation is attributed ([DEBT-490](../debt/debt-490-release-decisions-record-no-reason-or-authority.md)).**
+- **The receipt.** An activation, a rollback and the bootstrap each record their `--reason` and `--authority` on an immutable receipt, as the withdrawal and hold commands record theirs.
+- **Withdrawals.** A withdrawal made by an `archived` removal records the activation's authority, and its reason names the release.
+- **Holds.** A hold's or a lift's re-application of the active release records the hold's own decision.
+- **The plan.** The plan id does not include the decision, so the same transition keeps the same plan whatever its reason.
+
 A hold takes effect at once: it re-applies the active release, which archives the held question. A lift restores eligibility only if no question-wide withdrawal excludes the question; it records its own reason and authority. Both act only on the revision the active release publishes; a hold on any other revision stays until a release that names that revision is active. While no release is active, a hold would change nothing, so the command refuses; withdraw instead.
 
 ---
@@ -363,7 +372,7 @@ A hold takes effect at once: it re-applies the active release, which archives th
 
 **Question withdrawals table:** One row per withdrawn revision: `(questionId, questionRevisionId)`, with the `reason`, the `authority` that ordered it and `effectiveAt` (migration `0045`). Every revision of a withdrawn question has a row. Activation excludes a question with any recorded withdrawal, regardless of which revision its release names.
 
-**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable, hash-addressed manifest, which names the release's items and every live question it removes (DEBT-489), and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one receipt per activation. `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold).
+**Releases (ADR-021 phase 4b, migration `0047`):** `content_releases` holds an immutable, hash-addressed manifest, which names the release's items and every live question it removes (DEBT-489), and `content_release_items` holds its selectable set, one revision per question. `content_release_pointer` names the active release; until a release is activated it names none. `content_release_activations` keeps one immutable receipt per activation, with its reason and authority (migration `0049`). `question_holds` holds temporary holds, at most one unlifted per revision. Activation publishes each item unless its question is withdrawn or its revision is held, and archives every other published question. Once a release is active, the direct seed refuses to run. Operators bootstrap, stage, activate, roll back and hold with the commands under [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold).
 
 **Choices table:**
 

@@ -8,6 +8,7 @@ import { changeHolds } from '@/scripts/content-release/release-holds';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import { runContentWithdrawal } from '@/scripts/seed/withdraw-questions';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
@@ -22,7 +23,9 @@ it('allows a hold and overlapping withdrawal batch to finish without deadlock', 
     source('audit-low'),
     source('audit-high'),
   ]);
-  await bootstrapRelease(disposable.db);
+  await bootstrapRelease(disposable.db, {
+    record: RELEASE_DECISION,
+  });
   const monitor = postgres(disposable.url, { max: 1 });
   const holder = postgres(disposable.url, { max: 1 });
   let hold: Promise<unknown> | undefined;
@@ -96,7 +99,9 @@ it('allows a hold and overlapping withdrawal batch to finish without deadlock', 
 });
 
 it('reuses the release when identical new-only bundles stage concurrently', async () => {
-  await bootstrapRelease(disposable.db);
+  await bootstrapRelease(disposable.db, {
+    record: RELEASE_DECISION,
+  });
   const monitor = postgres(disposable.url, { max: 1, onnotice: () => {} });
   const first = postgres(disposable.url, { max: 1, onnotice: () => {} });
   const second = postgres(disposable.url, { max: 1, onnotice: () => {} });

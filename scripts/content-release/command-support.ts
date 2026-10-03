@@ -2,6 +2,7 @@ import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
+import type { DecisionRecord } from '../seed/qid-command-args';
 import type { ActivationPlan, ActivationSummary } from './release-activation';
 
 type Db = PostgresJsDatabase<typeof schema>;
@@ -89,4 +90,15 @@ export function formatPlan(plan: ActivationPlan): string[] {
 
 function formatNames(label: string, slugs: readonly string[]): string {
   return `${label} (${slugs.length})${slugs.length > 0 ? `: ${slugs.join(', ')}` : ''}`;
+}
+
+// DEBT-490: the decision an activation records, as printed and as the
+// arguments that repeat it, quoted for a POSIX shell.
+export function formatDecision(record: DecisionRecord): string {
+  return `Decision: ${record.reason} (authority: ${record.authority})`;
+}
+
+export function formatDecisionArgs(record: DecisionRecord): string {
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  return `--reason ${quote(record.reason)} --authority ${quote(record.authority)}`;
 }

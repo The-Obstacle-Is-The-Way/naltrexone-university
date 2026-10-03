@@ -37,7 +37,8 @@ a new release must account for every question the active release names,
 unless it is withdrawn, as an item or a named removal, and an apply is bound
 to the plan its preview printed. Staging does
 not move existing revision pointers and records no withdrawal; only tags
-change the live bank before activation.
+change the live bank before activation. Since [DEBT-490](../debt/debt-490-release-decisions-record-no-reason-or-authority.md),
+each activation's immutable receipt records its reason and authority.
 Withdrawals exclude the whole question across revisions; holds exclude one
 revision. The emergency QID command writes the withdrawal and archives the
 question directly, without a minimal manifest. The database triggers reject

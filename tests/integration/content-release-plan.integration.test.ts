@@ -12,6 +12,7 @@ import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import { runContentWithdrawal } from '@/scripts/seed/withdraw-questions';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
+import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 // DEBT-489: an activation applies exactly the plan its preview showed. The
@@ -47,7 +48,11 @@ async function arrange() {
     disposable.db,
     [kept, dropped, retired].map((qid) => source(qid)),
   );
-  const base = (await bootstrapRelease(disposable.db)).releaseId;
+  const base = (
+    await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    })
+  ).releaseId;
   const next = await stageReleaseFromFiles(disposable.db, [
     source(kept, { stem: 'A corrected task.' }),
     source(dropped, { status: 'draft' }),
@@ -58,7 +63,11 @@ async function arrange() {
 
 async function preview(releaseId: string, expectedActiveReleaseId: string) {
   return previewOrApply(disposable.db, false, (db) =>
-    activateRelease(db, { releaseId, expectedActiveReleaseId }),
+    activateRelease(db, {
+      record: RELEASE_DECISION,
+      releaseId,
+      expectedActiveReleaseId,
+    }),
   );
 }
 
@@ -84,6 +93,7 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     });
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: next,
         expectedActiveReleaseId: base,
         expectedPlanId: planned.plan.id,
@@ -112,6 +122,7 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
 
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: next,
         expectedActiveReleaseId: base,
         expectedPlanId: planned.plan.id,
@@ -155,6 +166,7 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
 
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: asNamed.releaseId,
         expectedActiveReleaseId: base,
         expectedPlanId: planned.plan.id,
@@ -166,7 +178,11 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     const live = `it-plan-${randomUUID()}`;
     await syncQuestionsFromFiles(disposable.db, [source(live)]);
     const bootstrapPreview = () =>
-      previewOrApply(disposable.db, false, (db) => bootstrapRelease(db));
+      previewOrApply(disposable.db, false, (db) =>
+        bootstrapRelease(db, {
+          record: RELEASE_DECISION,
+        }),
+      );
     const planned = await bootstrapPreview();
     expect((await bootstrapPreview()).plan.id).toBe(planned.plan.id);
     // Between the preview and the apply, the seed publishes another question.
@@ -176,7 +192,10 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     ]);
 
     await expect(
-      bootstrapRelease(disposable.db, { expectedPlanId: planned.plan.id }),
+      bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+        expectedPlanId: planned.plan.id,
+      }),
     ).rejects.toMatchObject({ code: 'PLAN_MISMATCH' });
 
     const [pointer] = await disposable.db
@@ -185,7 +204,10 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     expect(pointer?.id).toBeNull();
     const fresh = await bootstrapPreview();
     await expect(
-      bootstrapRelease(disposable.db, { expectedPlanId: fresh.plan.id }),
+      bootstrapRelease(disposable.db, {
+        record: RELEASE_DECISION,
+        expectedPlanId: fresh.plan.id,
+      }),
     ).resolves.toMatchObject({ items: 2, plan: { id: fresh.plan.id } });
   });
 
@@ -193,6 +215,7 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     const { dropped, base, next } = await arrange();
     const forward = await preview(next, base);
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: next,
       expectedActiveReleaseId: base,
       expectedPlanId: forward.plan.id,
@@ -203,12 +226,14 @@ describe('DEBT-489: an activation applies the plan its preview showed', () => {
     expect(back.plan.id).not.toBe(forward.plan.id);
     await expect(
       activateRelease(disposable.db, {
+        record: RELEASE_DECISION,
         releaseId: base,
         expectedActiveReleaseId: next,
         expectedPlanId: forward.plan.id,
       }),
     ).rejects.toMatchObject({ code: 'PLAN_MISMATCH' });
     await activateRelease(disposable.db, {
+      record: RELEASE_DECISION,
       releaseId: base,
       expectedActiveReleaseId: next,
       expectedPlanId: back.plan.id,
