@@ -116,6 +116,19 @@ describe('createStripeCheckoutSession', () => {
     });
   }
 
+  // BUG-310's decision: paid Checkout keeps Stripe's dynamic payment methods.
+  // Its consent says "payment method", subscription mode offers only methods
+  // that support recurring billing, and access waits on the Subscription.
+  it('leaves the paid Checkout on dynamic payment methods', async () => {
+    const stripe = createFake();
+
+    await createCheckout(stripe);
+
+    expect(stripe.createCalls[0]?.params).not.toHaveProperty(
+      'payment_method_types',
+    );
+  });
+
   // DEBT-414 F15: a consent text can exceed Stripe's 500-character metadata
   // values, so a Session carries its SHA-256 and the webhook verifies it
   // against the disclosure registry.

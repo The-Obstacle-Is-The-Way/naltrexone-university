@@ -2,6 +2,11 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
+- **Decision.** The trial add-card Checkout offers cards only (`payment_method_types: ['card']` on the setup Session). Its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic payment methods: its copy says "payment method", and access waits on the subscription's status.
+- **Next.** The fix, test-first, is the next code PR.
+- **BUG-317's deferred question**, whether the withdrawn label suits held or dropped questions, is decided by [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). Its row leaves the debt register's Deferred table.
+
 **Earlier** — 2026-10-02 (forward pointer: the Latest stanza above records that ADR-022 decides BUG-317's deferred question): **BUG-314–317 are resolved and archived** ([BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md#verified-closeout--2026-10-02-utc)).
 - **Shipped.** Content writers serialize on the release pointer, and content and session locks are ordered (BUG-314, P2). Placeholder archival is limited to the ten committed fixtures (BUG-315, P2). Disposable test databases clean up after failures (BUG-316, P3). Release guidance matches the code (BUG-317, P3).
 - **History.** BUG-314 and BUG-315 were in shipped code; no production incident is established.

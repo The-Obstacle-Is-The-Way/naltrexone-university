@@ -1,12 +1,16 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-03 — BUG-310 decided.
+**Last Updated:** 2026-10-03 — BUG-310 fixed in code.
 
-**Latest** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
-- **Decision.** The trial add-card Checkout offers cards only (`payment_method_types: ['card']` on the setup Session). Its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic payment methods: its copy says "payment method", and access waits on the subscription's status.
-- **Next.** The fix, test-first, is the next code PR.
-- **BUG-317's deferred question**, whether the withdrawn label suits held or dropped questions, is decided by [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). Its row leaves the debt register's Deferred table.
+**Latest** — 2026-10-03: BUG-310 is fixed in code, as decided ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#fix--2026-10-03)).
+- **The setup Session offers only cards.** `payment_method_types: ['card']` on the trial add-card Session; paid Checkout keeps dynamic methods, now pinned by a test.
+- **Setup completion accepts only a card that Stripe saved.** The webhook retrieves the SetupIntent with its payment method expanded and requires `status: 'succeeded'` and a `card`. Anything else fails the event before any write, with a logged error; nothing is attached or recorded.
+- **The hosted journey checks the Session Stripe recorded**, and replays Stripe's actual completion event through the signed webhook route, so both checks run against real Stripe.
+- **Evidence.** Nine targeted mutations each fail a case.
+- **The decision is released.** #1326 recorded it (**5399102258** on `e02322f8`; merged `8c999ccf`). It reached production with #1327 through promotion #1328 (`220b95c7`): main CI **37102616298** `test` passed **06:32:10Z**, production assigned **06:32:11.842Z**, trees `22a83f23`, healthy production.
+
+This entry was written before this increment's own checks ran; its local full gate runs on its head before it is pushed, and the next entry records its merge and release.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -459,7 +463,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | In Progress | The setup Session keeps dynamic payment methods (DEBT-414's recorded choice), so the card flow can save Cash App Pay, Klarna or Amazon Pay as the renewal method. Decided 2026-10-03: cards only on the setup Session, and completion attaches only a succeeded card SetupIntent. |
+| [BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md) | Trial add-card Checkout offers payment methods that are not cards | P3 | In Progress | The setup Session kept dynamic payment methods (DEBT-414's recorded choice), so the card flow could save Cash App Pay, Klarna or Amazon Pay as the renewal method. Fixed in code 2026-10-03: cards only on the setup Session, and completion attaches only a succeeded card SetupIntent; resolves once released. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

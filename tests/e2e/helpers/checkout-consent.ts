@@ -199,6 +199,8 @@ export async function expectE2ETrialPaymentConsent(
       'Add-card evidence must be a completed setup Session of this E2E Stripe test owner.',
     );
   }
+  // BUG-310: Stripe offered this setup only cards.
+  expect(session.payment_method_types).toEqual(['card']);
   const event = await findLatestStripeEvent({
     stripe,
     type: 'checkout.session.completed',

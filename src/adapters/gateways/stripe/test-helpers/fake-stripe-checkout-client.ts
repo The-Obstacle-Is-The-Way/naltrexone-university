@@ -146,6 +146,11 @@ type RetrieveRequest = {
   params?: { expand?: string[] } | undefined;
 };
 
+type SetupIntentRetrieveRequest = {
+  setupIntentId: string;
+  params?: { expand?: string[] } | undefined;
+};
+
 type ExpireCall = {
   sessionId: string;
   options?: StripeRequestOptions | undefined;
@@ -643,16 +648,24 @@ export class FakeStripeCheckoutClient implements StripeClient {
     this.webhookEvent = event ? structuredClone(event) : null;
   }
 
-  // Seeded SetupIntents are retrieved by id; the processor reads only the id
-  // and the payment method reference.
+  // Seeded SetupIntents are retrieved by id and returned as seeded, whatever
+  // `expand` asks for: a case seeds the payment method in the shape it needs.
+  // The processor reads the status and the expanded payment method's id and
+  // type. `retrieveRequests` records each call's params.
   readonly setupIntents: NonNullable<StripeClient['setupIntents']> & {
     readonly seeded: StripeSetupIntent[];
     readonly retrieveCalls: string[];
+    readonly retrieveRequests: SetupIntentRetrieveRequest[];
   } = {
     seeded: [],
     retrieveCalls: [],
-    async retrieve(setupIntentId) {
+    retrieveRequests: [],
+    async retrieve(setupIntentId, params) {
       this.retrieveCalls.push(setupIntentId);
+      this.retrieveRequests.push({
+        setupIntentId,
+        ...(params ? { params } : {}),
+      });
       const intent = this.seeded.find(
         (candidate) => candidate.id === setupIntentId,
       );
