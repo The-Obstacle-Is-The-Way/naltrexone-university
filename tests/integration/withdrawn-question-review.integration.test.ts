@@ -90,11 +90,25 @@ async function createCompletedSession() {
   return { kept, withdrawn, user, session };
 }
 
+// As the withdrawal command does: archive the question and record a
+// withdrawal for each of its revisions, so it reads as withdrawn (ADR-022).
 async function withdraw(questionId: string) {
   await db
     .update(schema.questions)
     .set({ status: 'archived' })
     .where(eq(schema.questions.id, questionId));
+  const revisions = await db
+    .select({ id: schema.questionRevisions.id })
+    .from(schema.questionRevisions)
+    .where(eq(schema.questionRevisions.questionId, questionId));
+  await db.insert(schema.questionWithdrawals).values(
+    revisions.map((revision) => ({
+      questionId,
+      questionRevisionId: revision.id,
+      reason: 'Integration test',
+      authority: 'Test suite',
+    })),
+  );
 }
 
 describe('ADR-021 §3: a withdrawn question stays reviewable by the learner who answered it', () => {
@@ -113,12 +127,12 @@ describe('ADR-021 §3: a withdrawn question stays reviewable by the learner who 
       expect.objectContaining({
         isAvailable: true,
         questionId: kept.id,
-        withdrawn: false,
+        availability: 'available',
       }),
       expect.objectContaining({
         isAvailable: true,
         questionId: withdrawn.id,
-        withdrawn: true,
+        availability: 'withdrawn',
         stemMd: '# Stem',
         selectedChoiceId: withdrawn.incorrectChoiceId,
         correctChoiceId: withdrawn.correctChoiceId,
@@ -164,8 +178,11 @@ describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
     });
 
     expect(view).toMatchObject({
-      withdrawn: true,
-      question: { id: question.id, stemMd: '# Stem' },
+      question: {
+        id: question.id,
+        stemMd: '# Stem',
+        availability: 'withdrawn',
+      },
     });
   });
 
@@ -178,7 +195,7 @@ describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
       review: {},
     });
 
-    expect(view).toMatchObject({ withdrawn: true });
+    expect(view).toMatchObject({ question: { availability: 'withdrawn' } });
   });
 
   it('shows it by the learner’s finished session item', async () => {
@@ -191,7 +208,7 @@ describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
       review: { sessionId: session.id },
     });
 
-    expect(view).toMatchObject({ withdrawn: true });
+    expect(view).toMatchObject({ question: { availability: 'withdrawn' } });
   });
 
   it('never shows it to a learner who did not answer it', async () => {
@@ -249,8 +266,7 @@ describe('ADR-021 §3: the standalone review of a withdrawn question', () => {
     });
 
     expect(view).toMatchObject({
-      withdrawn: false,
-      question: { stemMd: '# Stem' },
+      question: { stemMd: '# Stem', availability: 'available' },
     });
     expect(view?.question.choices.map((choice) => choice.id).sort()).toEqual(
       [question.correctChoiceId, question.incorrectChoiceId].sort(),
@@ -424,7 +440,7 @@ describe('ADR-021 §3: the attempt lists keep a withdrawn question the learner a
     expect(listed.rows).toEqual([
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'withdrawn',
         questionId: question.id,
         slug: question.slug,
         stemMd: '# Stem',
@@ -465,12 +481,12 @@ describe('ADR-021 §3: the attempt lists keep a withdrawn question the learner a
     expect(stats.recentActivity).toEqual([
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'withdrawn',
         stemMd: '# Revised stem',
       }),
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'withdrawn',
         stemMd: '# Stem',
       }),
     ]);
@@ -529,7 +545,7 @@ describe('ADR-021 §3: the session breakdown keeps a withdrawn item the learner 
     expect(review.rows).toEqual([
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'withdrawn',
         questionId: answered.id,
         stemMd: '# Stem',
       }),

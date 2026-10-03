@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { ReviewQuestionNavigator } from '@/app/(app)/app/questions/[slug]/components/review-question-navigator';
 import { ErrorCard } from '@/components/error-card';
+import { QuestionAvailabilityNotice } from '@/components/question/question-availability-notice';
 import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
 import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import {
@@ -191,9 +192,16 @@ export function QuestionView(props: QuestionViewProps) {
   const reviewHydrationState = props.reviewHydrationState ?? null;
   const reviewSessionMode = props.reviewSessionMode ?? null;
   const isReviewMode = props.mode === 'review';
-  // Pattern Registry F-11: a question withdrawn after the learner answered it
-  // stays reviewable, marked, with navigation only (ADR-021 §3).
-  const isWithdrawn = isReviewMode && props.question?.withdrawn === true;
+  // Pattern Registry F-11: a question no longer available that the learner
+  // answered stays reviewable, with its notice and navigation only (ADR-021
+  // §3, ADR-022).
+  const unavailability =
+    isReviewMode &&
+    props.question &&
+    props.question.availability !== 'available'
+      ? props.question.availability
+      : null;
+  const isWithdrawn = unavailability !== null;
   // Pattern Registry F-12: updated since the learner saw it; F-11 takes
   // precedence.
   const isSuperseded =
@@ -388,16 +396,8 @@ export function QuestionView(props: QuestionViewProps) {
                     slug={props.question.slug}
                   />
                 ) : null}
-                {isWithdrawn ? (
-                  <Card role="status" className="gap-0 p-4 text-sm">
-                    <p className="font-medium text-foreground">
-                      This question has been withdrawn.
-                    </p>
-                    <p className="text-muted-foreground">
-                      You can still review your answer. It no longer appears in
-                      new practice.
-                    </p>
-                  </Card>
+                {unavailability ? (
+                  <QuestionAvailabilityNotice availability={unavailability} />
                 ) : null}
                 {isSessionReviewUnansweredReveal ? (
                   <Card

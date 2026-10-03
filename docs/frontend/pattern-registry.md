@@ -187,7 +187,7 @@ group rounded-xl bg-foreground/5
 rounded-xl bg-foreground/5 p-3
 ```
 
-**Used in:** Dashboard unavailable activity rows (question no longer available). After ADR-021 increment 5, a withdrawn question the learner answered uses F-11 instead; an omitted attempt is not an answer (ADR-022 Decision 2).
+**Used in:** Dashboard unavailable activity rows, only for a question that no longer exists. A question no longer available uses F-11: its label for an answered row, and its heading for an omitted attempt (ADR-022).
 
 **Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
 
@@ -196,7 +196,7 @@ rounded-xl bg-foreground/5 p-3
 rounded-2xl bg-foreground/[0.08] p-4
 ```
 
-**Used in:** History questions unavailable rows, bookmarks unavailable rows. After ADR-021 increment 5, only for a question the learner never answered; an answered withdrawn question uses F-11. An omitted attempt is not an answer (ADR-022 Decision 2).
+**Used in:** History questions unavailable rows, only for a question that no longer exists, and bookmarks unavailable rows. A question no longer available uses F-11 in History: its label for an answered row, and its heading for an omitted attempt (ADR-022).
 
 **Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
 
@@ -881,47 +881,57 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 
 **Source:** `app/(app)/app/layout.tsx` (trial countdown banner)
 
-### F-11: Withdrawal Notice (withdrawn question the learner answered)
+### F-11: Availability Notice (a question no longer available that the learner answered)
 
-Marks a question that was withdrawn (its `status` is no longer `published`) after the learner answered it. *(Decided 2026-10-03: [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) replaces this single label with withdrawn, under review and retired, each with its own notice (a caution for the first two); DEBT-493 revises this entry when it ships.)* ADR-021 §3 keeps that question reviewable by the learner, as the revision they answered, and requires every such view to say so. Nothing is silently removed. A learner who never attempted a withdrawn question never sees its content. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
+Marks a question that is no longer available, by its state ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 1), derived from its status, its withdrawals and its unlifted holds:
 
-**Review views** (standalone review, post-exam review, completed-session feedback) — an S-1 **Status notice** placed first in the question region, above the stem:
+| State | Label | Notice heading | Notice body | Tone |
+|---|---|---|---|---|
+| Withdrawn | `Withdrawn` | "This question was withdrawn." | "Its answer and explanation may be inaccurate or outdated, so don't rely on them." | Caution |
+| Under review | `Under review` | "This question is under review." | "Its answer or explanation may change, so don't rely on them until it returns." | Caution |
+| Retired | `Retired` | "This question has been retired from the bank." | "You can still review your answer." | Neutral |
+
+ADR-021 §3 keeps the question reviewable by a learner who **answered** it, as the revision they answered, and every such view says so. A learner who never answered it never sees its content (ADR-022 Decision 2; an omitted attempt is not an answer). Withdrawn and under-review content may be wrong, so those notices are clinical cautions. A retired question's content was not found wrong, so its notice is neutral. The component is `QuestionAvailabilityNotice` (`components/question/question-availability-notice.tsx`), which also owns the labels and headings.
+
+**Review views** (standalone review, post-exam review, completed-session feedback): the notice is placed first in the question region, above the stem.
 
 ```text
-<Card role="status" className="gap-0 p-4 text-sm">
+Caution: <Card role="status" data-tone="caution" className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm">
+Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 ```
 
-- **Heading line:** `font-medium text-foreground` — "This question has been withdrawn."
-- **Body line:** `text-muted-foreground` — "You can still review your answer. It no longer appears in new practice."
+- **Heading line:** `font-medium text-foreground`.
+- **Body line:** `text-foreground` in a caution, and `text-muted-foreground` in a neutral notice.
 - The answer, the correct choice and the explanation show as the learner answered them. Bookmark, report and rating actions stay hidden, as for unavailable rows.
 
-**List rows** (History attempted list, Dashboard recent activity, Session breakdown). The active session's navigator and Review & Submit list still show the S-2 unavailable treatment; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) gives them the label:
+**List rows** (History attempted list, Dashboard recent activity, Session breakdown):
 
-- The row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
-- Its metadata reads `Withdrawn` where an available row shows the difficulty, in the same metadata style.
-- A row with no difficulty slot, such as a session breakdown row, shows `Withdrawn` before its result, in the style the row already uses for its `Unanswered` label (`shrink-0 text-muted-foreground`).
+- An answered row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
+- Its metadata shows the state's label where an available row shows the difficulty, in the same metadata style. Only a difficulty is capitalized; a label keeps its own case.
+- A row with no difficulty slot, such as a session breakdown row, shows the label before its result, in the style the row already uses for its `Unanswered` label (`shrink-0 text-muted-foreground`).
 
-**Active session** (a question withdrawn after the session began) — the same Status notice, in place of the F-3 `Question not found` error card:
+**Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered".
+
+**Never answered** (left unanswered, or omitted by an exam's finalization): the row or card names the state in a sentence, the notice heading alone, in place of S-2's generic text (`[Question no longer available]`, "Question no longer available.", "This question was removed or unpublished."). No content shows and there is nothing to caution against, so the tone is neutral (`labelOnly`). S-2's generic text remains only for a question that no longer exists.
+
+**Active session** (a question that became unavailable after the session began): the same Status notice, in place of the F-3 `Question not found` error card. Its copy is still the earlier withdrawal-only wording; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) part E names the state and adds "It won't count toward your score." (ADR-022 Decision 5).
 
 - **Heading line:** "This question was withdrawn after your session began."
 - **Body line:** "It can't be answered here. Continue to the next question."
-- The item cannot be answered or submitted. Today the notice makes no claim about scoring. [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides that an unavailable item does not count toward any score, and adds "It won't count toward your score." to this notice; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) implements it.
+- The item cannot be answered or submitted.
 - The action bar offers navigation only:
   - `Previous` when an earlier question is available, and `Next` when a later one is.
   - Otherwise, the session's end action: `Review & Submit` in an exam, `End session` in tutor mode.
-  - The learner can always move on; the page never leaves them at the withdrawn item with no way forward.
+  - The learner can always move on; the page never leaves them at the unavailable item with no way forward.
   - Exam `Mark for review` is hidden for the item.
-- A question withdrawn while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back withdrawn, shows this notice instead of an error.
-
-**Never answered** (left unanswered, omitted by an exam's finalization, or only bookmarked): unchanged S-2 unavailable row (`[Question no longer available]`). The learner never answered it, so its content is not shown ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 2; an omitted attempt is not an answer).
+- A question withdrawn while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back unavailable, shows this notice instead of an error.
 
 **Rules:**
-- Reuses S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`), I-1/I-2 rows and the existing metadata style; no new surface, token or opacity value.
-- Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong.
-- Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and `text-foreground` for the heading line. No new color pair, so no new `contrast-policy.md` ledger entry is required.
+- Reuses the S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`) for neutral notices, and, for cautions, the warning-tinted inline status card the unanswered reveal already uses (`border-warning/50 bg-warning/5`, `text-foreground`). No new surface, token, opacity value or color pair, so no new `contrast-policy.md` ledger entry is required.
+- Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong. A learner-facing reason is not shown: a withdrawal's recorded reason is written for the clinical audit (ADR-022).
 - `role="status"` announces the notice politely; it is never focused automatically.
 
-**Source:** ADR-021 §3 and DEBT-484 phase 2a, increment 5. In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, and the active session page. An active session's navigator and exam Review & Submit list still show the S-2 treatment for a withdrawn item; the label there waited on the scoring decision, which ADR-022 made, and DEBT-493 implements it.
+**Source:** ADR-021 §3, DEBT-484 phase 2a increment 5, and ADR-022 (DEBT-493 parts A to C). In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, the navigators and Review & Submit list, and the active session page. Bookmarks still show the S-2 treatment for an unavailable question; DEBT-493 increment 5 gives them the label.
 
 
 ### F-12: Update Notice (a question updated after the learner saw it)
@@ -950,7 +960,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - **No link.** Leaving mid-session would interrupt it. The post-session review carries the review notice and its link.
 - The item is answered and graded as usual.
 
-**Precedence:** a withdrawn question shows F-11 only. It is no longer offered, so there is no current version to link to.
+**Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to.
 
 **Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
 
@@ -1647,6 +1657,6 @@ Compact lookup for code reviews and implementation.
 | L-6 | Mobile Menu Link | `hover:bg-muted/50` | `rounded-md` | — |
 | F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive` |
 | F-4 | Toast | — | `rounded-xl` | varies by tone |
-| F-11 | Withdrawal Notice | — (non-interactive; list rows keep I-1 / I-2 hover) | `rounded-2xl` (S-1) | `border` (S-1) |
+| F-11 | Availability Notice | — (non-interactive; list rows keep I-1 / I-2 hover) | `rounded-2xl` (S-1) | `border` (S-1); a caution adds `border-warning/50` |
 | F-12 | Update Notice | L-5 link `hover:text-foreground` | `rounded-2xl` (S-1) | `border` (S-1) |
 | M-1 | Badge/Pill | — | `rounded-full` | `border-border/60` |

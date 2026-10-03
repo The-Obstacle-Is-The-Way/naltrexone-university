@@ -12,7 +12,11 @@ import {
   requirePracticeSessionQuestionState,
 } from '@/src/application/shared/practice-session-state';
 import { shouldShowExplanation as sessionShouldShowExplanation } from '@/src/domain/services';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  QuestionAvailability,
+  QuestionDifficulty,
+  UnavailableQuestionAvailability,
+} from '@/src/domain/value-objects';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -21,8 +25,12 @@ export type GetPracticeSessionReviewInput = {
 
 export type AvailablePracticeSessionReviewRow = {
   isAvailable: true;
-  /** Withdrawn since the learner answered it in this ended session (ADR-021 §3, ADR-022 Decision 2). */
-  withdrawn: boolean;
+  /**
+   * What the learner is told about the question now (ADR-022 Decision 1). One
+   * no longer published shows only where the learner answered it in this
+   * ended session (ADR-021 §3, ADR-022 Decision 2).
+   */
+  availability: QuestionAvailability;
   questionId: string;
   slug: string;
   stemMd: string;
@@ -36,6 +44,11 @@ export type AvailablePracticeSessionReviewRow = {
 
 export type UnavailablePracticeSessionReviewRow = {
   isAvailable: false;
+  /**
+   * The question's state, shown as its label alone (ADR-022 Decision 2); null
+   * when the question is missing.
+   */
+  availability: UnavailableQuestionAvailability | null;
   questionId: string;
   order: number; // 1-based
   isAnswered: boolean;
@@ -57,16 +70,20 @@ export type GetPracticeSessionReviewOutput = {
   rows: PracticeSessionReviewRow[];
 };
 
-function unavailableRow(row: {
-  questionId: string;
-  order: number;
-  isAnswered: boolean;
-  isCorrect: boolean | null;
-  isOmitted: boolean;
-  markedForReview: boolean;
-}): PracticeSessionReviewRow {
+function unavailableRow(
+  row: {
+    questionId: string;
+    order: number;
+    isAnswered: boolean;
+    isCorrect: boolean | null;
+    isOmitted: boolean;
+    markedForReview: boolean;
+  },
+  availability: UnavailableQuestionAvailability | null = null,
+): PracticeSessionReviewRow {
   return {
     isAvailable: false,
+    availability,
     questionId: row.questionId,
     order: row.order,
     isAnswered: row.isAnswered,
@@ -148,13 +165,13 @@ export class GetPracticeSessionReviewUseCase {
       getQuestionId: (row) => row.questionId,
       questionsById: questionById,
       available: (row, question): PracticeSessionReviewRow => {
-        const withdrawn = question.status !== 'published';
-        if (withdrawn && !(session.endedAt !== null && row.answered)) {
-          return unavailableRow(row);
+        const unavailable = question.availability !== 'available';
+        if (unavailable && !(session.endedAt !== null && row.answered)) {
+          return unavailableRow(row, question.availability);
         }
         return {
           isAvailable: true,
-          withdrawn,
+          availability: question.availability,
           questionId: question.id,
           slug: question.slug,
           stemMd: question.stemMd,

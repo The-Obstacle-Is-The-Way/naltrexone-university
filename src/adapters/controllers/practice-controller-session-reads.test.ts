@@ -168,7 +168,7 @@ describe('practice-controller', () => {
           rows: [
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               questionId: '22222222-2222-2222-2222-222222222222',
               slug: 'question-1',
               stemMd: 'Stem',
@@ -285,7 +285,7 @@ describe('practice-controller', () => {
           rows: [
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               superseded: false,
               questionId: '22222222-2222-2222-2222-222222222222',
               slug: 'question-1',

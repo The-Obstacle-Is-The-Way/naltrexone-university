@@ -48,12 +48,17 @@ function createSummaryReview(
   };
 }
 
+type AvailableSummaryReviewRow = Extract<
+  GetPracticeSessionReviewOutput['rows'][number],
+  { isAvailable: true }
+>;
+
 function createSummaryReviewRow(
-  overrides?: Partial<GetPracticeSessionReviewOutput['rows'][number]>,
-): GetPracticeSessionReviewOutput['rows'][number] {
+  overrides?: Partial<AvailableSummaryReviewRow>,
+): AvailableSummaryReviewRow {
   return {
     isAvailable: true,
-    withdrawn: false,
+    availability: 'available',
     questionId: fixtureQuestion1Id,
     slug: 'question-1',
     stemMd: 'Question stem',

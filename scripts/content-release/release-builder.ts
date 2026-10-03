@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, lt } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
 import { sha256Hex } from '../../lib/content/parse-mdx-question';
@@ -89,14 +90,23 @@ async function revisionForContent(
 // removal: its file set to draft or archived, or its QID given in `remove`.
 // A member already withdrawn may be absent. Staging records no withdrawal; an
 // archived file is a removal that activation turns into one.
+//
+// DEBT-492: a file whose content matches an earlier revision moves its
+// question back to that revision, which can undo an answer-key correction.
+// Staging allows that only for a question named in `revert`.
 export async function stageReleaseFromFiles(
   db: Db,
   files: readonly SeedSourceFile[],
-  options: { remove?: readonly string[] } = {},
+  options: { remove?: readonly string[]; revert?: readonly string[] } = {},
 ): Promise<StageSummary> {
   const prepared = prepareSeedQuestions(files);
   return db.transaction(async (tx) => {
-    // The pointer exclusively, then question rows: every content writer's order.
+    // The pointer exclusively: every content writer takes it first (BUG-314),
+    // so it alone keeps them out for the whole stage. DEBT-492: staging
+    // locks no question row. It updates no row a learner reads, only adding
+    // revisions and choices that are not current, and tags. A row lock held
+    // for the whole stage would block learners' session starts, which share-
+    // lock these rows, past the app's lock timeout.
     const active = await lockReleasePointer(tx);
     if (active === null) {
       throw new ReleaseActivationError(
@@ -108,13 +118,8 @@ export async function stageReleaseFromFiles(
     const existing = await tx
       .select({ id: schema.questions.id, slug: schema.questions.slug })
       .from(schema.questions)
-      .where(inArray(schema.questions.slug, slugs))
-      .orderBy(asc(schema.questions.id))
-      .for('no key update');
+      .where(inArray(schema.questions.slug, slugs));
     const idBySlug = new Map(existing.map((row) => [row.slug, row.id]));
-    // The active release's members are read without a row lock: the
-    // exclusive pointer lock above already keeps every other content writer
-    // out, and activation locks the whole set again before it writes.
     const members = await tx
       .select({ id: schema.questions.id, slug: schema.questions.slug })
       .from(schema.contentReleaseItems)
@@ -246,6 +251,21 @@ export async function stageReleaseFromFiles(
         'Refusing to stage a release with no published question: activating it would take every question out of the bank.',
       );
     }
+    const reverting = await revertedSlugs(tx, items);
+    const namedReverts = new Set(options.revert ?? []);
+    for (const qid of namedReverts) {
+      if (!reverting.includes(qid)) {
+        throw new Error(
+          `Cannot revert ${qid}: the bundle does not move it to an earlier revision.`,
+        );
+      }
+    }
+    const unnamed = reverting.filter((slug) => !namedReverts.has(slug));
+    if (unnamed.length > 0) {
+      throw new Error(
+        `The bundle moves ${unnamed.join(', ')} back to an earlier revision, which can undo a correction. Restore the newer content, or name each with --revert.`,
+      );
+    }
 
     const reused = await existingRelease(
       tx,
@@ -274,6 +294,30 @@ export async function stageReleaseFromFiles(
         .length,
     };
   });
+}
+
+// The items whose revision is older than their question's current one.
+async function revertedSlugs(
+  tx: Db,
+  items: readonly ReleaseItem[],
+): Promise<string[]> {
+  const item = alias(schema.questionRevisions, 'item');
+  const current = alias(schema.questionRevisions, 'current');
+  const rows = await tx
+    .select({ slug: schema.questions.slug })
+    .from(item)
+    .innerJoin(schema.questions, eq(schema.questions.id, item.questionId))
+    .innerJoin(current, eq(current.id, schema.questions.currentRevisionId))
+    .where(
+      and(
+        inArray(
+          item.id,
+          items.map((entry) => entry.questionRevisionId),
+        ),
+        lt(item.revisionNumber, current.revisionNumber),
+      ),
+    );
+  return rows.map((row) => row.slug).sort();
 }
 
 async function replaceTagsIfChanged(

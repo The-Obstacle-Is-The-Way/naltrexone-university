@@ -60,7 +60,7 @@ function renderExamResultsContinuityHarness() {
     rows: [
       {
         isAvailable: true as const,
-        withdrawn: false,
+        availability: 'available' as const,
         superseded: false,
         questionId: fixtureQ1Id,
         slug: 'q-1',
@@ -83,7 +83,7 @@ function renderExamResultsContinuityHarness() {
       },
       {
         isAvailable: true as const,
-        withdrawn: false,
+        availability: 'available' as const,
         superseded: false,
         questionId: fixtureQ2Id,
         slug: 'q-2',

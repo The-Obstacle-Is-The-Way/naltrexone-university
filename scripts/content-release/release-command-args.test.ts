@@ -132,11 +132,22 @@ describe('parseStageArgs', () => {
   it('reads --apply and each live question to remove', () => {
     expect(
       parseStageArgs(['--remove', 'alpha-q', '--apply', '--remove', 'beta-q']),
-    ).toEqual({ apply: true, remove: ['alpha-q', 'beta-q'] });
+    ).toEqual({ apply: true, remove: ['alpha-q', 'beta-q'], revert: [] });
   });
 
-  it('defaults to a dry run that removes nothing', () => {
-    expect(parseStageArgs([])).toEqual({ apply: false, remove: [] });
+  // DEBT-492: each question the bundle moves back to an earlier revision.
+  it('reads each question to revert', () => {
+    expect(
+      parseStageArgs(['--revert', 'alpha-q', '--revert', 'beta-q']),
+    ).toEqual({ apply: false, remove: [], revert: ['alpha-q', 'beta-q'] });
+  });
+
+  it('defaults to a dry run that removes and reverts nothing', () => {
+    expect(parseStageArgs([])).toEqual({
+      apply: false,
+      remove: [],
+      revert: [],
+    });
   });
 
   it.each([
@@ -148,6 +159,12 @@ describe('parseStageArgs', () => {
       'Duplicate question QID: alpha-q',
     ],
     [['--apply', '--apply'], 'Unknown argument: --apply'],
+    [['--revert'], 'Missing value for --revert'],
+    [['--revert', '*'], 'Invalid question QID: *'],
+    [
+      ['--revert', 'alpha-q', '--revert', 'alpha-q'],
+      'Duplicate question QID: alpha-q',
+    ],
   ] as const)('rejects %j', (argv, message) => {
     expect(() => parseStageArgs(argv)).toThrow(message);
   });

@@ -271,3 +271,77 @@ it('completes a hold and a concurrent real session creation without deadlock', a
     ]);
   }
 });
+
+// DEBT-492 gap 1: staging writes nothing a learner reads, so it must not
+// hold learners' session starts. The stage is paused mid-transaction, after
+// every lock it takes and before it inserts its release, while a learner
+// starts a session on the bundle's questions with a short lock timeout.
+it('starts a learner session on bundle questions while a stage is in progress', async () => {
+  const { user } = await arrange();
+  const monitor = postgres(disposable.url, { max: 1, onnotice: () => {} }),
+    stager = postgres(disposable.url, { max: 1, onnotice: () => {} }),
+    reader = postgres(disposable.url, { max: 1, onnotice: () => {} });
+  const runs: Promise<unknown>[] = [];
+  try {
+    await monitor.unsafe(
+      'CREATE FUNCTION audit_stage_pause() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_xact_lock(492); RETURN NEW; END $$',
+    );
+    await monitor.unsafe(
+      'CREATE TRIGGER audit_stage_pause BEFORE INSERT ON content_releases FOR EACH ROW EXECUTE FUNCTION audit_stage_pause()',
+    );
+    await monitor`SELECT pg_advisory_lock(492)`;
+    const [backend] = await stager<
+      { pid: number }[]
+    >`SELECT pg_backend_pid() AS pid`;
+    if (!backend) throw new Error('Missing backend');
+    let staged = false;
+    runs.push(
+      stageReleaseFromFiles(drizzle(stager, { schema }), [
+        source('audit-first', { stem: 'Corrected task.' }),
+        source('audit-second'),
+      ]).then(
+        () => {
+          staged = true;
+          return 'staged';
+        },
+        (error: unknown) => error,
+      ),
+    );
+    await expect
+      .poll(async () => {
+        const [row] =
+          await monitor`SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=${backend.pid} AND locktype='advisory' AND NOT granted) AS waiting`;
+        return row?.waiting;
+      })
+      .toBe(true);
+    const questions = await monitor<
+      { id: string }[]
+    >`SELECT id FROM questions ORDER BY id`;
+    await reader`SET lock_timeout = '2s'`;
+
+    await expect(
+      new DrizzlePracticeSessionRepository(drizzle(reader, { schema })).create({
+        userId: user.id,
+        mode: 'tutor',
+        paramsJson: {
+          count: 2,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: questions.map((q) => q.id),
+        },
+      }),
+    ).resolves.toMatchObject({ userId: user.id });
+
+    expect(staged).toBe(false);
+    await monitor`SELECT pg_advisory_unlock(492)`;
+    expect(await Promise.all(runs)).toEqual(['staged']);
+  } finally {
+    await monitor`SELECT pg_advisory_unlock_all()`;
+    await Promise.allSettled(runs);
+    await Promise.allSettled([
+      monitor.end({ timeout: 5 }),
+      stager.end({ timeout: 5 }),
+      reader.end({ timeout: 5 }),
+    ]);
+  }
+});

@@ -370,7 +370,7 @@ describe('PostExamReviewView', () => {
   it('marks a withdrawn question with the F-11 notice above the question, as answered', () => {
     const doc = renderView({
       row: createReviewRow({
-        withdrawn: true,
+        availability: 'withdrawn',
         isAnswered: true,
         isCorrect: false,
         selectedChoiceId: 'choice-a',
@@ -379,9 +379,9 @@ describe('PostExamReviewView', () => {
     const panel = doc.getElementById('practice-question-panel');
     const notice = panel?.querySelector('[role="status"]');
 
-    expect(notice?.textContent).toContain('This question has been withdrawn.');
+    expect(notice?.textContent).toContain('This question was withdrawn.');
     expect(notice?.textContent).toContain(
-      'You can still review your answer. It no longer appears in new practice.',
+      "Its answer and explanation may be inaccurate or outdated, so don't rely on them.",
     );
     expect(panel?.textContent).toContain('Question stem');
     expect(panel?.textContent).toContain('Explanation for review.');
@@ -404,7 +404,7 @@ describe('PostExamReviewView', () => {
           questionId: 'question-2',
           slug: 'question-2',
           order: 2,
-          withdrawn: true,
+          availability: 'withdrawn',
         }),
       ],
     });
@@ -418,7 +418,7 @@ describe('PostExamReviewView', () => {
 
   it('hides bookmark, report and rating for a withdrawn question', () => {
     const doc = renderView({
-      row: createReviewRow({ withdrawn: true }),
+      row: createReviewRow({ availability: 'withdrawn' }),
       questionFeedback: {
         rating: null,
         feedbackStatus: 'idle',
@@ -472,20 +472,50 @@ describe('PostExamReviewView', () => {
 
   it('marks a withdrawn question withdrawn only, even when updated', () => {
     const doc = renderView({
-      row: createReviewRow({ withdrawn: true, superseded: true }),
+      row: createReviewRow({ availability: 'withdrawn', superseded: true }),
     });
 
-    expect(doc.body.textContent).toContain('This question has been withdrawn.');
+    expect(doc.body.textContent).toContain('This question was withdrawn.');
     expect(doc.body.textContent).not.toContain(
       'This question has been updated.',
     );
   });
 
+  // ADR-022 Decision 2: an item the learner never answered names its state
+  // only, with no content and nothing to caution against.
+  it('names the state of an unanswered item no longer available, with no content', () => {
+    const doc = renderView({
+      row: {
+        isAvailable: false,
+        availability: 'withdrawn',
+        questionId: 'question-1',
+        order: 1,
+        isAnswered: false,
+        isCorrect: null,
+        isOmitted: true,
+        markedForReview: false,
+      },
+    });
+    const panel = doc.getElementById('practice-question-panel');
+
+    expect(panel?.textContent).toContain('This question was withdrawn.');
+    expect(panel?.textContent).not.toContain('inaccurate or outdated');
+    expect(panel?.textContent).not.toContain('Question no longer available.');
+    expect(panel?.textContent).not.toContain('Explanation for review.');
+  });
+
   it('does not render the bookmark toggle for unavailable questions', () => {
     const doc = renderView({
-      row: createReviewRow({
+      row: {
         isAvailable: false,
-      }),
+        availability: null,
+        questionId: 'question-1',
+        order: 1,
+        isAnswered: false,
+        isCorrect: null,
+        isOmitted: false,
+        markedForReview: false,
+      },
     });
 
     expect(doc.querySelector('button[aria-pressed]')).toBeNull();

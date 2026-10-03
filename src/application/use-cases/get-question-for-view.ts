@@ -18,9 +18,11 @@ export type GetQuestionForViewInput = {
 };
 
 export type GetQuestionForViewOutput = {
+  /**
+   * The revision to show. Its `availability` says what the learner is told
+   * about the question now (ADR-022 Decision 1).
+   */
   question: Question;
-  /** Withdrawn after the learner answered it (ADR-021 §3). */
-  withdrawn: boolean;
   /**
    * Still published, but the revision shown is no longer current: the
    * question was updated after the learner saw it (Pattern Registry F-12).
@@ -68,20 +70,19 @@ export class GetQuestionForViewUseCase {
 
     const question = await this.questions.findByIdForSession(reviewed.binding);
     if (!question) return null;
-    const withdrawn = question.status !== 'published';
+    const available = question.availability === 'available';
     // ADR-022 Decision 2: only a learner who answered a question no longer
     // published sees it.
-    if (withdrawn && !reviewed.answered) return null;
+    if (!available && !reviewed.answered) return null;
     return {
       question,
-      withdrawn,
-      superseded: !withdrawn && !question.isCurrentRevision,
+      superseded: available && !question.isCurrentRevision,
     };
   }
 
   private async published(slug: string): Promise<GetQuestionForViewOutput> {
     const question = await this.questions.findPublishedBySlug(slug);
-    return question ? { question, withdrawn: false, superseded: false } : null;
+    return question ? { question, superseded: false } : null;
   }
 
   // The learner's own item under review, or null when they have none. Every

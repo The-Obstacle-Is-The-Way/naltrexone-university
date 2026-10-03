@@ -15,14 +15,18 @@ type StageIo = {
   readFiles?: () => Promise<SeedSourceFile[]>;
 };
 
-// --apply, and --remove <qid> for each live question whose file is absent on
-// purpose (DEBT-489). Each flag value is checked like a QID.
+// --apply, --remove <qid> for each live question whose file is absent on
+// purpose (DEBT-489), and --revert <qid> for each question the bundle moves
+// back to an earlier revision on purpose (DEBT-492). Each flag value is
+// checked like a QID.
 export function parseStageArgs(argv: readonly string[]): {
   apply: boolean;
   remove: string[];
+  revert: string[];
 } {
   let apply = false;
   const remove: string[] = [];
+  const revert: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--apply' && !apply) {
@@ -30,11 +34,14 @@ export function parseStageArgs(argv: readonly string[]): {
     } else if (arg === '--remove') {
       remove.push(readQidValue(argv[index + 1], '--remove', remove));
       index += 1;
+    } else if (arg === '--revert') {
+      revert.push(readQidValue(argv[index + 1], '--revert', revert));
+      index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
-  return { apply, remove };
+  return { apply, remove, revert };
 }
 
 // DEBT-483: stages a release of the MDX bundle on the active release, writing
@@ -48,7 +55,7 @@ export async function runStageRelease(
     readFiles = () => readSeedQuestionFiles(false),
   }: StageIo = {},
 ): Promise<void> {
-  const { apply, remove } = parseStageArgs(argv);
+  const { apply, remove, revert } = parseStageArgs(argv);
   await runHumanDatabaseCommand({
     env,
     log,
@@ -56,7 +63,7 @@ export async function runStageRelease(
       const files = await readFiles();
       await withCommandDatabase(databaseUrl, async (db) => {
         const staged = await previewOrApply(db, apply, (target) =>
-          stageReleaseFromFiles(target, files, { remove }),
+          stageReleaseFromFiles(target, files, { remove, revert }),
         );
         log(
           [
@@ -73,7 +80,8 @@ export async function runStageRelease(
         );
         if (apply) {
           log(
-            `Preview, then activate: pnpm exec tsx scripts/content-release/activate-release.ts --release ${staged.releaseId} --expect-active ${staged.parentReleaseId}`,
+            // DEBT-492: activation requires the decision (DEBT-490).
+            `Preview, then activate: pnpm exec tsx scripts/content-release/activate-release.ts --release ${staged.releaseId} --expect-active ${staged.parentReleaseId} --reason "<why>" --authority "<who>"`,
           );
         }
       });

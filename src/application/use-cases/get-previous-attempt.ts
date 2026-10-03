@@ -136,7 +136,7 @@ export class GetPreviousAttemptUseCase {
         );
         return null;
       }
-      if (question.status !== 'published') return null;
+      if (question.availability !== 'available') return null;
 
       return {
         kind: 'session_unanswered',
@@ -188,7 +188,10 @@ export class GetPreviousAttemptUseCase {
     }
     // ADR-022 Decision 2: a question no longer published shows only to a
     // learner who answered it. An omitted attempt is not an answer.
-    if (question.status !== 'published' && isOmittedOutcome(attempt.outcome)) {
+    if (
+      question.availability !== 'available' &&
+      isOmittedOutcome(attempt.outcome)
+    ) {
       return null;
     }
 

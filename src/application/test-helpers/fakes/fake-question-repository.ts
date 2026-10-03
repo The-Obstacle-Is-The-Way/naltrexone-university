@@ -5,7 +5,10 @@ import type {
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import {
+  deriveQuestionAvailability,
+  type QuestionDifficulty,
+} from '@/src/domain/value-objects';
 
 function matchesDifficulty(
   difficulty: QuestionDifficulty,
@@ -54,12 +57,31 @@ export function listedRevisions(
       isCurrentRevision: false,
       slug: current.slug,
       status: current.status,
+      availability: current.availability,
       tags: current.tags,
       createdAt: current.createdAt,
       updatedAt: current.updatedAt,
     };
   });
 }
+
+/**
+ * The overlay rows, as the overlay tables hold them (ADR-021 decision 5). A
+ * question's availability is derived from its status and these, as the
+ * Drizzle adapter derives it (ADR-022 Decision 1); without them, it follows
+ * the status.
+ */
+export type FakeQuestionOverlay = {
+  readonly withdrawals?: readonly {
+    questionId: string;
+    questionRevisionId: string;
+  }[];
+  readonly holds?: readonly {
+    questionId: string;
+    questionRevisionId: string;
+    lifted: boolean;
+  }[];
+};
 
 // Every lookup except a bound session item or attempt reads the current
 // revision.
@@ -70,8 +92,28 @@ export class FakeQuestionRepository implements QuestionRepository {
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
-  constructor(questions: readonly Question[]) {
-    this.revisions = listedRevisions(questions);
+  constructor(questions: readonly Question[], overlay?: FakeQuestionOverlay) {
+    // A withdrawal is question-wide; a hold on any revision of the question
+    // counts while it is unlifted.
+    const withdrawn = new Set(
+      (overlay?.withdrawals ?? []).map((row) => row.questionId),
+    );
+    const held = new Set(
+      (overlay?.holds ?? [])
+        .filter((hold) => !hold.lifted)
+        .map((hold) => hold.questionId),
+    );
+    this.revisions = listedRevisions(questions).map((revision) =>
+      overlay
+        ? {
+            ...revision,
+            availability: deriveQuestionAvailability(revision.status, {
+              withdrawn: withdrawn.has(revision.id),
+              underReview: held.has(revision.id),
+            }),
+          }
+        : revision,
+    );
     this.questions = this.revisions.filter(
       (question) => question.isCurrentRevision,
     );

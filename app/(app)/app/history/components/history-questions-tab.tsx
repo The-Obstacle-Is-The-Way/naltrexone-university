@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ErrorCard } from '@/components/error-card';
+import {
+  questionAvailabilityHeading,
+  questionAvailabilityLabel,
+} from '@/components/question/question-availability-notice';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -474,13 +478,26 @@ export function HistoryQuestionsTab({
                   <li key={row.questionId}>
                     <div className="rounded-2xl bg-foreground/[0.08] p-4">
                       <div className="space-y-2">
+                        {/* ADR-022 Decision 2: a row the learner never
+                            answered names the state only. */}
                         <div className="text-sm font-medium text-foreground">
-                          [Question no longer available]
+                          {row.availability
+                            ? questionAvailabilityHeading(row.availability)
+                            : '[Question no longer available]'}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          This question was removed or unpublished.
-                        </div>
-                        <QuestionMetadata row={row} middleLabel="Unavailable" />
+                        {row.availability ? null : (
+                          <div className="text-sm text-muted-foreground">
+                            This question was removed or unpublished.
+                          </div>
+                        )}
+                        <QuestionMetadata
+                          row={row}
+                          middleLabel={
+                            row.availability
+                              ? questionAvailabilityLabel(row.availability)
+                              : 'Unavailable'
+                          }
+                        />
                       </div>
                     </div>
                   </li>
@@ -516,14 +533,21 @@ export function HistoryQuestionsTab({
                           {bodyPreview}
                         </div>
                       ) : null}
-                      {/* Pattern Registry F-11: withdrawn since attempted. */}
-                      <QuestionMetadata
-                        row={row}
-                        middleLabel={
-                          row.withdrawn ? 'Withdrawn' : row.difficulty
-                        }
-                        middleLabelClassName="capitalize"
-                      />
+                      {/* Pattern Registry F-11: no longer available since answered. */}
+                      {row.availability !== 'available' ? (
+                        <QuestionMetadata
+                          row={row}
+                          middleLabel={questionAvailabilityLabel(
+                            row.availability,
+                          )}
+                        />
+                      ) : (
+                        <QuestionMetadata
+                          row={row}
+                          middleLabel={row.difficulty}
+                          middleLabelClassName="capitalize"
+                        />
+                      )}
                     </div>
                   </Link>
                 </li>

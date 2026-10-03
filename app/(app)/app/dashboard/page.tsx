@@ -2,6 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { ErrorCard } from '@/components/error-card';
+import {
+  questionAvailabilityHeading,
+  questionAvailabilityLabel,
+} from '@/components/question/question-availability-notice';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate } from '@/lib/format-date';
@@ -210,7 +214,11 @@ export function DashboardView({
                     <li key={row.attemptId}>
                       <div className="rounded-xl bg-foreground/5 p-3">
                         <div className="text-sm font-medium text-foreground">
-                          [Question no longer available]
+                          {/* ADR-022 Decision 2: a row the learner never
+                              answered names the state only. */}
+                          {row.availability
+                            ? questionAvailabilityHeading(row.availability)
+                            : '[Question no longer available]'}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           <span className={resultClass}>{resultLabel}</span>
@@ -236,10 +244,10 @@ export function DashboardView({
                         <span className="min-w-0 flex-1 text-sm font-medium text-foreground">
                           {getStemPreview(row.stemMd, 110)}
                         </span>
-                        {/* Pattern Registry F-11: withdrawn since attempted. */}
+                        {/* Pattern Registry F-11: no longer available since answered. */}
                         <span className="inline-flex shrink-0 items-center rounded-full border-0 bg-foreground/[0.06] px-2 py-0.5 text-xs font-medium text-foreground/60">
-                          {row.withdrawn
-                            ? 'Withdrawn'
+                          {row.availability !== 'available'
+                            ? questionAvailabilityLabel(row.availability)
                             : toSentenceCase(row.difficulty)}
                         </span>
                       </div>

@@ -180,7 +180,7 @@ describe('DEBT-483 Verification on a disposable database', () => {
     expect(listed.rows).toEqual([
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'withdrawn',
         questionId: question.id,
         stemMd: 'Original clinical task.',
       }),

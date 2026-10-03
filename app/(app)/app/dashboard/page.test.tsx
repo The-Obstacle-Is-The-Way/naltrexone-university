@@ -160,7 +160,7 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               attemptId: fixtureAttempt1Id,
               answeredAt: '2026-02-02T00:00:00.000Z',
               questionId: fixtureQuestionCorrectId,
@@ -173,7 +173,7 @@ describe('app/(app)/app/dashboard', () => {
             },
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               attemptId: fixtureAttempt2Id,
               answeredAt: '2026-02-03T00:00:00.000Z',
               questionId: fixtureQuestionIncorrectId,
@@ -426,6 +426,7 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: false,
+              availability: null,
               attemptId: fixtureAttemptUnavailableIncorrectId,
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: fixtureQuestionOrphanedId,
@@ -435,6 +436,7 @@ describe('app/(app)/app/dashboard', () => {
             },
             {
               isAvailable: false,
+              availability: null,
               attemptId: fixtureAttemptUnavailableCorrectId,
               answeredAt: '2026-02-02T00:00:00.000Z',
               questionId: fixtureQuestionOrphaned2Id,
@@ -475,7 +477,7 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
-              withdrawn: true,
+              availability: 'withdrawn',
               attemptId,
               answeredAt: '2026-02-01T00:00:00.000Z',
               questionId: crypto.randomUUID(),
@@ -636,7 +638,7 @@ describe('app/(app)/app/dashboard', () => {
           recentActivity: [
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               attemptId: fixtureAttempt1Id,
               answeredAt: '2026-02-02T00:00:00.000Z',
               questionId: fixtureQuestionCorrectId,
@@ -649,6 +651,7 @@ describe('app/(app)/app/dashboard', () => {
             },
             {
               isAvailable: false,
+              availability: null,
               attemptId: fixtureAttempt2Id,
               answeredAt: '2026-02-03T00:00:00.000Z',
               questionId: fixtureQuestionUnavailableId,

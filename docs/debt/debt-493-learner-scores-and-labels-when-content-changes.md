@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's first part, Decision 2, fixed in code 2026-10-03 ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices) fixed in code 2026-10-03 ([Progress](#progress)); the rest open
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -83,6 +83,32 @@ In increments, each test-first.
   - A real-Postgres case finalizes an exam with an unanswered item, withdraws the question, and asserts that none of the six reads reveals its stem, key or explanation. It is the first integration case to finalize an exam containing a question withdrawn since.
   - Each read's fix was red first. Six further targeted mutations each fail a case, two of them only after the published-question cases were added.
 - **Suites split.** The completed-feedback and History suites were at the 800-line limit, so their content-change and filter cases moved, unchanged, to their own files.
+
+**Increment 1, part B: the availability value, 2026-10-03.** Additive: nothing reads it yet.
+- **Domain.** `QuestionAvailability` (`available | withdrawn | under_review | retired`) and `deriveQuestionAvailability`, with ADR-022's precedence. Every `Question` carries `availability`.
+- **Adapter.** `DrizzleQuestionRepository` reads the overlay only for bound questions that are not published, so a read of published questions costs no extra query. It reads withdrawals by their key, and unlifted holds through the question's revisions, since holds have no index that leads with the question.
+- **Fake.** `FakeQuestionRepository` takes the overlay as the tables hold it: withdrawal rows, and holds with a `lifted` flag.
+- **Contract.** There was no fake↔real contract for the question repository, only a dated waiver. `question-availability-contract.ts` now runs nine scenarios against both, the adapter on real Postgres, reading each question through both of its revisions. The register cites it.
+- **Evidence.** The precedence table, and the contract on both sides. Five targeted mutations each fail a scenario: the adapter skipping the overlay, counting lifted holds or ignoring the overlay, and the fake counting lifted holds or ignoring withdrawals.
+
+- **A race in the contract's test, found by promotion CI (2026-10-03).** Promotion #1335 failed: the real-Postgres contract lifted its hold with the client clock (`new Date()`, millisecond precision). Within the placement's millisecond, the lift sorted before the database's microsecond `placed_at`, and `question_holds_lifted_after_placed_chk` refused it. It passed locally by chance. The test now takes the lift time from the row (`placed_at + interval '1 second'`). The fixed file passed fifteen consecutive local runs, and a one-off probe confirmed that a client-clock lift in the placement's millisecond is refused. Production code was unaffected: the hold command lifts with the database's clock. #1335 was closed unmerged, and the parts are promoted after the fix.
+
+**Increment 1, part C: labels and notices, 2026-10-03.** The boolean "withdrawn" is replaced by availability on every review and list output, and each surface shows ADR-022's label and notice.
+- **Outputs.** Rows from the completed-session feedback, the session review, History and the Dashboard, and the question view's DTO, carry `availability` in place of `withdrawn`.
+  - A row that shows content carries the question's state.
+  - A row that shows none (an item the learner never answered) carries the state for its label, or `null` when the question no longer exists.
+  - Each read decides availability from that value, not from `status`.
+- **Notice.** `QuestionAvailabilityNotice` owns the labels, headings and notices.
+  - Withdrawn and under-review notices are cautions, in the warning-tinted inline status card the unanswered reveal already uses.
+  - A retired question's notice is neutral.
+  - An item never answered gets the heading alone.
+- **Surfaces.**
+  - The standalone review and post-exam review show the notice.
+  - History, the Dashboard and the session breakdown show the label, or the heading for an item never answered.
+  - The navigators and the Review & Submit list name the state.
+  - History no longer capitalizes a label.
+- **Not yet.** The active session's notice (part E, with Decision 5's sentence), Review & Submit's scoring warning (increment 3), and bookmarks (increment 5).
+- **Evidence.** Cases for each state on each surface, and for the notice's tones and label-only form. The UI changes were written before their cases, so fifteen targeted mutations, reverting each UI and output change in turn, confirm that each case fails without its change. Pattern Registry F-11 is rewritten to match.
 
 ## Verification
 
