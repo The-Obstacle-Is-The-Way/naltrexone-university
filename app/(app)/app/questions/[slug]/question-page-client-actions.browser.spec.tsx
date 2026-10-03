@@ -24,6 +24,7 @@ const question = {
   difficulty: 'easy' as const,
   availability: 'available' as const,
   superseded: false,
+  answerKeyChanged: false,
   choices: [
     { id: 'c1', label: 'A', textMd: 'Choice A' },
     { id: 'c2', label: 'B', textMd: 'Choice B' },

@@ -39,6 +39,7 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
     difficulty: question.difficulty,
     availability: 'available',
     superseded: false,
+    answerKeyChanged: false,
     choices: question.choices.map((c) => ({
       id: c.id,
       label: c.label,

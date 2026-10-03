@@ -144,7 +144,11 @@ export function PostExamReviewView({
                 />
               ) : currentRow.superseded ? (
                 // Pattern Registry F-12: updated since the learner saw it.
-                <QuestionUpdateNotice variant="review" slug={currentRow.slug} />
+                <QuestionUpdateNotice
+                  variant="review"
+                  slug={currentRow.slug}
+                  keyCorrected={currentRow.answerKeyChanged}
+                />
               ) : null}
               <QuestionCard
                 stemMd={currentRow.stemMd}
