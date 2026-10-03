@@ -20,8 +20,9 @@ export function contentInDoubt(
 /**
  * ADR-022 Amendment (DEBT-494): an item counts toward a score when the
  * learner had a fair chance at it, recorded when its session ends, and its
- * content is not now in doubt. A fair chance never recorded (a session that
- * ended before it was, an attempt outside a session) is a fair chance.
+ * content is not now in doubt. A fair chance never recorded (an attempt
+ * outside a session, or a session ended in the deploy window before the
+ * record was written) is a fair chance.
  */
 export function countsTowardScore(input: {
   fairChanceAtEnd: boolean | null;
