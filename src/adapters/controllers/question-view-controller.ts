@@ -13,7 +13,10 @@ import type {
   GetQuestionForViewInput,
   GetQuestionForViewOutput,
 } from '@/src/application/use-cases';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  QuestionAvailability,
+  QuestionDifficulty,
+} from '@/src/domain/value-objects';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -54,8 +57,11 @@ export type GetQuestionBySlugOutput = {
     label: string;
     textMd: string;
   }>;
-  /** Withdrawn after the learner answered it (Pattern Registry F-11). */
-  withdrawn: boolean;
+  /**
+   * What the learner is told about the question now: a question no longer
+   * published shows its label and notice (ADR-022, Pattern Registry F-11).
+   */
+  availability: QuestionAvailability;
   /** Updated since the learner saw it (Pattern Registry F-12). */
   superseded: boolean;
 };
@@ -138,7 +144,7 @@ export const getQuestionBySlug = createAction({
         label: choice.displayLabel,
         textMd: choice.textMd,
       })),
-      withdrawn: view.withdrawn,
+      availability: question.availability,
       superseded: view.superseded,
     };
   },

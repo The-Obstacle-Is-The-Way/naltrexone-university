@@ -17,8 +17,10 @@ import {
 } from '@/src/application/shared/shuffled-choice-views';
 import {
   isOmittedOutcome,
+  type QuestionAvailability,
   type QuestionDifficulty,
   selectedChoiceIdOrNull,
+  type UnavailableQuestionAvailability,
 } from '@/src/domain/value-objects';
 
 export type CompletedSessionQuestionChoice = {
@@ -30,10 +32,11 @@ export type CompletedSessionQuestionChoice = {
 export type AvailableCompletedSessionQuestionWithFeedbackRow = {
   isAvailable: true;
   /**
-   * The question was withdrawn after the session (ADR-021 §3). It stays
-   * reviewable here, as answered, and the view marks it (Pattern Registry F-11).
+   * What the learner is told about the question now (ADR-022 Decision 1). A
+   * question no longer published stays reviewable here, as answered, and the
+   * view marks it (Pattern Registry F-11).
    */
-  withdrawn: boolean;
+  availability: QuestionAvailability;
   /**
    * Still published, but a newer revision replaced the one shown here: the
    * question was updated after the session (Pattern Registry F-12).
@@ -58,6 +61,11 @@ export type AvailableCompletedSessionQuestionWithFeedbackRow = {
 
 export type UnavailableCompletedSessionQuestionWithFeedbackRow = {
   isAvailable: false;
+  /**
+   * The question's state, shown as its label alone (ADR-022 Decision 2); null
+   * when the question is missing.
+   */
+  availability: UnavailableQuestionAvailability | null;
   questionId: string;
   order: number;
   isAnswered: boolean;
@@ -96,9 +104,11 @@ type ReviewSeed = {
 
 function unavailableRow(
   row: ReviewSeed,
+  availability: UnavailableQuestionAvailability | null = null,
 ): CompletedSessionQuestionWithFeedbackRow {
   return {
     isAvailable: false,
+    availability,
     questionId: row.questionId,
     order: row.order,
     isAnswered: row.isAnswered,
@@ -216,8 +226,8 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         // ADR-022 Decision 2: a question no longer published shows only to a
         // learner who answered it; an item left unanswered or omitted stays
         // unavailable.
-        if (question.status !== 'published' && !row.isAnswered) {
-          return unavailableRow(row);
+        if (question.availability !== 'available' && !row.isAnswered) {
+          return unavailableRow(row, question.availability);
         }
         const shuffledChoices = buildShuffledChoiceViews(
           question,
@@ -233,11 +243,12 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
           );
         }
 
-        const withdrawn = question.status !== 'published';
         return {
           isAvailable: true,
-          withdrawn,
-          superseded: !withdrawn && !question.isCurrentRevision,
+          availability: question.availability,
+          superseded:
+            question.availability === 'available' &&
+            !question.isCurrentRevision,
           questionId: question.id,
           slug: question.slug,
           stemMd: question.stemMd,

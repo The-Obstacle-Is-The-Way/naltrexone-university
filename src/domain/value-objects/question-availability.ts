@@ -14,6 +14,12 @@ export const AllQuestionAvailabilities = [
 
 export type QuestionAvailability = (typeof AllQuestionAvailabilities)[number];
 
+/** A question a learner can no longer practice. */
+export type UnavailableQuestionAvailability = Exclude<
+  QuestionAvailability,
+  'available'
+>;
+
 /**
  * The overlay on a question: a withdrawal, permanent and question-wide, and
  * an unlifted hold on any of its revisions.

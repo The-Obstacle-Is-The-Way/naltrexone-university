@@ -158,7 +158,7 @@ describe('stats controller (integration)', () => {
 });
 
 describe('review controller (integration)', () => {
-  it('lists attempted questions (incorrect) and keeps one unpublished since, marked withdrawn (ADR-021 §3)', async () => {
+  it('lists attempted questions (incorrect) and keeps one unpublished since, as retired (ADR-021 §3, ADR-022)', async () => {
     const user = await createUser(db, cleanup);
     const incorrectSlug = `it-incorrect-${randomUUID()}`;
     const incorrectQuestion = await createQuestion(db, cleanup, {
@@ -263,7 +263,7 @@ describe('review controller (integration)', () => {
     expect(first.data.rows).toHaveLength(1);
     expect(first.data.rows[0]).toMatchObject({
       isAvailable: true,
-      withdrawn: false,
+      availability: 'available',
       questionId: incorrectQuestion.id,
       isCorrect: false,
       sessionId: null,
@@ -292,7 +292,7 @@ describe('review controller (integration)', () => {
     expect(second.data.rows).toEqual([
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'retired',
         questionId: incorrectQuestion.id,
         isCorrect: false,
         slug: incorrectSlug,

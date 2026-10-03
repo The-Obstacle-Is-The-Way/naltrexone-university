@@ -11,7 +11,9 @@ import {
 import { computeAccuracy, computeStreak, DAY_MS } from '@/src/domain/services';
 import {
   isOmittedOutcome,
+  type QuestionAvailability,
   type QuestionDifficulty,
+  type UnavailableQuestionAvailability,
 } from '@/src/domain/value-objects';
 
 /**
@@ -49,8 +51,11 @@ export type UserStatsOutput = {
   recentActivity: Array<
     | {
         isAvailable: true;
-        /** Withdrawn since the learner attempted it (ADR-021 §3). */
-        withdrawn: boolean;
+        /**
+         * What the learner is told about the question now (ADR-022 Decision
+         * 1). One no longer published stays listed (ADR-021 §3).
+         */
+        availability: QuestionAvailability;
         attemptId: string;
         answeredAt: string; // ISO
         questionId: string;
@@ -63,6 +68,8 @@ export type UserStatsOutput = {
       }
     | {
         isAvailable: false;
+        /** Shown as its label alone (ADR-022 Decision 2); null when missing. */
+        availability: UnavailableQuestionAvailability | null;
         attemptId: string;
         answeredAt: string; // ISO
         questionId: string;
@@ -119,8 +126,10 @@ export class GetUserStatsUseCase {
 
     const unavailable = (
       attempt: (typeof recentAttempts)[number],
+      availability: UnavailableQuestionAvailability | null = null,
     ): UserStatsOutput['recentActivity'][number] => ({
       isAvailable: false,
+      availability,
       attemptId: attempt.id,
       answeredAt: attempt.answeredAt.toISOString(),
       questionId: attempt.questionId,
@@ -138,11 +147,12 @@ export class GetUserStatsUseCase {
         attempt,
         question,
       ): UserStatsOutput['recentActivity'][number] =>
-        question.status !== 'published' && isOmittedOutcome(attempt.outcome)
-          ? unavailable(attempt)
+        question.availability !== 'available' &&
+        isOmittedOutcome(attempt.outcome)
+          ? unavailable(attempt, question.availability)
           : {
               isAvailable: true,
-              withdrawn: question.status !== 'published',
+              availability: question.availability,
               attemptId: attempt.id,
               answeredAt: attempt.answeredAt.toISOString(),
               questionId: attempt.questionId,

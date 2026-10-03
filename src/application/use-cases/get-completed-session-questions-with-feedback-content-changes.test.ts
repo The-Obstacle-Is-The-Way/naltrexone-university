@@ -50,7 +50,14 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
     });
     const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
       new FakePracticeSessionRepository([session]),
-      new FakeQuestionRepository([withdrawn]),
+      new FakeQuestionRepository([withdrawn], {
+        withdrawals: [
+          {
+            questionId: withdrawn.id,
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
       new FakeAttemptRepository([]),
       new FakeLogger(),
     );
@@ -63,7 +70,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
     expect(output.rows).toEqual([
       expect.objectContaining({
         isAvailable: true,
-        withdrawn: true,
+        availability: 'withdrawn',
         stemMd: 'Answered stem',
         correctChoiceId: 'c1',
       }),
@@ -71,10 +78,10 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
   });
 
   // Pattern Registry F-12: a newer revision replaced the one the session was
-  // bound to. A withdrawn question is marked withdrawn only.
+  // bound to. A question no longer available is not marked updated.
   it.each([
-    ['published', { withdrawn: false, superseded: true }],
-    ['archived', { withdrawn: true, superseded: false }],
+    ['published', { availability: 'available', superseded: true }],
+    ['archived', { availability: 'retired', superseded: false }],
   ] as const)(
     'marks a row of a %s question whose bound revision is no longer current',
     async (status, marks) => {
@@ -144,7 +151,14 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
     });
     const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
       new FakePracticeSessionRepository([session]),
-      new FakeQuestionRepository([withdrawn]),
+      new FakeQuestionRepository([withdrawn], {
+        withdrawals: [
+          {
+            questionId: withdrawn.id,
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
       new FakeAttemptRepository([]),
       logger,
     );
@@ -157,6 +171,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
     expect(output.rows).toEqual([
       {
         isAvailable: false,
+        availability: 'withdrawn',
         questionId: 'q1',
         order: 1,
         isAnswered: false,
@@ -185,7 +200,14 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
     });
     const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
       new FakePracticeSessionRepository([session]),
-      new FakeQuestionRepository([withdrawn]),
+      new FakeQuestionRepository([withdrawn], {
+        withdrawals: [
+          {
+            questionId: withdrawn.id,
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
       new FakeAttemptRepository([
         createAttempt({
           userId: 'user-1',
@@ -209,6 +231,82 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
         questionId: 'q1',
         isAnswered: false,
         isOmitted: true,
+      }),
+    ]);
+  });
+
+  // ADR-022 Decision 1: each row carries its question's availability, the
+  // row the learner answered and the label-only row of an omitted item alike.
+  it("carries each question's availability, on answered and omitted rows", async () => {
+    const held = createQuestion({
+      id: 'q-held',
+      status: 'archived',
+      choices: [
+        createChoice({ id: 'c-held', questionId: 'q-held', isCorrect: true }),
+      ],
+    });
+    const withdrawn = createQuestion({
+      id: 'q-withdrawn',
+      status: 'archived',
+      choices: [createChoice({ questionId: 'q-withdrawn', isCorrect: true })],
+    });
+    const session = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      endedAt: new Date('2026-03-19T12:00:00.000Z'),
+      questionIds: ['q-held', 'q-withdrawn'],
+    });
+    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([held, withdrawn], {
+        holds: [
+          {
+            questionId: 'q-held',
+            questionRevisionId: held.revisionId,
+            lifted: false,
+          },
+        ],
+        withdrawals: [
+          {
+            questionId: 'q-withdrawn',
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q-held',
+          practiceSessionId: 'session-1',
+          selectedChoiceId: 'c-held',
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q-withdrawn',
+          practiceSessionId: 'session-1',
+          outcome: omittedOutcome(),
+          isCorrect: false,
+        }),
+      ]),
+      new FakeLogger(),
+    );
+
+    const { rows } = await useCase.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        isAvailable: true,
+        questionId: 'q-held',
+        availability: 'under_review',
+      }),
+      expect.objectContaining({
+        isAvailable: false,
+        questionId: 'q-withdrawn',
+        availability: 'withdrawn',
       }),
     ]);
   });

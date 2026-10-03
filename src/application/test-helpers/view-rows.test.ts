@@ -14,7 +14,7 @@ describe('view-row factories', () => {
 
     expect(row).toEqual({
       isAvailable: true,
-      withdrawn: false,
+      availability: 'available',
       questionId: expect.stringMatching(UUID_PATTERN),
       isCorrect: false,
       sessionId: null,

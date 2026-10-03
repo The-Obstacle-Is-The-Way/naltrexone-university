@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import {
+  questionAvailabilityHeading,
+  questionAvailabilityLabel,
+} from '@/components/question/question-availability-notice';
 import { Button } from '@/components/ui/button';
 import { type QuestionOrigin, toQuestionRoute } from '@/lib/routes';
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
@@ -75,13 +79,19 @@ export function SessionBreakdownList({
                 {row.order}.
               </span>
               <span className="font-medium text-foreground">
-                [Question no longer available]
+                {/* ADR-022 Decision 2: an item the learner never answered
+                    names the state only. */}
+                {row.availability
+                  ? questionAvailabilityHeading(row.availability)
+                  : '[Question no longer available]'}
               </span>
             </span>
           )}
-          {/* Pattern Registry F-11: withdrawn since attempted. */}
-          {row.isAvailable && row.withdrawn ? (
-            <span className="shrink-0 text-muted-foreground">Withdrawn</span>
+          {/* Pattern Registry F-11: no longer available since answered. */}
+          {row.isAvailable && row.availability !== 'available' ? (
+            <span className="shrink-0 text-muted-foreground">
+              {questionAvailabilityLabel(row.availability)}
+            </span>
           ) : null}
           {row.isAnswered || row.isOmitted ? (
             row.isCorrect === true ? (

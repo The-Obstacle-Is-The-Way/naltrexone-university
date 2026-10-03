@@ -86,7 +86,7 @@ function mockCompletedSessionQuestionsWithFeedback(
       rows: [
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           questionId: BROWSER_QUESTION_1_ID,
           slug: 'question-1',

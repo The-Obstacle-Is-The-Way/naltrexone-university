@@ -116,7 +116,7 @@ const standaloneQuestion = {
   slug: 'request-identity-question',
   stemMd: 'Question stem',
   difficulty: 'easy',
-  withdrawn: false,
+  availability: 'available',
   superseded: false,
   choices: [
     { id: choiceAId, label: 'A', textMd: 'Choice A' },

@@ -12,7 +12,11 @@ import {
   bindingKey,
   fetchOwnedQuestionsByBinding,
 } from '@/src/application/shared/fetch-questions-by-binding';
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  QuestionAvailability,
+  QuestionDifficulty,
+  UnavailableQuestionAvailability,
+} from '@/src/domain/value-objects';
 
 export type GetAttemptedQuestionsInput = {
   userId: string;
@@ -27,8 +31,12 @@ export type GetAttemptedQuestionsInput = {
 
 export type AvailableAttemptedQuestionRow = {
   isAvailable: true;
-  /** Withdrawn since the learner attempted it (ADR-021 §3). */
-  withdrawn: boolean;
+  /**
+   * What the learner is told about the question now (ADR-022 Decision 1). One
+   * no longer published stays listed, since the learner attempted it (ADR-021
+   * §3).
+   */
+  availability: QuestionAvailability;
   questionId: string;
   isCorrect: boolean;
   sessionId: string | null;
@@ -42,6 +50,11 @@ export type AvailableAttemptedQuestionRow = {
 
 export type UnavailableAttemptedQuestionRow = {
   isAvailable: false;
+  /**
+   * The question's state, shown as its label alone (ADR-022 Decision 2); null
+   * when the question is missing.
+   */
+  availability: UnavailableQuestionAvailability | null;
   questionId: string;
   isCorrect: boolean;
   sessionId: string | null;
@@ -94,8 +107,10 @@ export class GetAttemptedQuestionsUseCase {
     const byBinding = await fetchOwnedQuestionsByBinding(this.questions, page);
     const unavailable = (
       attempted: (typeof page)[number],
+      availability: UnavailableQuestionAvailability | null = null,
     ): AttemptedQuestionRow => ({
       isAvailable: false,
+      availability,
       questionId: attempted.questionId,
       isCorrect: attempted.isCorrect,
       sessionId: attempted.sessionId,
@@ -109,11 +124,11 @@ export class GetAttemptedQuestionsUseCase {
       questionsById: byBinding,
       getLookupKey: bindingKey,
       available: (attempted, question): AttemptedQuestionRow =>
-        question.status !== 'published' && attempted.isOmitted
-          ? unavailable(attempted)
+        question.availability !== 'available' && attempted.isOmitted
+          ? unavailable(attempted, question.availability)
           : {
               isAvailable: true,
-              withdrawn: question.status !== 'published',
+              availability: question.availability,
               questionId: question.id,
               isCorrect: attempted.isCorrect,
               sessionId: attempted.sessionId,

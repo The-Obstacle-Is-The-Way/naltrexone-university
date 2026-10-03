@@ -100,7 +100,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             superseded: false,
             questionId: BROWSER_QUESTION_1_ID,
             slug: 'question-1',
@@ -122,7 +122,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           },
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             superseded: false,
             questionId: BROWSER_QUESTION_2_ID,
             slug: 'question-2',

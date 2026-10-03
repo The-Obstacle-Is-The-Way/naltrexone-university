@@ -176,7 +176,7 @@ describe('question-view-controller', () => {
           stemMd: 'Stem for q1',
           difficulty: 'medium',
           choices: mapChoicesForOutput(question, userId),
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
         },
       });
@@ -211,7 +211,11 @@ describe('question-view-controller', () => {
 
       expect(result).toMatchObject({
         ok: true,
-        data: { stemMd: 'Answered', withdrawn: false, superseded: true },
+        data: {
+          stemMd: 'Answered',
+          availability: 'available',
+          superseded: true,
+        },
       });
     });
 
@@ -221,11 +225,12 @@ describe('question-view-controller', () => {
       ['the session', 'session'],
       ['neither, for the latest attempt', 'latest'],
     ] as const)(
-      'returns a withdrawn question to the learner reviewing their answer by %s, marked withdrawn',
+      'returns a withdrawn question to the learner reviewing their answer by %s, with its availability',
       async (_name, by) => {
         const question = createQuestion({
           slug: 'q-withdrawn',
           status: 'archived',
+          availability: 'withdrawn',
         });
         const user = createUser();
         const session = createPracticeSession({
@@ -257,7 +262,7 @@ describe('question-view-controller', () => {
 
         expect(result).toMatchObject({
           ok: true,
-          data: { questionId: question.id, withdrawn: true },
+          data: { questionId: question.id, availability: 'withdrawn' },
         });
       },
     );
@@ -365,7 +370,7 @@ describe('question-view-controller', () => {
           stemMd: 'Stem for q2',
           difficulty: 'hard',
           choices: mapChoicesForOutput(question, userId),
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
         },
       });

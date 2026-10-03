@@ -80,8 +80,16 @@ function view(
   questions: readonly Question[],
   history: { attempts?: Attempt[]; sessions?: PracticeSession[] } = {},
 ) {
+  // Here a question no longer published was withdrawn: each has a withdrawal.
   const useCase = new GetQuestionForViewUseCase(
-    new FakeQuestionRepository(questions),
+    new FakeQuestionRepository(questions, {
+      withdrawals: questions
+        .filter((question) => question.status !== 'published')
+        .map((question) => ({
+          questionId: question.id,
+          questionRevisionId: question.revisionId,
+        })),
+    }),
     new FakeAttemptRepository(history.attempts ?? []),
     new FakePracticeSessionRepository(history.sessions ?? []),
   );
@@ -95,7 +103,6 @@ describe('GetQuestionForViewUseCase', () => {
 
     await expect(view([current])()).resolves.toEqual({
       question: current,
-      withdrawn: false,
       superseded: false,
     });
   });
@@ -109,7 +116,6 @@ describe('GetQuestionForViewUseCase', () => {
       view([current, answered], { attempts: [answerOf(answered)] })({}),
     ).resolves.toMatchObject({
       question: { stemMd: 'Answered' },
-      withdrawn: false,
       superseded: true,
     });
   });
@@ -119,7 +125,7 @@ describe('GetQuestionForViewUseCase', () => {
 
     await expect(
       view([current], { attempts: [answerOf(current)] })({}),
-    ).resolves.toMatchObject({ withdrawn: false, superseded: false });
+    ).resolves.toMatchObject({ superseded: false });
   });
 
   it('marks a withdrawn question withdrawn only, even when a newer revision exists', async () => {
@@ -127,7 +133,10 @@ describe('GetQuestionForViewUseCase', () => {
 
     await expect(
       view([current, answered], { attempts: [answerOf(answered)] })({}),
-    ).resolves.toMatchObject({ withdrawn: true, superseded: false });
+    ).resolves.toMatchObject({
+      question: { availability: 'withdrawn' },
+      superseded: false,
+    });
   });
 
   it('shows no withdrawn question outside review, even to a learner who answered it', async () => {
@@ -152,8 +161,11 @@ describe('GetQuestionForViewUseCase', () => {
     await expect(
       view([current, answered], { attempts: [answerOf(answered)] })({}),
     ).resolves.toMatchObject({
-      question: { stemMd: 'Answered', status: 'archived' },
-      withdrawn: true,
+      question: {
+        stemMd: 'Answered',
+        status: 'archived',
+        availability: 'withdrawn',
+      },
     });
   });
 
@@ -189,7 +201,6 @@ describe('GetQuestionForViewUseCase', () => {
       view([current, answered], { attempts: [answerOf(answered)] })({}),
     ).resolves.toMatchObject({
       question: { stemMd: 'Answered' },
-      withdrawn: false,
     });
   });
 
@@ -207,8 +218,7 @@ describe('GetQuestionForViewUseCase', () => {
         attemptId: named.id,
       }),
     ).resolves.toMatchObject({
-      question: { stemMd: 'Answered' },
-      withdrawn: true,
+      question: { stemMd: 'Answered', availability: 'withdrawn' },
     });
   });
 
@@ -222,8 +232,7 @@ describe('GetQuestionForViewUseCase', () => {
         sessionId: session.id,
       }),
     ).resolves.toMatchObject({
-      question: { stemMd: 'Answered' },
-      withdrawn: true,
+      question: { stemMd: 'Answered', availability: 'withdrawn' },
     });
   });
 
@@ -237,8 +246,7 @@ describe('GetQuestionForViewUseCase', () => {
         sessionId: session.id,
       }),
     ).resolves.toMatchObject({
-      question: { stemMd: 'Answered' },
-      withdrawn: true,
+      question: { stemMd: 'Answered', availability: 'withdrawn' },
     });
   });
 
@@ -264,7 +272,6 @@ describe('GetQuestionForViewUseCase', () => {
       }),
     ).resolves.toMatchObject({
       question: { stemMd: 'Answered' },
-      withdrawn: false,
     });
   });
 
@@ -338,7 +345,6 @@ describe('GetQuestionForViewUseCase', () => {
         view([current, answered], history)(review),
       ).resolves.toMatchObject({
         question: { stemMd: 'Current' },
-        withdrawn: false,
       });
     },
   );
@@ -383,7 +389,6 @@ describe('GetQuestionForViewUseCase', () => {
         view([current, answered], exam)(review(exam)),
       ).resolves.toMatchObject({
         question: { stemMd: 'Current' },
-        withdrawn: false,
       });
     },
   );
@@ -398,8 +403,7 @@ describe('GetQuestionForViewUseCase', () => {
         attemptId: attempt.id,
       }),
     ).resolves.toMatchObject({
-      question: { stemMd: 'Answered' },
-      withdrawn: true,
+      question: { stemMd: 'Answered', availability: 'withdrawn' },
     });
   });
 
@@ -416,8 +420,7 @@ describe('GetQuestionForViewUseCase', () => {
         attemptId: attempt.id,
       }),
     ).resolves.toMatchObject({
-      question: { stemMd: 'Answered' },
-      withdrawn: true,
+      question: { stemMd: 'Answered', availability: 'withdrawn' },
     });
   });
 

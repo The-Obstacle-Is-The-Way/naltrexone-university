@@ -23,7 +23,7 @@ vi.mock('next/link', () => ({
 
 const availableRow: PracticeSessionReviewRow = {
   isAvailable: true,
-  withdrawn: false,
+  availability: 'available',
   questionId: fixtureQuestion1Id,
   slug: 'q-1',
   stemMd: 'A short stem',
@@ -45,6 +45,7 @@ const correctRow: PracticeSessionReviewRow = {
 
 const unavailableRow: PracticeSessionReviewRow = {
   isAvailable: false,
+  availability: null,
   questionId: fixtureQuestion2Id,
   order: 2,
   isAnswered: false,
@@ -134,9 +135,12 @@ describe('SessionBreakdownList', () => {
   // link, and reads Withdrawn before its result, like the Unanswered label.
   it('renders a withdrawn question as a review link labelled Withdrawn', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000001';
-    const html = await renderList([{ ...availableRow, withdrawn: true }], {
-      sessionId,
-    });
+    const html = await renderList(
+      [{ ...availableRow, availability: 'withdrawn' }],
+      {
+        sessionId,
+      },
+    );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const link = findAnchorByHref(
       doc,
@@ -155,9 +159,12 @@ describe('SessionBreakdownList', () => {
   });
 
   it('labels a withdrawn question Withdrawn in callback mode too', async () => {
-    const html = await renderList([{ ...availableRow, withdrawn: true }], {
-      onOpenQuestion: () => undefined,
-    });
+    const html = await renderList(
+      [{ ...availableRow, availability: 'withdrawn' }],
+      {
+        onOpenQuestion: () => undefined,
+      },
+    );
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
     expect(
@@ -165,6 +172,36 @@ describe('SessionBreakdownList', () => {
         (span) => span.textContent === 'Withdrawn',
       ),
     ).toBe(true);
+  });
+
+  // ADR-022 Decision 1: each state has its own label.
+  it.each([
+    ['under_review', 'Under review'],
+    ['retired', 'Retired'],
+  ] as const)('labels a %s question %s', async (availability, label) => {
+    const doc = new DOMParser().parseFromString(
+      await renderList([{ ...availableRow, availability }]),
+      'text/html',
+    );
+
+    expect(
+      Array.from(doc.querySelectorAll('li span')).map(
+        (span) => span.textContent,
+      ),
+    ).toContain(label);
+  });
+
+  // ADR-022 Decision 2: an item the learner never answered names its state
+  // only, in place of the generic unavailable text.
+  it('names the state of an unanswered item no longer available, with no link', async () => {
+    const html = await renderList([
+      { ...unavailableRow, availability: 'under_review' },
+    ]);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    expect(doc.body.textContent).toContain('This question is under review.');
+    expect(html).not.toContain('[Question no longer available]');
+    expect(doc.querySelectorAll('a')).toHaveLength(0);
   });
 
   it('renders unavailable questions as plain text with no link', async () => {

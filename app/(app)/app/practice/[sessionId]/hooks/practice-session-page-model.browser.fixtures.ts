@@ -1,4 +1,5 @@
 import type { PreviousSubmission } from '@/src/application/use-cases/get-next-question';
+import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
 type PracticeMode = 'tutor' | 'exam';
 type QuestionDifficulty = 'easy' | 'medium' | 'hard';
@@ -112,19 +113,27 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
   };
 }
 
-export function createReviewRow(input: ReviewRowFixtureInput) {
-  return {
-    isAvailable: input.isAvailable ?? true,
-    withdrawn: false,
+export function createReviewRow(
+  input: ReviewRowFixtureInput,
+): GetPracticeSessionReviewOutput['rows'][number] {
+  const shared = {
     questionId: input.questionId,
-    slug: input.slug ?? input.questionId,
     order: input.order,
-    stemMd: input.stemMd ?? `Question ${input.order}`,
-    difficulty: input.difficulty ?? 'easy',
     isAnswered: input.isAnswered ?? false,
     isCorrect: input.isCorrect ?? null,
     isOmitted: input.isOmitted ?? false,
     markedForReview: input.markedForReview ?? false,
+  };
+  if (input.isAvailable === false) {
+    return { isAvailable: false, availability: null, ...shared };
+  }
+  return {
+    isAvailable: true,
+    availability: 'available',
+    slug: input.slug ?? input.questionId,
+    stemMd: input.stemMd ?? `Question ${input.order}`,
+    difficulty: input.difficulty ?? 'easy',
+    ...shared,
   };
 }
 

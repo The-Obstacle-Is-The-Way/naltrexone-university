@@ -87,7 +87,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -100,7 +100,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
           },
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',
@@ -144,7 +144,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -157,7 +157,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
           },
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             questionId: QUESTION_PAGE_QUESTION_2_ID,
             slug: 'q-2',
             stemMd: 'Stem 2',

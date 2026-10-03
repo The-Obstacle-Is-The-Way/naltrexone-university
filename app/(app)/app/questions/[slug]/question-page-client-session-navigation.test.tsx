@@ -297,7 +297,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [
             { id: 'c1', label: 'A', textMd: 'Choice A' },
@@ -345,7 +345,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [
             { id: 'c1', label: 'A', textMd: 'Choice A' },
@@ -389,7 +389,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [
             { id: 'c1', label: 'A', textMd: 'Choice A' },

@@ -29,6 +29,7 @@ export function createPostExamReviewRow(input: {
   if (input.isAvailable === false) {
     return {
       isAvailable: false,
+      availability: null,
       questionId: input.questionId,
       order: input.order,
       isAnswered: true,
@@ -40,7 +41,7 @@ export function createPostExamReviewRow(input: {
 
   return {
     isAvailable: true,
-    withdrawn: false,
+    availability: 'available',
     superseded: false,
     questionId: input.questionId,
     slug: `${input.questionId}-slug`,
