@@ -124,7 +124,7 @@ describe('FakeQuestionRepository', () => {
 
   // The adapter reads a revision's content from the revision and everything
   // else from its question.
-  it("reads a bound revision under its question's slug, status, tags and timestamps, as the adapter does", async () => {
+  it("reads a bound revision under its question's slug, status, availability, tags and timestamps, as the adapter does", async () => {
     const current = createQuestion({
       id: 'q1',
       slug: 'q-current',
@@ -151,6 +151,7 @@ describe('FakeQuestionRepository', () => {
       isCurrentRevision: false,
       slug: current.slug,
       status: current.status,
+      availability: current.availability,
       tags: current.tags,
       createdAt: current.createdAt,
       updatedAt: current.updatedAt,

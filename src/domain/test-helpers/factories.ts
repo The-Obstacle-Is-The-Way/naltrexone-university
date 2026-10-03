@@ -24,7 +24,11 @@ import type {
   SubscriptionStatus,
   TagKind,
 } from '../value-objects';
-import { answeredOutcome } from '../value-objects';
+import {
+  answeredOutcome,
+  deriveQuestionAvailability,
+  NO_QUESTION_OVERLAY,
+} from '../value-objects';
 
 function createUuid(): string {
   return crypto.randomUUID();
@@ -187,6 +191,13 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
     createdAt: now,
     updatedAt: now,
     ...overrides,
+    // With no overlay given, a question's availability follows its status.
+    availability:
+      overrides.availability ??
+      deriveQuestionAvailability(
+        overrides.status ?? 'published',
+        NO_QUESTION_OVERLAY,
+      ),
   };
 
   return {

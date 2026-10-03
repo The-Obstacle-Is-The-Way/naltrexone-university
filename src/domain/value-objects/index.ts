@@ -16,6 +16,13 @@ export {
   type PracticeMode,
   shouldShowExplanationForMode,
 } from './practice-mode';
+export {
+  AllQuestionAvailabilities,
+  deriveQuestionAvailability,
+  NO_QUESTION_OVERLAY,
+  type QuestionAvailability,
+  type QuestionOverlay,
+} from './question-availability';
 
 export {
   AllDifficulties,

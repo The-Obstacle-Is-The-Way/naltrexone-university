@@ -5,6 +5,7 @@ import {
   eq,
   exists,
   inArray,
+  isNull,
   notInArray,
   or,
   type SQL,
@@ -21,9 +22,11 @@ import {
   attempts,
   bookmarks,
   practiceSessions,
+  questionHolds,
   questionRevisions,
   questions,
   questionTags,
+  questionWithdrawals,
   tags,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
@@ -33,7 +36,10 @@ import type {
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
 import {
+  deriveQuestionAvailability,
   isValidChoiceLabel,
+  NO_QUESTION_OVERLAY,
+  type QuestionOverlay,
   type QuestionProgressStatus,
 } from '@/src/domain/value-objects';
 import type { DrizzleDb } from '../shared/database-types';
@@ -139,7 +145,8 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       with: questionRelations,
     });
 
-    return row ? this.toDomain(row) : null;
+    // Published, so available whatever its overlay.
+    return row ? this.toDomain(row, NO_QUESTION_OVERLAY) : null;
   }
 
   async findPublishedBySlug(slug: string) {
@@ -148,7 +155,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       with: questionRelations,
     });
 
-    return row ? this.toDomain(row) : null;
+    return row ? this.toDomain(row, NO_QUESTION_OVERLAY) : null;
   }
 
   async findIdBySlug(slug: string) {
@@ -189,6 +196,9 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     });
 
     const rowById = new Map(rows.map((row) => [row.id, row]));
+    const overlays = await this.overlaysOf(
+      rows.filter((row) => row.status !== 'published').map((row) => row.id),
+    );
     const revisionById = new Map(
       boundRevisions.map((revision) => [revision.id, revision]),
     );
@@ -204,7 +214,13 @@ export class DrizzleQuestionRepository implements QuestionRepository {
           `Revision ${binding.questionRevisionId} is not a revision of question ${row.id}`,
         );
       }
-      return [this.toDomain(row, revision)];
+      return [
+        this.toDomain(
+          row,
+          overlays.get(row.id) ?? NO_QUESTION_OVERLAY,
+          revision,
+        ),
+      ];
     });
   }
 
@@ -329,8 +345,43 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     }
   }
 
+  // ADR-022 Decision 1: the overlay on each question that is not published,
+  // read only for those, so a read of published questions costs nothing more.
+  // A hold is found through the question's revisions, whose key leads with
+  // the question; holds have no index that does.
+  private async overlaysOf(
+    questionIds: readonly string[],
+  ): Promise<Map<string, QuestionOverlay>> {
+    if (questionIds.length === 0) return new Map();
+    const ids = [...questionIds];
+    const withdrawn = await this.db
+      .selectDistinct({ questionId: questionWithdrawals.questionId })
+      .from(questionWithdrawals)
+      .where(inArray(questionWithdrawals.questionId, ids));
+    const held = await this.db
+      .selectDistinct({ questionId: questionRevisions.questionId })
+      .from(questionRevisions)
+      .innerJoin(
+        questionHolds,
+        and(
+          eq(questionHolds.questionRevisionId, questionRevisions.id),
+          isNull(questionHolds.liftedAt),
+        ),
+      )
+      .where(inArray(questionRevisions.questionId, ids));
+    const withdrawnIds = new Set(withdrawn.map((row) => row.questionId));
+    const heldIds = new Set(held.map((row) => row.questionId));
+    return new Map(
+      ids.map((id) => [
+        id,
+        { withdrawn: withdrawnIds.has(id), underReview: heldIds.has(id) },
+      ]),
+    );
+  }
+
   private toDomain(
     row: QuestionRowWithRelations,
+    overlay: QuestionOverlay,
     content: RevisionWithChoices | null = row.currentRevision,
   ) {
     // Only the seed writes questions, and it mirrors each into a revision in
@@ -370,6 +421,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       referenceMd: content.referenceMd ?? null,
       difficulty: content.difficulty,
       status: row.status,
+      availability: deriveQuestionAvailability(row.status, overlay),
       choices: mappedChoices.sort((a, b) => a.sortOrder - b.sortOrder),
       tags: row.questionTags.map((qt) => ({
         id: qt.tag.id,

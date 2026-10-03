@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's first part, Decision 2, fixed in code 2026-10-03 ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2) and B (the availability value) fixed in code 2026-10-03 ([Progress](#progress)); the rest open
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -83,6 +83,13 @@ In increments, each test-first.
   - A real-Postgres case finalizes an exam with an unanswered item, withdraws the question, and asserts that none of the six reads reveals its stem, key or explanation. It is the first integration case to finalize an exam containing a question withdrawn since.
   - Each read's fix was red first. Six further targeted mutations each fail a case, two of them only after the published-question cases were added.
 - **Suites split.** The completed-feedback and History suites were at the 800-line limit, so their content-change and filter cases moved, unchanged, to their own files.
+
+**Increment 1, part B: the availability value, 2026-10-03.** Additive: nothing reads it yet.
+- **Domain.** `QuestionAvailability` (`available | withdrawn | under_review | retired`) and `deriveQuestionAvailability`, with ADR-022's precedence. Every `Question` carries `availability`.
+- **Adapter.** `DrizzleQuestionRepository` reads the overlay only for bound questions that are not published, so a read of published questions costs no extra query. It reads withdrawals by their key, and unlifted holds through the question's revisions, since holds have no index that leads with the question.
+- **Fake.** `FakeQuestionRepository` takes the overlay as the tables hold it: withdrawal rows, and holds with a `lifted` flag.
+- **Contract.** There was no fake↔real contract for the question repository, only a dated waiver. `question-availability-contract.ts` now runs nine scenarios against both, the adapter on real Postgres, reading each question through both of its revisions. The register cites it.
+- **Evidence.** The precedence table, and the contract on both sides. Five targeted mutations each fail a scenario: the adapter skipping the overlay, counting lifted holds or ignoring the overlay, and the fake counting lifted holds or ignoring withdrawals.
 
 ## Verification
 
