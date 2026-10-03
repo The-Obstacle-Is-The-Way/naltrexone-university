@@ -3,37 +3,20 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-03 UTC
 
-**Latest** — 2026-10-03 UTC: every open decision that code can settle is decided and recorded, under the owner's 2026-10-03 delegation, after a read-only adversarial review of the scoring, release, payment and test-practice paths. Two records are filed. No code changes in this increment.
-- **[ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)** decides how a learner's scores and labels follow content changes:
-  - four availability states (Available, Withdrawn, Under review, Retired), derived at read time;
-  - an unavailable question's content is shown only to a learner who answered it;
-  - one scoring rule: an item counts only while its question is available and the key it was graded against is still the current key;
-  - a corrected key is disclosed and re-practiced, never regraded.
-
-  It settles the three Deferred decisions from DEBT-484 and BUG-317.
-- **[DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md)** (P1) implements ADR-022 in five increments.
-- **[DEBT-492](./debt-492-release-safety-before-production-bootstrap.md)** (P2) records four release gaps to close before the production bootstrap:
-  - staging's row locks can time out learners' session starts;
-  - a stale bundle silently reverts a correction;
-  - a held question can return with new content unflagged;
-  - `stage-release.ts` prints an activation command that activation refuses.
-- **[BUG-310](../bugs/bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03) is decided.** The trial add-card flow offers cards only, and its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic methods.
-- **[DEBT-465](./debt-465-test-quality-practices-adoption.md#decision--2026-10-03) and [ADR-019](../adr/adr-019-test-quality-practices.md) are amended.**
-  - Part 3's Gherkin harness is not adopted: its 17 candidate rules are already pinned by mutation-proven or real-infrastructure tests. A rule-to-test register replaces it.
-  - Part 4's QA procedures run before the production bootstrap and before a release that changes their flows, not before every promotion.
-- **[ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) is amended.** Its contract step is not pursued. The materialized `questions.status` stays the one runtime read model, kept in step by activation.
-- **Documentation corrected against the code:**
-  - the pipeline guide: the seed's lock order, what a hold binds, what the plan binding does not cover, and that a stale `archived` status is a permanent withdrawal;
-  - ADR-021's implementation line, hold key and boundary;
-  - Pattern Registry F-11 and F-12;
-  - `AGENTS.md`: the seed's refusal, and DEBT-491's check as early detection, not a lock.
-- **Deferred rows removed.** DEBT-484's withdrawn-item scoring and answer-key regrade, and BUG-317's withdrawn label, are now DEBT-493. DEBT-483's contract step is not pursued. The bootstrap row now waits on DEBT-492.
-- **What remains Active.** DEBT-414 (one owner decision, below), DEBT-465, DEBT-492 and DEBT-493.
-- **Next.** One PR at a time, each test-first: BUG-310, then DEBT-492, then DEBT-493, then DEBT-465.
-- **Open decisions for the owner.**
+**Latest** — 2026-10-03 UTC: the decisions are merged, and dependencies are updated for open security advisories.
+- **Merged.** #1326 (**5399102258** on `e02322f8`; merged `8c999ccf`): ADR-022, DEBT-492, DEBT-493, the BUG-310 decision, and the ADR-019, ADR-021 and DEBT-465 amendments. Its review also brought the QA runbook's cadence in line, corrected F-12's wording and a retired question's notice, and marked the Gherkin guide not adopted. Its promotion was pending; the next entry records it.
+- **Security updates, this increment:**
+  - **Next.js 16.3.6** for GHSA-vcvr-r3jv-pc5j (critical): remote code execution in `next/og`'s Node.js `ImageResponse` when attacker-controlled values reach its SVG. The only `ImageResponse` here (`app/opengraph-image.tsx`) renders fixed text, so the app was not exploitable; the patch closes it anyway. Dependabot had raised no alert for it; `pnpm audit` found it. 16.3.7 is younger than the 7-day release-age gate.
+  - **undici 7.29.1** for alerts #68, #70, #71, #74, #75 and #76 (one high). Dev-only, through jsdom.
+  - **brace-expansion 5.0.12 and 1.1.21** for three newer denial-of-service advisories. Build and test globs only.
+- **Accepted, with no fix available.** `braces` 3.0.3 (GHSA-vfj7-8cjw-p6xm, high) has no fixed version published. It is reached only through `@clerk/ui`'s Solana wallet adapters and React Native's Jest toolchain, which this web app never loads. Revisit when 3.0.4 is published. `stream-json` stays as [DEBT-476 § F](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md#deferred-accepted-risk-and-upstream-correction) records.
+- **What remains Active.** Unchanged: DEBT-414, DEBT-465, DEBT-492 and DEBT-493.
+- **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. The recommendation is to bootstrap once DEBT-492 is released and the next content import is ready to go through the release path, so the first staged release is real.
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
-  - **Massachusetts' second annual notice (DEBT-414 F19a)**, unchanged from the [previous stanza](./register-history-2026-10.md): it waits on counsel.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
 
