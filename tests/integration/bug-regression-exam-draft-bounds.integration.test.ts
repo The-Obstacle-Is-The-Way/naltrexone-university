@@ -97,14 +97,26 @@ function createPracticeControllerDepsForBug238(input: {
       endedAt: '2026-04-25T12:00:00.000Z',
       mode: 'exam',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     }),
     finalizeExamAnswersUseCase: new FakeFinalizeExamAnswersUseCase({
       sessionId: '11111111-1111-1111-1111-111111111111',
       endedAt: '2026-04-25T12:00:00.000Z',
       mode: 'exam',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     }),
     saveExamDraftAnswerUseCase: new SaveExamDraftAnswerUseCase(
       questions,
@@ -123,7 +135,13 @@ function createPracticeControllerDepsForBug238(input: {
       endedAt: '2026-04-25T12:00:00.000Z',
       mode: 'exam',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     }),
     getSessionHistoryUseCase: new FakeGetSessionHistoryUseCase({
       rows: [],

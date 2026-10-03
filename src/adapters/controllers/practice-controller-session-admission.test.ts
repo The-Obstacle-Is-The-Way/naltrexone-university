@@ -75,6 +75,7 @@ describe('practice-controller session admission', () => {
       questionCount: -1,
       totals: {
         answered: 2,
+        scored: 2,
         correct: 1,
         accuracy: 0.5,
         durationSeconds: 60,
@@ -100,7 +101,10 @@ describe('practice-controller session admission', () => {
         message: 'Invalid input',
         fieldErrors: {
           questionCount: ['Too small: expected number to be >=0'],
-          totals: ['answered must be <= questionCount'],
+          totals: [
+            'answered must be <= questionCount',
+            'scored must be <= questionCount',
+          ],
         },
       },
     });

@@ -983,13 +983,13 @@ States how many questions a score leaves out ([ADR-022](../adr/adr-022-learner-s
 
 - **Copy:** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." For one: "1 question isn't scored: withdrawn, under review, removed mid-session, or its answer was corrected." It names every reason, not the item's own: a score summarizes many items. A retired question is not a reason: retirement changes no score (DEBT-494).
 - **Placement:** directly below the score it qualifies, inside the same row or card. Nothing renders when every question is scored.
-- **The score beside it** reads `correct/scored`, and shows "—" for accuracy when nothing is scored.
+- **The score beside it** counts only the scored items: a fraction reads `correct/scored` (History, the Dashboard's recent sessions, the post-exam header's "X of scored correct"), a percentage is over the scored items, and either shows "—" for accuracy when nothing is scored. A count of activity, such as Answered, stays every answer.
 
 **Rules:**
 - Reuses the dense helper-copy style (`text-xs text-muted-foreground`, the 12.3 pairing at a smaller size). There is no new surface, token or color pair.
 - Informational, not a warning: nothing is wrong, and the learner has nothing to do.
 
-**Source:** ADR-022 Decision 3, as amended by DEBT-494, and DEBT-493 increment 2. The component is `UnscoredDisclosure` (`components/question/unscored-disclosure.tsx`). In use: History's session rows, the Dashboard's recent sessions and its two accuracy cards, where the count is of questions, not attempts; the session summary and the post-exam header follow in the next steps.
+**Source:** ADR-022 Decision 3, as amended by DEBT-494, and DEBT-493 increment 2. The component is `UnscoredDisclosure` (`components/question/unscored-disclosure.tsx`). In use: History's session rows, the Dashboard's recent sessions and its two accuracy cards, where the count is of questions, not attempts, the session summary's Accuracy card, and the post-exam header, whose sentence reads "X of scored correct".
 
 ---
 

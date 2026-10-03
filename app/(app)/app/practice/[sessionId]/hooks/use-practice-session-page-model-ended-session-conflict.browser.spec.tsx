@@ -49,6 +49,7 @@ function mockTutorSummary(sessionId = BROWSER_SESSION_ID) {
     questionCount: 2,
     totals: {
       answered: 1,
+      scored: 2,
       correct: 1,
       accuracy: 0.5,
       durationSeconds: 1200,

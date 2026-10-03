@@ -21,7 +21,7 @@ import {
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
   type PracticeSessionSummary,
-  projectPracticeSessionSummary,
+  summarizePracticeSession,
 } from './practice-session-summary';
 import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
 
@@ -268,7 +268,7 @@ export class FinalizeExamAnswersUseCase {
       );
     }
 
-    return projectPracticeSessionSummary(endedSession, endedAt);
+    return summarizePracticeSession(this.questions, endedSession, endedAt);
   }
 
   private async throwAlreadyEndedForDoubleFinalizeLoser(

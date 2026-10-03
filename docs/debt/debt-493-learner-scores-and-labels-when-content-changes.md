@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's steps 1–2 (the scored-total reader, history scores), fixed in code 2026-10-03; increment 2 revised the same day for the amended rule (DEBT-494) ([Progress](#progress)); the rest open
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done ([Progress](#progress)); the rest open
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -125,7 +125,7 @@ In increments, each test-first.
 - **Cost.** On the local integration database, 50 completed sessions of 20 items, a 20-row page, median of five warm `EXPLAIN (ANALYZE)` runs: 1.075 ms before, 1.407 ms after.
 - **Evidence.** Twelve targeted mutations each fail a case, across the adapter, the fake, the use case, the History and Dashboard views, the disclosure and the domain rule.
 
-**Increment 2 revised: the amended scoring rule, 2026-10-03.** [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03) amends Decision 3 ([ADR-022 Amendment](../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)). An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, from increment 4, key-corrected. Retired questions keep counting.
+**Increment 2 revised: the amended scoring rule, 2026-10-03.** [DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03) amends Decision 3 ([ADR-022 Amendment](../adr/adr-022-learner-scores-and-labels-when-content-changes.md#amendment--2026-10-03)). An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or, from increment 4, key-corrected. Retired questions keep counting.
 - **What changes.** History scores, released in step 2, exclude retired questions; they will count them again. Dashboard accuracy and the session summary's writer were built on step 2's rule and were not shipped; they move to the amended rule first.
 - **The revised steps:**
   1. **Record the fair chance when a session ends.** A nullable column on each session item, written by the statement that ends the session, for end and finalize alike. Sessions that already ended are recorded once, by the migration, from the bank as it stands when it runs. Nothing reads it yet.
@@ -136,7 +136,7 @@ In increments, each test-first.
 
 **Increment 2 revised, step 1: the fair chance is recorded when a session ends, 2026-10-03.** Nothing reads it yet.
 - **Domain.** `hadFairChanceAtEnd`: an item's question is available when the session ends or, in tutor mode, the learner had already answered it. Session items carry `fairChanceAtEnd`, null while the session is active, or for one ended in the deploy window before the writer served.
-- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. An earlier session's past availability is not kept, so 0050 records sessions that already ended once, from the bank as it stands when it runs. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again ([DEBT-494](./debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)). Null remains only while a session is active, or for one that ends in the window before the new code serves, and reads as a fair chance.
+- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. An earlier session's past availability is not kept, so 0050 records sessions that already ended once, from the bank as it stands when it runs. Once scores read it, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03)). Null remains only while a session is active, or for one that ends in the window before the new code serves, and reads as a fair chance.
 - **Writer.** The adapter ends a session and records every item in one statement, two data-modifying CTEs, so the record commits with the end whether `end` runs alone or inside finalize's transaction. The concurrency test that interleaves a competing end now hooks that statement.
 - **Contract.** `session-end-fair-chance-contract.ts` runs a tutor and an exam scenario against the fake and the adapter on real Postgres: nothing is recorded while active, and the ended session and a fresh read agree.
 - **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule. The backfill is a marked block executed against arranged rows, twice, in `session-fair-chance-backfill.integration.test.ts`.
@@ -149,6 +149,17 @@ In increments, each test-first.
 - **Contracts.** The history score runs four scenarios and the attempt score six, on the fakes and real Postgres. Retired questions keep counting, withdrawn and held ones do not, a hold lifted before retirement leaves no doubt, and an item with no fair chance is left out even once its question returns. The fake session repository now takes each question's state (`availabilityByQuestionId`) in place of a set of unpublished ids, so a test can change the bank between a session's end and the read.
 - **Cost.** On the local integration database, a learner with 2,000 answers over 300 questions, 20 of them retired and 10 withdrawn, median of 40 warm `EXPLAIN (ANALYZE)` runs: the dashboard's all-time read takes 2.31 ms and its seven-day read 0.73 ms, against 0.29 ms and 0.08 ms for the correct counts it replaces. It runs both once per load.
 - **Evidence.** Seven targeted mutations of the SQL each fail a real-Postgres case: the withdrawal and hold checks, the lifted-hold filter, the fair-chance default, the history's fair-chance column, and the dashboard's join to its session item. Twelve more across the domain, the fakes and the use case each fail a unit case.
+
+**Increment 2 revised, step 3: the session summary's writer, 2026-10-03.** The end, finalize and summary reads score a session by the amended rule, and send `totals.scored`.
+- **Writer.** The summary reads each item's availability through `findByIdsForSession`, the path the availability contract already proves, so there is no new port. It counts an item when its recorded fair chance is not false and its content is not in doubt, with the domain's `computeSessionScore` and `countsTowardScore`, as History does. Answered stays every answer. An item whose question it cannot find is in doubt.
+- **Reads.** End and finalize score the session as it ends, after recording each item's fair chance. The summary read scores it as the bank stands at the read, so a later withdrawal, hold or lift shows on reload. Within one page visit, the post-exam stage and its summary keep the snapshot taken at submission, so the header and the review rows beside it agree; a reload or a later visit reads the bank as it stands. End and the summary read now take the question repository; finalize already had it.
+- **Cached outputs.** A summary cached before this writer is replayed with `scored = questionCount`, which is what its writer counted. The schema fills it in, so every type downstream carries a required `scored`. The reader that accepts the field (step 1 of the original plan) is in production, so a rollback to it reads this writer's rows. The mapping is removed one full 24-hour TTL after the last earlier writer left production.
+- **Views.** The summary's Accuracy card and the post-exam header read "—" when nothing is scored and carry Pattern Registry F-13's disclosure. The header reads "X of scored correct".
+- **Every surface agrees.** A real-Postgres case finalizes an exam over four items, with one question held before submission. The summary at submission, the summary read, History and the Dashboard score each step alike:
+  - three items at submission;
+  - two after a second question is held and a third retired;
+  - three once both holds lift, since the item held before submission never had a fair chance.
+- **Fixtures.** Existing summary fixtures carry `scored` equal to their question count: every item in them counts, as before. Two deliberately invalid fixtures keep one invalid field. The finalize cases whose question leaves the bank before submission give the session fake the same bank state, so the item is graded but not scored.
 
 ## Verification
 
@@ -165,4 +176,4 @@ In increments, each test-first.
 - [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md): the decisions.
 - [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md): immutable revisions.
 - [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md) and [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md): the deferred decisions this record executes.
-- [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md): the decision that amends Decision 3, so past scores change only when content validity changes.
+- [DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md): the decision that amends Decision 3, so past scores change only when content validity changes.

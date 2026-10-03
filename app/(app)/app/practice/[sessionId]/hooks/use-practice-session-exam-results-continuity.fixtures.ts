@@ -13,6 +13,7 @@ export function createSummary(
     questionCount: 3,
     totals: {
       answered: 3,
+      scored: 3,
       correct: 2,
       accuracy: 2 / 3,
       durationSeconds: 180,

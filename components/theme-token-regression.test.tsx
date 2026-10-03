@@ -353,6 +353,7 @@ describe('theme token regression', () => {
           questionCount: 8,
           totals: {
             answered: 8,
+            scored: 8,
             correct: 6,
             accuracy: 0.75,
             durationSeconds: 600,

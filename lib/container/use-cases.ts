@@ -301,6 +301,7 @@ export function createUseCaseFactories(input: {
     createEndPracticeSessionUseCase: () =>
       new EndPracticeSessionUseCase(
         repositories.createPracticeSessionRepository(),
+        repositories.createQuestionRepository(),
       ),
     createFinalizeExamAnswersUseCase,
     createSaveExamDraftAnswerUseCase: () =>
@@ -388,6 +389,7 @@ export function createUseCaseFactories(input: {
     createGetPracticeSessionSummaryUseCase: () =>
       new GetPracticeSessionSummaryUseCase(
         repositories.createPracticeSessionRepository(),
+        repositories.createQuestionRepository(),
       ),
     createGetSessionHistoryUseCase: () =>
       new GetSessionHistoryUseCase(

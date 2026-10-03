@@ -1,9 +1,33 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApplicationError } from '@/src/application/errors';
-import { createPracticeSession } from '@/src/domain/test-helpers';
-import { FakePracticeSessionRepository } from '../test-helpers/fakes';
+import {
+  createPracticeSession,
+  createQuestion,
+} from '@/src/domain/test-helpers';
+import type { QuestionAvailability } from '@/src/domain/value-objects';
+import {
+  FakePracticeSessionRepository,
+  FakeQuestionRepository,
+} from '../test-helpers/fakes';
 import { EndPracticeSessionUseCase } from './end-practice-session';
 import { GetSessionHistoryUseCase } from './get-session-history';
+
+// The bank the sessions below are drawn from: every question available
+// unless a case says otherwise.
+function bank(
+  states: Readonly<Record<string, QuestionAvailability>> = {},
+): FakeQuestionRepository {
+  return new FakeQuestionRepository(
+    ['q1', 'q2', 'q3'].map((id) => {
+      const availability = states[id] ?? 'available';
+      return createQuestion({
+        id,
+        status: availability === 'available' ? 'published' : 'archived',
+        availability,
+      });
+    }),
+  );
+}
 
 describe('EndPracticeSessionUseCase', () => {
   afterEach(() => {
@@ -56,7 +80,7 @@ describe('EndPracticeSessionUseCase', () => {
       buildSessionWithOneAnswered('session-exam', 'exam'),
     ]);
 
-    const useCase = new EndPracticeSessionUseCase(sessions);
+    const useCase = new EndPracticeSessionUseCase(sessions, bank());
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'session-exam' }),
@@ -82,7 +106,7 @@ describe('EndPracticeSessionUseCase', () => {
         endedAt: new Date('2026-02-01T00:10:00Z'),
       }),
     ]);
-    const useCase = new EndPracticeSessionUseCase(sessions);
+    const useCase = new EndPracticeSessionUseCase(sessions, bank());
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'session-missing' }),
@@ -113,7 +137,7 @@ describe('EndPracticeSessionUseCase', () => {
     ]);
 
     await expect(
-      new EndPracticeSessionUseCase(sessions).execute({
+      new EndPracticeSessionUseCase(sessions, bank()).execute({
         userId: 'user-1',
         sessionId: 'session-tutor',
       }),
@@ -131,7 +155,7 @@ describe('EndPracticeSessionUseCase', () => {
       buildSessionWithOneAnswered('session-tutor', 'tutor'),
     ]);
 
-    const useCase = new EndPracticeSessionUseCase(sessions);
+    const useCase = new EndPracticeSessionUseCase(sessions, bank());
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'session-tutor' }),
@@ -141,6 +165,7 @@ describe('EndPracticeSessionUseCase', () => {
       questionCount: 3,
       totals: {
         answered: 1,
+        scored: 3,
         correct: 1,
         accuracy: 1 / 3,
       },
@@ -196,7 +221,7 @@ describe('EndPracticeSessionUseCase', () => {
       { publishedQuestionSlugsById: new Map([['q1', 'q-1']]) },
     );
 
-    const endUseCase = new EndPracticeSessionUseCase(sessionsForEnd);
+    const endUseCase = new EndPracticeSessionUseCase(sessionsForEnd, bank());
     const historyUseCase = new GetSessionHistoryUseCase(sessionsForHistory);
 
     const endResult = await endUseCase.execute({
@@ -212,6 +237,62 @@ describe('EndPracticeSessionUseCase', () => {
 
     expect(historyResult.rows).toHaveLength(1);
     expect(endResult.totals.accuracy).toBe(historyResult.rows[0]?.accuracy);
+  });
+
+  // ADR-022 Decision 3: the summary and History score the same items.
+  it('agrees with session history when a question is withdrawn', async () => {
+    vi.useFakeTimers();
+    const endedAt = new Date('2026-02-01T00:10:00Z');
+    vi.setSystemTime(endedAt);
+    const answered = (questionId: string, isCorrect: boolean) => ({
+      questionId,
+      markedForReview: false,
+      latestSelectedChoiceId: `choice-${questionId}`,
+      latestIsCorrect: isCorrect,
+      latestAnsweredAt: new Date('2026-02-01T00:05:00Z'),
+    });
+    const completed = createPracticeSession({
+      id: 'session-tutor',
+      userId: 'user-1',
+      mode: 'tutor',
+      questionIds: ['q1', 'q2', 'q3'],
+      questionStates: [
+        answered('q1', true),
+        answered('q2', true),
+        answered('q3', false),
+      ],
+      startedAt: new Date('2026-02-01T00:00:00Z'),
+      endedAt,
+    });
+
+    const endResult = await new EndPracticeSessionUseCase(
+      new FakePracticeSessionRepository([
+        createPracticeSession({ ...completed, endedAt: null }),
+      ]),
+      bank({ q2: 'withdrawn' }),
+    ).execute({ userId: 'user-1', sessionId: 'session-tutor' });
+    const historyResult = await new GetSessionHistoryUseCase(
+      new FakePracticeSessionRepository([completed], {
+        publishedQuestionSlugsById: new Map([
+          ['q1', 'q-1'],
+          ['q3', 'q-3'],
+        ]),
+        availabilityByQuestionId: new Map([['q2', 'withdrawn']]),
+      }),
+    ).execute({ userId: 'user-1', limit: 10, offset: 0, mode: 'tutor' });
+
+    expect(endResult.totals).toMatchObject({
+      answered: 3,
+      scored: 2,
+      correct: 1,
+      accuracy: 0.5,
+    });
+    expect(historyResult.rows[0]).toMatchObject({
+      answered: endResult.totals.answered,
+      scored: endResult.totals.scored,
+      correct: endResult.totals.correct,
+      accuracy: endResult.totals.accuracy,
+    });
   });
 
   it('returns totals from persisted latest question state (not raw attempt count)', async () => {
@@ -245,7 +326,7 @@ describe('EndPracticeSessionUseCase', () => {
       }),
     ]);
 
-    const useCase = new EndPracticeSessionUseCase(sessions);
+    const useCase = new EndPracticeSessionUseCase(sessions, bank());
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'session-1' }),
@@ -256,6 +337,7 @@ describe('EndPracticeSessionUseCase', () => {
       endedAt: '2026-02-01T00:10:00.000Z',
       totals: {
         answered: 1,
+        scored: 2,
         correct: 0,
         accuracy: 0,
         durationSeconds: 600,
@@ -265,7 +347,7 @@ describe('EndPracticeSessionUseCase', () => {
 
   it('propagates NOT_FOUND when the session does not exist', async () => {
     const sessions = new FakePracticeSessionRepository([]);
-    const useCase = new EndPracticeSessionUseCase(sessions);
+    const useCase = new EndPracticeSessionUseCase(sessions, bank());
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'missing' }),
@@ -282,7 +364,7 @@ describe('EndPracticeSessionUseCase', () => {
         endedAt: new Date('2026-02-01T00:05:00Z'),
       }),
     ]);
-    const useCase = new EndPracticeSessionUseCase(sessions);
+    const useCase = new EndPracticeSessionUseCase(sessions, bank());
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'session-ended' }),

@@ -207,6 +207,7 @@ describe('usePracticeSessionControls (browser)', () => {
         endedAt: '2026-02-08T01:00:00.000Z',
         totals: {
           answered: 2,
+          scored: 10,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -258,6 +259,7 @@ describe('usePracticeSessionControls (browser)', () => {
           endedAt: '2026-02-08T01:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 10,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -377,6 +379,7 @@ describe('usePracticeSessionControls (browser)', () => {
         endedAt: '2026-07-14T01:00:00.000Z',
         totals: {
           answered: 0,
+          scored: 20,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,
@@ -433,6 +436,7 @@ describe('usePracticeSessionControls (browser)', () => {
       endedAt: '2026-07-14T01:00:00.000Z',
       totals: {
         answered: 0,
+        scored: 20,
         correct: 0,
         accuracy: 0,
         durationSeconds: 60,
@@ -499,6 +503,7 @@ describe('usePracticeSessionControls (browser)', () => {
         endedAt: '2026-07-14T01:00:00.000Z',
         totals: {
           answered: 0,
+          scored: 20,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,

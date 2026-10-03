@@ -40,6 +40,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 10,
           totals: {
             answered: 10,
+            scored: 10,
             correct: 7,
             accuracy: 0.7,
             durationSeconds: 123,
@@ -74,6 +75,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -136,6 +138,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -212,6 +215,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -256,6 +260,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -278,6 +283,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -329,6 +335,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -376,6 +383,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -399,6 +407,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -423,6 +432,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           questionCount: 10,
           totals: {
             answered: 10,
+            scored: 10,
             correct: 7,
             accuracy: 0.7,
             durationSeconds: 123,

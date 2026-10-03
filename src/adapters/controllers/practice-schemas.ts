@@ -146,7 +146,8 @@ export const EndPracticeSessionOutputSchema = z
         /**
          * DEBT-493 / ADR-022 Decision 3: the items that count toward the
          * score. Optional while writers that predate it may have cached
-         * outputs (24-hour idempotency TTL); absent means every item counts.
+         * outputs (24-hour idempotency TTL); absent means every item counts,
+         * and the parse fills it in as the question count.
          */
         scored: z.number().int().min(0).optional(),
         accuracy: z.number().min(0).max(1),
@@ -189,7 +190,17 @@ export const EndPracticeSessionOutputSchema = z
         path: ['totals', 'scored'],
       });
     }
-  });
+  })
+  // A writer before scoring counted every item. Remove this, and make
+  // `scored` required, once no row cached by such a writer can remain: one
+  // full 24-hour TTL after the last of them left production.
+  .transform((value) => ({
+    ...value,
+    totals: {
+      ...value.totals,
+      scored: value.totals.scored ?? value.questionCount,
+    },
+  }));
 
 export const PracticeSessionSummaryOutputSchema =
   EndPracticeSessionOutputSchema;

@@ -381,6 +381,7 @@ describe('practice-controller', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 60,
@@ -433,6 +434,7 @@ describe('practice-controller', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 60,
@@ -457,6 +459,7 @@ describe('practice-controller', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 60,
@@ -638,6 +641,7 @@ describe('practice-controller', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 60,
@@ -701,6 +705,7 @@ describe('practice-controller', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 60,
@@ -725,6 +730,7 @@ describe('practice-controller', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 60,
@@ -744,6 +750,7 @@ describe('practice-controller', () => {
         questionCount: -1,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 60,

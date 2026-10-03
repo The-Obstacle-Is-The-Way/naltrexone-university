@@ -20,6 +20,7 @@ function renderExamResultsContinuityHarness() {
     questionCount: 2,
     totals: {
       answered: 2,
+      scored: 2,
       correct: 1,
       accuracy: 0.5,
       durationSeconds: 120,
@@ -197,6 +198,7 @@ test('renders session summary branch when summary is present', async () => {
         questionCount: 10,
         totals: {
           answered: 10,
+          scored: 10,
           correct: 8,
           accuracy: 0.8,
           durationSeconds: 1200,
@@ -250,6 +252,7 @@ test('keeps exam summaries on the in-session review contract when the substage p
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -262,6 +265,7 @@ test('keeps exam summaries on the in-session review contract when the substage p
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
