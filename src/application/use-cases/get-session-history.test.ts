@@ -75,6 +75,7 @@ describe('GetSessionHistoryUseCase', () => {
           questionCount: 3,
           firstQuestionSlug: 'q-1',
           answered: 2,
+          scored: 3,
           correct: 1,
           accuracy: 1 / 3,
           durationSeconds: 900,
@@ -86,6 +87,65 @@ describe('GetSessionHistoryUseCase', () => {
       limit: 10,
       offset: 0,
     });
+  });
+
+  // ADR-022 Decision 3: an item whose question is no longer published leaves
+  // both the numerator and the denominator of the session's score.
+  it('scores only the items whose question is still published', async () => {
+    const useCase = new GetSessionHistoryUseCase(
+      new FakePracticeSessionRepository(
+        [
+          createPracticeSession({
+            id: 'session-1',
+            userId: 'user-1',
+            mode: 'exam',
+            questionIds: ['q1', 'q2', 'q3'],
+            questionStates: [
+              {
+                questionId: 'q1',
+                markedForReview: false,
+                latestSelectedChoiceId: 'c1',
+                latestIsCorrect: true,
+                latestAnsweredAt: new Date('2026-02-06T10:01:00.000Z'),
+              },
+              {
+                questionId: 'q2',
+                markedForReview: false,
+                latestSelectedChoiceId: 'c2',
+                latestIsCorrect: true,
+                latestAnsweredAt: new Date('2026-02-06T10:02:00.000Z'),
+              },
+              {
+                questionId: 'q3',
+                markedForReview: false,
+                latestSelectedChoiceId: null,
+                latestIsCorrect: null,
+                latestAnsweredAt: null,
+              },
+            ],
+            startedAt: new Date('2026-02-06T10:00:00.000Z'),
+            endedAt: new Date('2026-02-06T10:15:00.000Z'),
+          }),
+        ],
+        { unpublishedQuestionIds: new Set(['q2']) },
+      ),
+    );
+
+    const { rows } = await useCase.execute({
+      userId: 'user-1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        questionCount: 3,
+        answered: 2,
+        scored: 2,
+        correct: 1,
+        accuracy: 0.5,
+      }),
+    ]);
   });
 
   it('computes tutor accuracy using total question count denominator', async () => {
@@ -136,6 +196,7 @@ describe('GetSessionHistoryUseCase', () => {
           questionCount: 2,
           firstQuestionSlug: 'q-10',
           answered: 1,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 1800,
@@ -190,6 +251,7 @@ describe('GetSessionHistoryUseCase', () => {
           questionCount: 1,
           firstQuestionSlug: 'q-1',
           answered: 0,
+          scored: 1,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,
@@ -269,6 +331,7 @@ describe('GetSessionHistoryUseCase', () => {
           questionCount: 1,
           firstQuestionSlug: 'q-exam',
           answered: 0,
+          scored: 1,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,
@@ -325,6 +388,7 @@ describe('GetSessionHistoryUseCase', () => {
           questionCount: 2,
           firstQuestionSlug: null,
           answered: 0,
+          scored: 2,
           correct: 0,
           accuracy: 0,
           durationSeconds: 60,

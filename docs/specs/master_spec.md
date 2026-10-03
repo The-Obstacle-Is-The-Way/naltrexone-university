@@ -1093,7 +1093,8 @@ export type SessionHistoryRow = {
   mode: 'tutor' | 'exam';
   questionCount: number;
   answered: number;
-  correct: number;
+  scored: number;         // items whose question is published now (ADR-022)
+  correct: number;        // scored items answered correctly
   accuracy: number;       // 0..1
   durationSeconds: number;
   startedAt: string;      // ISO
@@ -1121,8 +1122,9 @@ export type GetSessionHistoryOutput = {
 2. For each session, compute stats from persisted `practice_session_question_states`:
    * `questionCount` = total questions in session
    * `answered` = count where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
-   * `correct` = count where `latestIsCorrect === true`
-   * `accuracy` = correct / questionCount (0 if questionCount = 0)
+   * `scored` = count of items whose question is published when history is read (ADR-022 Decision 3); an unpublished item leaves both counts below, answered or not
+   * `correct` = count of scored items where `latestIsCorrect === true`
+   * `accuracy` = correct / scored (0 if scored = 0); the UI shows "—" when nothing is scored, and says how many questions aren't scored
    * `durationSeconds` = floor((ended_at - started_at) / 1000)
 3. Apply limit/offset pagination.
 4. Return rows with total count for pagination.

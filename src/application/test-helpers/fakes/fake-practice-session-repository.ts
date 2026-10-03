@@ -7,7 +7,10 @@ import {
 } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
-import { computeSessionStats } from '@/src/domain/services';
+import {
+  computeSessionScore,
+  computeSessionStats,
+} from '@/src/domain/services';
 import { defaultRevisionIdOf } from '@/src/domain/test-helpers';
 import type {
   AnswerOutcome,
@@ -33,6 +36,11 @@ export class FakePracticeSessionRepository
     seed: readonly PracticeSession[] = [],
     private readonly options: {
       publishedQuestionSlugsById?: ReadonlyMap<string, string>;
+      /**
+       * Questions that are not published now: their items do not count
+       * toward a history score (ADR-022 Decision 3).
+       */
+      unpublishedQuestionIds?: ReadonlySet<string>;
     } = {},
   ) {
     this.sessions = seed.map((session) =>
@@ -198,8 +206,11 @@ export class FakePracticeSessionRepository
     return {
       rows: page.rows.flatMap((session) => {
         if (session.endedAt === null) return [];
-        const { answered, correct } = computeSessionStats(
+        const { answered } = computeSessionStats(session.questionStates);
+        const { scored, correct: scoredCorrect } = computeSessionScore(
           session.questionStates,
+          (state) =>
+            !this.options.unpublishedQuestionIds?.has(state.questionId),
         );
         return [
           {
@@ -211,7 +222,8 @@ export class FakePracticeSessionRepository
                 session.questionIds[0] ?? '',
               ) ?? null,
             answered,
-            correct,
+            scored,
+            scoredCorrect,
             startedAt: session.startedAt,
             endedAt: session.endedAt,
           },

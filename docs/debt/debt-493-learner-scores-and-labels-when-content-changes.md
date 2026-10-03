@@ -116,6 +116,15 @@ In increments, each test-first.
 - **This step must be in production before the writer ships.** The writer's replay parser then reads a row cached without `scored` as every item counting, which is what the earlier writer computed.
 - The plan for the remaining steps is: history scores, then dashboard accuracy, then the session summary's writer, then Review & Submit with Decision 5's sentence. That sentence is true only once all three scores exclude the item.
 
+**Increment 2, step 2: history scores, 2026-10-03.** A completed session's history score counts only its scored items.
+- **The rule.** In the domain, `countsTowardScore` (available, and from increment 4 an unchanged key) and `computeSessionScore`, shared by every score.
+- **History.** The history summary returns `scored` (items whose question is published when read) and `scoredCorrect`, in place of `correct`. Accuracy is `correct / scored`.
+  - History and the Dashboard's recent sessions show `correct/scored`, "—" when nothing is scored, and Pattern Registry F-13's disclosure when items are left out.
+  - The singular form, "1 question isn't scored", was decided here; the ADR gives only the plural.
+- **The second fake↔real contract.** `session-history-score-contract.ts` runs three scenarios against the fake and the adapter on real Postgres.
+- **Cost.** On the local integration database, 50 completed sessions of 20 items, a 20-row page, median of five warm `EXPLAIN (ANALYZE)` runs: 1.075 ms before, 1.407 ms after.
+- **Evidence.** Twelve targeted mutations each fail a case, across the adapter, the fake, the use case, the History and Dashboard views, the disclosure and the domain rule.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.

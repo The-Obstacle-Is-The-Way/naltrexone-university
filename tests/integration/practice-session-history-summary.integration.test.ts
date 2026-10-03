@@ -105,7 +105,8 @@ describe('practice-session history summary read', () => {
         questionCount: 2,
         firstQuestionSlug: firstQuestion.slug,
         answered: 1,
-        correct: 1,
+        scored: 2,
+        scoredCorrect: 1,
       }),
     ]);
     expect(logger.warnCalls).toEqual([

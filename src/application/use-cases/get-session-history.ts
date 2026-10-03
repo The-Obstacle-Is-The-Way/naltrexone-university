@@ -18,7 +18,14 @@ export type SessionHistoryRow = {
   questionCount: number;
   firstQuestionSlug: string | null;
   answered: number;
+  /**
+   * The items that count toward the score: those whose question is
+   * published now (ADR-022 Decision 3).
+   */
+  scored: number;
+  /** The scored items answered correctly. */
   correct: number;
+  /** `correct / scored`; 0 when nothing is scored. */
   accuracy: number;
   durationSeconds: number;
   startedAt: string;
@@ -47,16 +54,15 @@ export class GetSessionHistoryUseCase {
 
     const rows: SessionHistoryRow[] = [];
     for (const session of page.rows) {
-      const accuracyDenominator = session.questionCount;
-
       rows.push({
         sessionId: session.sessionId,
         mode: session.mode,
         questionCount: session.questionCount,
         firstQuestionSlug: session.firstQuestionSlug,
         answered: session.answered,
-        correct: session.correct,
-        accuracy: computeAccuracy(accuracyDenominator, session.correct),
+        scored: session.scored,
+        correct: session.scoredCorrect,
+        accuracy: computeAccuracy(session.scored, session.scoredCorrect),
         durationSeconds: computeSessionDurationSeconds(
           session.startedAt,
           session.endedAt,

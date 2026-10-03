@@ -3,11 +3,12 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-03 UTC
 
-**Latest** — 2026-10-03 UTC: DEBT-493 increment 2 (scoring) begins with its reader step ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
-- **Why a reader first.** Decision 3 makes a session's score count only its scored items, so the end and finalize outputs gain `totals.scored`. Those outputs are cached by idempotency key for 24 hours under strict schemas. The reader must accept the new field in production before any writer sends it.
-- **This step.** The schemas accept an optional `scored`, bounded by the question count, with `correct` bounded by it. Both cached shapes parse, and two targeted mutations each fail a case.
-- **Next.** History scores, dashboard accuracy and the session summary's writer, each excluding unavailable items from both numerator and denominator. Then Review & Submit, and Decision 5's sentence.
-- **Merged since the last entry.** #1338 (BUG-310 and DEBT-492 closeouts, **5400466027** on `86b8ffb9`; merged `2269955d`).
+**Latest** — 2026-10-03 UTC: DEBT-493 increment 2, step 2. History scores count only the items whose question is still available ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+- **What learners see.** History and the Dashboard's recent sessions show `correct/scored` and "—" when nothing is scored. When items are left out, they say how many: "N questions aren't scored: withdrawn, under review, retired, or their answer was corrected."
+- **How.** The domain rule `countsTowardScore` and `computeSessionScore` is shared by every score. The history query joins each item's question, at a measured cost of about 0.3 ms on a 20-row page.
+- **The second fake↔real contract** is the session history score: three scenarios, on the fake and on real Postgres.
+- **Released since the last entry.** #1338 (closeouts) and #1339 (the scored-total reader, **5400543476** on `14eb2813`; merged `a53c4ac5`) went out through promotion #1340 (`778ce09f`): main CI **37121189101** `test` passed **12:07:06Z**, production assigned **12:07:07.793Z**, trees `34f541ce`, healthy production. The reader is in production, so the session summary's writer can follow.
+- **Next.** Dashboard accuracy, then the session summary's writer, then Review & Submit with Decision 5's sentence.
 - **What remains Active.** DEBT-414, DEBT-465 and DEBT-493.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
