@@ -11,7 +11,6 @@ import {
   type SQL,
   sql,
 } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/pg-core';
 import type {
   Choice,
   Question,
@@ -47,7 +46,12 @@ import {
 import type { DrizzleDb } from '../shared/database-types';
 import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
-import { answerKeyCorrectedSql } from './shared/score-eligibility-sql';
+import {
+  answeredRevisionsSql,
+  answerKeyCorrectedSql,
+  keyCorrectedRevisionsOn,
+  keyCorrectedRevisionsSql,
+} from './shared/score-eligibility-sql';
 
 function isNonEmptyArray<T>(
   values: readonly T[],
@@ -57,9 +61,6 @@ function isNonEmptyArray<T>(
 
 // ADR-021 phase 2a: content and choices come from the question's current
 // revision, not the legacy columns or every choice of the question.
-// The attempted question, for its current answer key (ADR-022 Decision 4).
-const attemptedQuestions = alias(questions, 'attempted_questions');
-
 const questionRelations = {
   currentRevision: { with: { choices: true } },
   questionTags: {
@@ -329,20 +330,18 @@ export class DrizzleQuestionRepository implements QuestionRepository {
           this.db
             .select({ questionId: latestAttemptRows.questionId })
             .from(latestAttemptRows)
-            .innerJoin(
-              attemptedQuestions,
-              eq(attemptedQuestions.id, latestAttemptRows.questionId),
+            .leftJoin(
+              keyCorrectedRevisionsSql(answeredRevisionsSql(userId)),
+              keyCorrectedRevisionsOn(latestAttemptRows.questionRevisionId),
             )
             .where(
               and(
                 eq(latestAttemptRows.attemptRank, 1),
                 or(
                   eq(latestAttemptRows.isCorrect, false),
-                  answerKeyCorrectedSql({
-                    answered: sql`${latestAttemptRows.selectedChoiceId} is not null`,
-                    gradedRevisionId: latestAttemptRows.questionRevisionId,
-                    currentRevisionId: attemptedQuestions.currentRevisionId,
-                  }),
+                  answerKeyCorrectedSql(
+                    sql`${latestAttemptRows.selectedChoiceId} is not null`,
+                  ),
                 ),
               ),
             ),
