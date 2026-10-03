@@ -619,7 +619,7 @@ describe('HistorySessionsTab', () => {
 
     expect(doc.body.textContent).toContain('6/8 correct (75%)');
     expect(doc.body.textContent).toContain(
-      "2 questions aren't scored: withdrawn, under review, retired, or their answer was corrected.",
+      "2 questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected.",
     );
   });
 

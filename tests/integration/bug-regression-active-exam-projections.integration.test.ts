@@ -127,7 +127,7 @@ describe('BUG-186: GetPracticeSessionReview active-exam secrecy', () => {
 // ---------------------------------------------------------------------------
 
 describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
-  it('excludes active-exam attempts from countByUserId and countCorrectByUserId', async () => {
+  it('excludes active-exam attempts from countByUserId and scoreByUserId', async () => {
     const user = await createUser(db, cleanup);
     const q1 = await createQuestion(db, cleanup, {
       slug: `it-count-exam-${randomUUID()}`,
@@ -181,12 +181,14 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
 
     // While exam is active: only adhoc attempt counted
     await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
-    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(1);
+    await expect(
+      attemptRepo.scoreByUserId(user.id, null).then((score) => score.correct),
+    ).resolves.toBe(1);
     await expect(attemptRepo.countByUserIdSince(user.id, since)).resolves.toBe(
       1,
     );
     await expect(
-      attemptRepo.countCorrectByUserIdSince(user.id, since),
+      attemptRepo.scoreByUserId(user.id, since).then((score) => score.correct),
     ).resolves.toBe(1);
 
     // End the exam
@@ -194,12 +196,14 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
 
     // After exam ends: both attempts counted
     await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(2);
-    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(2);
+    await expect(
+      attemptRepo.scoreByUserId(user.id, null).then((score) => score.correct),
+    ).resolves.toBe(2);
     await expect(attemptRepo.countByUserIdSince(user.id, since)).resolves.toBe(
       2,
     );
     await expect(
-      attemptRepo.countCorrectByUserIdSince(user.id, since),
+      attemptRepo.scoreByUserId(user.id, since).then((score) => score.correct),
     ).resolves.toBe(2);
   });
 
@@ -297,7 +301,9 @@ describe('BUG-187: Dashboard counts exclude active-exam attempts', () => {
 
     // Tutor attempts always counted, even while session is active
     await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
-    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(1);
+    await expect(
+      attemptRepo.scoreByUserId(user.id, null).then((score) => score.correct),
+    ).resolves.toBe(1);
   });
 });
 

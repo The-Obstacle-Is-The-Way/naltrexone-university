@@ -142,7 +142,9 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
       isCorrect: false,
     });
     await expect(attemptRepo.countByUserId(user.id)).resolves.toBe(1);
-    await expect(attemptRepo.countCorrectByUserId(user.id)).resolves.toBe(0);
+    await expect(
+      attemptRepo.scoreByUserId(user.id, null).then((score) => score.correct),
+    ).resolves.toBe(0);
     await expect(
       attemptRepo.findMostRecentAnsweredAtByQuestionIds(user.id, [question.id]),
     ).resolves.toHaveLength(1);

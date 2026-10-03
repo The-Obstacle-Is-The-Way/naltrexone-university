@@ -80,12 +80,26 @@ export interface AttemptSessionReader {
   ): Promise<readonly Attempt[]>;
 }
 
-export interface AttemptStatsReader {
-  countByUserId(userId: string): Promise<number>;
-  countCorrectByUserId(userId: string): Promise<number>;
+/**
+ * ADR-022 Decision 3, as amended by DEBT-494: the attempts that count toward
+ * accuracy (the learner had a fair chance at the attempt, and its question's
+ * content is not now withdrawn or under review; a retired question counts),
+ * the correct ones among them, and how many questions the attempts left out
+ * are on.
+ */
+export type AttemptScore = {
+  scored: number;
+  correct: number;
+  unscoredQuestions: number;
+};
 
+export interface AttemptStatsReader {
+  /** Every visible attempt: an activity count, not a score. */
+  countByUserId(userId: string): Promise<number>;
   countByUserIdSince(userId: string, since: Date): Promise<number>;
-  countCorrectByUserIdSince(userId: string, since: Date): Promise<number>;
+
+  /** The score over attempts answered at or after `since`, or all of them. */
+  scoreByUserId(userId: string, since: Date | null): Promise<AttemptScore>;
 
   listRecentByUserId(
     userId: string,

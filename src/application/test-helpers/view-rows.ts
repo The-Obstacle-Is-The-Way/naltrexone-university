@@ -1,6 +1,7 @@
 import type { AvailableBookmarkRow } from '@/src/application/ports/bookmarks';
 import type { AvailableAttemptedQuestionRow } from '@/src/application/use-cases/get-attempted-questions';
 import type { SessionHistoryRow } from '@/src/application/use-cases/get-session-history';
+import type { UserStatsOutput } from '@/src/application/use-cases/get-user-stats';
 
 // Rows the history, bookmarks and dashboard views render. Application-owned
 // ids default to fresh UUIDs (fixture-integrity.md); a case that asserts on an
@@ -56,5 +57,26 @@ export function createSessionHistoryRow(
     ...overrides,
     // Every question is published unless a case says otherwise.
     scored: overrides.scored ?? overrides.questionCount ?? 10,
+  };
+}
+
+export function createUserStatsOutput(
+  overrides: Partial<UserStatsOutput> = {},
+): UserStatsOutput {
+  const totalAnswered = overrides.totalAnswered ?? 0;
+  const answeredLast7Days = overrides.answeredLast7Days ?? 0;
+  return {
+    accuracyOverall: 0,
+    unscoredQuestionsOverall: 0,
+    accuracyLast7Days: 0,
+    unscoredQuestionsLast7Days: 0,
+    currentStreakDays: 0,
+    recentActivity: [],
+    ...overrides,
+    totalAnswered,
+    answeredLast7Days,
+    // Every answer is on a published question unless a case says otherwise.
+    scoredOverall: overrides.scoredOverall ?? totalAnswered,
+    scoredLast7Days: overrides.scoredLast7Days ?? answeredLast7Days,
   };
 }

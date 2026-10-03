@@ -71,11 +71,16 @@ export function DashboardView({
 
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Overall accuracy</div>
+          {/* ADR-022 Decision 3: over the scored answers only. */}
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {stats.totalAnswered > 0
+            {stats.scoredOverall > 0
               ? formatPercent(stats.accuracyOverall)
               : '—'}
           </div>
+          <UnscoredDisclosure
+            count={stats.unscoredQuestionsOverall}
+            className="mt-1"
+          />
         </Card>
 
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
@@ -88,10 +93,14 @@ export function DashboardView({
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Accuracy (7 days)</div>
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
-            {stats.answeredLast7Days > 0
+            {stats.scoredLast7Days > 0
               ? formatPercent(stats.accuracyLast7Days)
               : '—'}
           </div>
+          <UnscoredDisclosure
+            count={stats.unscoredQuestionsLast7Days}
+            className="mt-1"
+          />
         </Card>
       </div>
 

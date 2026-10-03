@@ -1,20 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 
-// DEBT-493 / ADR-022 Decision 3: a completed session's history score counts
-// only the items whose question is available, read at the time of the read.
-// This contract runs the same scenarios against FakePracticeSessionRepository
-// and the Drizzle adapter on real Postgres.
+// DEBT-493 / ADR-022 Amendment (DEBT-494): a completed session's history score
+// counts an item when the learner had a fair chance at it, recorded when the
+// session ended, and its content is not now in doubt (withdrawn or under
+// review). Retirement changes no score. This contract runs the same scenarios
+// against FakePracticeSessionRepository and the Drizzle adapter on real
+// Postgres.
+
+export type QuestionStateNow =
+  | 'available'
+  | 'retired'
+  | 'withdrawn'
+  | 'under_review';
 
 export type HistoryScoreItem = {
   answer: 'correct' | 'incorrect' | 'unanswered';
-  /** Whether the question is still published when history is read. */
-  published: boolean;
+  /** The question's state when history is read. */
+  now: QuestionStateNow;
+  /** The question left the bank before the session ended. */
+  removedBeforeEnd?: boolean;
 };
 
 export type SessionHistoryScoreHarness = {
   /** Ends one session over these items, in order, for a new learner. */
-  seed(items: readonly HistoryScoreItem[]): Promise<{
+  seed(input: {
+    mode: 'tutor' | 'exam';
+    items: readonly HistoryScoreItem[];
+  }): Promise<{
     repository: Pick<
       PracticeSessionRepository,
       'findCompletedHistorySummariesByUserId'
@@ -25,37 +38,51 @@ export type SessionHistoryScoreHarness = {
 
 type Scenario = {
   name: string;
+  mode: 'tutor' | 'exam';
   items: readonly HistoryScoreItem[];
   expected: { answered: number; scored: number; scoredCorrect: number };
 };
 
 const scenarios: readonly Scenario[] = [
   {
-    name: 'scores every item when every question is published',
+    name: 'scores every item when every question is available',
+    mode: 'tutor',
     items: [
-      { answer: 'correct', published: true },
-      { answer: 'incorrect', published: true },
-      { answer: 'unanswered', published: true },
+      { answer: 'correct', now: 'available' },
+      { answer: 'incorrect', now: 'available' },
+      { answer: 'unanswered', now: 'available' },
     ],
     expected: { answered: 2, scored: 3, scoredCorrect: 1 },
   },
   {
-    name: 'leaves an unpublished item out of both counts, answered or not, and keeps it answered',
+    name: 'keeps a question retired since counted, and leaves out a withdrawn or held one, answered or not',
+    mode: 'tutor',
     items: [
-      { answer: 'correct', published: false },
-      { answer: 'correct', published: true },
-      { answer: 'incorrect', published: true },
-      { answer: 'unanswered', published: false },
+      { answer: 'correct', now: 'retired' },
+      { answer: 'incorrect', now: 'available' },
+      { answer: 'correct', now: 'withdrawn' },
+      { answer: 'unanswered', now: 'under_review' },
     ],
     expected: { answered: 3, scored: 2, scoredCorrect: 1 },
   },
   {
-    name: 'scores nothing when no question is published',
+    name: 'leaves out an exam item whose question left the bank before the end, even once it returns',
+    mode: 'exam',
     items: [
-      { answer: 'correct', published: false },
-      { answer: 'unanswered', published: false },
+      { answer: 'correct', now: 'available', removedBeforeEnd: true },
+      { answer: 'correct', now: 'available' },
+      { answer: 'unanswered', now: 'available' },
     ],
-    expected: { answered: 1, scored: 0, scoredCorrect: 0 },
+    expected: { answered: 2, scored: 2, scoredCorrect: 1 },
+  },
+  {
+    name: 'keeps a tutor answer given before its question left the bank, but not an item never answered',
+    mode: 'tutor',
+    items: [
+      { answer: 'correct', now: 'retired', removedBeforeEnd: true },
+      { answer: 'unanswered', now: 'retired', removedBeforeEnd: true },
+    ],
+    expected: { answered: 1, scored: 1, scoredCorrect: 1 },
   },
 ];
 
@@ -64,8 +91,11 @@ export function runSessionHistoryScoreContract(
   createHarness: () => Promise<SessionHistoryScoreHarness>,
 ): void {
   describe(`${adapterName} session history score contract`, () => {
-    it.each(scenarios)('$name', async ({ items, expected }) => {
-      const { repository, userId } = await (await createHarness()).seed(items);
+    it.each(scenarios)('$name', async ({ mode, items, expected }) => {
+      const { repository, userId } = await (await createHarness()).seed({
+        mode,
+        items,
+      });
 
       const page = await repository.findCompletedHistorySummariesByUserId(
         userId,

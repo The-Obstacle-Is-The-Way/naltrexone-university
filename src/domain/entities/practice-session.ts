@@ -20,7 +20,8 @@ export type PracticeSessionQuestionState = {
   /**
    * Whether the learner had a fair chance at the item, recorded when the
    * session ends (ADR-022 Amendment). Null while the session is active, and
-   * for a session that ended before it was recorded.
+   * for one ended in the deploy window before it was recorded, which reads
+   * as a fair chance.
    */
   readonly fairChanceAtEnd: boolean | null;
 };

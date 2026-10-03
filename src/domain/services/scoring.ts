@@ -2,15 +2,33 @@ import type { PracticeSessionQuestionState } from '../entities';
 import type { PracticeMode, QuestionAvailability } from '../value-objects';
 
 /**
- * ADR-022 Decision 3: an item counts toward a score only while its question
- * is available. A question that no longer exists does not count either.
- * DEBT-493 increment 4 adds the second condition: if the item was answered,
- * the key it was graded against is still the current key.
+ * ADR-022 Amendment (DEBT-494): content the bank no longer stands behind:
+ * withdrawn or under review. DEBT-493 increment 4 adds an answered item whose
+ * graded key was since corrected. Retirement is curation, not doubt. A
+ * question that no longer exists is in doubt too.
  */
-export function countsTowardScore(
+export function contentInDoubt(
   availability: QuestionAvailability | null,
 ): boolean {
-  return availability === 'available';
+  return (
+    availability === null ||
+    availability === 'withdrawn' ||
+    availability === 'under_review'
+  );
+}
+
+/**
+ * ADR-022 Amendment (DEBT-494): an item counts toward a score when the
+ * learner had a fair chance at it, recorded when its session ends, and its
+ * content is not now in doubt. A fair chance never recorded (an attempt
+ * outside a session, or a session ended in the deploy window before the
+ * record was written) is a fair chance.
+ */
+export function countsTowardScore(input: {
+  fairChanceAtEnd: boolean | null;
+  availability: QuestionAvailability | null;
+}): boolean {
+  return input.fairChanceAtEnd !== false && !contentInDoubt(input.availability);
 }
 
 export type SessionScore = {

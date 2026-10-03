@@ -303,8 +303,12 @@ describe('theme token regression', () => {
         stats={{
           totalAnswered: 10,
           accuracyOverall: 0.7,
+          scoredOverall: 10,
+          unscoredQuestionsOverall: 0,
           answeredLast7Days: 5,
           accuracyLast7Days: 0.8,
+          scoredLast7Days: 5,
+          unscoredQuestionsLast7Days: 0,
           currentStreakDays: 3,
           recentActivity: [],
         }}
@@ -325,8 +329,12 @@ describe('theme token regression', () => {
         stats={{
           totalAnswered: 10,
           accuracyOverall: 0.7,
+          scoredOverall: 10,
+          unscoredQuestionsOverall: 0,
           answeredLast7Days: 5,
           accuracyLast7Days: 0.8,
+          scoredLast7Days: 5,
+          unscoredQuestionsLast7Days: 0,
           currentStreakDays: 3,
           recentActivity: [],
         }}
