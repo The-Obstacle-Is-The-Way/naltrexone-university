@@ -1,8 +1,11 @@
 import { ApplicationError } from '../errors';
-import type { PracticeSessionRepository } from '../ports/repositories';
+import type {
+  PracticeSessionRepository,
+  QuestionRepository,
+} from '../ports/repositories';
 import {
   type PracticeSessionSummary,
-  projectPracticeSessionSummary,
+  summarizePracticeSession,
 } from './practice-session-summary';
 
 export type EndPracticeSessionInput = {
@@ -13,7 +16,10 @@ export type EndPracticeSessionInput = {
 export type EndPracticeSessionOutput = PracticeSessionSummary;
 
 export class EndPracticeSessionUseCase {
-  constructor(private readonly sessions: PracticeSessionRepository) {}
+  constructor(
+    private readonly sessions: PracticeSessionRepository,
+    private readonly questions: QuestionRepository,
+  ) {}
 
   async execute(
     input: EndPracticeSessionInput,
@@ -45,6 +51,6 @@ export class EndPracticeSessionUseCase {
       );
     }
 
-    return projectPracticeSessionSummary(session, endedAt);
+    return summarizePracticeSession(this.questions, session, endedAt);
   }
 }

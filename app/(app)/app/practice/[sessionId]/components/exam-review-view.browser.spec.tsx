@@ -22,6 +22,7 @@ test('renders navigator states and disables unavailable questions', async () => 
         mode: 'exam',
         totalCount: 3,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 1,
         rows: [
           {
@@ -87,6 +88,7 @@ test('uses correctness labels only in tutor mode', async () => {
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -141,8 +143,9 @@ test('opens a review question and finalizes the exam', async () => {
       review={{
         sessionId: fixtureSession1Id,
         mode: 'exam',
-        totalCount: 2,
+        totalCount: 3,
         answeredCount: 1,
+        scoredUnansweredCount: 1,
         markedCount: 1,
         rows: [
           {
@@ -163,6 +166,21 @@ test('opens a review question and finalizes the exam', async () => {
             order: 2,
             isAvailable: false,
             availability: null,
+            isAnswered: false,
+            isCorrect: null,
+            isOmitted: false,
+            markedForReview: false,
+          },
+          // ADR-022 Decision 5: of the two unanswered items, only this one
+          // will be scored, so the warning counts one.
+          {
+            questionId: crypto.randomUUID(),
+            slug: 'q-3',
+            order: 3,
+            isAvailable: true,
+            availability: 'available',
+            stemMd: 'Stem 3',
+            difficulty: 'easy',
             isAnswered: false,
             isCorrect: null,
             isOmitted: false,
@@ -219,6 +237,7 @@ test('guards against double-clicking confirm submit before pending state updates
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [],
       }}
@@ -247,6 +266,7 @@ test('allows submitting again after finalize resolves even when pending state ne
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [],
       }}
@@ -286,6 +306,7 @@ test('omits unanswered warning when all exam questions are answered', async () =
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }}
@@ -296,6 +317,59 @@ test('omits unanswered warning when all exam questions are answered', async () =
   );
 
   await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByText('unanswered question', { exact: false }))
+    .not.toBeInTheDocument();
+});
+
+// ADR-022 Decision 5: an item no longer available won't be scored, so leaving
+// it unanswered costs nothing and is not warned about.
+test('omits the unanswered warning when no unanswered item will be scored', async () => {
+  const screen = await render(
+    <ExamReviewView
+      review={{
+        sessionId: fixtureSession1Id,
+        mode: 'exam',
+        totalCount: 2,
+        answeredCount: 1,
+        scoredUnansweredCount: 0,
+        markedCount: 0,
+        rows: [
+          {
+            questionId: fixtureQ1Id,
+            slug: 'q-1',
+            order: 1,
+            isAvailable: true,
+            availability: 'available',
+            stemMd: 'Stem 1',
+            difficulty: 'easy',
+            isAnswered: true,
+            isCorrect: null,
+            isOmitted: false,
+            markedForReview: false,
+          },
+          {
+            questionId: fixtureQ2Id,
+            order: 2,
+            isAvailable: false,
+            availability: 'withdrawn',
+            isAnswered: false,
+            isCorrect: null,
+            isOmitted: false,
+            markedForReview: false,
+          },
+        ],
+      }}
+      isPending={false}
+      onOpenQuestion={() => undefined}
+      onFinalizeReview={async () => undefined}
+    />,
+  );
+
+  await screen.getByRole('button', { name: 'Submit exam' }).click();
+  await expect
+    .element(screen.getByRole('alertdialog', { name: 'Submit exam?' }))
+    .toBeVisible();
   await expect
     .element(screen.getByText('unanswered question', { exact: false }))
     .not.toBeInTheDocument();
@@ -312,6 +386,7 @@ test('keeps the helper text visible and the first review row above the fold at 3
           mode: 'exam',
           totalCount: 10,
           answeredCount: 6,
+          scoredUnansweredCount: 4,
           markedCount: 2,
           rows: Array.from({ length: 10 }, (_, index) => ({
             questionId: crypto.randomUUID(),
@@ -381,6 +456,7 @@ test('keeps empty-stem rows discoverable by accessible name', async () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [
           {
@@ -420,6 +496,7 @@ test('supports keyboard activation for available review rows and leaves unavaila
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -482,6 +559,7 @@ test('renders decorative chevrons only on available review rows', async () => {
         mode: 'exam',
         totalCount: 3,
         answeredCount: 1,
+        scoredUnansweredCount: 1,
         markedCount: 1,
         rows: [
           {
@@ -558,6 +636,7 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
         mode: 'exam',
         totalCount: 3,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {

@@ -5,7 +5,7 @@ import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/pract
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type {
   GetNextQuestionOutput,
-  WithdrawnSessionQuestion,
+  UnavailableSessionQuestion,
 } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { ok } from '@/tests/test-helpers/ok';
@@ -23,9 +23,11 @@ const choiceNotFound = {
 const fixtureQ1Id = crypto.randomUUID();
 const fixtureChoiceId = crypto.randomUUID();
 
-function withdrawnItem(questionId: string): WithdrawnSessionQuestion {
+function withdrawnItem(questionId: string): UnavailableSessionQuestion {
   return {
-    withdrawn: true,
+    unavailable: true,
+    availability: 'withdrawn',
+    countsIfEndedNow: false,
     questionId,
     session: {
       sessionId: fixtureSessionId,
@@ -64,21 +66,26 @@ function renderFlow(input: {
   );
 }
 
-// ADR-021 §3, Pattern Registry F-11: an item whose question was withdrawn
+// ADR-021 §3, ADR-022 Decision 5, Pattern Registry F-11: an item whose question
+// became unavailable (here, withdrawn)
 // after the session began has its place in the session and no question.
-describe('usePracticeSessionQuestionFlow with a withdrawn item (browser)', () => {
+describe('usePracticeSessionQuestionFlow with an unavailable item (browser)', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('records a withdrawn item on load, with no question', async () => {
+  it('records an unavailable item and its state on load, with no question', async () => {
     const harness = await renderFlow({
       getNextQuestionFn: vi.fn(async () => ok(withdrawnItem(fixtureQ1Id))),
     });
 
     await expect
-      .poll(() => harness.result.current.withdrawnQuestionId)
-      .toBe(fixtureQ1Id);
+      .poll(() => harness.result.current.unavailableItem)
+      .toEqual({
+        questionId: fixtureQ1Id,
+        availability: 'withdrawn',
+        countsIfEndedNow: false,
+      });
     expect(harness.result.current.question).toBeNull();
     expect(harness.result.current.sessionInfo).toMatchObject({ index: 0 });
     expect(harness.result.current.loadState).toEqual({ status: 'ready' });
@@ -117,8 +124,12 @@ describe('usePracticeSessionQuestionFlow with a withdrawn item (browser)', () =>
     harness.result.current.onSelectChoice(fixtureChoiceId, 'pointer');
 
     await expect
-      .poll(() => harness.result.current.withdrawnQuestionId)
-      .toBe(fixtureQ1Id);
+      .poll(() => harness.result.current.unavailableItem)
+      .toEqual({
+        questionId: fixtureQ1Id,
+        availability: 'withdrawn',
+        countsIfEndedNow: false,
+      });
     expect(getNextQuestionFn).toHaveBeenLastCalledWith({
       sessionId: fixtureSessionId,
       questionId: fixtureQ1Id,
@@ -153,6 +164,6 @@ describe('usePracticeSessionQuestionFlow with a withdrawn item (browser)', () =>
     await expect
       .poll(() => harness.result.current.loadState)
       .toEqual({ status: 'error', message: 'Choice not found' });
-    expect(harness.result.current.withdrawnQuestionId).toBeNull();
+    expect(harness.result.current.unavailableItem).toBeNull();
   });
 });

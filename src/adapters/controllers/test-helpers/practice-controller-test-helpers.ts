@@ -148,7 +148,13 @@ export function createDeps(overrides?: {
       endedAt: '2026-02-01T00:00:00.000Z',
       mode: 'tutor',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     },
     overrides?.endThrows,
   );
@@ -160,6 +166,7 @@ export function createDeps(overrides?: {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 0,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [],
       },
@@ -185,7 +192,13 @@ export function createDeps(overrides?: {
       endedAt: '2026-02-01T00:00:00.000Z',
       mode: 'exam',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     },
     overrides?.finalizeThrows,
   );
@@ -213,7 +226,13 @@ export function createDeps(overrides?: {
         endedAt: '2026-02-01T00:00:00.000Z',
         mode: 'tutor',
         questionCount: 0,
-        totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+        totals: {
+          answered: 0,
+          scored: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 0,
+        },
       },
       overrides?.summaryThrows,
     );

@@ -84,6 +84,7 @@ function mockFinalizeSummary(input: { answered?: number } = {}) {
       questionCount: 1,
       totals: {
         answered,
+        scored: 1,
         correct: 0,
         accuracy: 0,
         durationSeconds: 72,
@@ -102,6 +103,7 @@ function mockFinalizeSummaryFromFinalFlush() {
       questionCount: 1,
       totals: {
         answered,
+        scored: 1,
         correct: 0,
         accuracy: 0,
         durationSeconds: 72,
@@ -211,6 +213,7 @@ describe('usePracticeSessionPageModel timer expiry', () => {
           questionCount: 1,
           totals: {
             answered: 0,
+            scored: 1,
             correct: 0,
             accuracy: 0,
             durationSeconds: 72,

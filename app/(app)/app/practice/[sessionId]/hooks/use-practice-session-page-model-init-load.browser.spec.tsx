@@ -46,6 +46,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         questionCount: 2,
         totals: {
           answered: 1,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 1200,
@@ -92,6 +93,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 0,
           accuracy: 0,
           durationSeconds: 1200,
@@ -216,6 +218,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           questionCount: 2,
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 1200,
@@ -334,6 +337,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 1200,
@@ -417,6 +421,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
           questionCount: 2,
           totals: {
             answered: 1,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 1200,

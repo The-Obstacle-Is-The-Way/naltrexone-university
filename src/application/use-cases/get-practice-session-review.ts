@@ -11,7 +11,10 @@ import {
   getEffectiveSelectedChoiceId,
   requirePracticeSessionQuestionState,
 } from '@/src/application/shared/practice-session-state';
-import { shouldShowExplanation as sessionShouldShowExplanation } from '@/src/domain/services';
+import {
+  countsIfEndedNow,
+  shouldShowExplanation as sessionShouldShowExplanation,
+} from '@/src/domain/services';
 import type {
   QuestionAvailability,
   QuestionDifficulty,
@@ -66,6 +69,11 @@ export type GetPracticeSessionReviewOutput = {
   mode: 'tutor' | 'exam';
   totalCount: number;
   answeredCount: number;
+  /**
+   * Unanswered items that would count if the session ended now: an item no
+   * longer available would not (ADR-022 Decision 5, as amended).
+   */
+  scoredUnansweredCount: number;
   markedCount: number;
   rows: PracticeSessionReviewRow[];
 };
@@ -194,6 +202,15 @@ export class GetPracticeSessionReviewUseCase {
       mode: session.mode,
       totalCount: session.questionIds.length,
       answeredCount,
+      scoredUnansweredCount: rows.filter(
+        (row) =>
+          !row.isAnswered &&
+          countsIfEndedNow({
+            mode: session.mode,
+            answered: false,
+            availability: row.availability,
+          }),
+      ).length,
       markedCount: rows.filter((row) => row.markedForReview).length,
       rows,
     };

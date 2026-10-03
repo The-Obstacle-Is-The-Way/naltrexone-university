@@ -16,6 +16,7 @@ export function createSummary(
     endedAt: '2026-03-20T00:00:00.000Z',
     totals: {
       answered: 1,
+      scored: 1,
       correct: 0,
       accuracy: 0,
       durationSeconds: 120,

@@ -9,6 +9,7 @@ import { QuestionCard } from '@/components/question/question-card';
 import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import { QuestionReportDialog } from '@/components/question/question-report-dialog';
 import { QuestionUpdateNotice } from '@/components/question/question-update-notice';
+import { UnscoredDisclosure } from '@/components/question/unscored-disclosure';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type {
@@ -87,12 +88,19 @@ export function PostExamReviewView({
             <h1 className="text-sm font-medium text-muted-foreground">
               Exam complete
             </h1>
+            {/* ADR-022 Decision 3: over the scored items only. */}
             <div className="mt-1 text-3xl font-bold font-display text-foreground">
-              {`${Math.round(summary.totals.accuracy * 100)}%`}
+              {summary.totals.scored > 0
+                ? `${Math.round(summary.totals.accuracy * 100)}%`
+                : '—'}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {`${summary.totals.correct} of ${summary.questionCount} correct · Review each question with detailed feedback.`}
+              {`${summary.totals.correct} of ${summary.totals.scored} correct · Review each question with detailed feedback.`}
             </p>
+            <UnscoredDisclosure
+              count={summary.questionCount - summary.totals.scored}
+              className="mt-1"
+            />
           </div>
           <Button
             type="button"

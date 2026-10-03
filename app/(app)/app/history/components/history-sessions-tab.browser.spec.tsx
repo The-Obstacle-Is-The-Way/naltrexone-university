@@ -94,6 +94,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -145,6 +146,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -196,6 +198,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -243,6 +246,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -327,6 +331,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -373,6 +378,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -422,6 +428,7 @@ describe('HistorySessionsTab (browser)', () => {
           mode: 'exam',
           totalCount: 1,
           answeredCount: 1,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -446,6 +453,7 @@ describe('HistorySessionsTab (browser)', () => {
         mode: 'tutor',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
+import { UnscoredDisclosure } from '@/components/question/unscored-disclosure';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDuration } from '@/lib/format-duration';
@@ -34,8 +35,10 @@ export function SessionSummaryView({
   const summaryReview = review ?? null;
   const summaryReviewLoadState = reviewLoadState ?? { status: 'idle' };
   const accuracyPercent = `${Math.round(summary.totals.accuracy * 100)}%`;
+  // ADR-022 Decision 3: over the scored items only.
   const accuracyLabel =
-    summary.mode === 'exam' || summary.totals.answered > 0
+    summary.totals.scored > 0 &&
+    (summary.mode === 'exam' || summary.totals.answered > 0)
       ? accuracyPercent
       : '—';
   const firstReviewableSlug =
@@ -87,6 +90,10 @@ export function SessionSummaryView({
           <div className="mt-2 text-3xl font-bold font-display text-foreground">
             {accuracyLabel}
           </div>
+          <UnscoredDisclosure
+            count={summary.questionCount - summary.totals.scored}
+            className="mt-1"
+          />
         </Card>
 
         <Card className="gap-0 rounded-2xl p-6 shadow-sm">

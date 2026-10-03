@@ -31,6 +31,7 @@ describe('QuestionNavigator', () => {
     mode: 'exam',
     totalCount: 3,
     answeredCount: 2,
+    scoredUnansweredCount: 0,
     markedCount: 0,
     rows: [
       {
@@ -273,6 +274,7 @@ describe('ExamReviewView', () => {
     mode: 'exam',
     totalCount: 4,
     answeredCount: 2,
+    scoredUnansweredCount: 1,
     markedCount: 1,
     rows: [
       {
@@ -350,6 +352,32 @@ describe('ExamReviewView', () => {
         )
       : [];
   }
+
+  // ADR-022 Decisions 3 and 5: an item no longer available is listed as
+  // "Won't be scored"; one still available is not.
+  it("lists each item no longer available as Won't be scored", () => {
+    const [, , open, missing] = review.rows;
+    const doc = renderExamReviewMarkup({
+      review: {
+        ...review,
+        rows: [
+          open,
+          missing,
+          {
+            ...missing,
+            questionId: crypto.randomUUID(),
+            availability: 'withdrawn',
+          },
+        ],
+      },
+    });
+
+    expect(
+      getReviewRows(doc).map((row) =>
+        row.textContent?.includes("Won't be scored"),
+      ),
+    ).toEqual([false, true, true]);
+  });
 
   function getReviewRowButtons(root: ParentNode) {
     return Array.from(

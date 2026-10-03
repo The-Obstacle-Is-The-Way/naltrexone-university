@@ -4,7 +4,7 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import { toPracticeQuestionResult } from './practice-page-logic';
 
 // Quick practice reads by filters, which never return a session item; a
-// withdrawn session item here would be a broken contract (ADR-021 §3).
+// session item here, unavailable or not, would be a broken contract (ADR-021 §3).
 describe('toPracticeQuestionResult', () => {
   it('passes a question, no question, or an error through unchanged', () => {
     const question = createNextQuestion();
@@ -15,10 +15,12 @@ describe('toPracticeQuestionResult', () => {
     expect(toPracticeQuestionResult(failure)).toEqual(failure);
   });
 
-  it('reports a withdrawn session item as an internal error', () => {
+  it('reports an unavailable session item as an internal error', () => {
     const result = toPracticeQuestionResult(
       ok({
-        withdrawn: true as const,
+        unavailable: true as const,
+        availability: 'withdrawn' as const,
+        countsIfEndedNow: false,
         questionId: crypto.randomUUID(),
         session: {
           sessionId: crypto.randomUUID(),

@@ -36,7 +36,13 @@ describe('practice-controller lifecycle idempotency policy', () => {
       endedAt: '2026-02-01T00:00:00.000Z',
       mode: 'tutor',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     } as const satisfies EndPracticeSessionOutput;
     const endUseCase = createOneTimeFailureUseCase<
       EndPracticeSessionInput,
@@ -72,7 +78,13 @@ describe('practice-controller lifecycle idempotency policy', () => {
       endedAt: '2026-02-01T00:00:00.000Z',
       mode: 'tutor',
       questionCount: 1,
-      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+      totals: {
+        answered: 0,
+        scored: 1,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 0,
+      },
     } as const satisfies EndPracticeSessionOutput;
     const endUseCase = createOneTimeFailureUseCase<
       EndPracticeSessionInput,

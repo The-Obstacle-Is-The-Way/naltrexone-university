@@ -707,11 +707,14 @@ export const EndPracticeSessionInputSchema = z.object({
 ```ts
 export type EndPracticeSessionOutput = {
   sessionId: string;
+  mode: 'tutor' | 'exam';
+  questionCount: number;
   endedAt: string; // ISO
   totals: {
-    answered: number;
-    correct: number;
-    accuracy: number; // 0..1
+    answered: number; // every answered item (activity)
+    scored: number; // items that count (ADR-022, as amended)
+    correct: number; // scored items answered correctly
+    accuracy: number; // 0..1, correct / scored
     durationSeconds: number; // endedAt - startedAt (rounded down)
   };
 };
@@ -734,10 +737,12 @@ export type EndPracticeSessionOutput = {
 4. Compute summary:
 
    * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
-   * `correct` = count of persisted session question states where `latestIsCorrect === true`
+   * `scored` = count of the session's items that count, answered or not (ADR-022 Decision 3, as amended by DEBT-494): the item's recorded `fair_chance_at_end` is not false, and its question's content is not now in doubt (withdrawn or under review); an item whose question cannot be found is in doubt
+   * `correct` = count of scored items with a selected choice where `latestIsCorrect === true`
+   * `accuracy` = correct / scored (0 if scored = 0); the summary and the post-exam header ("X of scored correct") show "—" when nothing is scored and say how many questions aren't scored
    * duration = floor((ended_at - started_at)/1000)
-5. Return summary.
-6. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:endPracticeSession'`) so duplicate finalize requests replay the cached summary.
+5. Return summary. `finalizeExamAnswers` and `getPracticeSessionSummary` return the same shape; the summary read scores the items as the bank stands at the read.
+6. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:endPracticeSession'`) so duplicate finalize requests replay the cached summary. A summary cached before `scored` existed (DEBT-493) is replayed with `scored = questionCount`, what its writer counted; that mapping is removed one full 24-hour TTL after the last such writer left production.
 
 > **SPEC-020 Note:** The UI MUST call `getPracticeSessionReview` after `endPracticeSession` to display per-question breakdown on the summary screen. See SPEC-020 Phase 2 (DEBT-123). No type change to `EndPracticeSessionOutput` — the review data comes from the existing review action (SRP).
 
@@ -987,6 +992,7 @@ export const GetPracticeSessionReviewInputSchema = z.object({
 export type PracticeSessionReviewRow =
   | {
       isAvailable: true;
+      availability: QuestionAvailability; // ADR-022 Decision 1
       questionId: string;
       slug: string;
       stemMd: string;
@@ -994,14 +1000,17 @@ export type PracticeSessionReviewRow =
       order: number; // 1-based
       isAnswered: boolean;
       isCorrect: boolean | null;
+      isOmitted: boolean;
       markedForReview: boolean;
     }
   | {
       isAvailable: false;
+      availability: UnavailableQuestionAvailability | null; // label only; null when missing
       questionId: string;
       order: number; // 1-based
       isAnswered: boolean;
       isCorrect: boolean | null;
+      isOmitted: boolean;
       markedForReview: boolean;
     };
 
@@ -1010,6 +1019,7 @@ export type GetPracticeSessionReviewOutput = {
   mode: 'tutor' | 'exam';
   totalCount: number;
   answeredCount: number;
+  scoredUnansweredCount: number; // unanswered items that would count if the session ended now (ADR-022 Decision 5)
   markedCount: number;
   rows: PracticeSessionReviewRow[];
 };

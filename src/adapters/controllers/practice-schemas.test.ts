@@ -161,12 +161,17 @@ describe('End and finalize outputs: scored totals', () => {
     ['EndPracticeSessionOutputSchema', EndPracticeSessionOutputSchema],
     ['FinalizeExamAnswersOutputSchema', FinalizeExamAnswersOutputSchema],
   ] as const)('%s reads both cached shapes', (_name, schema) => {
-    // Today's writers, and rows they have already cached.
-    expect(schema.safeParse(output({})).success).toBe(true);
-    // The next writer, which counts only scored items.
+    // A row cached by a writer before scoring: every item counted, so
+    // its scored total is the question count.
+    expect(schema.parse(output({})).totals).toMatchObject({
+      scored: 10,
+      correct: 5,
+      accuracy: 0.5,
+    });
+    // A writer that counts only scored items.
     expect(
-      schema.safeParse(output({ scored: 9, accuracy: 5 / 9 })).success,
-    ).toBe(true);
+      schema.parse(output({ scored: 9, accuracy: 5 / 9 })).totals,
+    ).toMatchObject({ scored: 9, correct: 5, accuracy: 5 / 9 });
   });
 
   it.each([

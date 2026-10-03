@@ -164,6 +164,7 @@ describe('practice-controller', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 1,
+          scoredUnansweredCount: 1,
           markedCount: 1,
           rows: [
             {
@@ -424,7 +425,13 @@ describe('practice-controller', () => {
           endedAt: '2026-02-01T00:00:00.000Z',
           mode: 'exam',
           questionCount: 0,
-          totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+          totals: {
+            answered: 0,
+            scored: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 0,
+          },
         },
       });
 

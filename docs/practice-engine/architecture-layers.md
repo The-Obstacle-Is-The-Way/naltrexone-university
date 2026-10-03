@@ -49,6 +49,7 @@ Pure functions with zero side effects. They live in `src/domain/services/`.
 | `statistics.ts` | `computeAccuracy()`, `computeStreak()`, `filterAttemptsInWindow()` | Dashboard stat computations |
 | `shuffle.ts` | `shuffleWithSeed()`, `createSeed()`, `createQuestionSeed()` | Deterministic question/choice ordering |
 | `session-stats.ts` | `computeSessionStats()`, `computeSessionDurationSeconds()` | Session-level stat computations |
+| `scoring.ts` | `hadFairChanceAtEnd()`, `contentInDoubt()`, `countsTowardScore()`, `countsIfEndedNow()`, `computeSessionScore()` | ADR-022 Decision 3, as amended: which items a score counts, shared by every score |
 | `question-selection.ts` | `selectNextQuestionId(candidates, history)` | Picks next question prioritizing least-recently-seen |
 
 ### 1.4 Domain Errors

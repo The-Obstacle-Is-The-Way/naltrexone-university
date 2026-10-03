@@ -19,6 +19,7 @@ test('renders exam review branch and triggers review actions', async () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -83,6 +84,7 @@ test('renders post-exam review with score banner, feedback, and a summary exit',
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -251,6 +253,7 @@ test('renders a loading state while post-exam review is hydrating inside the ses
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -294,6 +297,7 @@ test('renders retry and summary actions when post-exam review hydration fails', 
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -345,6 +349,7 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {

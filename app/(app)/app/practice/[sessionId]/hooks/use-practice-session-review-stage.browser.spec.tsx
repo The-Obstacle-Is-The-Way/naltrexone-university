@@ -44,6 +44,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 10,
         totals: {
           answered: 10,
+          scored: 10,
           correct: 8,
           accuracy: 0.8,
           durationSeconds: 1200,
@@ -56,6 +57,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 10,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),
@@ -88,6 +90,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 10,
         totals: {
           answered: 10,
+          scored: 10,
           correct: 8,
           accuracy: 0.8,
           durationSeconds: 1200,
@@ -100,6 +103,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'tutor',
         totalCount: 10,
         answeredCount: 10,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),
@@ -154,6 +158,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [
           {
@@ -229,6 +234,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -241,6 +247,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),
@@ -251,6 +258,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),
@@ -280,6 +288,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 2,
         totals: {
           answered: 2,
+          scored: 2,
           correct: 1,
           accuracy: 0.5,
           durationSeconds: 120,
@@ -292,6 +301,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),
@@ -302,6 +312,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -379,6 +390,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 1,
         totals: {
           answered: 1,
+          scored: 1,
           correct: 1,
           accuracy: 1,
           durationSeconds: 60,
@@ -391,6 +403,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),
@@ -444,6 +457,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 1,
+        scoredUnansweredCount: 1,
         markedCount: 0,
         rows: [],
       });
@@ -481,6 +495,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 10,
         totals: {
           answered: 1,
+          scored: 10,
           correct: 1,
           accuracy: 1,
           durationSeconds: 1200,
@@ -495,6 +510,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         questionCount: 10,
         totals: {
           answered: 1,
+          scored: 10,
           correct: 1,
           accuracy: 1,
           durationSeconds: 1200,
@@ -507,6 +523,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
         mode: 'exam',
         totalCount: 1,
         answeredCount: 1,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [],
       }),

@@ -42,6 +42,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 8,
+            scored: 8,
             correct: 6,
             accuracy: 0.75,
             durationSeconds: 600,
@@ -69,6 +70,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 8,
+            scored: 8,
             correct: 6,
             accuracy: 0.75,
             durationSeconds: 600,
@@ -93,6 +95,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 0,
+            scored: 10,
             correct: 0,
             accuracy: 0,
             durationSeconds: 0,
@@ -117,6 +120,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 0,
+            scored: 10,
             correct: 0,
             accuracy: 0,
             durationSeconds: 0,
@@ -141,6 +145,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 0,
+            scored: 10,
             correct: 0,
             accuracy: 0,
             durationSeconds: 0,
@@ -175,6 +180,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -185,6 +191,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -248,6 +255,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 2,
             accuracy: 1,
             durationSeconds: 120,
@@ -258,6 +266,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -292,6 +301,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -302,6 +312,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -341,6 +352,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -351,6 +363,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -391,6 +404,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -401,6 +415,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -438,6 +453,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -468,6 +484,7 @@ describe('SessionSummaryView', () => {
           endedAt: '2026-02-07T00:00:00.000Z',
           totals: {
             answered: 2,
+            scored: 2,
             correct: 1,
             accuracy: 0.5,
             durationSeconds: 120,
@@ -478,6 +495,7 @@ describe('SessionSummaryView', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -509,5 +527,82 @@ describe('SessionSummaryView', () => {
 
     expect(breakdownButton).not.toBeNull();
     expect(breakdownLink).toBeUndefined();
+  });
+
+  // ADR-022 Decision 3, Pattern Registry F-13: accuracy counts only the items
+  // whose question is available, and its card says how many it leaves out.
+  // Answered counts every answer.
+  describe('scored items', () => {
+    const render = (
+      totals: {
+        answered: number;
+        scored: number;
+        correct: number;
+        accuracy: number;
+      },
+      mode: 'tutor' | 'exam' = 'tutor',
+    ) => {
+      const doc = new DOMParser().parseFromString(
+        renderToStaticMarkup(
+          <SessionSummaryView
+            summary={{
+              sessionId: fixtureSession1Id,
+              mode,
+              questionCount: 10,
+              endedAt: '2026-02-07T00:00:00.000Z',
+              totals: { ...totals, durationSeconds: 600 },
+            }}
+            review={null}
+            reviewLoadState={{ status: 'idle' }}
+          />,
+        ),
+        'text/html',
+      );
+      const accuracyLabel = Array.from(doc.querySelectorAll('div')).find(
+        (el) => el.textContent === 'Accuracy',
+      );
+      return {
+        doc,
+        accuracyCard: accuracyLabel?.parentElement?.textContent ?? '',
+      };
+    };
+
+    it('scores accuracy over the scored items, with the disclosure in its card', () => {
+      const { doc, accuracyCard } = render({
+        answered: 10,
+        scored: 8,
+        correct: 6,
+        accuracy: 0.75,
+      });
+
+      expect(findStatValue(doc, 'Answered')).toBe('10');
+      expect(findStatValue(doc, 'Accuracy')).toBe('75%');
+      expect(accuracyCard).toContain(
+        "2 questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected.",
+      );
+    });
+
+    it('reads — when no item is scored, in either mode', () => {
+      for (const mode of ['tutor', 'exam'] as const) {
+        const { doc, accuracyCard } = render(
+          { answered: 4, scored: 0, correct: 0, accuracy: 0 },
+          mode,
+        );
+
+        expect(findStatValue(doc, 'Accuracy')).toBe('—');
+        expect(accuracyCard).toContain("10 questions aren't scored");
+      }
+    });
+
+    it('says nothing more when every item is scored', () => {
+      const { doc } = render({
+        answered: 10,
+        scored: 10,
+        correct: 6,
+        accuracy: 0.6,
+      });
+
+      expect(doc.body.textContent).not.toContain('scored:');
+    });
   });
 });

@@ -83,6 +83,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -140,6 +141,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
