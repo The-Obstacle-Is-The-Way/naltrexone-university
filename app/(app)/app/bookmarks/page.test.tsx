@@ -363,6 +363,7 @@ describe('app/(app)/app/bookmarks', () => {
         rows={[
           {
             isAvailable: false,
+            availability: null,
             questionId: fixtureQuestionOrphanedId,
             bookmarkedAt: '2026-02-01T00:00:00.000Z',
           },
@@ -387,6 +388,40 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).not.toContain('Review question:');
     expect(unavailableListItem?.querySelectorAll('a')).toHaveLength(0);
   });
+
+  // ADR-022 Decision 1, Pattern Registry F-11: the row names the question's
+  // state, as History names an item never answered, and shows no content.
+  it.each([
+    ['withdrawn', 'This question was withdrawn.', 'Withdrawn'],
+    ['under_review', 'This question is under review.', 'Under review'],
+    ['retired', 'This question has been retired from the bank.', 'Retired'],
+  ] as const)(
+    'names a bookmarked question that is %s',
+    (availability, heading, label) => {
+      const html = renderToStaticMarkup(
+        <BookmarksView
+          rows={[
+            {
+              isAvailable: false,
+              availability,
+              questionId: fixtureQuestionOrphanedId,
+              bookmarkedAt: '2026-02-01T00:00:00.000Z',
+            },
+          ]}
+        />,
+      );
+      const item = new DOMParser()
+        .parseFromString(html, 'text/html')
+        .querySelector('li');
+
+      expect(item?.textContent).toContain(heading);
+      expect(item?.textContent).toContain(label);
+      expect(item?.textContent).not.toContain('[Question no longer available]');
+      expect(item?.textContent).not.toContain('removed or unpublished');
+      expect(item?.textContent).not.toContain('Unavailable');
+      expect(item?.querySelectorAll('a')).toHaveLength(0);
+    },
+  );
 
   it('renders an error state when bookmarks load fails', () => {
     const element = renderBookmarks({

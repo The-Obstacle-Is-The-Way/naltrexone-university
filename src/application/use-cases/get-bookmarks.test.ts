@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import { FakeBookmarkRepository, FakeLogger } from '../test-helpers/fakes';
+import { createQuestion } from '@/src/domain/test-helpers';
+import {
+  FakeBookmarkRepository,
+  FakeLogger,
+  FakeQuestionRepository,
+} from '../test-helpers/fakes';
 import { GetBookmarksUseCase } from './get-bookmarks';
 
 describe('GetBookmarksUseCase', () => {
@@ -8,7 +13,11 @@ describe('GetBookmarksUseCase', () => {
     const userId = 'user-1';
 
     const bookmarks = new FakeBookmarkRepository();
-    const useCase = new GetBookmarksUseCase(bookmarks, new FakeLogger());
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+    );
 
     await expect(useCase.execute({ userId })).resolves.toEqual({ rows: [] });
   });
@@ -37,7 +46,11 @@ describe('GetBookmarksUseCase', () => {
     );
 
     const logger = new FakeLogger();
-    const useCase = new GetBookmarksUseCase(bookmarks, logger);
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      new FakeQuestionRepository([]),
+      logger,
+    );
 
     await expect(useCase.execute({ userId })).resolves.toEqual({
       rows: [
@@ -62,7 +75,53 @@ describe('GetBookmarksUseCase', () => {
     expect(logger.warnCalls).toEqual([]);
   });
 
-  it('returns unavailable row when bookmark references an unavailable question', async () => {
+  // ADR-022 Decision 1, DEBT-493 increment 5: a bookmark names the state of
+  // a question no longer available, and shows none of its content.
+  it.each([
+    [
+      'withdrawn',
+      { withdrawals: [{ questionId: 'q1', questionRevisionId: 'r1' }] },
+    ],
+    [
+      'under_review',
+      {
+        holds: [{ questionId: 'q1', questionRevisionId: 'r1', lifted: false }],
+      },
+    ],
+    ['retired', {}],
+  ] as const)(
+    'labels a bookmarked question that is %s',
+    async (availability, overlay) => {
+      const userId = 'user-1';
+      const bookmarks = new FakeBookmarkRepository([
+        {
+          userId,
+          questionId: 'q1',
+          createdAt: new Date('2026-02-01T00:00:00Z'),
+        },
+      ]);
+      const questions = new FakeQuestionRepository(
+        [createQuestion({ id: 'q1', revisionId: 'r1', status: 'archived' })],
+        overlay,
+      );
+      const logger = new FakeLogger();
+      const useCase = new GetBookmarksUseCase(bookmarks, questions, logger);
+
+      await expect(useCase.execute({ userId })).resolves.toEqual({
+        rows: [
+          {
+            isAvailable: false,
+            availability,
+            questionId: 'q1',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      });
+      expect(logger.warnCalls).toEqual([]);
+    },
+  );
+
+  it('returns an unlabelled row and warns when the bookmarked question is missing', async () => {
     const userId = 'user-1';
     const orphanedQuestionId = 'q-orphaned';
 
@@ -75,12 +134,17 @@ describe('GetBookmarksUseCase', () => {
     ]);
 
     const logger = new FakeLogger();
-    const useCase = new GetBookmarksUseCase(bookmarks, logger);
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      new FakeQuestionRepository([]),
+      logger,
+    );
 
     await expect(useCase.execute({ userId })).resolves.toEqual({
       rows: [
         {
           isAvailable: false,
+          availability: null,
           questionId: orphanedQuestionId,
           bookmarkedAt: '2026-02-01T00:00:00.000Z',
         },
@@ -89,7 +153,7 @@ describe('GetBookmarksUseCase', () => {
     expect(logger.warnCalls).toEqual([
       {
         context: { questionId: orphanedQuestionId },
-        msg: 'Bookmark references unavailable or unpublished question',
+        msg: 'Bookmark references a missing question',
       },
     ]);
   });
@@ -100,7 +164,11 @@ describe('GetBookmarksUseCase', () => {
       throw new ApplicationError('INTERNAL_ERROR', 'Bookmarks unavailable');
     };
 
-    const useCase = new GetBookmarksUseCase(bookmarks, new FakeLogger());
+    const useCase = new GetBookmarksUseCase(
+      bookmarks,
+      new FakeQuestionRepository([]),
+      new FakeLogger(),
+    );
 
     await expect(useCase.execute({ userId: 'user-1' })).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',

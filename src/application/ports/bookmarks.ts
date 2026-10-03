@@ -1,4 +1,7 @@
-import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type {
+  QuestionDifficulty,
+  UnavailableQuestionAvailability,
+} from '@/src/domain/value-objects';
 
 export type GetBookmarksInput = {
   userId: string;
@@ -15,6 +18,11 @@ export type AvailableBookmarkRow = {
 
 export type UnavailableBookmarkRow = {
   isAvailable: false;
+  /**
+   * The question's state, for its label (ADR-022 Decision 1), or null when
+   * the question no longer exists. No content is shown (Decision 2).
+   */
+  availability: UnavailableQuestionAvailability | null;
   questionId: string;
   bookmarkedAt: string; // ISO
 };

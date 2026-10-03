@@ -4,6 +4,10 @@ import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { ErrorCard } from '@/components/error-card';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import {
+  questionAvailabilityHeading,
+  questionAvailabilityLabel,
+} from '@/components/question/question-availability-notice';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -134,6 +138,7 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                   mode: 'review',
                 })
               : null;
+            const availability = row.isAvailable ? null : row.availability;
 
             return (
               <li key={row.questionId}>
@@ -177,14 +182,24 @@ export function BookmarksView({ rows }: { rows: GetBookmarksOutput['rows'] }) {
                   <div className="rounded-2xl bg-foreground/[0.08] p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
+                        {/* ADR-022 Decision 1, Pattern Registry F-11: the
+                            row names the state and shows no content. */}
                         <div className="text-sm font-medium text-foreground">
-                          [Question no longer available]
+                          {availability
+                            ? questionAvailabilityHeading(availability)
+                            : '[Question no longer available]'}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          This question was removed or unpublished.
-                        </div>
+                        {availability ? null : (
+                          <div className="text-sm text-muted-foreground">
+                            This question was removed or unpublished.
+                          </div>
+                        )}
                         <div className="text-xs text-muted-foreground">
-                          <span>Unavailable</span>
+                          <span>
+                            {availability
+                              ? questionAvailabilityLabel(availability)
+                              : 'Unavailable'}
+                          </span>
                           <span className="mx-2">•</span>
                           <span>Bookmarked {formatDate(row.bookmarkedAt)}</span>
                         </div>
