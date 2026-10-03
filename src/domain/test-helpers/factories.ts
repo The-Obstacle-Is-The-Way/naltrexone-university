@@ -255,6 +255,7 @@ export function createPracticeSession(
           | 'draftSelectedChoiceId'
           | 'draftSavedAt'
           | 'draftCumulativeMs'
+          | 'fairChanceAtEnd'
         >
       >)[];
   } = {},
@@ -272,6 +273,7 @@ export function createPracticeSession(
       draftSelectedChoiceId: null,
       draftSavedAt: null,
       draftCumulativeMs: 0,
+      fairChanceAtEnd: null,
     }));
   const normalizedQuestionStates: PracticeSessionQuestionState[] =
     questionStates.map((state) => ({
@@ -285,6 +287,7 @@ export function createPracticeSession(
       draftSelectedChoiceId: state.draftSelectedChoiceId ?? null,
       draftSavedAt: state.draftSavedAt ?? null,
       draftCumulativeMs: state.draftCumulativeMs ?? 0,
+      fairChanceAtEnd: state.fairChanceAtEnd ?? null,
     }));
 
   return {

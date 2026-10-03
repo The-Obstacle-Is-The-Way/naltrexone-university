@@ -17,6 +17,7 @@ export {
 export {
   computeSessionScore,
   countsTowardScore,
+  hadFairChanceAtEnd,
   type SessionScore,
 } from './scoring';
 export {

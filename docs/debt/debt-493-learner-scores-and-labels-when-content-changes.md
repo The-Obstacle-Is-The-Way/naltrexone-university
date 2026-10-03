@@ -134,6 +134,13 @@ In increments, each test-first.
   4. **Review & Submit and the active session's notice** (increment 3 and part E). "It won't count toward your score." shows only where it is true.
   5. Increment 4 adds key corrections to the in-doubt half.
 
+**Increment 2 revised, step 1: the fair chance is recorded when a session ends, 2026-10-03.** Nothing reads it yet.
+- **Domain.** `hadFairChanceAtEnd`: an item's question is available when the session ends or, in tutor mode, the learner had already answered it. Session items carry `fairChanceAtEnd`, null while the session is active and for a session that ended before it was recorded.
+- **Storage.** Migration 0050 adds the nullable `practice_session_question_states.fair_chance_at_end`. It is additive, with no backfill: an earlier session's past availability is not kept, so null reads as a fair chance.
+- **Writer.** The adapter ends a session and records every item in one statement, two data-modifying CTEs, so the record commits with the end whether `end` runs alone or inside finalize's transaction. The concurrency test that interleaves a competing end now hooks that statement.
+- **Contract.** `session-end-fair-chance-contract.ts` runs a tutor and an exam scenario against the fake and the adapter on real Postgres: nothing is recorded while active, and the ended session and a fresh read agree.
+- **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.

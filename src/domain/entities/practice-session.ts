@@ -17,6 +17,12 @@ export type PracticeSessionQuestionState = {
   readonly draftSelectedChoiceId: string | null;
   readonly draftSavedAt: Date | null;
   readonly draftCumulativeMs: number;
+  /**
+   * Whether the learner had a fair chance at the item, recorded when the
+   * session ends (ADR-022 Amendment). Null while the session is active, and
+   * for a session that ended before it was recorded.
+   */
+  readonly fairChanceAtEnd: boolean | null;
 };
 
 export type PracticeSession = {

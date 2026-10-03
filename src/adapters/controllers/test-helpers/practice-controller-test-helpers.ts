@@ -201,6 +201,7 @@ export function createDeps(overrides?: {
       draftSelectedChoiceId: '44444444-4444-4444-4444-444444444444',
       draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
       draftCumulativeMs: 30_000,
+      fairChanceAtEnd: null,
     },
     overrides?.saveDraftThrows,
   );

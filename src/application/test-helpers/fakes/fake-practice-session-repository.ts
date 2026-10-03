@@ -10,6 +10,7 @@ import type { PracticeSession } from '@/src/domain/entities';
 import {
   computeSessionScore,
   computeSessionStats,
+  hadFairChanceAtEnd,
 } from '@/src/domain/services';
 import { defaultRevisionIdOf } from '@/src/domain/test-helpers';
 import type {
@@ -38,7 +39,9 @@ export class FakePracticeSessionRepository
       publishedQuestionSlugsById?: ReadonlyMap<string, string>;
       /**
        * Questions that are not published now: their items do not count
-       * toward a history score (ADR-022 Decision 3).
+       * toward a history score (ADR-022 Decision 3), and an item on one, if
+       * the session ends now, had no fair chance unless a tutor answer
+       * already gave it one (ADR-022 Amendment).
        */
       unpublishedQuestionIds?: ReadonlySet<string>;
     } = {},
@@ -64,6 +67,7 @@ export class FakePracticeSessionRepository
           | 'draftSelectedChoiceId'
           | 'draftSavedAt'
           | 'draftCumulativeMs'
+          | 'fairChanceAtEnd'
         >
       >,
   ): PracticeSession['questionStates'][number] {
@@ -80,6 +84,7 @@ export class FakePracticeSessionRepository
       draftSelectedChoiceId: state.draftSelectedChoiceId ?? null,
       draftSavedAt: state.draftSavedAt ?? null,
       draftCumulativeMs: state.draftCumulativeMs ?? 0,
+      fairChanceAtEnd: state.fairChanceAtEnd ?? null,
     };
   }
 
@@ -454,9 +459,23 @@ export class FakePracticeSessionRepository
       );
     }
 
+    // ADR-022 Amendment (DEBT-494): the statement that ends the session
+    // records, for each item, whether the learner had a fair chance at it.
     const ended: PracticeSession = {
       ...existing,
       endedAt: explicitEndedAt ?? new Date(),
+      questionStates: existing.questionStates.map((state) => ({
+        ...state,
+        fairChanceAtEnd: hadFairChanceAtEnd({
+          mode: existing.mode,
+          answered: state.latestSelectedChoiceId !== null,
+          availability: this.options.unpublishedQuestionIds?.has(
+            state.questionId,
+          )
+            ? 'retired'
+            : 'available',
+        }),
+      })),
     };
     this.updateSession(id, () => ended);
     return ended;

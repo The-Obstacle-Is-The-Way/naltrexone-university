@@ -34,6 +34,7 @@ export function toDomainQuestionState(
     draftSelectedChoiceId: row.draftSelectedChoiceId,
     draftSavedAt: row.draftSavedAt ?? null,
     draftCumulativeMs: row.draftCumulativeMs,
+    fairChanceAtEnd: row.fairChanceAtEnd,
   };
 }
 

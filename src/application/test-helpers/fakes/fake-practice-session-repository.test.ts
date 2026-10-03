@@ -125,6 +125,7 @@ describe('FakePracticeSessionRepository', () => {
           draftSelectedChoiceId: null,
           draftSavedAt: null,
           draftCumulativeMs: 0,
+          fairChanceAtEnd: null,
         },
       ],
     });
@@ -348,6 +349,7 @@ describe('FakePracticeSessionRepository', () => {
         draftSelectedChoiceId: null,
         draftSavedAt: null,
         draftCumulativeMs: 0,
+        fairChanceAtEnd: null,
       },
     ]);
   });
@@ -390,6 +392,7 @@ describe('FakePracticeSessionRepository', () => {
             draftSelectedChoiceId: 'choice-1',
             draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
             draftCumulativeMs: 25_000,
+            fairChanceAtEnd: null,
           },
         ],
       }),
@@ -411,6 +414,7 @@ describe('FakePracticeSessionRepository', () => {
       draftSelectedChoiceId: 'choice-1',
       draftSavedAt: new Date('2099-02-01T00:00:00.000Z'),
       draftCumulativeMs: 25_000,
+      fairChanceAtEnd: null,
     });
   });
 
@@ -432,6 +436,7 @@ describe('FakePracticeSessionRepository', () => {
             draftSelectedChoiceId: null,
             draftSavedAt: null,
             draftCumulativeMs: 0,
+            fairChanceAtEnd: null,
           },
         ],
       }),
@@ -456,6 +461,7 @@ describe('FakePracticeSessionRepository', () => {
       draftSelectedChoiceId: null,
       draftSavedAt: null,
       draftCumulativeMs: 0,
+      fairChanceAtEnd: null,
     });
   });
 });

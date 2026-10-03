@@ -97,6 +97,7 @@ describe('parsePracticeSessionParamsJson', () => {
           draftSelectedChoiceId: draftSelectedChoiceId,
           draftSavedAt: new Date('2026-03-17T12:00:00.000Z'),
           draftCumulativeMs: 45_000,
+          fairChanceAtEnd: null,
         },
       ],
       tagFilters: ['opioids'],

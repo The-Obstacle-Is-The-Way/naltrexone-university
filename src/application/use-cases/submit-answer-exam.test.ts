@@ -48,6 +48,7 @@ describe('SubmitAnswerUseCase', () => {
           draftSelectedChoiceId: 'c1',
           draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
           draftCumulativeMs: 12_000,
+          fairChanceAtEnd: null,
         },
       ],
     });
@@ -89,6 +90,7 @@ describe('SubmitAnswerUseCase', () => {
         draftSelectedChoiceId: 'c1',
         draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
         draftCumulativeMs: 12_000,
+        fairChanceAtEnd: null,
       },
     ]);
   });
