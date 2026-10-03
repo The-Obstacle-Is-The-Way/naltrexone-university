@@ -167,6 +167,14 @@ In increments, each test-first.
 - **The active notice.** An item whose question became unavailable during the session comes back as `unavailable`, with its state and `countsIfEndedNow`, in place of the `withdrawn` marker, which misnamed a held or retired question. The notice names the state: withdrawn, placed under review, or retired from the bank, "after your session began". It adds "It won't count toward your score." unless the item still counts, as a tutor answer already given on a question retired since does.
 - **Evidence.** Mutations across the review count, the row marker, the warning, the marker's state and prediction, the page logic, the page view and the notice; each fails a case. Three survived the first run: a warning with unanswered but no scored items, and the prediction carried through the page logic and the page view. Cases now cover each.
 
+**Increment 4, steps a and b: a corrected answer key leaves every score, 2026-10-03.** ADR-022 Decision 4.
+- **The key.** The domain's `answerKeyChanged` compares the correct choices' labels and text between the revision an answer was graded on and the current one. Moving or rewording the correct choice changes the key; rewording the stem or a distractor does not.
+- **Questions.** A question read at a revision carries `answerKeyChanged`. The adapter derives it from the current revision it already loads, at no extra query; the fake derives it from its listed revisions. A third fake↔real contract, the answer key change, runs three scenarios on both.
+- **Scores.** An answered item or attempt whose graded key was corrected since is in doubt, and leaves the summary, History and Dashboard accuracy. An unanswered or omitted one has no key to correct and keeps counting. `countsTowardScore` takes `keyCorrected`; its SQL twin compares the two revisions' keys only when the graded revision is not the current one. F-13's "their answer was corrected" is now a reason a score can give.
+- **Contracts.** The history score gains a key scenario (five in all) and the attempt score two (eight in all). The second separates a reworded correct choice from a reworded distractor, which the first run of mutations showed was missing.
+- **Evidence.** Seventeen targeted mutations each fail a case, across the domain rule, the adapter, the fakes, the summary and the SQL twin. Two survived the first run, the key's text and its correct-only filter, until the second attempt scenario.
+- **Not yet** (step c): the review notice for a key-corrected answer, and the Incorrect filter.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.
