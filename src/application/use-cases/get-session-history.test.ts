@@ -89,9 +89,9 @@ describe('GetSessionHistoryUseCase', () => {
     });
   });
 
-  // ADR-022 Decision 3: an item whose question is no longer published leaves
-  // both the numerator and the denominator of the session's score.
-  it('scores only the items whose question is still published', async () => {
+  // ADR-022 Decision 3, as amended: an item whose question was withdrawn
+  // since leaves both the numerator and the denominator of the session's score.
+  it('leaves out an item whose question was withdrawn since', async () => {
     const useCase = new GetSessionHistoryUseCase(
       new FakePracticeSessionRepository(
         [

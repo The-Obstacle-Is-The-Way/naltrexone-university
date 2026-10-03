@@ -16,8 +16,9 @@ export type CompletedPracticeSessionHistorySummary = {
   firstQuestionSlug: string | null;
   answered: number;
   /**
-   * The items that count toward the session's score: those whose question is
-   * published when this is read (ADR-022 Decision 3).
+   * The items that count toward the session's score: the learner had a fair
+   * chance at them, recorded when the session ended, and their content is not
+   * in doubt when this is read (ADR-022 Decision 3, as amended by DEBT-494).
    */
   scored: number;
   /** The scored items answered correctly. */
