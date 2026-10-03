@@ -1,6 +1,6 @@
 # DEBT-489: A Release Silently Removes Every Live Question Its Bundle Omits
 
-**Status:** Resolved — 2026-10-02; explicit removals, staging that records no withdrawal and a plan-bound apply promoted and release-verified, with every Verification bullet re-run against `main`'s code before archival; the attribution of release decisions continues as [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md)
+**Status:** Resolved — 2026-10-02; explicit removals, staging that records no withdrawal and a plan-bound apply promoted and release-verified, with every Verification bullet re-run against `main`'s code before archival; the attribution of release decisions continues as [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md)
 **Priority:** P1
 **Date:** 2026-10-02
 **Resolved:** 2026-10-02
@@ -146,7 +146,7 @@ The plan names the release by identity rather than by row id. That lets the boot
 
 **Decided: a removal records its intent, not a free-text reason.** The review asked to preserve each removal's intent and reason. The manifest records the intent (the kind). For the permanent case, the withdrawal record names the release, and the authored reason lives in the content repository's history of that file. A `draft` or `removed` question can come back in a later release, so it is not a clinical record. If the owner wants a recorded reason for `--remove`, it can become a manifest field before the production bootstrap, while no release exists there.
 
-*(2026-10-02, after the owner asked about this decision: the gap is wider than removals. Activations, rollbacks and the bootstrap record no operator-supplied reason or authority either, while the withdrawal and hold commands require both. Filed as [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md), with a recommendation to attribute every activation before the production bootstrap.)*
+*(2026-10-02, after the owner asked about this decision: the gap is wider than removals. Activations, rollbacks and the bootstrap record no operator-supplied reason or authority either, while the withdrawal and hold commands require both. Filed as [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md), with a recommendation to attribute every activation before the production bootstrap.)*
 
 **The review's boundaries:**
 
@@ -206,5 +206,5 @@ The [Fix](#fix--2026-10-02) is implemented, reviewed, promoted to `main` and rel
 
 **Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, and `/api/health` reported `ok` with the database reachable.
 
-**Continues as DEBT-490, not Deferred.** Release decisions record no operator-supplied reason or authority. That is [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md), an Active record recommended before the production bootstrap.
+**Continues as DEBT-490, not Deferred.** Release decisions record no operator-supplied reason or authority. That is [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md), an Active record recommended before the production bootstrap.
 

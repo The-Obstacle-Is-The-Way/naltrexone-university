@@ -645,7 +645,7 @@ ADR-021 phase 4 is implemented, reviewed, promoted to `main` and release-verifie
 **Release.** Released through promotion #1312 (`7dcb9331`, merged **09:41:39Z** after a passing `verify-promotion` receipt): main CI **36991253547** `test` passed **09:55:00Z**, production assigned **09:55:02.296Z**, trees `d1e952d0`, and `/api/health` reported `ok` with the database reachable. Promotions #1304, #1306, #1308 and #1310 were closed unmerged to take their reviews' findings first, through #1305, #1307, #1309 and #1311.
 
 **Deferred, not resolved.** Four tails move to the register's Deferred table, with revive triggers:
-1. **The production bootstrap.** Adopting what is live as production's first release is the owner's decision. The recommendation is to do it after [DEBT-490](../../debt/debt-490-release-decisions-record-no-reason-or-authority.md), so the first production activation records who decided it and why.
+1. **The production bootstrap.** Adopting what is live as production's first release is the owner's decision. The recommendation is to do it after [DEBT-490](./debt-490-release-decisions-record-no-reason-or-authority.md), so the first production activation records who decided it and why.
 2. **The managed seed's switch to staging.** Once a release is active, the managed seed refuses that database; it must then stage a release instead.
 3. **The contract step.** Selection still reads the materialized `questions.status` and `current_revision_id`. Reading release items directly, and retiring `questions.status`, is ADR-021's contract step.
 4. **ADR-021's release zero.** The content repository builds the first release once it computes `stored-fields-json-v1` (SPEC-007).
