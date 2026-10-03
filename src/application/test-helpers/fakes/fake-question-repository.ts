@@ -5,6 +5,7 @@ import type {
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
 import type { Question } from '@/src/domain/entities';
+import { answerKeyChanged } from '@/src/domain/services';
 import {
   deriveQuestionAvailability,
   type QuestionDifficulty,
@@ -55,6 +56,8 @@ export function listedRevisions(
     return {
       ...revision,
       isCurrentRevision: false,
+      // ADR-022 Decision 4, as the adapter derives it.
+      answerKeyChanged: answerKeyChanged(revision.choices, current.choices),
       slug: current.slug,
       status: current.status,
       availability: current.availability,

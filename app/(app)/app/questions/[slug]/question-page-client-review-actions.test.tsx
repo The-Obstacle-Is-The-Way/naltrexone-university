@@ -248,6 +248,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -289,6 +290,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'withdrawn',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -327,6 +329,7 @@ describe('QuestionView', () => {
   function renderReviewedQuestion(marks: {
     availability: QuestionAvailability;
     superseded: boolean;
+    answerKeyChanged?: boolean;
   }) {
     return parseHtml(
       renderToStaticMarkup(
@@ -341,6 +344,7 @@ describe('QuestionView', () => {
             slug: 'q2',
             stemMd: 'Question stem',
             difficulty: 'easy',
+            answerKeyChanged: false,
             ...marks,
             choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
           }}
@@ -403,6 +407,26 @@ describe('QuestionView', () => {
     ).not.toBeNull();
   });
 
+  // ADR-022 Decision 4: an answer graded on a key corrected since is a
+  // caution, not a routine update.
+  it('says the answer was corrected, in place of the update notice, when its key changed', () => {
+    const doc = renderReviewedQuestion({
+      availability: 'available',
+      superseded: true,
+      answerKeyChanged: true,
+    });
+
+    const notice = statusWith(
+      doc,
+      'The answer to this question was corrected after you answered.',
+    );
+    expect(notice?.getAttribute('data-tone')).toBe('caution');
+    expect(statusWith(doc, 'This question has been updated.')).toBeNull();
+    expect(findAnchorByHref(doc, toQuestionRoute('q2'))?.textContent).toBe(
+      'Practice the corrected question',
+    );
+  });
+
   it('shows no update notice for the current version', () => {
     const doc = renderReviewedQuestion({
       availability: 'available',
@@ -443,6 +467,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         sessionNavigation={sharedSessionNavigation}
@@ -481,6 +506,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -520,6 +546,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -563,6 +590,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -610,6 +638,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -649,6 +678,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{
@@ -683,6 +713,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         submitResult={{

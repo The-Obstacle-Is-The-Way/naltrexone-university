@@ -474,6 +474,39 @@ describe('PostExamReviewView', () => {
     ).not.toBeNull();
   });
 
+  // ADR-022 Decision 4: an answer graded on a key corrected since is a
+  // caution, not a routine update.
+  it('says the answer was corrected, in place of the update notice, when its key changed', () => {
+    const doc = renderView({
+      row: createReviewRow({
+        slug: 'q-key',
+        superseded: true,
+        answerKeyChanged: true,
+        isAnswered: true,
+      }),
+    });
+    const panel = doc.getElementById('practice-question-panel');
+    const notices = Array.from(
+      panel?.querySelectorAll('[role="status"]') ?? [],
+    );
+
+    expect(
+      notices.find((element) =>
+        element.textContent?.includes(
+          'The answer to this question was corrected after you answered.',
+        ),
+      ),
+    ).toBeDefined();
+    expect(
+      notices.some((element) =>
+        element.textContent?.includes('This question has been updated.'),
+      ),
+    ).toBe(false);
+    expect(findAnchorByHref(doc, toQuestionRoute('q-key'))?.textContent).toBe(
+      'Practice the corrected question',
+    );
+  });
+
   it('marks a withdrawn question withdrawn only, even when updated', () => {
     const doc = renderView({
       row: createReviewRow({ availability: 'withdrawn', superseded: true }),

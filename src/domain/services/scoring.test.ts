@@ -65,6 +65,27 @@ function state(
   };
 }
 
+// ADR-022 Decisions 3 and 4: an answered item whose graded key was since
+// corrected is in doubt too, whatever its question's availability.
+describe('countsTowardScore with a corrected key', () => {
+  it.each([
+    [false, 'available', true],
+    [true, 'available', false],
+    [true, 'retired', false],
+  ] as const)(
+    'with its key corrected %s, counts an item whose question is %s: %s',
+    (keyCorrected, availability, counts) => {
+      expect(
+        countsTowardScore({
+          fairChanceAtEnd: true,
+          availability,
+          keyCorrected,
+        }),
+      ).toBe(counts);
+    },
+  );
+});
+
 describe('computeSessionScore', () => {
   it('scores every item when every question is available', () => {
     const states = [

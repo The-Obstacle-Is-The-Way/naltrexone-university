@@ -49,7 +49,13 @@ import {
 } from './postgres-errors';
 import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
-import { countsTowardScoreSql } from './shared/score-eligibility-sql';
+import {
+  answeredRevisionsSql,
+  answerKeyCorrectedSql,
+  countsTowardScoreSql,
+  keyCorrectedRevisionsOn,
+  keyCorrectedRevisionsSql,
+} from './shared/score-eligibility-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
 
@@ -360,6 +366,9 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     const counts = countsTowardScoreSql({
       fairChanceAtEnd: practiceSessionQuestionStates.fairChanceAtEnd,
       question: questions,
+      keyCorrected: answerKeyCorrectedSql(
+        sql`${attempts.selectedChoiceId} is not null`,
+      ),
     });
     const [row] = await this.db
       .select({
@@ -382,6 +391,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           ),
           eq(practiceSessionQuestionStates.questionId, attempts.questionId),
         ),
+      )
+      .leftJoin(
+        keyCorrectedRevisionsSql(answeredRevisionsSql(userId)),
+        keyCorrectedRevisionsOn(attempts.questionRevisionId),
       )
       .where(
         and(

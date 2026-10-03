@@ -278,6 +278,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         selectedChoiceId={null}
@@ -313,6 +314,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
         selectedChoiceId={null}
@@ -369,6 +371,7 @@ describe('QuestionView', () => {
           difficulty: question.difficulty,
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: question.choices.map((choice) => ({
             id: choice.id,
             label: choice.label,
@@ -465,6 +468,7 @@ describe('QuestionView', () => {
           difficulty: 'easy',
           availability: 'available',
           superseded: false,
+          answerKeyChanged: false,
           choices: [
             { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A text' },
             { id: fixtureChoiceBId, label: 'B', textMd: 'Choice B text' },

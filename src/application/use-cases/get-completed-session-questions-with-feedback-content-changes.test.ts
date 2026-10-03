@@ -78,13 +78,28 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
   });
 
   // Pattern Registry F-12: a newer revision replaced the one the session was
-  // bound to. A question no longer available is not marked updated.
+  // bound to. A question no longer available is not marked updated. The
+  // current revision has another key, which corrects only an answer given
+  // (ADR-022 Decision 4).
   it.each([
-    ['published', { availability: 'available', superseded: true }],
-    ['archived', { availability: 'retired', superseded: false }],
+    [
+      'published',
+      'c1',
+      { availability: 'available', superseded: true, answerKeyChanged: true },
+    ],
+    [
+      'published',
+      null,
+      { availability: 'available', superseded: true, answerKeyChanged: false },
+    ],
+    [
+      'archived',
+      'c1',
+      { availability: 'retired', superseded: false, answerKeyChanged: false },
+    ],
   ] as const)(
-    'marks a row of a %s question whose bound revision is no longer current',
-    async (status, marks) => {
+    'marks a row of a %s question whose bound revision is no longer current (answer %s)',
+    async (status, answer, marks) => {
       const choice = createChoice({
         id: 'c1',
         questionId: 'q1',
@@ -110,9 +125,11 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
             questionId: 'q1',
             questionRevisionId: bound.revisionId,
             markedForReview: false,
-            latestSelectedChoiceId: 'c1',
-            latestIsCorrect: true,
-            latestAnsweredAt: new Date('2026-03-19T11:58:00.000Z'),
+            latestSelectedChoiceId: answer,
+            latestIsCorrect: answer ? true : null,
+            latestAnsweredAt: answer
+              ? new Date('2026-03-19T11:58:00.000Z')
+              : null,
           },
         ],
       });

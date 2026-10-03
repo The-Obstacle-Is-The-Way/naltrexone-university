@@ -259,6 +259,7 @@ describe('question-controller', () => {
             },
           ],
           superseded: false,
+          answerKeyChanged: false,
           session: null,
         },
       });

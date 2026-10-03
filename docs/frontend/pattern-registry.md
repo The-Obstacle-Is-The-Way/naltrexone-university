@@ -939,7 +939,7 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 
 Marks a review whose question has changed since the learner saw it: the revision they answered is no longer the current one (ADR-021). Usually a newer revision is current; after a rollback or a stale revert, an older one can be. The review still shows the revision the learner answered, because that is the record of what they saw and were graded against. It says plainly that the question has been updated and links to the current version. This follows medical publishing's correction practice: the original stays readable, is marked, and points to the correction.
 
-A superseded answer key is the case that matters. Without the notice, a review would present the old key as correct. Informational, not a warning or an error, so it uses neither F-2 nor F-3.
+A superseded answer key is the case that matters. Without the notice, a review would present the old key as correct, so a corrected key has its own caution form (below). Otherwise the notice is informational, not a warning or an error, so it uses neither F-2 nor F-3.
 
 **Review views** (the standalone review page and post-exam review): the S-1 **Status notice** that F-11 uses, first in the question region, above the stem:
 
@@ -961,17 +961,27 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - **No link.** Leaving mid-session would interrupt it. The post-session review carries the review notice and its link.
 - The item is answered and graded as usual.
 
+**Key corrected** ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 4): the current revision keys another answer than the one shown, by the correct choices' labels or text. The notice says so in place of the update notice, as a caution, because the learner may have learned a wrong answer. It uses F-11's caution card, `data-tone="caution"`:
+
+```text
+<Card role="status" className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm">
+```
+
+- **Review views**, for an answered item only: "The answer to this question was corrected after you answered." (`font-medium`), then "This attempt isn't scored.", then the L-5 link "Practice the corrected question" to the standalone page. An unanswered or omitted item has no answer to correct, so it keeps the update notice.
+- **Active session**, in tutor and exam mode alike: "The answer to this question was corrected after your session began." (`font-medium`), then "This session shows the earlier version, so your answer here won't be scored." No link, as above.
+- Both lines read `text-foreground`, as F-11's caution does.
+
 **Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to.
 
 **Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
 
 **Rules:**
-- Reuses S-1 Status notice, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
-- Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`). No new `contrast-policy.md` ledger entry is required.
+- Reuses S-1 Status notice, F-11's caution card for a key correction, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
+- Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`, and `text-foreground` on the caution card). No new `contrast-policy.md` ledger entry is required.
 - `role="status"` announces the notice politely; it is never focused automatically.
-- Scoring is unchanged today: the attempt keeps the grade it received. [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) decides that a stored grade is never regraded. An attempt whose answer key was corrected is excluded from scores instead, with its own notice in place of this one; [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) implements it.
+- A stored grade is never regraded ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)). An answer graded on a key corrected since leaves every score instead (F-13 names the reason), and the Incorrect practice filter offers its question again.
 
-**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, and DEBT-484 phase 2b. In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`). It renders nothing while every question has one revision.
+**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, DEBT-484 phase 2b, and ADR-022 Decision 4 ([DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) increment 4). In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`, each with its `keyCorrected` form). It renders nothing while every question has one revision.
 
 
 ### F-13: Unscored Disclosure (a score that leaves items out)

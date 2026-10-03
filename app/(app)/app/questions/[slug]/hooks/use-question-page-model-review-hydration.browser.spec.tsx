@@ -29,6 +29,7 @@ describe('useQuestionPageModel (browser)', () => {
         difficulty: 'easy',
         availability: 'available',
         superseded: false,
+        answerKeyChanged: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -81,6 +82,7 @@ describe('useQuestionPageModel (browser)', () => {
         difficulty: 'easy',
         availability: 'withdrawn',
         superseded: false,
+        answerKeyChanged: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -110,6 +112,7 @@ describe('useQuestionPageModel (browser)', () => {
         difficulty: 'easy',
         availability: 'available',
         superseded: false,
+        answerKeyChanged: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
         ],
@@ -133,6 +136,7 @@ describe('useQuestionPageModel (browser)', () => {
         difficulty: 'easy',
         availability: 'available',
         superseded: false,
+        answerKeyChanged: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -198,6 +202,7 @@ describe('useQuestionPageModel (browser)', () => {
         difficulty: 'easy',
         availability: 'available',
         superseded: false,
+        answerKeyChanged: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },
@@ -303,6 +308,7 @@ describe('useQuestionPageModel (browser)', () => {
         difficulty: 'easy',
         availability: 'available',
         superseded: false,
+        answerKeyChanged: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
           { id: QUESTION_PAGE_CHOICE_2_ID, label: 'B', textMd: 'Choice B' },

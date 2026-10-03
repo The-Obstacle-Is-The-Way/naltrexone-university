@@ -18,6 +18,11 @@ export type Question = {
    * session item or attempt may carry an older revision (ADR-021 §3).
    */
   readonly isCurrentRevision: boolean;
+  /**
+   * Whether that revision's answer key differs from the current revision's
+   * (ADR-022 Decision 4). False for the current revision.
+   */
+  readonly answerKeyChanged: boolean;
   readonly slug: string;
   readonly stemMd: string;
   readonly explanationMd: string;

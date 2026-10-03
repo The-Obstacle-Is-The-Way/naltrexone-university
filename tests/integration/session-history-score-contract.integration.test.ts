@@ -10,7 +10,10 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
-import { setQuestionState } from './question-state-test-helpers';
+import {
+  reviseQuestion,
+  setQuestionState,
+} from './question-state-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -75,7 +78,11 @@ runSessionHistoryScoreContract(
       // As the bank stands when history is read.
       for (const [index, item] of items.entries()) {
         const question = questions[index];
-        if (question) await setQuestionState(db, question, item.now);
+        if (!question) continue;
+        if (item.revisedAfter) {
+          await reviseQuestion(db, question, item.revisedAfter);
+        }
+        await setQuestionState(db, question, item.now);
       }
       return { repository, userId: user.id };
     },

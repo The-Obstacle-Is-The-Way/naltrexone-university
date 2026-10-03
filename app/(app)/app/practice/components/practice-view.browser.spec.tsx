@@ -23,6 +23,7 @@ function practiceQuestion(
     slug: 'question-1',
     difficulty: 'easy' as const,
     superseded: false,
+    answerKeyChanged: false,
     session: null,
     ...fields,
   };

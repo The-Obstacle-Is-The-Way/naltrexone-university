@@ -55,6 +55,56 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.superseded).toBe(true);
   });
 
+  // ADR-022 Decision 4: the session keeps its revision, but says so when the
+  // current one keys another answer.
+  it.each([
+    ['another answer', 'A', true],
+    ['the same answer', 'B', false],
+  ] as const)(
+    'says whether the current revision keys %s',
+    async (_name, currentCorrect, changed) => {
+      const keyed = (revisionId: string, correct: 'A' | 'B') =>
+        createQuestion({
+          id: 'q1',
+          revisionId,
+          choices: (['A', 'B'] as const).map((label, index) =>
+            createChoice({
+              questionId: 'q1',
+              label,
+              textMd: `Choice ${label}`,
+              isCorrect: label === correct,
+              sortOrder: index + 1,
+            }),
+          ),
+        });
+      const bound = keyed(crypto.randomUUID(), 'B');
+      const { getNextQuestion } = createTestDeps({
+        questions: [keyed(crypto.randomUUID(), currentCorrect), bound],
+        sessions: [
+          createPracticeSession({
+            mode: 'tutor',
+            questionIds: ['q1'],
+            questionStates: [
+              createQuestionState('q1', {
+                questionRevisionId: bound.revisionId,
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const result = answerableQuestion(
+        await getNextQuestion.execute({
+          userId: USER_ID,
+          sessionId: SESSION_ID,
+          questionId: 'q1',
+        }),
+      );
+
+      expect(result?.answerKeyChanged).toBe(changed);
+    },
+  );
+
   it('does not mark a session item bound to the current revision as superseded', async () => {
     const question = createSingleChoiceQuestion('q1', 'c1');
     const session = createPracticeSession({
@@ -78,6 +128,7 @@ describe('GetNextQuestionUseCase', () => {
     );
 
     expect(result?.superseded).toBe(false);
+    expect(result?.answerKeyChanged).toBe(false);
   });
 
   it('returns a specific session question when questionId is provided', async () => {

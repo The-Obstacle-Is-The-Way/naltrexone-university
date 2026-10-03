@@ -118,6 +118,7 @@ const standaloneQuestion = {
   difficulty: 'easy',
   availability: 'available',
   superseded: false,
+  answerKeyChanged: false,
   choices: [
     { id: choiceAId, label: 'A', textMd: 'Choice A' },
     { id: choiceBId, label: 'B', textMd: 'Choice B' },

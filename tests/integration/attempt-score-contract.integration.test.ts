@@ -12,7 +12,10 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
-import { setQuestionState } from './question-state-test-helpers';
+import {
+  reviseQuestion,
+  setQuestionState,
+} from './question-state-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -103,6 +106,12 @@ runAttemptScoreContract('DrizzleAttemptRepository', async () => ({
         await setQuestionState(db, question, 'under_review');
         await setQuestionState(db, question, 'available');
       }
+    }
+    for (const [key, question] of questionByKey) {
+      const revisedAfter = attempts.find(
+        (attempt) => attempt.question === key,
+      )?.revisedAfter;
+      if (revisedAfter) await reviseQuestion(db, question, revisedAfter);
     }
     // As the bank stands when the score is read.
     for (const [key, question] of questionByKey) {

@@ -43,7 +43,7 @@ Top to bottom:
 
 1. **Nav bar** — global app navigation
 2. **Page heading** — "Quick Practice" + subtitle + "Back to Practice" link
-3. **Segmented control** — Unanswered / Incorrect / Bookmarked tabs with counts
+3. **Segmented control** — Unanswered / Incorrect / Bookmarked tabs with counts. Incorrect includes a question whose latest answer was graded on an answer key corrected since (ADR-022 Decision 4)
 4. **Question card** — stem text + 4 choice buttons (A–D)
 5. **Action bar** — Submit, Next, Bookmark buttons
 

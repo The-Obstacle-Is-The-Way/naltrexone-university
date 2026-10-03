@@ -672,7 +672,10 @@ export function PracticeView(props: PracticeViewProps) {
               // Pattern Registry F-12: the session keeps the revision its
               // item was bound to after a newer one became current.
               props.question?.superseded ? (
-                <QuestionUpdateNotice variant="session" />
+                <QuestionUpdateNotice
+                  variant="session"
+                  keyCorrected={props.question.answerKeyChanged}
+                />
               ) : undefined
             }
           />

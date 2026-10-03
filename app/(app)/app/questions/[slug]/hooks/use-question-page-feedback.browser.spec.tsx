@@ -29,6 +29,7 @@ function createQuestion(): GetQuestionBySlugOutput {
     difficulty: 'easy',
     availability: 'available',
     superseded: false,
+    answerKeyChanged: false,
     choices: [],
   };
 }

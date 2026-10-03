@@ -24,6 +24,11 @@ export type ScoredAttemptSeed = {
   removedBeforeEnd?: boolean;
   /** The question was held, and the hold lifted, before its state now. */
   heldThenLifted?: boolean;
+  /**
+   * After the attempts, the question gained a current revision: with another
+   * correct choice (its key corrected), or with only its stem reworded.
+   */
+  revisedAfter?: 'key' | 'key text' | 'stem' | 'distractor';
 };
 
 export type AttemptScoreHarness = {
@@ -119,6 +124,55 @@ const scenarios: readonly Scenario[] = [
     ],
     sinceDaysAgo: null,
     expected: { scored: 1, correct: 1, unscoredQuestions: 0 },
+  },
+  {
+    name: 'leaves out an answer whose key was corrected since, but keeps an omitted attempt and a reworded stem',
+    attempts: [
+      {
+        question: 'k',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'key',
+      },
+      {
+        question: 'o',
+        now: 'available',
+        outcome: 'omitted',
+        daysAgo: 1,
+        revisedAfter: 'key',
+      },
+      {
+        question: 's',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'stem',
+      },
+    ],
+    sinceDaysAgo: null,
+    expected: { scored: 2, correct: 1, unscoredQuestions: 1 },
+  },
+  {
+    name: "reads the key as the correct choices' text: rewording the correct choice corrects it, rewording a distractor does not",
+    attempts: [
+      {
+        question: 't',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'key text',
+      },
+      {
+        question: 'd',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'distractor',
+      },
+    ],
+    sinceDaysAgo: null,
+    expected: { scored: 1, correct: 1, unscoredQuestions: 1 },
   },
 ];
 

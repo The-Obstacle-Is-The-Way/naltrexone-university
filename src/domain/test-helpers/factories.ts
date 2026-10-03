@@ -180,6 +180,7 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
     id,
     revisionId: defaultRevisionIdOf(id),
     isCurrentRevision: true,
+    answerKeyChanged: false,
     slug: 'question-1',
     stemMd: 'Stem',
     explanationMd: 'Explanation',

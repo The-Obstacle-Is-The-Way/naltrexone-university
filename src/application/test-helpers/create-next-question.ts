@@ -37,6 +37,7 @@ export function createNextQuestion(
       sortOrder: index + 1,
     })),
     superseded: false,
+    answerKeyChanged: false,
     session: null,
     ...overrides,
   };
