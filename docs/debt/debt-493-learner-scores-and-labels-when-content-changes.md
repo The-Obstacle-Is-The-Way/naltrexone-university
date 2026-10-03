@@ -110,6 +110,12 @@ In increments, each test-first.
 - **Not yet.** The active session's notice (part E, with Decision 5's sentence), Review & Submit's scoring warning (increment 3), and bookmarks (increment 5).
 - **Evidence.** Cases for each state on each surface, and for the notice's tones and label-only form. The UI changes were written before their cases, so fifteen targeted mutations, reverting each UI and output change in turn, confirm that each case fails without its change. Pattern Registry F-11 is rewritten to match.
 
+**Increment 2, step 1: the reader accepts a scored total, 2026-10-03.** Decision 3 changes a session's score to count only its scored items, so the end and finalize outputs gain `totals.scored`. Those outputs are cached by idempotency key for 24 hours under strict schemas, so the reader comes first (`docs/dev/deployment-procedure.md`, keyed-action output compatibility).
+- `EndPracticeSessionOutputSchema`, and so `FinalizeExamAnswersOutputSchema`, accept an optional `scored`. When it is present, it is at most the question count, and `correct` is at most it.
+- Both cached shapes parse, today's and the next writer's. Two targeted mutations, one per bound, each fail a case.
+- **This step must be in production before the writer ships.** The writer's replay parser then reads a row cached without `scored` as every item counting, which is what the earlier writer computed.
+- The plan for the remaining steps is: history scores, then dashboard accuracy, then the session summary's writer, then Review & Submit with Decision 5's sentence. That sentence is true only once all three scores exclude the item.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.
