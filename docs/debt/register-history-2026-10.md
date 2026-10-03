@@ -2,6 +2,15 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 5, the last. Bookmarks name a question's state, and History's filters keep a question no longer available ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+- **What learners see.**
+  - A bookmarked question that was withdrawn, placed under review or retired says so, in place of "[Question no longer available]". It shows no content.
+  - History's difficulty and tag filters keep a question no longer available, by the difficulty of the revision answered and the question's tags, as History lists it unfiltered.
+- **How.** `QuestionRepository.findAvailabilityByIds` reads a question's state by id, whatever its status, derived as every other read derives it. The availability contract reads each scenario by id too, on the fake and on real Postgres. Both attempt repositories drop the published-only condition from the difficulty and tag filters and from the difficulty sort.
+- **Released since the last entry.** None. #1353 (DEBT-495, **5402919324** on `c330911e`; merged `19d383ea`) is on `dev` and is promoted with this increment.
+- **Next.** Promote #1353 and this increment. DEBT-495 then reaches `main`: alert #77 is dismissed against it, and it is archived as Accepted. DEBT-493 closes once this increment is in production. One closeout PR may archive both, each on its own trigger.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-495.
+
 **Earlier** — 2026-10-03 UTC: DEBT-495 filed. `braces`' denial-of-service advisory (Dependabot alert #77) has no fixed release, so its risk is accepted with recheck triggers ([DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md)).
 - **Why accepted.** Only repository-fixed glob patterns in operator scripts and test scans reach `braces`. Nothing from a request, a learner or the network becomes a glob. No pin or override can close it, since no fixed release exists.
 - **Next for it.** Once this record is on `main`, alert #77 is dismissed as `tolerable_risk` pointing to it, and the record is archived as Accepted, with its recheck triggers in the Deferred table.

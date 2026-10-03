@@ -2,11 +2,11 @@
 
 > Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice), increment 4 (key corrections) and increment 5 (bookmarks and History filters) ([Progress](#progress)); the record closes once all of it is in production
+**Status:** Resolved — 2026-10-03 UTC; ADR-022, as amended by DEBT-494, is implemented on every surface and in production ([Verified closeout](#verified-closeout--2026-10-03-utc)). One tail is deferred: removing the replay mapping for outputs cached before the session summary's writer.
 **Priority:** P1
 **Date:** 2026-10-03
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-03
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
@@ -211,6 +211,32 @@ In increments, each test-first.
 - **Key corrections.** A key-corrected attempt shows the correction notice, is unscored, and its question appears in the Incorrect filter. A wording-only revision keeps F-12 and stays scored.
 - **Real Postgres.** An integration case finalizes an exam containing a withdrawn item end to end; none exists today.
 - **Mutations.** Removing each derivation or exclusion fails a case.
+
+## Verified closeout — 2026-10-03 UTC
+
+- **Decided** in #1326 (ADR-022). Decision 3 was amended under [DEBT-494](./debt-494-read-time-scores-owner-confirmation.md) (#1343).
+- **Implemented** in twelve PRs, each merged on an exact-head CodeRabbit approval:
+  - part A, content only to a learner who answered: #1330 (**5399533151** on `d7e3f148`; merged `52970d9d`);
+  - part B, the availability value: #1333 (**5399789430** on `18d1e76a`; merged `8475778f`);
+  - part C, labels and notices: #1334 (**5399950118** on `059b5e27`; merged `97aa3b24`), with the contract's hold-lift clock fix #1336 (**5400102185** on `6a0e9dfb`; merged `2efb2b59`);
+  - increment 2, scores:
+    - #1339 (**5400543476** on `14eb2813`; merged `a53c4ac5`);
+    - #1341 (**5400759268** on `641bb9f3`; merged `40bf64e7`);
+    - and, as revised for the amended rule, #1344 (**5401592073** on `e944799b`; merged `3a91c476`), #1346 (**5401855796** on `b7cad958`; merged `279f8d59`) and #1348 (**5402225342** on `808540f6`; merged `7b77d2e5`);
+  - increment 3 and part E, Review & Submit and the active notice: #1349 (**5402382182** on `75a0c6b1`; merged `57b0a70d`);
+  - increment 4, key corrections: #1351 (**5402602114** on `1593fd4d`; merged `3e56a7e1`);
+  - increment 5, bookmarks and History filters: #1354 (**5403397503** on `e12c5a05`; merged `6373d13d`).
+- **Released** through promotions #1331, #1337, #1340, #1342, #1347, #1350, #1352 and #1355.
+  - Promotions #1335 and #1345 were closed unmerged, and their fixes were taken first (see Progress).
+  - The last, #1355 (`e2981bea`): main CI **37162107658** `test` passed **23:46:32Z**; production assigned **23:46:33.856Z**; `main` and `dev` trees `3dc0ed23`; production health 200 (`{"ok":true,"db":true}`).
+- **Verification**, as the record asks:
+  - every surface a learner who answered sees, bookmarks included, gives a question's own label and notice;
+  - no unavailable content reaches a learner who never answered it, proved on real Postgres through an exam finalized with a withdrawn item;
+  - every score follows the amended rule, and one real-Postgres case checks the summary, History and the Dashboard agree through holds, a retirement and lifts;
+  - the submit warning counts only scored items;
+  - a key-corrected answer shows the correction notice, is unscored, and returns to the Incorrect filter, while a wording-only revision keeps F-12 and stays scored;
+  - each step's targeted mutations fail a case (Progress).
+- **Deferred.** End and finalize outputs cached before #1348's writer are replayed with `totals.scored = questionCount`, by the mapping in `src/adapters/controllers/practice-schemas.ts`. It can be removed once a full 24-hour TTL has passed since that writer reached production (promotion #1350, assigned 2026-10-03 20:02:33Z), provided production has not rolled back to an earlier deployment since. The register's Deferred table carries it.
 
 ## Related
 
