@@ -603,6 +603,8 @@ describe('ADR-021 §3, ADR-022 Decision 5: an active session reaches a withdrawn
       expect(item).toEqual({
         unavailable: true,
         availability: 'withdrawn',
+        // Unanswered and withdrawn: it would not count.
+        countsIfEndedNow: false,
         questionId: second.id,
         session: expect.objectContaining({
           sessionId: session.id,
