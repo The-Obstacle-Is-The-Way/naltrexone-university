@@ -1,3 +1,4 @@
+export { answerKeyChanged, type KeyChoice } from './answer-key';
 export {
   determineNonEntitledReason,
   isEntitled,

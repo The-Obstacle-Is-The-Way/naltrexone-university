@@ -35,6 +35,7 @@ import type {
   QuestionRepository,
   QuestionRevisionBinding,
 } from '@/src/application/ports/repositories';
+import { answerKeyChanged } from '@/src/domain/services';
 import {
   deriveQuestionAvailability,
   isValidChoiceLabel,
@@ -415,6 +416,12 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       id: row.id,
       revisionId: content.id,
       isCurrentRevision: content.id === row.currentRevisionId,
+      // ADR-022 Decision 4: the current revision is loaded with the question,
+      // so the comparison costs no query.
+      answerKeyChanged:
+        content.id !== row.currentRevisionId &&
+        row.currentRevision !== null &&
+        answerKeyChanged(content.choices, row.currentRevision.choices),
       slug: row.slug,
       stemMd: content.stemMd,
       explanationMd: content.explanationMd,
