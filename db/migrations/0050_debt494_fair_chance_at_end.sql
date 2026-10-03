@@ -6,16 +6,6 @@
 -- answered it. That fact cannot be rebuilt later, because a question's past
 -- availability is not kept, so the statement that ends a session writes it
 -- for every item. Null while a session is active.
---
--- Lock scope: ADD COLUMN takes ACCESS EXCLUSIVE on
--- practice_session_question_states, and Drizzle holds it until this
--- migration's transaction commits, so it blocks reads and writes of the table
--- while the backfill below runs. The nullable column has no default, so adding
--- it rewrites no row. The backfill updates each item of every ended session
--- once, and holds those row locks to the same commit. The table has one row
--- per session item; at this product's scale it is small, and it accepts that
--- cost, as 0026 does for practice_sessions. The deploy log's notice records
--- how many rows each deploy target updated.
 ALTER TABLE "practice_session_question_states" ADD COLUMN "fair_chance_at_end" boolean;--> statement-breakpoint
 -- A session that ended before this column is recorded once, here, from the
 -- bank as it stands at this migration, the best evidence left. An item on a
