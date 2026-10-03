@@ -276,7 +276,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -311,7 +311,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -367,7 +367,7 @@ describe('QuestionView', () => {
           slug: question.slug,
           stemMd: question.stemMd,
           difficulty: question.difficulty,
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: question.choices.map((choice) => ({
             id: choice.id,
@@ -463,7 +463,7 @@ describe('QuestionView', () => {
           slug: 'question-1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [
             { id: fixtureChoiceAId, label: 'A', textMd: 'Choice A text' },

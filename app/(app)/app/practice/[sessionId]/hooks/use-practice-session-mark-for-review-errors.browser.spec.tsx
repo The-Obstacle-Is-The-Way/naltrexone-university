@@ -40,6 +40,7 @@ const initialReview: GetPracticeSessionReviewOutput = {
   rows: [
     {
       isAvailable: false,
+      availability: null,
       questionId,
       order: 1,
       isAnswered: false,

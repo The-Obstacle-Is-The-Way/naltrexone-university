@@ -106,7 +106,9 @@ describe('GetAttemptedQuestionsUseCase', () => {
     await expect(
       useCase.execute({ userId: 'user-1', limit: 10, offset: 0 }),
     ).resolves.toMatchObject({
-      rows: [{ isAvailable: true, stemMd: 'Live stem', withdrawn: false }],
+      rows: [
+        { isAvailable: true, stemMd: 'Live stem', availability: 'available' },
+      ],
     });
   });
 
@@ -128,7 +130,14 @@ describe('GetAttemptedQuestionsUseCase', () => {
         ],
         { questions },
       ),
-      new FakeQuestionRepository(questions),
+      new FakeQuestionRepository(questions, {
+        withdrawals: [
+          {
+            questionId: withdrawn.id,
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
       new FakeLogger(),
     );
 
@@ -145,11 +154,11 @@ describe('GetAttemptedQuestionsUseCase', () => {
         questionId: 'q1',
         slug: 'withdrawn-question',
         stemMd: 'Answered stem',
-        withdrawn: true,
+        availability: 'withdrawn',
       }),
     );
     expect(rows).toContainEqual(
-      expect.objectContaining({ questionId: 'q2', withdrawn: false }),
+      expect.objectContaining({ questionId: 'q2', availability: 'available' }),
     );
   });
 
@@ -206,7 +215,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           questionId: 'q1',
           isCorrect: false,
           sessionId: null,
@@ -219,7 +228,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
         },
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           questionId: 'q2',
           isCorrect: true,
           sessionId: null,
@@ -232,7 +241,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
         },
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           questionId: 'q3',
           isCorrect: true,
           sessionId: null,
@@ -378,6 +387,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: false,
+          availability: null,
           questionId: orphanedQuestionId,
           isCorrect: true,
           sessionId: null,
@@ -421,7 +431,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           questionId: 'q1',
           sessionId: 'session-1',
           sessionMode: 'exam',
@@ -486,7 +496,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
     expect(result.rows[0]).toMatchObject({
       questionId: 'q1',
       isAvailable: true,
-      withdrawn: false,
+      availability: 'available',
     });
     expect(result.totalCount).toBe(0);
   });
@@ -537,12 +547,70 @@ describe('GetAttemptedQuestionsUseCase', () => {
       rows: [
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           questionId: 'q1',
           slug: 'q-1',
           tagSlugs: ['opioids'],
         },
       ],
     });
+  });
+
+  // ADR-022 Decision 1: each row carries its question's availability.
+  it("carries each question's availability, on answered and omitted rows", async () => {
+    const held = createQuestion({ id: 'q-held', status: 'archived' });
+    const withdrawn = createQuestion({ id: 'q-withdrawn', status: 'archived' });
+    const questions = [held, withdrawn];
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository(
+        [
+          createAttempt({ userId: 'user-1', questionId: 'q-held' }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-withdrawn',
+            outcome: omittedOutcome(),
+            isCorrect: false,
+          }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions, {
+        holds: [
+          {
+            questionId: 'q-held',
+            questionRevisionId: held.revisionId,
+            lifted: false,
+          },
+        ],
+        withdrawals: [
+          {
+            questionId: 'q-withdrawn',
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
+      new FakeLogger(),
+    );
+
+    const { rows } = await useCase.execute({
+      userId: 'user-1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          isAvailable: true,
+          questionId: 'q-held',
+          availability: 'under_review',
+        }),
+        expect.objectContaining({
+          isAvailable: false,
+          questionId: 'q-withdrawn',
+          availability: 'withdrawn',
+        }),
+      ]),
+    );
   });
 });

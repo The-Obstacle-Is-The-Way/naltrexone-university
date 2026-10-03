@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { toQuestionRoute } from '@/lib/routes';
+import type { QuestionAvailability } from '@/src/domain/value-objects';
 import {
   containsDescendant,
   findAnchorByHref,
@@ -245,7 +246,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -286,7 +287,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: true,
+          availability: 'withdrawn',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -307,10 +308,10 @@ describe('QuestionView', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const notice = Array.from(doc.querySelectorAll('[role="status"]')).find(
       (element) =>
-        element.textContent?.includes('This question has been withdrawn.'),
+        element.textContent?.includes('This question was withdrawn.'),
     );
     expect(notice?.textContent).toContain(
-      'You can still review your answer. It no longer appears in new practice.',
+      "Its answer and explanation may be inaccurate or outdated, so don't rely on them.",
     );
     expect(getBottomActionLabels(doc)).toEqual([
       'Previous',
@@ -324,7 +325,7 @@ describe('QuestionView', () => {
 
   // Pattern Registry F-12: a newer revision replaced the one the learner saw.
   function renderReviewedQuestion(marks: {
-    withdrawn: boolean;
+    availability: QuestionAvailability;
     superseded: boolean;
   }) {
     return parseHtml(
@@ -378,7 +379,10 @@ describe('QuestionView', () => {
   }
 
   it('marks a question updated since the learner saw it with the F-12 notice above the stem', () => {
-    const doc = renderReviewedQuestion({ withdrawn: false, superseded: true });
+    const doc = renderReviewedQuestion({
+      availability: 'available',
+      superseded: true,
+    });
 
     const notice = statusWith(doc, 'This question has been updated.');
     const stem = Array.from(doc.querySelectorAll('p')).find(
@@ -400,17 +404,29 @@ describe('QuestionView', () => {
   });
 
   it('shows no update notice for the current version', () => {
-    const doc = renderReviewedQuestion({ withdrawn: false, superseded: false });
+    const doc = renderReviewedQuestion({
+      availability: 'available',
+      superseded: false,
+    });
 
     expect(statusWith(doc, 'This question has been updated.')).toBeNull();
   });
 
-  it('marks a withdrawn question withdrawn only', () => {
-    const doc = renderReviewedQuestion({ withdrawn: true, superseded: true });
+  // ADR-022 Decision 1: a question no longer available shows its own notice
+  // only; there is no current version to link to.
+  it.each([
+    ['withdrawn', 'This question was withdrawn.'],
+    ['under_review', 'This question is under review.'],
+    ['retired', 'This question has been retired from the bank.'],
+  ] as const)(
+    'marks a %s question with its own notice only',
+    (availability, heading) => {
+      const doc = renderReviewedQuestion({ availability, superseded: true });
 
-    expect(statusWith(doc, 'This question has been withdrawn.')).not.toBeNull();
-    expect(statusWith(doc, 'This question has been updated.')).toBeNull();
-  });
+      expect(statusWith(doc, heading)).not.toBeNull();
+      expect(statusWith(doc, 'This question has been updated.')).toBeNull();
+    },
+  );
 
   it('suppresses reattempt in answered exam-session review', () => {
     const html = renderToStaticMarkup(
@@ -425,7 +441,7 @@ describe('QuestionView', () => {
           slug: 'q2',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -463,7 +479,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -502,7 +518,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -545,7 +561,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -592,7 +608,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -631,7 +647,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}
@@ -665,7 +681,7 @@ describe('QuestionView', () => {
           slug: 'q1',
           stemMd: 'Question stem',
           difficulty: 'easy',
-          withdrawn: false,
+          availability: 'available',
           superseded: false,
           choices: [{ id: 'c1', label: 'A', textMd: 'Choice A' }],
         }}

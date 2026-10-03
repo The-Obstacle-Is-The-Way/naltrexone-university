@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import type { PracticeViewProps } from '@/app/(app)/app/practice/components/practice-view';
 import { Feedback } from '@/components/question/feedback';
+import { QuestionAvailabilityNotice } from '@/components/question/question-availability-notice';
 import { QuestionCard } from '@/components/question/question-card';
 import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import { QuestionReportDialog } from '@/components/question/question-report-dialog';
@@ -57,10 +58,10 @@ export function PostExamReviewView({
       ? (review.rows[currentIndex + 1] ?? null)
       : null;
   const focusedQuestionId = currentRow?.questionId ?? null;
-  // A withdrawn question stays reviewable, but not bookmarkable, reportable or
-  // ratable (Pattern Registry F-11).
+  // A question no longer available stays reviewable, but not bookmarkable,
+  // reportable or ratable (Pattern Registry F-11).
   const canActOnQuestion =
-    currentRow?.isAvailable === true && !currentRow.withdrawn;
+    currentRow?.isAvailable === true && currentRow.availability === 'available';
   const navigateToQuestion = (questionId: string) => {
     shouldRestorePanelRef.current = true;
     onNavigateQuestion(questionId);
@@ -126,18 +127,13 @@ export function PostExamReviewView({
 
           {currentRow.isAvailable ? (
             <>
-              {currentRow.withdrawn ? (
-                // Pattern Registry F-11: a question withdrawn after the learner
-                // answered it stays reviewable, as answered (ADR-021 §3).
-                <Card role="status" className="gap-0 p-4 text-sm">
-                  <p className="font-medium text-foreground">
-                    This question has been withdrawn.
-                  </p>
-                  <p className="text-muted-foreground">
-                    You can still review your answer. It no longer appears in
-                    new practice.
-                  </p>
-                </Card>
+              {currentRow.availability !== 'available' ? (
+                // Pattern Registry F-11: a question no longer available that
+                // the learner answered stays reviewable, as answered (ADR-021
+                // §3, ADR-022).
+                <QuestionAvailabilityNotice
+                  availability={currentRow.availability}
+                />
               ) : currentRow.superseded ? (
                 // Pattern Registry F-12: updated since the learner saw it.
                 <QuestionUpdateNotice variant="review" slug={currentRow.slug} />
@@ -175,6 +171,13 @@ export function PostExamReviewView({
                 selectedChoiceId={currentRow.selectedChoiceId}
               />
             </>
+          ) : currentRow.availability ? (
+            // ADR-022 Decision 2: an item the learner never answered shows
+            // its label only.
+            <QuestionAvailabilityNotice
+              availability={currentRow.availability}
+              labelOnly
+            />
           ) : (
             <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
               Question no longer available.

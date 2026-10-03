@@ -88,7 +88,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -101,6 +101,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: false,
+              availability: null,
               questionId: fixtureQuestion2Id,
               order: 2,
               isAnswered: false,
@@ -149,6 +150,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: false,
+              availability: null,
               questionId: fixtureQuestion0Id,
               order: 1,
               isAnswered: true,
@@ -158,7 +160,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -224,7 +226,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: true,
-              withdrawn: false,
+              availability: 'available',
               questionId: fixtureQuestion1Id3,
               slug: 'q-1',
               stemMd: 'Stem for q1',
@@ -290,6 +292,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: false,
+              availability: null,
               questionId: fixtureQuestion1Id3,
               order: 1,
               isAnswered: true,
@@ -299,6 +302,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
             },
             {
               isAvailable: false,
+              availability: null,
               questionId: fixtureQuestion2Id,
               order: 2,
               isAnswered: true,
@@ -339,6 +343,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
           rows: [
             {
               isAvailable: false,
+              availability: null,
               questionId: fixtureQuestion1Id3,
               order: 1,
               isAnswered: true,

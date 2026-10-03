@@ -646,7 +646,7 @@ describe('HistoryQuestionsTab', () => {
             slug: 'q-withdrawn',
             stemMd: 'Answered stem',
             difficulty: 'hard',
-            withdrawn: true,
+            availability: 'withdrawn',
           }),
         ],
         totalCount: 1,
@@ -677,6 +677,7 @@ describe('HistoryQuestionsTab', () => {
         rows: [
           {
             isAvailable: false,
+            availability: null,
             questionId: fixtureQuestion1Id,
             isCorrect: true,
             sessionId: fixtureSession1Id,

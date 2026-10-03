@@ -29,7 +29,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        withdrawn: false,
+        availability: 'available',
         superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
@@ -48,7 +48,7 @@ describe('useQuestionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -137,7 +137,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        withdrawn: false,
+        availability: 'available',
         superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
@@ -156,7 +156,7 @@ describe('useQuestionPageModel (browser)', () => {
         rows: [
           {
             isAvailable: true,
-            withdrawn: false,
+            availability: 'available',
             questionId: QUESTION_PAGE_QUESTION_1_ID,
             slug: 'q-1',
             stemMd: 'Stem',
@@ -205,7 +205,7 @@ describe('useQuestionPageModel (browser)', () => {
         slug: 'q-1',
         stemMd: 'Stem',
         difficulty: 'easy',
-        withdrawn: false,
+        availability: 'available',
         superseded: false,
         choices: [
           { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },

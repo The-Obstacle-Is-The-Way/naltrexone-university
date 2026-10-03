@@ -12,6 +12,10 @@ import {
   getReviewVariant,
 } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import {
+  questionAvailabilityHeading,
+  questionAvailabilityLabel,
+} from '@/components/question/question-availability-notice';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -74,12 +78,15 @@ export function QuestionNavigator({
                         : 'Answered'
                     : 'Answered'
                   : 'Unanswered';
-            // Pattern Registry F-11: a withdrawn question stays reachable in
-            // review and is named withdrawn.
-            const isWithdrawn = 'withdrawn' in row && row.withdrawn;
+            // Pattern Registry F-11: a question no longer available stays
+            // reachable in review and is named by its state (ADR-022).
+            const unavailableLabel =
+              row.availability && row.availability !== 'available'
+                ? questionAvailabilityLabel(row.availability)
+                : null;
             const statusParts = [
               ...(isCurrent ? (['Current'] as const) : []),
-              ...(isWithdrawn ? (['Withdrawn'] as const) : []),
+              ...(unavailableLabel ? [unavailableLabel] : []),
               ...(row.markedForReview ? (['Marked for review'] as const) : []),
               answeredLabel,
             ];
@@ -187,9 +194,13 @@ export function ExamReviewView({
               ? [row.isCorrect ? 'Correct' : 'Incorrect']
               : []),
           ];
+          // ADR-022 Decisions 2 and 5: an item no longer available names its
+          // state, not its content.
           const stemPreview = row.isAvailable
             ? getStemPreview(row.stemMd, 96)
-            : '[Question no longer available]';
+            : row.availability
+              ? questionAvailabilityHeading(row.availability)
+              : '[Question no longer available]';
           const rowContent = (
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 space-y-1">

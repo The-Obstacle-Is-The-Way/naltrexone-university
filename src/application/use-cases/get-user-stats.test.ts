@@ -104,7 +104,7 @@ describe('GetUserStatsUseCase', () => {
       recentActivity: [
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           attemptId: q1Attempt.id,
           answeredAt: '2026-02-01T11:00:00.000Z',
           questionId: 'q1',
@@ -117,7 +117,7 @@ describe('GetUserStatsUseCase', () => {
         },
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           attemptId: q2Attempt.id,
           answeredAt: '2026-01-31T11:00:00.000Z',
           questionId: 'q2',
@@ -130,7 +130,7 @@ describe('GetUserStatsUseCase', () => {
         },
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           attemptId: q3Attempt.id,
           answeredAt: '2026-01-20T11:00:00.000Z',
           questionId: 'q3',
@@ -163,7 +163,14 @@ describe('GetUserStatsUseCase', () => {
           answeredAt: new Date('2026-02-01T11:00:00Z'),
         }),
       ]),
-      new FakeQuestionRepository([withdrawn]),
+      new FakeQuestionRepository([withdrawn], {
+        withdrawals: [
+          {
+            questionId: withdrawn.id,
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
       new FakeLogger(),
       () => now,
     );
@@ -196,7 +203,7 @@ describe('GetUserStatsUseCase', () => {
 
     await expect(useCase.execute({ userId: 'user-1' })).resolves.toMatchObject({
       recentActivity: [
-        { isAvailable: true, stemMd: 'Live stem', withdrawn: false },
+        { isAvailable: true, stemMd: 'Live stem', availability: 'available' },
       ],
     });
   });
@@ -217,7 +224,14 @@ describe('GetUserStatsUseCase', () => {
           answeredAt: new Date('2026-02-01T11:00:00Z'),
         }),
       ]),
-      new FakeQuestionRepository([withdrawn]),
+      new FakeQuestionRepository([withdrawn], {
+        withdrawals: [
+          {
+            questionId: withdrawn.id,
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
       new FakeLogger(),
       () => now,
     );
@@ -228,7 +242,7 @@ describe('GetUserStatsUseCase', () => {
           isAvailable: true,
           questionId: 'q1',
           stemMd: 'Answered stem',
-          withdrawn: true,
+          availability: 'withdrawn',
         },
       ],
     });
@@ -302,7 +316,7 @@ describe('GetUserStatsUseCase', () => {
       recentActivity: [
         {
           isAvailable: true,
-          withdrawn: false,
+          availability: 'available',
           questionId: 'q1',
           sessionId: 'session-1',
           sessionMode: 'exam',
@@ -355,5 +369,60 @@ describe('GetUserStatsUseCase', () => {
       totalAnswered: 2,
       answeredLast7Days: 1,
     });
+  });
+
+  // ADR-022 Decision 1: each row carries its question's availability.
+  it("carries each question's availability, on answered and omitted rows", async () => {
+    const now = new Date('2026-02-01T12:00:00Z');
+    const held = createQuestion({ id: 'q-held', status: 'archived' });
+    const withdrawn = createQuestion({ id: 'q-withdrawn', status: 'archived' });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository([
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q-held',
+          answeredAt: new Date('2026-02-01T11:00:00Z'),
+        }),
+        createAttempt({
+          userId: 'user-1',
+          questionId: 'q-withdrawn',
+          outcome: omittedOutcome(),
+          isCorrect: false,
+          answeredAt: new Date('2026-02-01T10:00:00Z'),
+        }),
+      ]),
+      new FakeQuestionRepository([held, withdrawn], {
+        holds: [
+          {
+            questionId: 'q-held',
+            questionRevisionId: held.revisionId,
+            lifted: false,
+          },
+        ],
+        withdrawals: [
+          {
+            questionId: 'q-withdrawn',
+            questionRevisionId: withdrawn.revisionId,
+          },
+        ],
+      }),
+      new FakeLogger(),
+      () => now,
+    );
+
+    const { recentActivity } = await useCase.execute({ userId: 'user-1' });
+
+    expect(recentActivity).toEqual([
+      expect.objectContaining({
+        isAvailable: true,
+        questionId: 'q-held',
+        availability: 'under_review',
+      }),
+      expect.objectContaining({
+        isAvailable: false,
+        questionId: 'q-withdrawn',
+        availability: 'withdrawn',
+      }),
+    ]);
   });
 });

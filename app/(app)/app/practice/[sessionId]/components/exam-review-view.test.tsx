@@ -35,7 +35,7 @@ describe('QuestionNavigator', () => {
     rows: [
       {
         isAvailable: true,
-        withdrawn: false,
+        availability: 'available',
         questionId: fixtureQuestion1Id,
         slug: 'q-1',
         stemMd: 'Stem 1',
@@ -48,7 +48,7 @@ describe('QuestionNavigator', () => {
       },
       {
         isAvailable: true,
-        withdrawn: false,
+        availability: 'available',
         questionId: fixtureQuestion2Id,
         slug: 'q-2',
         stemMd: 'Stem 2',
@@ -61,6 +61,7 @@ describe('QuestionNavigator', () => {
       },
       {
         isAvailable: false,
+        availability: null,
         questionId: fixtureQuestion3Id,
         order: 3,
         isAnswered: false,
@@ -113,6 +114,32 @@ describe('QuestionNavigator', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     return { doc };
   }
+
+  // ADR-022 Decisions 1 and 5: an item no longer available is named by its
+  // state, whether the learner answered it or not.
+  it('names each item no longer available by its state', () => {
+    const [first, second, third] = review.rows;
+    const { doc } = renderNavigator({
+      // No item is current.
+      currentQuestionId: crypto.randomUUID(),
+      review: {
+        ...review,
+        rows: [
+          { ...first, availability: 'under_review' },
+          second,
+          { ...third, availability: 'retired' },
+        ],
+      },
+    });
+
+    expect(
+      findByAriaLabel(doc, 'Question 1: Under review, Answered'),
+    ).not.toBeNull();
+    expect(findByAriaLabel(doc, 'Question 2: Answered')).not.toBeNull();
+    expect(
+      findByAriaLabel(doc, 'Question 3: Retired, Unanswered'),
+    ).not.toBeNull();
+  });
 
   it('exposes a navigation landmark with an accessible label', () => {
     const { doc } = renderNavigator();
@@ -250,7 +277,7 @@ describe('ExamReviewView', () => {
     rows: [
       {
         isAvailable: true,
-        withdrawn: false,
+        availability: 'available',
         questionId: fixtureQuestion1Id,
         slug: 'q-1',
         stemMd: 'Marked answered question',
@@ -263,7 +290,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: true,
-        withdrawn: false,
+        availability: 'available',
         questionId: fixtureQuestion2Id,
         slug: 'q-2',
         stemMd: 'Unmarked answered question',
@@ -276,7 +303,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: true,
-        withdrawn: false,
+        availability: 'available',
         questionId: fixtureQuestion3Id,
         slug: 'q-3',
         stemMd: 'Unmarked unanswered question',
@@ -289,6 +316,7 @@ describe('ExamReviewView', () => {
       },
       {
         isAvailable: false,
+        availability: null,
         questionId: fixtureQuestion4Id,
         order: 4,
         isAnswered: false,

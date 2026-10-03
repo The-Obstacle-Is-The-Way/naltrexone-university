@@ -22,7 +22,7 @@ const question = {
   slug: 'q1',
   stemMd: 'Question stem',
   difficulty: 'easy' as const,
-  withdrawn: false,
+  availability: 'available' as const,
   superseded: false,
   choices: [
     { id: 'c1', label: 'A', textMd: 'Choice A' },

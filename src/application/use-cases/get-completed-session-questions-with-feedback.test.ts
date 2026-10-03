@@ -577,6 +577,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
     });
     expect(output.rows[1]).toEqual({
       isAvailable: false,
+      availability: null,
       questionId: 'q2',
       order: 2,
       isAnswered: false,
@@ -599,7 +600,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
 
   // ADR-021 §3: an attempt in the session is enough to show a withdrawn
   // question, even where the item's state recorded no answer.
-  it('keeps a withdrawn question reviewable when the attempt is the only record of an answer', async () => {
+  it('keeps a question no longer published reviewable when the attempt is the only record of an answer', async () => {
     const question = createQuestion({
       id: 'q1',
       status: 'archived',
@@ -620,7 +621,13 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
         sessionId: 'session-1',
       }),
     ).resolves.toMatchObject({
-      rows: [{ isAvailable: true, withdrawn: true, selectedChoiceId: 'q1-a' }],
+      rows: [
+        {
+          isAvailable: true,
+          availability: 'retired',
+          selectedChoiceId: 'q1-a',
+        },
+      ],
     });
   });
 

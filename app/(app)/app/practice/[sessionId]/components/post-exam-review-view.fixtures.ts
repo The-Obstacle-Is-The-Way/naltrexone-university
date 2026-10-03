@@ -4,6 +4,7 @@ import type {
 } from '@/src/adapters/controllers/practice-controller';
 
 type ReviewRow = GetCompletedSessionQuestionsWithFeedbackOutput['rows'][number];
+type AvailableReviewRow = Extract<ReviewRow, { isAvailable: true }>;
 
 export function createSummary(
   overrides?: Partial<EndPracticeSessionOutput>,
@@ -23,10 +24,12 @@ export function createSummary(
   };
 }
 
-export function createReviewRow(overrides?: Partial<ReviewRow>): ReviewRow {
+export function createReviewRow(
+  overrides?: Partial<AvailableReviewRow>,
+): AvailableReviewRow {
   return {
     isAvailable: true,
-    withdrawn: false,
+    availability: 'available',
     superseded: false,
     questionId: 'question-1',
     slug: 'question-1',

@@ -246,7 +246,10 @@ describe('ADR-021 phase 2b: reviews know when the question has been updated', ()
       review: { attemptId: attempt.id },
     });
 
-    expect(view).toMatchObject({ withdrawn: false, superseded: true });
+    expect(view).toMatchObject({
+      question: { availability: 'available' },
+      superseded: true,
+    });
   });
 
   it('marks both answered and unanswered feedback rows of a question updated since', async () => {
