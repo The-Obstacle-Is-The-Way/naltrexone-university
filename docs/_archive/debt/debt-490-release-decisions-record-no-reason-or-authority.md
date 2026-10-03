@@ -2,11 +2,11 @@
 
 > Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Resolved — 2026-10-02; every activation, rollback and bootstrap records its reason and authority on an immutable receipt, promoted and release-verified, with migration `0049` applied in production and its suites re-run on `main`'s code before archival
+**Status:** Resolved — 2026-10-03 UTC (fixed in code 2026-10-02, release-verified 2026-10-03); every activation, rollback and bootstrap records its reason and authority on an immutable receipt, promoted and release-verified, with migration `0049` applied in production and its suites re-run on `main`'s code before archival
 **Priority:** P2
 **Date:** 2026-10-02
-**Resolved:** 2026-10-02
-**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-02-utc)
+**Resolved:** 2026-10-03
+**Verification receipts:** [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
@@ -114,7 +114,7 @@ Option 2, started on the owner's go-ahead (2026-10-02, "DEBT-490 now").
 - [ADR-021](../../adr/adr-021-question-revisions-and-content-releases.md), decision 4.
 - [`content-pipeline.md`, Releases](../../practice-engine/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold).
 
-## Verified closeout — 2026-10-02 UTC
+## Verified closeout — 2026-10-03 UTC
 
 | Verification | Holds | Receipt |
 | --- | --- | --- |
