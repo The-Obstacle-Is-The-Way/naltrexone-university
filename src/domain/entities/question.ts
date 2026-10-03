@@ -1,4 +1,8 @@
-import type { QuestionDifficulty, QuestionStatus } from '../value-objects';
+import type {
+  QuestionAvailability,
+  QuestionDifficulty,
+  QuestionStatus,
+} from '../value-objects';
 import type { Choice } from './choice';
 import type { Tag } from './tag';
 
@@ -20,6 +24,11 @@ export type Question = {
   readonly referenceMd: string | null;
   readonly difficulty: QuestionDifficulty;
   readonly status: QuestionStatus;
+  /**
+   * What a learner is told about the question now, from its status and its
+   * withdrawals and holds (ADR-022 Decision 1).
+   */
+  readonly availability: QuestionAvailability;
   readonly choices: readonly Choice[];
   readonly tags: readonly Tag[];
   readonly createdAt: Date;

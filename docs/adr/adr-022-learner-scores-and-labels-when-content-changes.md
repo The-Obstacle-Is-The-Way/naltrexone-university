@@ -102,7 +102,7 @@ Stored grades are never regraded. Mapping an old selection onto a new revision's
 - **Every score becomes correct as content changes,** and consistent across surfaces. Learners are told why an item no longer counts.
 - **A learner's past session score can change** when a question in it is withdrawn, held, retired or key-corrected later, or when a hold lifts. This is intended, and it is disclosed.
 - **Read paths gain the availability and key-correction derivations.**
-  - Availability needs two `EXISTS` lookups against small, indexed tables.
+  - Availability needs two small lookups, made only for questions that are not published, so reads of published questions cost nothing more: withdrawals by their primary key, and unlifted holds through the question's revisions, since holds have no index that leads with the question (DEBT-493).
   - The key-correction check compares the correct choice of two revisions.
   - Aggregate queries (history, dashboard) gain the same predicates. DEBT-493 measures their cost before shipping.
 - **The domain gains an availability value** in place of the boolean "withdrawn". F-11 and F-12 in the Pattern Registry are revised to match.
