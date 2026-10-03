@@ -164,6 +164,7 @@ describe('practice-controller', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 1,
+          scoredUnansweredCount: 1,
           markedCount: 1,
           rows: [
             {

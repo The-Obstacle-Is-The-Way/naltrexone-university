@@ -161,6 +161,12 @@ In increments, each test-first.
   - three once both holds lift, since the item held before submission never had a fair chance.
 - **Fixtures.** Existing summary fixtures carry `scored` equal to their question count: every item in them counts, as before. Two deliberately invalid fixtures keep one invalid field. The finalize cases whose question leaves the bank before submission give the session fake the same bank state, so the item is graded but not scored.
 
+**Increment 2 revised, step 4: Review & Submit and the active notice (increment 3 and part E), 2026-10-03.** All three scores now follow the amended rule, so Decision 5's sentence is true where it is shown.
+- **The prediction.** The domain's `countsIfEndedNow` says whether an active session's item would count if the session ended now: the fair chance its end would record, and its content not in doubt.
+- **Review & Submit.** The review output's `scoredUnansweredCount` counts the unanswered items that would count, and the submit warning names only those. An item that would not count is listed as "Won't be scored".
+- **The active notice.** An item whose question became unavailable during the session comes back as `unavailable`, with its state and `countsIfEndedNow`, in place of the `withdrawn` marker, which misnamed a held or retired question. The notice names the state: withdrawn, placed under review, or retired from the bank, "after your session began". It adds "It won't count toward your score." unless the item still counts, as a tutor answer already given on a question retired since does.
+- **Evidence.** Mutations across the review count, the row marker, the warning, the marker's state and prediction, the page logic, the page view and the notice; each fails a case. Three survived the first run: a warning with unanswered but no scored items, and the prediction carried through the page logic and the page view. Cases now cover each.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.

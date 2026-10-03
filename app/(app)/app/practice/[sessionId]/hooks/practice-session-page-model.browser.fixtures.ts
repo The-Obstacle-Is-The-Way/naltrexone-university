@@ -60,6 +60,8 @@ type ReviewFixtureInput = {
   mode: PracticeMode;
   totalCount: number;
   answeredCount: number;
+  /** Defaults to every unanswered item: each is scored unless a case says. */
+  scoredUnansweredCount?: number;
   markedCount: number;
   rows?: ReturnType<typeof createReviewRow>[];
 };
@@ -143,6 +145,8 @@ export function createReviewResponse(input: ReviewFixtureInput) {
     mode: input.mode,
     totalCount: input.totalCount,
     answeredCount: input.answeredCount,
+    scoredUnansweredCount:
+      input.scoredUnansweredCount ?? input.totalCount - input.answeredCount,
     markedCount: input.markedCount,
     rows: input.rows ?? [],
   };

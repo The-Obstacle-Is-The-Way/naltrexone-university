@@ -27,6 +27,7 @@ function createFixturePracticeSessionReview(
     mode: 'tutor',
     totalCount: 0,
     answeredCount: 0,
+    scoredUnansweredCount: 0,
     markedCount: 0,
     rows: [],
     ...overrides,

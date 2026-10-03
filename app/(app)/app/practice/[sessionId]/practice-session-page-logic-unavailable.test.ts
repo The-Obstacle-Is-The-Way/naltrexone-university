@@ -20,23 +20,25 @@ function createFixtureNextQuestion() {
   });
 }
 
-// ADR-021 §3 and Pattern Registry F-11: a session item whose question was
-// withdrawn after the session began.
-describe('practice-session-page-logic, withdrawn session items', () => {
+// ADR-021 §3, ADR-022 Decision 5 and Pattern Registry F-11: a session item
+// whose question became unavailable after the session began.
+describe('practice-session-page-logic, unavailable session items', () => {
   describe('loadNextQuestion', () => {
-    // ADR-021 §3, Pattern Registry F-11: a question withdrawn after the
-    // session began comes back as its place in the session, with no content.
-    it('records a withdrawn item, with no question, and moves the session to it', async () => {
+    // A question held after the session began comes back as its state and
+    // its place in the session, with no content.
+    it('records an unavailable item and its state, with no question, and moves the session to it', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
       const setSessionInfo = vi.fn();
-      const setWithdrawnQuestionId = vi.fn();
+      const setUnavailableItem = vi.fn();
 
       await loadNextQuestion({
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () =>
           ok({
-            withdrawn: true as const,
+            unavailable: true as const,
+            availability: 'under_review' as const,
+            countsIfEndedNow: false,
             questionId: fixtureQuestion2Id,
             session: {
               sessionId: fixtureSession1Id,
@@ -55,12 +57,14 @@ describe('practice-session-page-logic, withdrawn session items', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo,
-        setWithdrawnQuestionId,
+        setUnavailableItem,
       });
 
-      expect(setWithdrawnQuestionId).toHaveBeenLastCalledWith(
-        fixtureQuestion2Id,
-      );
+      expect(setUnavailableItem).toHaveBeenLastCalledWith({
+        questionId: fixtureQuestion2Id,
+        availability: 'under_review',
+        countsIfEndedNow: false,
+      });
       expect(setQuestion).toHaveBeenLastCalledWith(null);
       expect(setSessionInfo).toHaveBeenLastCalledWith(
         expect.objectContaining({ mode: 'exam', index: 1, total: 2 }),
@@ -68,9 +72,49 @@ describe('practice-session-page-logic, withdrawn session items', () => {
       expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
     });
 
-    it('clears a recorded withdrawn item when a question loads', async () => {
+    // A tutor answer already given on a question retired since still counts,
+    // and the page carries that through to the notice.
+    it('records whether the unavailable item would still count', async () => {
+      const setUnavailableItem = vi.fn();
+
+      await loadNextQuestion({
+        sessionId: fixtureSession1Id,
+        getNextQuestionFn: async () =>
+          ok({
+            unavailable: true as const,
+            availability: 'retired' as const,
+            countsIfEndedNow: true,
+            questionId: fixtureQuestion2Id,
+            session: {
+              sessionId: fixtureSession1Id,
+              mode: 'tutor' as const,
+              index: 1,
+              total: 2,
+              deadlineAt: null,
+              isMarkedForReview: false,
+            },
+          }),
+        nowMs: () => 1234,
+        setLoadState: vi.fn(),
+        setSelectedChoiceId: vi.fn(),
+        setSubmitResult: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
+        setQuestionLoadedAt: vi.fn(),
+        setQuestion: vi.fn(),
+        setSessionInfo: vi.fn(),
+        setUnavailableItem,
+      });
+
+      expect(setUnavailableItem).toHaveBeenLastCalledWith({
+        questionId: fixtureQuestion2Id,
+        availability: 'retired',
+        countsIfEndedNow: true,
+      });
+    });
+
+    it('clears a recorded unavailable item when a question loads', async () => {
       const setQuestion = vi.fn();
-      const setWithdrawnQuestionId = vi.fn();
+      const setUnavailableItem = vi.fn();
 
       await loadNextQuestion({
         sessionId: fixtureSession1Id,
@@ -83,21 +127,24 @@ describe('practice-session-page-logic, withdrawn session items', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo: vi.fn(),
-        setWithdrawnQuestionId,
+        setUnavailableItem,
       });
 
-      expect(setWithdrawnQuestionId).toHaveBeenLastCalledWith(null);
+      expect(setUnavailableItem).toHaveBeenLastCalledWith(null);
       expect(setQuestion).toHaveBeenLastCalledWith(
         expect.objectContaining({ questionId: fixtureQuestion1Id }),
       );
     });
   });
 
-  // ADR-021 §3: the question was withdrawn while the learner had it open.
-  // A not-found answer asks for the item: if it comes back withdrawn, the page
+  // ADR-021 §3: the question became unavailable while the learner had it
+  // open. A not-found answer asks for the item: if it comes back unavailable,
+  // the page
   // loads it and the notice replaces the error; otherwise the error stands.
   const withdrawnItem = {
-    withdrawn: true as const,
+    unavailable: true as const,
+    availability: 'withdrawn' as const,
+    countsIfEndedNow: false,
     questionId: fixtureQuestion1Id,
     session: {
       sessionId: fixtureSession1Id,
@@ -115,9 +162,9 @@ describe('practice-session-page-logic, withdrawn session items', () => {
       | ReturnType<typeof ok<ReturnType<typeof createFixtureNextQuestion>>>
     >,
   ) {
-    const setWithdrawnQuestionId = vi.fn();
+    const setUnavailableItem = vi.fn();
     return {
-      setWithdrawnQuestionId,
+      setUnavailableItem,
       reload: {
         sessionId: fixtureSession1Id,
         getNextQuestionFn: vi.fn(getNextQuestionFn),
@@ -129,7 +176,7 @@ describe('practice-session-page-logic, withdrawn session items', () => {
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
-        setWithdrawnQuestionId,
+        setUnavailableItem,
       },
     };
   }
@@ -156,9 +203,9 @@ describe('practice-session-page-logic, withdrawn session items', () => {
   }
 
   describe('submitAnswerForQuestion', () => {
-    it('loads the item, with no error, when it comes back withdrawn', async () => {
+    it('loads the item, with no error, when it comes back unavailable', async () => {
       const setLoadState = vi.fn();
-      const { reload, setWithdrawnQuestionId } = reloadWith(async () =>
+      const { reload, setUnavailableItem } = reloadWith(async () =>
         ok(withdrawnItem),
       );
 
@@ -168,9 +215,11 @@ describe('practice-session-page-logic, withdrawn session items', () => {
         sessionId: fixtureSession1Id,
         questionId: fixtureQuestion1Id,
       });
-      expect(setWithdrawnQuestionId).toHaveBeenLastCalledWith(
-        fixtureQuestion1Id,
-      );
+      expect(setUnavailableItem).toHaveBeenLastCalledWith({
+        questionId: fixtureQuestion1Id,
+        availability: 'withdrawn',
+        countsIfEndedNow: false,
+      });
       expect(setLoadState).not.toHaveBeenCalledWith(
         expect.objectContaining({ status: 'error' }),
       );
@@ -178,14 +227,14 @@ describe('practice-session-page-logic, withdrawn session items', () => {
 
     it('keeps the error, loading nothing, when the item is still answerable', async () => {
       const setLoadState = vi.fn();
-      const { reload, setWithdrawnQuestionId } = reloadWith(async () =>
+      const { reload, setUnavailableItem } = reloadWith(async () =>
         ok(createFixtureNextQuestion()),
       );
 
       await submitNotFound(reload, setLoadState, 'Choice not found');
 
       expect(reload.getNextQuestionFn).toHaveBeenCalledTimes(1);
-      expect(setWithdrawnQuestionId).not.toHaveBeenCalled();
+      expect(setUnavailableItem).not.toHaveBeenCalled();
       expect(setLoadState).toHaveBeenLastCalledWith({
         status: 'error',
         message: 'Choice not found',

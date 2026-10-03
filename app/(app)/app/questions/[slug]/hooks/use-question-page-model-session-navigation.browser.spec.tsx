@@ -46,6 +46,7 @@ describe('useQuestionPageModel (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -169,6 +170,7 @@ describe('useQuestionPageModel (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -257,6 +259,7 @@ describe('useQuestionPageModel (browser)', () => {
         mode: 'exam',
         totalCount: 2,
         answeredCount: 2,
+        scoredUnansweredCount: 0,
         markedCount: 0,
         rows: [
           {
@@ -351,6 +354,7 @@ describe('useQuestionPageModel (browser)', () => {
           mode: 'exam',
           totalCount: 2,
           answeredCount: 2,
+          scoredUnansweredCount: 0,
           markedCount: 0,
           rows: [
             {
@@ -455,6 +459,7 @@ describe('useQuestionPageModel (browser)', () => {
       mode: 'exam',
       totalCount: 2,
       answeredCount: 2,
+      scoredUnansweredCount: 0,
       markedCount: 0,
       rows: [
         {

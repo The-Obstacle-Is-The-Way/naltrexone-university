@@ -6,6 +6,7 @@ import {
   createLoadNextQuestionAction,
   loadNextQuestion,
   submitAnswerForQuestion,
+  type UnavailableSessionItem,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
@@ -63,8 +64,11 @@ export type UsePracticeSessionQuestionFlowOutput = {
   sessionMode: 'tutor' | 'exam' | null;
   loadState: LoadState;
   question: NextQuestion | null;
-  /** The current item when its question was withdrawn since the session began. */
-  withdrawnQuestionId: string | null;
+  /**
+   * The current item when its question became unavailable since the session
+   * began (ADR-022 Decision 5).
+   */
+  unavailableItem: UnavailableSessionItem | null;
   selectedChoiceId: string | null;
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
@@ -117,9 +121,8 @@ export function usePracticeSessionQuestionFlow(
 
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
-  const [withdrawnQuestionId, setWithdrawnQuestionId] = useState<string | null>(
-    null,
-  );
+  const [unavailableItem, setUnavailableItem] =
+    useState<UnavailableSessionItem | null>(null);
   const savedExamDraftsRef = useRef<
     Map<string, { selectedChoiceId: string | null; cumulativeMs: number }>
   >(new Map());
@@ -153,7 +156,7 @@ export function usePracticeSessionQuestionFlow(
       setQuestionLoadedAt,
       setQuestion,
       setSessionInfo: applySessionInfo,
-      setWithdrawnQuestionId,
+      setUnavailableItem,
       recoverEndedSessionConflict: input.recoverEndedSessionConflict,
       createRequestSequenceId,
       isLatestRequest,
@@ -236,7 +239,7 @@ export function usePracticeSessionQuestionFlow(
   const resetQuestionState = useCallback(() => {
     setSessionInfo(null);
     setQuestion(null);
-    setWithdrawnQuestionId(null);
+    setUnavailableItem(null);
     setSubmitResult(null);
     setSelectedChoiceId(null);
     savedExamDraftsRef.current.clear();
@@ -448,7 +451,7 @@ export function usePracticeSessionQuestionFlow(
             },
             recoverEndedSessionConflict: input.recoverEndedSessionConflict,
             // ADR-021 §3: a not-found answer reloads the item, which shows the
-            // withdrawal notice if the question was withdrawn while open.
+            // notice if the question became unavailable while open.
             reload: loadQuestionConfig,
             createRequestSequenceId,
             isLatestRequest,
@@ -524,7 +527,7 @@ export function usePracticeSessionQuestionFlow(
     setSessionMode,
     loadState,
     question,
-    withdrawnQuestionId,
+    unavailableItem,
     selectedChoiceId,
     isAnswered,
     submitResult,

@@ -7,6 +7,7 @@ import { useEffect, useId, useRef } from 'react';
 import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import { ErrorCard } from '@/components/error-card';
 import type { ChoiceSelectionOrigin } from '@/components/question/choice-selection';
+import { questionAvailabilitySessionHeading } from '@/components/question/question-availability-notice';
 import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
 import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import {
@@ -22,6 +23,7 @@ import { ROUTES } from '@/lib/routes';
 import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import type { UnavailableQuestionAvailability } from '@/src/domain/value-objects';
 import type { LoadState } from '../practice-page-logic';
 
 export type PracticeViewProps = {
@@ -39,8 +41,18 @@ export type PracticeViewProps = {
   sessionInfo?: NextQuestion['session'] | undefined;
   loadState: LoadState;
   question: NextQuestion | null;
-  /** The current session item's question was withdrawn since the session began. */
-  isQuestionWithdrawn?: boolean | undefined;
+  /**
+   * The current session item when its question became unavailable since the
+   * session began: its state, and whether it would still count if the
+   * session ended now (ADR-022 Decision 5, as amended).
+   */
+  unavailable?:
+    | {
+        availability: UnavailableQuestionAvailability;
+        countsIfEndedNow: boolean;
+      }
+    | null
+    | undefined;
   selectedChoiceId: string | null;
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
@@ -312,7 +324,7 @@ function ExamActionBar(props: ExamActionBarProps) {
   return navigationGroup;
 }
 
-type WithdrawnActionBarProps = Pick<
+type UnavailableActionBarProps = Pick<
   PracticeViewProps,
   | 'canNavigatePrevious'
   | 'hasNextQuestion'
@@ -326,9 +338,9 @@ type WithdrawnActionBarProps = Pick<
   endLabel: string;
 };
 
-// Pattern Registry F-11: a withdrawn item can't be answered, so it offers
+// Pattern Registry F-11: an unavailable item can't be answered, so it offers
 // navigation only, ending as the last question would.
-function WithdrawnActionBar(props: WithdrawnActionBarProps) {
+function UnavailableActionBar(props: UnavailableActionBarProps) {
   const isNavigationDisabled =
     props.isPending || props.loadState.status === 'loading';
   const continues = props.hasNextQuestion !== false || !props.onEndSession;
@@ -336,7 +348,7 @@ function WithdrawnActionBar(props: WithdrawnActionBarProps) {
   return (
     <div
       className="flex flex-wrap items-center gap-3"
-      data-testid="withdrawn-action-primary-group"
+      data-testid="unavailable-action-primary-group"
     >
       {props.onPreviousQuestion && props.hasPreviousQuestion ? (
         <Button
@@ -381,10 +393,11 @@ export function PracticeView(props: PracticeViewProps) {
     typeof sessionInfo.index === 'number' &&
     typeof sessionInfo.total === 'number' &&
     sessionInfo.index >= sessionInfo.total - 1;
-  const isWithdrawn =
-    props.isQuestionWithdrawn === true &&
-    props.question === null &&
-    props.loadState.status === 'ready';
+  const unavailable =
+    props.question === null && props.loadState.status === 'ready'
+      ? (props.unavailable ?? null)
+      : null;
+  const isUnavailable = unavailable !== null;
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const canSubmitSelectedChoice =
     !isExamMode &&
@@ -465,12 +478,12 @@ export function PracticeView(props: PracticeViewProps) {
         />
       )}
     </div>
-  ) : isWithdrawn ? (
+  ) : isUnavailable ? (
     <div
       className="flex flex-wrap items-center gap-3"
       data-testid="bottom-action-bar"
     >
-      <WithdrawnActionBar
+      <UnavailableActionBar
         canNavigatePrevious={props.canNavigatePrevious}
         endLabel={isExamMode ? 'Review & Submit' : endSessionLabel}
         hasNextQuestion={props.hasNextQuestion}
@@ -509,7 +522,7 @@ export function PracticeView(props: PracticeViewProps) {
             data-testid="question-header-actions"
           >
             {isExamMode ? props.examTimer : null}
-            {isExamMode && props.onToggleMarkForReview && !isWithdrawn ? (
+            {isExamMode && props.onToggleMarkForReview && !isUnavailable ? (
               <Button
                 type="button"
                 variant="outline"
@@ -601,20 +614,22 @@ export function PracticeView(props: PracticeViewProps) {
           </ErrorCard>
         ) : null}
 
-        {isWithdrawn ? (
+        {unavailable !== null ? (
           <Card role="status" className="gap-0 p-4 text-sm">
             <p className="font-medium text-foreground">
-              This question was withdrawn after your session began.
+              {questionAvailabilitySessionHeading(unavailable.availability)}
             </p>
             <p className="text-muted-foreground">
-              {"It can't be answered here. Continue to the next question."}
+              {unavailable.countsIfEndedNow
+                ? "It can't be answered here. Continue to the next question."
+                : "It can't be answered here. It won't count toward your score. Continue to the next question."}
             </p>
           </Card>
         ) : null}
 
         {props.loadState.status === 'ready' &&
         props.question === null &&
-        !isWithdrawn ? (
+        !isUnavailable ? (
           <Card className="gap-0 rounded-2xl p-6 text-sm text-muted-foreground shadow-sm">
             <div>No more questions found.</div>
             {props.onEndSession ? (

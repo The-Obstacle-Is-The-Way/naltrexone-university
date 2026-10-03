@@ -12,12 +12,15 @@ const fixtureQ1Id = crypto.randomUUID();
 const fixtureQ2Id = crypto.randomUUID();
 const fixtureQ3Id = crypto.randomUUID();
 
-// ADR-021 §3, Pattern Registry F-11: a session item whose question was
-// withdrawn after the session began shows the notice, and the learner can
-// always move on: to the next available question, or to the session's end.
-function renderWithdrawnItem(input: {
+// ADR-021 §3, ADR-022 Decision 5, Pattern Registry F-11: a session item whose
+// question became unavailable after the session began shows the notice, and
+// the learner can always move on: to the next available question, or to the
+// session's end.
+function renderUnavailableItem(input: {
   mode: 'tutor' | 'exam';
-  withdrawnQuestionId: string;
+  unavailableQuestionId: string;
+  availability?: 'withdrawn' | 'retired';
+  countsIfEndedNow?: boolean;
   index: number;
   availableAfter: boolean;
   handlers: {
@@ -41,7 +44,7 @@ function renderWithdrawnItem(input: {
             questionId,
             order: index + 1,
             isAvailable:
-              questionId !== input.withdrawnQuestionId &&
+              questionId !== input.unavailableQuestionId &&
               (index < input.index || input.availableAfter),
             isAnswered: index === 0,
           }),
@@ -57,7 +60,11 @@ function renderWithdrawnItem(input: {
       }}
       loadState={{ status: 'ready' }}
       question={null}
-      withdrawnQuestionId={input.withdrawnQuestionId}
+      unavailableItem={{
+        questionId: input.unavailableQuestionId,
+        availability: input.availability ?? 'withdrawn',
+        countsIfEndedNow: input.countsIfEndedNow ?? false,
+      }}
       selectedChoiceId={null}
       isAnswered={false}
       submitResult={null}
@@ -81,11 +88,46 @@ function handlers() {
   };
 }
 
-test('moves on from a withdrawn item to the next and previous available questions by id', async () => {
+// ADR-022 Decision 5, as amended: the notice says the item won't count only
+// when it won't; a tutor answer already given on a retired question will.
+test.each([
+  [false, true],
+  [true, false],
+])(
+  'says the item will not count only when it will not (counts if ended now: %s)',
+  async (countsIfEndedNow, saysWontCount) => {
+    const screen = await renderUnavailableItem({
+      mode: 'tutor',
+      unavailableQuestionId: fixtureQ2Id,
+      availability: 'retired',
+      countsIfEndedNow,
+      index: 1,
+      availableAfter: true,
+      handlers: handlers(),
+    });
+
+    await expect
+      .element(screen.getByRole('status'))
+      .toHaveTextContent(
+        'This question was retired from the bank after your session began.',
+      );
+    if (saysWontCount) {
+      await expect
+        .element(screen.getByRole('status'))
+        .toHaveTextContent("It won't count toward your score.");
+    } else {
+      await expect
+        .element(screen.getByRole('status'))
+        .not.toHaveTextContent('count toward your score');
+    }
+  },
+);
+
+test('moves on from an unavailable item to the next and previous available questions by id', async () => {
   const on = handlers();
-  const screen = await renderWithdrawnItem({
+  const screen = await renderUnavailableItem({
     mode: 'exam',
-    withdrawnQuestionId: fixtureQ2Id,
+    unavailableQuestionId: fixtureQ2Id,
     index: 1,
     availableAfter: true,
     handlers: on,
@@ -107,12 +149,12 @@ test.each([
   ['exam', 'Review & Submit'],
   ['tutor', 'End session'],
 ] as const)(
-  'ends a %s session from a withdrawn last item with %s',
+  'ends a %s session from an unavailable last item with %s',
   async (mode, label) => {
     const on = handlers();
-    const screen = await renderWithdrawnItem({
+    const screen = await renderUnavailableItem({
       mode,
-      withdrawnQuestionId: fixtureQ3Id,
+      unavailableQuestionId: fixtureQ3Id,
       index: 2,
       availableAfter: false,
       handlers: on,

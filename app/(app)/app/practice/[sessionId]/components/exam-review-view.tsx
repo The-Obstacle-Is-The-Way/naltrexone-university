@@ -34,6 +34,7 @@ import type {
   GetCompletedSessionQuestionsWithFeedbackOutput,
   GetPracticeSessionReviewOutput,
 } from '@/src/application/use-cases';
+import { countsIfEndedNow } from '@/src/domain/services';
 
 type NavigatorReview =
   | GetPracticeSessionReviewOutput
@@ -193,6 +194,15 @@ export function ExamReviewView({
             ...(row.isAnswered && row.isCorrect !== null
               ? [row.isCorrect ? 'Correct' : 'Incorrect']
               : []),
+            // ADR-022 Decision 5, as amended: an item no longer available
+            // would count toward no score if the exam ended now.
+            ...(countsIfEndedNow({
+              mode: review.mode,
+              answered: row.isAnswered,
+              availability: row.availability,
+            })
+              ? []
+              : ["Won't be scored"]),
           ];
           // ADR-022 Decisions 2 and 5: an item no longer available names its
           // state, not its content.
@@ -262,11 +272,14 @@ export function ExamReviewView({
               <AlertDialogTitle>Submit exam?</AlertDialogTitle>
               <AlertDialogDescription>
                 This will end the session and save your results.
-                {unansweredCount > 0 ? (
+                {/* ADR-022 Decision 5: only the items that will be scored. */}
+                {review.scoredUnansweredCount > 0 ? (
                   <span className="mt-2 block text-destructive">
-                    You have {unansweredCount} unanswered{' '}
-                    {unansweredCount === 1 ? 'question' : 'questions'} that will
-                    be scored as incorrect.
+                    You have {review.scoredUnansweredCount} unanswered{' '}
+                    {review.scoredUnansweredCount === 1
+                      ? 'question'
+                      : 'questions'}{' '}
+                    that will be scored as incorrect.
                   </span>
                 ) : null}
               </AlertDialogDescription>

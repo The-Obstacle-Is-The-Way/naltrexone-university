@@ -992,6 +992,7 @@ export const GetPracticeSessionReviewInputSchema = z.object({
 export type PracticeSessionReviewRow =
   | {
       isAvailable: true;
+      availability: QuestionAvailability; // ADR-022 Decision 1
       questionId: string;
       slug: string;
       stemMd: string;
@@ -999,14 +1000,17 @@ export type PracticeSessionReviewRow =
       order: number; // 1-based
       isAnswered: boolean;
       isCorrect: boolean | null;
+      isOmitted: boolean;
       markedForReview: boolean;
     }
   | {
       isAvailable: false;
+      availability: UnavailableQuestionAvailability | null; // label only; null when missing
       questionId: string;
       order: number; // 1-based
       isAnswered: boolean;
       isCorrect: boolean | null;
+      isOmitted: boolean;
       markedForReview: boolean;
     };
 
@@ -1015,6 +1019,7 @@ export type GetPracticeSessionReviewOutput = {
   mode: 'tutor' | 'exam';
   totalCount: number;
   answeredCount: number;
+  scoredUnansweredCount: number; // unanswered items that would count if the session ended now (ADR-022 Decision 5)
   markedCount: number;
   rows: PracticeSessionReviewRow[];
 };
