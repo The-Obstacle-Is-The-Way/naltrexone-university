@@ -141,6 +141,14 @@ In increments, each test-first.
 - **Contract.** `session-end-fair-chance-contract.ts` runs a tutor and an exam scenario against the fake and the adapter on real Postgres: nothing is recorded while active, and the ended session and a fresh read agree.
 - **Evidence.** Ten targeted mutations each fail a case, across the SQL, the row mapper, the fake and the domain rule. The backfill is a marked block executed against arranged rows, twice, in `session-fair-chance-backfill.integration.test.ts`.
 
+**Increment 2 revised, step 2: history and dashboard on the amended rule, 2026-10-03.**
+- **The rule.** The domain's `countsTowardScore` counts an item when its recorded fair chance is not false and its content is not in doubt (`contentInDoubt`: withdrawn or under review; a question that no longer exists, too). Its SQL twin, `countsTowardScoreSql`, is shared by both queries; it reads the hold and withdrawal overlay only for a question not published.
+- **History** (released in step 2 under the earlier rule) counts a retired question again. It leaves out an item without a fair chance, even once its question returns.
+- **Dashboard accuracy** ships for the first time, on the amended rule. Total answered, answered in seven days and the streak still count every answer. An attempt in a session reads its item's recorded fair chance; an attempt outside a session had one.
+- **Disclosure.** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." Retirement is no longer a reason.
+- **Contracts.** The history score runs four scenarios and the attempt score six, on the fakes and real Postgres. Retired questions keep counting, withdrawn and held ones do not, a hold lifted before retirement leaves no doubt, and an item with no fair chance is left out even once its question returns. The fake session repository now takes each question's state (`availabilityByQuestionId`) in place of a set of unpublished ids, so a test can change the bank between a session's end and the read.
+- **Evidence.** Seven targeted mutations of the SQL each fail a real-Postgres case: the withdrawal and hold checks, the lifted-hold filter, the fair-chance default, the history's fair-chance column, and the dashboard's join to its session item. Twelve more across the domain, the fakes and the use case each fail a unit case.
+
 ## Verification
 
 - **Labels.** A withdrawn, a held and a retired question each show their own label and notice, a caution for the first two and a neutral notice for a retired one, on every surface a learner who answered them sees. When a hold lifts, a question the active release publishes is Available again.

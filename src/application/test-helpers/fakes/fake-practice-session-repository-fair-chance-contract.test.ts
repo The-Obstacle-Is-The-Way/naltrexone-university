@@ -22,8 +22,11 @@ runSessionEndFairChanceContract('FakePracticeSessionRepository', async () => ({
       endedAt: null,
     });
     const repository = new FakePracticeSessionRepository([session], {
-      unpublishedQuestionIds: new Set(
-        questionIds.filter((_id, index) => !items[index]?.published),
+      availabilityByQuestionId: new Map(
+        questionIds.map((id, index) => [
+          id,
+          items[index]?.published ? 'available' : 'retired',
+        ]),
       ),
     });
     return { repository, sessionId: session.id, userId };

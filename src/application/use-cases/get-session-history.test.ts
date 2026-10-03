@@ -127,7 +127,7 @@ describe('GetSessionHistoryUseCase', () => {
             endedAt: new Date('2026-02-06T10:15:00.000Z'),
           }),
         ],
-        { unpublishedQuestionIds: new Set(['q2']) },
+        { availabilityByQuestionId: new Map([['q2', 'withdrawn']]) },
       ),
     );
 

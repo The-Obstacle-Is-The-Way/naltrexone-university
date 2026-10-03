@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { inArray } from 'drizzle-orm';
 import { afterAll, afterEach } from 'vitest';
-import * as schema from '@/db/schema';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { runSessionHistoryScoreContract } from '@/tests/shared/session-history-score-contract';
 import {
@@ -12,6 +10,7 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
+import { setQuestionState } from './question-state-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -27,7 +26,7 @@ afterAll(async () => {
 runSessionHistoryScoreContract(
   'DrizzlePracticeSessionRepository',
   async () => ({
-    async seed(items) {
+    async seed({ mode, items }) {
       const repository = new DrizzlePracticeSessionRepository(db);
       const user = await createUser(db, cleanup);
       const questions = [];
@@ -42,7 +41,7 @@ runSessionHistoryScoreContract(
       }
       const session = await repository.create({
         userId: user.id,
-        mode: 'tutor',
+        mode,
         paramsJson: {
           count: questions.length,
           tagSlugs: [],
@@ -65,16 +64,18 @@ runSessionHistoryScoreContract(
           answeredAt: new Date(),
         });
       }
+      // Taken out of the bank before the session ends.
+      for (const [index, item] of items.entries()) {
+        const question = questions[index];
+        if (question && item.removedBeforeEnd) {
+          await setQuestionState(db, question, 'retired');
+        }
+      }
       await repository.end(session.id, user.id);
-      // Taken out of the bank after the session ended.
-      const unpublished = questions
-        .filter((_question, index) => !items[index]?.published)
-        .map((question) => question.id);
-      if (unpublished.length > 0) {
-        await db
-          .update(schema.questions)
-          .set({ status: 'archived' })
-          .where(inArray(schema.questions.id, unpublished));
+      // As the bank stands when history is read.
+      for (const [index, item] of items.entries()) {
+        const question = questions[index];
+        if (question) await setQuestionState(db, question, item.now);
       }
       return { repository, userId: user.id };
     },

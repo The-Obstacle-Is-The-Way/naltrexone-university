@@ -10,12 +10,14 @@ import type { PracticeSession } from '@/src/domain/entities';
 import {
   computeSessionScore,
   computeSessionStats,
+  countsTowardScore,
   hadFairChanceAtEnd,
 } from '@/src/domain/services';
 import { defaultRevisionIdOf } from '@/src/domain/test-helpers';
 import type {
   AnswerOutcome,
   PracticeMode,
+  QuestionAvailability,
   QuestionDifficulty,
 } from '@/src/domain/value-objects';
 import { selectedChoiceIdOrNull } from '@/src/domain/value-objects';
@@ -38,16 +40,22 @@ export class FakePracticeSessionRepository
     private readonly options: {
       publishedQuestionSlugsById?: ReadonlyMap<string, string>;
       /**
-       * Questions that are not published now: their items do not count
-       * toward a history score (ADR-022 Decision 3), and an item on one, if
-       * the session ends now, had no fair chance unless a tutor answer
-       * already gave it one (ADR-022 Amendment).
+       * Each question's state now; a question not listed is available. A
+       * session ending now records an item's fair chance from it, and a
+       * history score leaves out an item whose content is in doubt
+       * (ADR-022 Amendment). A test may change the map between the two.
        */
-      unpublishedQuestionIds?: ReadonlySet<string>;
+      availabilityByQuestionId?: ReadonlyMap<string, QuestionAvailability>;
     } = {},
   ) {
     this.sessions = seed.map((session) =>
       this.withNormalizedQuestionStates(session),
+    );
+  }
+
+  private availabilityOf(questionId: string): QuestionAvailability {
+    return (
+      this.options.availabilityByQuestionId?.get(questionId) ?? 'available'
     );
   }
 
@@ -215,7 +223,10 @@ export class FakePracticeSessionRepository
         const { scored, correct: scoredCorrect } = computeSessionScore(
           session.questionStates,
           (state) =>
-            !this.options.unpublishedQuestionIds?.has(state.questionId),
+            countsTowardScore({
+              fairChanceAtEnd: state.fairChanceAtEnd,
+              availability: this.availabilityOf(state.questionId),
+            }),
         );
         return [
           {
@@ -469,11 +480,7 @@ export class FakePracticeSessionRepository
         fairChanceAtEnd: hadFairChanceAtEnd({
           mode: existing.mode,
           answered: state.latestSelectedChoiceId !== null,
-          availability: this.options.unpublishedQuestionIds?.has(
-            state.questionId,
-          )
-            ? 'retired'
-            : 'available',
+          availability: this.availabilityOf(state.questionId),
         }),
       })),
     };

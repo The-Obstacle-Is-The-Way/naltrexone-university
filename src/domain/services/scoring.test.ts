@@ -2,24 +2,42 @@ import { describe, expect, it } from 'vitest';
 import type { PracticeSessionQuestionState } from '../entities';
 import {
   computeSessionScore,
+  contentInDoubt,
   countsTowardScore,
   hadFairChanceAtEnd,
 } from './scoring';
 
-// ADR-022 Decision 3: an item counts toward a score only while its question
-// is available. (Increment 4 adds: and the key it was graded against is still
-// the current key.)
+// ADR-022 Amendment (DEBT-494): an item counts when the learner had a fair
+// chance at it, recorded at session end, and its content is not now in doubt:
+// withdrawn or under review. (Increment 4 adds a corrected key.) Retirement is
+// curation, not doubt.
+describe('contentInDoubt', () => {
+  it.each([
+    ['available', false],
+    ['retired', false],
+    ['withdrawn', true],
+    ['under_review', true],
+    [null, true],
+  ] as const)('a question %s is in doubt: %s', (availability, inDoubt) => {
+    expect(contentInDoubt(availability)).toBe(inDoubt);
+  });
+});
+
 describe('countsTowardScore', () => {
   it.each([
-    ['available', true],
-    ['withdrawn', false],
-    ['under_review', false],
-    ['retired', false],
-    [null, false],
+    [null, 'available', true],
+    [true, 'available', true],
+    [true, 'retired', true],
+    [null, 'retired', true],
+    [false, 'available', false],
+    [false, 'retired', false],
+    [true, 'withdrawn', false],
+    [true, 'under_review', false],
+    [true, null, false],
   ] as const)(
-    'counts an item whose question is %s: %s',
-    (availability, counts) => {
-      expect(countsTowardScore(availability)).toBe(counts);
+    'with a fair chance %s, counts an item whose question is %s: %s',
+    (fairChanceAtEnd, availability, counts) => {
+      expect(countsTowardScore({ fairChanceAtEnd, availability })).toBe(counts);
     },
   );
 });

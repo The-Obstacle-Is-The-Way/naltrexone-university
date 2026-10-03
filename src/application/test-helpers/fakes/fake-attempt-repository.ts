@@ -9,10 +9,12 @@ import type {
   AttemptInsertInput,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
+  AttemptScore,
   PageOptions,
 } from '@/src/application/ports/repositories';
 import type { Attempt, Question } from '@/src/domain/entities';
 import { createAttempt } from '@/src/domain/entities/attempt';
+import { countsTowardScore } from '@/src/domain/services';
 import { isOmittedOutcome } from '@/src/domain/value-objects';
 import { listedRevisions } from './fake-question-repository';
 
@@ -28,12 +30,27 @@ export class FakeAttemptRepository implements AttemptRepository {
   // `FakeQuestionRepository`: several revisions of a question, current first.
   private readonly questions: readonly Question[] | null;
 
+  // ADR-022 Amendment (DEBT-494): session items recorded at their session's
+  // end as having had no fair chance, as `${practiceSessionId}:${questionId}`.
+  private readonly itemsWithoutFairChance: ReadonlySet<string>;
+
   constructor(
     seed: readonly InMemoryAttempt[] = [],
-    deps?: { questions?: readonly Question[] },
+    deps?: {
+      questions?: readonly Question[];
+      itemsWithoutFairChance?: readonly {
+        practiceSessionId: string;
+        questionId: string;
+      }[];
+    },
   ) {
     this.attempts = [...seed];
     this.questions = deps?.questions ? listedRevisions(deps.questions) : null;
+    this.itemsWithoutFairChance = new Set(
+      (deps?.itemsWithoutFairChance ?? []).map(
+        (item) => `${item.practiceSessionId}:${item.questionId}`,
+      ),
+    );
   }
 
   // ADR-021: the revision the attempt answered. A listed question without it
@@ -182,13 +199,6 @@ export class FakeAttemptRepository implements AttemptRepository {
     ).length;
   }
 
-  async countCorrectByUserId(userId: string): Promise<number> {
-    return this.attempts.filter(
-      (a) =>
-        a.userId === userId && a.isCorrect && !this.isHiddenByActiveExam(a),
-    ).length;
-  }
-
   async countByUserIdSince(userId: string, since: Date): Promise<number> {
     return this.attempts.filter(
       (a) =>
@@ -198,17 +208,47 @@ export class FakeAttemptRepository implements AttemptRepository {
     ).length;
   }
 
-  async countCorrectByUserIdSince(
+  // ADR-022 Decision 3. An attempt counts while its question is published.
+  // An attempt whose question is not listed counts neither way, as the
+  // adapter's cascade leaves no attempt without its question.
+  async scoreByUserId(
     userId: string,
-    since: Date,
-  ): Promise<number> {
-    return this.attempts.filter(
+    since: Date | null,
+  ): Promise<AttemptScore> {
+    if (!this.questions) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'FakeAttemptRepository requires questions metadata to score attempts',
+      );
+    }
+    const visible = this.attempts.filter(
       (a) =>
         a.userId === userId &&
-        a.answeredAt >= since &&
-        a.isCorrect &&
+        (since === null || a.answeredAt >= since) &&
         !this.isHiddenByActiveExam(a),
-    ).length;
+    );
+    let scored = 0;
+    let correct = 0;
+    const unscored = new Set<string>();
+    for (const attempt of visible) {
+      const question = this.answeredQuestion(attempt);
+      if (!question) continue;
+      const counts = countsTowardScore({
+        fairChanceAtEnd: this.itemsWithoutFairChance.has(
+          `${attempt.practiceSessionId}:${attempt.questionId}`,
+        )
+          ? false
+          : null,
+        availability: question.availability,
+      });
+      if (counts) {
+        scored += 1;
+        if (attempt.isCorrect) correct += 1;
+      } else {
+        unscored.add(attempt.questionId);
+      }
+    }
+    return { scored, correct, unscoredQuestions: unscored.size };
   }
 
   async listRecentByUserId(

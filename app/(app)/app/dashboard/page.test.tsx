@@ -2,7 +2,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
-import { createSessionHistoryRow } from '@/src/application/test-helpers/view-rows';
+import {
+  createSessionHistoryRow,
+  createUserStatsOutput,
+} from '@/src/application/test-helpers/view-rows';
 import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
 const {
@@ -60,14 +63,7 @@ describe('app/(app)/app/dashboard', () => {
   it('renders page subtitle with explicit text-base sizing', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -92,14 +88,7 @@ describe('app/(app)/app/dashboard', () => {
   it('uses h2 card titles for dashboard sections', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -119,14 +108,7 @@ describe('app/(app)/app/dashboard', () => {
   it('uses items-start alignment for the ready-to-practice card row', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -151,7 +133,7 @@ describe('app/(app)/app/dashboard', () => {
   it('renders user stats and recent sections', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 12,
           accuracyOverall: 0.75,
           answeredLast7Days: 5,
@@ -185,7 +167,7 @@ describe('app/(app)/app/dashboard', () => {
               isCorrect: false,
             },
           ],
-        }}
+        })}
         sessionHistoryResult={{
           ok: true,
           data: {
@@ -260,14 +242,7 @@ describe('app/(app)/app/dashboard', () => {
   it('renders — for accuracy when there are no attempts', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -283,14 +258,7 @@ describe('app/(app)/app/dashboard', () => {
   it('renders a per-session review link when firstQuestionSlug is available', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: {
@@ -331,14 +299,7 @@ describe('app/(app)/app/dashboard', () => {
   it('falls back to history sessions link when firstQuestionSlug is null', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: {
@@ -377,14 +338,7 @@ describe('app/(app)/app/dashboard', () => {
   it('renders tutor session fraction using questionCount denominator', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
-          totalAnswered: 0,
-          accuracyOverall: 0,
-          answeredLast7Days: 0,
-          accuracyLast7Days: 0,
-          currentStreakDays: 0,
-          recentActivity: [],
-        }}
+        stats={createUserStatsOutput()}
         sessionHistoryResult={{
           ok: true,
           data: {
@@ -417,7 +371,7 @@ describe('app/(app)/app/dashboard', () => {
   it('renders placeholder text for unavailable recent activity rows', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 2,
           accuracyOverall: 1,
           answeredLast7Days: 2,
@@ -445,7 +399,7 @@ describe('app/(app)/app/dashboard', () => {
               isCorrect: true,
             },
           ],
-        }}
+        })}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -468,11 +422,9 @@ describe('app/(app)/app/dashboard', () => {
     const attemptId = crypto.randomUUID();
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 1,
-          accuracyOverall: 0,
           answeredLast7Days: 1,
-          accuracyLast7Days: 0,
           currentStreakDays: 1,
           recentActivity: [
             {
@@ -489,7 +441,7 @@ describe('app/(app)/app/dashboard', () => {
               isCorrect: false,
             },
           ],
-        }}
+        })}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -515,14 +467,13 @@ describe('app/(app)/app/dashboard', () => {
   it('renders per-section error when sessionHistoryResult fails', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 1,
           accuracyOverall: 1,
           answeredLast7Days: 1,
           accuracyLast7Days: 1,
           currentStreakDays: 1,
-          recentActivity: [],
-        }}
+        })}
         sessionHistoryResult={{
           ok: false,
           error: { code: 'INTERNAL_ERROR', message: 'Sessions failed' },
@@ -537,14 +488,13 @@ describe('app/(app)/app/dashboard', () => {
   it('renders empty state when there is no recent activity', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 1,
           accuracyOverall: 1,
           answeredLast7Days: 1,
           accuracyLast7Days: 1,
           currentStreakDays: 1,
-          recentActivity: [],
-        }}
+        })}
         sessionHistoryResult={{
           ok: true,
           data: { rows: [], total: 0, limit: 3, offset: 0 },
@@ -595,8 +545,12 @@ describe('app/(app)/app/dashboard', () => {
         data: {
           totalAnswered: 0,
           accuracyOverall: 0,
+          scoredOverall: 0,
+          unscoredQuestionsOverall: 0,
           answeredLast7Days: 0,
           accuracyLast7Days: 0,
+          scoredLast7Days: 0,
+          unscoredQuestionsLast7Days: 0,
           currentStreakDays: 0,
           recentActivity: [],
         },
@@ -629,7 +583,7 @@ describe('app/(app)/app/dashboard', () => {
   it('uses borderless tonal fill elevation for dashboard activity/session rows', () => {
     const html = renderToStaticMarkup(
       <DashboardView
-        stats={{
+        stats={createUserStatsOutput({
           totalAnswered: 1,
           accuracyOverall: 1,
           answeredLast7Days: 1,
@@ -660,7 +614,7 @@ describe('app/(app)/app/dashboard', () => {
               isCorrect: false,
             },
           ],
-        }}
+        })}
         sessionHistoryResult={{
           ok: true,
           data: {

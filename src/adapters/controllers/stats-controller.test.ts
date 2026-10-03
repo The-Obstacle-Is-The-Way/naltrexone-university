@@ -52,8 +52,12 @@ function createDeps(overrides?: {
     overrides?.useCaseOutput ?? {
       totalAnswered: 0,
       accuracyOverall: 0,
+      scoredOverall: 0,
+      unscoredQuestionsOverall: 0,
       answeredLast7Days: 0,
       accuracyLast7Days: 0,
+      scoredLast7Days: 0,
+      unscoredQuestionsLast7Days: 0,
       currentStreakDays: 0,
       recentActivity: [],
     },

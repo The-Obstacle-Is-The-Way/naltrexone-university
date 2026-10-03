@@ -188,12 +188,16 @@ describe('attempt reads and writes against real Postgres', () => {
     });
     await attempts.insert({ ...input, userId: other.id, answeredAt: newDate });
     await expect(attempts.countByUserId(input.userId)).resolves.toBe(3);
-    await expect(attempts.countCorrectByUserId(input.userId)).resolves.toBe(2);
+    await expect(
+      attempts.scoreByUserId(input.userId, null).then((score) => score.correct),
+    ).resolves.toBe(2);
     await expect(
       attempts.countByUserIdSince(input.userId, cutoff),
     ).resolves.toBe(2);
     await expect(
-      attempts.countCorrectByUserIdSince(input.userId, cutoff),
+      attempts
+        .scoreByUserId(input.userId, cutoff)
+        .then((score) => score.correct),
     ).resolves.toBe(1);
     await expect(
       attempts.listAnsweredAtByUserIdSince(input.userId, cutoff),

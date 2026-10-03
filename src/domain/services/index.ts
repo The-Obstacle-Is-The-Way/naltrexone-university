@@ -16,6 +16,7 @@ export {
 } from './question-selection';
 export {
   computeSessionScore,
+  contentInDoubt,
   countsTowardScore,
   hadFairChanceAtEnd,
   type SessionScore,

@@ -3,6 +3,7 @@ import {
   createAvailableAttemptedQuestionRow,
   createAvailableBookmarkRow,
   createSessionHistoryRow,
+  createUserStatsOutput,
 } from './view-rows';
 
 const UUID_PATTERN =
@@ -55,5 +56,34 @@ describe('view-row factories', () => {
       startedAt: '2026-02-07T00:00:00.000Z',
       endedAt: '2026-02-07T00:20:00.000Z',
     });
+  });
+
+  it('builds the stats of a learner with no answers', () => {
+    expect(createUserStatsOutput()).toEqual({
+      totalAnswered: 0,
+      accuracyOverall: 0,
+      scoredOverall: 0,
+      unscoredQuestionsOverall: 0,
+      answeredLast7Days: 0,
+      accuracyLast7Days: 0,
+      scoredLast7Days: 0,
+      unscoredQuestionsLast7Days: 0,
+      currentStreakDays: 0,
+      recentActivity: [],
+    });
+  });
+
+  it('scores every answer unless a case says otherwise', () => {
+    expect(
+      createUserStatsOutput({ totalAnswered: 12, answeredLast7Days: 5 }),
+    ).toMatchObject({ scoredOverall: 12, scoredLast7Days: 5 });
+    expect(
+      createUserStatsOutput({
+        totalAnswered: 12,
+        scoredOverall: 10,
+        answeredLast7Days: 5,
+        scoredLast7Days: 4,
+      }),
+    ).toMatchObject({ scoredOverall: 10, scoredLast7Days: 4 });
   });
 });

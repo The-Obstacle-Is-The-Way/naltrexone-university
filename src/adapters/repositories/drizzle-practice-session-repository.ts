@@ -44,6 +44,7 @@ import {
   toDomainQuestionState,
   updatePracticeSessionQuestionState,
 } from './practice-session-question-state-updater';
+import { countsTowardScoreSql } from './shared/score-eligibility-sql';
 
 type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
@@ -56,8 +57,12 @@ class CorruptPracticeSessionRowError extends ApplicationError {
   }
 }
 
-// Each session item's question, for its score (ADR-022 Decision 3).
+// Each session item's question, for its score (ADR-022 Amendment).
 const itemQuestions = alias(questions, 'item_questions');
+const itemCounts = countsTowardScoreSql({
+  fairChanceAtEnd: practiceSessionQuestionStates.fairChanceAtEnd,
+  question: itemQuestions,
+});
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -482,14 +487,15 @@ export class DrizzlePracticeSessionRepository
             answered: sql<number>`
               count(${practiceSessionQuestionStates.latestSelectedChoiceId})::int
             `,
-            // ADR-022 Decision 3: an item counts toward the score only while
-            // its question is published, read now.
+            // ADR-022 Amendment (DEBT-494): an item counts when the learner
+            // had a fair chance at it, recorded when the session ended, and
+            // its question's content is not now in doubt.
             scored: sql<number>`
-              count(*) filter (where ${itemQuestions.status} = 'published')::int
+              count(*) filter (where ${itemCounts})::int
             `,
             scoredCorrect: sql<number>`
               count(*) filter (
-                where ${itemQuestions.status} = 'published'
+                where ${itemCounts}
                   and ${practiceSessionQuestionStates.latestSelectedChoiceId} is not null
                   and ${practiceSessionQuestionStates.latestIsCorrect} is true
               )::int
