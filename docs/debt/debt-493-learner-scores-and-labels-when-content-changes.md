@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice) ([Progress](#progress)); increments 4 and 5 remain
+**Status:** In Progress — increment 1's parts A (Decision 2), B (the availability value) and C (labels and notices), and increment 2's reader and history scores, fixed in code 2026-10-03; increment 2 revised the same day for DEBT-494's amended rule, whose steps 1–3 (the fair chance recorded at session end, History and Dashboard accuracy, the session summary's writer) are done, as are increment 3 and part E (Review & Submit, the active notice) and increment 4 (key corrections) ([Progress](#progress)); increment 5 remains
 **Priority:** P1
 **Date:** 2026-10-03
 **Resolved:** —
@@ -174,6 +174,12 @@ In increments, each test-first.
 - **Contracts.** The history score gains a key scenario (five in all) and the attempt score two (eight in all). The second separates a reworded correct choice from a reworded distractor, which the first run of mutations showed was missing.
 - **Evidence.** Seventeen targeted mutations each fail a case, across the domain rule, the adapter, the fakes, the summary and the SQL twin. Two survived the first run, the key's text and its correct-only filter, until the second attempt scenario.
 - **Not yet** (step c): the review notice for a key-corrected answer, and the Incorrect filter.
+
+**Increment 4, step c: the notice and the Incorrect filter, 2026-10-03.** ADR-022 Decision 4 is complete.
+- **Outputs.** The question view, the completed-session review rows and the active session's item carry `answerKeyChanged`. A review row or question view sets it only for an answered item on an available question: an unanswered or omitted item has no answer to correct, and an unavailable question shows F-11 only. The active session's item sets it whether or not it is answered yet, since any answer given there is graded on the earlier key.
+- **The notice.** `QuestionUpdateNotice` takes `keyCorrected`, which replaces the generic update with a caution, in F-11's caution card. On review: "The answer to this question was corrected after you answered." "This attempt isn't scored." and the link "Practice the corrected question". In a session: "The answer to this question was corrected after your session began." "This session shows the earlier version, so your answer here won't be scored." Post-exam review, the standalone review page and the active session page pass it. Pattern Registry F-12 gains the variant.
+- **The Incorrect filter.** It now also offers a question whose latest answer was graded on a revision whose key the current revision corrects, whatever its stored grade; the candidate listing and its count share the condition. The adapter compares the two keys with the SQL twin from step b, through an alias of the attempted question for its current revision. The fake ignores status filters, as before, so this is proved on real Postgres in `question-repository-key-corrections.integration.test.ts`: a correct answer whose key moved since is offered, one whose stem was reworded is not, and a wrong answer still is. The twin's handling of key text and distractors is step b's, proved by the contracts.
+- **Evidence.** Twelve targeted mutations across the notice, the three outputs, the controller, the three pages and the filter. Two survived the first run. Review rows marked unanswered items, until a case for an unanswered item on a key-corrected question; the filter's mutation was itself a no-op (a query fragment is truthy), and failed its cases once rewritten.
 
 ## Verification
 
