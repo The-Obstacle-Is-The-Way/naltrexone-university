@@ -2,6 +2,23 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-04 UTC: DEBT-465 Part 3. The rule-to-test register states 23 business rules in plain language, each with the tests that prove it, and a check fails when one of those tests is renamed or deleted ([DEBT-465](./debt-465-test-quality-practices-adoption.md#part-3--acceptance-test-harness)).
+- **What it gives.** A clinician or the owner can read what the product guarantees in [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md), and see where each guarantee is pinned. `tests/rule-to-test-register.test.ts` checks every link on each test run.
+- **Five rules lacked a proof at the right level.** Each now has one:
+  - the 1–200 session size, at the schema;
+  - scheduled cancellation keeping access, in the domain;
+  - one idempotency key, one session, with overlapping starts on real Postgres;
+  - the content-hiding rule for a question under review;
+  - the discard rule, restated as what is enforced.
+- **The terminal-close disposition rule's scope is named** in both registers: the findings of a fix wave's terminal audit, as #673 introduced it. CodeRabbit read it as a cap on any P3 accepted risk on #1353, #1356 and #1357. It withdrew that reading on #1356 once the provenance was shown. No rule changes in substance.
+- **Correction: alert #77 is open again.** Dismissing it on 2026-10-03 stopped GitHub tracking it, and Dependabot raises a security fix PR only for an open alert, so a future fixed `braces` would have gone unnoticed. It was reopened at 2026-10-04 01:07:06Z as the watcher for that fix, and the risk acceptance stands ([DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#correction--2026-10-04-alert-77-reopened)).
+- **Released since the last entry.** #1356 (closing DEBT-493 and DEBT-495) went out through promotion #1357 (`5ad74f9d`):
+  - main CI **37165223511** `test` passed **00:41:52Z**;
+  - production assigned **00:41:54.009Z**;
+  - trees `7cacdce9`, healthy production.
+- **Next.** Remove DEBT-493's replay mapping once its TTL has passed, on or after 2026-10-04 20:03 UTC. DEBT-465 Part 4's QA runs are owner-scheduled, before the production bootstrap.
+- **What remains Active.** DEBT-414 and DEBT-465, both owner-gated in part.
+
 **Earlier** — 2026-10-03 UTC: DEBT-493 and DEBT-495 are closed and archived ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#verified-closeout--2026-10-03-utc), [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#verified-closeout--2026-10-03-utc)).
 - **DEBT-493 is resolved.** Learner scores and labels follow content changes, as ADR-022 decides and DEBT-494 amends, on every surface and in production. The replay mapping's removal is Deferred, due on or after 2026-10-04 20:03 UTC.
 - **DEBT-495 is accepted.** Alert #77 is dismissed as `tolerable_risk` against it, and its recheck triggers are Deferred.

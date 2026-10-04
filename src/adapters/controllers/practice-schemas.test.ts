@@ -159,9 +159,7 @@ describe('FinalizeExamAnswersInputSchema', () => {
 });
 
 // DEBT-493 / ADR-022 Decision 3: a session's score counts only its scored
-// items. End and finalize outputs are cached by idempotency key for 24 hours,
-// so the reader accepts the scored count before any writer sends it
-// (deployment-procedure.md, keyed-action output compatibility).
+// items, and every end and finalize output carries that count.
 describe('End and finalize outputs: scored totals', () => {
   const output = (totals: Record<string, number>) => ({
     sessionId: crypto.randomUUID(),
@@ -177,18 +175,18 @@ describe('End and finalize outputs: scored totals', () => {
     },
   });
 
+  // The writer that counts only scored items has been in production since
+  // promotion #1350 (2026-10-03 20:02:33Z). A full 24-hour TTL later, no row
+  // cached by an earlier writer can remain, so the reader requires the count.
   it.each([
     ['EndPracticeSessionOutputSchema', EndPracticeSessionOutputSchema],
     ['FinalizeExamAnswersOutputSchema', FinalizeExamAnswersOutputSchema],
-  ] as const)('%s reads both cached shapes', (_name, schema) => {
-    // A row cached by a writer before scoring: every item counted, so
-    // its scored total is the question count.
-    expect(schema.parse(output({})).totals).toMatchObject({
-      scored: 10,
-      correct: 5,
-      accuracy: 0.5,
-    });
-    // A writer that counts only scored items.
+  ] as const)('%s requires the scored total', (_name, schema) => {
+    const result = schema.safeParse(output({}));
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path.at(-1))).toContain(
+      'scored',
+    );
     expect(
       schema.parse(output({ scored: 9, accuracy: 5 / 9 })).totals,
     ).toMatchObject({ scored: 9, correct: 5, accuracy: 5 / 9 });
