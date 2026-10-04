@@ -67,7 +67,7 @@ Decided under the owner's 2026-10-03 delegation, after a review of what each par
 - **Parts 1 and 2 are adopted** and in production: the CRAP report, and mutation testing at 100% across the domain and application layers.
 - **Part 3 (Gherkin acceptance tests) is not adopted.**
   - Its candidate rules are already proven by mutation-proven unit tests and by real-Postgres and E2E tests. Re-testing adapter rules over fakes would lower fidelity.
-  - It is replaced by a rule-to-test register: plain-language rules linked to the tests that prove them, with a documentation check.
+  - It is replaced by a rule-to-test register: plain-language rules linked to the tests that prove them, with a documentation check. The register is in [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md) and the check in `tests/rule-to-test-register.test.ts`, both since DEBT-465 Part 3 (2026-10-04).
 - **Part 4 (UI QA procedures) is adopted,** with the procedures run before the production bootstrap and before releases that change their flows, not before every promotion.
 - **The Compliance rule against numeric gates without a new ADR is unchanged.**
 

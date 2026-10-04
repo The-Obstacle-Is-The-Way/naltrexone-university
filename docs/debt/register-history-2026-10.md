@@ -2,6 +2,16 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03 UTC: DEBT-493 and DEBT-495 are closed and archived ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#verified-closeout--2026-10-03-utc), [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#verified-closeout--2026-10-03-utc)).
+- **DEBT-493 is resolved.** Learner scores and labels follow content changes, as ADR-022 decides and DEBT-494 amends, on every surface and in production. The replay mapping's removal is Deferred, due on or after 2026-10-04 20:03 UTC.
+- **DEBT-495 is accepted.** Alert #77 is dismissed as `tolerable_risk` against it, and its recheck triggers are Deferred.
+- **Released since the last entry.** #1353 (DEBT-495) and #1354 (DEBT-493 increment 5, **5403397503** on `e12c5a05`; merged `6373d13d`) went out through promotion #1355 (`e2981bea`):
+  - main CI **37162107658** `test` passed **23:46:32Z**;
+  - production assigned **23:46:33.856Z**;
+  - trees `3dc0ed23`, healthy production.
+- **Next.** DEBT-465's rule-to-test register.
+- **What remains Active.** DEBT-414 and DEBT-465, both owner-gated in part.
+
 **Earlier** — 2026-10-03 UTC: DEBT-493 increment 5, the last. Bookmarks name a question's state, and History's filters keep a question no longer available ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.**
   - A bookmarked question that was withdrawn, placed under review or retired says so, in place of "[Question no longer available]". It shows no content.

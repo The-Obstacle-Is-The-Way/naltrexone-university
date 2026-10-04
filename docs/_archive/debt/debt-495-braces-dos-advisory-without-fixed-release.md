@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Accepted (accepted risk) — 2026-10-03 UTC, under the owner's delegation; Dependabot alert #77 is dismissed as `tolerable_risk` against this record ([Verified closeout](#verified-closeout--2026-10-03-utc)). The recheck triggers below are in the register's Deferred table.
+**Status:** Accepted (accepted risk) — 2026-10-03 UTC, under the owner's delegation ([Verified closeout](#verified-closeout--2026-10-03-utc)). Dependabot alert #77 stays **open** as the watcher for a fix; it was dismissed on 2026-10-03 and reopened on 2026-10-04 ([Correction](#correction--2026-10-04-alert-77-reopened)). The other recheck triggers are in the register's Deferred table.
 **Priority:** P3
 **Date:** 2026-10-03
 **Resolved:** 2026-10-03
@@ -48,6 +48,19 @@ Investigated on 2026-10-03, against `main` at `2c4113e1`, and rechecked against 
 - **Released** through promotion #1355 (`e2981bea`): main CI **37162107658** `test` passed **23:46:32Z**; production assigned **23:46:33.856Z**; `main` and `dev` trees `3dc0ed23`; production health 200 (`{"ok":true,"db":true}`).
 - **Alert #77** (GHSA-vfj7-8cjw-p6xm) dismissed as `tolerable_risk` at **2026-10-03 23:32:48Z**, with a comment pointing to this record. At that time npm's latest `braces` was still 3.0.3 and the advisory named no patched version.
 - **Monitoring.** The recheck triggers in Triage are the register's Deferred row. Any one of them reopens this record and the alert.
+
+## Correction — 2026-10-04: alert #77 reopened
+
+The dismissal above hid the one trigger that can arrive without our action: a fixed `braces` release. The owner relayed a review note saying so, and GitHub's documentation confirms it:
+- **Dismissal stops tracking.** A manually dismissed Dependabot alert stays dismissed when a patched version ships. Only an auto-triage rule set to dismiss "until a patch is available" reopens on its own.
+- **Dismissal stops the fix.** Dependabot security updates are enabled for this repository, but they raise a fix PR only for an open alert.
+- **Nothing else watched.** The register's Deferred row is read only when someone reviews the register, so the first recheck trigger in Triage had no watcher.
+
+**What changed.**
+- Alert #77 was reopened at **2026-10-04 01:07:06Z**. While it is open, Dependabot raises the fix PR as soon as a patched `braces` is published within `micromatch`'s range.
+- The risk acceptance stands; only the watcher changed. The open alert is a known, accepted risk, not an untriaged one.
+- **The other two triggers** need code or configuration to change, and the Deferred row still carries them: a glob built from untrusted input, and Clerk enabling Web3 sign-in.
+- **Alert #55** (`stream-json`, [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md)) was dismissed by the owner on 2026-09-16 and is left as the owner decided.
 
 ## Related
 
