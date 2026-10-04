@@ -981,7 +981,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - `role="status"` announces the notice politely; it is never focused automatically.
 - A stored grade is never regraded ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)). An answer graded on a key corrected since leaves every score instead (F-13 names the reason), and the Incorrect practice filter offers its question again.
 
-**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, DEBT-484 phase 2b, and ADR-022 Decision 4 ([DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md) increment 4). In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`, each with its `keyCorrected` form). It renders nothing while every question has one revision.
+**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, DEBT-484 phase 2b, and ADR-022 Decision 4 ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md) increment 4). In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`, each with its `keyCorrected` form). It renders nothing while every question has one revision.
 
 
 ### F-13: Unscored Disclosure (a score that leaves items out)

@@ -1,12 +1,12 @@
 # DEBT-495: braces Denial-of-Service Advisory With No Fixed Release
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — the risk is accepted under the owner's delegation (2026-10-03). Once this record is on `main`, Dependabot alert #77 is dismissed as `tolerable_risk` pointing here, and the record is archived as Accepted, with the recheck triggers below in the Deferred table
+**Status:** Accepted (accepted risk) — 2026-10-03 UTC, under the owner's delegation; Dependabot alert #77 is dismissed as `tolerable_risk` against this record ([Verified closeout](#verified-closeout--2026-10-03-utc)). The recheck triggers below are in the register's Deferred table.
 **Priority:** P3
 **Date:** 2026-10-03
-**Resolved:** —
-**Verification receipts:** [Triage](#triage--2026-10-03)
+**Resolved:** 2026-10-03
+**Verification receipts:** [Triage](#triage--2026-10-03), [Verified closeout](#verified-closeout--2026-10-03-utc)
 
 ---
 
@@ -40,6 +40,15 @@ Investigated on 2026-10-03, against `main` at `2c4113e1`, and rechecked against 
   - any runtime code that passes a request-, learner- or network-derived string to a glob;
   - Clerk enabling a Web3 strategy in this application, which would bring the Solana tree into use.
 
+## Verified closeout — 2026-10-03 UTC
+
+- **Filed** in #1353 (**5402919324** on `c330911e`; merged `19d383ea`). CodeRabbit raised two findings:
+  - the register tied this record's closure to DEBT-493's, which was accepted and corrected;
+  - a P3 record cannot be accepted, which was declined: the terminal-close rule it cited governs terminal-close sweep findings, and DEBT-408, DEBT-437 and DEBT-476 record accepted risks at P3 and P2.
+- **Released** through promotion #1355 (`e2981bea`): main CI **37162107658** `test` passed **23:46:32Z**; production assigned **23:46:33.856Z**; `main` and `dev` trees `3dc0ed23`; production health 200 (`{"ok":true,"db":true}`).
+- **Alert #77** (GHSA-vfj7-8cjw-p6xm) dismissed as `tolerable_risk` at **2026-10-03 23:32:48Z**, with a comment pointing to this record. At that time npm's latest `braces` was still 3.0.3 and the advisory named no patched version.
+- **Monitoring.** The recheck triggers in Triage are the register's Deferred row. Any one of them reopens this record and the alert.
+
 ## Related
 
-- [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md) §F: the same unused Solana tree, for `stream-json`.
+- [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md) §F: the same unused Solana tree, for `stream-json`.

@@ -2,7 +2,16 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-03 UTC: DEBT-495 filed. `braces`' denial-of-service advisory (Dependabot alert #77) has no fixed release, so its risk is accepted with recheck triggers ([DEBT-495](./debt-495-braces-dos-advisory-without-fixed-release.md)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 5, the last. Bookmarks name a question's state, and History's filters keep a question no longer available ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+- **What learners see.**
+  - A bookmarked question that was withdrawn, placed under review or retired says so, in place of "[Question no longer available]". It shows no content.
+  - History's difficulty and tag filters keep a question no longer available, by the difficulty of the revision answered and the question's tags, as History lists it unfiltered.
+- **How.** `QuestionRepository.findAvailabilityByIds` reads a question's state by id, whatever its status, derived as every other read derives it. The availability contract reads each scenario by id too, on the fake and on real Postgres. Both attempt repositories drop the published-only condition from the difficulty and tag filters and from the difficulty sort.
+- **Released since the last entry.** None. #1353 (DEBT-495, **5402919324** on `c330911e`; merged `19d383ea`) is on `dev` and is promoted with this increment.
+- **Next.** Promote #1353 and this increment. DEBT-495 then reaches `main`: alert #77 is dismissed against it, and it is archived as Accepted. DEBT-493 closes once this increment is in production. One closeout PR may archive both, each on its own trigger.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-495.
+
+**Earlier** — 2026-10-03 UTC: DEBT-495 filed. `braces`' denial-of-service advisory (Dependabot alert #77) has no fixed release, so its risk is accepted with recheck triggers ([DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md)).
 - **Why accepted.** Only repository-fixed glob patterns in operator scripts and test scans reach `braces`. Nothing from a request, a learner or the network becomes a glob. No pin or override can close it, since no fixed release exists.
 - **Next for it.** Once this record is on `main`, alert #77 is dismissed as `tolerable_risk` pointing to it, and the record is archived as Accepted, with its recheck triggers in the Deferred table.
 - **Released since the last entry.** #1351 (DEBT-493 increment 4, key corrections, **5402602114** on `1593fd4d`; merged `3e56a7e1`) went out through promotion #1352 (`e45cc86b`):
@@ -12,7 +21,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
 - **Next.** DEBT-493 increment 5, bookmarks and History filters. DEBT-495 closes as Accepted once it is on `main`, and DEBT-493 once its fifth increment is in production.
 - **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-495.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 4, key corrections. An answer graded on an answer key corrected since leaves every score, its review says so, and the Incorrect filter offers its question again ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 4, key corrections. An answer graded on an answer key corrected since leaves every score, its review says so, and the Incorrect filter offers its question again ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.**
   - Reviewing an answer whose key was corrected since, on post-exam review or the review page, shows a caution in place of "This question has been updated": "The answer to this question was corrected after you answered. This attempt isn't scored." It links to the corrected question.
   - During a session, an item whose key was corrected after the session began says so, and that an answer to it won't be scored.
@@ -33,7 +42,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 3 and part E. Review & Submit warns only about the unanswered questions that would count, and the active session's notice names a question's state and says when it won't count ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 3 and part E. Review & Submit warns only about the unanswered questions that would count, and the active session's notice names a question's state and says when it won't count ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.**
   - Review & Submit lists a question no longer available as "Won't be scored", and its warning counts only the unanswered questions that would be scored.
   - During a session, a question withdrawn, placed under review or retired since the session began says so by name. It adds "It won't count toward your score." unless the item still counts, as a tutor answer already given on a question retired since does.
@@ -48,7 +57,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 3, the session summary's writer; DEBT-494 is resolved and archived ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress), [DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#verified-closeout--2026-10-03-utc)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 3, the session summary's writer; DEBT-494 is resolved and archived ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress), [DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#verified-closeout--2026-10-03-utc)).
 - **What learners see.** The session summary's Accuracy card and the post-exam header score the session by the amended rule, as History and the Dashboard already do. The header reads "X of scored correct", and a summary that leaves questions out says so. End, finalize and the summary read agree with History and the Dashboard, as a real-Postgres case checks through holds, a retirement and lifts.
 - **Released since the last entry.** #1343 (the DEBT-494 decision), #1344 (the fair chance recorded at session end) and #1346 (History and Dashboard on the amended rule) went out through promotion #1347 (`2c4113e1`):
   - main CI **37142019278** `test` passed **18:01:19Z**;
@@ -65,7 +74,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 2. History and dashboard accuracy follow the amended rule: an item counts when the learner had a fair chance at it and its content is not in doubt ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 2. History and dashboard accuracy follow the amended rule: an item counts when the learner had a fair chance at it and its content is not in doubt ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.** History counts a question retired since their session again. Withdrawn and held questions stay out. Dashboard accuracy, overall and over seven days, ships on the same rule; total answered, answered in seven days and the streak still count every answer. Scores that leave questions out say so: "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected."
 - **How.** One domain rule, `countsTowardScore`, and its SQL twin, shared by both queries. The history score's and the new attempt score's contracts run on the fakes and real Postgres. The dashboard's two reads take 2.31 ms and 0.73 ms for a learner with 2,000 answers.
 - **Promotion #1345 was closed unmerged.** CodeRabbit found two comments, in the schema and DEBT-493's plan, that still said sessions ended before 0050 are unrecorded; the migration records them. This PR corrects those and a third such comment, and `dev` is then promoted with #1343, #1344 and this step.
@@ -78,7 +87,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 1. Each session item records whether the learner had a fair chance at it when its session ends ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03), [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 revised, step 1. Each session item records whether the learner had a fair chance at it when its session ends ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#consequences-and-cost-verified--2026-10-03), [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.** Nothing yet: no score reads the record. Scores move to the amended rule in the next steps.
 - **Storage.** Migration 0050 adds `practice_session_question_states.fair_chance_at_end`, written by the statement that ends a session. Sessions that already ended are recorded once, by the migration, from the bank as it stands when it runs. No score reads it yet; once scores do, those sessions keep the scores they show, except that a tutor answer on a question retired before then counts again.
 - **A second notice on DEBT-494's cost** was checked claim by claim. Every claim was accurate, and the one consequence worth correcting, how sessions ended before 0050 are read, is corrected by that backfill.
@@ -95,7 +104,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
 **Earlier** — 2026-10-03 UTC: DEBT-494 is filed and decided. Past scores now change only when content validity changes ([DEBT-494](../_archive/debt/debt-494-read-time-scores-owner-confirmation.md#decision--2026-10-03)).
 - **The question.** A review notice, and then the owner, asked whether learners' past scores should change after the fact. Under ADR-022 they did, whenever a question was later withdrawn, held, retired or key-corrected, and retired questions left every score.
 - **The decision,** made under the owner's delegation from first principles, amends ADR-022 Decision 3. An item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt: withdrawn, under review or key-corrected. Retiring a question changes no past score. No "score when taken" value is shown, because a past score now moves only for a disclosed clinical reason.
-- **Effect on DEBT-493.** History scores, released, will count retired questions again. Dashboard accuracy and the session summary's writer, built but not shipped, move to the amended rule first. The revised plan is in [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress).
+- **Effect on DEBT-493.** History scores, released, will count retired questions again. Dashboard accuracy and the session summary's writer, built but not shipped, move to the amended rule first. The revised plan is in [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress).
 - **Released since the last entry.** #1341 (history scores, **5400759268** on `641bb9f3`; merged `40bf64e7`) went out through promotion #1342 (`bad0ad67`): main CI **37123866377** `test` passed **12:58:03Z**, production assigned **12:58:05.230Z**, trees `9e21af94`, healthy production.
 - **Next.** Record the fair-chance fact when a session ends, then move history and dashboard to the amended rule.
 - **What remains Active.** DEBT-414, DEBT-465, DEBT-493 and DEBT-494. DEBT-494 closes once its amendment is promoted.
@@ -106,7 +115,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2, step 2. History scores count only the items whose question is still available ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2, step 2. History scores count only the items whose question is still available ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.** History and the Dashboard's recent sessions show `correct/scored` and "—" when nothing is scored. When items are left out, they say how many: "N questions aren't scored: withdrawn, under review, retired, or their answer was corrected."
 - **How.** The domain rule `countsTowardScore` and `computeSessionScore` is shared by every score. The history query joins each item's question, at a measured cost of about 0.3 ms on a 20-row page.
 - **The second fake↔real contract** is the session history score: three scenarios, on the fake and on real Postgres.
@@ -120,7 +129,7 @@ Update stanzas moved out of the [Technical Debt Register](./index.md), newest fi
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 (scoring) begins with its reader step ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493 increment 2 (scoring) begins with its reader step ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **Why a reader first.** Decision 3 makes a session's score count only its scored items, so the end and finalize outputs gain `totals.scored`. Those outputs are cached by idempotency key for 24 hours under strict schemas. The reader must accept the new field in production before any writer sends it.
 - **This step.** The schemas accept an optional `scored`, bounded by the question count, with `correct` bounded by it. Both cached shapes parse, and two targeted mutations each fail a case.
 - **Next.** History scores, dashboard accuracy and the session summary's writer, each excluding unavailable items from both numerator and denominator. Then Review & Submit, and Decision 5's sentence.
@@ -150,7 +159,7 @@ This entry was written before this increment's own checks ran. Its local full ga
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID is DEBT-494.**
 
-**Earlier** — 2026-10-03 UTC: promotion #1335 failed on a race in a test written for DEBT-493 part B, which is now fixed ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: promotion #1335 failed on a race in a test written for DEBT-493 part B, which is now fixed ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **The failure.** The availability contract's real-Postgres run lifted a hold with the client clock, at millisecond precision. Within the placement's millisecond, the lift sorted before the database's microsecond `placed_at`, and the lifted-after-placed check refused it. It was a test defect; production lifts use the database's clock.
 - **The fix.** The lift time comes from the row. The fixed file passed fifteen consecutive runs, and a probe confirmed the old form fails in the same millisecond. The cause was documented on #1335 before anything was re-run, and #1335 was closed unmerged.
 - **Merged since the last entry.** #1334 (DEBT-493 part C, **5399950118** on `059b5e27`; merged `97aa3b24`). #1332, #1333, #1334 and this fix are promoted together next.
@@ -164,7 +173,7 @@ This entry was written before this increment's own checks ran. Its local full ga
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
 
-**Earlier** — 2026-10-03 UTC: DEBT-493's part C is fixed in code. Learners now see ADR-022's labels and notices: Withdrawn, Under review or Retired, each with its own notice ([DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493's part C is fixed in code. Learners now see ADR-022's labels and notices: Withdrawn, Under review or Retired, each with its own notice ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **What learners see.**
   - A withdrawn or under-review question carries a clinical caution. A retired one carries a neutral notice.
   - Lists and navigators show the state's label.
@@ -184,7 +193,7 @@ This entry was written before this increment's own checks ran. Its local full ga
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
 
-**Earlier** — 2026-10-03 UTC: DEBT-493's part B is fixed in code. Every question read now carries its availability, derived from its status, withdrawals and unlifted holds (ADR-022 Decision 1; [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493's part B is fixed in code. Every question read now carries its availability, derived from its status, withdrawals and unlifted holds (ADR-022 Decision 1; [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **Additive.** Nothing reads the value yet. The labels, notices and scores that use it follow in the next parts.
 - **Cost.** The adapter reads the overlay only for bound questions that are not published, so reads of published questions cost no extra query. Holds are found through the question's revisions, since holds have no index that leads with the question; ADR-022's cost note is corrected to say so.
 - **The first fake↔real contract for the question repository.** Before this there was only a dated waiver. `question-availability-contract.ts` runs nine scenarios against the fake and the adapter on real Postgres, reading each question through both of its revisions. Five targeted mutations each fail a scenario.
@@ -216,7 +225,7 @@ This entry was written before this increment's own checks ran. Its local full ga
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID is DEBT-494.**
 
-**Earlier** — 2026-10-03 UTC: DEBT-493's first part is fixed in code. An unavailable question's content now shows only to a learner who answered it (ADR-022 Decision 2; [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
+**Earlier** — 2026-10-03 UTC: DEBT-493's first part is fixed in code. An unavailable question's content now shows only to a learner who answered it (ADR-022 Decision 2; [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#progress)).
 - **The exposure.** An exam item left unanswered is finalized as an omitted attempt. Once its question was withdrawn, six reads still revealed its content to that learner: the previous-attempt reveal (key and explanation, with no availability check at all), the standalone review, completed-session feedback, the session review, History and the Dashboard.
 - **The fix.** Each read now requires a selected choice. An omitted attempt on a question still published is unchanged. It uses today's status-based availability; the four availability states follow in the next parts.
 - **Evidence.** A red unit case per read, and a real-Postgres case that finalizes an exam with an unanswered item, withdraws the question and checks all six reads. Six further targeted mutations each fail a case.
@@ -256,7 +265,7 @@ This entry was written before this increment's own checks ran. Its local full ga
   - a corrected key is disclosed and re-practiced, never regraded.
 
   It settles the three Deferred decisions from DEBT-484 and BUG-317.
-- **[DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md)** (P1) implements ADR-022 in five increments.
+- **[DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md)** (P1) implements ADR-022 in five increments.
 - **[DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md)** (P2) records four release gaps to close before the production bootstrap:
   - staging's row locks can time out learners' session starts;
   - a stale bundle silently reverts a correction;
