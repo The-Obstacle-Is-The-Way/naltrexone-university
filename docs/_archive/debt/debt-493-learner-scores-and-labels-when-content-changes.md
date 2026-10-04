@@ -238,6 +238,21 @@ In increments, each test-first.
   - each step's targeted mutations fail a case (Progress).
 - **Deferred.** End and finalize outputs cached before #1348's writer are replayed with `totals.scored = questionCount`, by the mapping in `src/adapters/controllers/practice-schemas.ts`. It can be removed once a full 24-hour TTL has passed since that writer reached production (promotion #1350, assigned 2026-10-03 20:02:33Z), provided production has not rolled back to an earlier deployment since. The register's Deferred table carries it.
 
+
+## Deferred tail done — 2026-10-04 UTC
+
+The replay mapping is removed. `EndPracticeSessionOutputSchema` now requires `totals.scored` and no longer fills it in as the question count.
+
+**Why it is safe.** A full 24-hour TTL has passed since the last writer without `scored` left production:
+- #1350's writer was assigned to production at 2026-10-03 20:02:33Z.
+- The change was made at 21:00Z on 2026-10-04.
+- Every production deployment since then (#1352, #1355, #1357 and #1359) carries that writer.
+- The production domains were served by #1359's deployment from 03:28:57Z, with no reassignment to an earlier deployment, as read from Vercel's deployment and alias APIs.
+
+**Tests.** A case requires the count from both end and finalize outputs.
+
+The register's Deferred row is closed.
+
 ## Related
 
 - [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md): the decisions.

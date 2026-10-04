@@ -1,6 +1,6 @@
 # DEBT-476: Dependabot Alert Triage — What #882/#886 Closed and the Four-Package Residue
 
-**Status:** Resolved — 2026-09-22; fast-uri 3.1.8 shipped through #995/#996, main CI and production gate verified, zero open alerts. The accepted-risk stream-json follow-up remains explicitly Deferred in the register; this is not a claim that package was patched or removed.
+**Status:** Resolved — 2026-09-22; fast-uri 3.1.8 shipped through #995/#996, main CI and production gate verified, zero open alerts. The accepted-risk stream-json follow-up remains explicitly Deferred in the register; this is not a claim that package was patched or removed. Alert #55 was reopened on 2026-10-04 as the watcher for that follow-up ([Correction](#correction--2026-10-04-alert-55-reopened)).
 **Priority:** P2 — at filing, nothing was reachable from a production request path, but five High-rated alerts across two transitive packages sat in the default-branch lockfile and one alert could not be closed by any version pin
 **Date:** 2026-09-15
 **Source:** Owner question after PR #882 (`chore/dependabot-batch-2026-09-14`) merged to `dev` and promo #886 opened: do the 13 open Dependabot alerts get squashed by that merge, or do some still need handling?
@@ -22,6 +22,16 @@ The September 16 remediation and the final dated fast-uri follow-up are shipped.
 The installed `stream-json@1.9.1` remains covered by the owner's September 16 `not_used` ruling and the reverified §F import-path argument. An upstream prerequisite has changed: npm now reports **jayson 5.0.0**, published `2026-09-18T09:58:54.850Z`, whose dependency manifest no longer declares stream-json. The earlier proposed tedeh/jayson#241 was **closed unmerged** on September 18; do not report it as the merged fix. Even latest `@solana/web3.js@1.99.0` still requires `jayson: ^4.3.0`, and `@clerk/ui@1.33.1` retains the same exact adapter pins (0.15.39 / 0.9.27 / 1.1.4). The installed chain therefore has not changed and a forced major override remains unsupported.
 
 The register's Deferred row retains the actual remaining trigger: a supported Solana/Clerk update adopts the jayson major or removes the unused adapter tree, or a reachability change makes the vulnerable filters relevant. Re-audit then; reopen the alert if its dismissal no longer holds. The optional adapter-free Clerk observation is deferred until an upstream-supported variant exists and is prioritized, not silently claimed implemented. This follow-up is accepted-risk monitoring, not unfinished fast-uri remediation.
+
+
+### Correction — 2026-10-04: alert #55 reopened
+
+The `not_used` dismissal left the Deferred row's trigger with no watcher. A manually dismissed Dependabot alert is never reopened when its advisory changes, and Dependabot raises security-update PRs only for open alerts. The same finding reopened DEBT-495's alert #77 the same day. The owner approved reopening #55, under the principle that a known risk is documented, not hidden.
+
+**What changed.** Alert #55 was reopened at **2026-10-04 21:00:07Z**.
+- **Dependabot cannot fix it yet.** The patched `stream-json` 3.5.0 is outside `jayson`'s `^1.9.1` range, as §F records.
+- **The open alert watches the trigger.** It resolves itself when the vulnerable version leaves the lockfile, which happens once a supported Clerk or Solana update adopts `jayson` 5. Dependabot raises a fix PR as soon as one can apply.
+- **The reachability argument and the risk acceptance are unchanged.** The alert is a known, accepted risk, not an untriaged one.
 
 ## Problem
 
