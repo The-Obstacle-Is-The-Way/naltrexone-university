@@ -114,7 +114,7 @@ Decided under the owner's 2026-10-03 delegation ("deciding all that we need to d
 - [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
 - [x] Part 2 widening: every production file under `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**`, by glob, with every survivor triaged (third wave 2026-09-30; waves 4a–4f by 2026-10-01, below)
-- [x] Part 3 (replaced 2026-10-03): the rule-to-test register lists the 17 rules with the tests that prove each, and a renamed or deleted test fails its check. Done 2026-10-04 with 23 rules (above)
+- [x] Part 3 (replaced 2026-10-03): the rule-to-test register lists 23 business rules (the 17 candidates and six added since) with the tests that prove each, and a renamed or deleted test fails its check. Done 2026-10-04 (above)
 - [ ] Part 4 (re-scoped 2026-10-03): QA-001 and QA-002 Active, each with two evidenced runs; the gap list is updated (the cadence was updated with the decision); operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
 
