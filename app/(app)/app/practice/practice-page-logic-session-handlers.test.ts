@@ -12,6 +12,7 @@ import {
   SESSION_COUNT_MAX,
   SESSION_COUNT_MIN,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { MAX_PRACTICE_SESSION_QUESTIONS } from '@/src/adapters/shared/validation-limits';
 
 describe('practice-page-logic session handlers', () => {
   describe('handleSessionModeChange', () => {
@@ -26,6 +27,15 @@ describe('practice-page-logic session handlers', () => {
       expect(setSessionMode).toHaveBeenNthCalledWith(1, 'tutor');
       expect(setSessionMode).toHaveBeenNthCalledWith(2, 'exam');
     });
+  });
+
+  // DEBT-465 Part 3, rule R23: the starter offers 1 to 100 questions, within
+  // the 1 to 200 the server accepts.
+  it('offers sessions of 1 to 100 questions, within what the server accepts', () => {
+    expect([SESSION_COUNT_MIN, SESSION_COUNT_MAX]).toEqual([1, 100]);
+    expect(SESSION_COUNT_MAX).toBeLessThanOrEqual(
+      MAX_PRACTICE_SESSION_QUESTIONS,
+    );
   });
 
   describe('handleSessionCountChange', () => {

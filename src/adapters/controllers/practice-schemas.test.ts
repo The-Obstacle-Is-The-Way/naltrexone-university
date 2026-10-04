@@ -5,7 +5,27 @@ import {
   FinalizeExamAnswersInputSchema,
   FinalizeExamAnswersOutputSchema,
   SaveExamDraftAnswerInputSchema,
+  StartPracticeSessionInputSchema,
 } from './practice-schemas';
+
+// A practice session holds 1 to 200 questions (DEBT-465 Part 3, rule R23).
+describe('StartPracticeSessionInputSchema', () => {
+  const start = (count: number) =>
+    StartPracticeSessionInputSchema.safeParse({
+      mode: 'tutor',
+      count,
+      tagSlugs: [],
+      difficulties: [],
+    }).success;
+
+  it.each([1, 200])('accepts a session of %i questions', (count) => {
+    expect(start(count)).toBe(true);
+  });
+
+  it.each([0, 201])('refuses a session of %i questions', (count) => {
+    expect(start(count)).toBe(false);
+  });
+});
 
 describe('SaveExamDraftAnswerInputSchema', () => {
   it('accepts a nullable selectedChoiceId for time-only exam drafts', () => {
