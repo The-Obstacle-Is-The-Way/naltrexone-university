@@ -1,16 +1,22 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-03 UTC
+**Last Updated:** 2026-10-04 UTC
 
-**Latest** — 2026-10-03 UTC: DEBT-493 and DEBT-495 are closed and archived ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#verified-closeout--2026-10-03-utc), [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#verified-closeout--2026-10-03-utc)).
-- **DEBT-493 is resolved.** Learner scores and labels follow content changes, as ADR-022 decides and DEBT-494 amends, on every surface and in production. The replay mapping's removal is Deferred, due on or after 2026-10-04 20:03 UTC.
-- **DEBT-495 is accepted.** Alert #77 is dismissed as `tolerable_risk` against it, and its recheck triggers are Deferred.
-- **Released since the last entry.** #1353 (DEBT-495) and #1354 (DEBT-493 increment 5, **5403397503** on `e12c5a05`; merged `6373d13d`) went out through promotion #1355 (`e2981bea`):
-  - main CI **37162107658** `test` passed **23:46:32Z**;
-  - production assigned **23:46:33.856Z**;
-  - trees `3dc0ed23`, healthy production.
-- **Next.** DEBT-465's rule-to-test register.
+**Latest** — 2026-10-04 UTC: DEBT-465 Part 3. The rule-to-test register states 23 business rules in plain language, each with the tests that prove it, and a check fails when one of those tests is renamed or deleted ([DEBT-465](./debt-465-test-quality-practices-adoption.md#part-3--acceptance-test-harness)).
+- **What it gives.** A clinician or the owner can read what the product guarantees in [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md), and see where each guarantee is pinned. `tests/rule-to-test-register.test.ts` checks every link on each test run.
+- **Five rules lacked a proof at the right level.** Each now has one:
+  - the 1–200 session size, at the schema;
+  - scheduled cancellation keeping access, in the domain;
+  - one idempotency key, one session, with overlapping starts on real Postgres;
+  - the content-hiding rule for a question under review;
+  - the discard rule, restated as what is enforced.
+- **The terminal-close disposition rule's scope is named** in both registers: the findings of a fix wave's terminal audit, as #673 introduced it. CodeRabbit read it as a cap on any P3 accepted risk on #1353, #1356 and #1357. It withdrew that reading on #1356 once the provenance was shown. No rule changes in substance.
+- **Released since the last entry.** #1356 (closing DEBT-493 and DEBT-495) went out through promotion #1357 (`5ad74f9d`):
+  - main CI **37165223511** `test` passed **00:41:52Z**;
+  - production assigned **00:41:54.009Z**;
+  - trees `7cacdce9`, healthy production.
+- **Next.** Remove DEBT-493's replay mapping once its TTL has passed, on or after 2026-10-04 20:03 UTC. DEBT-465 Part 4's QA runs are owner-scheduled, before the production bootstrap.
 - **What remains Active.** DEBT-414 and DEBT-465, both owner-gated in part.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
