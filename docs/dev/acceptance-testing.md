@@ -3,7 +3,7 @@
 Each rule below states, in plain language, something the system guarantees a learner or a subscriber. The lines under it name the tests that prove it. A clinician or the owner can read what the product promises without reading code, and a developer can see where each promise is pinned.
 
 `tests/rule-to-test-register.test.ts` checks the register on every `pnpm test`.
-- Every named file must exist and still declare a running test with the named title. The file is parsed, so a commented-out, skipped or todo test does not count.
+- Every named file must exist and still declare a test with the named title that runs unconditionally. The file is parsed, so a test that is commented out, skipped, todo, conditional (`runIf`, `skipIf`) or skipped by its options does not count.
 - Every rule must name at least one test.
 - A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
 

@@ -60,20 +60,35 @@ describe('the rule-to-test register check', () => {
     });
   });
 
-  it('reports a malformed rule heading, a malformed proof line and a repeated rule', () => {
+  it('reports a malformed rule heading', () => {
     const { problems } = parseRuleRegister(`### R1. A rule.
 - \`src/a.test.ts\`: \`a title\`
 ### R2 A heading without its period.
-- \`src/b.test.ts\` \`a title without its colon\`
-### R1. The same rule again.
-- \`src/c.test.ts\`: \`another title\`
 `);
 
     expect(problems).toEqual([
       'line 3: not a rule heading (### R<n>. <rule>): ### R2 A heading without its period.',
-      'line 4: not a proof line (- `file`: `title`): - `src/b.test.ts` `a title without its colon`',
-      'line 5: R1 is listed twice',
     ]);
+  });
+
+  it('reports a malformed proof line', () => {
+    const { problems } = parseRuleRegister(`### R1. A rule.
+- \`src/b.test.ts\` \`a title without its colon\`
+`);
+
+    expect(problems).toEqual([
+      'line 2: not a proof line (- `file`: `title`): - `src/b.test.ts` `a title without its colon`',
+    ]);
+  });
+
+  it('reports a repeated rule number', () => {
+    const { problems } = parseRuleRegister(`### R1. A rule.
+- \`src/a.test.ts\`: \`a title\`
+### R1. The same rule again.
+- \`src/c.test.ts\`: \`another title\`
+`);
+
+    expect(problems).toEqual(['line 3: R1 is listed twice']);
   });
 
   it('accepts a test declared in any quote style, escaped or not, and through each', () => {
@@ -120,7 +135,7 @@ describe('the rule-to-test register check', () => {
     ]);
   });
 
-  it('counts only tests that run: not a commented-out, skipped or todo test, nor one in a skipped describe', () => {
+  it('counts only tests that run unconditionally: not a commented-out, skipped, todo or conditional test, nor one in a skipped describe', () => {
     expect(
       declaredTestTitles(
         `// it('commented out', () => {});
@@ -128,11 +143,19 @@ const note = 'a title in a string';
 it.skip('skipped', () => {});
 it.todo('todo');
 test.skipIf(true)('skipped if', () => {});
+test.runIf(false)('run if', () => {});
+it('skipped by option', { skip: true }, () => {});
+it('todo by option', { todo: true });
 describe.skip('skipped group', () => {
   it('inside a skipped group', () => {});
 });
+describe('group skipped by option', { skip: true }, () => {
+  it('inside a group skipped by option', () => {});
+});
 describe('group', () => {
   it('runs', () => {});
+  it('runs with options', { timeout: 1000 }, () => {});
+  it('runs with skip false', { skip: false }, () => {});
   it.each([1])('runs for %i', () => {});
   test.only('runs alone', () => {});
 });
@@ -140,7 +163,14 @@ it(\`a template title\`, () => {});`,
         'example.test.ts',
       ),
     ).toEqual(
-      new Set(['runs', 'runs for %i', 'runs alone', 'a template title']),
+      new Set([
+        'runs',
+        'runs with options',
+        'runs with skip false',
+        'runs for %i',
+        'runs alone',
+        'a template title',
+      ]),
     );
   });
 

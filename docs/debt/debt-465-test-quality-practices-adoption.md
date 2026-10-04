@@ -54,9 +54,9 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
   R18–R22 add DEBT-493's rules: availability, content only to a learner who answered, scoring, key corrections and the submit warning. R23 pins the session size.
 - **The check.** `tests/rule-to-test-register.test.ts` runs on every `pnpm test`, through `scripts/rule-to-test-register.ts`.
   - It fails when a named file is missing or no longer declares a running test with the named title, or when a rule names no test.
-  - It parses each file with the TypeScript compiler, so a test that is commented out, skipped, todo or inside a skipped `describe` does not count. `it.each` and `test.each` titles do count.
+  - It parses each file with the TypeScript compiler. A test does not count if it is commented out, skipped, todo, conditional (`runIf`, `skipIf`), skipped by its options (`{ skip: true }`), or inside a skipped `describe`. `it.each` and `test.each` titles do count.
   - A malformed heading or proof line, or a repeated rule number, is reported, not skipped.
-  - In review, CodeRabbit found that the first version matched source text and silently ignored malformed lines. Both were fixed, and nine targeted mutations of the check each fail a case.
+  - In review, CodeRabbit found three gaps: the first version matched source text, silently ignored malformed lines, and counted option-skipped and conditional tests. All three were fixed, and thirteen targeted mutations of the check each fail a case.
 - **Five rules had no proof at the right level.** Mapping each rule to its tests found them, and each now has a test:
   - **R23**, the 1–200 session size: nothing sent 200 or 201, so the schema could drift from the constant unnoticed. Schema cases accept 1 and 200 and refuse 0 and 201, and a starter case pins 1–100 within the server's range.
   - **R11**, scheduled cancellation keeps access: only the hosted-Stripe E2E proved it. A domain case now does.

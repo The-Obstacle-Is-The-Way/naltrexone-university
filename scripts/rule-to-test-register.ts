@@ -62,13 +62,15 @@ export function parseRuleRegister(markdown: string): {
 }
 
 const TEST_FUNCTIONS = new Set(['it', 'test']);
-const SKIPPING_MODIFIERS = new Set(['skip', 'todo', 'skipIf']);
+// A proof must run unconditionally: a conditional test may not run.
+const SKIPPING_MODIFIERS = new Set(['skip', 'todo', 'skipIf', 'runIf']);
+const SKIPPING_OPTIONS = new Set(['skip', 'todo']);
 
 type TestCall = { readonly declaresTest: boolean; readonly skipped: boolean };
 
 // What a call's callee declares: `it`/`test` (a test) or `describe` (a
 // group), and whether a modifier on the way skips it. `.each` and `.for` are
-// tables applied to a test; `.only`, `.concurrent` and `.runIf` run it.
+// tables applied to a test; `.only` and `.concurrent` run it.
 function classifyCallee(callee: ts.Expression): TestCall | null {
   if (ts.isIdentifier(callee)) {
     if (TEST_FUNCTIONS.has(callee.text))
@@ -89,7 +91,23 @@ function classifyCallee(callee: ts.Expression): TestCall | null {
   return null;
 }
 
-/** The titles of the tests a file declares and would run. */
+// Whether a call's options object (`{ skip: true }`, `{ todo: true }`)
+// skips it.
+function skippedByOptions(options: ts.Expression | undefined): boolean {
+  return (
+    options !== undefined &&
+    ts.isObjectLiteralExpression(options) &&
+    options.properties.some(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        ts.isIdentifier(property.name) &&
+        SKIPPING_OPTIONS.has(property.name.text) &&
+        property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+    )
+  );
+}
+
+/** The titles of the tests a file declares and would run unconditionally. */
 export function declaredTestTitles(
   source: string,
   fileName: string,
@@ -106,8 +124,9 @@ export function declaredTestTitles(
     if (ts.isCallExpression(node)) {
       const call = classifyCallee(node.expression);
       if (call) {
-        const skipped = insideSkipped || call.skipped;
-        const [first] = node.arguments;
+        const [first, options] = node.arguments;
+        const skipped =
+          insideSkipped || call.skipped || skippedByOptions(options);
         if (
           call.declaresTest &&
           !skipped &&
