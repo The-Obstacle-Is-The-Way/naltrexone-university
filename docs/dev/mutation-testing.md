@@ -19,7 +19,7 @@ Coverage says a line was *executed*; mutation tests whether selected behavior ch
 
 ## 2. Scope policy — mutate only what the unit lane pins
 
-Stryker runs the **unit config** (`vitest.config.mts`). Therefore only files whose behavior is pinned by unit-lane tests (including the planned acceptance suite from `docs/dev/acceptance-testing.md`, which will run in the same lane and add business-rule kills) produce meaningful scores. A file covered only by browser or integration tests will report surviving or `NoCoverage` mutants that mean "tested in the wrong lane for this pilot," not "badly tested" — keep such files out of `mutate` until that changes.
+Stryker runs the **unit config** (`vitest.config.mts`). Therefore only files whose behavior is pinned by unit-lane tests produce meaningful scores. The Gherkin acceptance suite once planned here was not adopted; the rule-to-test register in `docs/dev/acceptance-testing.md` names the tests that prove each business rule instead. A file covered only by browser or integration tests will report surviving or `NoCoverage` mutants that mean "tested in the wrong lane for this pilot," not "badly tested" — keep such files out of `mutate` until that changes.
 
 Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/application/ports/**` (port contracts), barrels.
 

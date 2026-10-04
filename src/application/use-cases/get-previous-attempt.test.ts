@@ -536,8 +536,28 @@ describe('GetPreviousAttemptUseCase', () => {
 
   // ADR-022 Decision 2: an unavailable question's content is shown only to a
   // learner who answered it. An omitted attempt is not an answer.
+  // ADR-022 Decision 2: whatever the reason it is no longer available.
   describe('a question no longer published', () => {
-    function arrange(outcome: ReturnType<typeof omittedOutcome> | 'answered') {
+    const states = [
+      [
+        'withdrawn',
+        { withdrawals: [{ questionId: 'q1', questionRevisionId: 'r1' }] },
+      ],
+      [
+        'under review',
+        {
+          holds: [
+            { questionId: 'q1', questionRevisionId: 'r1', lifted: false },
+          ],
+        },
+      ],
+      ['retired', undefined],
+    ] as const;
+
+    function arrange(
+      outcome: ReturnType<typeof omittedOutcome> | 'answered',
+      overlay: (typeof states)[number][1],
+    ) {
       const userId = 'user-1';
       const questionId = 'q1';
       const question = createQuestion({
@@ -561,25 +581,31 @@ describe('GetPreviousAttemptUseCase', () => {
             isCorrect: false,
           }),
         ]),
-        new FakeQuestionRepository([question]),
+        new FakeQuestionRepository([question], overlay),
         new FakeLogger(),
         new FakePracticeSessionRepository(),
       );
       return () => useCase.execute({ userId, questionId });
     }
 
-    it('reveals nothing for an omitted attempt', async () => {
-      await expect(arrange(omittedOutcome())()).resolves.toBeNull();
-    });
+    it.each(states)(
+      'reveals nothing for an omitted attempt on a question %s',
+      async (_state, overlay) => {
+        await expect(arrange(omittedOutcome(), overlay)()).resolves.toBeNull();
+      },
+    );
 
-    it('still reveals the revision a learner answered', async () => {
-      await expect(arrange('answered')()).resolves.toMatchObject({
-        kind: 'attempt',
-        selectedChoiceId: 'c1',
-        correctChoiceId: 'c2',
-        explanationMd: 'Possibly unsafe explanation.',
-      });
-    });
+    it.each(states)(
+      'still reveals the revision a learner answered on a question %s',
+      async (_state, overlay) => {
+        await expect(arrange('answered', overlay)()).resolves.toMatchObject({
+          kind: 'attempt',
+          selectedChoiceId: 'c1',
+          correctChoiceId: 'c2',
+          explanationMd: 'Possibly unsafe explanation.',
+        });
+      },
+    );
   });
 
   it('propagates repository failures', async () => {

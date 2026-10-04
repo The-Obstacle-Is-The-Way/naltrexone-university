@@ -12,7 +12,7 @@
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
-**Terminal-close disposition rule:** confirmed P3-or-higher findings enter Active as must-fix; confirmed P4 findings enter Parked (accepted-risk) and do not extend a mandatory fix wave.
+**Terminal-close disposition rule** (for the findings of a fix wave's terminal audit; introduced by #673, 2026-07-18): confirmed P3-or-higher findings enter Active as must-fix; confirmed P4 findings enter Parked (accepted-risk) and do not extend a mandatory fix wave. It does not govern a risk accepted through other triage.
 
 
 ---

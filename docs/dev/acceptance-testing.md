@@ -1,209 +1,150 @@
-# Acceptance Testing (Gherkin)
+# Business Rules and Their Tests (Rule-to-Test Register)
 
-**Last Updated:** 2026-10-03
+Each rule below states, in plain language, something the system guarantees a learner or a subscriber. The lines under it name the tests that prove it. A clinician or the owner can read what the product promises without reading code, and a developer can see where each promise is pinned.
 
-> **Not adopted (2026-10-03).** Do not install `@amiceli/vitest-cucumber` or build `tests/acceptance/`. [ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03) and [DEBT-465's decision](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03) replace this harness with a **rule-to-test register**: each business rule in plain language, linked to the tests that prove it, with a documentation check that fails when one of those tests is deleted or renamed. This file becomes that register when DEBT-465 Part 3 is done. Until then, the design below is kept as the record of what was considered, and §6's rules are the register's starting list.
+`tests/rule-to-test-register.test.ts` checks the register on every `pnpm test`.
+- Every named file must exist and still declare a test with the named title that runs unconditionally. The file is parsed, and these do not count:
+  - a test that is commented out, skipped, todo or skipped by its options;
+  - a conditional test (`runIf`, `skipIf`);
+  - a test declared under a condition: an `if` or ternary branch, after `&&`, `||` or `??`, in a `switch` case or in a `catch` block.
 
-Executable specifications of user-visible business rules, written in Gherkin (`Given / When / Then`), bound to the **application layer** through the existing fakes — never through the UI. Proposed by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 3.
+  A test in a loop, a `try` block or a `finally` block counts. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
+- Every rule must name at least one test.
+- A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
 
-**Why this layer exists.** Unit tests protect logic. UI QA protects the rendered surface. Acceptance tests protect the *seam between them*: they state each business rule in business language and prove it holds at the use-case boundary, which (a) keeps business rules out of components — an agent cannot quietly reimplement a rule in a React hook when the rule's specification runs against the use case and fails, and (b) gives every rule a UI-independent, human-readable contract that survives refactors of either side. This is the outer loop of TDD: the acceptance scenario goes red first, unit-level TDD makes it green from the inside out.
+This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), [DEBT-465's decision](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03)). Its design is in this file's history up to commit `91a24f3e`.
 
----
+## How to use it
 
-## 1. Gherkin in sixty seconds
+- **A new business rule** gets a numbered `### R<n>.` heading and at least one proof line, in the same change that introduces it.
+- **Prove a rule with the lowest test that can:**
+  - a domain or use-case unit test for an application rule;
+  - real Postgres (`tests/integration/`) for a rule that lives in storage or SQL;
+  - end-to-end only for what nothing lower reaches.
+- **Renaming a test that proves a rule** means updating its line here.
+- **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3.
 
-```gherkin
-Feature: Starting a practice session
-  As a user I start filtered practice sessions in tutor or exam mode.
+## Practice sessions
 
-  Scenario: An unfinished session blocks a new one
-    Given a user with an unfinished tutor session
-    When the user starts a new practice session
-    Then the request is rejected because an incomplete session exists
-    And the user is offered the existing session to resume or abandon
-```
+### R1. An unfinished practice session blocks starting a new one until it is resumed or abandoned.
+- `src/application/use-cases/start-practice-session.test.ts`: `throws CONFLICT when an incomplete session exists`
+- `tests/integration/session-attempt-repository.integration.test.ts`: `maps the real duplicate-incomplete-session constraint to the resume-or-abandon conflict`
+- `src/application/use-cases/discard-practice-session.test.ts`: `frees the incomplete-session slot so the user can start over`
 
-- **Feature** — one capability; a short narrative line under the title is convention.
-- **Scenario** — one rule instance, named as a specification sentence.
-- **Given** (arrange) / **When** (act) / **Then** (assert), with **And/But** continuing the previous keyword.
-- **Background** — Givens shared by every scenario in the feature (use sparingly; hidden setup breeds misreads).
-- **Scenario Outline + Examples** — one parameterized scenario over a table of cases (boundary tables: entitled statuses, count clamps).
-- **Tags** (`@billing`, `@exam`) — filtering and grouping.
+### R4. Tutor mode shows the answer and explanation at once; an active exam reveals no correctness until it ends.
+- `src/domain/value-objects/practice-mode.test.ts`: `returns true for tutor mode`
+- `src/domain/value-objects/practice-mode.test.ts`: `returns false for exam mode when not ended`
+- `src/application/use-cases/get-practice-session-review.test.ts`: `redacts correctness for active exam sessions`
 
-**House style — declarative, UI-free, domain-voiced:**
+### R5. During an active exam, answers are saved as drafts only; answering a question for grading is refused.
+- `src/application/use-cases/submit-answer-exam.test.ts`: `rejects active exam sessions before inserting an attempt or recording an answer`
+- `src/application/use-cases/save-exam-draft-answer.test.ts`: `saves a draft answer for an active exam session without changing latest answer fields`
 
-1. No UI vocabulary in feature files. Never "clicks the Submit button" — write "submits an answer". The same feature must remain true if the UI is rebuilt (that is the point).
-2. Use this codebase's ubiquitous language as the domain and application layers express it: *practice session, tutor mode, exam mode, draft answer, finalize, omitted question, attempt, entitled, trial, past due, cancel at period end, bookmark, mark for review*. If a feature file needs a word the codebase doesn't have, that is a naming finding, not a synonym opportunity.
-3. One behavior per scenario; no incidental data (only the details that drive the outcome).
-4. Scenarios assert **outcomes** ("the answer is graded", "access is denied with `UNSUBSCRIBED`"), never mechanism ("the repository upserts…").
+### R6. Finalizing an exam grades each drafted answer and records each unanswered question as omitted and incorrect.
+- `src/application/use-cases/finalize-exam-answers.test.ts`: `finalizes drafted answers and records omitted exam questions as incorrect attempts`
+- `src/application/use-cases/get-practice-session-review.test.ts`: `marks ended exam terminal-null question states as omitted incorrect rows`
 
-## 2. Tooling: `@amiceli/vitest-cucumber`
+### R7. A final draft saved at the last second still counts within the grace window; one arriving later is dropped, and the exam still finalizes.
+- `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `applies the flush within the deadline grace window`
+- `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `drops a flush arriving after the grace window and still finalizes`
 
-**Chosen:** [`@amiceli/vitest-cucumber`](https://github.com/amiceli/vitest-cucumber) v7 — Gherkin for Vitest with real `.feature` files.
+### R8. Only an unfinished exam can be discarded. A tutor session, whose answers are graded attempts, can only be ended, so its attempts are never deleted. Discarding a session that is already gone is a silent success.
+- `src/application/use-cases/discard-practice-session.test.ts`: `rejects discarding a tutor session and leaves it intact`
+- `src/application/use-cases/discard-practice-session.test.ts`: `is idempotent when the session is missing or already discarded`
+- `src/application/use-cases/end-practice-session.test.ts`: `rejects generic end for an active exam session`
 
-- Peer-depends on `vitest ^4.0.4`; we run Vitest 4.1.x. **No second test runner enters the repo** — acceptance tests are ordinary Vitest files.
-- **Spec synchronization:** it errors when the `.feature` file and the step bindings drift (missing/renamed steps fail loudly). For agent-driven development this is the enforcement teeth: bindings cannot silently drift from the feature text.
-- **Codegen:** v7.0.0's published `npx @amiceli/vitest-cucumber --feature <path> --spec <path>` entry point is broken: its bin targets missing `dist/cli-generate.js` while the package ships `dist/cli-generate.mjs`. Write the binding skeleton manually until the package fixes its bin.
+### R9. Marking a question for review exists only inside an active exam.
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `persists marked-for-review state for exam sessions`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT for tutor sessions`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT when session is already ended`
 
-Rejected alternatives, for the record: `@cucumber/cucumber` (canonical, but a second runner with its own TS/ESM loader story — cost without benefit given the above); `playwright-bdd` (binds features to browser E2E — exactly the coupling this layer exists to avoid; revisit only if we later want the *same* feature files executed through a UI driver as well).
+### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
+- `src/application/shared/shuffled-choice-views.test.ts`: `returns deterministic output for the same user and question`
+- `src/application/shared/shuffled-choice-views.test.ts`: `uses the userId in the shuffle seed`
+- `src/domain/services/shuffle.test.ts`: `produces different seeds for different questionIds`
 
-```bash
-pnpm add -D @amiceli/vitest-cucumber@7.0.0
-```
+### R17. Repeating a start request with the same idempotency key starts exactly one session, even when the requests overlap.
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `keeps successful starts idempotent when idempotencyKey is reused`
+- `src/adapters/shared/with-idempotency.test.ts`: `waits for an in-progress request and returns the stored result`
+- `tests/integration/start-session-idempotency.integration.test.ts`: `starts one session for two overlapping requests with one key, and both receive it`
 
-(7.0.0 is current at filing; re-verify the latest release and this runbook's compatibility notes before the adoption PR.)
+### R23. A practice session holds 1 to 200 questions; the practice starter offers 1 to 100.
+- `src/adapters/controllers/practice-schemas.test.ts`: `accepts a session of %i questions`
+- `src/adapters/controllers/practice-schemas.test.ts`: `refuses a session of %i questions`
+- `app/(app)/app/practice/practice-page-logic-session-handlers.test.ts`: `offers sessions of 1 to 100 questions, within what the server accepts`
 
-## 3. Architecture: four layers, one driver
+## Scores and content changes
 
-```text
-.feature file          the specification (business-readable, versioned)
-  └─ step bindings     *.acceptance.test.ts — thin glue, no logic
-       └─ driver       tests/acceptance/support/application-driver.ts — the DSL
-            └─ SUT     real use cases + domain; adapter controllers for adapter-owned rules
-```
+### R18. A question is in one of four states, derived when it is read from its status, its withdrawals and its unlifted holds: available, withdrawn, under review or retired.
+- `src/domain/value-objects/question-availability.test.ts`: `derives a %s question with withdrawn=%s and underReview=%s as %s`
+- `tests/shared/question-availability-contract.ts`: `$name, read through either revision`
+- `tests/shared/question-availability-contract.ts`: `$name, read by id`
 
-The **driver** is the only layer that knows how the system is wired. It composes real use cases with the standard fakes (`src/application/test-helpers/fakes/` — 17 repository fakes, gateway fakes, `FakeLogger`, `FakeRateLimiter`) and exposes intention-level verbs: `givenUser()`, `startSession({ mode, count })`, `submitAnswer(choice)`, `finalizeExam()`, `expectRejectedWithConflict(reason)`.
+### R19. A question no longer available shows its content only to a learner who answered it, never on an omitted or unanswered item, whether it was withdrawn, is under review or was retired.
+- `tests/integration/withdrawn-question-review.integration.test.ts`: `finalizes an exam with an unanswered item, then hides it from every review once withdrawn`
+- `src/application/use-cases/get-previous-attempt.test.ts`: `reveals nothing for an omitted attempt on a question %s`
+- `src/application/use-cases/get-previous-attempt.test.ts`: `still reveals the revision a learner answered on a question %s`
 
-Rules that keep the layers honest:
+### R20. An item counts toward a score when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt (withdrawn, under review, or key-corrected). A retired question keeps counting, and activity counts (total answered, the streak) count every answer.
+- `src/domain/services/scoring.test.ts`: `with a fair chance %s, counts an item whose question is %s: %s`
+- `tests/integration/scores-when-content-changes.integration.test.ts`: `agrees across the summary, History and the Dashboard as content changes during and after an exam`
+- `src/application/use-cases/get-user-stats.test.ts`: `leaves a withdrawn question out of accuracy, not out of activity`
 
-- Step bindings call **only** the driver. They never import fakes, use cases, or factories directly.
-- The driver constructs use cases **the same way their colocated unit tests do** — when writing a new driver method, open the use case's own `*.test.ts` and mirror its wiring; that file is the wiring reference and already demonstrates the correct fakes.
-- The driver holds scenario state (current user, session, last result) so steps stay declarative.
-- No DB, no network, no browser: keep the suite in the unit lane and inject fixed clocks where use cases take one.
+### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed.
+- `tests/shared/attempt-score-contract.ts`: `$name`
+- `tests/integration/question-repository-key-corrections.integration.test.ts`: `includes a latest answer whose key was corrected since, but not one whose stem was reworded`
+- `tests/integration/seed-revision-append.integration.test.ts`: `keeps a graded attempt on its revision and grade after a key correction`
+- `components/question/question-update-notice.test.tsx`: `says the attempt is not scored and links to the corrected question`
 
-Because the primary SUT boundary is the application layer, these tests also double as pressure on the ports. Adapter-owned coordination such as webhook and idempotency behavior is driven at the controller boundary; purely UI behavior belongs in component tests or QA procedures, not here.
+### R22. An exam's submit warning counts only the unanswered questions that would be scored.
+- `src/application/use-cases/get-practice-session-review-content-changes.test.ts`: `counts the scored items left unanswered in an active exam`
+- `src/domain/services/scoring.test.ts`: `in %s mode, answered: %s, question %s: counts %s`
+- `app/(app)/app/practice/[sessionId]/components/exam-review-view.browser.spec.tsx`: `omits the unanswered warning when no unanswered item will be scored`
 
-## 4. File organization and runner wiring
+## Subscription and billing
 
-```text
-tests/acceptance/
-├── support/
-│   └── application-driver.ts
-└── features/
-    ├── practice-sessions/
-    │   ├── starting-a-session.feature
-    │   └── starting-a-session.acceptance.test.ts
-    ├── scoring/
-    ├── entitlement/
-    ├── billing-lifecycle/
-    ├── account-lifecycle/
-    ├── feedback/
-    └── bookmarks/
-```
+### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed.
+- `src/adapters/controllers/require-entitled-user-id.test.ts`: `throws UNSUBSCRIBED when the user is not entitled`
+- `src/adapters/controllers/practice-controller-session-lifecycle.test.ts`: `returns UNSUBSCRIBED when not entitled`
+- `src/adapters/controllers/bookmark-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
+- `src/adapters/controllers/stats-controller.test.ts`: `returns UNSUBSCRIBED when not entitled`
 
-- Binding files are named **`*.acceptance.test.ts`**, colocated beside their `.feature` file. This matches the existing Vitest unit-config include (`**/*.test.ts`), so no Vitest config or runner change is needed: acceptance tests run inside `pnpm test`, the full gate, CI, coverage, and (deliberately) inside the mutation-testing lane, where they can kill business-rule mutants (`docs/dev/mutation-testing.md`). The first adoption PR must also add `acceptance.test` to the filename suffix pattern in `biome.json`'s `useFilenamingConvention` override and its real-lint contract in `tests/architecture-lint-policy.test.ts`; otherwise lint rejects the binding name.
-- Run just this suite with `pnpm test tests/acceptance`. If the suite ever needs its own lane (reporting, timing), split a dedicated config then — not before.
-- When the first feature lands, add the `tests/acceptance/` row to the Test Locations table in `AGENTS.md` (and the `.claude/rules/testing.md` table), plus the filename-policy suffix above, in the same PR.
+### R3. Access ends the instant the paid period ends, whatever the subscription's status says.
+- `src/domain/services/entitlement.test.ts`: `returns false for active with expired period`
+- `src/domain/services/entitlement.test.ts`: `returns false when currentPeriodEnd is exactly now`
+- `src/domain/services/entitlement.test.ts`: `returns false for pastDue with expired period`
 
-## 5. Worked example
+### R10. A first checkout carries a 7-day trial; anyone who has had a subscription gets none; a subscription still current refuses a second checkout.
+- `src/application/use-cases/create-checkout-session.test.ts`: `passes a 7-day trial to the gateway for a first-time user`
+- `src/application/use-cases/create-checkout-session.test.ts`: `does not pass a trial to the gateway for a user with an existing subscription row`
+- `src/application/use-cases/create-checkout-session.test.ts`: `returns ALREADY_SUBSCRIBED when a subscription is still current`
 
-`tests/acceptance/features/practice-sessions/starting-a-session.feature`:
+### R11. A scheduled cancellation keeps access until the paid period ends, and stops renewal notices.
+- `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
+- `tests/integration/send-renewal-notices-job.integration.test.ts`: `selects only active, renewing annual subscriptions in the supplied window`
+- `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: `a paid subscriber cancels without obstruction; renewal stops and access continues to the period end`
 
-```gherkin
-Feature: Starting a practice session
-  Users start filtered practice sessions; unfinished work is protected.
+### R12. A repeated or out-of-order billing event never applies twice and never moves a subscription back to an older state.
+- `tests/integration/stripe-event-repository.integration.test.ts`: `claims an event once without overwriting its type or processed state on replay`
+- `src/adapters/controllers/stripe-webhook-controller.test.ts`: `does not reprocess an event completed between peek and lock`
+- `tests/integration/bug-regression-subscription-observation-version-fence.integration.test.ts`: `rejects the reverse-commit webhook observation and retries with current state`
 
-  Scenario: An unfinished session blocks a new one
-    Given a user with an unfinished tutor session
-    When the user starts a new 10-question tutor session
-    Then the request is rejected because an incomplete session exists
+## Account
 
-  Scenario: The pool is smaller than the requested count
-    Given a user and 3 published questions matching their filters
-    When the user starts a new 10-question tutor session
-    Then a session begins with 3 questions
-    And the user is told the actual count
-```
+### R13. Deleting an account removes the learner's data and their Stripe customer; billing events that arrive later are acknowledged, not used to recreate anything.
+- `src/adapters/controllers/clerk-webhook-controller-deletion.test.ts`: `deletes the Stripe customer and local user when receiving user.deleted`
+- `tests/integration/controllers-webhooks.integration.test.ts`: `deletes the user and cascades stripe data on user.deleted`
+- `tests/integration/bug-regression-post-deletion-webhook-fk.integration.test.ts`: `returns 200, warns, and records a non-failed event when the local user was deleted`
 
-`starting-a-session.acceptance.test.ts` (binding — thin glue only):
+## Feedback and bookmarks
 
-```ts
-import { describeFeature, loadFeature } from '@amiceli/vitest-cucumber';
-import { ApplicationDriver } from '../../support/application-driver';
+### R14. Feedback on a question attaches only to the learner's own attempt or session, and only when it contains that question.
+- `src/application/use-cases/validate-feedback-context.test.ts`: `rejects an attempt owned by another user with NOT_FOUND`
+- `src/application/use-cases/validate-feedback-context.test.ts`: `rejects a session that does not contain the question with VALIDATION_ERROR`
+- `src/application/use-cases/validate-feedback-context.test.ts`: `rejects an attempt for a different question with VALIDATION_ERROR`
 
-const feature = await loadFeature(
-  './starting-a-session.feature',
-);
-
-describeFeature(feature, ({ Scenario }) => {
-  Scenario('An unfinished session blocks a new one', ({ Given, When, Then }) => {
-    const app = new ApplicationDriver();
-    Given('a user with an unfinished tutor session', async () => {
-      await app.givenUser();
-      await app.givenUnfinishedSession({ mode: 'tutor' });
-    });
-    When('the user starts a new 10-question tutor session', async () => {
-      await app.startSession({ mode: 'tutor', count: 10 });
-    });
-    Then('the request is rejected because an incomplete session exists', () => {
-      app.expectRejectedWithConflict('IncompleteSessionExists');
-    });
-  });
-  Scenario(
-    'The pool is smaller than the requested count',
-    ({ Given, When, Then, And }) => {
-      const app = new ApplicationDriver();
-      Given(
-        'a user and 3 published questions matching their filters',
-        async () => {
-          await app.givenUser();
-          await app.givenPublishedQuestions(3);
-        },
-      );
-      When('the user starts a new 10-question tutor session', async () => {
-        await app.startSession({ mode: 'tutor', count: 10 });
-      });
-      Then('a session begins with 3 questions', async () => {
-        await app.expectSessionStarted({ actualCount: 3 });
-      });
-      And('the user is told the actual count', () => {
-        app.expectActualCountReported(3);
-      });
-    },
-  );
-});
-```
-
-The driver's `startSession` wires `StartPracticeSessionUseCase` with `FakePracticeSessionRepository`, `FakeQuestionRepository`, and domain factories (`createQuestion`, `createPracticeSession`) exactly as `start-practice-session.test.ts` already does, and stores the thrown/returned result for the `expect*` verbs. In v7.0.0, `loadFeature('./filename.feature')` resolves that simple path relative to the calling test file; other relative paths resolve against the process working directory. Keep each pair colocated and use the simple `./filename.feature` form shown above.
-
-## 6. Feature backlog — the rules worth specifying first
-
-Each rule below was read from the implementation (receipts cited); every one is UI-independent and expressible through the driver. Work the numbered order: it front-loads revenue- and integrity-bearing rules.
-
-| # | Rule (as the scenario will state it) | Implementation receipts | Folder |
-|---|---|---|---|
-| 1 | An unfinished session blocks starting a new one until resumed or abandoned | `src/application/use-cases/start-practice-session.ts` (`IncompleteSessionExists`) | practice-sessions |
-| 2 | Without an entitled subscription, practice/bookmarks/stats are denied with `UNSUBSCRIBED` | `src/adapters/controllers/require-entitled-user-id.ts` (the per-controller gate), `src/application/use-cases/check-entitlement.ts`, `src/domain/services/entitlement.ts` | entitlement |
-| 3 | Access ends the instant `currentPeriodEnd` passes, whatever the status string says | `entitlement.ts` (`currentPeriodEnd <= now`) | entitlement |
-| 4 | Tutor mode explains immediately; exam mode reveals nothing until the exam ends | `src/domain/value-objects/practice-mode.ts` (`shouldShowExplanationForMode`), `submit-answer.ts`, `get-practice-session-review.ts`, `get-completed-session-questions-with-feedback.ts` | practice-sessions |
-| 5 | Active exams take draft answers only; per-question submit is refused | `submit-answer.ts` ("not available in exam mode"), `save-exam-draft-answer.ts` | practice-sessions |
-| 6 | Finalizing an exam records unanswered questions as omitted-incorrect; accuracy divides by total question count | `finalize-exam-answers.ts`, `practice-session-summary.ts` | scoring |
-| 7 | A last-second final draft flush still grades within the grace window; later ones are dropped | `finalize-exam-answers.ts` (`FINALIZE_FLUSH_DEADLINE_GRACE_MS`) | scoring |
-| 8 | Exams can be discarded; tutor sessions can only be ended (attempts never deleted); discarding a missing session is a silent success | `discard-practice-session.ts` (BUG-251), `end-practice-session.ts` | practice-sessions |
-| 9 | Mark-for-review exists only inside an active exam | `set-practice-session-question-mark.ts` | practice-sessions |
-| 10 | Checkout with no existing subscription row carries a 7-day trial; any existing row removes it; a still-current blocking subscription refuses a second checkout | `create-checkout-session.ts` (`FREE_TRIAL_DAYS`, `ALREADY_SUBSCRIBED`) | billing-lifecycle |
-| 11 | Scheduled cancellation keeps access until period end and stops renewal notices | `src/adapters/controllers/stripe-webhook-controller.ts`, `src/adapters/jobs/send-due-renewal-notices.ts` (`cancelAtPeriodEnd`) | billing-lifecycle |
-| 12 | A duplicate or out-of-order billing event never double-applies or regresses subscription state | `stripe-webhook-controller.ts` claim/lock, `persist-subscription-observation.ts`, `subscription-write-guard.ts` | billing-lifecycle |
-| 13 | Deleting the account removes local data, deletes the Stripe customer, and later billing events are acknowledged, not resurrected | `clerk-webhook-controller.ts` tombstone + cascade, `stripe-webhook-controller.ts` (`user_missing` acknowledgment) | account-lifecycle |
-| 14 | Feedback attaches only to your own attempt/session, and only when it actually contains the question | `validate-feedback-context.ts` (BUG-260) | feedback |
-| 15 | Only published questions can be newly bookmarked; unbookmark is idempotent; existing bookmarks survive unpublishing (listed as unavailable) | `set-bookmark.ts`, `get-bookmarks.ts` | bookmarks |
-| 16 | A user sees a deterministic choice order for a question; both the user and question IDs seed that order | `shuffled-choice-views.ts`, `shuffle.ts` | practice-sessions |
-| 17 | Reusing one start-session idempotency key yields exactly one session | `with-idempotency.ts`, `practice-controller.ts` | practice-sessions |
-
-Known edge worth a scenario while writing #1: the client clamps session count to 1–100 (`SESSION_COUNT_MAX`) while the server accepts 1–200 (`MAX_PRACTICE_SESSION_QUESTIONS`) — specify the intended contract and pin it.
-
-## 7. Boundaries with the other suites
-
-- **Not integration tests.** Fakes here; real Postgres there (`tests/integration/`). A rule involving real SQL semantics (locks, constraint races) stays integration-owned; the acceptance scenario states the user-visible outcome and the integration test proves the storage mechanics.
-- **Not a unit-test replacement.** Unit tests keep exhaustive edge/error coverage next to the code; acceptance covers the rule as a user-visible contract. One rule ≈ 2–5 scenarios, not 30.
-- **Not E2E.** No browser, no Clerk, no Stripe. The webhook-lifecycle features (#12, #13) drive the controllers directly with the fixture events in `tests/fixtures/stripe/` and `tests/fixtures/clerk/`.
-- ADR-003's pyramid stays intact; ADR-019 names this band explicitly. Coverage remains observational policy-wide.
-
-## 8. Adoption sequence (DEBT-465 Part 3)
-
-1. `pnpm add -D @amiceli/vitest-cucumber`; commit the `package.json` and lockfile bump as an isolated dependency commit.
-2. Build `tests/acceptance/support/application-driver.ts` with the verbs needed by feature #1 only (drivers grow verb-by-verb, never speculatively).
-3. Land features #1 and #4 (session start conflict + tutor/exam feedback split) with manually written skeletons; confirm spec-sync errors fire by renaming a step locally.
-4. Land #2/#3 (entitlement) and #10 (trial) — the revenue rules.
-5. Update the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) and filename-policy suffix in the PR that lands #1.
-6. From then on: **every new business rule ships its feature file first** — the acceptance scenario is the outer red before unit-level TDD begins.
+### R15. Only an available question can be newly bookmarked, and removing a bookmark twice is harmless. An existing bookmark survives the question becoming unavailable, and names its state.
+- `src/application/use-cases/set-bookmark.test.ts`: `throws NOT_FOUND when adding an unpublished question`
+- `src/application/use-cases/set-bookmark.test.ts`: `returns bookmarked=false when removing an already absent bookmark`
+- `src/application/use-cases/get-bookmarks.test.ts`: `labels a bookmarked question that is %s`

@@ -28,6 +28,18 @@ describe('isEntitled', () => {
     expect(isEntitled(sub, now)).toBe(true);
   });
 
+  // A scheduled cancellation keeps access until the period ends (DEBT-465
+  // Part 3, rule R11).
+  it('keeps access until the period ends when cancellation is scheduled', () => {
+    const sub = createSubscription({
+      status: 'active',
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
+    });
+    expect(isEntitled(sub, now)).toBe(true);
+    expect(isEntitled(sub, new Date('2026-03-01T00:00:00Z'))).toBe(false);
+  });
+
   it('returns false for active with expired period', () => {
     const sub = createSubscription({
       status: 'active',
