@@ -742,7 +742,7 @@ export type EndPracticeSessionOutput = {
    * `accuracy` = correct / scored (0 if scored = 0); the summary and the post-exam header ("X of scored correct") show "—" when nothing is scored and say how many questions aren't scored
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary. `finalizeExamAnswers` and `getPracticeSessionSummary` return the same shape; the summary read scores the items as the bank stands at the read.
-6. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:endPracticeSession'`) so duplicate finalize requests replay the cached summary. A summary cached before `scored` existed (DEBT-493) is replayed with `scored = questionCount`, what its writer counted; that mapping is removed one full 24-hour TTL after the last such writer left production.
+6. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:endPracticeSession'`) so duplicate finalize requests replay the cached summary. Every cached summary carries `totals.scored` (DEBT-493).
 
 > **SPEC-020 Note:** The UI MUST call `getPracticeSessionReview` after `endPracticeSession` to display per-question breakdown on the summary screen. See SPEC-020 Phase 2 (DEBT-123). No type change to `EndPracticeSessionOutput` — the review data comes from the existing review action (SRP).
 
