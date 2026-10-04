@@ -3,16 +3,17 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-04 UTC
 
-**Latest** — 2026-10-04 UTC: the last tails of DEBT-493 and DEBT-476's accepted risk. The replay mapping is removed, and alert #55 is open again as the watcher for a `stream-json` fix ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#deferred-tail-done--2026-10-04-utc), [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md#correction--2026-10-04-alert-55-reopened)).
-- **The replay mapping is removed.** End and finalize outputs now require `totals.scored`. A full 24-hour TTL had passed since the last writer without it left production, at 2026-10-03 20:02:33Z, and production had not rolled back since; Vercel's deployment and alias APIs confirmed both.
-- **Alert #55 is open.** The owner approved it, on the principle that a known risk is documented, not hidden. Dismissal had stopped GitHub tracking the alert, as it had for #77. Both open alerts, #55 and #77, are accepted risks with recorded triggers, not untriaged ones.
-- **DEBT-465's Part 3 checklist** now states its outcome, 23 rules, as CodeRabbit asked on #1359.
-- **Released since the last entry.** #1358 (DEBT-465 Part 3, **5403991593** on `48cc9c59`; merged `62b8050d`) went out through promotion #1359 (`2018ba5a`):
-  - main CI **37173530975** `test` passed **03:28:55Z**;
-  - production assigned **03:28:57.328Z**;
-  - trees `8711ecb0`, healthy production.
-- **Next.** DEBT-465 Part 4's QA runs come before the production bootstrap, which remains the owner's decision.
-- **What remains Active.** DEBT-414 and DEBT-465, both owner-gated in part.
+**Latest** — 2026-10-04 UTC: DEBT-496 filed, and a rollback floor recorded. DEBT-493's notices for changed content have no route-level proof, and an end-to-end spec on dedicated questions is decided ([DEBT-496](./debt-496-content-change-notices-route-level-proof.md)).
+- **The gap.** Each notice is proven layer by layer: domain, use cases, real-Postgres queries, and components in real Chromium. No test drives a real page from database state to the rendered notice. The UI PRs also shipped without the screenshots `.claude/rules/git-workflow.md` asks for.
+- **The resolution, decided.** One Playwright spec on dedicated questions shows the key-corrected caution, a withdrawn bookmark and a held question. It asserts by role and text, and attaches a screenshot on every run. A manual pass was rejected: it would stage content changes in the shared remote development database, and it would not repeat.
+- **Rollback floor.** CodeRabbit noted on #1360 that rolling back below #1350 would cache outputs the strict reader now refuses. The deployment procedure now keeps a rollback-floor table, and its first entry says a rollback below #1350 must restore the `scored` replay parser before rolling forward.
+- **Released since the last entry.** #1360 (DEBT-493's last tail; alert #55 reopened) went out through promotion #1361 (`4a32f08b`):
+  - main CI **37244375295** `test` passed **23:50:09Z**;
+  - production assigned **23:50:11.645Z**;
+  - trees `52132fb9`, healthy production.
+- **CodeRabbit.** The owner moved the repository to the Essentials plan on 2026-10-04. It allows 5 reviews an hour, falling to 1 an hour after 60 reviews in a week; the last 7 days used 191. Promotions are now skipped (`.coderabbit.yaml`, titles beginning `Promote #`; AGENTS.md, Reviewed-Source Promotions), since they need no review of their own. Each review round is one push.
+- **Next.** DEBT-496's spec.
+- **What remains Active.** DEBT-414, DEBT-465 and DEBT-496.
 - **Open decisions for the owner.** Unchanged:
   - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
   - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
@@ -20,7 +21,7 @@
     - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
     - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
 
-This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **2 Active records; Next Debt ID is DEBT-496.**
+This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **3 Active records; Next Debt ID is DEBT-497.**
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md), [2026-06](./register-history-2026-06.md).
 

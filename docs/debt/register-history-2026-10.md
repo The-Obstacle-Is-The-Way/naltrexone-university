@@ -2,6 +2,17 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-04 UTC: the last tails of DEBT-493 and DEBT-476's accepted risk. The replay mapping is removed, and alert #55 is open again as the watcher for a `stream-json` fix ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#deferred-tail-done--2026-10-04-utc), [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md#correction--2026-10-04-alert-55-reopened)).
+- **The replay mapping is removed.** End and finalize outputs now require `totals.scored`. A full 24-hour TTL had passed since the last writer without it left production, at 2026-10-03 20:02:33Z, and production had not rolled back since; Vercel's deployment and alias APIs confirmed both.
+- **Alert #55 is open.** The owner approved it, on the principle that a known risk is documented, not hidden. Dismissal had stopped GitHub tracking the alert, as it had for #77. Both open alerts, #55 and #77, are accepted risks with recorded triggers, not untriaged ones.
+- **DEBT-465's Part 3 checklist** now states its outcome, 23 rules, as CodeRabbit asked on #1359.
+- **Released since the last entry.** #1358 (DEBT-465 Part 3, **5403991593** on `48cc9c59`; merged `62b8050d`) went out through promotion #1359 (`2018ba5a`):
+  - main CI **37173530975** `test` passed **03:28:55Z**;
+  - production assigned **03:28:57.328Z**;
+  - trees `8711ecb0`, healthy production.
+- **Next.** DEBT-465 Part 4's QA runs come before the production bootstrap, which remains the owner's decision.
+- **What remains Active.** DEBT-414 and DEBT-465, both owner-gated in part.
+
 **Earlier** — 2026-10-04 UTC: DEBT-465 Part 3. The rule-to-test register states 23 business rules in plain language, each with the tests that prove it, and a check fails when one of those tests is renamed or deleted ([DEBT-465](./debt-465-test-quality-practices-adoption.md#part-3--acceptance-test-harness)).
 - **What it gives.** A clinician or the owner can read what the product guarantees in [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md), and see where each guarantee is pinned. `tests/rule-to-test-register.test.ts` checks every link on each test run.
 - **Five rules lacked a proof at the right level.** Each now has one:
