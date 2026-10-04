@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  declaredTestTitles,
   findRuleRegisterProblems,
   parseRuleRegister,
   RULE_REGISTER_PATH,
@@ -11,6 +12,8 @@ import {
 // that prove it, and a rename or deletion of one of them fails here.
 
 const register = `# Register
+
+- **Format.** A proof line is \`- \\\`path\\\`: \\\`title\\\`\`.
 
 ### R1. An unfinished session blocks a new one.
 - \`src/start.test.ts\`: \`throws CONFLICT when an incomplete session exists\`
@@ -26,36 +29,55 @@ function source(files: Record<string, string>) {
 
 describe('the rule-to-test register check', () => {
   it('parses each rule and the tests that prove it', () => {
-    expect(parseRuleRegister(register)).toEqual([
-      {
-        id: 'R1',
-        rule: 'An unfinished session blocks a new one.',
-        proofs: [
-          {
-            file: 'src/start.test.ts',
-            title: 'throws CONFLICT when an incomplete session exists',
-          },
-          {
-            file: 'tests/integration/start.integration.test.ts',
-            title: 'maps the constraint',
-          },
-        ],
-      },
-      {
-        id: 'R2',
-        rule: "A rule with an apostrophe's title.",
-        proofs: [
-          {
-            file: 'src/apostrophe.test.ts',
-            title: "keeps the question's state",
-          },
-        ],
-      },
+    expect(parseRuleRegister(register)).toEqual({
+      rules: [
+        {
+          id: 'R1',
+          rule: 'An unfinished session blocks a new one.',
+          proofs: [
+            {
+              file: 'src/start.test.ts',
+              title: 'throws CONFLICT when an incomplete session exists',
+            },
+            {
+              file: 'tests/integration/start.integration.test.ts',
+              title: 'maps the constraint',
+            },
+          ],
+        },
+        {
+          id: 'R2',
+          rule: "A rule with an apostrophe's title.",
+          proofs: [
+            {
+              file: 'src/apostrophe.test.ts',
+              title: "keeps the question's state",
+            },
+          ],
+        },
+      ],
+      problems: [],
+    });
+  });
+
+  it('reports a malformed rule heading, a malformed proof line and a repeated rule', () => {
+    const { problems } = parseRuleRegister(`### R1. A rule.
+- \`src/a.test.ts\`: \`a title\`
+### R2 A heading without its period.
+- \`src/b.test.ts\` \`a title without its colon\`
+### R1. The same rule again.
+- \`src/c.test.ts\`: \`another title\`
+`);
+
+    expect(problems).toEqual([
+      'line 3: not a rule heading (### R<n>. <rule>): ### R2 A heading without its period.',
+      'line 4: not a proof line (- `file`: `title`): - `src/b.test.ts` `a title without its colon`',
+      'line 5: R1 is listed twice',
     ]);
   });
 
-  it('accepts titles written in any quote style, escaped or not', () => {
-    const rules = parseRuleRegister(register);
+  it('accepts a test declared in any quote style, escaped or not, and through each', () => {
+    const { rules } = parseRuleRegister(register);
 
     expect(
       findRuleRegisterProblems(
@@ -64,37 +86,25 @@ describe('the rule-to-test register check', () => {
           'src/start.test.ts':
             "it('throws CONFLICT when an incomplete session exists', () => {});",
           'tests/integration/start.integration.test.ts':
-            'it(`maps the constraint`, async () => {});',
+            'test.each([1, 2])(`maps the constraint`, async () => {});',
           'src/apostrophe.test.ts':
-            "it('keeps the question\\'s state', () => {});",
-        }),
-      ),
-    ).toEqual([]);
-    expect(
-      findRuleRegisterProblems(
-        parseRuleRegister(register).slice(1),
-        source({
-          'src/apostrophe.test.ts':
-            'it("keeps the question\'s state", () => {});',
+            "describe('x', () => { it('keeps the question\\'s state', () => {}); });",
         }),
       ),
     ).toEqual([]);
   });
 
   it('reports a renamed test, a missing file and a rule with no test', () => {
-    const rules = [
-      ...parseRuleRegister(register),
-      { id: 'R3', rule: 'An unproven rule.', proofs: [] },
-    ];
+    const { rules } = parseRuleRegister(register);
 
     expect(
       findRuleRegisterProblems(
-        rules,
+        [...rules, { id: 'R3', rule: 'An unproven rule.', proofs: [] }],
         source({
           'src/start.test.ts':
             "it('throws CONFLICT when a session is incomplete', () => {});",
           'src/apostrophe.test.ts':
-            "it('keeps the question\\'s state', () => {});",
+            'it("keeps the question\'s state", () => {});',
         }),
       ),
     ).toEqual([
@@ -110,17 +120,42 @@ describe('the rule-to-test register check', () => {
     ]);
   });
 
+  it('counts only tests that run: not a commented-out, skipped or todo test, nor one in a skipped describe', () => {
+    expect(
+      declaredTestTitles(
+        `// it('commented out', () => {});
+const note = 'a title in a string';
+it.skip('skipped', () => {});
+it.todo('todo');
+test.skipIf(true)('skipped if', () => {});
+describe.skip('skipped group', () => {
+  it('inside a skipped group', () => {});
+});
+describe('group', () => {
+  it('runs', () => {});
+  it.each([1])('runs for %i', () => {});
+  test.only('runs alone', () => {});
+});
+it(\`a template title\`, () => {});`,
+        'example.test.ts',
+      ),
+    ).toEqual(
+      new Set(['runs', 'runs for %i', 'runs alone', 'a template title']),
+    );
+  });
+
   it('finds every test the live register names', () => {
     const root = path.resolve(__dirname, '..');
-    const rules = parseRuleRegister(
+    const { rules, problems } = parseRuleRegister(
       readFileSync(path.join(root, RULE_REGISTER_PATH), 'utf8'),
     );
 
-    expect(
-      findRuleRegisterProblems(rules, (file) => {
+    expect([
+      ...problems,
+      ...findRuleRegisterProblems(rules, (file) => {
         const absolute = path.join(root, file);
         return existsSync(absolute) ? readFileSync(absolute, 'utf8') : null;
       }),
-    ).toEqual([]);
+    ]).toEqual([]);
   });
 });

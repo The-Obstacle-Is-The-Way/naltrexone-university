@@ -32,8 +32,16 @@ describe('practice-page-logic session handlers', () => {
   // DEBT-465 Part 3, rule R23: the starter offers 1 to 100 questions, within
   // the 1 to 200 the server accepts.
   it('offers sessions of 1 to 100 questions, within what the server accepts', () => {
-    expect([SESSION_COUNT_MIN, SESSION_COUNT_MAX]).toEqual([1, 100]);
-    expect(SESSION_COUNT_MAX).toBeLessThanOrEqual(
+    const counts = ['0', '1', '100', '101', '1000'].map((value) => {
+      const setSessionCount = vi.fn();
+      handleSessionCountChange(vi.fn(), setSessionCount, {
+        target: { value },
+      });
+      return setSessionCount.mock.calls.at(-1)?.[0];
+    });
+
+    expect(counts).toEqual([1, 1, 100, 100, 100]);
+    expect(Math.max(...counts)).toBeLessThanOrEqual(
       MAX_PRACTICE_SESSION_QUESTIONS,
     );
   });

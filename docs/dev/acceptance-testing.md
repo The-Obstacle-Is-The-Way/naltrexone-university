@@ -2,7 +2,10 @@
 
 Each rule below states, in plain language, something the system guarantees a learner or a subscriber. The lines under it name the tests that prove it. A clinician or the owner can read what the product promises without reading code, and a developer can see where each promise is pinned.
 
-`tests/rule-to-test-register.test.ts` checks the register on every `pnpm test`. Every named file must exist and still hold a test with the named title, and every rule must name at least one test. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
+`tests/rule-to-test-register.test.ts` checks the register on every `pnpm test`.
+- Every named file must exist and still declare a running test with the named title. The file is parsed, so a commented-out, skipped or todo test does not count.
+- Every rule must name at least one test.
+- A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
 
 This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), [DEBT-465's decision](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03)). Its design is in this file's history up to commit `91a24f3e`.
 
