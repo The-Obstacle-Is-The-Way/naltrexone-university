@@ -145,6 +145,7 @@ it.todo('todo');
 test.skipIf(true)('skipped if', () => {});
 test.runIf(false)('run if', () => {});
 it('skipped by option', { skip: true }, () => {});
+it('skipped by a quoted option', { 'skip': true }, () => {});
 it('todo by option', { todo: true });
 describe.skip('skipped group', () => {
   it('inside a skipped group', () => {});
@@ -156,6 +157,7 @@ describe('group', () => {
   it('runs', () => {});
   it('runs with options', { timeout: 1000 }, () => {});
   it('runs with skip false', { skip: false }, () => {});
+  for (const n of [1]) it('runs in a loop', () => {});
   it.each([1])('runs for %i', () => {});
   test.only('runs alone', () => {});
 });
@@ -167,11 +169,29 @@ it(\`a template title\`, () => {});`,
         'runs',
         'runs with options',
         'runs with skip false',
+        'runs in a loop',
         'runs for %i',
         'runs alone',
         'a template title',
       ]),
     );
+  });
+
+  it('counts no test declared under a condition', () => {
+    expect(
+      declaredTestTitles(
+        `if (process.env.RUN_PROOF) it('in an if', () => {});
+if (flag) {} else { it('in an else', () => {}); }
+flag ? it('in a ternary', () => {}) : undefined;
+flag && it('after and', () => {});
+flag || it('after or', () => {});
+value ?? it('after nullish', () => {});
+switch (mode) { case 'a': it('in a case', () => {}); }
+it('runs', () => {});
+it('left of and', () => {}) && undefined;`,
+        'example.test.ts',
+      ),
+    ).toEqual(new Set(['runs', 'left of and']));
   });
 
   it('finds every test the live register names', () => {

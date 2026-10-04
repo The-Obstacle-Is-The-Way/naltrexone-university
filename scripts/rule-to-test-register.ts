@@ -100,11 +100,34 @@ function skippedByOptions(options: ts.Expression | undefined): boolean {
     options.properties.some(
       (property) =>
         ts.isPropertyAssignment(property) &&
-        ts.isIdentifier(property.name) &&
+        (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
         SKIPPING_OPTIONS.has(property.name.text) &&
         property.initializer.kind === ts.SyntaxKind.TrueKeyword,
     )
   );
+}
+
+// Whether a child runs only under a condition: an `if` or ternary branch, the
+// right side of `&&`, `||` or `??`, or a `switch` case. A loop body or a
+// `try` block runs, so a test declared there counts.
+function isConditionalChild(parent: ts.Node, child: ts.Node): boolean {
+  if (ts.isIfStatement(parent)) {
+    return child === parent.thenStatement || child === parent.elseStatement;
+  }
+  if (ts.isConditionalExpression(parent)) {
+    return child === parent.whenTrue || child === parent.whenFalse;
+  }
+  if (ts.isBinaryExpression(parent)) {
+    return (
+      child === parent.right &&
+      [
+        ts.SyntaxKind.AmpersandAmpersandToken,
+        ts.SyntaxKind.BarBarToken,
+        ts.SyntaxKind.QuestionQuestionToken,
+      ].includes(parent.operatorToken.kind)
+    );
+  }
+  return ts.isCaseClause(parent) || ts.isDefaultClause(parent);
 }
 
 /** The titles of the tests a file declares and would run unconditionally. */
@@ -120,13 +143,13 @@ export function declaredTestTitles(
     fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const titles = new Set<string>();
-  const visit = (node: ts.Node, insideSkipped: boolean): void => {
+  // `inactive`: skipped, or declared under a condition.
+  const visit = (node: ts.Node, inactive: boolean): void => {
     if (ts.isCallExpression(node)) {
       const call = classifyCallee(node.expression);
       if (call) {
         const [first, options] = node.arguments;
-        const skipped =
-          insideSkipped || call.skipped || skippedByOptions(options);
+        const skipped = inactive || call.skipped || skippedByOptions(options);
         if (
           call.declaresTest &&
           !skipped &&
@@ -140,7 +163,9 @@ export function declaredTestTitles(
         return;
       }
     }
-    ts.forEachChild(node, (child) => visit(child, insideSkipped));
+    ts.forEachChild(node, (child) =>
+      visit(child, inactive || isConditionalChild(node, child)),
+    );
   };
   visit(file, false);
   return titles;
