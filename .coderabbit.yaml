@@ -25,6 +25,12 @@ reviews:
     base_branches:
       - '.*'
     drafts: false
+    # Promotions (dev → main) carry only source PRs already approved on their
+    # exact heads, and need no review of their own (AGENTS.md, Reviewed-Source
+    # Promotions; owner, 2026-09-22 and 2026-10-04). Every promotion title
+    # begins "Promote #". Matching is a case-insensitive substring.
+    ignore_title_keywords:
+      - 'Promote #'
   pre_merge_checks:
     docstrings:
       mode: off

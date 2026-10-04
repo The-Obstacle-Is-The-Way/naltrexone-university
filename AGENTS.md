@@ -730,6 +730,12 @@ own CodeRabbit review or approval. Re-reviewing already-approved content cost
 hours during #984 without adding a new implementation boundary. Every feature
 PR still requires normal exact-head approval before entering `dev`.
 
+**Owner decision, 2026-10-04:** CodeRabbit skips promotions altogether
+(`.coderabbit.yaml`, `reviews.auto_review.ignore_title_keywords`), which keeps
+its review allowance for feature PRs. A promotion's title therefore begins
+`Promote #`, followed by the source PR numbers. A feature PR's title must not
+contain `Promote #`, or it would go unreviewed.
+
 For each promotion:
 
 1. Wait for promotion CI `test` to pass. The read-only proof is
