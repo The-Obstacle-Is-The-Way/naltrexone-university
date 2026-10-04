@@ -108,8 +108,9 @@ function skippedByOptions(options: ts.Expression | undefined): boolean {
 }
 
 // Whether a child runs only under a condition: an `if` or ternary branch, the
-// right side of `&&`, `||` or `??`, or a `switch` case. A loop body or a
-// `try` block runs, so a test declared there counts.
+// right side of `&&`, `||` or `??`, a `switch` case, or a `catch` block. A
+// loop body, a `try` block and a `finally` block run, so a test declared there
+// counts.
 function isConditionalChild(parent: ts.Node, child: ts.Node): boolean {
   if (ts.isIfStatement(parent)) {
     return child === parent.thenStatement || child === parent.elseStatement;
@@ -127,6 +128,7 @@ function isConditionalChild(parent: ts.Node, child: ts.Node): boolean {
       ].includes(parent.operatorToken.kind)
     );
   }
+  if (ts.isCatchClause(parent)) return true;
   return ts.isCaseClause(parent) || ts.isDefaultClause(parent);
 }
 

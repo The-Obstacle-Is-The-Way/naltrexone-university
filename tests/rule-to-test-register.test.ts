@@ -187,11 +187,12 @@ flag && it('after and', () => {});
 flag || it('after or', () => {});
 value ?? it('after nullish', () => {});
 switch (mode) { case 'a': it('in a case', () => {}); }
+try { it('in a try', () => {}); } catch { it('in a catch', () => {}); } finally { it('in a finally', () => {}); }
 it('runs', () => {});
 it('left of and', () => {}) && undefined;`,
         'example.test.ts',
       ),
-    ).toEqual(new Set(['runs', 'left of and']));
+    ).toEqual(new Set(['runs', 'left of and', 'in a try', 'in a finally']));
   });
 
   it('finds every test the live register names', () => {

@@ -6,9 +6,9 @@ Each rule below states, in plain language, something the system guarantees a lea
 - Every named file must exist and still declare a test with the named title that runs unconditionally. The file is parsed, and these do not count:
   - a test that is commented out, skipped, todo or skipped by its options;
   - a conditional test (`runIf`, `skipIf`);
-  - a test declared under a condition: an `if` or ternary branch, after `&&`, `||` or `??`, or in a `switch` case.
+  - a test declared under a condition: an `if` or ternary branch, after `&&`, `||` or `??`, in a `switch` case or in a `catch` block.
 
-  A test in a loop or a `try` block counts. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
+  A test in a loop, a `try` block or a `finally` block counts. Titles built at run time, and tests reached through renamed aliases of `it`, are outside what the check reads; write proofs as plain `it`, `test` or `.each` declarations.
 - Every rule must name at least one test.
 - A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
 

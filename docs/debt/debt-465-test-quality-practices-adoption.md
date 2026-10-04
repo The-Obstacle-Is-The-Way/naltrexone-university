@@ -57,10 +57,10 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
   - It parses each file with the TypeScript compiler. A test does not count if it is:
     - commented out, skipped, todo, or skipped by its options (`{ skip: true }`, quoted or not);
     - conditional (`runIf`, `skipIf`);
-    - declared under a condition (an `if` or ternary branch, after `&&`, `||` or `??`, or in a `switch` case);
+    - declared under a condition (an `if` or ternary branch, after `&&`, `||` or `??`, in a `switch` case or in a `catch` block);
     - inside a skipped `describe`.
 
-    `it.each` and `test.each` titles count. So does a test in a loop or a `try` block.
+    `it.each` and `test.each` titles count. So does a test in a loop, a `try` block or a `finally` block.
   - A malformed heading or proof line, or a repeated rule number, is reported, not skipped.
   - In review, CodeRabbit found gaps over three rounds:
     - the first version matched source text;
@@ -68,7 +68,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
     - it counted option-skipped and `runIf` tests;
     - it counted tests declared under an ordinary condition.
 
-    Each was fixed, and the last was closed as a class rather than form by form. Twenty-three targeted mutations of the check each fail a case.
+    Each was fixed, and the last was closed as a class rather than form by form. Twenty-five targeted mutations of the check each fail a case.
 - **Five rules had no proof at the right level.** Mapping each rule to its tests found them, and each now has a test:
   - **R23**, the 1–200 session size: nothing sent 200 or 201, so the schema could drift from the constant unnoticed. Schema cases accept 1 and 200 and refuse 0 and 201, and a starter case pins 1–100 within the server's range.
   - **R11**, scheduled cancellation keeps access: only the hosted-Stripe E2E proved it. A domain case now does.
