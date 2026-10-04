@@ -236,7 +236,7 @@ In increments, each test-first.
   - the submit warning counts only scored items;
   - a key-corrected answer shows the correction notice, is unscored, and returns to the Incorrect filter, while a wording-only revision keeps F-12 and stays scored;
   - each step's targeted mutations fail a case (Progress).
-- **Deferred.** End and finalize outputs cached before #1348's writer are replayed with `totals.scored = questionCount`, by the mapping in `src/adapters/controllers/practice-schemas.ts`. It can be removed once a full 24-hour TTL has passed since that writer reached production (promotion #1350, assigned 2026-10-03 20:02:33Z), provided production has not rolled back to an earlier deployment since. The register's Deferred table carries it.
+- **Deferred.** End and finalize outputs cached before #1348's writer are replayed with `totals.scored = questionCount`, by the mapping in `src/adapters/controllers/practice-schemas.ts`. It can be removed once a full 24-hour TTL has passed since that writer reached production (promotion #1350, assigned 2026-10-03 20:02:33Z), provided production has not rolled back to an earlier deployment since. The register's Deferred table carries it. Done on 2026-10-04: see [Deferred tail done](#deferred-tail-done--2026-10-04-utc).
 
 
 ## Deferred tail done — 2026-10-04 UTC
