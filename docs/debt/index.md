@@ -17,7 +17,7 @@
   - production assigned **11:41:25.615Z**;
   - trees `6b94e39a`, healthy production.
 - **DEBT-496 closed (Resolved).** Its spec is in production through promotion #1365 (receipts below), and the record is archived ([DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md#progress)).
-- **Next.** DEBT-498 is fixed: the ADR-022 amendment and the Pattern Registry entries first, then the code.
+- **Next.** DEBT-498's implementation, in this order: the ADR-022 amendment and the Pattern Registry entries, then the code. It is decided, not yet built.
 - **What remains Active.** DEBT-414, DEBT-465, DEBT-497 and DEBT-498.
 - **Open decisions for the owner.** Unchanged from the [previous entry](./register-history-2026-10.md): when to bootstrap production content releases (DEBT-483), configuring the Resend webhook, and Massachusetts' second annual notice (DEBT-414 F19a).
 

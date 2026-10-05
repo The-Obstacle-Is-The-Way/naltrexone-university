@@ -56,7 +56,7 @@ One Playwright spec, `tests/e2e/content-change-notices.spec.ts`, proves the path
 - the withdrawn bookmark is checked for the stem's rendered text, not its Markdown source;
 - a fixture question's tag links are written inside its transaction, so a failed link leaves nothing behind.
 
-#1364 then went to production through promotion #1365. Its key-corrected screenshot showed the old key graded as correct under the caution, which is recorded as [DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md).
+PR #1364 then went to production through promotion #1365. Its key-corrected screenshot showed the old key graded as correct under the caution, which is recorded as [DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md).
 
 ## Verification
 

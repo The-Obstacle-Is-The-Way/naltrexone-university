@@ -30,7 +30,7 @@ Codecov's `*.codecov.io` certificate expired at 2026-10-04 23:59:59 UTC (`notAft
 
 ## Impact
 
-- **Merges stop.** Every feature merge stops while Codecov is down, even when the change has no code for coverage to measure.
+- **Merges stop.** While Codecov is down, every feature merge stops except a change confined to dependency manifests or CI workflows, which ADR-020 already excuses. That includes changes to documentation and repository-tool configuration, where coverage measures nothing.
 - **The stop is hidden.** CI shows green, and the stop surfaces only when the merge guard refuses.
 
 ## Options
@@ -61,5 +61,5 @@ Option 4 is not justified by one outage. It is revisited if a second outage bloc
 
 - [x] `merge-reviewed-pr.ts` excuses a missing `codecov/patch` for a change confined to the extended paths, and still refuses a failed status, or any change touching code.
 - [x] Both cases are proven by red-first unit cases.
-- [x] CI reports a failed Codecov upload as a job warning and summary, without failing the job. The summary appears only on failure, so a run with no warning had an accepted upload.
+- [x] CI reports a failed Codecov upload as a job warning and summary, without failing the job. The upload has no condition of its own, so it is skipped only when an earlier step failed, and then the job is already red. A green job with no warning therefore had an accepted upload.
 - [x] AGENTS.md records the outage procedure.
