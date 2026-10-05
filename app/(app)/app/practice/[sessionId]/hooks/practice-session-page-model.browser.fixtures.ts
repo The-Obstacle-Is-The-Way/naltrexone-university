@@ -127,6 +127,7 @@ export function createReviewRow(
     isCorrect: input.isCorrect ?? null,
     isOmitted: input.isOmitted ?? false,
     markedForReview: input.markedForReview ?? false,
+    answerKeyChanged: false,
   };
   if (input.isAvailable === false) {
     return { isAvailable: false, availability: null, ...shared };

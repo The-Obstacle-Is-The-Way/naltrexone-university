@@ -10,6 +10,7 @@ import { ReviewCorrectnessBadge } from '@/app/(app)/app/shared/components/review
 import {
   getReviewStatusLabel,
   getReviewVariant,
+  isResultNotScored,
 } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import {
   questionAvailabilityHeading,
@@ -67,16 +68,20 @@ export function QuestionNavigator({
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
           {review.rows.map((row) => {
             const isCurrent = row.questionId === currentQuestionId;
+            // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score
+            // counts is named, not graded.
+            const notScored = isResultNotScored({
+              isCorrect: row.isCorrect,
+              availability: row.availability,
+              answerKeyChanged:
+                'answerKeyChanged' in row && row.answerKeyChanged,
+            });
             const answeredLabel =
               mode === 'review'
-                ? getReviewStatusLabel(row.isCorrect)
+                ? getReviewStatusLabel(row.isCorrect, { notScored })
                 : row.isAnswered
-                  ? review.mode === 'tutor'
-                    ? row.isCorrect === true
-                      ? 'Correct'
-                      : row.isCorrect === false
-                        ? 'Incorrect'
-                        : 'Answered'
+                  ? review.mode === 'tutor' && row.isCorrect !== null
+                    ? getReviewStatusLabel(row.isCorrect, { notScored })
                     : 'Answered'
                   : 'Unanswered';
             // Pattern Registry F-11: a question no longer available stays
@@ -94,7 +99,7 @@ export function QuestionNavigator({
 
             const variant =
               mode === 'review'
-                ? getReviewVariant(row.isCorrect)
+                ? getReviewVariant(row.isCorrect, { notScored })
                 : isCurrent
                   ? 'default'
                   : row.isAnswered
@@ -118,7 +123,9 @@ export function QuestionNavigator({
               >
                 {row.order}
                 {mode === 'review' ? (
-                  <ReviewCorrectnessBadge isCorrect={row.isCorrect} />
+                  <ReviewCorrectnessBadge
+                    isCorrect={notScored ? null : row.isCorrect}
+                  />
                 ) : null}
                 {row.markedForReview ? (
                   <span
@@ -192,7 +199,11 @@ export function ExamReviewView({
             row.isAnswered ? 'Answered' : 'Unanswered',
             ...(row.markedForReview ? ['Marked for review'] : []),
             ...(row.isAnswered && row.isCorrect !== null
-              ? [row.isCorrect ? 'Correct' : 'Incorrect']
+              ? [
+                  getReviewStatusLabel(row.isCorrect, {
+                    notScored: isResultNotScored(row),
+                  }),
+                ]
               : []),
             // ADR-022 Decision 5, as amended: an item no longer available
             // would count toward no score if the exam ended now.

@@ -337,6 +337,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),

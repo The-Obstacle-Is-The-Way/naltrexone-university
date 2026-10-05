@@ -173,6 +173,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             isAvailable: true,
@@ -186,6 +187,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),

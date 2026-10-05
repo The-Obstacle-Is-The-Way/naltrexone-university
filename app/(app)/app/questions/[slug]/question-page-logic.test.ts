@@ -16,6 +16,7 @@ import {
   createLoadQuestionAction,
   loadQuestion,
   normalizeReviewIdentifiers,
+  sessionNavigationQuestions,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
@@ -343,5 +344,67 @@ describe('question-page-logic', () => {
       expect(startTransition).toHaveBeenCalledTimes(1);
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
     });
+  });
+});
+
+// DEBT-498: the question page's session navigator names a result no score
+// counts, as the other navigators do.
+describe('sessionNavigationQuestions', () => {
+  const row = {
+    isAvailable: true as const,
+    availability: 'available' as const,
+    questionId: crypto.randomUUID(),
+    slug: 'q-1',
+    stemMd: 'Stem',
+    difficulty: 'easy' as const,
+    order: 1,
+    isAnswered: true,
+    isCorrect: true,
+    isOmitted: false,
+    markedForReview: false,
+    answerKeyChanged: false,
+  };
+
+  it('keeps available rows, in order, marking those no score counts', () => {
+    expect(
+      sessionNavigationQuestions([
+        row,
+        {
+          isAvailable: false,
+          availability: null,
+          questionId: crypto.randomUUID(),
+          order: 2,
+          isAnswered: false,
+          isCorrect: null,
+          isOmitted: false,
+          markedForReview: false,
+          answerKeyChanged: false,
+        },
+        { ...row, slug: 'q-3', order: 3, availability: 'withdrawn' },
+        { ...row, slug: 'q-4', order: 4, answerKeyChanged: true },
+      ]),
+    ).toEqual([
+      {
+        slug: 'q-1',
+        order: 1,
+        isCorrect: true,
+        notScored: false,
+        wasRetried: false,
+      },
+      {
+        slug: 'q-3',
+        order: 3,
+        isCorrect: true,
+        notScored: true,
+        wasRetried: false,
+      },
+      {
+        slug: 'q-4',
+        order: 4,
+        isCorrect: true,
+        notScored: true,
+        wasRetried: false,
+      },
+    ]);
   });
 });

@@ -48,6 +48,7 @@ const initialReview: GetPracticeSessionReviewOutput = {
       isCorrect: null,
       isOmitted: false,
       markedForReview: false,
+      answerKeyChanged: false,
     },
   ],
 };

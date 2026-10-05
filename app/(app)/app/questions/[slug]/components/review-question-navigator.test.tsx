@@ -15,9 +15,9 @@ vi.mock('next/link', () => ({
 describe('ReviewQuestionNavigator', () => {
   const baseNavigation = {
     questions: [
-      { slug: 'q1', order: 1, isCorrect: true },
-      { slug: 'q2', order: 2, isCorrect: false },
-      { slug: 'q3', order: 3, isCorrect: null },
+      { slug: 'q1', order: 1, isCorrect: true, notScored: false },
+      { slug: 'q2', order: 2, isCorrect: false, notScored: false },
+      { slug: 'q3', order: 3, isCorrect: null, notScored: false },
     ],
     currentIndex: 1,
     sessionId: fixtureSession123Id,
@@ -65,6 +65,25 @@ describe('ReviewQuestionNavigator', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     return { doc, html, navigation };
   }
+
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts is
+  // named, with no verdict color or correctness badge.
+  it('renders a result no score counts as Not scored, without a badge', async () => {
+    const { doc } = await renderNavigator({
+      navigation: {
+        ...baseNavigation,
+        questions: [
+          { slug: 'q1', order: 1, isCorrect: true, notScored: true },
+          { slug: 'q2', order: 2, isCorrect: false, notScored: false },
+        ],
+      },
+    });
+    const button = findByAriaLabel(doc, 'Question 1: Not scored');
+
+    expect(button).not.toBeNull();
+    expect(getClassList(button)).toContain('bg-secondary');
+    expect(findBottomRightBadge(button)).toBeNull();
+  });
 
   it('renders success variant for correct questions', async () => {
     const { doc } = await renderNavigator();
@@ -187,9 +206,15 @@ describe('ReviewQuestionNavigator', () => {
       navigation: {
         ...baseNavigation,
         questions: [
-          { slug: 'q1', order: 1, isCorrect: true, wasRetried: true },
-          { slug: 'q2', order: 2, isCorrect: false },
-          { slug: 'q3', order: 3, isCorrect: null },
+          {
+            slug: 'q1',
+            order: 1,
+            isCorrect: true,
+            notScored: false,
+            wasRetried: true,
+          },
+          { slug: 'q2', order: 2, isCorrect: false, notScored: false },
+          { slug: 'q3', order: 3, isCorrect: null, notScored: false },
         ],
       },
     });
@@ -230,9 +255,15 @@ describe('ReviewQuestionNavigator', () => {
         ...baseNavigation,
         currentIndex: 2,
         questions: [
-          { slug: 'q1', order: 1, isCorrect: true, wasRetried: true },
-          { slug: 'q2', order: 2, isCorrect: false },
-          { slug: 'q3', order: 3, isCorrect: null },
+          {
+            slug: 'q1',
+            order: 1,
+            isCorrect: true,
+            notScored: false,
+            wasRetried: true,
+          },
+          { slug: 'q2', order: 2, isCorrect: false, notScored: false },
+          { slug: 'q3', order: 3, isCorrect: null, notScored: false },
         ],
       },
     });

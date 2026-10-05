@@ -33,6 +33,7 @@ const availableRow: PracticeSessionReviewRow = {
   isCorrect: false,
   isOmitted: false,
   markedForReview: false,
+  answerKeyChanged: false,
 };
 
 const correctRow: PracticeSessionReviewRow = {
@@ -52,6 +53,7 @@ const unavailableRow: PracticeSessionReviewRow = {
   isCorrect: null,
   isOmitted: false,
   markedForReview: false,
+  answerKeyChanged: false,
 };
 
 let SessionBreakdownList: typeof import('./session-breakdown-list').SessionBreakdownList;
@@ -154,8 +156,27 @@ describe('SessionBreakdownList', () => {
     expect(label).toBeDefined();
     expect(link?.contains(label ?? null)).toBe(false);
     expect(label?.classList.contains('text-muted-foreground')).toBe(true);
-    expect(doc.body.textContent).toContain('Incorrect');
+    // DEBT-498: no score counts it, so it is named, not graded.
+    expect(doc.body.textContent).toContain('Not scored');
+    expect(doc.body.textContent).not.toContain('Incorrect');
     expect(html).not.toContain('[Question no longer available]');
+  });
+
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): an answer graded on a key
+  // corrected since is not scored, and says so in a neutral tone.
+  it('names an answer graded on a corrected key Not scored, in a neutral tone', async () => {
+    const html = await renderList([
+      { ...correctRow, answerKeyChanged: true },
+      availableRow,
+    ]);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const result = Array.from(doc.querySelectorAll('li span')).find(
+      (span) => span.textContent === 'Not scored',
+    );
+
+    expect(result?.classList.contains('text-muted-foreground')).toBe(true);
+    expect(doc.body.textContent).not.toContain('Correct');
+    expect(doc.body.textContent).toContain('Incorrect');
   });
 
   it('labels a withdrawn question Withdrawn in callback mode too', async () => {

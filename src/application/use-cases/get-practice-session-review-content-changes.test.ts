@@ -6,6 +6,7 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import { GetPracticeSessionReviewUseCase } from '@/src/application/use-cases/get-practice-session-review';
 import {
+  createChoice,
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
@@ -104,6 +105,58 @@ describe('GetPracticeSessionReviewUseCase: content changed since', () => {
       },
     );
   });
+
+  // DEBT-498: a list shows a result no score counts as "Not scored", so each
+  // row says whether the answer was graded on a key corrected since, in any
+  // question state, as the score reads it.
+  it.each([
+    ['published', 'c1', true],
+    ['published', null, false],
+    ['archived', 'c1', true],
+  ] as const)(
+    'marks an answer graded on a corrected key, on a %s question (answer %s): %s',
+    async (status, answer, answerKeyChanged) => {
+      const current = createQuestion({ id: 'q1', slug: 'q-1', status });
+      const bound = createQuestion({
+        id: 'q1',
+        revisionId: crypto.randomUUID(),
+        slug: 'q-1',
+        status,
+        choices: [
+          createChoice({ id: 'c1', questionId: 'q1', isCorrect: true }),
+        ],
+      });
+      const session = createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'tutor',
+        endedAt: new Date('2026-09-01T00:00:00Z'),
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            questionRevisionId: bound.revisionId,
+            markedForReview: false,
+            latestSelectedChoiceId: answer,
+            latestIsCorrect: answer ? true : null,
+            latestAnsweredAt: answer ? new Date('2026-08-31T00:00:00Z') : null,
+          },
+        ],
+      });
+      const useCase = new GetPracticeSessionReviewUseCase(
+        new FakePracticeSessionRepository([session]),
+        new FakeQuestionRepository([current, bound]),
+        new FakeLogger(),
+      );
+
+      const { rows } = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(rows).toEqual([expect.objectContaining({ answerKeyChanged })]);
+    },
+  );
 
   // ADR-022 Decision 1: each row carries its question's availability.
   it("carries each question's availability, on answered and unanswered rows", async () => {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { isResultNotScored } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import {
   questionAvailabilityHeading,
   questionAvailabilityLabel,
@@ -94,7 +95,13 @@ export function SessionBreakdownList({
             </span>
           ) : null}
           {row.isAnswered || row.isOmitted ? (
-            row.isCorrect === true ? (
+            // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score
+            // counts is named, not graded.
+            isResultNotScored(row) ? (
+              <span className="ml-auto shrink-0 text-muted-foreground">
+                Not scored
+              </span>
+            ) : row.isCorrect === true ? (
               <span className="ml-auto shrink-0 text-success">Correct</span>
             ) : row.isCorrect === false ? (
               <span className="ml-auto shrink-0 text-destructive">
