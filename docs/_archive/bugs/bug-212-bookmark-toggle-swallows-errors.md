@@ -1,6 +1,6 @@
 # BUG-212: Bookmark Toggle Drops Failure Context at the Hook Boundary
 
-**Status:** Resolved — Register archival date: 2026-03-15. Receipt: [PR #214](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/214); [register disposition](../../bugs/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register archival date: 2026-03-15. Receipt: [PR #214](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/214); [register disposition](./register-frozen-2026-10-05.md?plain=1#L435). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 *Status as filed (superseded 2026-09-22):* Open
 **Priority:** P3 (downgraded from P2 after verification)

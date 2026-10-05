@@ -1,6 +1,6 @@
 # DEBT-347: Parallel Fetch Opportunities in Layout, Pricing, and Billing
 
-**Status:** Resolved — Register date: 2026-04-02. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-04-02. Receipt: register row only; [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 **Priority:** P4
 **Created:** 2026-04-02

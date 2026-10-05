@@ -1,6 +1,6 @@
 # Bug Reports — Update History, 2026-07
 
-Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
+Update stanzas moved out of the [Bug Reports register](../../bugs/index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
 **Prior 2026-07-18 update:** **Fix-wave-5 terminal close: BUG-302 and BUG-303 are resolved, production-verified, and archived.** The combined review of `bbc32fab...fd2e6fc8` accounted for all 11 expected commits and found no unrelated lineage. Six independent lenses produced 18 raw candidates → 9 deduplicated candidates → 0 confirmed after source tracing, focused behavioral proof, and three-verifier panels. No BUG-304 filing was warranted. Fresh close proof found main/dev byte-identical at tree `3964a0e8`, main CI run 29652695750 successful including deploy, and `addictionboards.com` HTTP 200. **Next Bug ID remains BUG-304.** Prior detailed wave records remain below. (Superseded by the BUG-304 filing above.)
 

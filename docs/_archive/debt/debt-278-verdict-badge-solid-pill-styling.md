@@ -1,6 +1,6 @@
 # DEBT-278: Verdict Badge Solid Compact Pill
 
-**Status:** Resolved — Register date: 2026-03-07. Receipt: [PR #177](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/177); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-03-07. Receipt: [PR #177](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/177); [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 **Priority:** P2
 **Created:** 2026-03-05
