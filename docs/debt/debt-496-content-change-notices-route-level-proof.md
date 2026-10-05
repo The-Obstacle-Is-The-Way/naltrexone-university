@@ -46,15 +46,15 @@ One Playwright spec, `tests/e2e/content-change-notices.spec.ts`, proves the path
 
 **The spec, 2026-10-05.** `tests/e2e/content-change-notices.spec.ts` runs three cases as the E2E user, on dedicated questions:
 - an answer whose key then moved: the review page shows the caution, "This attempt isn't scored." and the link to the corrected question;
-- an answered question then placed under review: its review names the state;
+- an answered question then placed under review: History labels its row "Under review", and its review names the state;
 - a bookmarked question then withdrawn: Bookmarks names it, with no stem and no link.
 
-`tests/e2e/helpers/content-changes.ts` arranges each state with the question fixtures, which moved to `tests/shared/question-fixtures.ts`; the integration lane re-exports them unchanged. Each case attaches a full-page screenshot. All three were viewed: each notice renders in its documented card, the caution in F-11's warning card.
+`tests/e2e/helpers/content-changes.ts` arranges each state with the question fixtures, which moved to `tests/shared/question-fixtures.ts`; the integration lane re-exports them unchanged. Each page checked attaches a full-page screenshot, four in all, and each was viewed. Each notice renders in its documented card, the caution in F-11's warning card. The History row shows the label in place of the difficulty.
 
 ## Verification
 
 - [x] The spec passes in the local E2E lane (3 of 3) and in the full gate.
-- [x] Targeted mutations fail it, each failing exactly one case: the review page not passing `keyCorrected`, and the bookmarks page ignoring `availability`.
+- [x] Targeted mutations fail it, each failing exactly one case: the review page not passing `keyCorrected`, the bookmarks page ignoring `availability`, and History labelling a held row by its difficulty.
 - [x] The screenshots appear in the Playwright report.
 - [x] After a run, no question with an `e2e-content-change-` slug remains. The shared bank is untouched, since only those questions are written.
 

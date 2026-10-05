@@ -64,11 +64,20 @@ test.describe('content-change notices', () => {
     await attachScreenshot(page, testInfo, 'key-corrected-review');
   });
 
-  test('a question placed under review after the answer is named on its review', async ({
+  test('a question placed under review after the answer is named in History and on its review', async ({
     page,
   }, testInfo) => {
     if (!changes) throw new Error('content changes not arranged');
     const { slug, attemptId } = await changes.heldAttempt();
+
+    await page.goto(`${ROUTES.APP_HISTORY}?tab=questions`);
+
+    const row = page
+      .getByRole('listitem')
+      .filter({ has: page.locator(`a[href*="${slug}"]`) });
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText('Under review');
+    await attachScreenshot(page, testInfo, 'under-review-history');
 
     await page.goto(
       toQuestionRoute(slug, { from: 'history', mode: 'review', attemptId }),
@@ -96,7 +105,8 @@ test.describe('content-change notices', () => {
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Withdrawn');
     await expect(row.getByRole('link')).toHaveCount(0);
-    await expect(row).not.toContainText('# Stem');
+    // The stem's rendered text, as a preview would show it.
+    await expect(row).not.toContainText('Stem');
     await attachScreenshot(page, testInfo, 'withdrawn-bookmark');
   });
 });
