@@ -308,4 +308,52 @@ describe('verify-lockfile-union against a real git repository', () => {
     expect(result.exitCode).toBe(0);
     expect(decoyState()).toEqual(before);
   });
+
+  // A git hook exports GIT_DIR and friends. The reader must still resolve
+  // revisions in the repository at its cwd, where file specs resolve too.
+  it('reads revisions from its cwd even when GIT_DIR names another repository', () => {
+    const { directory, env } = createRepository();
+    const decoy = mkdtempSync(path.join(tmpdir(), 'lockfile-union-decoy-'));
+    directories.push(decoy);
+    spawnSync('git', ['init', '--quiet', '--initial-branch=main'], {
+      cwd: decoy,
+      env: isolatedGitEnv(decoy),
+    });
+
+    const result = run(
+      [
+        '--base',
+        'refs/pr/826^',
+        '--source',
+        'refs/pr/826',
+        '--source',
+        'refs/pr/827',
+        '--source',
+        'refs/pr/828',
+        '--candidate',
+        'refs/pr/829',
+      ],
+      directory,
+      {
+        ...env,
+        GIT_DIR: path.join(decoy, '.git'),
+        GIT_WORK_TREE: decoy,
+        GIT_INDEX_FILE: path.join(decoy, '.git', 'index'),
+      },
+    );
+
+    expect(result.err).toBe('');
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('fails closed when git cannot list its repository-local variables', () => {
+    const { directory, env } = createRepository();
+
+    expect(() =>
+      gitLockfileReader({
+        cwd: directory,
+        env: { ...env, PATH: path.join(directory, 'no-git-here') },
+      }),
+    ).toThrow(/git rev-parse --local-env-vars/);
+  });
 });

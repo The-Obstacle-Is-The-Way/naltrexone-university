@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseDocument, visit } from 'yaml';
+import { isAlias, parseDocument, visit } from 'yaml';
 
 // Verifies that a repo-owned bundle lockfile changes exactly the union of the
 // changes its source Dependabot lockfiles make against their shared base
@@ -109,15 +109,16 @@ function parseLockfile({ label, text }: LockfileText): Mapping {
     );
   }
   // pnpm never writes anchors or aliases, and an alias cycle would make the
-  // comparison recurse without end, so any alias is an input error.
-  let hasAlias = false;
+  // comparison recurse without end, so either one is an input error.
+  let hasAnchorOrAlias = false;
   visit(parsed, {
-    Alias: () => {
-      hasAlias = true;
+    Node: (_key, node) => {
+      if (!isAlias(node) && !node.anchor) return undefined;
+      hasAnchorOrAlias = true;
       return visit.BREAK;
     },
   });
-  if (hasAlias) {
+  if (hasAnchorOrAlias) {
     throw new LockfileUnionInputError(
       `${label}: YAML anchors and aliases are not allowed in a pnpm lockfile`,
     );
@@ -456,10 +457,25 @@ export function gitLockfileReader(options: {
   cwd: string;
   env: NodeJS.ProcessEnv;
 }): LockfileReader {
+  // Git prefers repository-location variables such as GIT_DIR over the
+  // working directory, and git hooks export them. Removing git's own list of
+  // repository-local variables keeps every revision in the repository at
+  // `cwd`, where file specs resolve too.
+  const localVariables = spawnSync('git', ['rev-parse', '--local-env-vars'], {
+    env: options.env,
+    encoding: 'utf8',
+  });
+  if (localVariables.status !== 0) {
+    throw new Error(
+      `git rev-parse --local-env-vars failed: ${localVariables.stderr || localVariables.error}`,
+    );
+  }
+  const env: NodeJS.ProcessEnv = { ...options.env };
+  for (const name of localVariables.stdout.split('\n')) delete env[name];
   const git = (args: string[]) =>
     spawnSync('git', args, {
       cwd: options.cwd,
-      env: options.env,
+      env,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     });

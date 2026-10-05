@@ -88,7 +88,7 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    pnpm install --frozen-lockfile
    ```
 
-Each argument is a git revision or a lockfile path. The verifier refuses a name that is both. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. A symlink to the script runs it like the script itself.
+Each argument is a git revision or a lockfile path. The verifier refuses a name that is both. Revisions always come from the repository in the current directory, even inside a git hook that exports `GIT_DIR`. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. A symlink to the script runs it like the script itself.
 
 | Exit | Meaning |
 |---:|---|

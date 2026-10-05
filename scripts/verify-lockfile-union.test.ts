@@ -461,6 +461,11 @@ describe('compareLockfileUnion', () => {
       /anchors and aliases are not allowed/,
     ],
     [
+      'an anchor without an alias',
+      "lockfileVersion: '9.0'\nsettings: &s {a: 1}\n",
+      /anchors and aliases are not allowed/,
+    ],
+    [
       'a cyclic alias',
       "lockfileVersion: '9.0'\npackages: {a: &p {self: *p}}\n",
       /anchors and aliases are not allowed/,
