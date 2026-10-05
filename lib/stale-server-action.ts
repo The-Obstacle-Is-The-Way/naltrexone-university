@@ -48,3 +48,9 @@ export function readSessionStorage(
     return undefined;
   }
 }
+
+export function reloadCurrentPage(
+  location: Pick<Location, 'reload'> = window.location,
+): void {
+  location.reload();
+}

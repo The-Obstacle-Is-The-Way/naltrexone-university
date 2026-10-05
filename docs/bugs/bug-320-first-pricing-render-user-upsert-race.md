@@ -14,7 +14,7 @@
 
 The first time a newly signed-up user's app row is created, two concurrent requests can both try to insert it. The loser fails on the users table's email index and raises `ApplicationError: User could not be upserted due to a uniqueness constraint`. The user sees the pricing error page, at the moment they arrive to subscribe. A reload succeeds, but the page's "Try again" does not (BUG-319).
 
-This happened in production twice, on 2026-10-02 and 2026-10-04. It is the likely origin of the owner's report that a bug may have stopped a user from subscribing.
+Sentry recorded that error in production twice, on 2026-10-02 and 2026-10-04. This race is the leading explanation, by the elimination under Evidence, but no event shows the second request, so it is not proven. It may be the origin of the owner's report that a bug stopped a user from subscribing.
 
 ## Evidence
 
@@ -33,9 +33,17 @@ This happened in production twice, on 2026-10-02 and 2026-10-04. It is the likel
   - `users` has two unique indexes, on `clerk_user_id` and on `email` (`db/schema.ts:198-199`). The upsert's `onConflictDoUpdate` names only `clerk_user_id` as its target.
   - PostgreSQL resolves conflicts only on the arbiter index. A concurrent duplicate on another unique index raises 23505, since `INSERT … ON CONFLICT` guarantees its outcome only "provided there is no independent error". So when two first-time inserts for the same `(clerkId, email)` overlap, the later fails on `users_email_uq`.
   - `mapEmailWriteError` then finds the email's owner. The owner is the same Clerk user, so the identity-conflict branch (`:72`) does not apply, and the error falls to `mapDbError`'s generic `CONFLICT` (`:42-46`). `ensureClerkUser` rethrows it.
-- **The message identifies the path.** Every cross-identity email clash produces "Email is already associated with another identity" instead. The generic message needs the owner to be the same Clerk user, which is this race, or for the owner to vanish between the insert and the lookup.
+- **What the events show, and what they don't.** The retained Sentry facts give the message and the stack, not the violated constraint. That the conflict was on `users_email_uq` follows by elimination:
+  - `users` has three unique indexes: the primary key (a random UUID), `users_clerk_user_id_uq` and `users_email_uq` (`db/schema.ts:187,198-199`);
+  - the upsert's arbiter is `users_clerk_user_id_uq`, which PostgreSQL resolves atomically, so it does not raise 23505 for this statement;
+  - a primary-key collision needs two equal random UUIDs.
+- **The generic message narrows the cause to two cases.** For `users_email_uq`, `mapEmailWriteError` (`drizzle-user-repository.ts:56-82`) gives "Email is already associated with another identity" when the email's owner is a different Clerk user. It falls through to the generic `CONFLICT` only when:
+  - the owner is the same Clerk user, which is the race described above; or
+  - no owner is found, because the row was deleted between the insert and the lookup (for example by a `user.deleted` webhook).
+
+  The race needs only two requests from a new user. The deletion needs a deletion within milliseconds of first sign-in. So the race is far likelier, but neither event identifies which case occurred. (Qualified 2026-10-05 after CodeRabbit's review: the record first said the events established the race.)
 - **The second request is not identified.** Candidates are Clerk's `invalidateCacheAction` with `router.refresh()` around sign-in (`@clerk/nextjs` 7.9.4 `ClerkProvider.js:23-37`), a second tab, or a `user.updated` webhook that inserts (`clerk-webhook-controller.ts:286`).
-- **A record is wrong.** `docs/bugs/index.md` (the BUG-147 notes) calls lazy provisioning "verified race-free". It is not race-free for two simultaneous first inserts.
+- **A register note is broader than its evidence.** `docs/bugs/index.md` (the BUG-147 notes) and DEBT-436 call lazy provisioning "verified race-free". That check covered the race between the Clerk webhook and the first signed-in request: the webhook ignores `user.created`. It did not cover two simultaneous first inserts for the same user, which this record describes.
 
 ## Impact
 
@@ -58,7 +66,7 @@ Criteria to meet before closing; none is met yet.
 - [ ] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
 - [ ] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
 - [ ] A real-Postgres test of concurrent first-time upserts for one user ends with one row and no error.
-- [ ] The "race-free" note in the bug register is corrected.
+- [ ] The "race-free" note in the bug register is qualified to the race it covered.
 
 ## Related
 

@@ -1,9 +1,10 @@
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   claimStaleActionReload,
   isStaleServerActionError,
   readSessionStorage,
+  reloadCurrentPage,
   STALE_ACTION_RELOAD_KEY,
   STALE_ACTION_RELOAD_WINDOW_MS,
 } from './stale-server-action';
@@ -124,5 +125,15 @@ describe('readSessionStorage', () => {
     };
 
     expect(readSessionStorage(blocked)).toBeUndefined();
+  });
+});
+
+describe('reloadCurrentPage', () => {
+  it('reloads the location it is given', () => {
+    const reload = vi.fn();
+
+    reloadCurrentPage({ reload });
+
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

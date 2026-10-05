@@ -7,7 +7,7 @@
 - **The hunt.** At the owner's request, four independent read-only reviewers covered every path to a paid subscription: pricing, checkout and trial, webhooks and entitlement, and account lifecycle. They checked Stripe, Clerk and Next.js behaviour against current documentation, and each claim was verified in code before filing.
 - **The defects are bugs** ([bug register](../bugs/index.md)):
   - BUG-319 (P2, filed as P1): payment buttons fail after a deploy that changes the action key. Fixed in this increment; its production checks remain;
-  - BUG-320 (P2): a first-visit user-row race, seen in production;
+  - BUG-320 (P2): a first-visit user-row race, the leading explanation of an error seen twice in production;
   - BUG-321 (P2): Stripe's "already subscribed" answer is discarded;
   - BUG-322 (P2): checkout errors are hidden behind the dialog.
 - **The latent gaps are debt.**

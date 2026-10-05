@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import type { reportClientError } from '@/lib/report-client-error';
+import { reloadCurrentPage } from '@/lib/stale-server-action';
 import { REPORT_ISSUE_URL } from '@/lib/support';
 import { useReportCaughtError } from '@/lib/use-report-caught-error';
 import { useStaleServerActionReload } from '@/lib/use-stale-server-action-reload';
@@ -25,10 +26,6 @@ export type ErrorBoundaryPageProps = {
   reportError?: typeof reportClientError;
 };
 
-function reloadWindow() {
-  window.location.reload();
-}
-
 export function ErrorBoundaryPage({
   error,
   retry,
@@ -37,7 +34,7 @@ export function ErrorBoundaryPage({
   links,
   includeMainLandmark = false,
   logPrefix,
-  reloadPage = reloadWindow,
+  reloadPage = reloadCurrentPage,
   reportError,
 }: ErrorBoundaryPageProps) {
   useReportCaughtError(error, logPrefix ?? 'ErrorBoundaryPage:', reportError);
