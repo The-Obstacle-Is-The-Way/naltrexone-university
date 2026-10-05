@@ -106,7 +106,7 @@ Option 3, under the owner's 2026-09-28 delegation:
     - `referer`;
     - `prerender`, Next.js's prerender bypass header;
     - `proxied`, Vercel's proxied-for address.
-  - **`scrubEvent` and `scrubBreadcrumb`** redact the values of credential-bearing query parameters in the URLs the SDK's filters do not reach.
+  - **`scrubEvent` and `scrubBreadcrumb`** redact the values of credential-bearing query parameters in the URLs the SDK's filters do not reach. The redaction never throws on a parameter name that is not valid URL encoding: a throw in `beforeSend` would lose the event. A test pins this, from CodeRabbit's review of #1373.
 - **The SDK import boundary.** Biome's `noRestrictedImports` limits `@sentry/nextjs` to the tracing wrapper and the SDK configuration files. The module and its real-SDK test join that allowlist. `tests/server-tracing-import-policy.test.ts` pins both, red first.
 - **Tests.**
   - `sentry-config.test.ts` asserts each runtime's `init` options, including the settings and both scrubbers, equal to the module's exports.

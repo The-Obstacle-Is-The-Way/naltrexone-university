@@ -83,4 +83,12 @@ describe('redactCredentialParams', () => {
   ])('redacts %s as %s', (input, expected) => {
     expect(redactCredentialParams(input)).toBe(expected);
   });
+
+  // A beforeSend that throws loses the error event: a malformed parameter
+  // name must not stop the redaction.
+  it('redacts around a parameter name that is not valid URL encoding', () => {
+    expect(
+      redactCredentialParams('/app?bad%=1&token=secret&ok%zz_token=x'),
+    ).toBe('/app?bad%=1&token=[Filtered]&ok%zz_token=[Filtered]');
+  });
 });

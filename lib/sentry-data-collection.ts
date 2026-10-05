@@ -83,6 +83,16 @@ const CREDENTIAL_PARAM_TERMS = [
 
 const QUERY_PAIR = /([?&;]|^)([^=&#?;]+)=([^&#;]*)/g;
 
+// A name that is not valid URL encoding is matched as written: this runs in
+// beforeSend, and a throw there would lose the event.
+function decodeName(name: string): string {
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}
+
 /**
  * A URL, path or query string with the value of each credential-bearing
  * query parameter replaced by `[Filtered]`. Sentry's `urlQueryParams`
@@ -91,7 +101,7 @@ const QUERY_PAIR = /([?&;]|^)([^=&#?;]+)=([^&#;]*)/g;
  */
 export function redactCredentialParams(value: string): string {
   return value.replace(QUERY_PAIR, (pair, separator: string, name: string) => {
-    const lowerName = decodeURIComponent(name).toLowerCase();
+    const lowerName = decodeName(name).toLowerCase();
     return CREDENTIAL_PARAM_TERMS.some((term) => lowerName.includes(term))
       ? `${separator}${name}=[Filtered]`
       : pair;
