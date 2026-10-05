@@ -1,12 +1,12 @@
 # BUG-318: Sentry Receives Credentials on Every Server Error Event
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is in production (promotion #1374, 2026-10-05); the record closes once the owner's checks below are done ([Fix](#fix))
+**Status:** Resolved — 2026-10-05: the fix is in production and the owner's checks are done ([Owner checks](#owner-checks-owner-only-sentry-and-secret-access))
 **Priority:** P1
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-05
+**Verification receipts:** #1373 merged `86c62eb9` after exact-head approval 5417478378 on `6102844d` (local full gate passed on that head); promotion #1374 merged `2998928c`: main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production. Owner checks done 2026-10-05: settings read, the 1,005 retained events audited, sensitive fields added, and both affected issues deleted (confirmed 404).
 
 ---
 
@@ -61,14 +61,31 @@ It adds `beforeSend` and `beforeBreadcrumb` scrubbers, which redact credential q
 4. If stored events hold `__refresh` values, revoke those users' Clerk sessions.
 5. No webhook signing secret needs rotating: a signature does not reveal its secret.
 
+### Results, 2026-10-05
+
+The owner had the Sentry CLI logged in to the project (`novamindnyc` / `addiction-boards-web`, with event, project and org scopes) and asked for these checks to be run with it. Reads printed names, counts, and whether each value was filtered, never a value.
+1. **Settings.** Data Scrubber on, default scrubbers on, IP scrubbing on, no additional sensitive fields.
+2. **Stored events.** Sentry holds 1,005 of the project's 3,649 events, from 2026-09-06 to 2026-10-05.
+   - The 3,575 browser CSP reports carry no credential parameter.
+   - Across all retained events: no `authorization` header, no request body, no user IP, no `__refresh` cookie, and no Clerk handshake or development-browser token in any URL or header.
+   - Two production error issues held values unfiltered:
+     - ADDICTION-BOARDS-WEB-2A: 2 events, 2 and 4 October, with a `__session_<suffix>` cookie;
+     - ADDICTION-BOARDS-WEB-T: 5 retained events, with Clerk's encrypted `x-clerk-request-data` and a token-free `x-clerk-clerk-url`.
+   - Clerk session tokens expire about a minute after issue, so the stored ones cannot be replayed.
+   - The owner deleted both issues in the Sentry UI, and the API then returned 404 for each. The CLI token lacks `event:admin`, so its own deletion attempt returned 403. The issues' non-sensitive facts (error, route, release, frames) were kept first, for the two application errors they record.
+3. **`CRON_SECRET` needs no rotation.** No retained event carries it, and retention begins after its last rotation, per the owner's 2026-09-19 decision.
+4. **No Clerk session needs revoking.** The stored session tokens were expired, and no refresh token was stored.
+5. **Defense in depth, owner-approved.** The project's additional sensitive fields are now `__session`, `__refresh`, `__clerk`, `x-clerk-request-data` and `x-clerk-clerk-url`, confirmed by read-back. Sentry scrubs these server-side even if a future SDK change sent them.
+6. **After the release**, none of the 940 spans received from 16:55Z on carries a cookie, `authorization`, body or Clerk request-data attribute.
+
 ## Verification
 
 - [x] Production runs the fix, and the real-SDK test passes in the gate on that commit: #1373 merged `86c62eb9` after exact-head approval 5417478378 on `6102844d` (gate passed on that head), released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
-- [ ] A server error event after the release, viewed in Sentry, shows no cookies, credential headers, body or IP.
-- [ ] The owner's checks above are done and recorded here.
+- [x] What reaches Sentry after the release carries no cookie, credential header, body or IP. This was proven through the real SDK in the gate on the released head, and from Sentry's side by the span audit in Results (6), since no server error event has occurred since.
+- [x] The owner's checks above are done and recorded here (Results).
 
 ## Related
 
 - [DEBT-499](../debt/debt-499-sentry-major-widens-data-collection.md): the upgrade and the settings that fix this.
-- [BUG-307](../_archive/bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md): Clerk tokens in public CI artifacts, the same credential class.
+- [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md): Clerk tokens in public CI artifacts, the same credential class.
 - `app/(marketing)/privacy/privacy-content.ts`: the privacy policy's Sentry row.

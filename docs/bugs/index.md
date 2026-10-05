@@ -1,17 +1,16 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-05 — BUG-318 filed, and its fix released.
+**Last Updated:** 2026-10-05 — BUG-318 resolved and archived.
 
-**Latest** — 2026-10-05: BUG-318's fix is in production ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
-- **Released.** #1373 went out through promotion #1374 (`2998928c`):
-  - main CI **37342621484** `test` passed **16:54:12Z**;
-  - production assigned **16:54:15.082Z**;
-  - trees `6496d9fe`.
-
-  Server error events no longer carry cookies, credential headers, request bodies, the IP or credential URL parameters, as proven through the real SDK in the gate on that head.
-- **Open owner checks.** These close the record: Sentry's scrubbing settings and stored events, rotating `CRON_SECRET`, and revoking any Clerk sessions whose refresh tokens were stored.
-- **What remains Active.** BUG-318.
+**Latest** — 2026-10-05: BUG-318 is resolved and archived ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
+- **Fixed in production** through promotion #1374: Sentry 11 with explicit restrictive settings and URL scrubbers.
+- **Owner checks done** with the owner's Sentry CLI login, on the owner's instruction; reads printed names and counts only.
+  - Sentry retains 1,005 events. None holds the cron secret, a body, an IP or a Clerk refresh or handshake token.
+  - Two production error issues held expired Clerk session tokens or Clerk's encrypted request header. The owner deleted both, and the API confirmed (404).
+  - No secret rotation or session revocation is needed.
+  - Clerk's names were added to Sentry's server-side sensitive fields.
+- **What remains.** There are no active bugs.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -462,9 +461,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 ## Active Bugs
 
-| ID | Title | Severity | Status | Summary |
-|----|-------|----------|--------|---------|
-| [BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md) | Sentry receives credentials on every server error event | P1 | In Progress: fix in production (#1374); owner checks open | With `@sentry/nextjs` 10.75.1 and `main`'s settings, server error events carry every cookie (Clerk's session, refresh and handshake tokens), every non-IP header (the cron `Bearer` secret, webhook signatures), the handshake query token, the client IP and request bodies, as measured through the real SDK. DEBT-499's upgrade with restrictive settings and URL scrubbers sends none of them. Owner checks: Sentry's scrubbing and stored events, rotating `CRON_SECRET`, and revoking sessions if refresh tokens were stored. |
+There are no active bugs.
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 
@@ -1085,6 +1082,7 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md) | Production no longer sends credentials to Sentry: Sentry 11 with explicit restrictive settings and URL scrubbers (released through promotion #1374) ends the exposure, in which 10.75.1 had sent Clerk tokens, the cron `Bearer` secret, webhook signatures, the IP and request bodies on server error events. The owner's checks are done: two stored issues with expired Clerk session tokens deleted, no `CRON_SECRET` exposure in retained events, no session to revoke, and server-side sensitive fields added. | P1 | 2026-10-05 |
 | [BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md) | The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved (`status: 'succeeded'`, a `card` payment method); paid Checkout keeps dynamic methods, as decided | P3 | 2026-10-03 |
 | [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md) | Release guidance states staging's effects, lift precedence and saved-draft grading as the code behaves; the clinical suitability of the withdrawn label is Deferred in the debt register | P3 | 2026-10-02 |
 | [BUG-316](../_archive/bugs/bug-316-content-release-test-resource-cleanup.md) | A failed disposable-database migration leaves nothing behind and keeps both errors; the visibility test cleans up after a failure and waits on its own activation; the combined-error case's race is fixed | P3 | 2026-10-02 |
