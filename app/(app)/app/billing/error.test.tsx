@@ -14,7 +14,7 @@ describe('app/(app)/app/billing/error', () => {
     (error as Error & { digest?: string }).digest = 'digest_123';
 
     const html = renderToStaticMarkup(
-      <BillingError error={error} reset={() => {}} />,
+      <BillingError error={error} retry={() => {}} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');

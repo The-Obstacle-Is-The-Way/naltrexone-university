@@ -2,9 +2,48 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-05 UTC: DEBT-499 closed with BUG-318, and DEBT-498 increment 2a released.
+- **DEBT-499 closed (Resolved)** ([DEBT-499](../_archive/debt/debt-499-sentry-major-widens-data-collection.md#progress)).
+  - Sentry 11 with explicit restrictive settings is in production through promotion #1374.
+  - Server traces still arrive, read through the owner's Sentry CLI login: 940 spans in the first hours after the release (140 from the app's wrapper), none with a cookie, `authorization`, body or Clerk request-data attribute.
+- **BUG-318 closed with it** ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
+  - Sentry retained no cron secret, body, IP or Clerk refresh token. Two issues holding expired Clerk session tokens were deleted by the owner.
+  - No rotation or revocation is needed.
+  - Server-side sensitive fields were added.
+- **Released since the last entry.** #1376 (DEBT-498 increment 2a: lists name a result no score counts "Not scored") went out through promotion #1377 (`9171234b`):
+  - main CI **37355353192** `test` passed **18:33:33Z**;
+  - production assigned **18:33:36.016Z**;
+  - trees `f31404a7`, healthy production.
+- **Next.** DEBT-498 increment 2b (History's rows, filters and sorts). Then Dependabot's group update (#1368). Then the two application errors the Sentry audit surfaced, which go through investigation first:
+  - a uniqueness conflict on `POST /pricing`;
+  - a React "resumable slots" render error.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-498 and DEBT-500.
+- **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md).
+
+**Earlier** — 2026-10-05 UTC: DEBT-498 increment 2a, and the Sentry fix released.
+- **DEBT-498 increment 2a: lists name a result no score counts "Not scored"** ([DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
+  - The covered surfaces: the question navigator (post-exam and tutor), the Review & Submit list, the session breakdown, the question page's session navigator and the Dashboard's recent activity.
+  - Session review and recent-activity rows carry a required `answerKeyChanged`, in any question state.
+  - Ten targeted mutations each fail a test. DEBT-496's spec asserts the Dashboard row, and its screenshot was viewed.
+  - ADR-022's Amendment now says exactly what it decides: what the score leaves out *because its content is in doubt*.
+  - History's rows and filters follow, as increment 2b.
+- **Released since the last entry.**
+  - #1373 (BUG-318 and DEBT-499: Sentry 11 with explicit restrictive settings and URL scrubbers) went out through promotion #1374 (`2998928c`):
+    - main CI **37342621484** `test` passed **16:54:12Z**;
+    - production assigned **16:54:15.082Z**;
+    - trees `6496d9fe`, healthy production.
+  - Vercel began deploying four seconds after the merge.
+  - Production's server error events no longer carry credentials. #1369 is closed as superseded.
+- **Open owner checks.**
+  - **BUG-318:** Sentry's scrubbing settings and stored events, rotating `CRON_SECRET`, and revoking any Clerk sessions whose refresh tokens were stored.
+  - **DEBT-499:** confirm that server traces still arrive.
+- **Next.** DEBT-498 increment 2b (History). Then Dependabot's group update (#1368), once `dev` carries `main`'s promotion merge.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-498, DEBT-499 and DEBT-500.
+- **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md).
+
 **Earlier** — 2026-10-05 UTC: DEBT-499 filed and fixed, with BUG-318 (P1) filed and fixed with it, and DEBT-500 filed.
-- **BUG-318: production already sends credentials to Sentry on server error events.** Sentry 10.75.1 with our settings sends Clerk's session, refresh and handshake tokens, the cron `Bearer` secret, webhook signatures, the client IP and request bodies, as measured through the real SDK ([BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)). The fix below closes it. The owner's checks in Sentry and the `CRON_SECRET` rotation are listed in the record.
-- **DEBT-499 (P1): nothing pinned what we send to Sentry, and a green major would change it** ([DEBT-499](./debt-499-sentry-major-widens-data-collection.md#progress)).
+- **BUG-318: production already sends credentials to Sentry on server error events.** Sentry 10.75.1 with our settings sends Clerk's session, refresh and handshake tokens, the cron `Bearer` secret, webhook signatures, the client IP and request bodies, as measured through the real SDK ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)). The fix below closes it. The owner's checks in Sentry and the `CRON_SECRET` rotation are listed in the record.
+- **DEBT-499 (P1): nothing pinned what we send to Sentry, and a green major would change it** ([DEBT-499](../_archive/debt/debt-499-sentry-major-widens-data-collection.md#progress)).
   - Dependabot's #1369 (`@sentry/nextjs` 11.0.0) passed CI, yet under v11's defaults it would still send eight of BUG-318's nine values, and request bodies.
   - The upgrade is now ours. Every `Sentry.init` receives:
     - explicit restrictive settings, with no cookies, user info, bodies or database data;

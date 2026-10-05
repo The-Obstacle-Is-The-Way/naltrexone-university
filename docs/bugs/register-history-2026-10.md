@@ -2,7 +2,26 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
+**Earlier** — 2026-10-05: BUG-318 is resolved and archived ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
+- **Fixed in production** through promotion #1374: Sentry 11 with explicit restrictive settings and URL scrubbers.
+- **Owner checks done** with the owner's Sentry CLI login, on the owner's instruction; reads printed names and counts only.
+  - Sentry retains 1,005 events. None holds the cron secret, a body, an IP or a Clerk refresh or handshake token.
+  - Two production error issues held expired Clerk session tokens or Clerk's encrypted request header. The owner deleted both, and the API confirmed (404).
+  - No secret rotation or session revocation is needed.
+  - Clerk's names were added to Sentry's server-side sensitive fields.
+- **What remains.** There are no active bugs.
+
+**Earlier** — 2026-10-05: BUG-318's fix is in production ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)).
+- **Released.** #1373 went out through promotion #1374 (`2998928c`):
+  - main CI **37342621484** `test` passed **16:54:12Z**;
+  - production assigned **16:54:15.082Z**;
+  - trees `6496d9fe`.
+
+  Server error events no longer carry cookies, credential headers, request bodies, the IP or credential URL parameters, as proven through the real SDK in the gate on that head.
+- **Open owner checks.** These close the record: Sentry's scrubbing settings and stored events, rotating `CRON_SECRET`, and revoking any Clerk sessions whose refresh tokens were stored.
+- **What remains Active.** BUG-318.
+
+**Earlier** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)).
 - **What is sent.** With `@sentry/nextjs` 10.75.1 and `main`'s settings, a server error event carries:
   - every cookie: Clerk's session, refresh and handshake tokens;
   - every non-IP header: the cron `Bearer` secret and the webhook signatures;
