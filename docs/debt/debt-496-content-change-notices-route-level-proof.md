@@ -44,10 +44,12 @@ One Playwright spec, `tests/e2e/content-change-notices.spec.ts`, proves the path
 
 ## Verification
 
-- The spec passes in the local E2E lane and the full gate.
-- Targeted mutations fail it: the review page not passing `keyCorrected`, and the bookmarks page ignoring `availability`.
-- The screenshots appear in the Playwright report.
-- Afterwards, the dedicated questions are gone and the shared bank is unchanged.
+Criteria to meet before closing; none is met yet.
+
+- [ ] The spec passes in the local E2E lane and in the full gate.
+- [ ] Targeted mutations fail it: the review page not passing `keyCorrected`, and the bookmarks page ignoring `availability`.
+- [ ] The screenshots appear in the Playwright report.
+- [ ] After a run, the dedicated questions are gone and the shared bank is unchanged.
 
 ## Related
 
