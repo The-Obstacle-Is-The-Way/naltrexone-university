@@ -113,6 +113,16 @@ The deleted `deploy` job only echoed a message. Its success never proved that pr
 
 On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
 
+**No production deployment at all.** Twice, Vercel created no deployment for a promotion's merge commit:
+- promotion #509 on 2026-06-24 ([BUG-259](../_archive/bugs/bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md));
+- promotion #1367 on 2026-10-05.
+
+In each case, the commit had no Vercel status on GitHub, no deployment was listed for its SHA, and its tree matched a `dev` preview that had just built. Not every such promotion is skipped (#1365 deployed), so the trigger is not known on our side. Production keeps serving the previous release. That is harmless when the promotion changes no application code, but otherwise production silently lags `main`.
+
+The release watch must therefore find a deployment for the exact merge SHA, not merely a ready one. If none appears within about ten minutes:
+1. Confirm the project's Git link, ignore settings and the status pages.
+2. With the owner's approval, deploy that exact commit to production from a clean checkout (`vercel deploy --prod`), as #509 did. The Deployment Check still holds the alias until `test` passes.
+
 **Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. [DEBT-445 Part 3](../_archive/debt/debt-445-migration-deploy-pipeline-guardrails.md) already established the [deployed-code compatibility contract](./migration-authoring.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
 
 For a manual Preview or Production reseed, export the verified target, run the

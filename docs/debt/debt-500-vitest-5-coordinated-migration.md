@@ -12,7 +12,7 @@
 
 ## Summary
 
-Dependabot opened #1370 on 2026-10-05, bumping `vitest` from 4.1.11 to 5.0.1 on its own. CI's typecheck fails across the browser-mode specs (`*.browser.spec.tsx`) with `TS2349: This expression is not callable`. Vitest 5 changes the browser-mode API, and the companion packages (`@vitest/browser`, the coverage provider and `vitest-browser-react`) are not moved with it.
+Dependabot opened #1370 on 2026-10-05, bumping `vitest` from 4.1.11 to 5.0.1 on its own. CI's typecheck fails across the browser-mode specs (`*.browser.spec.tsx`) with `TS2349: This expression is not callable`. Vitest 5 changes the browser-mode API, and the companion packages (`@vitest/browser-playwright`, `@vitest/coverage-v8` and `vitest-browser-react`) are not moved with it.
 
 ## Evidence
 
