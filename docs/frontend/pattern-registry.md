@@ -993,7 +993,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - **Active session**, in tutor and exam mode alike: "The answer to this question was corrected after your session began." (`font-medium`), then "This session shows the earlier version, so your answer here won't be scored." No link, as above. A tutor answer's feedback takes F-5's ungraded key-corrected form, so the earlier key is never graded as right.
 - Both lines read `text-foreground`, as F-11's caution does.
 
-**Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to.
+**Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to. Its answer is still shown ungraded in the key-corrected form when its key was corrected, because no score counts that answer, whatever the question's state (DEBT-498).
 
 **Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
 

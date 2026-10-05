@@ -99,6 +99,7 @@ The code:
   - ten targeted mutations each fail a test, one per wiring point, including the domain rule's two branches;
   - DEBT-496's spec asserts the ungraded key-corrected and held reviews on real pages;
   - the screenshots were viewed: "Not scored", no verdict color, "Your answer · Answer before the correction", and no superseded explanation.
+- **The key-corrected flag no longer depends on availability.** `GetQuestionForViewUseCase` and `GetCompletedSessionQuestionsWithFeedbackUseCase` set `answerKeyChanged` only for an available question, because it drove the F-12 notice alone. The score reads a corrected key whatever the question's state, so a retired question's answer on a corrected key was left out of the score yet graded on its review. Both now flag it in any state. F-11 still takes the notice's place, and the answer is shown in the key-corrected ungraded form. Red first: the post-exam table's retired row and a new withdrawn case for the standalone view.
 - **Not done in this increment:** the post-exam navigator, the session breakdown, the Dashboard's recent activity, History's rows and its result filters.
 
 ## Verification

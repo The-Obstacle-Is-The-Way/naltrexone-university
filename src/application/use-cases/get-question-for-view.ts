@@ -83,8 +83,9 @@ export class GetQuestionForViewUseCase {
     return {
       question,
       superseded: available && !question.isCurrentRevision,
-      answerKeyChanged:
-        available && reviewed.answered && question.answerKeyChanged,
+      // Whatever the question's state, as the score reads it: the review is
+      // then shown ungraded (DEBT-498).
+      answerKeyChanged: reviewed.answered && question.answerKeyChanged,
     };
   }
 
