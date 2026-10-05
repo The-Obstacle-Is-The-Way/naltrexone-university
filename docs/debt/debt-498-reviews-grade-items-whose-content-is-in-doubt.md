@@ -86,5 +86,5 @@ Criteria to meet before closing; none is met yet.
 
 - [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decisions 2 and 4: what a learner sees, and key corrections.
 - [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md): the notices and scores.
-- [DEBT-496](./debt-496-content-change-notices-route-level-proof.md): the end-to-end screenshots that showed this.
+- [DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md): the end-to-end screenshots that showed this.
 - `docs/frontend/pattern-registry.md`: F-11, F-12 and F-13.

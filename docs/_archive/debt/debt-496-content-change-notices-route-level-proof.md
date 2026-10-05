@@ -1,18 +1,18 @@
 # DEBT-496: Content-Change Notices Have No Route-Level Proof
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the spec is written and passes (2026-10-05); the record closes once it is in production ([Progress](#progress))
+**Status:** Resolved — 2026-10-05: the spec is in production ([Progress](#progress))
 **Priority:** P2
 **Date:** 2026-10-04
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-05
+**Verification receipts:** #1364 merged `430a3dcc` after exact-head approval 5413453127 on `d205d731`; promotion #1365 `25c4748b`: main CI 37303140406 `test` passed 11:41:23Z, production assigned 11:41:25.615Z, trees `6b94e39a`, healthy production.
 
 ---
 
 ## Summary
 
-[DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md) shipped learner-facing notices for content that changed after a learner saw it. Two of them carry clinical weight: a key-corrected answer is flagged as a caution, and a withdrawn or held question warns that its content may be wrong. Each layer of every notice is proven:
+[DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md) shipped learner-facing notices for content that changed after a learner saw it. Two of them carry clinical weight: a key-corrected answer is flagged as a caution, and a withdrawn or held question warns that its content may be wrong. Each layer of every notice is proven:
 - the domain rule and use-case outputs, by mutation-proven unit tests;
 - the queries, on real Postgres;
 - the rendered component, in real Chromium in the browser lane.
@@ -51,15 +51,23 @@ One Playwright spec, `tests/e2e/content-change-notices.spec.ts`, proves the path
 
 `tests/e2e/helpers/content-changes.ts` arranges each state with the question fixtures, which moved to `tests/shared/question-fixtures.ts`; the integration lane re-exports them unchanged. Each page checked attaches a full-page screenshot, four in all, and each was viewed. Each notice renders in its documented card, the caution in F-11's warning card. The History row shows the label in place of the difficulty.
 
+**Review and release, 2026-10-05.** CodeRabbit's review of #1364 added three changes:
+- History is checked for the held question, as the resolution decided;
+- the withdrawn bookmark is checked for the stem's rendered text, not its Markdown source;
+- a fixture question's tag links are written inside its transaction, so a failed link leaves nothing behind.
+
+#1364 then went to production through promotion #1365. Its key-corrected screenshot showed the old key graded as correct under the caution, which is recorded as [DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md).
+
 ## Verification
 
 - [x] The spec passes in the local E2E lane (3 of 3) and in the full gate.
 - [x] Targeted mutations fail it, each failing exactly one case: the review page not passing `keyCorrected`, the bookmarks page ignoring `availability`, and History labelling a held row by its difficulty.
 - [x] The screenshots appear in the Playwright report.
+- [x] In production through promotion #1365 (receipts above).
 - [x] After a run, no question with an `e2e-content-change-` slug remains. The shared bank is untouched, since only those questions are written.
 
 ## Related
 
-- [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md): the notices.
-- [DEBT-465](./debt-465-test-quality-practices-adoption.md) Part 4: the UI QA procedures. This record moves one of their gaps into the automated lane.
+- [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md): the notices.
+- [DEBT-465](../../debt/debt-465-test-quality-practices-adoption.md) Part 4: the UI QA procedures. This record moves one of their gaps into the automated lane.
 - `.claude/rules/git-workflow.md`: screenshots for UI changes.
