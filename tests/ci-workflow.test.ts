@@ -26,6 +26,7 @@ const WORKFLOW_PATHS = [
 ] as const;
 
 type WorkflowStep = {
+  'continue-on-error'?: boolean;
   env?: Record<string, string>;
   id?: string;
   if?: string;
@@ -470,6 +471,28 @@ jobs:
 describe('Codecov configuration', () => {
   it('excludes Playwright test infrastructure from product coverage', () => {
     expect(readCodecovConfig()).toMatch(/ignore:\n\s+- ['"]tests\/e2e['"]/);
+  });
+
+  // DEBT-497: an upload that fails is reported in the job, not hidden behind
+  // a green step, and still does not fail CI. The merge guard decides.
+  it('reports a failed Codecov upload in the job without failing it', () => {
+    const upload = findParsedStep(
+      CI_WORKFLOW_PATH,
+      'Upload coverage to Codecov',
+    );
+    const report = findParsedStep(
+      CI_WORKFLOW_PATH,
+      'Report a failed Codecov upload',
+    );
+
+    expect(upload).toMatchObject({
+      id: 'codecov',
+      'continue-on-error': true,
+      with: { fail_ci_if_error: true },
+    });
+    expect(report.if).toContain("steps.codecov.outcome == 'failure'");
+    expect(report.run).toContain('::warning');
+    expect(report.run).toContain('GITHUB_STEP_SUMMARY');
   });
 });
 

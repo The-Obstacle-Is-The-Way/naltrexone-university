@@ -79,16 +79,24 @@ export function hasSuccessfulCheckRun(nodes: CheckNodes, name: string) {
   );
 }
 
-// ADR-020 amendment (2026-09-28): Dependabot PRs run without secrets, so
-// Codecov cannot post codecov/patch on them, and a change confined to
-// dependency manifests or CI workflows has no line coverage measures. Only a
-// missing status is excused, only for a complete file list, and only when
-// every changed path is one of these.
-function isDependencyOrWorkflowPath(path: string): boolean {
+// ADR-020 amendments (2026-09-28, 2026-10-05): a missing codecov/patch is
+// excused only when every changed path is one coverage never measures, and
+// only for a complete file list. Dependabot PRs run without secrets, so
+// Codecov cannot post on them; a Codecov outage posts on nothing (DEBT-497).
+// The unmeasured paths are dependency manifests, CI workflows, Markdown
+// documentation and repository-tool configuration.
+const UNMEASURED_FILES = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  '.coderabbit.yaml',
+  'codecov.yml',
+]);
+
+function isUnmeasuredPath(path: string): boolean {
   return (
-    path === 'package.json' ||
-    path === 'pnpm-lock.yaml' ||
-    path.startsWith('.github/')
+    UNMEASURED_FILES.has(path) ||
+    path.startsWith('.github/') ||
+    path.endsWith('.md')
   );
 }
 
@@ -104,7 +112,7 @@ function codecovNotApplicable(
     !codecovPosted &&
     !files.pageInfo.hasNextPage &&
     files.nodes.length > 0 &&
-    files.nodes.every((file) => isDependencyOrWorkflowPath(file.path))
+    files.nodes.every((file) => isUnmeasuredPath(file.path))
   );
 }
 
