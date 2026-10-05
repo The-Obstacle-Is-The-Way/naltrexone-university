@@ -77,3 +77,66 @@ describe('QuestionCard', () => {
     ).not.toContain('text-muted-foreground');
   });
 });
+
+// ADR-022 Amendment 2026-10-05 (DEBT-498): what the score leaves out, the
+// page does not grade. The choices keep the learner's selection and name the
+// key in words, with no verdict color.
+describe('QuestionCard ungraded', () => {
+  function renderUngraded(
+    ungraded: 'key_corrected' | 'in_doubt',
+    selectedChoiceId: string,
+  ) {
+    const html = renderToStaticMarkup(
+      <QuestionCard
+        stemMd="Stem paragraph"
+        choices={[
+          { id: 'c1', label: 'A', textMd: 'Choice A' },
+          { id: 'c2', label: 'B', textMd: 'Choice B' },
+        ]}
+        selectedChoiceId={selectedChoiceId}
+        correctChoiceId="c2"
+        ungraded={ungraded}
+        disabled
+        onSelectChoice={() => {}}
+      />,
+    );
+    const labels = Array.from(parseHtml(html).querySelectorAll('label'));
+    const choice = (text: string) =>
+      labels.find((label) => label.textContent?.includes(text));
+    return { labels, choice };
+  }
+
+  it('styles no choice correct or incorrect', () => {
+    const { labels } = renderUngraded('in_doubt', 'c1');
+
+    expect(labels).toHaveLength(2);
+    for (const label of labels) {
+      expect(label.outerHTML).not.toMatch(/success|destructive/);
+    }
+  });
+
+  it("names the learner's choice and the key held in doubt", () => {
+    const { choice } = renderUngraded('in_doubt', 'c1');
+
+    expect(choice('Choice A')?.textContent).toContain('Your answer');
+    expect(choice('Choice B')?.textContent).toContain('Keyed answer');
+  });
+
+  it('names a corrected key as the answer before the correction', () => {
+    const { choice } = renderUngraded('key_corrected', 'c1');
+
+    expect(choice('Choice B')?.textContent).toContain(
+      'Answer before the correction',
+    );
+    expect(choice('Choice B')?.textContent).not.toContain('Keyed answer');
+  });
+
+  it('gives both names when the learner chose the key', () => {
+    const { choice } = renderUngraded('in_doubt', 'c2');
+
+    expect(choice('Choice B')?.textContent).toContain(
+      'Your answer · Keyed answer',
+    );
+    expect(choice('Choice A')?.textContent).not.toContain('Your answer');
+  });
+});

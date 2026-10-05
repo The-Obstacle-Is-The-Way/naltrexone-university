@@ -23,6 +23,7 @@ import { ROUTES } from '@/lib/routes';
 import { headerActionLinkClasses } from '@/lib/shared-styles';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
+import { ungradedReason } from '@/src/domain/services';
 import type { UnavailableQuestionAvailability } from '@/src/domain/value-objects';
 import type { LoadState } from '../practice-page-logic';
 
@@ -407,6 +408,13 @@ export function PracticeView(props: PracticeViewProps) {
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): an answer graded on a key
+  // corrected since the session began won't be scored, so it is shown
+  // ungraded. An item that can be answered is available (F-11).
+  const ungraded = ungradedReason({
+    availability: 'available',
+    keyCorrected: props.question?.answerKeyChanged === true,
+  });
   const feedbackResult =
     !isExamMode && hasBooleanCorrectness(props.submitResult)
       ? props.submitResult
@@ -666,7 +674,7 @@ export function PracticeView(props: PracticeViewProps) {
                   }
                 : undefined
             }
-            feedback={feedbackResult}
+            feedback={feedbackResult ? { ...feedbackResult, ungraded } : null}
             feedbackRef={feedbackRef}
             beforeQuestionCard={
               // Pattern Registry F-12: the session keeps the revision its

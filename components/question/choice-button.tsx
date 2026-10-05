@@ -11,7 +11,17 @@ export type ChoiceButtonProps = {
   textMd: string;
   selected: boolean;
   disabled?: boolean;
-  correctness?: 'correct' | 'incorrect' | 'wrong-unselected' | null;
+  /**
+   * `ungraded`: a review no score counts (ADR-022 Amendment 2026-10-05). The
+   * choice keeps the neutral styles, and `note` names its role in words.
+   */
+  correctness?:
+    | 'correct'
+    | 'incorrect'
+    | 'wrong-unselected'
+    | 'ungraded'
+    | null;
+  note?: string | null;
   onClick: (origin: ChoiceSelectionOrigin) => void;
 };
 
@@ -30,6 +40,7 @@ export function ChoiceButton({
   selected,
   disabled = false,
   correctness = null,
+  note = null,
   onClick,
 }: ChoiceButtonProps) {
   const choiceTextClassName = 'text-base text-foreground';
@@ -39,6 +50,8 @@ export function ChoiceButton({
   > | null>(null);
 
   const hasVerdict = correctness === 'correct' || correctness === 'incorrect';
+  const neutralSelected =
+    selected && (correctness === null || correctness === 'ungraded');
 
   const clearPointerActivation = useCallback(() => {
     pointerActivationArmedRef.current = false;
@@ -108,8 +121,7 @@ export function ChoiceButton({
           'hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]',
         disabled && 'cursor-not-allowed',
         disabled && !correctness && 'opacity-50',
-        selected &&
-          correctness === null &&
+        neutralSelected &&
           'border-ring bg-foreground/[0.08] dark:border-foreground/70 dark:bg-foreground/[0.12]',
         correctness === 'correct' &&
           'border-success bg-success/10 text-success',
@@ -136,7 +148,7 @@ export function ChoiceButton({
           className={cn(
             'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground',
             !hasVerdict && 'dark:border-foreground/60 dark:bg-foreground/20',
-            selected && correctness === null && 'border-ring',
+            neutralSelected && 'border-ring',
             correctness === 'correct' &&
               'border-success bg-success/15 text-success',
             correctness === 'incorrect' &&
@@ -145,7 +157,14 @@ export function ChoiceButton({
         >
           {label}
         </div>
-        <Markdown content={textMd} className={choiceTextClassName} />
+        {note ? (
+          <div className="min-w-0">
+            <Markdown content={textMd} className={choiceTextClassName} />
+            <p className="mt-1 text-xs font-medium text-foreground">{note}</p>
+          </div>
+        ) : (
+          <Markdown content={textMd} className={choiceTextClassName} />
+        )}
       </div>
     </label>
   );
