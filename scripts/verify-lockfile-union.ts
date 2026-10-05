@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { parse } from 'yaml';
+import { fileURLToPath } from 'node:url';
+import { parseDocument, visit } from 'yaml';
 
 // Verifies that a repo-owned bundle lockfile changes exactly the union of the
 // changes its source Dependabot lockfiles make against their shared base
@@ -101,15 +101,28 @@ function mappingOrEmpty(value: unknown, what: string, label: string): Mapping {
 }
 
 function parseLockfile({ label, text }: LockfileText): Mapping {
-  let document: unknown;
-  try {
-    document = parse(text);
-  } catch (error) {
+  const parsed = parseDocument(text);
+  const [firstError] = parsed.errors;
+  if (firstError) {
     throw new LockfileUnionInputError(
-      `${label}: invalid YAML (${String(error)})`,
-      { cause: error },
+      `${label}: invalid YAML (${firstError.message})`,
     );
   }
+  // pnpm never writes anchors or aliases, and an alias cycle would make the
+  // comparison recurse without end, so any alias is an input error.
+  let hasAlias = false;
+  visit(parsed, {
+    Alias: () => {
+      hasAlias = true;
+      return visit.BREAK;
+    },
+  });
+  if (hasAlias) {
+    throw new LockfileUnionInputError(
+      `${label}: YAML anchors and aliases are not allowed in a pnpm lockfile`,
+    );
+  }
+  const document: unknown = parsed.toJS();
   if (!isMapping(document) || !('lockfileVersion' in document)) {
     throw new LockfileUnionInputError(
       `${label}: not a pnpm lockfile (no lockfileVersion)`,
@@ -137,6 +150,9 @@ function lockfileEntries(lockfile: LockfileText): Entries {
         `${lockfile.label}: importer "${importer}" must be a mapping`,
       );
     }
+    // The importer's presence is its own entry, so adding or removing an
+    // importer with no fields still counts as a change.
+    add(['importers', importer], 'present');
     for (const [field, fieldValue] of Object.entries(fields)) {
       if (!DEPENDENCY_FIELDS.has(field)) {
         add(['importers', importer, field], fieldValue);
@@ -448,10 +464,27 @@ export function gitLockfileReader(options: {
       maxBuffer: 64 * 1024 * 1024,
     });
   const resolve = (spec: string) => path.resolve(options.cwd, spec);
+  // A spec that names an unreadable path (a symlink loop, a permission
+  // failure) is an input error, not a crash.
+  const readInput = <T>(spec: string, read: () => T): T => {
+    try {
+      return read();
+    } catch (error) {
+      throw new LockfileUnionInputError(
+        `cannot read "${spec}": ${String(error)}`,
+        { cause: error },
+      );
+    }
+  };
   return {
     isFile: (spec) =>
-      statSync(resolve(spec), { throwIfNoEntry: false })?.isFile() ?? false,
-    readFile: (spec) => readFileSync(resolve(spec), 'utf8'),
+      readInput(
+        spec,
+        () =>
+          statSync(resolve(spec), { throwIfNoEntry: false })?.isFile() ?? false,
+      ),
+    readFile: (spec) =>
+      readInput(spec, () => readFileSync(resolve(spec), 'utf8')),
     resolveCommit: (spec) => {
       const result = git([
         'rev-parse',
@@ -498,10 +531,22 @@ export function runVerifyLockfileUnion(
   }
 }
 
-/* v8 ignore start */
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
+// Whether this module is the process entry point. Node reports a symlinked
+// script by its resolved path, so both sides are resolved before comparing;
+// a mismatch would skip the CLI and exit 0 without verifying anything.
+export function isEntryPoint(
+  moduleUrl: string,
+  argvPath: string | undefined,
+): boolean {
+  return (
+    argvPath !== undefined &&
+    existsSync(argvPath) &&
+    realpathSync(argvPath) === realpathSync(fileURLToPath(moduleUrl))
+  );
+}
 
-if (import.meta.url === executedPath) {
+/* v8 ignore start */
+if (isEntryPoint(import.meta.url, process.argv[1])) {
   process.exitCode = runVerifyLockfileUnion(
     process.argv.slice(2),
     gitLockfileReader({ cwd: process.cwd(), env: process.env }),

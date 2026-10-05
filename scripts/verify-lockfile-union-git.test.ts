@@ -1,8 +1,14 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   gitLockfileReader,
   LOCKFILE_UNION_EXIT,
@@ -19,11 +25,14 @@ function fixture(name: string) {
 const base = fixture('base');
 
 describe('verify-lockfile-union against a real git repository', () => {
-  let repository: string | undefined;
+  let directories: string[] = [];
 
   afterEach(() => {
-    if (repository) rmSync(repository, { recursive: true, force: true });
-    repository = undefined;
+    vi.unstubAllEnvs();
+    for (const directory of directories) {
+      rmSync(directory, { recursive: true, force: true });
+    }
+    directories = [];
   });
 
   // Inherited GIT_* variables (set inside git hooks) would redirect these
@@ -46,7 +55,7 @@ describe('verify-lockfile-union against a real git repository', () => {
 
   function createRepository() {
     const directory = mkdtempSync(path.join(tmpdir(), 'lockfile-union-'));
-    repository = directory;
+    directories.push(directory);
     const env = isolatedGitEnv(directory);
     const git = (args: string[], input?: string) => {
       const result = spawnSync('git', args, {
@@ -233,5 +242,70 @@ describe('verify-lockfile-union against a real git repository', () => {
 
     expect(result.exitCode).toBe(LOCKFILE_UNION_EXIT.usage);
     expect(result.err).toContain('is both a file and a git revision');
+  });
+
+  it('exits with the usage code for a candidate path that cannot be read', () => {
+    const { directory, env } = createRepository();
+    symlinkSync('loop', path.join(directory, 'loop'));
+
+    const result = run(
+      [
+        '--base',
+        'main',
+        '--source',
+        'refs/pr/826',
+        '--source',
+        'refs/pr/827',
+        '--candidate',
+        'loop',
+      ],
+      directory,
+      env,
+    );
+
+    expect(result.exitCode).toBe(LOCKFILE_UNION_EXIT.usage);
+    expect(result.err).toContain('cannot read "loop"');
+  });
+
+  // Inside a git hook, GIT_DIR names the enclosing repository. The fixture
+  // must still build its refs in its own temporary repository.
+  it('keeps fixture git commands out of a repository named by inherited GIT_* variables', () => {
+    const decoy = mkdtempSync(path.join(tmpdir(), 'lockfile-union-decoy-'));
+    directories.push(decoy);
+    const decoyGit = (args: string[]) =>
+      spawnSync('git', args, {
+        cwd: decoy,
+        env: isolatedGitEnv(decoy),
+        encoding: 'utf8',
+      }).stdout.trim();
+    decoyGit(['init', '--quiet', '--initial-branch=main']);
+    const decoyState = () => ({
+      refs: decoyGit(['for-each-ref']),
+      objects: decoyGit(['count-objects', '-v']),
+    });
+    const before = decoyState();
+    vi.stubEnv('GIT_DIR', path.join(decoy, '.git'));
+    vi.stubEnv('GIT_WORK_TREE', decoy);
+
+    const { directory, env } = createRepository();
+    const result = run(
+      [
+        '--base',
+        'main',
+        '--source',
+        'refs/pr/826',
+        '--source',
+        'refs/pr/827',
+        '--source',
+        'refs/pr/828',
+        '--candidate',
+        'refs/pr/829',
+      ],
+      directory,
+      env,
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(decoyState()).toEqual(before);
   });
 });

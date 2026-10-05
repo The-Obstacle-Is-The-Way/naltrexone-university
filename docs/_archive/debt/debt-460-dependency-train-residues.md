@@ -41,6 +41,13 @@ canonical `typescript` package. Measured against `origin/dev` at `31380775`:
     -e "['\"]typescript/lib/typescript(\.js)?['\"]" node_modules/.pnpm
   ```
 
+  The search is targeted, not exhaustive. A wider search for
+  `typescript/package.json` and `createRequire(...)('typescript')` adds
+  `tsx`, `jiti`, `playwright` and `@babel/core`. The last three match only
+  `@babel/preset-typescript/package.json`. `tsx`, like `next`, resolves
+  `typescript/package.json` for version and `tsconfig` metadata, which
+  TypeScript 7 still ships. Neither form loads the classic API.
+
 - **Stryker needs the classic API under the canonical name.** Its sandbox
   `TSConfigPreprocessor` runs `await import('typescript')`, then calls
   `parseConfigFileTextToJson` and `resolveProjectReferencePath`. It does so

@@ -318,10 +318,75 @@ describe('compareLockfileUnion', () => {
     const report = compareWithCandidate(candidate);
 
     expect(entries(report.extra)).toEqual([
+      'importers > packages/docs',
       'importers > packages/docs > devDependencies > typescript',
       'importers > packages/docs > publishDirectory',
     ]);
-    expect(report.sections.importers.candidateKeyDeltas).toBe(2);
+    expect(report.sections.importers.candidateKeyDeltas).toBe(3);
+  });
+
+  it('reports an empty workspace importer the candidate adds as extra', () => {
+    const candidate = variant(fixture('candidate-union'), 'empty', (lock) => {
+      lock.importers['packages/extra'] = {};
+    });
+
+    const report = compareWithCandidate(candidate);
+
+    expect(report.extra).toEqual([
+      {
+        section: 'importers',
+        entry: 'importers > packages/extra',
+        detail: 'candidate adds',
+      },
+    ]);
+    expect(lockfileUnionExitCode(report)).toBe(LOCKFILE_UNION_EXIT.extra);
+  });
+
+  it('reports an empty workspace importer a source adds and the candidate omits as missing', () => {
+    const addingSource = variant(source827, '#827', (lock) => {
+      lock.importers['packages/extra'] = {};
+    });
+
+    const report = compareWithCandidate(fixture('candidate-union'), [
+      source826,
+      addingSource,
+      source828,
+    ]);
+
+    expect(report.missing).toEqual([
+      {
+        section: 'importers',
+        entry: 'importers > packages/extra',
+        detail: '#827 adds',
+      },
+    ]);
+    expect(lockfileUnionExitCode(report)).toBe(LOCKFILE_UNION_EXIT.missing);
+  });
+
+  it('reports an empty workspace importer a source removes and the candidate keeps as missing', () => {
+    const withImporter = (from: LockfileText, label: string) =>
+      variant(from, label, (lock) => {
+        lock.importers['packages/old'] = {};
+      });
+
+    const report = compareLockfileUnion({
+      base: withImporter(base, 'base'),
+      sources: [
+        withImporter(source826, '#826'),
+        source827,
+        withImporter(source828, '#828'),
+      ],
+      candidate: withImporter(fixture('candidate-union'), 'bundle'),
+    });
+
+    expect(report.missing).toEqual([
+      {
+        section: 'importers',
+        entry: 'importers > packages/old',
+        detail: '#827 removes',
+      },
+    ]);
+    expect(lockfileUnionExitCode(report)).toBe(LOCKFILE_UNION_EXIT.missing);
   });
 
   it('compares scalar top-level metadata such as lockfileVersion', () => {
@@ -341,9 +406,19 @@ describe('compareLockfileUnion', () => {
   });
 
   it('compares parsed structure rather than text layout', () => {
-    // Same data, different key order, quoting and flow style.
-    const lockfile = parse(fixture('candidate-union').text);
-    const reordered = Object.fromEntries(Object.entries(lockfile).reverse());
+    // Same data, with every mapping's keys reversed at every depth, plus
+    // different quoting and flow style.
+    const reverseKeys = (value: unknown): unknown =>
+      Array.isArray(value)
+        ? value.map(reverseKeys)
+        : typeof value === 'object' && value !== null
+          ? Object.fromEntries(
+              Object.entries(value)
+                .reverse()
+                .map(([key, nested]) => [key, reverseKeys(nested)]),
+            )
+          : value;
+    const reordered = reverseKeys(parse(fixture('candidate-union').text));
     const candidate = {
       label: 'reformatted',
       text: stringify(reordered, {
@@ -374,6 +449,21 @@ describe('compareLockfileUnion', () => {
       'a non-mapping dependency field',
       "lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies: [x]\n",
       /importer "\." dependencies must be a mapping/,
+    ],
+    [
+      'duplicate keys',
+      "lockfileVersion: '9.0'\nlockfileVersion: '9.0'\n",
+      /candidate: invalid YAML/,
+    ],
+    [
+      'an anchor and alias',
+      "lockfileVersion: '9.0'\nsettings: &s {a: 1}\noverrides: *s\n",
+      /anchors and aliases are not allowed/,
+    ],
+    [
+      'a cyclic alias',
+      "lockfileVersion: '9.0'\npackages: {a: &p {self: *p}}\n",
+      /anchors and aliases are not allowed/,
     ],
   ])('rejects %s as an input error', (_name, text, message) => {
     const act = () => compareWithCandidate({ label: 'candidate', text });

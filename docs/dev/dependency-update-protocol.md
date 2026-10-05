@@ -59,9 +59,11 @@ The example bundles #826, #827 and #828, which is how #829 was built.
 
    ```sh
    git switch -c chore/bundle-dependabot-826-828 origin/dev
-   git diff refs/pr/826^ refs/pr/826 -- package.json | git apply   # repeat for each source that changes package.json
+   git diff refs/pr/826^ refs/pr/826 -- package.json | git apply --3way   # repeat for each source that changes package.json
    git add package.json
    ```
+
+   `--3way` merges each patch against the base it was made from. Git still reports a conflict when two sources edit neighbouring lines, even when they change different dependencies. Resolve `package.json` by keeping every source's specifier change, not either side whole, then run `git add package.json`. Step 6 checks the result: each importer entry the verifier compares includes the manifest `specifier`, so a dropped or altered pin fails it.
 
 4. Regenerate with scoped `pnpm update` commands at the source versions, under a maturity cutoff that matches when Dependabot generated the sources. `minimumReleaseAge` counts back from the current time, so a later regeneration admits transitives Dependabot could not see. That is how #829 first picked up `baseline-browser-mapping@2.11.15` when every source had 2.11.14. Use the oldest source head's commit time:
 
@@ -86,12 +88,12 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    pnpm install --frozen-lockfile
    ```
 
-Each argument is a git revision or a lockfile path. The verifier refuses a name that is both. It parses the YAML and compares every root and workspace importer dependency, every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes.
+Each argument is a git revision or a lockfile path. The verifier refuses a name that is both. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. A symlink to the script runs it like the script itself.
 
 | Exit | Meaning |
 |---:|---|
 | 0 | The candidate changes exactly the union of the source changes. |
-| 2 | Usage or input error: a missing revision or file, invalid YAML, or a document that is not a pnpm lockfile. |
+| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, YAML anchors or aliases (pnpm never writes them), or a document that is not a pnpm lockfile. |
 | 4 | Extra: the candidate changes an entry no source changes. |
 | 8 | Missing: the candidate omits a source change. |
 | 16 | Unmatched: the candidate changes an entry to a value no source proposes. |
