@@ -33,6 +33,7 @@ test('renders active question branch with navigator and navigation callback', as
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -46,6 +47,7 @@ test('renders active question branch with navigator and navigation callback', as
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -221,6 +223,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -234,6 +237,7 @@ test('wires navigator aria-controls to an existing question panel id', async () 
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}

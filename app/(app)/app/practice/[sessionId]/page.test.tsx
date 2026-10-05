@@ -182,6 +182,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
               isCorrect: false,
               isOmitted: false,
               markedForReview: true,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -237,6 +238,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
               isCorrect: false,
               isOmitted: false,
               markedForReview: true,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -321,6 +323,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
               isCorrect: true,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
             {
               isAvailable: true,
@@ -334,6 +337,7 @@ describe('app/(app)/app/practice/[sessionId]', () => {
               isCorrect: null,
               isOmitted: false,
               markedForReview: true,
+              answerKeyChanged: false,
             },
           ],
         }}

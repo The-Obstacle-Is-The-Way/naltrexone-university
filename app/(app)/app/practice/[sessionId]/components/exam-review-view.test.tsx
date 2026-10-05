@@ -46,6 +46,7 @@ describe('QuestionNavigator', () => {
         isCorrect: true,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
       {
         isAvailable: true,
@@ -59,6 +60,7 @@ describe('QuestionNavigator', () => {
         isCorrect: false,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
       {
         isAvailable: false,
@@ -69,6 +71,7 @@ describe('QuestionNavigator', () => {
         isCorrect: null,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
     ],
   } as const satisfies GetPracticeSessionReviewOutput;
@@ -289,6 +292,7 @@ describe('ExamReviewView', () => {
         isCorrect: true,
         isOmitted: false,
         markedForReview: true,
+        answerKeyChanged: false,
       },
       {
         isAvailable: true,
@@ -302,6 +306,7 @@ describe('ExamReviewView', () => {
         isCorrect: false,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
       {
         isAvailable: true,
@@ -315,6 +320,7 @@ describe('ExamReviewView', () => {
         isCorrect: null,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
       {
         isAvailable: false,
@@ -325,6 +331,7 @@ describe('ExamReviewView', () => {
         isCorrect: null,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
     ],
   } as const satisfies GetPracticeSessionReviewOutput;

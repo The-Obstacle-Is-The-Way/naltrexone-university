@@ -206,6 +206,7 @@ describe('SessionSummaryView', () => {
               isCorrect: true,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -281,6 +282,7 @@ describe('SessionSummaryView', () => {
               isCorrect: true,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -324,6 +326,7 @@ describe('SessionSummaryView', () => {
               isCorrect: false,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -378,6 +381,7 @@ describe('SessionSummaryView', () => {
               isCorrect: true,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -427,6 +431,7 @@ describe('SessionSummaryView', () => {
               isCorrect: false,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }}
@@ -510,6 +515,7 @@ describe('SessionSummaryView', () => {
               isCorrect: true,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }}

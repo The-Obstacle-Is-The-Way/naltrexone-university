@@ -62,6 +62,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             isAvailable: true,
@@ -75,6 +76,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),
@@ -188,6 +190,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             isAvailable: true,
@@ -201,6 +204,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),
@@ -278,6 +282,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             isAvailable: true,
@@ -291,6 +296,7 @@ describe('useQuestionPageModel (browser)', () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),
@@ -374,6 +380,7 @@ describe('useQuestionPageModel (browser)', () => {
               isCorrect: true,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
             {
               isAvailable: true,
@@ -387,6 +394,7 @@ describe('useQuestionPageModel (browser)', () => {
               isCorrect: false,
               isOmitted: false,
               markedForReview: false,
+              answerKeyChanged: false,
             },
           ],
         }),
@@ -480,6 +488,7 @@ describe('useQuestionPageModel (browser)', () => {
           isCorrect: true,
           isOmitted: false,
           markedForReview: false,
+          answerKeyChanged: false,
         },
         {
           isAvailable: true,
@@ -493,6 +502,7 @@ describe('useQuestionPageModel (browser)', () => {
           isCorrect: false,
           isOmitted: false,
           markedForReview: false,
+          answerKeyChanged: false,
         },
       ],
     };

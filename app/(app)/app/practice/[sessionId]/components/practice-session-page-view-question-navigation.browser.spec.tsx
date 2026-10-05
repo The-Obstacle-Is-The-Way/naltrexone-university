@@ -43,6 +43,7 @@ test('renders Previous button in the session answering branch', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -56,15 +57,14 @@ test('renders Previous button in the session answering branch', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -125,6 +125,7 @@ test('hasPreviousQuestion is false when current question is first in navigator',
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -138,15 +139,14 @@ test('hasPreviousQuestion is false when current question is first in navigator',
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -191,9 +191,7 @@ test('hasPreviousQuestion is false on the first question when navigator is missi
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -238,9 +236,7 @@ test('renders Previous when navigator is missing but sessionInfo indicates a pri
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -308,9 +304,7 @@ test('routes the last exam-question footer Review & Submit button through onEndS
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'exam',
-
         deadlineAt: '2099-05-22T12:02:24.000Z',
-
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -368,6 +362,7 @@ test('hasPreviousQuestion is true when current question is not first', async () 
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -381,15 +376,14 @@ test('hasPreviousQuestion is true when current question is not first', async () 
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -453,6 +447,7 @@ test('routes the last tutor-question footer End session button through onEndSess
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -466,15 +461,14 @@ test('routes the last tutor-question footer End session button through onEndSess
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -569,9 +563,7 @@ test('clicking Next in a completed session navigates to the next available quest
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 1,
         total: 4,
         isMarkedForReview: false,
@@ -583,9 +575,7 @@ test('clicking Next in a completed session navigates to the next available quest
         session: {
           sessionId: fixtureSession1Id,
           mode: 'tutor',
-
           deadlineAt: null,
-
           index: 1,
           total: 4,
           isMarkedForReview: false,
@@ -658,9 +648,7 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 0,
         total: 3,
         isMarkedForReview: false,
@@ -672,9 +660,7 @@ test('clicking Next falls back to onNextQuestion when id-based navigation is una
         session: {
           sessionId: fixtureSession1Id,
           mode: 'tutor',
-
           deadlineAt: null,
-
           index: 0,
           total: 3,
           isMarkedForReview: false,
@@ -735,6 +721,7 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -748,15 +735,14 @@ test("clicking Previous calls onNavigateQuestion with the previous question's ID
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
       sessionInfo={{
         sessionId: fixtureSession1Id,
         mode: 'tutor',
-
         deadlineAt: null,
-
         index: 1,
         total: 2,
         isMarkedForReview: false,

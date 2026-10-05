@@ -33,6 +33,7 @@ const availableRow: PracticeSessionReviewRow = {
   isCorrect: false,
   isOmitted: false,
   markedForReview: false,
+  answerKeyChanged: false,
 };
 
 const correctRow: PracticeSessionReviewRow = {
@@ -52,6 +53,7 @@ const unavailableRow: PracticeSessionReviewRow = {
   isCorrect: null,
   isOmitted: false,
   markedForReview: false,
+  answerKeyChanged: false,
 };
 
 let SessionBreakdownList: typeof import('./session-breakdown-list').SessionBreakdownList;
