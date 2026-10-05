@@ -11,7 +11,7 @@ beforeAll(async () => {
 describe('ErrorBoundaryPage', () => {
   const baseProps = {
     error: new Error('boom') as Error & { digest?: string },
-    reset: () => undefined,
+    retry: () => undefined,
     title: 'Something went wrong',
     description: 'Please try again.',
     links: [{ href: '/', label: 'Go home' }],

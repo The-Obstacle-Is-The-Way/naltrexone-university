@@ -8,7 +8,7 @@ vi.mock('next/link', () => ({
 
 const ERROR_PROPS = {
   error: Object.assign(new Error('boom'), { digest: 'digest_123' }),
-  reset: () => {},
+  retry: () => {},
 };
 
 describe('app error heading styles', () => {

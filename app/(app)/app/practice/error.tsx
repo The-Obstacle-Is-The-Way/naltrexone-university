@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function PracticeError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Practice error"
       description="We couldn't load practice right now. Please try again."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}

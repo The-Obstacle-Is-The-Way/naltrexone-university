@@ -15,7 +15,7 @@ describe('app/(app)/app/practice/quick/error', () => {
     (error as Error & { digest?: string }).digest = 'digest_123';
 
     const html = renderToStaticMarkup(
-      <QuickPracticeError error={error} reset={() => {}} />,
+      <QuickPracticeError error={error} retry={() => {}} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');

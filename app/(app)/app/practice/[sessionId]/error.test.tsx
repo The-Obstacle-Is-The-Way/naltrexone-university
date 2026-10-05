@@ -14,7 +14,7 @@ describe('app/(app)/app/practice/[sessionId]/error', () => {
     (error as Error & { digest?: string }).digest = 'digest_123';
 
     const html = renderToStaticMarkup(
-      <PracticeSessionError error={error} reset={() => {}} />,
+      <PracticeSessionError error={error} retry={() => {}} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');

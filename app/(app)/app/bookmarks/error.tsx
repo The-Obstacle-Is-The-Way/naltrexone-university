@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function BookmarksError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Bookmarks error"
       description="We couldn't load your bookmarks right now. Please try again."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}

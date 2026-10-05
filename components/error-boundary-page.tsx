@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import type { reportClientError } from '@/lib/report-client-error';
+import { reloadCurrentPage } from '@/lib/stale-server-action';
 import { REPORT_ISSUE_URL } from '@/lib/support';
+import { useReportCaughtError } from '@/lib/use-report-caught-error';
+import { useStaleServerActionReload } from '@/lib/use-stale-server-action-reload';
 
 export type ErrorBoundaryPageLink = {
   href: string;
@@ -12,26 +15,30 @@ export type ErrorBoundaryPageLink = {
 
 export type ErrorBoundaryPageProps = {
   error: Error & { digest?: string };
-  reset: () => void;
+  /** Next.js's retry: refetches the route from the server, then re-renders. */
+  retry: () => void;
   title: string;
   description: string;
   links: ErrorBoundaryPageLink[];
   includeMainLandmark?: boolean;
   logPrefix?: string;
+  reloadPage?: () => void;
+  reportError?: typeof reportClientError;
 };
 
 export function ErrorBoundaryPage({
   error,
-  reset,
+  retry,
   title,
   description,
   links,
   includeMainLandmark = false,
   logPrefix,
+  reloadPage = reloadCurrentPage,
+  reportError,
 }: ErrorBoundaryPageProps) {
-  useEffect(() => {
-    console.error(logPrefix ?? 'ErrorBoundaryPage:', error);
-  }, [error, logPrefix]);
+  useReportCaughtError(error, logPrefix ?? 'ErrorBoundaryPage:', reportError);
+  useStaleServerActionReload(error, reloadPage);
 
   const content = (
     <div className="w-full max-w-md space-y-4 px-4 text-center">
@@ -51,7 +58,7 @@ export function ErrorBoundaryPage({
         </p>
       ) : null}
       <div className="flex flex-col justify-center gap-3 sm:flex-row">
-        <Button type="button" onClick={reset}>
+        <Button type="button" onClick={retry}>
           Try again
         </Button>
         {links.map((link) => (

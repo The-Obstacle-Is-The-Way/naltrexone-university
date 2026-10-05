@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increment 1, the answer views, is in production (promotion #1372, 2026-10-05). Increment 2a (navigators, session breakdown, Dashboard) is written and tested. History's rows and filters follow ([Progress](#progress))
+**Status:** In Progress — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows and filters, remains ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -104,7 +104,7 @@ The code:
 
 **Increment 1 released, 2026-10-05.** #1371 went out through promotion #1372 (`f32160d8`): main CI 37323260394 `test` passed 14:29:27Z, production assigned 14:29:29.955Z, trees `2c0e5f96`, healthy production.
 
-**Increment 2a: the navigators, the session breakdown and the Dashboard, 2026-10-05.**
+**Increment 2a: the navigators, the session breakdown and the Dashboard, 2026-10-05.** It was released through promotion #1377 (`9171234b`): main CI 37355353192 `test` passed 18:33:33Z, production assigned 18:33:36.016Z, trees `f31404a7`, healthy production.
 - **The rule for lists.** `isResultNotScored` (`app/(app)/app/shared/components/review-navigator-utils.ts`) marks a graded result as not scored when:
   - its key was corrected since; or
   - its question's content is in doubt, which `contentInDoubt` decides: withdrawn, under review, or a question that no longer exists.
