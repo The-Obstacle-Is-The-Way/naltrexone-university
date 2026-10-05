@@ -15,7 +15,7 @@
 Dependabot opened #1369 on 2026-10-05, bumping `@sentry/nextjs` from 10.75.1 to 11.0.0, and its CI passed. Sentry v11 replaces `sendDefaultPii` with `dataCollection`. Sentry's migration guide warns that this is "a behavior change, not just a renamed option": in v10, leaving `sendDefaultPii` unset was restrictive, but in v11, leaving `dataCollection` unset "collects the categories below **by default**".
 
 None of our three `Sentry.init` calls set either option. They rely on v10's restrictive default, so merging #1369 would start sending Sentry:
-- cookies, which here include Clerk's session tokens;
+- cookies, including Clerk's refresh-token and handshake cookies;
 - user information and IP addresses;
 - every request and response body;
 - request and response headers without v10's PII scrubbing;
@@ -45,6 +45,18 @@ No test pins what we send, so nothing failed.
   - narrow trace attributes.
 
   It names neither cookies, full request or response bodies, nor database queries. v11's default would exceed it.
+- **Which cookies Sentry's own filter would still catch.** v11 always replaces with `[Filtered]` the value of any key whose name contains one of its sensitive snippets: `auth`, `token`, `session`, `jwt`, `cookie`, `sid`, `nonce` and others. That list is in `@sentry/core`'s `filtering-snippets.js`, version 11.0.0. Checked against the cookie names in the installed Clerk SDK (`@clerk/backend` 3.18.1):
+
+  | Cookie | Under v11's default |
+  | --- | --- |
+  | `__session` (session token) | filtered |
+  | `__clerk_db_jwt`, `__dev_session` (development) | filtered |
+  | `__clerk_handshake_nonce` | filtered |
+  | `__refresh` (Clerk's refresh token) | **sent in clear** |
+  | `__clerk_handshake` (the signed session handoff) | **sent in clear** |
+  | `__client_uat`, `__clerk_redirect_count`, `__clerk_synced` | sent; not credentials |
+
+  The session token itself would be filtered, but two credential carriers would not.
 - **Other v11 changes, checked against our use.** We call only `init`, `captureException`, `captureRequestError` and `startSpan`, and our spans carry attributes, not scope tags.
   - Node ≥20.19, Next.js ≥14 and TypeScript ≥5.0.4: all met.
   - Span streaming is on by default.
@@ -52,7 +64,7 @@ No test pins what we send, so nothing failed.
 
 ## Impact
 
-Merging a green Dependabot PR would send Clerk session tokens, learners' request bodies and database query text to a third party. That breaches the privacy policy and creates a credential exposure. Compare BUG-307's leak of session tokens into CI logs.
+Merging a green Dependabot PR would send Clerk's refresh-token and handshake cookies, learners' request bodies, and database query parameters and results to a third party. That breaches the privacy policy and creates a credential exposure. Compare BUG-307's leak of session tokens into CI logs.
 
 ## Options
 
