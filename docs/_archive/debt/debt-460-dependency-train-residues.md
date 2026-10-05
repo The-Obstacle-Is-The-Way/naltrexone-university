@@ -1,10 +1,10 @@
 # DEBT-460: Dependency Upgrade Train Residues (TS7 Dual-Compiler Seam, Clerk `createRouteMatcher` Deprecation, Biome Schema Pin Drift)
 
-**Status:** Deferred / Parked (standing rules and one-dependency consolidation; de-alias candidate tracked in issue #813) — 2026-08-19
+**Status:** Deferred / Parked (standing rules and one-dependency consolidation; de-alias candidate in issue #813, blocked 2026-10-05 because Stryker loads the classic API from canonical `typescript`) — 2026-10-05
 **Priority:** P4
 **Date:** 2026-07-20
 **Baseline confirmed:** 2026-07-20 (each part verified against the installed packages and checked-in config on `dev`/`main` at `9f11e674`, promoted via PR #685 merge `b5fd6880`)
-**Latest update confirmed:** 2026-08-19 (PR #811 audit against `dev` at `4e05cca4` — de-alias experiment, enumerated consolidation blockers, and correction receipts; see "One-dependency consolidation checklist" below)
+**Latest update confirmed:** 2026-10-05 (issue #813 census against `dev` at `31380775`; see "De-alias census (2026-10-05)" below). Earlier: 2026-08-19 (PR #811 audit against `dev` at `4e05cca4` — de-alias experiment, enumerated consolidation blockers, and correction receipts; see "One-dependency consolidation checklist" below)
 
 ## Register final-wave disposition (2026-07-23)
 
@@ -22,6 +22,61 @@ record remains parked and is not resolved:
 2. migrate `proxy.ts` off `createRouteMatcher` **before** accepting any
    `@clerk/nextjs` major bump; and
 3. fold the `biome.json` `$schema` bump into every Biome Dependabot PR.
+
+## De-alias census (2026-10-05)
+
+Issue #813 asked for the third-party compiler-API census to be repeated before
+de-aliasing, and for the aliases to stay if a required tool can only load the
+canonical `typescript` package. Measured against `origin/dev` at `31380775`:
+
+- **Third-party loaders.** This search of the installed packages finds two
+  loaders, `next` and `@stryker-mutator/core`. Next is the Blocker 3 path,
+  which de-aliasing clears. Stryker arrived after the 2026-08-19 audit, with
+  ADR-019 and its weekly `Mutation` workflow.
+
+  ```bash
+  rg -l -g '*.{js,cjs,mjs}' -g '!**/typescript/**' -g '!**/@typescript/**' \
+    -e "require\(['\"]typescript['\"]\)" -e "from ['\"]typescript['\"]" \
+    -e "import\(['\"]typescript['\"]\)" -e "resolve\(['\"]typescript(/[^'\"]*)?['\"]" \
+    -e "['\"]typescript/lib/typescript(\.js)?['\"]" node_modules/.pnpm
+  ```
+
+- **Stryker needs the classic API under the canonical name.** Its sandbox
+  `TSConfigPreprocessor` runs `await import('typescript')`, then calls
+  `parseConfigFileTextToJson` and `resolveProjectReferencePath`. It does so
+  whenever Stryker is not running in place and the project contains the
+  configured `tsconfigFile` (default `tsconfig.json`). Stryker declares no
+  `typescript` dependency, so nothing supported points it at
+  `@typescript/typescript6`. The latest release, 10.0.0 (2026-08-14), has the
+  same code. TypeScript 7's package root still exports only
+  `{ version, versionMajorMinor }`.
+- **Receipt.** A detached worktree used real `typescript@7.0.2` and
+  `@typescript/typescript6@6.0.2`, with every owned import rewritten. There,
+  `pnpm exec stryker run --mutate src/domain/services/answer-key.ts --force --concurrency 2`
+  failed with `TypeError: ts.parseConfigFileTextToJson is not a function`. The
+  same command on the aliased tree ran 2,865 tests in its initial run and scored
+  100%.
+- **Owned consumers grew from three to eleven.** Widened to `scripts/`, the
+  Blocker 2 census now finds 11 files that import the classic API from
+  `typescript`. Eight are under `tests/`. Three are under `scripts/`: the CRAP
+  report, its test, and the rule-to-test register.
+  `tests/server-span-family-boundary.test.ts` no longer exists. All eleven are
+  owned and could move to `@typescript/typescript6`; they are not the blocker.
+
+Following issue #813, the aliases stay and Cleanup A is blocked. One workaround
+was measured but not adopted. Setting `"tsconfigFile"` in `stryker.config.json`
+to a file that does not exist makes Stryker skip the preprocessor. The
+de-aliased run then passed, with 2,865 tests and a 100% score. This repository's
+`tsconfig.json` has no `extends` or `references`, and its `include` and
+`exclude` paths stay inside the project, so the rewrite changes nothing here
+today. Adopting the workaround is an owner decision. It depends on Stryker
+silently skipping a missing file, and it would need revisiting if
+`@stryker-mutator/typescript-checker` is ever adopted.
+
+**Revive trigger:** Stryker loads the TypeScript 6 API explicitly or stops
+loading TypeScript in its preprocessor; TypeScript 7 ships a stable compiler
+API (Blocker 1); or the owner accepts the `tsconfigFile` workaround. Re-run this
+census first.
 
 ---
 
@@ -404,6 +459,8 @@ keep it conditional on Webpack becoming an intentional project mode.
 
 - **Cleanup A — de-alias.** A viable current-`dev` candidate, tracked in
   [issue #813](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/813).
+  **Blocked on 2026-10-05:** Stryker loads the classic API from canonical
+  `typescript`; see "De-alias census (2026-10-05)" above.
   Install both packages under their real published names: `typescript` → real
   `typescript@7`, `@typescript/typescript6` → real `@typescript/typescript6`.
   Rewrite the three imports above to `from '@typescript/typescript6'`, drop the
