@@ -698,9 +698,10 @@ earlier head, provided GitHub's compare API shows every file except
 both heads; a rename onto the lockfile path is compared like any other file. The
 receipt then names the approved head as `carriedFrom`. It also requires zero unresolved
 threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
-ADR-020, except on a complete changed-file list confined to `package.json`,
-`pnpm-lock.yaml` and `.github/`, where Codecov cannot post and nothing is
-measured; see its 2026-09-28 amendment), green checks, and a clean, mergeable,
+ADR-020, except on a complete changed-file list confined to paths coverage
+never measures: `package.json`, `pnpm-lock.yaml`, `.github/`, Markdown
+documentation, `.coderabbit.yaml` and `codecov.yml`; see its 2026-09-28 and
+2026-10-05 amendments), green checks, and a clean, mergeable,
 non-draft PR. Incomplete/truncated thread or check data fails closed. It also refuses a merge
 that would leave `dev` without `main`'s latest promotion merge commit: `main`'s head
 must be in the PR head or already in `dev` (DEBT-491). Base each branch made after a
@@ -722,6 +723,19 @@ gh pr view <PR_NUMBER> --comments
 # If a rate-limit warning is present, DO NOT MERGE until after the cooldown
 # and a fresh CodeRabbit review has landed on the latest PR head commit.
 ```
+
+**Codecov outages (DEBT-497, 2026-10-05).** When `codecov/patch` does not post,
+CI stays green, but the job carries a "Codecov upload failed" warning and
+summary.
+1. Confirm the cause from the upload step's log or from Codecov's hosts. On
+   2026-10-05, `*.codecov.io` served an expired certificate while its status
+   page reported no incident.
+2. Record the cause on the PR before any re-run.
+3. A change that touches measured code waits for Codecov. Do not bypass the
+   guard.
+4. A change confined to unmeasured paths merges under ADR-020's exemption.
+   The merge guard applies it without any override.
+5. After recovery, re-run CI once.
 
 ### Reviewed-Source Promotions
 
