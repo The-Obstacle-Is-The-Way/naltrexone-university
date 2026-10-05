@@ -63,7 +63,7 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    git add package.json
    ```
 
-   `--3way` merges each patch against the base it was made from. Git still reports a conflict when two sources edit neighbouring lines, even when they change different dependencies. Resolve `package.json` by keeping every source's specifier change, not either side whole, then run `git add package.json`. Step 6 checks the result: each importer entry the verifier compares includes the manifest `specifier`, so a dropped or altered pin fails it.
+   `--3way` merges each patch against the base it was made from. Git still reports a conflict when two sources edit neighbouring lines, even when they change different dependencies. Resolve each conflict before applying the next patch, since a conflicted `package.json` blocks further applies. Keep every source's specifier change, not either side whole, then run `git add package.json`.
 
 4. Regenerate with scoped `pnpm update` commands at the source versions, under a maturity cutoff that matches when Dependabot generated the sources. `minimumReleaseAge` counts back from the current time, so a later regeneration admits transitives Dependabot could not see. That is how #829 first picked up `baseline-browser-mapping@2.11.15` when every source had 2.11.14. Use the oldest source head's commit time:
 
@@ -81,6 +81,8 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    pnpm install --lockfile-only --config.minimum-release-age=$CUTOFF
    ```
 
+   If this install fails, stop. The manifest from step 3 is wrong, for example a mistyped specifier, and the lockfile still holds step 4's specifiers. Fix `package.json`, stage it, and repeat step 5.
+
 6. Verify, and paste the printed table into the PR body:
 
    ```sh
@@ -88,18 +90,22 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    pnpm install --frozen-lockfile
    ```
 
-Each argument is a git revision or a lockfile path. The verifier refuses a name that is both. Revisions always come from the repository in the current directory, even inside a git hook that exports `GIT_DIR`. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. A symlink to the script runs it like the script itself.
+   The two checks cover different things. The frozen install proves that the lockfile matches `package.json`. The verifier proves that the lockfile is the union of the sources, and each importer entry it compares includes the manifest `specifier`. So a pin dropped or altered while resolving step 3 fails one check or the other.
+
+Each argument is a git revision or a lockfile path. The verifier refuses a name that is both, and a candidate that is also a source, by name or by identical content. Revisions always come from the repository in the current directory, even inside a git hook that exports `GIT_DIR`. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. The script runs the same way through a symlink or without its `.ts` extension.
 
 | Exit | Meaning |
 |---:|---|
 | 0 | The candidate changes exactly the union of the source changes. |
-| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, YAML anchors or aliases (pnpm never writes them), or a document that is not a pnpm lockfile. |
+| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a document that is not a pnpm lockfile, or YAML that pnpm never writes (anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
 | 4 | Extra: the candidate changes an entry no source changes. |
 | 8 | Missing: the candidate omits a source change. |
 | 16 | Unmatched: the candidate changes an entry to a value no source proposes. |
 | 32 | Conflict: two sources change one entry differently. |
 
-Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR. The verifier has no override flag.
+Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR.
+
+A correct bundle can still report missing when the sources overlap. For example, one source drops `is-number@6.0.0` because it moves to 7, while another source's new dependency still needs 6. The bundle rightly keeps 6.0.0, so the verifier reports the first source's removal as missing, and no regeneration clears it. Treat that the same way as a conflict: confirm in `pnpm why` that the kept entry is needed, then record the overlap and the decision in the PR. The verifier has no override flag.
 
 Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced #829's lockfile byte for byte, with `package.json` identical to #826's. The verifier printed #829's hand-built counts: packages 54 / 23 / 7 into a union of 74, snapshots 72 / 38 / 22 into 92, importer entries 10 / 5 / 5 into 12, and 72 / 86 key deltas, all matched. The same steps without the cutoff exited 28, with 385 extra, 18 missing and 14 unmatched entries.
 

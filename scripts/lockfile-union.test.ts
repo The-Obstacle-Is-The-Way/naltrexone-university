@@ -6,14 +6,10 @@ import {
   compareLockfileUnion,
   formatLockfileUnionReport,
   LOCKFILE_UNION_EXIT,
-  type LockfileReader,
   type LockfileText,
   LockfileUnionInputError,
   lockfileUnionExitCode,
-  parseLockfileUnionArgs,
-  readLockfileSpec,
-  runVerifyLockfileUnion,
-} from './verify-lockfile-union';
+} from './lockfile-union';
 
 const FIXTURES = path.join(import.meta.dirname, 'fixtures', 'lockfile-union');
 
@@ -307,8 +303,12 @@ describe('compareLockfileUnion', () => {
       'workspace',
       (lock) => {
         lock.importers['packages/docs'] = {
+          dependencies: { react: { specifier: '19.2.8', version: '19.2.8' } },
           devDependencies: {
             typescript: { specifier: '^7.0.2', version: '7.0.2' },
+          },
+          optionalDependencies: {
+            fsevents: { specifier: '^2.3.3', version: '2.3.3' },
           },
           publishDirectory: { dist: true },
         };
@@ -319,10 +319,49 @@ describe('compareLockfileUnion', () => {
 
     expect(entries(report.extra)).toEqual([
       'importers > packages/docs',
+      'importers > packages/docs > dependencies > react',
       'importers > packages/docs > devDependencies > typescript',
+      'importers > packages/docs > optionalDependencies > fsevents',
       'importers > packages/docs > publishDirectory',
     ]);
-    expect(report.sections.importers.candidateKeyDeltas).toBe(3);
+    expect(report.sections.importers.candidateKeyDeltas).toBe(5);
+  });
+
+  it('reports a candidate removing an entry no source touches as extra', () => {
+    const candidate = variant(fixture('candidate-union'), 'drop', (lock) => {
+      delete lock.packages['react@19.2.8'];
+    });
+
+    const report = compareWithCandidate(candidate);
+
+    expect(report.extra).toEqual([
+      {
+        section: 'packages',
+        entry: 'packages > react@19.2.8',
+        detail: 'candidate removes',
+      },
+    ]);
+    expect(lockfileUnionExitCode(report)).toBe(4);
+  });
+
+  it('reports a candidate removing an entry a source changes as unmatched', () => {
+    const candidate = variant(fixture('candidate-union'), 'drop', (lock) => {
+      lock.importers['.'].dependencies = {
+        next: { specifier: '16.3.1', version: '16.3.1(react@19.2.8)' },
+        react: { specifier: '19.2.8', version: '19.2.8' },
+      };
+    });
+
+    const report = compareWithCandidate(candidate);
+
+    expect(report.unmatched).toEqual([
+      {
+        section: 'importers',
+        entry: 'importers > . > dependencies > stripe',
+        detail: 'candidate value differs from #828',
+      },
+    ]);
+    expect(lockfileUnionExitCode(report)).toBe(16);
   });
 
   it('reports an empty workspace importer the candidate adds as extra', () => {
@@ -466,6 +505,21 @@ describe('compareLockfileUnion', () => {
       /anchors and aliases are not allowed/,
     ],
     [
+      'an explicit tag',
+      "lockfileVersion: '9.0'\nsettings: !!set {a}\n",
+      /explicit tags are not allowed/,
+    ],
+    [
+      'a non-string key',
+      "lockfileVersion: '9.0'\noverrides:\n  1: a\n  '1': b\n",
+      /non-string keys are not allowed/,
+    ],
+    [
+      'a non-finite number',
+      "lockfileVersion: '9.0'\nsettings: {a: .nan}\n",
+      /non-finite numbers are not allowed/,
+    ],
+    [
       'a cyclic alias',
       "lockfileVersion: '9.0'\npackages: {a: &p {self: *p}}\n",
       /anchors and aliases are not allowed/,
@@ -475,6 +529,19 @@ describe('compareLockfileUnion', () => {
 
     expect(act).toThrow(LockfileUnionInputError);
     expect(act).toThrow(message);
+  });
+});
+
+describe('LOCKFILE_UNION_EXIT', () => {
+  // Automation reads these numbers, so a change must break a test.
+  it('keeps one distinct bit per failure category and 2 for input errors', () => {
+    expect(LOCKFILE_UNION_EXIT).toEqual({
+      usage: 2,
+      extra: 4,
+      missing: 8,
+      unmatched: 16,
+      conflict: 32,
+    });
   });
 });
 
@@ -511,170 +578,43 @@ describe('formatLockfileUnionReport', () => {
     );
   });
 
-  it('caps long finding lists', () => {
+  it('reports a conflict-only failure with exit 32', () => {
+    const conflicting = [
+      variant(source826, '#826', (lock) => {
+        lock.overrides.postcss = '8.5.24';
+      }),
+      source827,
+      variant(source828, '#828', (lock) => {
+        lock.overrides.postcss = '8.5.25';
+      }),
+    ];
+
+    const output = formatLockfileUnionReport(
+      compareWithCandidate(fixture('candidate-union'), conflicting),
+    );
+
+    expect(output).toContain('FAIL (exit 32): 1 conflicting.');
+    expect(output).toContain(
+      '### Conflicting: sources disagree, so the bundle needs a deliberate choice',
+    );
+  });
+
+  it.each([
+    [20, undefined],
+    [21, '- …and 1 more'],
+    [25, '- …and 5 more'],
+  ])('lists %i findings with the cap line %s', (count, capLine) => {
     const candidate = variant(fixture('candidate-union'), 'many', (lock) => {
-      for (let index = 0; index < 25; index += 1) {
+      for (let index = 0; index < count; index += 1) {
         lock.packages[`extra-${index}@1.0.0`] = {};
       }
     });
 
     const output = formatLockfileUnionReport(compareWithCandidate(candidate));
+    const listed = output.split('\n').filter((line) => line.startsWith('- `'));
 
-    expect(output).toContain('- …and 5 more');
-  });
-});
-
-describe('parseLockfileUnionArgs', () => {
-  it('reads one base, repeated sources and one candidate', () => {
-    expect(
-      parseLockfileUnionArgs([
-        '--base',
-        'refs/pr/826^',
-        '--source',
-        'refs/pr/826',
-        '--source',
-        'refs/pr/827',
-        '--candidate',
-        'pnpm-lock.yaml',
-      ]),
-    ).toEqual({
-      base: 'refs/pr/826^',
-      sources: ['refs/pr/826', 'refs/pr/827'],
-      candidate: 'pnpm-lock.yaml',
-    });
-  });
-
-  it.each([
-    ['no arguments', []],
-    ['one source', ['--base', 'b', '--source', 's', '--candidate', 'c']],
-    [
-      'a duplicate source',
-      ['--base', 'b', '--source', 's', '--source', 's', '--candidate', 'c'],
-    ],
-    [
-      'a repeated base',
-      [
-        '--base',
-        'b',
-        '--base',
-        'b2',
-        '--source',
-        's1',
-        '--source',
-        's2',
-        '--candidate',
-        'c',
-      ],
-    ],
-    [
-      'a missing value',
-      ['--base', 'b', '--source', 's1', '--source', 's2', '--candidate'],
-    ],
-    [
-      'a flag as a value',
-      ['--base', '--source', '--source', 's2', '--candidate', 'c'],
-    ],
-    [
-      'a trailing flag without a value',
-      [
-        '--base',
-        'b',
-        '--source',
-        's1',
-        '--source',
-        's2',
-        '--candidate',
-        'c',
-        '--fix',
-      ],
-    ],
-  ])('rejects %s', (_name, argv) => {
-    expect(() => parseLockfileUnionArgs(argv)).toThrowError(
-      /Usage: tsx scripts\/verify-lockfile-union\.ts/,
-    );
-  });
-
-  it('rejects an unknown flag even when it has a value', () => {
-    expect(() =>
-      parseLockfileUnionArgs([
-        '--fix',
-        'yes',
-        '--base',
-        'b',
-        '--source',
-        's1',
-        '--source',
-        's2',
-        '--candidate',
-        'c',
-      ]),
-    ).toThrowError(/Unknown argument --fix\./);
-  });
-});
-
-describe('readLockfileSpec', () => {
-  function reader(
-    files: Record<string, string>,
-    commits: Record<string, string>,
-  ) {
-    const shown: string[] = [];
-    const lockfileReader: LockfileReader = {
-      isFile: (spec) => spec in files,
-      readFile: (spec) => files[spec] ?? '',
-      resolveCommit: (spec) => commits[spec] ?? null,
-      showLockfile: (commit) => {
-        shown.push(commit);
-        return `lockfile at ${commit}`;
-      },
-    };
-    return { lockfileReader, shown };
-  }
-
-  it('reads a file path from disk', () => {
-    const { lockfileReader } = reader({ 'pnpm-lock.yaml': 'on disk' }, {});
-
-    expect(readLockfileSpec('pnpm-lock.yaml', lockfileReader)).toBe('on disk');
-  });
-
-  it('reads a revision through its resolved commit', () => {
-    const { lockfileReader, shown } = reader({}, { 'refs/pr/826': 'abc123' });
-
-    expect(readLockfileSpec('refs/pr/826', lockfileReader)).toBe(
-      'lockfile at abc123',
-    );
-    expect(shown).toEqual(['abc123']);
-  });
-
-  it.each([
-    ['is both a file and a revision', { dev: 'x' }, { dev: 'abc' }, 'dev'],
-    ['is neither a file nor a revision', {}, {}, 'nope'],
-    ['starts with a dash', {}, {}, '-p'],
-  ])('rejects a spec that %s', (_name, files, commits, spec) => {
-    const { lockfileReader } = reader(files, commits);
-
-    expect(() => readLockfileSpec(spec, lockfileReader)).toThrow(
-      LockfileUnionInputError,
-    );
-  });
-});
-
-describe('runVerifyLockfileUnion', () => {
-  it('rethrows an unexpected reader failure instead of reporting a usage error', () => {
-    const failingReader: LockfileReader = {
-      isFile: () => {
-        throw new Error('disk unavailable');
-      },
-      readFile: () => '',
-      resolveCommit: () => null,
-      showLockfile: () => '',
-    };
-
-    expect(() =>
-      runVerifyLockfileUnion(
-        ['--base', 'b', '--source', 's1', '--source', 's2', '--candidate', 'c'],
-        failingReader,
-        { out: () => undefined, err: () => undefined },
-      ),
-    ).toThrow('disk unavailable');
+    expect(listed).toHaveLength(Math.min(count, 20));
+    if (capLine) expect(output).toContain(capLine);
+    else expect(output).not.toContain('…and');
   });
 });

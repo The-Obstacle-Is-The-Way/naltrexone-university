@@ -13,7 +13,7 @@ import {
   gitLockfileReader,
   LOCKFILE_UNION_EXIT,
   runVerifyLockfileUnion,
-} from './verify-lockfile-union';
+} from './lockfile-union';
 
 const FIXTURES = path.join(import.meta.dirname, 'fixtures', 'lockfile-union');
 
