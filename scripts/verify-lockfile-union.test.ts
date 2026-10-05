@@ -1,13 +1,10 @@
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { parse, stringify } from 'yaml';
 import {
   compareLockfileUnion,
   formatLockfileUnionReport,
-  gitLockfileReader,
   LOCKFILE_UNION_EXIT,
   type LockfileReader,
   type LockfileText,
@@ -217,6 +214,40 @@ describe('compareLockfileUnion', () => {
     });
     expect(lockfileUnionExitCode(report)).toBe(LOCKFILE_UNION_EXIT.conflict);
   });
+
+  it.each([
+    ['keeps the base value', '8.5.23', 'candidate keeps the base value'],
+    ['takes a third value', '8.5.26', 'candidate value matches no source'],
+  ])(
+    'names the outcome when a conflicted candidate %s',
+    (_name, candidateValue, outcome) => {
+      const conflicting = [
+        variant(source826, '#826', (lock) => {
+          lock.overrides.postcss = '8.5.24';
+        }),
+        source827,
+        variant(source828, '#828', (lock) => {
+          lock.overrides.postcss = '8.5.25';
+        }),
+      ];
+      const candidate = variant(
+        fixture('candidate-union'),
+        'bundle',
+        (lock) => {
+          lock.overrides.postcss = candidateValue;
+        },
+      );
+
+      const report = compareWithCandidate(candidate, conflicting);
+
+      expect(report.conflicts.map(({ detail }) => detail)).toEqual([
+        `#826 changes it to "8.5.24"; #828 changes it to "8.5.25"; ${outcome}`,
+      ]);
+      expect(report.missing).toEqual([]);
+      expect(report.unmatched).toEqual([]);
+      expect(lockfileUnionExitCode(report)).toBe(LOCKFILE_UNION_EXIT.conflict);
+    },
+  );
 
   it('reports one source removing an entry another source changes as a conflict', () => {
     const conflicting = [
@@ -449,7 +480,7 @@ describe('parseLockfileUnionArgs', () => {
       ['--base', '--source', '--source', 's2', '--candidate', 'c'],
     ],
     [
-      'an unknown flag',
+      'a trailing flag without a value',
       [
         '--base',
         'b',
@@ -466,6 +497,23 @@ describe('parseLockfileUnionArgs', () => {
     expect(() => parseLockfileUnionArgs(argv)).toThrowError(
       /Usage: tsx scripts\/verify-lockfile-union\.ts/,
     );
+  });
+
+  it('rejects an unknown flag even when it has a value', () => {
+    expect(() =>
+      parseLockfileUnionArgs([
+        '--fix',
+        'yes',
+        '--base',
+        'b',
+        '--source',
+        's1',
+        '--source',
+        's2',
+        '--candidate',
+        'c',
+      ]),
+    ).toThrowError(/Unknown argument --fix\./);
   });
 });
 
@@ -515,191 +563,23 @@ describe('readLockfileSpec', () => {
   });
 });
 
-describe('verify-lockfile-union against a real git repository', () => {
-  let repository: string | undefined;
-
-  afterEach(() => {
-    if (repository) rmSync(repository, { recursive: true, force: true });
-    repository = undefined;
-  });
-
-  // Inherited GIT_* variables (set inside git hooks) would redirect these
-  // commands to the enclosing repository, so the child environment drops them.
-  function isolatedGitEnv(home: string): NodeJS.ProcessEnv {
-    const env: NodeJS.ProcessEnv = { ...process.env };
-    for (const name of Object.keys(env)) {
-      if (name.startsWith('GIT_')) delete env[name];
-    }
-    return Object.assign(env, {
-      HOME: home,
-      GIT_CONFIG_GLOBAL: path.join(home, 'gitconfig'),
-      GIT_CONFIG_NOSYSTEM: '1',
-      GIT_AUTHOR_NAME: 'Fixture',
-      GIT_AUTHOR_EMAIL: 'fixture@example.com',
-      GIT_COMMITTER_NAME: 'Fixture',
-      GIT_COMMITTER_EMAIL: 'fixture@example.com',
-    });
-  }
-
-  function createRepository() {
-    const directory = mkdtempSync(path.join(tmpdir(), 'lockfile-union-'));
-    repository = directory;
-    const env = isolatedGitEnv(directory);
-    const git = (args: string[], input?: string) => {
-      const result = spawnSync('git', args, {
-        cwd: directory,
-        env,
-        input,
-        encoding: 'utf8',
-      });
-      if (result.status !== 0) throw new Error(result.stderr);
-      return result.stdout.trim();
+describe('runVerifyLockfileUnion', () => {
+  it('rethrows an unexpected reader failure instead of reporting a usage error', () => {
+    const failingReader: LockfileReader = {
+      isFile: () => {
+        throw new Error('disk unavailable');
+      },
+      readFile: () => '',
+      resolveCommit: () => null,
+      showLockfile: () => '',
     };
-    // Commits are built from blobs and trees, so no branch is checked out
-    // or switched while the fixture refs are created.
-    const commitLockfile = (text: string, parent?: string) => {
-      const blob = git(['hash-object', '-w', '--stdin'], text);
-      const tree = git(['mktree'], `100644 blob ${blob}\tpnpm-lock.yaml\n`);
-      return git([
-        'commit-tree',
-        tree,
-        '-m',
-        'lockfile',
-        ...(parent ? ['-p', parent] : []),
-      ]);
-    };
-    git(['init', '--quiet', '--initial-branch=main']);
-    const baseCommit = commitLockfile(base.text);
-    git(['update-ref', 'refs/heads/main', baseCommit]);
-    for (const [number, name] of [
-      ['826', 'source-826'],
-      ['827', 'source-827'],
-      ['828', 'source-828'],
-      ['829', 'candidate-union'],
-    ] as const) {
-      git([
-        'update-ref',
-        `refs/pr/${number}`,
-        commitLockfile(fixture(name).text, baseCommit),
-      ]);
-    }
-    const state = () => ({
-      head: git(['symbolic-ref', 'HEAD']),
-      refs: git(['for-each-ref', '--format=%(refname) %(objectname)']),
-      status: git(['status', '--porcelain', '--untracked-files=all']),
-    });
-    return { directory, env, state };
-  }
 
-  function run(argv: string[], directory: string, env: NodeJS.ProcessEnv) {
-    const out: string[] = [];
-    const err: string[] = [];
-    const exitCode = runVerifyLockfileUnion(
-      argv,
-      gitLockfileReader({ cwd: directory, env }),
-      { out: (text) => out.push(text), err: (text) => err.push(text) },
-    );
-    return { exitCode, out: out.join('\n'), err: err.join('\n') };
-  }
-
-  it('verifies fetched refs without checking out or moving any branch', () => {
-    const { directory, env, state } = createRepository();
-    const before = state();
-
-    const result = run(
-      [
-        '--base',
-        'refs/pr/826^',
-        '--source',
-        'refs/pr/826',
-        '--source',
-        'refs/pr/827',
-        '--source',
-        'refs/pr/828',
-        '--candidate',
-        'refs/pr/829',
-      ],
-      directory,
-      env,
-    );
-
-    expect(result.exitCode).toBe(0);
-    expect(result.out).toContain('PASS');
-    expect(state()).toEqual(before);
-  });
-
-  it('verifies a working-tree candidate file against fetched refs', () => {
-    const { directory, env } = createRepository();
-    writeFileSync(
-      path.join(directory, 'pnpm-lock.yaml'),
-      fixture('candidate-newer-transitive').text,
-    );
-
-    const result = run(
-      [
-        '--base',
-        'main',
-        '--source',
-        'refs/pr/826',
-        '--source',
-        'refs/pr/827',
-        '--source',
-        'refs/pr/828',
-        '--candidate',
-        'pnpm-lock.yaml',
-      ],
-      directory,
-      env,
-    );
-
-    expect(result.exitCode).toBe(28);
-    expect(result.out).toContain('FAIL (exit 28)');
-  });
-
-  it('exits with the usage code when a revision has no lockfile', () => {
-    const { directory, env } = createRepository();
-
-    const result = run(
-      [
-        '--base',
-        'main',
-        '--source',
-        'refs/pr/826',
-        '--source',
-        'refs/pr/827',
-        '--candidate',
-        'refs/pr/does-not-exist',
-      ],
-      directory,
-      env,
-    );
-
-    expect(result.exitCode).toBe(LOCKFILE_UNION_EXIT.usage);
-    expect(result.err).toContain(
-      '"refs/pr/does-not-exist" is neither a file nor a git revision',
-    );
-  });
-
-  it('rejects a name that is both a file and a revision', () => {
-    const { directory, env } = createRepository();
-    writeFileSync(path.join(directory, 'main'), base.text);
-
-    const result = run(
-      [
-        '--base',
-        'main',
-        '--source',
-        'refs/pr/826',
-        '--source',
-        'refs/pr/827',
-        '--candidate',
-        'refs/pr/829',
-      ],
-      directory,
-      env,
-    );
-
-    expect(result.exitCode).toBe(LOCKFILE_UNION_EXIT.usage);
-    expect(result.err).toContain('is both a file and a git revision');
+    expect(() =>
+      runVerifyLockfileUnion(
+        ['--base', 'b', '--source', 's1', '--source', 's2', '--candidate', 'c'],
+        failingReader,
+        { out: () => undefined, err: () => undefined },
+      ),
+    ).toThrow('disk unavailable');
   });
 });

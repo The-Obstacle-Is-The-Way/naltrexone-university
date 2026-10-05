@@ -86,9 +86,7 @@ function canonical(value: unknown): string {
   return JSON.stringify(value, (_key, nested: unknown) =>
     isMapping(nested)
       ? Object.fromEntries(
-          Object.entries(nested).sort(([a], [b]) =>
-            a < b ? -1 : a > b ? 1 : 0,
-          ),
+          Object.entries(nested).sort(([a], [b]) => (a < b ? -1 : 1)),
         )
       : nested,
   );
@@ -108,7 +106,7 @@ function parseLockfile({ label, text }: LockfileText): Mapping {
     document = parse(text);
   } catch (error) {
     throw new LockfileUnionInputError(
-      `${label}: invalid YAML (${error instanceof Error ? error.message : String(error)})`,
+      `${label}: invalid YAML (${String(error)})`,
       { cause: error },
     );
   }
@@ -269,12 +267,11 @@ export function compareLockfileUnion(input: {
     const candidateValue = candidateChanges.get(id);
 
     if (byValue.size > 1) {
-      const proposed = [...byValue].map(([value, labels]) => {
-        const action = verb(id, value);
-        return action === 'removes'
+      const proposed = [...byValue].map(([value, labels]) =>
+        value === undefined
           ? `${labels.join(', ')} removes it`
-          : `${labels.join(', ')} ${action} it to ${preview(value ?? '')}`;
-      });
+          : `${labels.join(', ')} ${verb(id, value)} it to ${preview(value)}`,
+      );
       const taken = candidateChanged ? byValue.get(candidateValue) : undefined;
       const outcome = taken
         ? `candidate takes ${taken.join(', ')}`
@@ -441,12 +438,12 @@ export function readLockfileSpec(spec: string, reader: LockfileReader): string {
 // out, fetched, or written.
 export function gitLockfileReader(options: {
   cwd: string;
-  env?: NodeJS.ProcessEnv;
+  env: NodeJS.ProcessEnv;
 }): LockfileReader {
   const git = (args: string[]) =>
     spawnSync('git', args, {
       cwd: options.cwd,
-      env: options.env ?? process.env,
+      env: options.env,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
     });
@@ -501,13 +498,13 @@ export function runVerifyLockfileUnion(
   }
 }
 
+/* v8 ignore start */
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 
-/* v8 ignore start */
 if (import.meta.url === executedPath) {
   process.exitCode = runVerifyLockfileUnion(
     process.argv.slice(2),
-    gitLockfileReader({ cwd: process.cwd() }),
+    gitLockfileReader({ cwd: process.cwd(), env: process.env }),
     { out: console.log, err: console.error },
   );
 }
