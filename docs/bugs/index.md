@@ -1,14 +1,22 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-03 — BUG-310 resolved and archived.
+**Last Updated:** 2026-10-05 — BUG-318 filed.
 
-**Latest** — 2026-10-03: BUG-310 is resolved and archived ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#verified-closeout--2026-10-03-utc)).
-- **Shipped.** The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved. Paid Checkout keeps dynamic methods.
-- **Merged.** #1329 (**5399437013** on `b3addce5`; merged `d6cf5602`).
-- **Released** through promotion #1331 (`6411d7e8`): main CI **37107592388** `test` passed **08:01:47Z**, production assigned **08:01:50.199Z**, trees `6f4e2ff9`, healthy production.
-- **Re-verified** on `main`'s code before archival: the 27 Stripe adapter suites pass, and the hosted add-card journey passed against real Stripe in TEST mode in every gate since.
-- **What remains.** There are no active bugs.
+**Latest** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
+- **What is sent.** With `@sentry/nextjs` 10.75.1 and `main`'s settings, a server error event carries:
+  - every cookie: Clerk's session, refresh and handshake tokens;
+  - every non-IP header: the cron `Bearer` secret and the webhook signatures;
+  - the request path with Clerk's handshake token;
+  - the client IP;
+  - request bodies up to about 10 KB.
+- **How it was found.** Measured through the real SDK in an isolated install, and confirmed in Sentry's source. It came out of DEBT-499's adversarial review of Dependabot's Sentry 11 bump.
+- **The fix** is DEBT-499's upgrade: Sentry 11 with explicit restrictive settings and URL scrubbers on every runtime. The same scenario through the real SDK sends none of the values.
+- **Owner checks.**
+  - Sentry's scrubbing settings, and stored events.
+  - Rotating `CRON_SECRET`.
+  - Revoking Clerk sessions if refresh tokens were stored.
+- **What remains Active.** BUG-318.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -31,7 +39,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-318
+**Next Bug ID:** BUG-319
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -459,7 +467,9 @@ Every one of these was confirmed against the other branch's actual live registry
 
 ## Active Bugs
 
-There are no active bugs.
+| ID | Title | Severity | Status | Summary |
+|----|-------|----------|--------|---------|
+| [BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md) | Sentry receives credentials on every server error event | P1 | In Progress | With `@sentry/nextjs` 10.75.1 and `main`'s settings, server error events carry every cookie (Clerk's session, refresh and handshake tokens), every non-IP header (the cron `Bearer` secret, webhook signatures), the handshake query token, the client IP and request bodies, as measured through the real SDK. DEBT-499's upgrade with restrictive settings and URL scrubbers sends none of them. Owner checks: Sentry's scrubbing and stored events, rotating `CRON_SECRET`, and revoking sessions if refresh tokens were stored. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

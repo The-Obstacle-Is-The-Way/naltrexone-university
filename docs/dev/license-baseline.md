@@ -1,6 +1,6 @@
 # License Baseline
 
-**Last Reviewed:** 2026-05-25
+**Last Reviewed:** 2026-05-25. On 2026-10-05, DEBT-499's Sentry 11 upgrade replaced the FSL rows: `@sentry/cli` (FSL-1.1-MIT) left the tree and `sentry` (FSL-1.1-Apache-2.0) entered it. The other counts remain the 2026-05-25 snapshot.
 
 This document records the production dependency license baseline for the app. It is a snapshot, not legal advice. The goal is to make future dependency/license drift visible during dependency hygiene work.
 
@@ -34,7 +34,7 @@ The raw JSON output includes absolute local `node_modules` paths, so the repo tr
 | BSD-3-Clause | 18 | Approved |
 | BSD-2-Clause | 8 | Approved |
 | BlueOak-1.0.0 | 6 | Approved |
-| FSL-1.1-MIT | 2 | Requires review |
+| FSL-1.1-Apache-2.0 | 1 | Requires review |
 | Unknown | 2 | Requires review; do not introduce new unknown-license packages |
 | Unlicense | 2 | Approved |
 | 0BSD | 2 | Approved |
@@ -54,8 +54,7 @@ These entries are allowed in the current resolved tree, but any new direct depen
 
 | License | Package | Version | Why allowed now | Policy |
 |---|---|---:|---|---|
-| FSL-1.1-MIT | `@sentry/cli` | 2.58.6 | Existing Sentry CLI tooling dependency. | Approved for current tree; review before adding new FSL packages. |
-| FSL-1.1-MIT | `@sentry/cli-darwin` | 2.58.6 | Existing Sentry CLI platform binary. | Approved for current tree; review before adding new FSL packages. |
+| FSL-1.1-Apache-2.0 | `sentry` | 0.44.1 | Sentry's CLI, the successor to `@sentry/cli`, pulled transitively by `@sentry/bundler-plugins` under `@sentry/nextjs` 11 (DEBT-499, reviewed 2026-10-05). The app does not invoke it, and has no `withSentryConfig` build step. FSL restricts only competing use and becomes Apache-2.0 after two years. | Approved for current tree; review before adding new FSL packages. |
 | LGPL-3.0-only | `rpc-websockets` | 9.3.9 | Transitive JSON-RPC/WebSocket package through the current dependency graph. | Requires review before direct use or new LGPL dependency additions. |
 | LGPL-3.0-or-later | `@img/sharp-libvips-darwin-arm64` | 1.2.4 | Prebuilt libvips dependency used by `sharp` on macOS ARM. | Approved for current image-processing dependency; review before adding new LGPL packages. |
 | Unknown | `eyes` | 0.1.8 | Transitive value-inspection utility in the current graph. | Do not add new unknown-license packages; replace if this becomes direct/runtime-critical. |

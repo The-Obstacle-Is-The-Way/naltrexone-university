@@ -34,13 +34,6 @@ overrides:
   # so defense-in-depth. 7.29.1 satisfies jsdom's ^7.25.0. Aged past the 7-day
   # gate (published 2026-09-04).
   undici: 7.29.1
-  # Security: GHSA-8988-4f7v-96qf — W3CBaggagePropagator.extract() lacked inbound
-  # size caps (unbounded allocation). Patched in OTel 2.8.0. Pinned exact to keep the
-  # lockstep trio (core/resources/sdk-trace-base pin each other exactly) coherent;
-  # within @sentry/node's accepted ^2.6.1 range. Pulled transitively via @sentry/nextjs.
-  '@opentelemetry/core': 2.8.0
-  '@opentelemetry/resources': 2.8.0
-  '@opentelemetry/sdk-trace-base': 2.8.0
   # Security: GHSA-2883-xcg3-v3hh (CVE-2026-84375) — maxTotalMergeKeys did not
   # bound CPU for empty merge sources; the earlier GHSA-h67p-54hq-rp68 +
   # GHSA-5p4m-2wfm-xmqj alias/!!omap quadratic-CPU fixes remain covered.
@@ -110,7 +103,6 @@ trustPolicyExclude:
 strictDepBuilds: true
 allowBuilds:
   '@clerk/shared': false # postinstall prints telemetry notice and persists telemetryNoticeVersion to local Clerk config.
-  '@sentry/cli': true # installs/verifies the platform sentry-cli binary used by Sentry tooling.
   '@stripe/cli': true # installs the pinned official Stripe CLI binary used by the required provider-backed Checkout contract.
   bufferutil: false # optional ws peer/native performance addon built by node-gyp-build; ws can fall back.
   core-js: false # postinstall prints support/funding banner with temp-file dedupe; no build artifact.

@@ -1,4 +1,9 @@
 import * as Sentry from '@sentry/nextjs';
+import {
+  SENTRY_DATA_COLLECTION,
+  scrubBreadcrumb,
+  scrubEvent,
+} from '@/lib/sentry-data-collection';
 
 export const SENTRY_DISABLED_IN_PRODUCTION_WARNING =
   '[SENTRY_DISABLED] Sentry DSN is not configured; server telemetry is disabled.';
@@ -20,6 +25,9 @@ export async function register() {
     dsn,
     tracesSampleRate: 0.05,
     environment,
+    dataCollection: SENTRY_DATA_COLLECTION,
+    beforeSend: scrubEvent,
+    beforeBreadcrumb: scrubBreadcrumb,
   });
 }
 
