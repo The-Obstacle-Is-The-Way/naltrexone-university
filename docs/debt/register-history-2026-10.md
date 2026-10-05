@@ -2,6 +2,18 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-04 UTC: DEBT-496 filed, and a rollback floor recorded. DEBT-493's notices for changed content have no route-level proof, and an end-to-end spec on dedicated questions is decided ([DEBT-496](./debt-496-content-change-notices-route-level-proof.md)).
+- **The gap.** Each notice is proven layer by layer: domain, use cases, real-Postgres queries, and components in real Chromium. No test drives a real page from database state to the rendered notice. The UI PRs also shipped without the screenshots `.claude/rules/git-workflow.md` asks for.
+- **The resolution, decided.** One Playwright spec on dedicated questions shows the key-corrected caution, a withdrawn bookmark and a held question. It asserts by role and text, and attaches a screenshot on every run. A manual pass was rejected: it would stage content changes in the shared remote development database, and it would not repeat.
+- **Rollback floor.** CodeRabbit noted on #1360 that rolling back below #1350 would cache outputs the strict reader now refuses. The deployment procedure now keeps a rollback-floor table, and its first entry says a rollback below #1350 must restore the `scored` replay parser before rolling forward.
+- **Released since the last entry.** #1360 (DEBT-493's last tail; alert #55 reopened) went out through promotion #1361 (`4a32f08b`):
+  - main CI **37244375295** `test` passed **23:50:09Z**;
+  - production assigned **23:50:11.645Z**;
+  - trees `52132fb9`, healthy production.
+- **CodeRabbit.** The owner moved the repository to the Essentials plan on 2026-10-04. It allows 5 reviews an hour, falling to 1 an hour after 60 reviews in a week; the last 7 days used 191. Promotions are now skipped (`.coderabbit.yaml`, titles beginning `Promote #`; AGENTS.md, Reviewed-Source Promotions), since they need no review of their own. Each review round is one push.
+- **Next.** DEBT-496's spec.
+- **What remains Active.** DEBT-414, DEBT-465 and DEBT-496.
+
 **Earlier** — 2026-10-04 UTC: the last tails of DEBT-493 and DEBT-476's accepted risk. The replay mapping is removed, and alert #55 is open again as the watcher for a `stream-json` fix ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#deferred-tail-done--2026-10-04-utc), [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md#correction--2026-10-04-alert-55-reopened)).
 - **The replay mapping is removed.** End and finalize outputs now require `totals.scored`. A full 24-hour TTL had passed since the last writer without it left production, at 2026-10-03 20:02:33Z, and production had not rolled back since; Vercel's deployment and alias APIs confirmed both.
 - **Alert #55 is open.** The owner approved it, on the principle that a known risk is documented, not hidden. Dismissal had stopped GitHub tracking the alert, as it had for #77. Both open alerts, #55 and #77, are accepted risks with recorded triggers, not untriaged ones.
