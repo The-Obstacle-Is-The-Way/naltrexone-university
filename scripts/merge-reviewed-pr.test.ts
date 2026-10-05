@@ -209,6 +209,31 @@ describe('feature merge decision', () => {
     });
   });
 
+  // ADR-020 amendment (2026-10-05, DEBT-497): documentation and
+  // repository-tool configuration are just as unmeasured, so a Codecov outage
+  // need not hold them.
+  it('accepts a missing codecov/patch when only documentation or repository-tool configuration changes', () => {
+    const pr = withoutCodecov([
+      'docs/debt/index.md',
+      'AGENTS.md',
+      '.coderabbit.yaml',
+      'codecov.yml',
+    ]);
+
+    expect(checkFeatureMerge(pr, [[review()]])).toMatchObject({
+      number: 987,
+      head: HEAD,
+    });
+  });
+
+  it('still requires codecov/patch when documentation changes with code', () => {
+    const pr = withoutCodecov(['docs/debt/index.md', 'scripts/example.ts']);
+
+    expect(() => checkFeatureMerge(pr, [[review()]])).toThrow(
+      'codecov/patch has not succeeded',
+    );
+  });
+
   it('still requires codecov/patch when any other file changes', () => {
     const pr = withoutCodecov(['package.json', 'src/example.ts']);
 

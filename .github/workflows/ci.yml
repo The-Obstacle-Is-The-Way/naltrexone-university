@@ -95,12 +95,27 @@ jobs:
         id: browser_tests
         run: pnpm test:browser:coverage
 
+      # DEBT-497: a failed upload no longer hides behind a green step. It fails
+      # this step without failing the job, and the next step reports it. The
+      # merge guard, not CI, decides whether a missing codecov/patch blocks.
       - name: Upload coverage to Codecov
+        id: codecov
+        continue-on-error: true
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/**/coverage-final.json
-          fail_ci_if_error: false
+          fail_ci_if_error: true
+
+      - name: Report a failed Codecov upload
+        if: ${{ !cancelled() && steps.codecov.outcome == 'failure' }}
+        run: |
+          echo "::warning title=Codecov upload failed::No coverage reached Codecov, so codecov/patch will not post on this head. scripts/merge-reviewed-pr.ts refuses until it does, unless every changed path is unmeasured (ADR-020). See the upload step's log and AGENTS.md (Codecov outages)."
+          {
+            echo "### Codecov upload failed"
+            echo ""
+            echo "No coverage reached Codecov, so \`codecov/patch\` will not post on this head. See the upload step's log and AGENTS.md (Codecov outages)."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build
         id: build

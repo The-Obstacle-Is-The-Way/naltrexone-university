@@ -2,7 +2,29 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-04 UTC: DEBT-496 filed, and a rollback floor recorded. DEBT-493's notices for changed content have no route-level proof, and an end-to-end spec on dedicated questions is decided ([DEBT-496](./debt-496-content-change-notices-route-level-proof.md)).
+**Earlier** — 2026-10-05 UTC: DEBT-496's spec. The notices a learner sees when content changed are proven on real pages from database state, each with a screenshot ([DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md#progress)).
+- **What it proves.** As the E2E user, on dedicated questions that are deleted afterwards, it shows three notices:
+  - a corrected key flagged on review;
+  - a question placed under review, labelled in History and named on review;
+  - a withdrawn bookmark named on Bookmarks, with no content.
+
+  Three targeted mutations each fail one case. The four screenshots were viewed: each notice renders in its documented card.
+- **How.** The question fixtures moved to `tests/shared/question-fixtures.ts`, so the E2E lane writes them as the integration lane does.
+- **Released since the last entry.** #1362 (DEBT-496 filed, rollback floors, CodeRabbit skipping promotions) went out through promotion #1363 (`4074cf4a`), the first promotion CodeRabbit skipped:
+  - main CI **37290963421** `test` passed **09:46:46Z**;
+  - production assigned **09:46:49.147Z**;
+  - trees `8100583a`, healthy production.
+- **A Codecov outage held #1362 for about eight hours.** Codecov's `*.codecov.io` certificate expired at 2026-10-04 23:59:59 UTC while its status page reported no incident, so no coverage could upload. The merge guard rightly refused. CI was re-run once after the renewal at about 09:07Z. The next PR files DEBT-497 for the gap this exposed: CI showed green while every merge was blocked.
+- **Next.** DEBT-497 is filed, then DEBT-496 closes once this spec is in production.
+- **What remains Active.** DEBT-414, DEBT-465 and DEBT-496.
+- **Open decisions for the owner.** Unchanged:
+  - **When to bootstrap production content releases (DEBT-483).** Bootstrapping adopts what is live as the first release; there is no supported way to undo it. After it, `pnpm db:seed` and the managed seed refuse production, and authored content changes only by staging a release, previewing its activation and applying its plan. Holds and rollback become available then; withdrawals already work. Until then the direct seed keeps working. DEBT-492 is released, so nothing in engineering blocks the bootstrap. The recommendation is to bootstrap once the next content import is ready to go through the release path, so the first staged release is real, and to run the UI QA procedures before it (DEBT-465 Part 4).
+  - Configuring the Resend webhook: create it for `https://addictionboards.com/api/webhooks/resend` (`email.delivered`, `email.bounced`, `email.failed`, `email.suppressed`), then set its signing secret as `RESEND_WEBHOOK_SECRET` in Vercel Production.
+  - **Massachusetts' second annual notice (DEBT-414 F19a).** 940 CMR 38.05(4) asks for a notice 5–30 days before the cancellation deadline on plans longer than 31 days. Here that deadline is the renewal instant. Today both annual notices go out together 35 days before it.
+    - First, check whether Stripe's upcoming-renewal email is enabled in production and meets every element of 940 CMR 38.05(4)–(5). That means its timing; every disclosure the rule requires, of which the amount, the date and how to cancel are only part; and delivery by a medium that (5) allows. (5) allows either a medium substantially similar to the one used to subscribe, or a commonly used medium that is reasonably calculated to be seen and understood by an ordinary consumer and that the consumer affirmatively chose as their preferred method of contact. Only if it meets all of them, as counsel confirms (Q1), may it serve as the notice.
+    - If not, the recommendation is to send the annual reminder about 25 days before the cancellation deadline, with its own send-by limit, and keep the renewal notice at 35 days for the 30–40-day states. No schema change is needed.
+
+**Earlier** — 2026-10-04 UTC: DEBT-496 filed, and a rollback floor recorded. DEBT-493's notices for changed content have no route-level proof, and an end-to-end spec on dedicated questions is decided ([DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md)).
 - **The gap.** Each notice is proven layer by layer: domain, use cases, real-Postgres queries, and components in real Chromium. No test drives a real page from database state to the rendered notice. The UI PRs also shipped without the screenshots `.claude/rules/git-workflow.md` asks for.
 - **The resolution, decided.** One Playwright spec on dedicated questions shows the key-corrected caution, a withdrawn bookmark and a held question. It asserts by role and text, and attaches a screenshot on every run. A manual pass was rejected: it would stage content changes in the shared remote development database, and it would not repeat.
 - **Rollback floor.** CodeRabbit noted on #1360 that rolling back below #1350 would cache outputs the strict reader now refuses. The deployment procedure now keeps a rollback-floor table, and its first entry says a rollback below #1350 must restore the `scored` replay parser before rolling forward.

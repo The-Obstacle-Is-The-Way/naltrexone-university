@@ -44,6 +44,18 @@ The revisit condition above occurred. Under the owner's 2026-09-19 ruling, Depen
   - Promotions carry secrets, so `scripts/verify-promotion.ts` still requires it by name on every promotion, including one that promotes dependency updates.
   - The target and the gate's binding status are unchanged.
 
+
+## Amendment: documentation, configuration and Codecov outages (2026-10-05)
+
+Codecov's `*.codecov.io` certificate expired at 2026-10-04 23:59:59 UTC while its status page reported no incident. No coverage reached Codecov for about nine hours.
+- **What happened.** #1362 changed only documentation and `.coderabbit.yaml`. It waited about eight hours for a `codecov/patch` that would have measured nothing, while CI showed green ([DEBT-497](../debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md)).
+- **The rule.** The excused paths gain Markdown documentation (`*.md`) and repository-tool configuration (`.coderabbit.yaml`, `codecov.yml`). The reasoning is the 2026-09-28 amendment's: coverage measures none of these, so the invariant holds vacuously.
+- **Visibility.** CI's upload step now fails on an upload error without failing the job (`continue-on-error`), and the next step reports it as a job warning and summary. The guard, not CI, decides whether a missing status blocks.
+- **What it does not relax.**
+  - A posted `codecov/patch` must still succeed.
+  - A change to any measured path still waits for it.
+  - Promotions still require it by name.
+
 ## Related
 
 - [ADR-019](./adr-019-test-quality-practices.md), the binding observational posture this refines
