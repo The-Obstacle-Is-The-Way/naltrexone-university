@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-04 under the owner's delegation; resolution decided below
+**Status:** In Progress — the spec is written and passes (2026-10-05); the record closes once it is in production ([Progress](#progress))
 **Priority:** P2
 **Date:** 2026-10-04
 **Resolved:** —
@@ -42,14 +42,21 @@ One Playwright spec, `tests/e2e/content-change-notices.spec.ts`, proves the path
 3. **Assert by role and text** (`.claude/rules/testing.md`: no snapshots). Each case attaches a full-page screenshot to the Playwright report (`testInfo.attach`): the visual evidence, produced by every run rather than by hand.
 4. **Out of scope:** visual-regression baselines. They would be a new ADR-level decision (ADR-019 Compliance), not this record.
 
+## Progress
+
+**The spec, 2026-10-05.** `tests/e2e/content-change-notices.spec.ts` runs three cases as the E2E user, on dedicated questions:
+- an answer whose key then moved: the review page shows the caution, "This attempt isn't scored." and the link to the corrected question;
+- an answered question then placed under review: History labels its row "Under review", and its review names the state;
+- a bookmarked question then withdrawn: Bookmarks names it, with no stem and no link.
+
+`tests/e2e/helpers/content-changes.ts` arranges each state with the question fixtures, which moved to `tests/shared/question-fixtures.ts`; the integration lane re-exports them unchanged. Each page checked attaches a full-page screenshot, four in all, and each was viewed. Each notice renders in its documented card, the caution in F-11's warning card. The History row shows the label in place of the difficulty.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] The spec passes in the local E2E lane and in the full gate.
-- [ ] Targeted mutations fail it: the review page not passing `keyCorrected`, and the bookmarks page ignoring `availability`.
-- [ ] The screenshots appear in the Playwright report.
-- [ ] After a run, the dedicated questions are gone and the shared bank is unchanged.
+- [x] The spec passes in the local E2E lane (3 of 3) and in the full gate.
+- [x] Targeted mutations fail it, each failing exactly one case: the review page not passing `keyCorrected`, the bookmarks page ignoring `availability`, and History labelling a held row by its difficulty.
+- [x] The screenshots appear in the Playwright report.
+- [x] After a run, no question with an `e2e-content-change-` slug remains. The shared bank is untouched, since only those questions are written.
 
 ## Related
 
