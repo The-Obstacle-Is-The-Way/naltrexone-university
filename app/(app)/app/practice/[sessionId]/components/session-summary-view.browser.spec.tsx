@@ -78,6 +78,7 @@ test('renders summary totals and per-question breakdown', async () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -88,6 +89,7 @@ test('renders summary totals and per-question breakdown', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -164,6 +166,7 @@ test('omits the removed practice-missed CTA when all exam answers are correct', 
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -209,6 +212,7 @@ test('uses New Session as the primary CTA when no reviewable slug exists', async
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -324,6 +328,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -334,6 +339,7 @@ test('renders callback-driven exam review controls as buttons and disables the C
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -394,6 +400,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -404,6 +411,7 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}

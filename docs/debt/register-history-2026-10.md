@@ -2,6 +2,27 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-05 UTC: DEBT-499 filed and fixed, with BUG-318 (P1) filed and fixed with it, and DEBT-500 filed.
+- **BUG-318: production already sends credentials to Sentry on server error events.** Sentry 10.75.1 with our settings sends Clerk's session, refresh and handshake tokens, the cron `Bearer` secret, webhook signatures, the client IP and request bodies, as measured through the real SDK ([BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)). The fix below closes it. The owner's checks in Sentry and the `CRON_SECRET` rotation are listed in the record.
+- **DEBT-499 (P1): nothing pinned what we send to Sentry, and a green major would change it** ([DEBT-499](./debt-499-sentry-major-widens-data-collection.md#progress)).
+  - Dependabot's #1369 (`@sentry/nextjs` 11.0.0) passed CI, yet under v11's defaults it would still send eight of BUG-318's nine values, and request bodies.
+  - The upgrade is now ours. Every `Sentry.init` receives:
+    - explicit restrictive settings, with no cookies, user info, bodies or database data;
+    - deny lists for Clerk's, webhook and proxy headers and parameters;
+    - `beforeSend` and `beforeBreadcrumb` scrubbers for credentials in URLs.
+  - **The proof.** A test through the real SDK shows none of the values is sent. Config tests pin the wiring. A type-level check fails on any unset category, nested ones included. Every targeted mutation fails a check.
+  - Stale OpenTelemetry overrides and the `@sentry/cli` build permission are removed. The licence baseline records `sentry` (FSL-1.1-Apache-2.0).
+  - #1369 closes as superseded.
+- **DEBT-500 (P3): Vitest 5 needs a coordinated migration** ([DEBT-500](./debt-500-vitest-5-coordinated-migration.md)). Dependabot's lone bump (#1370) fails typecheck across the browser specs. The decided route groups the Vitest packages and migrates them together.
+- **Released since the last entry.** #1371 (DEBT-498 increment 1: answers no score counts shown ungraded; DEBT-497 closed) went out through promotion #1372 (`f32160d8`):
+  - main CI **37323260394** `test` passed **14:29:27Z**;
+  - production assigned **14:29:29.955Z**;
+  - trees `2c0e5f96`, healthy production.
+  - Vercel began deploying four seconds after the merge. #1367's missing deployment had happened once before: on 2026-06-24, Vercel skipped promotion #509, whose tree matched its `dev` preview, and production was redeployed with `vercel deploy --prod` (BUG-259). Neither the Hobby plan's cap (16 deployments in the prior 24 hours), an ignore rule, the Git link nor an incident explains either skip. `docs/dev/deployment-procedure.md` now says how to detect one and recover.
+- **Next.** #1368 (the minor and patch group), then DEBT-498 increment 2: the post-exam navigator, the session breakdown, the Dashboard's recent activity, and History's rows and filters.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-498, DEBT-499 and DEBT-500.
+- **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md).
+
 **Earlier** — 2026-10-05 UTC: DEBT-498's first increment, and DEBT-497 closed.
 - **DEBT-498 increment 1: an answer no score counts is shown ungraded on reviews and in tutor feedback** ([DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
   - **Design first.** ADR-022 gains its 2026-10-05 Amendment: what the score leaves out, the page does not grade. Pattern Registry F-1, I-3, F-5, F-8, F-11 and F-12 record the ungraded forms.

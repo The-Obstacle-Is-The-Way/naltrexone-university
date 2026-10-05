@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the upgrade with explicit restrictive settings is written and tested (2026-10-05); the record closes once it is on `main` ([Progress](#progress))
+**Status:** In Progress — on `main` and in production through promotion #1374 (2026-10-05); the record closes once server traces are confirmed in Sentry ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -14,9 +14,11 @@
 
 Dependabot opened #1369 on 2026-10-05, bumping `@sentry/nextjs` from 10.75.1 to 11.0.0, and its CI passed. Sentry v11 replaces `sendDefaultPii` with `dataCollection`, and its migration guide warns that leaving `dataCollection` unset "collects the categories below **by default**".
 
-None of our `Sentry.init` calls sets either option, and no test pins what they send, so a green major could change what goes to a third party.
+*The two paragraphs below describe the state before the upgrade, which promotion #1374 released on 2026-10-05. Production now runs 11.0.0 with the explicit settings in [Progress](#progress).*
 
-Checking that showed the current version is no better. Production already sends credentials on server error events, which is filed as [BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md). This record covers the missing guard; BUG-318 covers the live exposure. One change fixes both.
+None of our `Sentry.init` calls set either option, and no test pinned what they sent, so a green major could change what goes to a third party.
+
+Checking that showed the version then in production was no better. It sent credentials on server error events, filed as [BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md). This record covers the missing guard; BUG-318 covers the live exposure. One change fixes both.
 
 ## Evidence
 
@@ -128,9 +130,9 @@ Criteria to meet before closing.
 
 - [x] Every `Sentry.init` receives the shared settings and both scrubbers, and a test fails if any runtime omits one or widens a category. The type-level guard covers new categories, nested ones included.
 - [x] The real SDK sends none of the credential-bearing values in BUG-318's scenario, and its body capture is off.
-- [ ] `@sentry/nextjs` is on v11 on `main`, and the full gate passes.
+- [x] `@sentry/nextjs` is on v11 on `main`, and the full gate passes: #1373 merged `86c62eb9`, released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
 - [ ] Server traces still arrive in Sentry after the release.
-- [ ] #1369 is closed as superseded.
+- [x] #1369 is closed as superseded (2026-10-05).
 
 ## Related
 

@@ -36,14 +36,17 @@ export function ReviewQuestionNavigator({
         <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-10">
           {questions.map((q, i) => {
             const isCurrent = i === currentIndex;
-            const variant = getReviewVariant(q.isCorrect);
-            const statusLabel = getReviewStatusLabel(q.isCorrect);
+            const result = { notScored: q.notScored };
+            const variant = getReviewVariant(q.isCorrect, result);
+            const statusLabel = getReviewStatusLabel(q.isCorrect, result);
             const retryLabel = q.wasRetried ? ', Retried' : '';
 
             const innerContent = (
               <>
                 {q.order}
-                <ReviewCorrectnessBadge isCorrect={q.isCorrect} />
+                <ReviewCorrectnessBadge
+                  isCorrect={q.notScored ? null : q.isCorrect}
+                />
                 {q.wasRetried ? (
                   <span
                     aria-hidden

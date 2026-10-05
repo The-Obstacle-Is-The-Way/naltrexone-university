@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
+import { isResultNotScored } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import { ErrorCard } from '@/components/error-card';
 import {
   questionAvailabilityHeading,
@@ -219,10 +220,23 @@ export function DashboardView({
           ) : (
             <ul className="mt-4 space-y-2">
               {recentActivityRows.map((row) => {
-                const resultLabel = row.isCorrect ? 'Correct' : 'Incorrect';
-                const resultClass = row.isCorrect
-                  ? 'text-success'
-                  : 'text-destructive';
+                // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no
+                // score counts is named, in a neutral tone, not graded.
+                const notScored = isResultNotScored({
+                  isCorrect: row.isCorrect,
+                  availability: row.availability,
+                  answerKeyChanged: row.isAvailable && row.answerKeyChanged,
+                });
+                const resultLabel = notScored
+                  ? 'Not scored'
+                  : row.isCorrect
+                    ? 'Correct'
+                    : 'Incorrect';
+                const resultClass = notScored
+                  ? 'text-muted-foreground'
+                  : row.isCorrect
+                    ? 'text-success'
+                    : 'text-destructive';
 
                 if (!row.isAvailable) {
                   return (

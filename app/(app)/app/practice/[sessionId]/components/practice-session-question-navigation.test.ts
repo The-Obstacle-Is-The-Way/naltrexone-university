@@ -44,6 +44,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         isCorrect: true,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
       {
         questionId: fixtureQuestion2Id,
@@ -54,6 +55,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         isCorrect: null,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
       {
         questionId: fixtureQuestion3Id,
@@ -67,6 +69,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         isCorrect: null,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
     ]);
 
@@ -89,6 +92,7 @@ describe('findAdjacentAvailableQuestionId', () => {
         isCorrect: true,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
     ]);
 

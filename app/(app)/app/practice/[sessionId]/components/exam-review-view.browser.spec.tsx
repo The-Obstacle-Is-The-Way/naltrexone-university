@@ -37,6 +37,7 @@ test('renders navigator states and disables unavailable questions', async () => 
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -50,6 +51,7 @@ test('renders navigator states and disables unavailable questions', async () => 
             isCorrect: false,
             isOmitted: false,
             markedForReview: true,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ3Id,
@@ -60,6 +62,7 @@ test('renders navigator states and disables unavailable questions', async () => 
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -103,6 +106,7 @@ test('uses correctness labels only in tutor mode', async () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -116,6 +120,7 @@ test('uses correctness labels only in tutor mode', async () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -160,6 +165,7 @@ test('opens a review question and finalizes the exam', async () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: true,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -170,6 +176,7 @@ test('opens a review question and finalizes the exam', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           // ADR-022 Decision 5: of the two unanswered items, only this one
           // will be scored, so the warning counts one.
@@ -185,6 +192,7 @@ test('opens a review question and finalizes the exam', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -347,6 +355,7 @@ test('omits the unanswered warning when no unanswered item will be scored', asyn
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -357,6 +366,7 @@ test('omits the unanswered warning when no unanswered item will be scored', asyn
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -404,6 +414,7 @@ test('keeps the helper text visible and the first review row above the fold at 3
             isCorrect: index < 6 ? index % 2 === 0 : null,
             isOmitted: false,
             markedForReview: index === 1 || index === 4,
+            answerKeyChanged: false,
           })),
         }}
         isPending={false}
@@ -471,6 +482,7 @@ test('keeps empty-stem rows discoverable by accessible name', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -511,6 +523,7 @@ test('supports keyboard activation for available review rows and leaves unavaila
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -521,6 +534,7 @@ test('supports keyboard activation for available review rows and leaves unavaila
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -574,6 +588,7 @@ test('renders decorative chevrons only on available review rows', async () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: true,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -587,6 +602,7 @@ test('renders decorative chevrons only on available review rows', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ3Id,
@@ -597,6 +613,7 @@ test('renders decorative chevrons only on available review rows', async () => {
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -651,6 +668,7 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ2Id,
@@ -664,6 +682,7 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             questionId: fixtureQ3Id,
@@ -674,6 +693,7 @@ test('keeps the row-to-submit tab order unchanged with the helper text skipped',
             isCorrect: null,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}

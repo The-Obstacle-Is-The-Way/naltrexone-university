@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import { createAttempt, createQuestion } from '@/src/domain/test-helpers';
+import {
+  createAttempt,
+  createChoice,
+  createQuestion,
+} from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
 import {
   FakeAttemptRepository,
@@ -49,6 +53,62 @@ describe('GetUserStatsUseCase', () => {
     expect(
       stats.recentActivity.map((row) => (row.isAvailable ? row.stemMd : null)),
     ).toEqual(['Current stem', 'Older stem']);
+  });
+
+  // DEBT-498: recent activity shows a result no score counts as "Not
+  // scored", so each answered row says whether its key was corrected since.
+  it('marks an answer graded on a key corrected since, and no other', async () => {
+    const keyed = (correctLabel: 'A' | 'B', revisionId?: string) =>
+      createQuestion({
+        id: 'q1',
+        ...(revisionId ? { revisionId } : {}),
+        choices: (['A', 'B'] as const).map((label, index) =>
+          createChoice({
+            questionId: 'q1',
+            label,
+            textMd: `Choice ${label}`,
+            isCorrect: label === correctLabel,
+            sortOrder: index + 1,
+          }),
+        ),
+      });
+    const current = keyed('A');
+    const older = keyed('B', crypto.randomUUID());
+    const attemptOn = (
+      revisionId: string,
+      answeredAt: string,
+      overrides: Partial<Parameters<typeof createAttempt>[0]> = {},
+    ) =>
+      createAttempt({
+        userId: 'user-1',
+        questionId: 'q1',
+        questionRevisionId: revisionId,
+        answeredAt: new Date(answeredAt),
+        ...overrides,
+      });
+    const useCase = new GetUserStatsUseCase(
+      new FakeAttemptRepository(
+        [
+          attemptOn(older.revisionId, '2026-02-01T09:00:00Z'),
+          attemptOn(older.revisionId, '2026-02-01T10:00:00Z', {
+            outcome: omittedOutcome(),
+          }),
+          attemptOn(current.revisionId, '2026-02-01T11:00:00Z'),
+        ],
+        { questions: [current, older] },
+      ),
+      new FakeQuestionRepository([current, older]),
+      new FakeLogger(),
+      () => new Date('2026-02-01T12:00:00Z'),
+    );
+
+    const stats = await useCase.execute({ userId: 'user-1' });
+
+    expect(
+      stats.recentActivity.map((row) =>
+        row.isAvailable ? row.answerKeyChanged : null,
+      ),
+    ).toEqual([false, false, true]);
   });
 
   it('returns computed stats and recent activity when user has attempts', async () => {
@@ -142,6 +202,7 @@ describe('GetUserStatsUseCase', () => {
           stemMd: 'Stem for q1',
           difficulty: 'easy',
           isCorrect: true,
+          answerKeyChanged: false,
         },
         {
           isAvailable: true,
@@ -155,6 +216,7 @@ describe('GetUserStatsUseCase', () => {
           stemMd: 'Stem for q2',
           difficulty: 'medium',
           isCorrect: false,
+          answerKeyChanged: false,
         },
         {
           isAvailable: true,
@@ -168,6 +230,7 @@ describe('GetUserStatsUseCase', () => {
           stemMd: 'Stem for q3',
           difficulty: 'hard',
           isCorrect: true,
+          answerKeyChanged: false,
         },
       ],
     });

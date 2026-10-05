@@ -98,6 +98,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             isAvailable: true,
@@ -111,6 +112,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),
@@ -156,6 +158,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
           {
             isAvailable: true,
@@ -169,6 +172,7 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
             isCorrect: false,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }),

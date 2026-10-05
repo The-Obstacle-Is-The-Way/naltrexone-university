@@ -34,6 +34,7 @@ test('renders exam review branch and triggers review actions', async () => {
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}
@@ -366,6 +367,7 @@ test('falls back to onEndSession when onFinalizeReview is omitted in the review 
             isCorrect: true,
             isOmitted: false,
             markedForReview: false,
+            answerKeyChanged: false,
           },
         ],
       }}

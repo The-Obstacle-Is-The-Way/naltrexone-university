@@ -925,8 +925,13 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 - An answered row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
 - Its metadata shows the state's label where an available row shows the difficulty, in the same metadata style. Only a difficulty is capitalized; a label keeps its own case.
 - A row with no difficulty slot, such as a session breakdown row, shows the label before its result, in the style the row already uses for its `Unanswered` label (`shrink-0 text-muted-foreground`).
+- **A result no score counts reads "Not scored"** in place of Correct or Incorrect ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05, DEBT-498). That covers an answer on a question withdrawn, under review or gone, or graded on a key corrected since. It uses the row's muted style (`text-muted-foreground`), not `text-success` or `text-destructive`. The rule is `isResultNotScored` (`app/(app)/app/shared/components/review-navigator-utils.ts`), over the domain's `contentInDoubt`. In use: the session breakdown and the Dashboard's recent activity. History's rows follow with its filters.
+  - **Contrast**, computed from `app/globals.css` and passing AA (4.5:1) in the product's dark theme:
+    - `text-muted-foreground` measures 5.04:1 on the Dashboard row (`bg-foreground/5` on the card) and 5.60:1 on the session breakdown (the card).
+    - These are the pairs the same lines already use for their dates and for "Unanswered", so no new pair is added.
+  - **Light mode** is unfinished and switched off (`forcedTheme="dark"`, [DEBT-421](../_archive/debt/debt-421-light-mode-force-dark-vs-default-dark.md)). There, the same muted text measures 4.27:1 on the Dashboard row and 4.00:1 on History's row, and the existing `text-destructive` result measures 4.37:1 and 4.09:1. Light mode would need these rows' metadata in S-2's `text-foreground/60` (5.17:1 and 5.06:1) before it ships.
 
-**Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered". The Review & Submit list also marks such an item "Won't be scored", and the submit warning counts only the unanswered items that would count if the exam ended now.
+**Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered". A result no score counts takes the Button `secondary` variant and no correctness badge, and its name reads "Not scored", as in "Question 2: Withdrawn, Not scored" (DEBT-498). The question page's session navigator does the same. `secondary` is the variant the exam navigator already gives an answered item: 14.57:1 in the dark theme (16.30:1 in light). The Review & Submit list also marks such an item "Won't be scored", and the submit warning counts only the unanswered items that would count if the exam ended now.
 
 **Never answered** (left unanswered, or omitted by an exam's finalization): the row or card names the state in a sentence, the notice heading alone, in place of S-2's generic text (`[Question no longer available]`, "Question no longer available.", "This question was removed or unpublished."). No content shows and there is nothing to caution against, so the tone is neutral (`labelOnly`). S-2's generic text remains only for a question that no longer exists.
 
@@ -995,7 +1000,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 
 **Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to. Its answer is still shown ungraded in the key-corrected form when its key was corrected, because no score counts that answer, whatever the question's state (DEBT-498).
 
-**Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice.
+**Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice. A key-corrected answer's result still reads "Not scored" there (F-11's list rule, DEBT-498).
 
 **Rules:**
 - Reuses S-1 Status notice, F-11's caution card for a key correction, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.

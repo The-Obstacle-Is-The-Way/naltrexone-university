@@ -43,6 +43,12 @@ export type AvailablePracticeSessionReviewRow = {
   isCorrect: boolean | null;
   isOmitted: boolean;
   markedForReview: boolean;
+  /**
+   * The answer was graded on a key corrected since, in any question state
+   * (ADR-022 Decision 4), so no score counts it and a list shows it as "Not
+   * scored" (DEBT-498).
+   */
+  answerKeyChanged: boolean;
 };
 
 export type UnavailablePracticeSessionReviewRow = {
@@ -58,6 +64,8 @@ export type UnavailablePracticeSessionReviewRow = {
   isCorrect: boolean | null;
   isOmitted: boolean;
   markedForReview: boolean;
+  /** As on an available row; false when the question is missing. */
+  answerKeyChanged: boolean;
 };
 
 export type PracticeSessionReviewRow =
@@ -88,10 +96,12 @@ function unavailableRow(
     markedForReview: boolean;
   },
   availability: UnavailableQuestionAvailability | null = null,
+  answerKeyChanged = false,
 ): PracticeSessionReviewRow {
   return {
     isAvailable: false,
     availability,
+    answerKeyChanged,
     questionId: row.questionId,
     order: row.order,
     isAnswered: row.isAnswered,
@@ -174,8 +184,9 @@ export class GetPracticeSessionReviewUseCase {
       questionsById: questionById,
       available: (row, question): PracticeSessionReviewRow => {
         const unavailable = question.availability !== 'available';
+        const answerKeyChanged = row.answered && question.answerKeyChanged;
         if (unavailable && !(session.endedAt !== null && row.answered)) {
-          return unavailableRow(row, question.availability);
+          return unavailableRow(row, question.availability, answerKeyChanged);
         }
         return {
           isAvailable: true,
@@ -189,9 +200,10 @@ export class GetPracticeSessionReviewUseCase {
           isCorrect: row.isCorrect,
           isOmitted: row.isOmitted,
           markedForReview: row.markedForReview,
+          answerKeyChanged,
         };
       },
-      unavailable: unavailableRow,
+      unavailable: (row) => unavailableRow(row),
       logger: this.logger,
       missingQuestionMessage:
         'Practice session review references missing question',

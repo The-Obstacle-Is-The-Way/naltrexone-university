@@ -179,6 +179,7 @@ describe('practice-controller', () => {
               isCorrect: false,
               isOmitted: false,
               markedForReview: true,
+              answerKeyChanged: false,
             },
           ],
         },

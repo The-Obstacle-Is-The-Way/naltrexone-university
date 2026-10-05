@@ -41,6 +41,7 @@ function makeReviewOutput(sessionId: string): GetPracticeSessionReviewOutput {
         isCorrect: false,
         isOmitted: false,
         markedForReview: false,
+        answerKeyChanged: false,
       },
     ],
   };

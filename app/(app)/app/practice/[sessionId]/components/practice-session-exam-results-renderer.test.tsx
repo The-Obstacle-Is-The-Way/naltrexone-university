@@ -70,6 +70,7 @@ function createSummaryReviewRow(
     isCorrect: false,
     isOmitted: false,
     markedForReview: false,
+    answerKeyChanged: false,
     ...overrides,
   };
 }

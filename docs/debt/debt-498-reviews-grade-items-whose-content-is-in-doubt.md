@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the answer views are ungraded (increment 1, 2026-10-05); the lists follow ([Progress](#progress))
+**Status:** In Progress — increment 1, the answer views, is in production (promotion #1372, 2026-10-05). Increment 2a (navigators, session breakdown, Dashboard) is written and tested. History's rows and filters follow ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -101,6 +101,39 @@ The code:
   - the screenshots were viewed: "Not scored", no verdict color, "Your answer · Answer before the correction", and no superseded explanation.
 - **The key-corrected flag no longer depends on availability.** `GetQuestionForViewUseCase` and `GetCompletedSessionQuestionsWithFeedbackUseCase` set `answerKeyChanged` only for an available question, because it drove the F-12 notice alone. The score reads a corrected key whatever the question's state, so a retired question's answer on a corrected key was left out of the score yet graded on its review. Both now flag it in any state. F-11 still takes the notice's place, and the answer is shown in the key-corrected ungraded form. Red first: the post-exam table's retired row and a new withdrawn case for the standalone view.
 - **Not done in this increment:** the post-exam navigator, the session breakdown, the Dashboard's recent activity, History's rows and its result filters.
+
+**Increment 1 released, 2026-10-05.** #1371 went out through promotion #1372 (`f32160d8`): main CI 37323260394 `test` passed 14:29:27Z, production assigned 14:29:29.955Z, trees `2c0e5f96`, healthy production.
+
+**Increment 2a: the navigators, the session breakdown and the Dashboard, 2026-10-05.**
+- **The rule for lists.** `isResultNotScored` (`app/(app)/app/shared/components/review-navigator-utils.ts`) marks a graded result as not scored when:
+  - its key was corrected since; or
+  - its question's content is in doubt, which `contentInDoubt` decides: withdrawn, under review, or a question that no longer exists.
+
+  The label and variant helpers take a `notScored` option.
+- **Data.**
+  - `GetPracticeSessionReviewUseCase`'s rows (both kinds) and `GetUserStatsUseCase`'s recent-activity rows carry `answerKeyChanged` in any question state, as the score reads it.
+  - The field is required, so no producer can omit it and fall back to showing a grade. 110 hand-built row fixtures gained it.
+- **Surfaces.** Each reads "Not scored" with no verdict color:
+  - the question navigator, in post-exam review and during a tutor session;
+  - the Review & Submit list;
+  - the session breakdown;
+  - the question page's session navigator, from a tested mapping, `sessionNavigationQuestions`;
+  - the Dashboard's recent activity.
+- **Two expectations changed with the rule:**
+  - an answered withdrawn item in the session breakdown, which had read "Incorrect";
+  - a question that no longer exists, in the Dashboard's activity, which had read Correct or Incorrect.
+
+  The score already leaves both out.
+- **The ADR's wording is narrowed** to what it decides: "what the score leaves out *because its content is in doubt*". An exam draft on a question retired during that exam is left out for want of a fair chance, not doubt, so it keeps its grade. The Amendment says why.
+- **Evidence.**
+  - Every case was red first.
+  - Ten targeted mutations each fail a test: both branches of the rule, both use cases' flags, and each surface's wiring, the page navigator's badge included.
+  - DEBT-496's spec now asserts the Dashboard row ("Not scored"), and its screenshot was viewed.
+- **Contrast, from CodeRabbit's review of #1376.**
+  - Both themes were computed from `app/globals.css`.
+  - In the product's dark theme, the new forms pass AA, and add no new pair: muted "Not scored" measures 5.04:1 on the Dashboard row and 5.60:1 on the breakdown, and the `secondary` navigator 14.57:1.
+  - In light mode, unfinished and switched off (DEBT-421), tinted rows' small metadata and result text falls below 4.5:1, which predates this record. The figures are recorded in Pattern Registry F-11 for when light mode is finished.
+- **Not done yet:** History's rows, and its Correct and Incorrect filters and sorts (increment 2b).
 
 ## Verification
 
