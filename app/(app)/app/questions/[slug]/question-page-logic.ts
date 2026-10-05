@@ -1,4 +1,6 @@
 // WHY large-file: this module keeps question-page async actions, timeout handling, and user-facing error mapping in one route-local orchestration seam.
+
+import { isResultNotScored } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -26,6 +28,10 @@ import {
   IdempotentActionNames,
   rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
+import type {
+  AvailablePracticeSessionReviewRow,
+  PracticeSessionReviewRow,
+} from '@/src/application/use-cases/get-practice-session-review';
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
@@ -46,6 +52,8 @@ export type SessionNavigation = {
     slug: string;
     order: number;
     isCorrect: boolean | null;
+    /** No score counts the result (DEBT-498): it is named, not graded. */
+    notScored: boolean;
     wasRetried?: boolean;
   }>;
   currentIndex: number;
@@ -485,4 +493,23 @@ export async function loadPreviousAttempt(input: {
     choiceExplanations: data.choiceExplanations,
   });
   setReviewHydrationState('attempt');
+}
+
+/**
+ * A session's reviewable items for the question page's navigator: each
+ * available row in order, its result marked when no score counts it
+ * (ADR-022 Amendment 2026-10-05, DEBT-498).
+ */
+export function sessionNavigationQuestions(
+  rows: readonly PracticeSessionReviewRow[],
+): SessionNavigation['questions'] {
+  return rows
+    .filter((row): row is AvailablePracticeSessionReviewRow => row.isAvailable)
+    .map((row) => ({
+      slug: row.slug,
+      order: row.order,
+      isCorrect: row.isCorrect,
+      notScored: isResultNotScored(row),
+      wasRetried: false,
+    }));
 }

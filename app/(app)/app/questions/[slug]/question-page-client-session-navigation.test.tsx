@@ -26,9 +26,9 @@ beforeAll(async () => {
 describe('QuestionView', () => {
   const historySequenceNavigation = {
     questions: [
-      { slug: 'q1', order: 1, isCorrect: null },
-      { slug: 'q2', order: 2, isCorrect: null },
-      { slug: 'q3', order: 3, isCorrect: null },
+      { slug: 'q1', order: 1, isCorrect: null, notScored: false },
+      { slug: 'q2', order: 2, isCorrect: null, notScored: false },
+      { slug: 'q3', order: 3, isCorrect: null, notScored: false },
     ],
     currentIndex: 1,
     from: 'history',
@@ -176,8 +176,8 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         sessionNavigation={{
           questions: [
-            { slug: 'q1', order: 1, isCorrect: false },
-            { slug: 'q2', order: 2, isCorrect: true },
+            { slug: 'q1', order: 1, isCorrect: false, notScored: false },
+            { slug: 'q2', order: 2, isCorrect: true, notScored: false },
           ],
           currentIndex: 0,
           sessionId: fixtureSession123Id,
@@ -213,8 +213,8 @@ describe('QuestionView', () => {
         {...createBaseProps()}
         sessionNavigation={{
           questions: [
-            { slug: 'q1', order: 1, isCorrect: false },
-            { slug: 'q2', order: 2, isCorrect: true },
+            { slug: 'q1', order: 1, isCorrect: false, notScored: false },
+            { slug: 'q2', order: 2, isCorrect: true, notScored: false },
           ],
           currentIndex: 1,
           sessionId: fixtureSession123Id,

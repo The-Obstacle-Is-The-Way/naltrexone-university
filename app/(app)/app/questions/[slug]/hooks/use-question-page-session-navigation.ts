@@ -6,9 +6,11 @@ import {
 import type { QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-controller';
-import type { AvailablePracticeSessionReviewRow } from '@/src/application/use-cases/get-practice-session-review';
 import { STANDARD_READ_TIMEOUT_MS } from '../../../shared/timeout-tiers';
-import type { SessionNavigation } from '../question-page-logic';
+import {
+  type SessionNavigation,
+  sessionNavigationQuestions,
+} from '../question-page-logic';
 
 const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
@@ -65,6 +67,7 @@ export function useQuestionPageSessionNavigation(
               slug,
               order: index + 1,
               isCorrect: null,
+              notScored: false,
               wasRetried: false,
             })),
             currentIndex,
@@ -121,17 +124,7 @@ export function useQuestionPageSessionNavigation(
             return;
           }
 
-          const questions = result.data.rows
-            .filter(
-              (row): row is AvailablePracticeSessionReviewRow =>
-                row.isAvailable,
-            )
-            .map((row) => ({
-              slug: row.slug,
-              order: row.order,
-              isCorrect: row.isCorrect,
-              wasRetried: false,
-            }));
+          const questions = sessionNavigationQuestions(result.data.rows);
 
           const currentIndex = questions.findIndex(
             (question) => question.slug === input.slug,
