@@ -5,10 +5,15 @@ import {
   NextResponse,
 } from 'next/server';
 import {
+  carriesClerkHandshake,
+  limitClerkHandshake,
+} from '@/lib/clerk-handshake-limit';
+import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 
 export function parseSentryIngestOrigin(
   dsn: string | undefined,
@@ -228,30 +233,55 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
   return clerkMw;
 }
 
-export default async function proxy(
-  request: NextRequest,
-  event: NextFetchEvent,
-) {
-  // These exact public machine resources must not require even Clerk's
-  // anonymous dev-browser handshake, which redirects HTML requests.
-  if (
-    PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
-  ) {
-    return NextResponse.next();
-  }
+let cachedHandshakeLimiter: RateLimiter | null = null;
 
-  if (shouldBypassClerkAuth()) {
-    return NextResponse.next();
-  }
-
-  const clerkMw = await getClerkMiddleware();
-  const response = await clerkMw(request, event);
-  if (response) {
-    logCheckoutSuccessAuthBounce(request, response);
-  }
-
-  return response;
+async function loadContainerRateLimiter(): Promise<RateLimiter> {
+  if (cachedHandshakeLimiter) return cachedHandshakeLimiter;
+  const { createContainer } = await import('@/lib/container');
+  cachedHandshakeLimiter = createContainer().createRateLimiter();
+  return cachedHandshakeLimiter;
 }
+
+export type ProxyDependencies = {
+  loadHandshakeLimiter: () => Promise<RateLimiter>;
+};
+
+export function createProxy({ loadHandshakeLimiter }: ProxyDependencies) {
+  return async function proxy(request: NextRequest, event: NextFetchEvent) {
+    // These exact public machine resources must not require even Clerk's
+    // anonymous dev-browser handshake, which redirects HTML requests.
+    if (
+      PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
+    ) {
+      return NextResponse.next();
+    }
+
+    if (shouldBypassClerkAuth()) {
+      return NextResponse.next();
+    }
+
+    // BUG-323: a handshake parameter makes Clerk call its Backend API, whose
+    // limit every signed-in page shares; limit it per address first.
+    if (carriesClerkHandshake(request)) {
+      const limited = await limitClerkHandshake(
+        request,
+        loadHandshakeLimiter,
+        (failure) => console.error(failure),
+      );
+      if (limited) return limited;
+    }
+
+    const clerkMw = await getClerkMiddleware();
+    const response = await clerkMw(request, event);
+    if (response) {
+      logCheckoutSuccessAuthBounce(request, response);
+    }
+
+    return response;
+  };
+}
+
+export default createProxy({ loadHandshakeLimiter: loadContainerRateLimiter });
 
 export const config = {
   matcher: [
