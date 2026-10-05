@@ -104,12 +104,12 @@ The code:
 
 ## Verification
 
-Criteria to meet before closing; none is met yet.
+Criteria to meet before closing. Increment 1 meets the key-corrected review's criterion; the others wait for the list surfaces (increment 2).
 
 - [ ] Each surface above shows "Not scored", and no success or destructive grading, for a key-corrected, withdrawn or under-review item.
 - [ ] Every scored item still shows its grade as before.
 - [ ] Both are proven by red-first component tests.
-- [ ] A key-corrected review shows neither the superseded explanation nor a green key.
+- [x] A key-corrected review shows neither the superseded explanation nor a green key: component tests, DEBT-496's spec on the real page, and its screenshot (increment 1).
 - [ ] DEBT-496's spec asserts the ungraded review, and the History row's "Not scored".
 - [ ] Removing the in-doubt check from each surface fails a test.
 - [ ] Screenshots of each surface are viewed.
