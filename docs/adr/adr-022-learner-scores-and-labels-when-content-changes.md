@@ -1,6 +1,6 @@
 # ADR-022: Learner Scores and Labels When Content Changes
 
-**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03))
+**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03)) and 2026-10-05 (what a page shows for an item no score counts; see [Amendment](#amendment--2026-10-05))
 **Date:** 2026-10-03
 **Implementation:** Implemented and in production since 2026-10-03, by [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md#verified-closeout--2026-10-03-utc), released through promotion #1355.
 **Decision Makers:** The owner, who on 2026-10-03 asked for every remaining decision that can be settled in code to be decided from first principles, "like the best software engineers in the world and the best physicians in the world who are designing this question bank", and executed. This record decides the three questions [ADR-021](./adr-021-question-revisions-and-content-releases.md) left to the owner: withdrawn-item scoring, answer-key regrade, and how an unavailable question is labeled ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), [BUG-317](../_archive/bugs/bug-317-content-release-documentation-overclaims.md#verified-closeout--2026-10-02-utc)).
@@ -85,6 +85,8 @@ A key-corrected attempt:
 
 Stored grades are never regraded. Mapping an old selection onto a new revision's choices would be a guess, because choice identities differ between revisions. Excluding the attempt and prompting re-practice gives the learner the right outcome without inventing a grade.
 
+> **Amended 2026-10-05.** The attempt is also shown ungraded: its review no longer presents the superseded key as correct, nor its explanation ([Amendment](#amendment--2026-10-05)).
+
 ### 5. Exams: an item that becomes unavailable mid-session
 
 - The item stays in the session. Its saved draft, if any, is kept and graded at finalization as today, since the record is immutable. By Decision 3 it does not count, whatever the grade.
@@ -134,6 +136,35 @@ Decided under the owner's 2026-10-03 delegation, after a review notice asked whe
 - **Freeze each session's score when it ends** (option B). A question later withdrawn as unsafe would keep counting.
 - **Show both the current score and the score when taken** (option D). See above.
 - **Count retired items without recording the fair-chance fact** (option C as first written). An item retired mid-session would count against a learner who could not reach it, unless its timing were rebuilt from history the system does not keep.
+
+## Amendment — 2026-10-05
+
+Decided under the owner's 2026-09-28 delegation, after DEBT-496's screenshots showed a key-corrected review that grades the attempt beneath its caution ([DEBT-498](../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md)).
+
+**What changed.** Decisions 2 and 4 settled what a learner is told and what a score counts. They did not settle what the page beneath the notice shows. Every view kept the stored grade's signals:
+- a green or red verdict;
+- the keyed choice styled as correct;
+- the explanation written for that key.
+
+A review of a key-corrected attempt therefore says "This attempt isn't scored." above "Correct", and presents the superseded answer as right. A withdrawn or held item does the same beneath a caution that says not to rely on it. The rule added is:
+
+> **What the score leaves out, the page does not grade.** An answered item whose content is in doubt, as the Amendment of 2026-10-03 defines it (key corrected since the learner answered, withdrawn, or under review), is shown ungraded wherever its result appears.
+> - **The verdict** reads "Not scored", in a neutral tone, in place of Correct or Incorrect.
+> - **The choices** keep the learner's selection, marked "Your answer", and drop the success and destructive styling. The choice keyed in the revision answered is marked in words.
+> - **A key-corrected item** marks the old key "Answer before the correction" and does not show the explanation or reference written for it, because they argue for the superseded answer. The notice's link to the corrected question is the way to the current answer.
+> - **A withdrawn or held item** marks its key "Keyed answer" and keeps its explanation, beneath the caution that already says not to rely on them. Decision 2 shows that content to the learner who answered.
+> - **Lists** (History, the Dashboard's recent activity, the session breakdown and the post-exam navigator) show "Not scored" in place of the result. History's Correct and Incorrect filters follow what each row shows.
+
+**Consequences.**
+- **A page and a score agree.** An item that no score counts is never shown as credited or penalized.
+- **No regrade.** The stored grade is unchanged. It is not shown while the content is in doubt, and is shown again if the doubt ends, for example when a hold lifts.
+- **Retired items keep their grade.** Retirement is curation, not doubt (the Amendment of 2026-10-03).
+- **Practice after a correction is unchanged.** The Incorrect practice filter still offers a key-corrected question again (Decision 4).
+
+**Alternatives rejected** (DEBT-498):
+- **Keep the notice alone.** Color and the verdict are the strongest signals on the page, and they contradicted the notice.
+- **Hide the attempt's content.** This erases the learner's own record, which Decision 2 keeps for answered items.
+- **Show the corrected answer on the old review.** The revisions' choices differ, so the learner's choice may not exist in the current revision. It would also mix revisions on one page, and hand over the answer that Decision 4 has the learner re-practice.
 
 ## Alternatives rejected
 

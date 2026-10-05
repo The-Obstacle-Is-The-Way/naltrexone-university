@@ -344,6 +344,7 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 
 **Correct:** `border-success bg-success/10 text-success`
 **Incorrect:** `border-destructive bg-destructive/10 text-destructive`
+**Ungraded** (`correctness="ungraded"`, [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05): a review that no score counts. Every choice keeps the base state at full strength, and the learner's choice keeps **Selected (neutral)**. A `note` line under the choice text names its role in words: `mt-1 text-xs font-medium text-foreground`, reading "Your answer", the key's name, or both joined by " · ". The key is named "Answer before the correction" when it was corrected, and otherwise "Keyed answer". No success or destructive token appears. Words carry the meaning, not color.
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
 
@@ -672,9 +673,14 @@ inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold bg-success t
 inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold bg-destructive text-destructive-foreground dark:bg-destructive/60
 ```
 
-**Source:** `components/question/feedback.tsx`
+**Not scored** (an answer no score counts; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05): F-8's neutral chip palette, in place of either verdict:
+```
+self-start inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10
+```
 
-Uses a solid semantic pill in light mode plus `dark:bg-*/60` in dark mode so verdict text stays readable while the badge remains compact via `self-start`.
+**Source:** `components/question/feedback.tsx`; Not scored, `components/question/feedback-ungraded.tsx`
+
+Uses a solid semantic pill in light mode plus `dark:bg-*/60` in dark mode so verdict text stays readable while the badge remains compact via `self-start`. Not scored is deliberately neutral: the item is neither credited nor penalized, so no verdict color applies.
 
 ### F-2: Warning Surface (3-tier)
 
@@ -764,6 +770,15 @@ text-base text-foreground
 
 **Rule:** These cards are not interactive, but they still separate mutually exclusive answer explanations inside a larger feedback card. Neutral cards therefore need the same dark-mode required-boundary override as other low-contrast in-card rows.
 
+**Ungraded** (an answer no score counts; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05; `components/question/feedback-ungraded.tsx`). The F-1 verdict reads Not scored, and no success or destructive card appears.
+- **Withdrawn or under review:** each answer is shown on the neutral "Other wrong answers" card, under an F-8 neutral chip:
+  - "Your answer", when the learner chose another choice, with that choice's explanation;
+  - "Keyed answer", with the question's explanation;
+  - "Other answers", for the remaining choices that have explanations.
+
+  The F-6 Reference stays. The F-11 caution above already says not to rely on them.
+- **Key corrected:** no answer card, explanation or reference, because they were written for the superseded key. One line says why: "The explanation was written for the answer before the correction, so it isn't shown." (`mt-6 text-base text-foreground`). The F-12 caution's link leads to the corrected question.
+
 ### F-6: Feedback Reference Section
 
 Reference block appended to the bottom of a feedback card.
@@ -818,7 +833,7 @@ inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-success text-success
 inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10
 ```
 
-**Used for:** `Correct Answer` (semantic success), `Explanation`, `Why Other Answers Are Wrong`
+**Used for:** `Correct Answer` (semantic success), `Explanation`, `Why Other Answers Are Wrong`; and, in F-5's ungraded form, `Your answer`, `Keyed answer` and `Other answers`, which stay neutral because nothing is graded
 
 **Source:** `components/question/feedback.tsx`
 
@@ -903,6 +918,7 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 - **Heading line:** `font-medium text-foreground`.
 - **Body line:** `text-foreground` in a caution, and `text-muted-foreground` in a neutral notice.
 - The answer, the correct choice and the explanation show as the learner answered them. Bookmark, report and rating actions stay hidden, as for unavailable rows.
+- **Withdrawn or under review: shown ungraded** ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05). No score counts the answer, so the verdict reads Not scored (F-1), and the choices take I-3's ungraded state with the key named "Keyed answer". The explanations follow F-5's ungraded form. A retired question keeps its grade, since retirement is not doubt.
 
 **List rows** (History attempted list, Dashboard recent activity, Session breakdown):
 
@@ -968,7 +984,13 @@ A superseded answer key is the case that matters. Without the notice, a review w
 ```
 
 - **Review views**, for an answered item only: "The answer to this question was corrected after you answered." (`font-medium`), then "This attempt isn't scored.", then the L-5 link "Practice the corrected question" to the standalone page. An unanswered or omitted item has no answer to correct, so it keeps the update notice.
-- **Active session**, in tutor and exam mode alike: "The answer to this question was corrected after your session began." (`font-medium`), then "This session shows the earlier version, so your answer here won't be scored." No link, as above.
+- **Beneath the notice, the answer is shown ungraded** ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05):
+  - the verdict reads Not scored (F-1);
+  - the choices take I-3's ungraded state, with the old key named "Answer before the correction";
+  - the superseded explanation and reference are not shown (F-5's ungraded form).
+
+  The notice alone did not stop a review from presenting the old key as correct (DEBT-498).
+- **Active session**, in tutor and exam mode alike: "The answer to this question was corrected after your session began." (`font-medium`), then "This session shows the earlier version, so your answer here won't be scored." No link, as above. A tutor answer's feedback takes F-5's ungraded key-corrected form, so the earlier key is never graded as right.
 - Both lines read `text-foreground`, as F-11's caution does.
 
 **Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to.
