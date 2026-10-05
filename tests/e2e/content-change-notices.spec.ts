@@ -69,6 +69,16 @@ test.describe('content-change notices', () => {
     ).toHaveCount(1);
     await expect(page.getByText('Explanation', { exact: true })).toHaveCount(0);
     await attachScreenshot(page, testInfo, 'key-corrected-review');
+
+    // DEBT-498 increment 2a: the Dashboard's recent activity names it too.
+    await page.goto(ROUTES.APP_DASHBOARD);
+    const activity = page
+      .getByRole('listitem')
+      .filter({ has: page.locator(`a[href*="${slug}"]`) });
+    await expect(activity).toHaveCount(1);
+    await expect(activity).toContainText('Not scored');
+    await expect(activity).not.toContainText('Correct');
+    await attachScreenshot(page, testInfo, 'key-corrected-dashboard');
   });
 
   test('a question placed under review after the answer is named in History and on its review', async ({
