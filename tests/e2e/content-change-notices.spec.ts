@@ -61,6 +61,13 @@ test.describe('content-change notices', () => {
     await expect(
       notice.getByRole('link', { name: 'Practice the corrected question' }),
     ).toHaveAttribute('href', toQuestionRoute(slug));
+    // DEBT-498: the answer is not graded against the superseded key, and the
+    // explanation written for that key is not shown.
+    await expect(page.getByTestId('verdict-pill')).toHaveText('Not scored');
+    await expect(
+      page.getByRole('radio', { name: /Answer before the correction/ }),
+    ).toHaveCount(1);
+    await expect(page.getByText('Explanation', { exact: true })).toHaveCount(0);
     await attachScreenshot(page, testInfo, 'key-corrected-review');
   });
 
@@ -88,6 +95,11 @@ test.describe('content-change notices', () => {
         .getByRole('status')
         .filter({ hasText: 'This question is under review.' }),
     ).toBeVisible();
+    // DEBT-498: not graded, its key named in words.
+    await expect(page.getByTestId('verdict-pill')).toHaveText('Not scored');
+    await expect(page.getByRole('radio', { name: /Keyed answer/ })).toHaveCount(
+      1,
+    );
     await attachScreenshot(page, testInfo, 'under-review-review');
   });
 

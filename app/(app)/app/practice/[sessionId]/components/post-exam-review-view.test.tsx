@@ -208,6 +208,49 @@ describe('PostExamReviewView', () => {
     ).toBe('Correct');
   });
 
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): what the score leaves out, the
+  // page does not grade.
+  it.each([
+    [
+      { answerKeyChanged: true, superseded: true },
+      'Answer before the correction',
+    ],
+    [{ availability: 'withdrawn' as const }, 'Keyed answer'],
+    [{ availability: 'under_review' as const }, 'Keyed answer'],
+  ])(
+    'shows an answer no score counts (%o) as not scored, naming its key',
+    (marks, keyName) => {
+      const doc = renderView({
+        row: createReviewRow({
+          isAnswered: true,
+          isCorrect: true,
+          selectedChoiceId: fixtureChoiceBId,
+          ...marks,
+        }),
+      });
+
+      expect(
+        doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+      ).toBe('Not scored');
+      expect(doc.body.textContent).toContain(keyName);
+    },
+  );
+
+  it('keeps the grade of an answer on a retired question', () => {
+    const doc = renderView({
+      row: createReviewRow({
+        availability: 'retired',
+        isAnswered: true,
+        isCorrect: true,
+        selectedChoiceId: fixtureChoiceBId,
+      }),
+    });
+
+    expect(
+      doc.querySelector('[data-testid="verdict-pill"]')?.textContent?.trim(),
+    ).toBe('Correct');
+  });
+
   it('renders the middle-question action bar in navigation-first DOM order', () => {
     const rows = [
       createReviewRow({

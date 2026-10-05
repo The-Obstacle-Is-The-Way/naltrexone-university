@@ -3,6 +3,9 @@
 import { Markdown } from '@/components/markdown/markdown';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import type { UngradedReason } from '@/src/domain/services';
+import { FeedbackReference } from './feedback-reference';
+import { UngradedFeedback } from './feedback-ungraded';
 
 export type FeedbackChoiceExplanation = {
   choiceId: string;
@@ -29,6 +32,11 @@ function isIncorrectChoiceWithExplanation(
 
 export type FeedbackProps = {
   isCorrect: boolean;
+  /**
+   * An answer no score counts (ADR-022 Amendment 2026-10-05): shown as "Not
+   * scored", without the stored grade's verdict or colors.
+   */
+  ungraded?: UngradedReason | null;
   isOmitted?: boolean;
   isUnanswered?: boolean;
   explanationMd: string | null;
@@ -148,6 +156,7 @@ function WrongAnswerSection({ choices }: WrongAnswerSectionProps) {
 
 export function Feedback({
   isCorrect,
+  ungraded = null,
   isOmitted = false,
   isUnanswered = false,
   explanationMd,
@@ -155,6 +164,18 @@ export function Feedback({
   choiceExplanations = [],
   selectedChoiceId = null,
 }: FeedbackProps) {
+  if (ungraded) {
+    return (
+      <UngradedFeedback
+        ungraded={ungraded}
+        explanationMd={explanationMd}
+        referenceMd={referenceMd ?? null}
+        choiceExplanations={choiceExplanations}
+        selectedChoiceId={selectedChoiceId}
+      />
+    );
+  }
+
   const correctChoice =
     choiceExplanations.find((choice) => choice.isCorrect) ?? null;
   const visibleChoiceExplanations = choiceExplanations.filter(
@@ -249,14 +270,7 @@ export function Feedback({
         </>
       )}
 
-      {referenceMd ? (
-        <div className="mt-4 border-t border-border/40 pt-3 dark:border-foreground/40">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Reference
-          </div>
-          <Markdown content={referenceMd} className="mt-1 text-sm" />
-        </div>
-      ) : null}
+      {referenceMd ? <FeedbackReference referenceMd={referenceMd} /> : null}
     </Card>
   );
 }

@@ -80,7 +80,8 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
   // Pattern Registry F-12: a newer revision replaced the one the session was
   // bound to. A question no longer available is not marked updated. The
   // current revision has another key, which corrects only an answer given
-  // (ADR-022 Decision 4).
+  // (ADR-022 Decision 4), whatever the question's state: no score counts the
+  // answer, so its review is not graded either (DEBT-498).
   it.each([
     [
       'published',
@@ -95,7 +96,7 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase: content changed since
     [
       'archived',
       'c1',
-      { availability: 'retired', superseded: false, answerKeyChanged: false },
+      { availability: 'retired', superseded: false, answerKeyChanged: true },
     ],
   ] as const)(
     'marks a row of a %s question whose bound revision is no longer current (answer %s)',

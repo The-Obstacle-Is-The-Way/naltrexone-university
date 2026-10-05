@@ -3,8 +3,10 @@
 import { useId } from 'react';
 import { Markdown } from '@/components/markdown/markdown';
 import { Card } from '@/components/ui/card';
+import type { UngradedReason } from '@/src/domain/services';
 import { ChoiceButton } from './choice-button';
 import type { ChoiceSelectionOrigin } from './choice-selection';
+import { KEY_NAME, YOUR_ANSWER } from './ungraded-review';
 
 export type QuestionCardChoice = {
   id: string;
@@ -17,6 +19,11 @@ export type QuestionCardProps = {
   choices: readonly QuestionCardChoice[];
   selectedChoiceId: string | null;
   correctChoiceId: string | null;
+  /**
+   * A review no score counts (ADR-022 Amendment 2026-10-05): the choices are
+   * shown ungraded, and the learner's choice and the key are named in words.
+   */
+  ungraded?: UngradedReason | null;
   disabled?: boolean;
   canSubmitSelectedChoice?: boolean;
   onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
@@ -28,6 +35,7 @@ export function QuestionCard({
   choices,
   selectedChoiceId,
   correctChoiceId,
+  ungraded = null,
   disabled = false,
   canSubmitSelectedChoice = false,
   onSelectChoice,
@@ -61,14 +69,24 @@ export function QuestionCard({
         <legend className="sr-only">Answer choices</legend>
         {choices.map((choice) => {
           const selected = selectedChoiceId === choice.id;
+          const keyed = choice.id === correctChoiceId;
           const correctness =
             correctChoiceId === null
               ? null
-              : choice.id === correctChoiceId
-                ? 'correct'
-                : selected
-                  ? 'incorrect'
-                  : 'wrong-unselected';
+              : ungraded
+                ? 'ungraded'
+                : keyed
+                  ? 'correct'
+                  : selected
+                    ? 'incorrect'
+                    : 'wrong-unselected';
+          const notes =
+            ungraded && correctChoiceId !== null
+              ? [
+                  ...(selected ? [YOUR_ANSWER] : []),
+                  ...(keyed ? [KEY_NAME[ungraded]] : []),
+                ]
+              : [];
 
           return (
             <ChoiceButton
@@ -78,6 +96,7 @@ export function QuestionCard({
               textMd={choice.textMd}
               selected={selected}
               correctness={correctness}
+              note={notes.length > 0 ? notes.join(' · ') : null}
               disabled={disabled || correctChoiceId !== null}
               onClick={(origin) => onSelectChoice(choice.id, origin)}
             />

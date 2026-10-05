@@ -23,6 +23,7 @@ import {
   toQuestionRoute,
 } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import { ungradedReason } from '@/src/domain/services';
 import {
   type QuestionPageBookmarkStatus,
   useQuestionPageModel,
@@ -252,11 +253,24 @@ export function QuestionView(props: QuestionViewProps) {
     props.question && !props.isLoadingPreviousAttempt && !isReviewHydrationError
       ? props.question
       : null;
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): a reviewed answer no score
+  // counts is shown ungraded.
+  const ungraded =
+    isReviewMode &&
+    props.question &&
+    props.submitResult &&
+    !props.submitResult.isOmitted
+      ? ungradedReason({
+          availability: props.question.availability,
+          keyCorrected: props.question.answerKeyChanged,
+        })
+      : null;
   const questionSurfaceFeedback =
     (props.submitResult || sessionUnansweredReveal) &&
     !props.isLoadingPreviousAttempt
       ? {
           isCorrect: props.submitResult?.isCorrect ?? false,
+          ungraded,
           isOmitted: props.submitResult?.isOmitted ?? false,
           isUnanswered:
             isSessionReviewUnansweredReveal &&

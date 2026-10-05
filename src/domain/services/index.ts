@@ -22,6 +22,8 @@ export {
   countsTowardScore,
   hadFairChanceAtEnd,
   type SessionScore,
+  type UngradedReason,
+  ungradedReason,
 } from './scoring';
 export {
   computeSessionProgress,

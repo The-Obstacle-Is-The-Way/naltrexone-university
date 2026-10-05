@@ -16,6 +16,7 @@ import type {
   EndPracticeSessionOutput,
   GetCompletedSessionQuestionsWithFeedbackOutput,
 } from '@/src/adapters/controllers/practice-controller';
+import { ungradedReason } from '@/src/domain/services';
 import { QuestionNavigator } from './exam-review-view';
 
 type PostExamReviewViewProps = {
@@ -59,6 +60,15 @@ export function PostExamReviewView({
       ? (review.rows[currentIndex + 1] ?? null)
       : null;
   const focusedQuestionId = currentRow?.questionId ?? null;
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): an answer no score counts is
+  // shown ungraded.
+  const ungraded =
+    currentRow?.isAvailable && currentRow.isAnswered
+      ? ungradedReason({
+          availability: currentRow.availability,
+          keyCorrected: currentRow.answerKeyChanged,
+        })
+      : null;
   // A question no longer available stays reviewable, but not bookmarkable,
   // reportable or ratable (Pattern Registry F-11).
   const canActOnQuestion =
@@ -155,6 +165,7 @@ export function PostExamReviewView({
                 choices={currentRow.choices}
                 selectedChoiceId={currentRow.selectedChoiceId}
                 correctChoiceId={currentRow.correctChoiceId}
+                ungraded={ungraded}
                 disabled
                 onSelectChoice={() => undefined}
               />
@@ -175,6 +186,7 @@ export function PostExamReviewView({
               ) : null}
               <Feedback
                 isCorrect={currentRow.isCorrect === true}
+                ungraded={ungraded}
                 isOmitted={currentRow.isOmitted}
                 isUnanswered={!currentRow.isAnswered && !currentRow.isOmitted}
                 explanationMd={currentRow.explanationMd}

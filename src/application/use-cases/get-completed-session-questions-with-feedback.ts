@@ -254,11 +254,11 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
           superseded:
             question.availability === 'available' &&
             !question.isCurrentRevision,
-          // ADR-022 Decision 4: an answer graded on a key corrected since.
-          answerKeyChanged:
-            question.availability === 'available' &&
-            row.isAnswered &&
-            question.answerKeyChanged,
+          // ADR-022 Decision 4: an answer graded on a key corrected since,
+          // whatever the question's state, as the score reads it. F-11's
+          // notice still takes precedence over F-12's; the flag also keeps
+          // the review ungraded (DEBT-498).
+          answerKeyChanged: row.isAnswered && question.answerKeyChanged,
           questionId: question.id,
           slug: question.slug,
           stemMd: question.stemMd,
