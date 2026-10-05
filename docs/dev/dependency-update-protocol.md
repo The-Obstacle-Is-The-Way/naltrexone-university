@@ -67,7 +67,9 @@ The example bundles #826, #827 and #828, which is how #829 was built.
 
    ```sh
    CUTOFF=$(( ($(date +%s) - $(git log -1 --format=%ct refs/pr/826)) / 60 + 10080 ))
-   pnpm update @clerk/nextjs@7.7.6 next@16.3.1 stripe@22.5.0 --lockfile-only --config.minimum-release-age=$CUTOFF   # every bumped package
+   # Every package any source bumps: #826's five, #827's Biome and #828's Stripe.
+   pnpm update @clerk/nextjs@7.7.6 @clerk/ui@1.30.3 next@16.3.1 @clerk/testing@2.2.24 @stripe/cli@1.50.1 \
+     @biomejs/biome@2.5.8 stripe@22.5.0 --lockfile-only --config.minimum-release-age=$CUTOFF
    ```
 
 5. `pnpm update` rewrites caret ranges (`^22.4.0` became `^22.5.0`), which breaks `increase-if-necessary`. Restore the staged manifest and resynchronize the lockfile's specifiers under the same cutoff:
