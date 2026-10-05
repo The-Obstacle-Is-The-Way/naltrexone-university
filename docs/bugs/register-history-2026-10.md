@@ -2,6 +2,13 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-03: BUG-310 is resolved and archived ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#verified-closeout--2026-10-03-utc)).
+- **Shipped.** The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved. Paid Checkout keeps dynamic methods.
+- **Merged.** #1329 (**5399437013** on `b3addce5`; merged `d6cf5602`).
+- **Released** through promotion #1331 (`6411d7e8`): main CI **37107592388** `test` passed **08:01:47Z**, production assigned **08:01:50.199Z**, trees `6f4e2ff9`, healthy production.
+- **Re-verified** on `main`'s code before archival: the 27 Stripe adapter suites pass, and the hosted add-card journey passed against real Stripe in TEST mode in every gate since.
+- **What remains.** There are no active bugs.
+
 **Earlier** — 2026-10-03: BUG-310 is fixed in code, as decided ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#fix--2026-10-03)).
 - **The setup Session offers only cards.** `payment_method_types: ['card']` on the trial add-card Session; paid Checkout keeps dynamic methods, now pinned by a test.
 - **Setup completion accepts only a card that Stripe saved.** The webhook retrieves the SetupIntent with its payment method expanded and requires `status: 'succeeded'` and a `card`. Anything else fails the event before any write, with a logged error; nothing is attached or recorded.

@@ -2,6 +2,31 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-05 UTC: DEBT-498's first increment, and DEBT-497 closed.
+- **DEBT-498 increment 1: an answer no score counts is shown ungraded on reviews and in tutor feedback** ([DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
+  - **Design first.** ADR-022 gains its 2026-10-05 Amendment: what the score leaves out, the page does not grade. Pattern Registry F-1, I-3, F-5, F-8, F-11 and F-12 record the ungraded forms.
+  - **The ungraded form.**
+    - The verdict reads "Not scored" in place of Correct or Incorrect, with no verdict color.
+    - The learner's choice is marked "Your answer", and the key is named in words: "Answer before the correction" or "Keyed answer".
+    - A corrected key's explanation is not shown.
+    - It applies on the standalone review, in post-exam review, and to a tutor answer given after its key was corrected mid-session. A retired question keeps its grade.
+  - **Evidence.**
+    - Every case was red first.
+    - Ten targeted mutations each fail a test.
+    - DEBT-496's spec now asserts both ungraded reviews on real pages, and their screenshots were viewed.
+  - **A correction to the record as filed.** An omitted item in doubt never shows the "scored incorrect" card: it shows only its label (Decision 2). That claim is removed.
+- **DEBT-497 closed (Resolved).** Its fix is in CI, scripts and docs, and is on `main` through promotion #1367. The first `main` run uploaded coverage and skipped the new failure report, as designed ([DEBT-497](../_archive/debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md#progress)).
+- **Released since the last entry.** #1366 (DEBT-497's fix, DEBT-498 filed, DEBT-496 closed) went out through promotion #1367 (`e5fd3c37`), which CodeRabbit skipped:
+  - main CI **37312392478** `test` passed **13:03:26Z**;
+  - **Vercel created no deployment for `e5fd3c37`.** The commit has no Vercel status, the API lists no deployment for it, and Vercel's status page showed no incident.
+    - #1366 changed no application code, so production still serves `25c4748b`'s build, the same application.
+    - The release watcher had treated "no deployment listed" as done. It now reports a missing deployment as a failure.
+    - If a promotion that changes the application gets no deployment, that is filed as a defect.
+  - trees `cd0f4cdd`, healthy production.
+- **Next.** DEBT-498 increment 2: the post-exam navigator, the session breakdown, the Dashboard's recent activity, and History's rows and result filters.
+- **What remains Active.** DEBT-414, DEBT-465 and DEBT-498.
+- **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md): when to bootstrap production content releases (DEBT-483), configuring the Resend webhook, and Massachusetts' second annual notice (DEBT-414 F19a).
+
 **Earlier** — 2026-10-05 UTC: DEBT-497's fix, DEBT-498 filed, and DEBT-496 closed.
 - **DEBT-497: a Codecov outage no longer hides behind green CI, and no longer blocks unmeasured changes** ([DEBT-497](../_archive/debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md#progress)).
   - The merge guard excuses a missing `codecov/patch` for changes confined to documentation and repository-tool configuration, as ADR-020 already did for manifests and workflows. A posted failure, or any measured path, still blocks.
