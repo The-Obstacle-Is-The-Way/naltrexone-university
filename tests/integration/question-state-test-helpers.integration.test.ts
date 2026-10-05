@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import * as schema from '@/db/schema';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
 import {
   cleanupAfterEach,
@@ -53,5 +55,29 @@ describe('setQuestionState', () => {
     await expect(
       readBack(['under_review', 'available', 'retired']),
     ).resolves.toBe('retired');
+  });
+});
+
+// A failed fixture leaves nothing behind for cleanup to miss: cleanup records
+// a question only once the helper returns.
+describe('createQuestion', () => {
+  it('writes no question when a tag link fails', async () => {
+    const slug = `it-question-tag-failure-${randomUUID()}`;
+
+    await expect(
+      createQuestion(db, cleanup, {
+        slug,
+        status: 'published',
+        difficulty: 'easy',
+        tagIds: [randomUUID()],
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      db
+        .select({ id: schema.questions.id })
+        .from(schema.questions)
+        .where(eq(schema.questions.slug, slug)),
+    ).resolves.toEqual([]);
   });
 });
