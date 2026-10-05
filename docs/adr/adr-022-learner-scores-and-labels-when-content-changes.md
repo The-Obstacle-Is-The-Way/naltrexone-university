@@ -148,7 +148,7 @@ Decided under the owner's 2026-09-28 delegation, after DEBT-496's screenshots sh
 
 A review of a key-corrected attempt therefore says "This attempt isn't scored." above "Correct", and presents the superseded answer as right. A withdrawn or held item does the same beneath a caution that says not to rely on it. The rule added is:
 
-> **What the score leaves out, the page does not grade.** An answered item whose content is in doubt, as the Amendment of 2026-10-03 defines it (key corrected since the learner answered, withdrawn, or under review), is shown ungraded wherever its result appears.
+> **What the score leaves out because its content is in doubt, the page does not grade.** An answered item whose content is in doubt is shown ungraded wherever its result appears. "In doubt" is as the Amendment of 2026-10-03 defines it: key corrected since the learner answered, withdrawn, under review, or a question that no longer exists.
 > - **The verdict** reads "Not scored", in a neutral tone, in place of Correct or Incorrect.
 > - **The choices** keep the learner's selection, marked "Your answer", and drop the success and destructive styling. The choice keyed in the revision answered is marked in words.
 > - **A key-corrected item** marks the old key "Answer before the correction" and does not show the explanation or reference written for it, because they argue for the superseded answer. The notice's link to the corrected question is the way to the current answer.
@@ -159,6 +159,7 @@ A review of a key-corrected attempt therefore says "This attempt isn't scored." 
 - **A page and a score agree.** An item that no score counts is never shown as credited or penalized.
 - **No regrade.** The stored grade is unchanged. It is not shown while the content is in doubt, and is shown again if the doubt ends, for example when a hold lifts.
 - **Retired items keep their grade.** Retirement is curation, not doubt (the Amendment of 2026-10-03).
+- **Absence of a fair chance is not doubt.** An exam draft on a question retired during that exam is left out of the score because the learner could not reach the question at the end, not because its content is in doubt. Its grade stays shown, since retired content stands, and the score's disclosure (F-13) explains the smaller denominator.
 - **Practice after a correction is unchanged.** The Incorrect practice filter still offers a key-corrected question again (Decision 4).
 
 **Alternatives rejected** (DEBT-498):

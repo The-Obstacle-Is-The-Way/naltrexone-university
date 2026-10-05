@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the upgrade with explicit restrictive settings is written and tested (2026-10-05); the record closes once it is on `main` ([Progress](#progress))
+**Status:** In Progress — on `main` and in production through promotion #1374 (2026-10-05); the record closes once server traces are confirmed in Sentry ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -128,9 +128,9 @@ Criteria to meet before closing.
 
 - [x] Every `Sentry.init` receives the shared settings and both scrubbers, and a test fails if any runtime omits one or widens a category. The type-level guard covers new categories, nested ones included.
 - [x] The real SDK sends none of the credential-bearing values in BUG-318's scenario, and its body capture is off.
-- [ ] `@sentry/nextjs` is on v11 on `main`, and the full gate passes.
+- [x] `@sentry/nextjs` is on v11 on `main`, and the full gate passes: #1373 merged `86c62eb9`, released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
 - [ ] Server traces still arrive in Sentry after the release.
-- [ ] #1369 is closed as superseded.
+- [x] #1369 is closed as superseded (2026-10-05).
 
 ## Related
 

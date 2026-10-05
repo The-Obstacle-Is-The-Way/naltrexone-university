@@ -2,6 +2,21 @@
 
 Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
+- **What is sent.** With `@sentry/nextjs` 10.75.1 and `main`'s settings, a server error event carries:
+  - every cookie: Clerk's session, refresh and handshake tokens;
+  - every non-IP header: the cron `Bearer` secret and the webhook signatures;
+  - the request path with Clerk's handshake token;
+  - the client IP;
+  - request bodies up to about 10 KB.
+- **How it was found.** Measured through the real SDK in an isolated install, and confirmed in Sentry's source. It came out of DEBT-499's adversarial review of Dependabot's Sentry 11 bump.
+- **The fix** is DEBT-499's upgrade: Sentry 11 with explicit restrictive settings and URL scrubbers on every runtime. The same scenario through the real SDK sends none of the values.
+- **Owner checks.**
+  - Sentry's scrubbing settings, and stored events.
+  - Rotating `CRON_SECRET`.
+  - Revoking Clerk sessions if refresh tokens were stored.
+- **What remains Active.** BUG-318.
+
 **Earlier** — 2026-10-03: BUG-310 is resolved and archived ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#verified-closeout--2026-10-03-utc)).
 - **Shipped.** The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved. Paid Checkout keeps dynamic methods.
 - **Merged.** #1329 (**5399437013** on `b3addce5`; merged `d6cf5602`).

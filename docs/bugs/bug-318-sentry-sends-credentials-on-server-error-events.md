@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is written and tested with DEBT-499 (2026-10-05); the record closes once it is in production and the owner's checks below are done ([Fix](#fix))
+**Status:** In Progress — the fix is in production (promotion #1374, 2026-10-05); the record closes once the owner's checks below are done ([Fix](#fix))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -61,7 +61,7 @@ It adds `beforeSend` and `beforeBreadcrumb` scrubbers, which redact credential q
 
 ## Verification
 
-- [ ] Production runs the fix, and the real-SDK test passes in the gate on that commit.
+- [x] Production runs the fix, and the real-SDK test passes in the gate on that commit: #1373 merged `86c62eb9` after exact-head approval 5417478378 on `6102844d` (gate passed on that head), released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
 - [ ] A server error event after the release, viewed in Sentry, shows no cookies, credential headers, body or IP.
 - [ ] The owner's checks above are done and recorded here.
 

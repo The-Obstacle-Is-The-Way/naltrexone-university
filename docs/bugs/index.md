@@ -1,21 +1,16 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-05 — BUG-318 filed.
+**Last Updated:** 2026-10-05 — BUG-318 filed, and its fix released.
 
-**Latest** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
-- **What is sent.** With `@sentry/nextjs` 10.75.1 and `main`'s settings, a server error event carries:
-  - every cookie: Clerk's session, refresh and handshake tokens;
-  - every non-IP header: the cron `Bearer` secret and the webhook signatures;
-  - the request path with Clerk's handshake token;
-  - the client IP;
-  - request bodies up to about 10 KB.
-- **How it was found.** Measured through the real SDK in an isolated install, and confirmed in Sentry's source. It came out of DEBT-499's adversarial review of Dependabot's Sentry 11 bump.
-- **The fix** is DEBT-499's upgrade: Sentry 11 with explicit restrictive settings and URL scrubbers on every runtime. The same scenario through the real SDK sends none of the values.
-- **Owner checks.**
-  - Sentry's scrubbing settings, and stored events.
-  - Rotating `CRON_SECRET`.
-  - Revoking Clerk sessions if refresh tokens were stored.
+**Latest** — 2026-10-05: BUG-318's fix is in production ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
+- **Released.** #1373 went out through promotion #1374 (`2998928c`):
+  - main CI **37342621484** `test` passed **16:54:12Z**;
+  - production assigned **16:54:15.082Z**;
+  - trees `6496d9fe`.
+
+  Server error events no longer carry cookies, credential headers, request bodies, the IP or credential URL parameters, as proven through the real SDK in the gate on that head.
+- **Open owner checks.** These close the record: Sentry's scrubbing settings and stored events, rotating `CRON_SECRET`, and revoking any Clerk sessions whose refresh tokens were stored.
 - **What remains Active.** BUG-318.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
@@ -469,7 +464,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md) | Sentry receives credentials on every server error event | P1 | In Progress | With `@sentry/nextjs` 10.75.1 and `main`'s settings, server error events carry every cookie (Clerk's session, refresh and handshake tokens), every non-IP header (the cron `Bearer` secret, webhook signatures), the handshake query token, the client IP and request bodies, as measured through the real SDK. DEBT-499's upgrade with restrictive settings and URL scrubbers sends none of them. Owner checks: Sentry's scrubbing and stored events, rotating `CRON_SECRET`, and revoking sessions if refresh tokens were stored. |
+| [BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md) | Sentry receives credentials on every server error event | P1 | In Progress: fix in production (#1374); owner checks open | With `@sentry/nextjs` 10.75.1 and `main`'s settings, server error events carry every cookie (Clerk's session, refresh and handshake tokens), every non-IP header (the cron `Bearer` secret, webhook signatures), the handshake query token, the client IP and request bodies, as measured through the real SDK. DEBT-499's upgrade with restrictive settings and URL scrubbers sends none of them. Owner checks: Sentry's scrubbing and stored events, rotating `CRON_SECRET`, and revoking sessions if refresh tokens were stored. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 
