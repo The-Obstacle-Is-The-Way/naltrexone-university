@@ -16,7 +16,7 @@ import {
   auditRecordLifecycle,
   brokenDocumentationLinks,
   type DocumentationAudit,
-  REGISTER_FILE_BUDGET_BYTES,
+  REGISTER_ARCHIVE_BUDGET_BYTES,
   REGISTERS,
   readDocumentation,
   readDocumentationFiles,
@@ -214,43 +214,6 @@ describe('documentation archive convention', () => {
     ).toMatchObject({ missingArchiveDispositions: [] });
   });
 
-  it.each(['debt', 'bugs', 'specs', 'brainstorming', 'audits', 'qa'])(
-    'rejects duplicate Latest stanzas in %s',
-    (register) => {
-      expect(
-        audit({
-          [`docs/${register}/index.md`]: '**Latest** — new\n\n**Latest** — old',
-        }),
-      ).toMatchObject({
-        invalidLatest: expect.arrayContaining([`docs/${register}/index.md`]),
-      });
-    },
-  );
-
-  it.each(['debt', 'bugs'])(
-    'requires the existing Latest stanza in %s',
-    (register) => {
-      expect(
-        audit({
-          [`docs/${register}/index.md`]: '# Register\n\n**Earlier** — old',
-        }),
-      ).toMatchObject({
-        invalidLatest: expect.arrayContaining([`docs/${register}/index.md`]),
-      });
-    },
-  );
-
-  it('ignores examples and historical labels without requiring new Latest conventions', () => {
-    expect(
-      audit({
-        'docs/debt/index.md':
-          '**Latest** — current\n\n**Earlier** — previous\n\n```md\n**Latest** — example\n```\n\n`**Latest**`\n\n**Latest archival (2026-06-11):** historic',
-        'docs/bugs/index.md': '**Latest** — current',
-        'docs/specs/index.md': '# Register without update stanzas',
-      }),
-    ).toMatchObject({ invalidLatest: [] });
-  });
-
   it('reports a missing register-row destination', () => {
     expect(
       audit({
@@ -400,7 +363,7 @@ describe('documentation archive command', () => {
   function populate(root: string, files: Record<string, string>): void {
     for (const register of Object.keys(REGISTERS)) {
       files[`docs/${register}/index.md`] ??= ['debt', 'bugs'].includes(register)
-        ? '# Register\n\n**Latest** — fixture'
+        ? '# Register\n\n**Now** — fixture'
         : '# Register';
     }
     for (const [file, contents] of Object.entries(files)) {
@@ -429,16 +392,29 @@ describe('documentation archive command', () => {
       '**Status:** Deferred',
     ],
     [
-      'duplicate Latest',
+      'duplicate Now',
       'docs/debt/index.md',
-      '**Latest** — A\n\n**Latest** — B',
-      '**Latest** — A\n\n**Earlier** — B',
+      '**Now** — A\n\n**Now** — B',
+      '**Now** — A',
+    ],
+    ['missing Now', 'docs/debt/index.md', '# Register', '**Now** — current'],
+    [
+      'a Latest changelog',
+      'docs/debt/index.md',
+      '**Now** — A\n\n**Latest** — B',
+      '**Now** — A',
     ],
     [
-      'missing Latest',
-      'docs/debt/index.md',
-      '# Register',
-      '**Latest** — current',
+      'a Verifying record without a due date',
+      'docs/debt/debt-001-example.md',
+      '**Status:** Verifying — production check',
+      '**Status:** Verifying — production check; due 2026-10-19',
+    ],
+    [
+      'a long status',
+      'docs/debt/debt-001-example.md',
+      `**Status:** Open — ${'x'.repeat(200)}`,
+      '**Status:** Open — short',
     ],
   ])(
     'fails the command solely for %s and passes after correction',
@@ -447,7 +423,7 @@ describe('documentation archive command', () => {
       const files: Record<string, string> = { [file]: before };
       if (!file.endsWith('/index.md')) {
         files['docs/debt/index.md'] =
-          `**Latest** — fixture\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/debt', file)}) | Example |`;
+          `**Now** — fixture, naming DEBT-001\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/debt', file)}) | Example |`;
       }
       populate(root, files);
       const reports: DocumentationAudit[] = [];
@@ -682,9 +658,9 @@ describe('documentation archive command', () => {
 
   it('exits nonzero for a register history file over its budget', () => {
     const root = fixture();
-    const history = 'docs/debt/register-history-2026-09.md';
+    const history = 'docs/_archive/debt/register-history-2026-09.md';
     populate(root, {
-      [history]: 'a'.repeat(REGISTER_FILE_BUDGET_BYTES + 1),
+      [history]: 'a'.repeat(REGISTER_ARCHIVE_BUDGET_BYTES + 1),
     });
     const reports: DocumentationAudit[] = [];
 
@@ -756,8 +732,24 @@ describe('repository documentation', () => {
     expect(result).toMatchObject({ missingArchiveDispositions: [] });
   });
 
-  it('preserves the single-Latest register convention', () => {
-    expect(result).toMatchObject({ invalidLatest: [] });
+  it('keeps one Now stanza and no Latest changelog in each index', () => {
+    expect(result).toMatchObject({ invalidNow: [] });
+  });
+
+  it('keeps only open records beside the bug and debt indexes', () => {
+    expect(result.strayRegisterFiles).toEqual([]);
+  });
+
+  it('names every Verifying record in its index Now stanza', () => {
+    expect(result.unnamedVerifying).toEqual([]);
+  });
+
+  it('gives every Verifying record a due date', () => {
+    expect(result.invalidVerifying).toEqual([]);
+  });
+
+  it('keeps every live record status to one line', () => {
+    expect(result.longStatus).toEqual([]);
   });
 
   it('keeps every register index and history file within its size budget', () => {

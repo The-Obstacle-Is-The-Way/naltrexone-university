@@ -4,7 +4,7 @@
 **Created:** 2026-05-14
 **Source:** Filed from DEBT-384 after live Stripe payload inspection found invoice events no longer expose the subscription reference at the root field our schema reads.
 **Related:** [DEBT-384](debt-384-stripe-webhook-error-rate-investigation.md)
-**Status:** Resolved — Register date: 2026-05-20. Receipt: [PR #312](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/312); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-05-20. Receipt: [PR #312](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/312); [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 *Status as filed (superseded 2026-09-22):* Active — implementation in PR #312, pending user grade and merge. DEBT-384 has shipped and been archived; this remains a separate follow-up.
 

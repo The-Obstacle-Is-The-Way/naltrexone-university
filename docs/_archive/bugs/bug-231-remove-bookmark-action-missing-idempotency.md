@@ -1,6 +1,6 @@
 # BUG-231: Remove Bookmark Form Action Is Not Idempotent and Can Re-Add the Bookmark
 
-**Status:** Resolved — Register archival date: 2026-04-06. Receipt: [PR #266](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/266); [register disposition](../../bugs/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register archival date: 2026-04-06. Receipt: [PR #266](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/266); [register disposition](./register-frozen-2026-10-05.md?plain=1#L376). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 *Status as filed (superseded 2026-09-22):* Open
 **Priority:** P4

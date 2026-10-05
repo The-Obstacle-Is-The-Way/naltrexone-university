@@ -1,6 +1,6 @@
 # DEBT-273: Choice Button Surface Hierarchy Fix
 
-**Status:** Resolved — Register date: 2026-03-04. Receipt: [PR #170](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/170); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-03-04. Receipt: [PR #170](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/170); [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 **Priority:** P2
 **Created:** 2026-03-03
