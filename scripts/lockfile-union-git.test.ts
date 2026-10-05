@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import {
+  chmodSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -17,7 +18,7 @@ import {
 
 const FIXTURES = path.join(import.meta.dirname, 'fixtures', 'lockfile-union');
 
-// The PR #829 model shared with verify-lockfile-union.test.ts.
+// The PR #829 model shared with lockfile-union.test.ts.
 function fixture(name: string) {
   return { text: readFileSync(path.join(FIXTURES, `${name}.yaml`), 'utf8') };
 }
@@ -339,11 +340,37 @@ describe('verify-lockfile-union against a real git repository', () => {
         GIT_DIR: path.join(decoy, '.git'),
         GIT_WORK_TREE: decoy,
         GIT_INDEX_FILE: path.join(decoy, '.git', 'index'),
+        GIT_OBJECT_DIRECTORY: path.join(decoy, '.git', 'objects'),
       },
     );
 
     expect(result.err).toBe('');
     expect(result.exitCode).toBe(0);
+  });
+
+  it('exits with the usage code for a candidate file it may not read', () => {
+    const { directory, env } = createRepository();
+    const candidate = path.join(directory, 'unreadable.yaml');
+    writeFileSync(candidate, fixture('candidate-union').text);
+    chmodSync(candidate, 0o000);
+
+    const result = run(
+      [
+        '--base',
+        'main',
+        '--source',
+        'refs/pr/826',
+        '--source',
+        'refs/pr/827',
+        '--candidate',
+        'unreadable.yaml',
+      ],
+      directory,
+      env,
+    );
+
+    expect(result.exitCode).toBe(2);
+    expect(result.err).toContain('cannot read "unreadable.yaml"');
   });
 
   it('fails closed when git cannot list its repository-local variables', () => {

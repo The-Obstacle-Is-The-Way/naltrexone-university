@@ -111,7 +111,13 @@ function parseLockfile({ label, text }: LockfileText): Mapping {
   // pnpm writes none of these. Each could make different documents compare
   // equal (a tag or key converted to the same value, NaN and Infinity becoming
   // null) or, for an alias cycle, recurse without end, so each is an input error.
-  let forbidden: string | undefined;
+  // A %YAML 1.1 directive changes how plain scalars such as `yes` parse, so
+  // this parser and pnpm's would read different documents.
+  const { yaml, tags } = parsed.directives;
+  let forbidden: string | undefined =
+    yaml.explicit || Object.keys(tags).some((handle) => handle !== '!!')
+      ? 'directives'
+      : undefined;
   visit(parsed, {
     Node: (_key, node) => {
       if (isAlias(node) || node.anchor) forbidden = 'anchors and aliases';

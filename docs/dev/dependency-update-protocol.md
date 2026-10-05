@@ -83,11 +83,11 @@ The example bundles #826, #827 and #828, which is how #829 was built.
 
    If this install fails, stop. The manifest from step 3 is wrong, for example a mistyped specifier, and the lockfile still holds step 4's specifiers. Fix `package.json`, stage it, and repeat step 5.
 
-6. Verify, and paste the printed table into the PR body:
+6. Verify, and paste the printed table into the PR body. Run the frozen install first: `pnpm exec` installs a stale `node_modules` before it runs anything (pnpm's `verify-deps-before-run`), and steps 4 and 5 leave `node_modules` stale, so a frozen install run afterwards could no longer fail:
 
    ```sh
-   pnpm exec tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    pnpm install --frozen-lockfile
+   pnpm exec tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    ```
 
    The two checks cover different things. The frozen install proves that the lockfile matches `package.json`. The verifier proves that the lockfile is the union of the sources, and each importer entry it compares includes the manifest `specifier`. So a pin dropped or altered while resolving step 3 fails one check or the other.
@@ -97,6 +97,7 @@ Each argument is a git revision or a lockfile path. The verifier refuses a name 
 | Exit | Meaning |
 |---:|---|
 | 0 | The candidate changes exactly the union of the source changes. |
+| 1 | Unexpected failure, such as `git` being unavailable. Nothing was verified. |
 | 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a document that is not a pnpm lockfile, or YAML that pnpm never writes (anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
 | 4 | Extra: the candidate changes an entry no source changes. |
 | 8 | Missing: the candidate omits a source change. |
@@ -105,7 +106,9 @@ Each argument is a git revision or a lockfile path. The verifier refuses a name 
 
 Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR.
 
-A correct bundle can still report missing when the sources overlap. For example, one source drops `is-number@6.0.0` because it moves to 7, while another source's new dependency still needs 6. The bundle rightly keeps 6.0.0, so the verifier reports the first source's removal as missing, and no regeneration clears it. Treat that the same way as a conflict: confirm in `pnpm why` that the kept entry is needed, then record the overlap and the decision in the PR. The verifier has no override flag.
+A correct bundle can still report missing when the sources overlap. For example, one source drops `is-number@6.0.0` because it moves to 7, while another source's new dependency still needs 6. The bundle rightly keeps 6.0.0, so the verifier reports the first source's removal as missing, and no regeneration clears it. Treat that the same way as a conflict: confirm in `pnpm why` that the kept entry is needed, then record the overlap and the decision in the PR.
+
+Peer suffixes overlap in the same way. pnpm writes a package's resolved peers into its key, as in `stripe@22.5.0(@types/node@24.13.4)`. If one source bumps `@types/node` and another bumps `stripe`, a correct bundle has a key that neither source has. It then reports that key as extra, the sources' own keys as missing, and the importer entry as a conflict. Regenerating or recreating the sources does not clear it, because the sources already share a base. Confirm that every unexpected key combines versions the sources chose, then record the overlap in the PR. The verifier has no override flag.
 
 Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced #829's lockfile byte for byte, with `package.json` identical to #826's. The verifier printed #829's hand-built counts: packages 54 / 23 / 7 into a union of 74, snapshots 72 / 38 / 22 into 92, importer entries 10 / 5 / 5 into 12, and 72 / 86 key deltas, all matched. The same steps without the cutoff exited 28, with 385 extra, 18 missing and 14 unmatched entries.
 

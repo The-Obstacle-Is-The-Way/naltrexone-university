@@ -177,7 +177,7 @@ describe('runVerifyLockfileUnion', () => {
       base: base.text,
       a: source826.text,
       b: source827.text,
-      bundle: source826.text,
+      bundle: source827.text,
     };
     const fileReader: LockfileReader = {
       isFile: (spec) => spec in files,
@@ -204,7 +204,7 @@ describe('runVerifyLockfileUnion', () => {
 
     expect(exitCode).toBe(2);
     expect(err.join('\n')).toContain(
-      'The candidate bundle has the same lockfile as source a',
+      'The candidate bundle has the same lockfile as source b',
     );
   });
 

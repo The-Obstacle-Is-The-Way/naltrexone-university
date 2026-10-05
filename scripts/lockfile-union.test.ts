@@ -520,6 +520,41 @@ describe('compareLockfileUnion', () => {
       /non-finite numbers are not allowed/,
     ],
     [
+      'a %YAML directive',
+      "%YAML 1.1\n---\nlockfileVersion: '9.0'\nsettings: {a: yes}\n",
+      /directives are not allowed/,
+    ],
+    [
+      'a %TAG directive',
+      "%TAG !e! tag:example.com,2000:\n---\nlockfileVersion: '9.0'\n",
+      /directives are not allowed/,
+    ],
+    [
+      'an infinite number',
+      "lockfileVersion: '9.0'\nsettings: {a: -.inf}\n",
+      /non-finite numbers are not allowed/,
+    ],
+    [
+      'a boolean key',
+      "lockfileVersion: '9.0'\noverrides:\n  true: a\n",
+      /non-string keys are not allowed/,
+    ],
+    [
+      'a null key',
+      "lockfileVersion: '9.0'\noverrides:\n  ~: a\n",
+      /non-string keys are not allowed/,
+    ],
+    [
+      'a complex key',
+      "lockfileVersion: '9.0'\noverrides:\n  ? [a, b]\n  : c\n",
+      /non-string keys are not allowed/,
+    ],
+    [
+      'a tag on a key',
+      "lockfileVersion: '9.0'\nsettings: {!!str a: 1}\n",
+      /explicit tags are not allowed/,
+    ],
+    [
       'a cyclic alias',
       "lockfileVersion: '9.0'\npackages: {a: &p {self: *p}}\n",
       /anchors and aliases are not allowed/,
@@ -578,6 +613,31 @@ describe('formatLockfileUnionReport', () => {
     );
   });
 
+  // Each row has distinct numbers in the columns a swap would confuse, so a
+  // reordered table (the part pasted into PRs) fails.
+  it.each([
+    [
+      'an extra package',
+      () =>
+        variant(fixture('candidate-union'), 'extra', (lock) => {
+          lock.packages['left-pad@1.3.0'] = {};
+        }),
+      '| packages | 4 / 2 / 2 | 8 | 9 | 8 / 9 | 1 | 0 | 0 | 0 |',
+    ],
+    [
+      'an unmatched package',
+      () =>
+        variant(fixture('candidate-union'), 'unmatched', (lock) => {
+          lock.packages['stripe@22.5.0'] = { resolution: { integrity: 'x' } };
+        }),
+      '| packages | 4 / 2 / 2 | 8 | 8 | 8 / 8 | 0 | 0 | 1 | 0 |',
+    ],
+  ])('prints the section row for %s', (_name, candidate, row) => {
+    const output = formatLockfileUnionReport(compareWithCandidate(candidate()));
+
+    expect(output).toContain(row);
+  });
+
   it('reports a conflict-only failure with exit 32', () => {
     const conflicting = [
       variant(source826, '#826', (lock) => {
@@ -594,6 +654,9 @@ describe('formatLockfileUnionReport', () => {
     );
 
     expect(output).toContain('FAIL (exit 32): 1 conflicting.');
+    expect(output).toContain(
+      '| metadata | 1 / 0 / 1 | 1 | 0 | 0 / 0 | 0 | 0 | 0 | 1 |',
+    );
     expect(output).toContain(
       '### Conflicting: sources disagree, so the bundle needs a deliberate choice',
     );
