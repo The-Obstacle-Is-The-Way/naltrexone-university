@@ -41,10 +41,12 @@ export type DocumentationAudit = {
   closedLive: string[];
   missingArchiveDispositions: string[];
   invalidNow: string[];
-  liveHistory: string[];
+  strayRegisterFiles: string[];
+  unnamedVerifying: string[];
   invalidVerifying: string[];
   longStatus: string[];
   verifyingOverdue: { file: string; due: string }[];
+  verifyingFarFuture: { file: string; due: string }[];
   missingLiveRows: string[];
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
@@ -57,7 +59,11 @@ export type DocumentationAudit = {
 // An index lists open records and the current position; its budget keeps it
 // a list rather than a history. Frozen register history in the archive is
 // parsed whole by the link audit, so its budget bounds that audit's cost.
-export const REGISTER_INDEX_BUDGET_BYTES = 64 * 1024;
+export const REGISTER_INDEX_BUDGET_BYTES = 32 * 1024;
+// The Now stanza, with its list, states the current position in a few lines.
+export const NOW_STANZA_BUDGET_BYTES = 2 * 1024;
+// A Verifying check is meant to happen soon; a far-off date is reported.
+const VERIFYING_HORIZON_DAYS = 90;
 export const REGISTER_ARCHIVE_BUDGET_BYTES = 256 * 1024;
 
 // A live record's status is one line; its detail belongs in the record body.
@@ -80,16 +86,17 @@ function registerFileBudget(file: string): number | undefined {
   return undefined;
 }
 
-// Change history lives in git; frozen register history lives in the archive.
-function isLiveRegisterHistory(file: string): boolean {
+// Beside the bug and debt indexes only open records belong: change history
+// lives in git, and frozen register history lives in the archive.
+const RESTRUCTURED_REGISTERS = ['bugs', 'debt'] as const;
+
+function isStrayRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
-  return (
-    docs === 'docs' &&
-    rest.length === 0 &&
-    register !== undefined &&
-    Object.hasOwn(REGISTERS, register) &&
-    /^register-.*\.md$/.test(name ?? '')
-  );
+  if (docs !== 'docs' || rest.length > 0 || name === undefined) return false;
+  if (!RESTRUCTURED_REGISTERS.some((entry) => entry === register)) return false;
+  const pattern =
+    REGISTERS[register as (typeof RESTRUCTURED_REGISTERS)[number]];
+  return name !== 'index.md' && !pattern.test(name);
 }
 
 type ArchiveLinkRepair = DocumentationLink & {
@@ -169,15 +176,15 @@ export function documentationLinks(
   return scanMarkdown(file, contents).links;
 }
 
-// One parse yields a file's links and its counts of top-level Now and Latest
-// stanzas.
+type StanzaLabel = { text: string; start: number; end: number };
+
+// One parse yields a file's links and its top-level labelled stanzas.
 function scanMarkdown(
   file: string,
   contents: string,
-): { links: DocumentationLink[]; nowStanzas: number; latestStanzas: number } {
+): { links: DocumentationLink[]; labels: StanzaLabel[] } {
   const links: DocumentationLink[] = [];
-  let nowStanzas = 0;
-  let latestStanzas = 0;
+  const labels: StanzaLabel[] = [];
   // Use the installed first-party application Markdown seam, including GFM
   // tables. Code examples are not links; definitions cover reference links.
   Markdown({
@@ -185,15 +192,23 @@ function scanMarkdown(
     remarkPlugins: [
       remarkGfm,
       () => (tree: MarkdownNode) => {
-        const stanzas = (label: string) =>
-          (tree.children ?? []).filter(
-            (node) =>
-              node.type === 'paragraph' &&
-              node.children?.[0]?.type === 'strong' &&
-              nodeText(node.children[0]) === label,
-          ).length;
-        nowStanzas = stanzas('Now');
-        latestStanzas = stanzas('Latest');
+        // Top-level paragraphs that open with a bold label, such as **Now**.
+        // A stanza runs to the end of a list that directly follows it.
+        const children = tree.children ?? [];
+        children.forEach((node, index) => {
+          if (
+            node.type !== 'paragraph' ||
+            node.children?.[0]?.type !== 'strong'
+          )
+            return;
+          const next = children[index + 1];
+          labels.push({
+            text: nodeText(node.children[0]),
+            start: node.position?.start.offset ?? 0,
+            end:
+              (next?.type === 'list' ? next : node).position?.end.offset ?? 0,
+          });
+        });
         function visit(
           node: MarkdownNode,
           inTable = false,
@@ -248,7 +263,7 @@ function scanMarkdown(
       },
     ],
   });
-  return { links, nowStanzas, latestStanzas };
+  return { links, labels };
 }
 
 function recordStatus(file: string, contents: string): string {
@@ -300,7 +315,24 @@ const HISTORICAL_DISPOSITION =
   /^(?:accepted|invalidated|decomposed|deferred|decided|won['’]t fix|reclassified|superseded|parked)\b/i;
 
 const VERIFYING_STATUS = /^verifying\b/i;
-const DUE_DATE = /\bdue (\d{4}-\d{2}-\d{2})\b/i;
+const DUE_DATE = /\bdue (\d{4}-\d{2}-\d{2})\b/gi;
+const HISTORY_LABEL = /^(?:latest|earlier|update history)\b/i;
+// A status line followed by a plain text line was hard-wrapped.
+const WRAPPED_STATUS =
+  /^\s*(?:>\s*)?\*\*(?:Status|Resolution State):?\*\*:?.*\n(?!\s*$|\s*(?:>\s*)?\*\*|\s*#|\s*-{3}|\s*[-*+]\s|\s*\d+\.\s)/im;
+
+function isCalendarDate(value: string): boolean {
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+}
+
+function addDays(day: string, days: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 
 export function auditRecordLifecycle(
   files: ReadonlyMap<string, string>,
@@ -314,10 +346,12 @@ export function auditRecordLifecycle(
     closedLive: [],
     missingArchiveDispositions: [],
     invalidNow: [],
-    liveHistory: [],
+    strayRegisterFiles: [],
+    unnamedVerifying: [],
     invalidVerifying: [],
     longStatus: [],
     verifyingOverdue: [],
+    verifyingFarFuture: [],
     missingLiveRows: [],
     missingRowTargets: [],
     brokenLive: [],
@@ -336,21 +370,33 @@ export function auditRecordLifecycle(
     const budget = registerFileBudget(file);
     if (budget !== undefined && Buffer.byteLength(contents, 'utf8') > budget)
       result.oversized.push(file);
-    if (isLiveRegisterHistory(file)) result.liveHistory.push(file);
+    if (isStrayRegisterFile(file)) result.strayRegisterFiles.push(file);
   }
 
   for (const [register, pattern] of Object.entries(REGISTERS)) {
     const liveDirectory = `docs/${register}`;
     const archiveDirectory = `docs/_archive/${register}`;
     const indexFile = `${liveDirectory}/index.md`;
-    const scan = scans.get(indexFile);
-    const now = scan?.nowStanzas ?? 0;
-    // Debt and bugs state their current position in one Now stanza, replaced
-    // in place. Other registers need not, but none keeps a Latest changelog.
+    const labels = scans.get(indexFile)?.labels ?? [];
+    const nowLabels = labels.filter((label) => /^now\b/i.test(label.text));
+    const now = nowLabels[0];
+    const nowText = now
+      ? (files.get(indexFile) ?? '').slice(now.start, now.end)
+      : '';
+    // Bug and debt indexes state their current position in one Now stanza,
+    // replaced in place, and carry no changelog under any label. Other
+    // registers need no Now stanza, but none keeps a Latest changelog.
+    const restructured = RESTRUCTURED_REGISTERS.some(
+      (entry) => entry === register,
+    );
     if (
-      now > 1 ||
-      (scan?.latestStanzas ?? 0) > 0 ||
-      (['debt', 'bugs'].includes(register) && now !== 1)
+      restructured
+        ? nowLabels.length !== 1 ||
+          now?.text !== 'Now' ||
+          labels.some((label) => HISTORY_LABEL.test(label.text)) ||
+          Buffer.byteLength(nowText, 'utf8') > NOW_STANZA_BUDGET_BYTES
+        : labels.filter((label) => label.text === 'Now').length > 1 ||
+          labels.some((label) => label.text === 'Latest')
     )
       result.invalidNow.push(indexFile);
     const records = (directory: string) =>
@@ -381,14 +427,24 @@ export function auditRecordLifecycle(
       if (archivedIds.has(recordId(record))) result.duplicates.push(record);
       if (CLOSED_STATUS.test(status)) result.closedLive.push(record);
       if (!registered.has(record)) result.missingLiveRows.push(record);
-      if (status.length > STATUS_MAX_CHARACTERS) result.longStatus.push(record);
+      if (
+        status.length > STATUS_MAX_CHARACTERS ||
+        WRAPPED_STATUS.test(files.get(record) ?? '')
+      )
+        result.longStatus.push(record);
       // A record whose fix shipped but whose check can only happen in
       // production stays live, as Verifying, until that check is done.
       if (VERIFYING_STATUS.test(status)) {
-        const due = DUE_DATE.exec(status)?.[1];
-        if (!due) result.invalidVerifying.push(record);
+        const dues = [...status.matchAll(DUE_DATE)].map((match) => match[1]);
+        const due = dues[0];
+        if (dues.length !== 1 || !due || !isCalendarDate(due))
+          result.invalidVerifying.push(record);
         else if (due < today)
           result.verifyingOverdue.push({ file: record, due });
+        else if (due > addDays(today, VERIFYING_HORIZON_DAYS))
+          result.verifyingFarFuture.push({ file: record, due });
+        if (!nowText.toLowerCase().includes(recordId(record) ?? record))
+          result.unnamedVerifying.push(record);
       }
     }
     for (const record of archived) {
@@ -408,6 +464,7 @@ export function auditRecordLifecycle(
       archived: archived.length,
     });
   }
+  result.strayRegisterFiles.sort();
   return result;
 }
 
@@ -533,7 +590,8 @@ export function runDocumentationCommand(
     result.closedLive,
     result.missingArchiveDispositions,
     result.invalidNow,
-    result.liveHistory,
+    result.strayRegisterFiles,
+    result.unnamedVerifying,
     result.invalidVerifying,
     result.longStatus,
     result.missingLiveRows,

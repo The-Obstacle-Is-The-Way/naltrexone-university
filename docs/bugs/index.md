@@ -4,7 +4,7 @@
 **Last Updated:** 2026-10-05
 
 **Now** — 2026-10-05.
-- **Verifying.** BUG-319: its fix is merged and promoting; the checks are stable server-action IDs across two production builds and the Sentry signals in its record, due 2026-10-19.
+- **Verifying.** BUG-319: its fix is in production since 2026-10-05; the checks are stable server-action IDs across two production builds and the Sentry signals in its record, due 2026-10-19.
 - **Next.** BUG-320 to BUG-322, then the Audit #22 security findings once they are filed.
 - **Owner decisions pending.** None for bugs.
 
@@ -26,6 +26,14 @@
 | ID | Title | Priority | Accepted risk |
 |----|-------|----------|---------------|
 | — | None | — | — |
+
+## Deferred (not resolved)
+
+Unfinished tails of closed bugs, each with a revive trigger. None.
+
+| ID | Title | Priority | Deferred | Revive when |
+|----|-------|----------|----------|-------------|
+| — | None | — | — | — |
 
 ## How this register works
 

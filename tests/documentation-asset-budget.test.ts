@@ -61,4 +61,10 @@ describe('documentation file budget', () => {
     ).toEqual({ overBudget: [], staleAllowances: [] });
     expect(DOCUMENTATION_FILE_BUDGET_BYTES).toBe(300 * KIB);
   });
+
+  // 25 files were over the budget when it was introduced; the list may only
+  // shrink as they are deleted or compressed.
+  it('never grows its list of earlier large files', () => {
+    expect(LARGE_FILES_BEFORE_BUDGET.length).toBeLessThanOrEqual(25);
+  });
 });

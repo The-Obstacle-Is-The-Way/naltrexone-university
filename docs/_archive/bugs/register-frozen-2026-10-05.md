@@ -156,7 +156,7 @@ Companion filings from the same review: [DEBT-455](../debt/debt-455-fake-user-re
 |-----|--------|----------|---------|
 | [BUG-276](./bug-276-quick-practice-status-counts-go-stale.md) | Practice / Quick Practice / UI state | P3 | Resolved 2026-07-08 after production proof: Quick Practice status-count badges now refresh after the user answers or bookmarks a single question |
 
-Also filed [DEBT-436](../debt/debt-436-stale-spec-docs-claim-user-created-webhook-handling.md) (P3, resolved 2026-07-06): `master_spec.md`/`master_spec_part2.md` claimed the Clerk webhook handles `user.created`, contradicting both the live implementation and this repo's own correct `docs/vendor-docs/clerk.md` (lazy upsert-on-first-request design, verified race-free during this sweep).
+Also filed [DEBT-436](../debt/debt-436-stale-spec-docs-claim-user-created-webhook-handling.md) (P3, resolved 2026-07-06): `master_spec.md`/`master_spec_part2.md` claimed the Clerk webhook handles `user.created`, contradicting both the live implementation and this repo's own correct `docs/vendor-docs/clerk.md` (lazy upsert-on-first-request design, verified race-free during this sweep). *Corrected 2026-10-05: that check covered the race between the webhook and the first signed-in request only, not two simultaneous first inserts for one user ([BUG-320](../../bugs/bug-320-first-pricing-render-user-upsert-race.md)).*
 
 **Numbering note (updated 2026-07-04 — three rounds total; see "Last Updated" above for the fullest account):**
 1. Originally drafted as BUG-265..270/DEBT-425.

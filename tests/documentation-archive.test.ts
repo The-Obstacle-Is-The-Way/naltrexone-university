@@ -395,7 +395,7 @@ describe('documentation archive command', () => {
       'duplicate Now',
       'docs/debt/index.md',
       '**Now** — A\n\n**Now** — B',
-      '**Now** — A\n\n**Earlier** — B',
+      '**Now** — A',
     ],
     ['missing Now', 'docs/debt/index.md', '# Register', '**Now** — current'],
     [
@@ -423,7 +423,7 @@ describe('documentation archive command', () => {
       const files: Record<string, string> = { [file]: before };
       if (!file.endsWith('/index.md')) {
         files['docs/debt/index.md'] =
-          `**Now** — fixture\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/debt', file)}) | Example |`;
+          `**Now** — fixture, naming DEBT-001\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/debt', file)}) | Example |`;
       }
       populate(root, files);
       const reports: DocumentationAudit[] = [];
@@ -736,8 +736,12 @@ describe('repository documentation', () => {
     expect(result).toMatchObject({ invalidNow: [] });
   });
 
-  it('keeps register history in the archive, not beside a live index', () => {
-    expect(result.liveHistory).toEqual([]);
+  it('keeps only open records beside the bug and debt indexes', () => {
+    expect(result.strayRegisterFiles).toEqual([]);
+  });
+
+  it('names every Verifying record in its index Now stanza', () => {
+    expect(result.unnamedVerifying).toEqual([]);
   });
 
   it('gives every Verifying record a due date', () => {

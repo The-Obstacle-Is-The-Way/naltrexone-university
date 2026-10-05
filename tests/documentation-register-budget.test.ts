@@ -17,7 +17,7 @@ describe('documentation register size budget', () => {
   // An index is a list of open records and the current position, not a
   // history; its budget keeps it that way.
   it.each(['docs/debt/index.md', 'docs/qa/index.md'])(
-    'reports %s over its 64 KiB budget, counted in bytes',
+    'reports %s over its 32 KiB budget, counted in bytes',
     (file) => {
       expect(audit({ [file]: `${now}${'€'.repeat(23_000)}` })).toMatchObject({
         oversized: [file],
