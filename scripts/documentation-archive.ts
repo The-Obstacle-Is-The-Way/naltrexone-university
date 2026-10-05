@@ -40,7 +40,11 @@ export type DocumentationAudit = {
   duplicates: string[];
   closedLive: string[];
   missingArchiveDispositions: string[];
-  invalidLatest: string[];
+  invalidNow: string[];
+  liveHistory: string[];
+  invalidVerifying: string[];
+  longStatus: string[];
+  verifyingOverdue: { file: string; due: string }[];
   missingLiveRows: string[];
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
@@ -50,20 +54,41 @@ export type DocumentationAudit = {
   counts: { register: string; live: number; archived: number }[];
 };
 
-// The lifecycle audit parses every register index in one test hook, and a
-// history file is parsed whole, so this bounds the audit's cost. An index
-// moves its older update stanzas to a monthly history file beside it.
-export const REGISTER_FILE_BUDGET_BYTES = 256 * 1024;
+// An index lists open records and the current position; its budget keeps it
+// a list rather than a history. Frozen register history in the archive is
+// parsed whole by the link audit, so its budget bounds that audit's cost.
+export const REGISTER_INDEX_BUDGET_BYTES = 64 * 1024;
+export const REGISTER_ARCHIVE_BUDGET_BYTES = 256 * 1024;
 
-function isBudgetedRegisterFile(file: string): boolean {
+// A live record's status is one line; its detail belongs in the record body.
+export const STATUS_MAX_CHARACTERS = 200;
+
+function registerFileBudget(file: string): number | undefined {
+  const parts = file.split('/');
+  const isRegister = (name?: string) =>
+    name !== undefined && Object.hasOwn(REGISTERS, name);
+  if (parts.length === 3 && parts[0] === 'docs' && isRegister(parts[1]))
+    return parts[2] === 'index.md' ? REGISTER_INDEX_BUDGET_BYTES : undefined;
+  if (
+    parts.length === 4 &&
+    parts[0] === 'docs' &&
+    parts[1] === '_archive' &&
+    isRegister(parts[2]) &&
+    /^register-.*\.md$/.test(parts[3] ?? '')
+  )
+    return REGISTER_ARCHIVE_BUDGET_BYTES;
+  return undefined;
+}
+
+// Change history lives in git; frozen register history lives in the archive.
+function isLiveRegisterHistory(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
   return (
     docs === 'docs' &&
     rest.length === 0 &&
     register !== undefined &&
     Object.hasOwn(REGISTERS, register) &&
-    (name === 'index.md' ||
-      /^register-history-\d{4}-\d{2}\.md$/.test(name ?? ''))
+    /^register-.*\.md$/.test(name ?? '')
   );
 }
 
@@ -144,12 +169,14 @@ export function documentationLinks(
   return scanMarkdown(file, contents).links;
 }
 
-// One parse yields a file's links and its count of top-level Latest stanzas.
+// One parse yields a file's links and its counts of top-level Now and Latest
+// stanzas.
 function scanMarkdown(
   file: string,
   contents: string,
-): { links: DocumentationLink[]; latestStanzas: number } {
+): { links: DocumentationLink[]; nowStanzas: number; latestStanzas: number } {
   const links: DocumentationLink[] = [];
+  let nowStanzas = 0;
   let latestStanzas = 0;
   // Use the installed first-party application Markdown seam, including GFM
   // tables. Code examples are not links; definitions cover reference links.
@@ -158,12 +185,15 @@ function scanMarkdown(
     remarkPlugins: [
       remarkGfm,
       () => (tree: MarkdownNode) => {
-        latestStanzas = (tree.children ?? []).filter(
-          (node) =>
-            node.type === 'paragraph' &&
-            node.children?.[0]?.type === 'strong' &&
-            nodeText(node.children[0]) === 'Latest',
-        ).length;
+        const stanzas = (label: string) =>
+          (tree.children ?? []).filter(
+            (node) =>
+              node.type === 'paragraph' &&
+              node.children?.[0]?.type === 'strong' &&
+              nodeText(node.children[0]) === label,
+          ).length;
+        nowStanzas = stanzas('Now');
+        latestStanzas = stanzas('Latest');
         function visit(
           node: MarkdownNode,
           inTable = false,
@@ -218,7 +248,7 @@ function scanMarkdown(
       },
     ],
   });
-  return { links, latestStanzas };
+  return { links, nowStanzas, latestStanzas };
 }
 
 function recordStatus(file: string, contents: string): string {
@@ -269,9 +299,13 @@ const CLOSED_STATUS =
 const HISTORICAL_DISPOSITION =
   /^(?:accepted|invalidated|decomposed|deferred|decided|won['’]t fix|reclassified|superseded|parked)\b/i;
 
+const VERIFYING_STATUS = /^verifying\b/i;
+const DUE_DATE = /\bdue (\d{4}-\d{2}-\d{2})\b/i;
+
 export function auditRecordLifecycle(
   files: ReadonlyMap<string, string>,
   exists: (file: string) => boolean,
+  today: string = new Date().toISOString().slice(0, 10),
 ): DocumentationAudit {
   const targetExists = (file: string) =>
     file !== '..' && !file.startsWith('../') && exists(file);
@@ -279,7 +313,11 @@ export function auditRecordLifecycle(
     duplicates: [],
     closedLive: [],
     missingArchiveDispositions: [],
-    invalidLatest: [],
+    invalidNow: [],
+    liveHistory: [],
+    invalidVerifying: [],
+    longStatus: [],
+    verifyingOverdue: [],
     missingLiveRows: [],
     missingRowTargets: [],
     brokenLive: [],
@@ -295,22 +333,26 @@ export function auditRecordLifecycle(
     }),
   );
   for (const [file, contents] of files) {
-    if (
-      isBudgetedRegisterFile(file) &&
-      Buffer.byteLength(contents, 'utf8') > REGISTER_FILE_BUDGET_BYTES
-    )
+    const budget = registerFileBudget(file);
+    if (budget !== undefined && Buffer.byteLength(contents, 'utf8') > budget)
       result.oversized.push(file);
+    if (isLiveRegisterHistory(file)) result.liveHistory.push(file);
   }
 
   for (const [register, pattern] of Object.entries(REGISTERS)) {
     const liveDirectory = `docs/${register}`;
     const archiveDirectory = `docs/_archive/${register}`;
     const indexFile = `${liveDirectory}/index.md`;
-    const latest = scans.get(indexFile)?.latestStanzas ?? 0;
-    // Debt and bugs already use this convention. Other registers need not
-    // adopt update stanzas, but may not carry competing Latest entries.
-    if (latest > 1 || (['debt', 'bugs'].includes(register) && latest !== 1))
-      result.invalidLatest.push(indexFile);
+    const scan = scans.get(indexFile);
+    const now = scan?.nowStanzas ?? 0;
+    // Debt and bugs state their current position in one Now stanza, replaced
+    // in place. Other registers need not, but none keeps a Latest changelog.
+    if (
+      now > 1 ||
+      (scan?.latestStanzas ?? 0) > 0 ||
+      (['debt', 'bugs'].includes(register) && now !== 1)
+    )
+      result.invalidNow.push(indexFile);
     const records = (directory: string) =>
       [...files.keys()].filter(
         (file) =>
@@ -335,10 +377,19 @@ export function auditRecordLifecycle(
         .map((link) => link.target),
     );
     for (const record of live) {
+      const status = recordStatus(record, files.get(record) ?? '');
       if (archivedIds.has(recordId(record))) result.duplicates.push(record);
-      if (CLOSED_STATUS.test(recordStatus(record, files.get(record) ?? '')))
-        result.closedLive.push(record);
+      if (CLOSED_STATUS.test(status)) result.closedLive.push(record);
       if (!registered.has(record)) result.missingLiveRows.push(record);
+      if (status.length > STATUS_MAX_CHARACTERS) result.longStatus.push(record);
+      // A record whose fix shipped but whose check can only happen in
+      // production stays live, as Verifying, until that check is done.
+      if (VERIFYING_STATUS.test(status)) {
+        const due = DUE_DATE.exec(status)?.[1];
+        if (!due) result.invalidVerifying.push(record);
+        else if (due < today)
+          result.verifyingOverdue.push({ file: record, due });
+      }
     }
     for (const record of archived) {
       const status = recordStatus(record, files.get(record) ?? '');
@@ -481,7 +532,10 @@ export function runDocumentationCommand(
     result.duplicates,
     result.closedLive,
     result.missingArchiveDispositions,
-    result.invalidLatest,
+    result.invalidNow,
+    result.liveHistory,
+    result.invalidVerifying,
+    result.longStatus,
     result.missingLiveRows,
     result.missingRowTargets,
     result.brokenLive,

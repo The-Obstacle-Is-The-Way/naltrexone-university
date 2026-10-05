@@ -1,6 +1,6 @@
 # DEBT-280: Choice Button and Segmented Control Dark Mode Surface Refinement
 
-**Status:** Resolved — Register date: 2026-03-06. Receipt: [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-03-06. Receipt: [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175); [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 **Priority:** P2
 **Created:** 2026-03-06

@@ -827,13 +827,9 @@ and `docs/qa/`. These live folders are the open-record list.
    archives. Preserve fragments and historical prose; changing a destination
    is link maintenance, not rewriting history. Keep assets in place unless
    moving them is necessary, and prove their links still resolve.
-5. Move the register row to its **Resolved** or **Archived** table, using the
-   archive path. The Deferred table keeps any unfinished tail visible. Keep
-   exactly one `**Latest**` stanza when updating a register that uses one;
-   move the prior stanza, relabelled **Earlier** and without rewriting its
-   dated claims, to the top of that month's history file beside the index
-   (`register-history-YYYY-MM.md`), which the index's **Update history** line
-   links.
+5. Remove the record's row from the live index: the archive folder is the
+   list of closed records. The Deferred table keeps any unfinished tail
+   visible. Update the index's **Now** stanza in place.
 6. Run the documentation unit guard and the full pre-push gate. A move is not
    complete until live links resolve, register rows resolve, and no live/archive
    duplicate or terminal-status live record remains. Every archived numbered
@@ -870,19 +866,56 @@ ambiguous-metadata configuration error rather than searching for a later value.
 Put the actual record disposition before status examples. Unrelated earlier
 code blocks in historical records remain valid.
 
-Debt and bug indexes already use the literal `**Latest**` stanza and must retain
-exactly one. Other registers may omit update stanzas, but must not have multiple
-Latest entries. The guard counts top-level Markdown paragraphs beginning with
-the bold label `Latest`, not code examples or older labels such as “Latest
-archival (date)”.
+### Register Indexes and Records (2026-10-05)
 
-**2026-09-29 register size budget:** each register index and each
-`register-history-YYYY-MM.md` file must stay within 256 KiB, counted in UTF-8
-bytes. The lifecycle audit parses every index in one test hook, and each
-history file is parsed whole, so the budget bounds the guard's cost. The debt
-index had grown to 444 KB of accumulated update stanzas, and the hook timed
-out twice in CI. Keep update history in the monthly files. When an index
-approaches the budget, move historical sections out rather than raising it.
+**Why.** By 2026-10-05 the bug and debt indexes had grown to about 215 KB each,
+while their open-work tables were under 10 KB. Every change was written three
+times: in the record, in a prose register row, and in a Latest stanza that then
+moved to a monthly history file. Git and pull requests already held all of it.
+The indexes' earlier content is frozen, unchanged, in
+`docs/_archive/{bugs,debt}/register-frozen-2026-10-05.md`, beside the old
+`register-history-*.md` files.
+
+- **An index lists open work.** It holds:
+  - one `**Now**` stanza, rewritten in place, naming the Verifying records and
+    their due dates, what is next, and the owner's pending decisions;
+  - an **Active** table with one line per record: ID, title, priority and
+    status;
+  - the **Parked** and, for debt, **Deferred** tables.
+
+  It never holds closed records, prose history or a `**Latest**` changelog.
+  Each index stays within 64 KiB.
+- **A record states the current truth.** Its `**Status:**` is one line of at
+  most 200 characters; detail goes in the body. When understanding changes,
+  edit the text in place and add a one-line `Corrected YYYY-MM-DD: what
+  changed` note, instead of appending dated sections. Receipts such as gate
+  counts, run IDs and SHAs belong in the pull request; the record links it.
+- **Lifecycle.** A record moves from `Open` (or `Active`, `In Progress`) to
+  `Verifying — <the remaining check>; due YYYY-MM-DD` when its fix merges but
+  a check remains that only promotion or production can satisfy. It stays
+  live, so the queue stays complete. Once the check is recorded, it is
+  archived in the next pull request that touches the register; closing needs
+  no pull request of its own. A documentation-only record closes on its
+  reviewed publication (rule 1).
+- **Nothing overdue goes unseen.** Pull-request CI never fails because a date
+  passed. Instead, `.github/workflows/documentation-due-checks.yml` runs
+  weekly and opens one GitHub issue listing every Verifying record past its
+  due date. Start each working session by reading both indexes' Now stanzas,
+  and clear any overdue check before new work.
+- **Audits.** A sweep files each confirmed finding as its own record. Its
+  method, coverage and dispositions go in an audit record (`audit-NNN-*.md`),
+  which closes on publication like any documentation-only record.
+- **Files.** No file under `docs/` may exceed 300 KiB. Attach screenshots to
+  the pull request, or compress them. The files already over the budget are
+  listed in `scripts/documentation-asset-budget.ts`, and the list only shrinks.
+
+The guard enforces each of these:
+- one Now stanza and no Latest;
+- no register history beside a live index;
+- index and frozen-history budgets;
+- one-line statuses;
+- a due date on every Verifying record;
+- the file budget.
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)

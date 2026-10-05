@@ -5,7 +5,8 @@
 **Scope:** Explore replacing text-based bookmark controls across the app with a toggle bookmark icon (filled ↔ outlined), starting with the Bookmarks page Remove pill and extending to the practice and review action bars.
 **Related:** [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill hover pattern), [BS-049 (archived)](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) (bookmark card unification), [DEBT-307 (archived)](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) (bookmark row visual unification), [DEBT-365 (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) (bookmark vs mark-for-review semantic split), [Bookmark Surface Policy](../frontend/bookmark-surface-policy.md)
 
-**Status:** Active — no icon-toggle UI has shipped. Later bookmark work changed surface timing and placement (`BS-053`, `DEBT-318`, `DEBT-365`), but production still uses text pills for bookmark add/remove actions and the Bookmarks page still uses the AlertDialog-backed Remove pill.
+**Status:** Active — no icon-toggle bookmark control has shipped
+**Status detail** (moved from the status line 2026-10-05, when status lines became one line): Active — no icon-toggle UI has shipped. Later bookmark work changed surface timing and placement (`BS-053`, `DEBT-318`, `DEBT-365`), but production still uses text pills for bookmark add/remove actions and the Bookmarks page still uses the AlertDialog-backed Remove pill.
 
 ---
 

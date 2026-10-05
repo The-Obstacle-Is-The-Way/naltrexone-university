@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-05; fix shipped in the increment that files it; production checks pending
+**Status:** Verifying — stable action IDs across two production builds and the Sentry checks; due 2026-10-19
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
 **Date:** 2026-10-05
 **Resolved:** —

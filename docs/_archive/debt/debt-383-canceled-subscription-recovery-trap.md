@@ -2,7 +2,7 @@
 
 **Priority:** P1 (authenticated canceled subscribers can be trapped away from both `/app/*` and normal re-subscribe plans)
 **Created:** 2026-05-13
-**Status:** Resolved — Register date: 2026-05-13. Receipt: [PR #309](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/309); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-05-13. Receipt: [PR #309](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/309); [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 *Status as filed (superseded 2026-09-22):* Open — root cause confirmed; implementation in this PR; rollout pending merge
 **Owner:** Billing / entitlement
