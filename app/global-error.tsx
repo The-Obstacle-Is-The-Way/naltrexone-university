@@ -7,10 +7,10 @@ import { REPORT_ISSUE_URL } from '@/lib/support';
 
 export default function GlobalError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   useEffect(() => {
     console.error('app/global-error.tsx:', error);
@@ -44,7 +44,7 @@ export default function GlobalError({
               </p>
             ) : null}
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
-              <Button type="button" onClick={reset}>
+              <Button type="button" onClick={retry}>
                 Try again
               </Button>
               <Button asChild variant="outline">

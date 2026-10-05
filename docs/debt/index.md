@@ -6,7 +6,7 @@
 **Latest** — 2026-10-05 UTC: The payment-flow hunt filed DEBT-501 and DEBT-502, with BUG-319 to BUG-322.
 - **The hunt.** At the owner's request, four independent read-only reviewers covered every path to a paid subscription: pricing, checkout and trial, webhooks and entitlement, and account lifecycle. They checked Stripe, Clerk and Next.js behaviour against current documentation, and each claim was verified in code before filing.
 - **The defects are bugs** ([bug register](../bugs/index.md)):
-  - BUG-319 (P1): payment buttons fail after a deploy;
+  - BUG-319 (P2, filed as P1): payment buttons fail after a deploy that changes the action key. Fixed in this increment; its production checks remain;
   - BUG-320 (P2): a first-visit user-row race, seen in production;
   - BUG-321 (P2): Stripe's "already subscribed" answer is discarded;
   - BUG-322 (P2): checkout errors are hidden behind the dialog.
@@ -15,13 +15,11 @@
   - [DEBT-502](./debt-502-account-identity-and-action-hardening.md) (P3): rare identity lockouts with no repair runbook, Clerk's rate limit, and test seams on the payment actions.
 - **Not found.** No path charges an ordinary buyer without granting access, and nothing blocks Clerk or Stripe.
 - **Next.**
-  1. BUG-319 first. It needs the owner's approval to create the stable action-key secret.
-  2. BUG-320 to BUG-322.
-  3. DEBT-498 increment 2b.
-  4. DEBT-501's two P2 items.
+  1. BUG-320 to BUG-322.
+  2. DEBT-498 increment 2b.
+  3. DEBT-501's two P2 items.
 - **What remains Active.** DEBT-414, DEBT-465, DEBT-498, DEBT-500, DEBT-501 and DEBT-502.
 - **Open decisions for the owner.**
-  - Approve the action-key secret (BUG-319).
   - Make one live purchase and refund it (DEBT-501 item 7).
   - Decide whether a re-created account gets a fresh trial (DEBT-502).
   - The earlier decisions in the [previous entries](./register-history-2026-10.md) are unchanged.

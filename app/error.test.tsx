@@ -14,7 +14,7 @@ describe('app/error', () => {
     const error = new Error('boom');
     (error as Error & { digest?: string }).digest = 'digest_123';
     const html = renderToStaticMarkup(
-      <ErrorPage error={error} reset={() => {}} />,
+      <ErrorPage error={error} retry={() => {}} />,
     );
     const doc = parseHtml(html);
     const main = findMainLandmarkById(doc, 'main-content');

@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function BillingError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Billing error"
       description="We couldn't load billing details right now. Your subscription is not affected."
       links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}

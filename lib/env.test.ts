@@ -4,6 +4,9 @@ import {
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
 
+// A 32-byte base64 key, the shape Next.js reads.
+const ACTION_KEY = Buffer.alloc(32, 7).toString('base64');
+
 vi.mock('server-only', () => ({}));
 
 const ORIGINAL_ENV = snapshotProcessEnv();
@@ -148,6 +151,8 @@ describe('env', () => {
     process.env.VERCEL_ENV = 'production';
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 
+    process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
+
     vi.resetModules();
 
     await expect(import('@/lib/env')).rejects.toThrow(
@@ -171,6 +176,8 @@ describe('env', () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
     delete process.env.CLERK_SECRET_KEY;
     delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+    process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
 
     vi.resetModules();
 
@@ -217,6 +224,8 @@ describe('env', () => {
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
     delete process.env.CLERK_WEBHOOK_SIGNING_SECRET;
 
+    process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
+
     vi.resetModules();
 
     await expect(import('@/lib/env')).resolves.toHaveProperty('env');
@@ -239,6 +248,7 @@ describe('env', () => {
     process.env.CLERK_SECRET_KEY = 'sk_test_clerk_dummy';
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
     process.env.CLERK_WEBHOOK_SIGNING_SECRET = 'whsec_clerk_dummy';
+    process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
     delete process.env.CRON_SECRET;
 
     vi.resetModules();
@@ -346,4 +356,80 @@ describe('env', () => {
       'Invalid environment variables',
     );
   });
+
+  // BUG-319: without a stable key, every build changes the server-action
+  // IDs, and a page loaded before a deploy can no longer subscribe. A Vercel
+  // build without it must fail rather than ship that silently.
+  function setValidVercelEnv(vercelEnv: 'production' | 'preview') {
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.CLERK_SECRET_KEY = 'sk_test_clerk_dummy';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
+    process.env.CLERK_WEBHOOK_SIGNING_SECRET = 'whsec_clerk_dummy';
+    process.env.VERCEL_ENV = vercelEnv;
+  }
+
+  it.each(['production', 'preview'] as const)(
+    'requires NEXT_SERVER_ACTIONS_ENCRYPTION_KEY on a Vercel %s build',
+    async (vercelEnv) => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      setValidVercelEnv(vercelEnv);
+      delete process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
+      vi.resetModules();
+
+      await expect(import('@/lib/env')).rejects.toThrow(
+        'Invalid environment variables',
+      );
+    },
+  );
+
+  it.each(['production', 'preview'] as const)(
+    'accepts a Vercel %s build that sets NEXT_SERVER_ACTIONS_ENCRYPTION_KEY',
+    async (vercelEnv) => {
+      setValidVercelEnv(vercelEnv);
+      process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
+      vi.resetModules();
+
+      await expect(import('@/lib/env')).resolves.toHaveProperty('env');
+    },
+  );
+
+  it('does not require NEXT_SERVER_ACTIONS_ENCRYPTION_KEY off Vercel', async () => {
+    setValidVercelEnv('production');
+    delete process.env.VERCEL_ENV;
+    delete process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
+    vi.resetModules();
+
+    await expect(import('@/lib/env')).resolves.toHaveProperty('env');
+  });
+
+  it.each([
+    ['not base64', 'not a key!'],
+    ['the wrong length', Buffer.alloc(20, 7).toString('base64')],
+    // Node's decoder skips the stray character and still yields 32 bytes;
+    // the browser-style decoder Next uses rejects it.
+    [
+      'malformed but decodes to 32 bytes',
+      `${ACTION_KEY.slice(0, 10)}!${ACTION_KEY.slice(10)}`,
+    ],
+  ])(
+    'rejects a NEXT_SERVER_ACTIONS_ENCRYPTION_KEY that is %s',
+    async (_, key) => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      setValidVercelEnv('production');
+      process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = key;
+      vi.resetModules();
+
+      await expect(import('@/lib/env')).rejects.toThrow(
+        'Invalid environment variables',
+      );
+    },
+  );
 });

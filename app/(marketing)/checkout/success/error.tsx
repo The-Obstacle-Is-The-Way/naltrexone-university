@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function CheckoutSuccessError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Checkout error"
       description="We couldn't confirm your checkout right now. Please try again."
       links={[{ href: ROUTES.PRICING, label: 'Back to Pricing' }]}

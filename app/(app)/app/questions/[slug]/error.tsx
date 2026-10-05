@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function QuestionError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Question error"
       description="We couldn't load this question right now. Please try again."
       links={[

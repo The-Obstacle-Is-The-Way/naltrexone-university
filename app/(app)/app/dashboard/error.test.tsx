@@ -14,7 +14,7 @@ describe('app/(app)/app/dashboard/error', () => {
     (error as Error & { digest?: string }).digest = 'digest_123';
 
     const html = renderToStaticMarkup(
-      <DashboardError error={error} reset={() => {}} />,
+      <DashboardError error={error} retry={() => {}} />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const tryAgainButton = doc.querySelector('button');

@@ -65,6 +65,7 @@ These rules are enforced by the repo today:
 - Clerk keys are required unless `NEXT_PUBLIC_SKIP_CLERK=true`.
 - `NEXT_PUBLIC_SKIP_CLERK=true` is allowed for local/CI non-production flows, but it is rejected when `VERCEL_ENV=production`.
 - `CLERK_WEBHOOK_SIGNING_SECRET` is required at Vercel production runtime when Clerk is enabled.
+- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is required on Vercel production and preview builds, and must be a base64 AES key of 16, 24 or 32 bytes. Without it, Next.js salts server-action IDs with a key it generates and caches for 14 days, so a deploy after that cache expires (or misses the build cache) leaves a page loaded earlier unable to call its actions ([BUG-319](../bugs/bug-319-subscribe-actions-break-after-a-deploy.md)). Changing the key changes every action ID once; pages open at the time reload on their next action.
 - `CRON_SECRET` is intentionally not startup-validated. The cron route validates it at request time and returns `401` when it is missing or invalid.
 - Sentry DSNs are optional. `instrumentation.ts` logs `[SENTRY_DISABLED] ...` on Vercel production when server telemetry is unset.
 - `playwright.config.ts` loads `.env.local` first, then `.env`, and uses `NEXT_PUBLIC_APP_URL` for `baseURL`.
@@ -83,6 +84,7 @@ These rules are enforced by the repo today:
 | Stripe price IDs | Live price IDs | Test price IDs | Test price IDs |
 | `NEXT_PUBLIC_APP_URL` | Canonical production domain | Actual preview deployment URL | Local origin you are serving (`127.0.0.1` or `localhost`) |
 | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional, set intentionally | Optional | Optional |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Required; generate with `openssl rand -base64 32` | Required | Optional |
 | `CRON_SECRET` | Required anywhere cron route is exercised | Required if you hit cron route | Required if you hit cron route |
 
 ### Stripe account rule

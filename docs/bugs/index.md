@@ -1,17 +1,17 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-05 — BUG-319 to BUG-322 filed (payment-flow hunt).
+**Last Updated:** 2026-10-05 — BUG-319 to BUG-322 filed (payment-flow hunt); BUG-319's fix shipped with them.
 
 **Latest** — 2026-10-05: BUG-319 to BUG-322 filed from the owner-requested hunt of the payment flows.
 - **Why the hunt.** The owner recalled dismissing a report that a production bug stopped a user from subscribing. Four independent read-only reviewers covered the whole path, against Stripe's, Clerk's and Next.js's current documentation: pricing, checkout and trial, webhooks and entitlement, and account lifecycle. Every claim was then verified in code before filing.
-- **BUG-319 (P1).** Subscribe and add-card fail after every deploy for a page loaded earlier, and "Try again" can't recover.
+- **BUG-319 (P2).** Subscribe and add-card fail for a page loaded before a deploy that changes the server-action key, and "Try again" can't recover. Filed as P1 for "every deploy"; corrected before the fix shipped, since Next caches its generated key for 14 days and Vercel restores that cache. Fixed in this increment: a stable key (owner-approved, created), "Try again" using `retry`, a guarded reload on a stale action, and error pages that report browser-side errors to Sentry. It stays Open for its production checks.
 - **BUG-320 (P2).** A new user's first pricing visit can fail on a concurrent user-row insert. Seen in production twice, and the likely origin of the report.
 - **BUG-321 (P2).** Stripe's "already subscribed" refusal is discarded, causing a silent loop. In the worst case a payer has no access and no portal.
 - **BUG-322 (P2).** A checkout error is hidden behind the reopened consent dialog.
 - **Also filed.** DEBT-501 (billing operations at scale) and DEBT-502 (rare account states, action hardening).
 - **Not found.** No path charges an ordinary buyer without granting access. No CSP or middleware blocks Clerk or Stripe.
-- **Next.** These are fixed before DEBT-498 increment 2b, BUG-319 first. It needs the owner's approval to create the stable action-key secret.
+- **Next.** BUG-320 to BUG-322, before DEBT-498 increment 2b.
 - **What remains Active.** BUG-319, BUG-320, BUG-321 and BUG-322.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
@@ -465,7 +465,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P1 | Open | Next.js salts server-action IDs with a per-build key, and the project sets no stable `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and has no Skew Protection (Hobby). So after each production deploy, the pricing and add-card buttons on a page loaded earlier return 404 and show an error page whose "Try again" (`reset`) cannot recover. Decided: a stable key (owner approves the secret), "Try again" using Next 16's `retry`, and a guarded reload on a stale action. |
+| [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Open | Next.js salts server-action IDs with a build key, and the project set no stable `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and has no Skew Protection (Hobby). After a deploy that changes the key (probably every 14 days, when Next's cached key expires, or on a build-cache miss), the pricing and add-card buttons on a page loaded earlier return 404 and show an error page whose "Try again" (`reset`) cannot recover. Fixed 2026-10-05: the key is set and required on Vercel builds, "Try again" uses `retry`, a stale action reloads once, and error pages report browser-side errors to Sentry. Open for the production checks in its record. |
 | [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) | A new user's first visit can fail when two requests create their row at once | P2 | Open | In production twice (Sentry, 2 and 4 October): two first-time upserts race on the users email index, and the loser gets the generic uniqueness `CONFLICT` and the pricing error page, right after sign-up. Decided: retry the upsert once when the email's owner is the same Clerk user. |
 | [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | Open | When Stripe holds a subscription our database lacks, Subscribe returns to the same page with no message. If the database never learns of it, the payer has no access and no route to the portal. Decided: sync that customer's subscriptions from Stripe on the refusal, with a notice and portal link if the sync fails. |
 | [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md) | A checkout error is hidden behind the consent dialog that reopens | P2 | Open | A failed Checkout redirects with the plan, which reopens the dialog over the error banner and hides it from screen readers. Decided: show the error as an alert inside the dialog. |

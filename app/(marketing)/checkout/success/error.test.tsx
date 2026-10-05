@@ -13,7 +13,7 @@ describe('checkout/success error page', () => {
     const error = Object.assign(new Error('boom'), { digest: 'digest_123' });
 
     const html = renderToStaticMarkup(
-      <CheckoutSuccessError error={error} reset={() => {}} />,
+      <CheckoutSuccessError error={error} retry={() => {}} />,
     );
     const doc = parseHtml(html);
     const main = findMainLandmarkById(doc, 'main-content');

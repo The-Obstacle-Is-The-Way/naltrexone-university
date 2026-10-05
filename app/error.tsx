@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function ErrorPage({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Something went wrong"
       description="Please try again. If the problem persists, contact support and share the error ID."
       links={[{ href: ROUTES.HOME, label: 'Go home' }]}
