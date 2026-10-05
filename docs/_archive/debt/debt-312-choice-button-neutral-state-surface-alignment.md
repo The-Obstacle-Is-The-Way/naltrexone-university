@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-14
 **Source:** Quick Practice answer-choice contrast investigation (user-reported visual audit + repo-doc cross-check)
-**Status:** Resolved — Register date: 2026-03-15. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register date: 2026-03-15. Receipt: register row only; [register disposition](./register-frozen-2026-10-05.md#debt-index-resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 *Status as filed (superseded 2026-09-22):* Open
 **Scope:** Neutral answer-choice states in `components/question/choice-button.tsx` across Quick Practice, active practice sessions, and review pages. Post-submit feedback cards are intentionally out of scope for this ticket.

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-05; fix shipped in the increment that files it; production checks pending
+**Status:** Verifying — stable action IDs across two production builds and the Sentry checks; due 2026-10-19
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
 **Date:** 2026-10-05
 **Resolved:** —
@@ -74,6 +74,8 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 - **Reporting.** `lib/use-report-caught-error.ts` logs the caught error and sends browser-side errors to Sentry through `reportClientError`, but not those with a digest. `ErrorBoundaryPage` and `app/global-error.tsx` both use it. The review found that the global error page was first left out. Browser specs cover both pages, and a mutant reporting digest errors too was killed.
 - **Independent review.** An adversarial reviewer checked the fix against the Next 16.3.6 and Sentry 11 sources and found no P1 or P2 defect. It confirmed that Next passes `retry` to `global-error` inside the router context, and that a call to an unknown action is refused before anything runs: a 404 for the usual fetch call, and an error for a form posted without JavaScript. So a reload cannot charge twice. Its P3 and P4 findings are fixed above.
 - **Docs.** `.env.example`, master spec §10 and `docs/dev/deployment-environments.md` list the key.
+
+**Released 2026-10-05.** #1379 was merged and promoted through #1380 (`048ca43f`). Production deployed it at 22:10 UTC, and that build passed the new key requirement.
 
 ## Verification
 

@@ -43,7 +43,7 @@ Sentry recorded that error in production twice, on 2026-10-02 and 2026-10-04. Th
 
   The race needs only two requests from a new user. The deletion needs a deletion within milliseconds of first sign-in. So the race is far likelier, but neither event identifies which case occurred. (Qualified 2026-10-05 after CodeRabbit's review: the record first said the events established the race.)
 - **The second request is not identified.** Candidates are Clerk's `invalidateCacheAction` with `router.refresh()` around sign-in (`@clerk/nextjs` 7.9.4 `ClerkProvider.js:23-37`), a second tab, or a `user.updated` webhook that inserts (`clerk-webhook-controller.ts:286`).
-- **A register note is broader than its evidence.** `docs/bugs/index.md` (the BUG-147 notes) and DEBT-436 call lazy provisioning "verified race-free". That check covered the race between the Clerk webhook and the first signed-in request: the webhook ignores `user.created`. It did not cover two simultaneous first inserts for the same user, which this record describes.
+- **A register note is broader than its evidence.** The bug register's BUG-147 notes (now in its frozen history, `docs/_archive/bugs/register-frozen-2026-10-05.md`) and DEBT-436 call lazy provisioning "verified race-free". That check covered the race between the Clerk webhook and the first signed-in request: the webhook ignores `user.created`. It did not cover two simultaneous first inserts for the same user, which this record describes.
 
 ## Impact
 
@@ -66,7 +66,7 @@ Criteria to meet before closing; none is met yet.
 - [ ] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
 - [ ] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
 - [ ] A real-Postgres test of concurrent first-time upserts for one user ends with one row and no error.
-- [ ] The "race-free" note in the bug register is qualified to the race it covered.
+- [x] The "race-free" note is qualified to the race it covered: a dated correction in the frozen register history (2026-10-05).
 
 ## Related
 

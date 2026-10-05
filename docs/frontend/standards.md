@@ -876,7 +876,7 @@ Dark mode is implemented via CSS custom properties in `.dark` class (globals.css
 
 ## 17. Known Violations
 
-Issues documented below are tracked as tech debt in `docs/debt/index.md` (Frontend Debt section). Items with individual resolution docs live at `docs/debt/debt-NNN-*.md`. Fix them as you encounter the files. Each is tagged with severity.
+Open frontend debt is listed in `docs/debt/index.md`'s Active table, with `FE-NNN` IDs; the resolved FE items are in its frozen history, `docs/_archive/debt/register-frozen-2026-10-05.md`. Records live at `docs/debt/debt-NNN-*.md` while open. Fix them as you encounter the files. Each is tagged with severity.
 
 ### P1 — Must fix before UI/UX refactor
 
