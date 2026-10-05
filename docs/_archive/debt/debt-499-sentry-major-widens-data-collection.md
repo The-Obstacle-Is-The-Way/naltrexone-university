@@ -1,12 +1,12 @@
 # DEBT-499: Nothing Pins What We Send to Sentry, and a Green Major Would Change It
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — on `main` and in production through promotion #1374 (2026-10-05); the record closes once server traces are confirmed in Sentry ([Progress](#progress))
+**Status:** Resolved — 2026-10-05: Sentry 11 with explicit settings is in production, and server traces still arrive ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-05
+**Verification receipts:** #1373 merged `86c62eb9` after exact-head approval 5417478378 on `6102844d` (local full gate passed on that head); promotion #1374 merged `2998928c`: main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production. Spans after the release are counted below.
 
 ---
 
@@ -124,6 +124,14 @@ Option 3, under the owner's 2026-09-28 delegation:
 - **An independent adversarial review**, against the installed 10.75.1 and 11.0.0 source, found the live exposure and the URL paths. It also found the stale overrides, the licence change, the shallow type check and several overstatements in this record as first filed. All are addressed here.
 - **After release.** Confirm in Sentry that the 5% server traces still arrive under span streaming.
 
+**Released and verified, 2026-10-05.** Promotion #1374 put the upgrade in production (receipts above). Sentry's spans dataset, read through the owner's CLI token, shows:
+- 6,660 spans from 08:00 to 16:54Z under v10, about 740 an hour;
+- 940 from 16:55Z on under v11, about 620 an hour. That is the same order: v11 streams spans, and traffic varies.
+- 140 of the v11 spans carry this app's `app.route` attribute, so the tracing wrapper reports.
+- None carries a cookie, `authorization`, request-body or Clerk request-data attribute.
+
+The owner also added Clerk's names to the project's server-side sensitive fields (BUG-318).
+
 ## Verification
 
 Criteria to meet before closing.
@@ -131,7 +139,7 @@ Criteria to meet before closing.
 - [x] Every `Sentry.init` receives the shared settings and both scrubbers, and a test fails if any runtime omits one or widens a category. The type-level guard covers new categories, nested ones included.
 - [x] The real SDK sends none of the credential-bearing values in BUG-318's scenario, and its body capture is off.
 - [x] `@sentry/nextjs` is on v11 on `main`, and the full gate passes: #1373 merged `86c62eb9`, released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
-- [ ] Server traces still arrive in Sentry after the release.
+- [x] Server traces still arrive in Sentry after the release: 940 spans in the first hours, 140 from the app's wrapper, and none with a sensitive attribute.
 - [x] #1369 is closed as superseded (2026-10-05).
 
 ## Related
