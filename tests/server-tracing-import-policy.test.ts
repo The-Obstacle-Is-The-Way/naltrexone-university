@@ -50,6 +50,9 @@ describe('server tracing import boundary', () => {
     'instrumentation.ts',
     'sentry.client.config.ts',
     'lib/report-client-error.ts',
+    // DEBT-499: the shared dataCollection setting is SDK configuration, typed
+    // by the SDK's init options.
+    'lib/sentry-data-collection.ts',
     'vitest.browser.setup.ts',
   ])('allows the approved SDK boundary at %s', (filePath) => {
     expect(lintSentryImport(filePath).status).toBe(0);

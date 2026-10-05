@@ -222,6 +222,7 @@
         "instrumentation.ts",
         "sentry.client.config.ts",
         "lib/report-client-error.ts",
+        "lib/sentry-data-collection.ts",
         "vitest.browser.setup.ts"
       ],
       "linter": {

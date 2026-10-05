@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SENTRY_DATA_COLLECTION } from '@/lib/sentry-data-collection';
 
 const initMock = vi.fn();
 const captureRequestErrorMock = vi.fn();
@@ -56,6 +57,7 @@ describe('Sentry configuration', () => {
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         environment: getClientEnvironment(),
+        dataCollection: SENTRY_DATA_COLLECTION,
       });
     });
 
@@ -74,6 +76,7 @@ describe('Sentry configuration', () => {
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         environment: 'preview',
+        dataCollection: SENTRY_DATA_COLLECTION,
       });
     });
   });
@@ -93,6 +96,7 @@ describe('Sentry configuration', () => {
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         environment: getClientEnvironment(),
+        dataCollection: SENTRY_DATA_COLLECTION,
       });
     });
   });
@@ -150,6 +154,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
+        dataCollection: SENTRY_DATA_COLLECTION,
       });
     });
 
@@ -166,6 +171,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://examplePublicDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
+        dataCollection: SENTRY_DATA_COLLECTION,
       });
     });
 
@@ -182,6 +188,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: 'preview',
+        dataCollection: SENTRY_DATA_COLLECTION,
       });
     });
 
