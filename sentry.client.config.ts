@@ -1,5 +1,9 @@
 import * as Sentry from '@sentry/nextjs';
-import { SENTRY_DATA_COLLECTION } from '@/lib/sentry-data-collection';
+import {
+  SENTRY_DATA_COLLECTION,
+  scrubBreadcrumb,
+  scrubEvent,
+} from '@/lib/sentry-data-collection';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -14,5 +18,7 @@ if (dsn) {
     replaysOnErrorSampleRate: 0,
     environment,
     dataCollection: SENTRY_DATA_COLLECTION,
+    beforeSend: scrubEvent,
+    beforeBreadcrumb: scrubBreadcrumb,
   });
 }

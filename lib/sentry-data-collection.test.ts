@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { SENTRY_DATA_COLLECTION } from './sentry-data-collection';
+import {
+  redactCredentialParams,
+  SENTRY_DATA_COLLECTION,
+} from './sentry-data-collection';
 
 // DEBT-499: Sentry v11 collects cookies, user info, request and response
 // bodies, unscrubbed headers and database query data when `dataCollection` is
@@ -36,7 +39,11 @@ describe('SENTRY_DATA_COLLECTION', () => {
           'via',
           '-user',
           '__clerk',
+          'x-clerk',
           'signature',
+          'referer',
+          'prerender',
+          'proxied',
         ]),
       });
     },
@@ -51,5 +58,29 @@ describe('SENTRY_DATA_COLLECTION', () => {
           ? headers.request
           : undefined,
     });
+  });
+});
+
+// BUG-318: URLs held outside the query-string field are not filtered by the
+// SDK, so credential parameters are redacted in them before sending.
+describe('redactCredentialParams', () => {
+  it.each([
+    [
+      '/app?__clerk_handshake=eyJx&tab=questions',
+      '/app?__clerk_handshake=[Filtered]&tab=questions',
+    ],
+    [
+      'https://clerk.example/v1/client?__clerk_db_jwt=eyJx',
+      'https://clerk.example/v1/client?__clerk_db_jwt=[Filtered]',
+    ],
+    [
+      'https://x.test/cb?code=abc&state=s&session_id=cs_1',
+      'https://x.test/cb?code=[Filtered]&state=s&session_id=[Filtered]',
+    ],
+    ['__dev_session=abc&plan=annual', '__dev_session=[Filtered]&plan=annual'],
+    ['/app/history?tab=questions', '/app/history?tab=questions'],
+    ['https://x.test/path#token=abc', 'https://x.test/path#token=abc'],
+  ])('redacts %s as %s', (input, expected) => {
+    expect(redactCredentialParams(input)).toBe(expected);
   });
 });

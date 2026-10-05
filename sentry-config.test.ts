@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SENTRY_DATA_COLLECTION } from '@/lib/sentry-data-collection';
 
 const initMock = vi.fn();
 const captureRequestErrorMock = vi.fn();
@@ -9,6 +8,18 @@ vi.mock('@sentry/nextjs', () => ({
   init: initMock,
   captureRequestError: captureRequestErrorMock,
 }));
+
+// DEBT-499 / BUG-318: what every runtime may send. Imported after the code
+// under test, from the same module registry, so the functions are the ones
+// it passed.
+async function sentryPrivacyOptions() {
+  const privacy = await import('@/lib/sentry-data-collection');
+  return {
+    dataCollection: privacy.SENTRY_DATA_COLLECTION,
+    beforeSend: privacy.scrubEvent,
+    beforeBreadcrumb: privacy.scrubBreadcrumb,
+  };
+}
 
 describe('Sentry configuration', () => {
   const originalEnv = { ...process.env };
@@ -57,7 +68,7 @@ describe('Sentry configuration', () => {
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         environment: getClientEnvironment(),
-        dataCollection: SENTRY_DATA_COLLECTION,
+        ...(await sentryPrivacyOptions()),
       });
     });
 
@@ -76,7 +87,7 @@ describe('Sentry configuration', () => {
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         environment: 'preview',
-        dataCollection: SENTRY_DATA_COLLECTION,
+        ...(await sentryPrivacyOptions()),
       });
     });
   });
@@ -96,7 +107,7 @@ describe('Sentry configuration', () => {
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         environment: getClientEnvironment(),
-        dataCollection: SENTRY_DATA_COLLECTION,
+        ...(await sentryPrivacyOptions()),
       });
     });
   });
@@ -154,7 +165,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
-        dataCollection: SENTRY_DATA_COLLECTION,
+        ...(await sentryPrivacyOptions()),
       });
     });
 
@@ -171,7 +182,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://examplePublicDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
-        dataCollection: SENTRY_DATA_COLLECTION,
+        ...(await sentryPrivacyOptions()),
       });
     });
 
@@ -188,7 +199,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: 'preview',
-        dataCollection: SENTRY_DATA_COLLECTION,
+        ...(await sentryPrivacyOptions()),
       });
     });
 
