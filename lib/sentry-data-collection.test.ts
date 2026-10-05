@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   redactCredentialParams,
   SENTRY_DATA_COLLECTION,
+  scrubBreadcrumb,
+  scrubEvent,
 } from './sentry-data-collection';
 
 // DEBT-499: Sentry v11 collects cookies, user info, request and response
@@ -90,5 +92,69 @@ describe('redactCredentialParams', () => {
     expect(
       redactCredentialParams('/app?bad%=1&token=secret&ok%zz_token=x'),
     ).toBe('/app?bad%=1&token=[Filtered]&ok%zz_token=[Filtered]');
+  });
+});
+
+// BUG-318: the browser SDK puts the page URL on the event, and breadcrumbs
+// carry fetch, XHR and navigation URLs; the SDK's query filter reaches none.
+describe('scrubEvent', () => {
+  type ErrorEvent = Parameters<typeof scrubEvent>[0];
+
+  it("redacts credentials in the event's URL, query string and Next.js request path", () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      request: {
+        url: 'https://addictionboards.com/app?__clerk_db_jwt=eyJx&tab=questions',
+        query_string: '__clerk_db_jwt=eyJx&tab=questions',
+      },
+      contexts: { nextjs: { request_path: '/app?__clerk_handshake=eyJy' } },
+    };
+
+    expect(scrubEvent(event)).toMatchObject({
+      request: {
+        url: 'https://addictionboards.com/app?__clerk_db_jwt=[Filtered]&tab=questions',
+        query_string: '__clerk_db_jwt=[Filtered]&tab=questions',
+      },
+      contexts: {
+        nextjs: { request_path: '/app?__clerk_handshake=[Filtered]' },
+      },
+    });
+  });
+
+  it('leaves an event without a request or Next.js context unchanged', () => {
+    const event: ErrorEvent = { type: undefined, message: 'boom' };
+
+    expect(scrubEvent(event)).toEqual({ type: undefined, message: 'boom' });
+  });
+});
+
+describe('scrubBreadcrumb', () => {
+  it('leaves a breadcrumb without data unchanged', () => {
+    expect(scrubBreadcrumb({ category: 'console', message: 'hi' })).toEqual({
+      category: 'console',
+      message: 'hi',
+    });
+  });
+
+  it('redacts credentials in a breadcrumb URL, origin and destination', () => {
+    expect(
+      scrubBreadcrumb({
+        category: 'navigation',
+        data: {
+          url: '/x?token=a',
+          from: '/sign-in?__clerk_handshake=b',
+          to: '/app?__dev_session=c&tab=1',
+          status_code: 200,
+        },
+      }),
+    ).toEqual({
+      category: 'navigation',
+      data: {
+        url: '/x?token=[Filtered]',
+        from: '/sign-in?__clerk_handshake=[Filtered]',
+        to: '/app?__dev_session=[Filtered]&tab=1',
+        status_code: 200,
+      },
+    });
   });
 });
