@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import type { reportClientError } from '@/lib/report-client-error';
 import { ROUTES } from '@/lib/routes';
 import { REPORT_ISSUE_URL } from '@/lib/support';
+import { useReportCaughtError } from '@/lib/use-report-caught-error';
 
 export default function GlobalError({
   error,
   retry,
+  reportError,
 }: {
   error: Error & { digest?: string };
   retry: () => void;
+  reportError?: typeof reportClientError;
 }) {
-  useEffect(() => {
-    console.error('app/global-error.tsx:', error);
-  }, [error]);
+  useReportCaughtError(error, 'app/global-error.tsx:', reportError);
 
   return (
     <html

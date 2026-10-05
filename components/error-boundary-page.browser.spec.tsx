@@ -41,8 +41,6 @@ function renderBoundary(
     <ErrorBoundaryPage
       error={new Error('boom')}
       retry={() => undefined}
-      reloadPage={() => undefined}
-      reportError={() => undefined}
       title="Something went wrong"
       description="Please try again."
       links={[{ href: '/app/dashboard', label: 'Back to Dashboard' }]}

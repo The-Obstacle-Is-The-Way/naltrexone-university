@@ -419,6 +419,9 @@ describe('env', () => {
       'malformed but decodes to 32 bytes',
       `${ACTION_KEY.slice(0, 10)}!${ACTION_KEY.slice(10)}`,
     ],
+    // The URL-safe alphabet: the right length, and Node decodes it to 32
+    // bytes, but the browser-style decoder Next uses rejects it.
+    ['URL-safe base64', `${Buffer.alloc(32, 251).toString('base64url')}=`],
   ])(
     'rejects a NEXT_SERVER_ACTIONS_ENCRYPTION_KEY that is %s',
     async (_, key) => {

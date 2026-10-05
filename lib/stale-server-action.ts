@@ -24,8 +24,9 @@ export function claimStaleActionReload(
 ): boolean {
   if (!store) return false;
   try {
-    // A missing or unreadable marker gives NaN, and a marker in the future
-    // (the clock moved back) a negative gap; neither blocks the reload.
+    // None of these blocks the reload: a missing marker reads as 0 (a gap of
+    // the whole clock), an unreadable one gives NaN, and one in the future
+    // (the clock moved back) a negative gap.
     const elapsed = now - Number(store.getItem(STALE_ACTION_RELOAD_KEY));
     if (elapsed >= 0 && elapsed < STALE_ACTION_RELOAD_WINDOW_MS) {
       return false;

@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { reportClientError } from '@/lib/report-client-error';
+import type { reportClientError } from '@/lib/report-client-error';
 import { REPORT_ISSUE_URL } from '@/lib/support';
+import { useReportCaughtError } from '@/lib/use-report-caught-error';
 import { useStaleServerActionReload } from '@/lib/use-stale-server-action-reload';
 
 export type ErrorBoundaryPageLink = {
@@ -38,15 +38,9 @@ export function ErrorBoundaryPage({
   includeMainLandmark = false,
   logPrefix,
   reloadPage = reloadWindow,
-  reportError = reportClientError,
+  reportError,
 }: ErrorBoundaryPageProps) {
-  useEffect(() => {
-    const component = logPrefix ?? 'ErrorBoundaryPage:';
-    console.error(component, error);
-    // Sentry does not see errors an error page catches. A server error carries
-    // a digest and was already reported on the server (onRequestError).
-    if (!error.digest) reportError(error, { component });
-  }, [error, logPrefix, reportError]);
+  useReportCaughtError(error, logPrefix ?? 'ErrorBoundaryPage:', reportError);
   useStaleServerActionReload(error, reloadPage);
 
   const content = (
