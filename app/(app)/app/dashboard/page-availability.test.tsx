@@ -65,6 +65,55 @@ describe('Dashboard recent activity: question availability', () => {
   });
 
   // ADR-022 Decision 2: an attempt that answered nothing names the state only.
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts is
+  // named, in a neutral tone, not graded.
+  function resultOf(doc: Document) {
+    return Array.from(doc.querySelectorAll('li span')).find((span) =>
+      ['Correct', 'Incorrect', 'Not scored'].includes(span.textContent ?? ''),
+    );
+  }
+
+  const answered = {
+    ...shared,
+    isAvailable: true as const,
+    slug: 'q-1',
+    stemMd: 'Answered stem',
+    difficulty: 'easy' as const,
+    isCorrect: true,
+  };
+
+  it.each([
+    [
+      'on a withdrawn question',
+      { availability: 'withdrawn' as const, answerKeyChanged: false },
+    ],
+    [
+      'under review',
+      { availability: 'under_review' as const, answerKeyChanged: false },
+    ],
+    [
+      'graded on a corrected key',
+      { availability: 'available' as const, answerKeyChanged: true },
+    ],
+  ])('names an answer %s Not scored', (_name, marks) => {
+    const result = resultOf(renderActivity({ ...answered, ...marks }));
+
+    expect(result?.textContent).toBe('Not scored');
+    expect(result?.classList.contains('text-muted-foreground')).toBe(true);
+  });
+
+  it('keeps the grade of an answer on a retired question', () => {
+    const result = resultOf(
+      renderActivity({
+        ...answered,
+        availability: 'retired',
+        answerKeyChanged: false,
+      }),
+    );
+
+    expect(result?.textContent).toBe('Correct');
+  });
+
   it('names the state of an omitted attempt, in place of the generic text', () => {
     const doc = renderActivity({
       ...shared,

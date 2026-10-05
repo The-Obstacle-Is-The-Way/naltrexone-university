@@ -410,8 +410,10 @@ describe('app/(app)/app/dashboard', () => {
     );
 
     expect(html).toContain('[Question no longer available]');
-    expect(html).toContain('Incorrect');
-    expect(html).toContain('Correct');
+    // DEBT-498: a question that no longer exists is in doubt, so no score
+    // counts its answers and neither is graded.
+    expect(html).toContain('Not scored');
+    expect(html).not.toContain('Incorrect');
     expect(html).toContain('Feb 1, 2026');
     expect(html).toContain('Feb 2, 2026');
     expect(html).not.toContain('Answered Feb 1, 2026');
