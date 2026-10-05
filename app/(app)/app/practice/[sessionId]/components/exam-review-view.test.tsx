@@ -145,6 +145,66 @@ describe('QuestionNavigator', () => {
     ).not.toBeNull();
   });
 
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts is
+  // named "Not scored", with no verdict color or correctness badge.
+  it('names an answer no score counts Not scored in review', () => {
+    const [first, second, third] = review.rows;
+    const { doc } = renderNavigator({
+      mode: 'review',
+      currentQuestionId: crypto.randomUUID(),
+      review: {
+        ...review,
+        rows: [
+          { ...first, availability: 'withdrawn' },
+          { ...second, answerKeyChanged: true },
+          third,
+        ],
+      },
+    });
+
+    for (const label of [
+      'Question 1: Withdrawn, Not scored',
+      'Question 2: Not scored',
+    ]) {
+      const button = findByAriaLabel(doc, label);
+      expect(button).not.toBeNull();
+      expect(findBottomRightBadge(button)).toBeNull();
+      expect(getClassList(button)).toContain('bg-secondary');
+      expect(getClassList(button)).not.toContain('bg-success');
+      expect(getClassList(button)).not.toContain('bg-destructive');
+    }
+  });
+
+  it('names a tutor answer no score counts Not scored during the session', () => {
+    const [first, second] = review.rows;
+    const { doc } = renderNavigator({
+      currentQuestionId: crypto.randomUUID(),
+      review: {
+        ...review,
+        mode: 'tutor',
+        rows: [
+          {
+            isAvailable: false,
+            availability: 'withdrawn',
+            questionId: first.questionId,
+            order: 1,
+            isAnswered: true,
+            isCorrect: true,
+            isOmitted: false,
+            markedForReview: false,
+            answerKeyChanged: false,
+          },
+          second,
+        ],
+      },
+    });
+
+    expect(
+      findByAriaLabel(doc, 'Question 1: Withdrawn, Not scored'),
+    ).not.toBeNull();
+    expect(findByAriaLabel(doc, 'Question 2: Incorrect')).not.toBeNull();
+  });
+
   it('exposes a navigation landmark with an accessible label', () => {
     const { doc } = renderNavigator();
 
