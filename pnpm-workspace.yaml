@@ -96,6 +96,18 @@ overrides:
   # removed surface (failOnError, paletteBitDepth, format.jp2k). Aged past the
   # 7-day release gate (0.35.4 published 2026-08-26).
   sharp: 0.35.4
+packageExtensions:
+  # DEBT-460 Cleanup A (issue #813): Stryker's sandbox TSConfigPreprocessor runs
+  # `import('typescript')` and calls the classic compiler API
+  # (parseConfigFileTextToJson), but declares no `typescript` dependency, so it
+  # would otherwise resolve the root TypeScript 7, whose package root exports
+  # only version metadata. Declaring the real typescript 6 package gives it the
+  # same compiler @typescript/typescript6 wraps, with no npm: alias. Remove this
+  # when Stryker declares or stops needing TypeScript; Dependabot does not update
+  # this range, so advance it with the @typescript/typescript6 pin.
+  '@stryker-mutator/core':
+    dependencies:
+      typescript: ^6.0.3
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1 # legacy Babel dependency published in 2023; exact exception for no-downgrade provenance gap.

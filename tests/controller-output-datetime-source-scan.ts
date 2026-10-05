@@ -2,7 +2,7 @@
 // (src/adapters/controllers/controller-output-datetime-contract.test.ts).
 import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 import type { z } from 'zod';
 
 export type ContractIssue = string;
