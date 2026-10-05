@@ -92,6 +92,11 @@ function gh(args: string[]): string {
   });
 }
 
+// The search returns at most this many issues. Reaching it means the
+// existing alert may have been left out, so the job fails rather than
+// opening a duplicate.
+const SEARCH_LIMIT = 100;
+
 function parseIssues(json: string): AlertIssue[] {
   const entries: unknown = JSON.parse(json);
   if (!Array.isArray(entries)) throw new Error('Invalid GitHub issue response');
@@ -123,7 +128,7 @@ export function createGithubAlertIssues(run: typeof gh = gh): AlertIssues {
     // A server-side title search, so the job does not grow with the
     // repository's issue and pull-request count.
     async find(title) {
-      return parseIssues(
+      const issues = parseIssues(
         run([
           'issue',
           'list',
@@ -134,9 +139,12 @@ export function createGithubAlertIssues(run: typeof gh = gh): AlertIssues {
           '--json',
           'number,title,body,state',
           '--limit',
-          '20',
+          String(SEARCH_LIMIT),
         ]),
       );
+      if (issues.length >= SEARCH_LIMIT)
+        throw new Error('Too many matching issues to find the alert safely');
+      return issues;
     },
     async create(title, body) {
       run(['issue', 'create', '--title', title, '--body', body]);
@@ -178,8 +186,7 @@ export function repositoryDueChecks(
 }
 
 export async function runDocumentationDueChecks(
-  check: () => Promise<string> = async () =>
-    reportDueChecks(repositoryDueChecks(), createGithubAlertIssues()),
+  check: () => Promise<string>,
   output: Pick<Console, 'log' | 'error'> = console,
 ): Promise<number> {
   try {
@@ -193,18 +200,26 @@ export async function runDocumentationDueChecks(
   }
 }
 
+// `--dry-run` reports what the job would raise without touching GitHub.
+export function runFromCommandLine(
+  argv: readonly string[],
+  root = process.cwd(),
+  output: Pick<Console, 'log' | 'error'> = console,
+): Promise<number> {
+  const check = argv.includes('--dry-run')
+    ? async () => {
+        const { overdue, farFuture } = repositoryDueChecks(root);
+        return `${overdue.length} overdue, ${farFuture.length} far off (dry run; no issue touched)`;
+      }
+    : () =>
+        reportDueChecks(repositoryDueChecks(root), createGithubAlertIssues());
+  return runDocumentationDueChecks(check, output);
+}
+
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 // No top-level await: tsx runs this repository's scripts as CommonJS.
 if (import.meta.url === executedPath) {
-  const dryRun = process.argv.includes('--dry-run');
-  void runDocumentationDueChecks(
-    dryRun
-      ? async () => {
-          const { overdue, farFuture } = repositoryDueChecks();
-          return `${overdue.length} overdue, ${farFuture.length} far off (dry run; no issue touched)`;
-        }
-      : undefined,
-  ).then((code) => {
+  void runFromCommandLine(process.argv).then((code) => {
     process.exitCode = code;
   });
 }

@@ -886,7 +886,7 @@ The indexes' earlier content is frozen, unchanged, in
   - the **Parked** and, for debt, **Deferred** tables.
 
   It never holds closed records, prose history or a `**Latest**` changelog.
-  Each index stays within 64 KiB.
+  Each index stays within 32 KiB.
 - **A record states the current truth.** Its `**Status:**` is one line of at
   most 200 characters; detail goes in the body. When understanding changes,
   edit the text in place and add a one-line `Corrected YYYY-MM-DD: what

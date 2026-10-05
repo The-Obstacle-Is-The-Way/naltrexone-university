@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   mkdirSync,
   mkdtempSync,
@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import {
   type AlertIssue,
@@ -19,7 +19,19 @@ import {
   reportDueChecks,
   repositoryDueChecks,
   runDocumentationDueChecks,
+  runFromCommandLine,
 } from './documentation-due-checks';
+
+// Only execFileSync, which runs gh, is replaced; spawnSync stays real.
+vi.mock('node:child_process', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:child_process')>()),
+  execFileSync: vi.fn(),
+}));
+const gh = vi.mocked(execFileSync);
+
+afterEach(() => {
+  gh.mockReset();
+});
 
 class MemoryIssues implements AlertIssues {
   issues: AlertIssue[] = [];
@@ -199,8 +211,39 @@ describe('GitHub alert issues', () => {
       '--json',
       'number,title,body,state',
       '--limit',
-      '20',
+      '100',
     ]);
+  });
+
+  // A search capped at its limit may have dropped the existing alert, and
+  // the job would then open a duplicate; it fails instead.
+  it('fails closed when the search may have been cut off at its limit', async () => {
+    const issues = createGithubAlertIssues(() =>
+      JSON.stringify(
+        Array.from({ length: 100 }, (_, index) => ({
+          number: index + 1,
+          title: `Overdue production checks ${index}`,
+          body: '',
+          state: 'CLOSED',
+        })),
+      ),
+    );
+
+    await expect(issues.find(DUE_CHECKS_ISSUE_TITLE)).rejects.toThrow(
+      'Too many matching issues',
+    );
+  });
+
+  it('runs gh with a bounded time and output buffer', async () => {
+    gh.mockReturnValue('[]');
+
+    await createGithubAlertIssues().find(DUE_CHECKS_ISSUE_TITLE);
+
+    expect(gh).toHaveBeenCalledWith(
+      'gh',
+      expect.arrayContaining(['issue', 'list']),
+      { encoding: 'utf8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
+    );
   });
 
   it('rejects a malformed search response', async () => {
@@ -276,6 +319,42 @@ describe('due checks in a repository', () => {
       overdue: [],
       farFuture: [{ file: 'docs/bugs/bug-001-x.md', due: '2026-10-19' }],
     });
+  });
+
+  it('reports in a dry run without touching any issue', async () => {
+    const root = repository('Verifying — check; due 2000-01-03');
+    const lines: string[] = [];
+
+    expect(
+      await runFromCommandLine(['node', 'script', '--dry-run'], root, {
+        log: (line) => lines.push(line),
+        error: (line) => lines.push(line),
+      }),
+    ).toBe(0);
+    expect(lines).toEqual([
+      'Overdue production checks: 1 overdue, 0 far off (dry run; no issue touched)',
+    ]);
+    expect(gh).not.toHaveBeenCalled();
+  });
+
+  it('raises the overdue checks as an issue through gh', async () => {
+    const root = repository('Verifying — check; due 2000-01-03');
+    gh.mockImplementation((_command, args) =>
+      Array.isArray(args) && args[1] === 'list' ? '[]' : '',
+    );
+
+    expect(
+      await runFromCommandLine(['node', 'script'], root, {
+        log: () => {},
+        error: () => {},
+      }),
+    ).toBe(0);
+    expect(
+      gh.mock.calls.map(([, args]) => (args as string[]).slice(0, 2)),
+    ).toEqual([
+      ['issue', 'list'],
+      ['issue', 'create'],
+    ]);
   });
 
   // The weekly job runs this exact command; it must start under tsx.

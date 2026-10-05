@@ -1,6 +1,6 @@
 # BUG-225: Question Review Page Drops Repeated Review-Context Query Params
 
-**Status:** Resolved — Register archival date: 2026-03-15. Receipt: [PR #223](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/223); [register disposition](./register-frozen-2026-10-05.md#parked-accepted-risk). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+**Status:** Resolved — Register archival date: 2026-03-15. Receipt: [PR #223](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/223); [register disposition](./register-frozen-2026-10-05.md?plain=1#L431). Metadata backfilled 2026-09-22; historical prose below is unchanged.
 
 *Status as filed (superseded 2026-09-22):* Open
 **Priority:** P4
