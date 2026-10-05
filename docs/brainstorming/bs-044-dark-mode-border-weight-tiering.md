@@ -5,7 +5,8 @@
 **Scope:** Explore whether dark-mode borders should be tiered by element role (interactive vs. container vs. structural) instead of applied uniformly.
 **Related:** [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md), [BS-042](../_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [BS-043](../_archive/brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md), [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md), [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md), [DEBT-313](../_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md)
 
-**Status:** Active — still not archiveable, but no longer a repo-wide "everything has the same bright dark border" problem. Later follow-ups resolved major slices of the original complaint (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`). The remaining open question is narrower: which read-only containers and subordinate inner separators, if any, still deserve a softer dark-mode treatment.
+**Status:** Active — narrowed to which dark-mode containers and separators still deserve a softer border
+**Status detail** (moved from the status line 2026-10-05, when status lines became one line): Active — still not archiveable, but no longer a repo-wide "everything has the same bright dark border" problem. Later follow-ups resolved major slices of the original complaint (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`). The remaining open question is narrower: which read-only containers and subordinate inner separators, if any, still deserve a softer dark-mode treatment.
 
 ---
 

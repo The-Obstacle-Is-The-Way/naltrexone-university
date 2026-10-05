@@ -827,13 +827,11 @@ and `docs/qa/`. These live folders are the open-record list.
    archives. Preserve fragments and historical prose; changing a destination
    is link maintenance, not rewriting history. Keep assets in place unless
    moving them is necessary, and prove their links still resolve.
-5. Move the register row to its **Resolved** or **Archived** table, using the
-   archive path. The Deferred table keeps any unfinished tail visible. Keep
-   exactly one `**Latest**` stanza when updating a register that uses one;
-   move the prior stanza, relabelled **Earlier** and without rewriting its
-   dated claims, to the top of that month's history file beside the index
-   (`register-history-YYYY-MM.md`), which the index's **Update history** line
-   links.
+5. In the bug and debt registers, remove the record's row from the live
+   index, and update its **Now** stanza in place. The archive folder holds
+   closed records, and also records whose remaining tail is deferred; those
+   tails stay listed in the index's Deferred table. The specs, brainstorming,
+   audits and QA registers still move the row to their Archived table.
 6. Run the documentation unit guard and the full pre-push gate. A move is not
    complete until live links resolve, register rows resolve, and no live/archive
    duplicate or terminal-status live record remains. Every archived numbered
@@ -870,25 +868,112 @@ ambiguous-metadata configuration error rather than searching for a later value.
 Put the actual record disposition before status examples. Unrelated earlier
 code blocks in historical records remain valid.
 
-Debt and bug indexes already use the literal `**Latest**` stanza and must retain
-exactly one. Other registers may omit update stanzas, but must not have multiple
-Latest entries. The guard counts top-level Markdown paragraphs beginning with
-the bold label `Latest`, not code examples or older labels such as “Latest
-archival (date)”.
+### Register Indexes and Records (2026-10-05)
 
-**2026-09-29 register size budget:** each register index and each
-`register-history-YYYY-MM.md` file must stay within 256 KiB, counted in UTF-8
-bytes. The lifecycle audit parses every index in one test hook, and each
-history file is parsed whole, so the budget bounds the guard's cost. The debt
-index had grown to 444 KB of accumulated update stanzas, and the hook timed
-out twice in CI. Keep update history in the monthly files. When an index
-approaches the budget, move historical sections out rather than raising it.
+**Why.** By 2026-10-05 the bug and debt indexes had grown to about 215 KB each,
+while their open-work tables were under 10 KB. Every change was written three
+times: in the record, in a prose register row, and in a Latest stanza that then
+moved to a monthly history file. Git and pull requests already held all of it.
+The indexes' earlier content is frozen, unchanged, in
+`docs/_archive/{bugs,debt}/register-frozen-2026-10-05.md`, beside the old
+`register-history-*.md` files.
+
+- **An index lists open work.** It holds:
+  - one `**Now**` stanza, rewritten in place, naming the Verifying records and
+    their due dates, what is next, and the owner's pending decisions;
+  - an **Active** table with one line per record: ID, title, priority and
+    status;
+  - the **Parked** and, for debt, **Deferred** tables.
+
+  It never holds closed records, prose history or a `**Latest**` changelog.
+  Each index stays within 32 KiB.
+- **A record states the current truth.** Its `**Status:**` is one line of at
+  most 200 characters; detail goes in the body. When understanding changes,
+  edit the text in place and add a one-line `Corrected YYYY-MM-DD: what
+  changed` note, instead of appending dated sections. A record's receipts are
+  short: the pull requests, the promotion, and the outcome of each
+  verification item (rules 3 and 6). Lane counts, CI run IDs and SHAs belong in
+  the pull-request descriptions, which the record links.
+- **Frozen history is not edited,** apart from link-destination maintenance and
+  a one-line `*Corrected YYYY-MM-DD: …*` note beside a statement later proved
+  wrong.
+- **Lifecycle.** A record moves from `Open` (or `Active`, `In Progress`) to
+  `Verifying — <the remaining check>; due YYYY-MM-DD` when its fix merges but
+  a check remains that only promotion or production can satisfy. It stays
+  live, so the queue stays complete. Once the check is recorded, it is
+  archived in the next pull request that touches the register; closing needs
+  no pull request of its own. A documentation-only record closes on its
+  reviewed publication (rule 1).
+- **Nothing overdue goes unseen.** Pull-request CI never fails because a date
+  passed. Instead, `.github/workflows/documentation-due-checks.yml` runs
+  weekly and opens one GitHub issue listing every Verifying record past its
+  due date. Start each working session by reading both indexes' Now stanzas,
+  and clear any overdue check before new work.
+- **Audits.** A sweep files each confirmed finding as its own record. Its
+  method, coverage and dispositions go in an audit record (`audit-NNN-*.md`),
+  which closes on publication like any documentation-only record. Because
+  this repository is public, a security finding that an outsider could use is
+  filed with its fix, not before it ships.
+- **Tracking.** A bug found in shipped code stays open until its fix is
+  promoted and any production proof is recorded. A branch-local defect still
+  needs red-first proof, review, CI and promotion receipts, and its record
+  says it was branch-local, so readers infer no production incident. An
+  invalidated candidate may be archived when its record gives the
+  source-level reason it cannot happen.
+- **Evidence.** A resolution that deletes a pattern lands with the executable
+  guard that keeps it deleted. A guard lands with a red test for the exact
+  state it rejects. A scheduled-only proof is not claimed until a hosted run
+  has executed it.
+- **Priorities.** P0: the system is broken, data is lost, or a security hole is
+  open. P1: major functionality is broken. P2: degraded, with a workaround. P3:
+  minor. P4: trivial.
+- **Statuses.** Open, In Progress, Blocked (needs a manual action outside the
+  repository), Verifying, then a closed disposition: Resolved, Won't Fix,
+  Reclassified, Accepted, Deferred or Superseded.
+- **Template.** File `docs/{bugs,debt}/{bug,debt}-NNN-short-title.md` with the
+  register's Next ID, add its Active row, and bump the Next ID:
+
+  ```markdown
+  # BUG-NNN: Short Title
+
+  > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
+  **Status:** Open
+  **Priority:** P2
+  **Date:** YYYY-MM-DD
+  **Resolved:** —
+  **Verification receipts:** —
+
+  ---
+
+  ## Summary
+  ## Evidence
+  ## Impact
+  ## Options
+  ## Resolution (decided)
+  ## Verification
+  - [ ] …
+  ## Related
+  ```
+- **Files.** No file under `docs/` may exceed 300 KiB. Attach screenshots to
+  the pull request, or compress them. The files already over the budget are
+  listed in `scripts/documentation-asset-budget.ts`, and the list only shrinks.
+
+The guard (`scripts/documentation-archive.ts`) enforces each of these:
+- one Now stanza, at most 2 KiB, and no Latest, Earlier or update-history label;
+- only open records beside the bug and debt indexes;
+- index (32 KiB) and frozen-history (256 KiB) budgets;
+- one-line statuses;
+- a single valid due date on every Verifying record, which the Now stanza names;
+- the file budget (`tests/documentation-asset-budget.test.ts`).
+
+**Key documents:**
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
 - `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-022 accepted; ADR-019 and ADR-022 as amended 2026-10-03)
-- `docs/debt/index.md` — Technical debt register (active + resolved)
-- `docs/bugs/index.md` — Bug report register
+- `docs/debt/index.md` — Technical debt register (open work)
+- `docs/bugs/index.md` — Bug register (open work)
 - `docs/qa/index.md` — UI QA procedure register (QA-NNN scripted UI verification; method in `docs/dev/qa-procedures.md`)
 - `docs/brainstorming/index.md` — UX audits and design explorations
 - `docs/frontend/standards.md` — Canonical frontend standards (components, tokens, accessibility, dark mode)

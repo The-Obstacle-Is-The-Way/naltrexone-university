@@ -1,8 +1,8 @@
 # Bug Reports — Update History, 2026-10
 
-Update stanzas moved out of the [Bug Reports register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
+Update stanzas moved out of the [Bug Reports register](../../bugs/index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
-**Earlier** — 2026-10-05: BUG-318 is resolved and archived ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
+**Earlier** — 2026-10-05: BUG-318 is resolved and archived ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
 - **Fixed in production** through promotion #1374: Sentry 11 with explicit restrictive settings and URL scrubbers.
 - **Owner checks done** with the owner's Sentry CLI login, on the owner's instruction; reads printed names and counts only.
   - Sentry retains 1,005 events. None holds the cron secret, a body, an IP or a Clerk refresh or handshake token.
@@ -11,7 +11,7 @@ Update stanzas moved out of the [Bug Reports register](./index.md), newest first
   - Clerk's names were added to Sentry's server-side sensitive fields.
 - **What remains.** There are no active bugs.
 
-**Earlier** — 2026-10-05: BUG-318's fix is in production ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)).
+**Earlier** — 2026-10-05: BUG-318's fix is in production ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
 - **Released.** #1373 went out through promotion #1374 (`2998928c`):
   - main CI **37342621484** `test` passed **16:54:12Z**;
   - production assigned **16:54:15.082Z**;
@@ -21,7 +21,7 @@ Update stanzas moved out of the [Bug Reports register](./index.md), newest first
 - **Open owner checks.** These close the record: Sentry's scrubbing settings and stored events, rotating `CRON_SECRET`, and revoking any Clerk sessions whose refresh tokens were stored.
 - **What remains Active.** BUG-318.
 
-**Earlier** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md)).
+**Earlier** — 2026-10-05: BUG-318 filed (P1). Production sends credentials to Sentry on every server error event ([BUG-318](./bug-318-sentry-sends-credentials-on-server-error-events.md)).
 - **What is sent.** With `@sentry/nextjs` 10.75.1 and `main`'s settings, a server error event carries:
   - every cookie: Clerk's session, refresh and handshake tokens;
   - every non-IP header: the cron `Bearer` secret and the webhook signatures;
@@ -36,14 +36,14 @@ Update stanzas moved out of the [Bug Reports register](./index.md), newest first
   - Revoking Clerk sessions if refresh tokens were stored.
 - **What remains Active.** BUG-318.
 
-**Earlier** — 2026-10-03: BUG-310 is resolved and archived ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#verified-closeout--2026-10-03-utc)).
+**Earlier** — 2026-10-03: BUG-310 is resolved and archived ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#verified-closeout--2026-10-03-utc)).
 - **Shipped.** The trial add-card setup offers only cards, and its completion attaches only a card that Stripe saved. Paid Checkout keeps dynamic methods.
 - **Merged.** #1329 (**5399437013** on `b3addce5`; merged `d6cf5602`).
 - **Released** through promotion #1331 (`6411d7e8`): main CI **37107592388** `test` passed **08:01:47Z**, production assigned **08:01:50.199Z**, trees `6f4e2ff9`, healthy production.
 - **Re-verified** on `main`'s code before archival: the 27 Stripe adapter suites pass, and the hosted add-card journey passed against real Stripe in TEST mode in every gate since.
 - **What remains.** There are no active bugs.
 
-**Earlier** — 2026-10-03: BUG-310 is fixed in code, as decided ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#fix--2026-10-03)).
+**Earlier** — 2026-10-03: BUG-310 is fixed in code, as decided ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#fix--2026-10-03)).
 - **The setup Session offers only cards.** `payment_method_types: ['card']` on the trial add-card Session; paid Checkout keeps dynamic methods, now pinned by a test.
 - **Setup completion accepts only a card that Stripe saved.** The webhook retrieves the SetupIntent with its payment method expanded and requires `status: 'succeeded'` and a `card`. Anything else fails the event before any write, with a logged error; nothing is attached or recorded.
 - **The hosted journey checks the Session Stripe recorded**, and replays Stripe's actual completion event through the signed webhook route, so both checks run against real Stripe.
@@ -52,12 +52,12 @@ Update stanzas moved out of the [Bug Reports register](./index.md), newest first
 
 This entry was written before this increment's own checks ran; its local full gate runs on its head before it is pushed, and the next entry records its merge and release.
 
-**Earlier** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](../_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
+**Earlier** — 2026-10-03: BUG-310 is decided, under the owner's 2026-10-03 delegation ([BUG-310](./bug-310-trial-add-card-offers-non-card-methods.md#decision--2026-10-03)).
 - **Decision.** The trial add-card Checkout offers cards only (`payment_method_types: ['card']` on the setup Session). Its completion attaches nothing unless the SetupIntent succeeded with a card. Paid Checkout keeps dynamic payment methods: its copy says "payment method", and access waits on the subscription's status.
 - **Next.** The fix, test-first, is the next code PR.
-- **BUG-317's deferred question**, whether the withdrawn label suits held or dropped questions, is decided by [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md). Its row leaves the debt register's Deferred table.
+- **BUG-317's deferred question**, whether the withdrawn label suits held or dropped questions, is decided by [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). Its row leaves the debt register's Deferred table.
 
-**Earlier** — 2026-10-02 (forward pointer: the Latest stanza above records that ADR-022 decides BUG-317's deferred question): **BUG-314–317 are resolved and archived** ([BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md#verified-closeout--2026-10-02-utc)).
+**Earlier** — 2026-10-02 (forward pointer: the Latest stanza above records that ADR-022 decides BUG-317's deferred question): **BUG-314–317 are resolved and archived** ([BUG-314](./bug-314-content-hold-withdrawal-deadlock.md#verified-closeout--2026-10-02-utc)).
 - **Shipped.** Content writers serialize on the release pointer, and content and session locks are ordered (BUG-314, P2). Placeholder archival is limited to the ten committed fixtures (BUG-315, P2). Disposable test databases clean up after failures (BUG-316, P3). Release guidance matches the code (BUG-317, P3).
 - **History.** BUG-314 and BUG-315 were in shipped code; no production incident is established.
 - **Fixes.** #1302 (**5388054704** on `69733bb9`; merged `93f8104a`), with follow-ups in #1305, #1309 and #1311.
@@ -65,9 +65,9 @@ This entry was written before this increment's own checks ran; its local full ga
 - **Released** through promotion #1312 (`7dcb9331`): main CI **36991253547**, production assigned **09:55:02.296Z**, trees `d1e952d0`.
 - **Deferred.** BUG-317's open owner question, whether the withdrawn label suits held or dropped questions, moves to the debt register's Deferred table. This register has none.
 
-**Earlier** — 2026-10-02: promotion #1308's review on BUG-314–317 ([BUG-314](../_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md#promotion-review-follow-up--2026-10-02)). BUG-314's attempt-lock case now fails on the real `40P01` deadlock, not a timeout, if activation's lock regresses to `FOR UPDATE`; its probe count is corrected. BUG-314–317 gain the template's archive-convention callout and `Resolved` and `Verification receipts` fields (`—` until their promotion receipts exist). All four stay open until then.
+**Earlier** — 2026-10-02: promotion #1308's review on BUG-314–317 ([BUG-314](./bug-314-content-hold-withdrawal-deadlock.md#promotion-review-follow-up--2026-10-02)). BUG-314's attempt-lock case now fails on the real `40P01` deadlock, not a timeout, if activation's lock regresses to `FOR UPDATE`; its probe count is corrected. BUG-314–317 gain the template's archive-convention callout and `Resolved` and `Verification receipts` fields (`—` until their promotion receipts exist). All four stay open until then.
 
-**Earlier** — 2026-10-02: BUG-316's combined migration/cleanup-error test had a race, now fixed ([BUG-316](../_archive/bugs/bug-316-content-release-test-resource-cleanup.md)). After #1302 merged, the case failed CI run `36965916479` with `permission denied for database`. It transferred its database's ownership before drizzle's migrator had created its schema. Reproduced in 12 of 24 concurrent local runs; the test now waits until the injected migration is running, and 24 concurrent runs then passed. BUG-314–317 stay open until their promotion receipts exist.
+**Earlier** — 2026-10-02: BUG-316's combined migration/cleanup-error test had a race, now fixed ([BUG-316](./bug-316-content-release-test-resource-cleanup.md)). After #1302 merged, the case failed CI run `36965916479` with `permission denied for database`. It transferred its database's ownership before drizzle's migrator had created its schema. Reproduced in 12 of 24 concurrent local runs; the test now waits until the injected migration is running, and 24 concurrent runs then passed. BUG-314–317 stay open until their promotion receipts exist.
 
 **Earlier** — 2026-10-02: BUG-314–317 filed from a disposable-Postgres audit:
 content writer deadlock/concurrent staging, authored placeholder-prefix archival,

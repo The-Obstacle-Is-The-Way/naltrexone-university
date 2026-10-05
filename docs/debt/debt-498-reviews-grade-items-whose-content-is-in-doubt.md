@@ -2,7 +2,8 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows and filters, remains ([Progress](#progress))
+**Status:** In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, remains
+**Status detail** (moved from the status line 2026-10-05, when status lines became one line): In Progress — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows and filters, remains ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
