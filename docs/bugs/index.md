@@ -1,16 +1,18 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-05 — BUG-318 resolved and archived.
+**Last Updated:** 2026-10-05 — BUG-319 to BUG-322 filed (payment-flow hunt); BUG-319's fix shipped with them.
 
-**Latest** — 2026-10-05: BUG-318 is resolved and archived ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
-- **Fixed in production** through promotion #1374: Sentry 11 with explicit restrictive settings and URL scrubbers.
-- **Owner checks done** with the owner's Sentry CLI login, on the owner's instruction; reads printed names and counts only.
-  - Sentry retains 1,005 events. None holds the cron secret, a body, an IP or a Clerk refresh or handshake token.
-  - Two production error issues held expired Clerk session tokens or Clerk's encrypted request header. The owner deleted both, and the API confirmed (404).
-  - No secret rotation or session revocation is needed.
-  - Clerk's names were added to Sentry's server-side sensitive fields.
-- **What remains.** There are no active bugs.
+**Latest** — 2026-10-05: BUG-319 to BUG-322 filed from the owner-requested hunt of the payment flows.
+- **Why the hunt.** The owner recalled dismissing a report that a production bug stopped a user from subscribing. Four independent read-only reviewers covered the whole path, against Stripe's, Clerk's and Next.js's current documentation: pricing, checkout and trial, webhooks and entitlement, and account lifecycle. Every claim was then verified in code before filing.
+- **BUG-319 (P2).** Subscribe and add-card fail for a page loaded before a deploy that changes the server-action key, and "Try again" can't recover. Filed as P1 for "every deploy"; corrected before the fix shipped, since Next caches its generated key for 14 days and Vercel restores that cache. Fixed in this increment: a stable key (owner-approved, created), "Try again" using `retry`, a guarded reload on a stale action, and error pages that report browser-side errors to Sentry. It stays Open for its production checks.
+- **BUG-320 (P2).** A new user's first pricing visit can fail on a concurrent user-row insert. Its error was seen in production twice; the race is the leading, unproven explanation, and may be the origin of the report.
+- **BUG-321 (P2).** Stripe's "already subscribed" refusal is discarded, causing a silent loop. In the worst case a payer has no access and no portal.
+- **BUG-322 (P2).** A checkout error is hidden behind the reopened consent dialog.
+- **Also filed.** DEBT-501 (billing operations at scale) and DEBT-502 (rare account states, action hardening).
+- **Not found.** No path charges an ordinary buyer without granting access. No CSP or middleware blocks Clerk or Stripe.
+- **Next.** BUG-320 to BUG-322, before DEBT-498 increment 2b.
+- **What remains Active.** BUG-319, BUG-320, BUG-321 and BUG-322.
 
 **Update history:** earlier update stanzas, newest first, are kept by month: [2026-10](./register-history-2026-10.md), [2026-09](./register-history-2026-09.md), [2026-08](./register-history-2026-08.md), [2026-07](./register-history-2026-07.md).
 
@@ -33,7 +35,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-319
+**Next Bug ID:** BUG-323
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -461,7 +463,12 @@ Every one of these was confirmed against the other branch's actual live registry
 
 ## Active Bugs
 
-There are no active bugs.
+| ID | Title | Severity | Status | Summary |
+|----|-------|----------|--------|---------|
+| [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Open | Next.js salts server-action IDs with a build key, and the project set no stable `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` and has no Skew Protection (Hobby). After a deploy that changes the key (probably every 14 days, when Next's cached key expires, or on a build-cache miss), the pricing and add-card buttons on a page loaded earlier return 404 and show an error page whose "Try again" (`reset`) cannot recover. Fixed 2026-10-05: the key is set and required on Vercel builds, "Try again" uses `retry`, a stale action reloads once, and error pages report browser-side errors to Sentry. Open for the production checks in its record. |
+| [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) | A new user's first visit can fail when two requests create their row at once | P2 | Open | Sentry recorded the generic uniqueness `CONFLICT` from the user upsert twice in production (2 and 4 October), on the pricing render right after sign-up. By elimination it was the users email index. The leading explanation is two first-time upserts racing; the events do not show the second request, so it is not proven. Decided: retry the upsert once when the email's owner is the same Clerk user. |
+| [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | Open | When Stripe holds a subscription our database lacks, Subscribe returns to the same page with no message. If the database never learns of it, the payer has no access and no route to the portal. Decided: sync that customer's subscriptions from Stripe on the refusal, with a notice and portal link if the sync fails. |
+| [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md) | A checkout error is hidden behind the consent dialog that reopens | P2 | Open | A failed Checkout redirects with the plan, which reopens the dialog over the error banner and hides it from screen readers. Decided: show the error as an alert inside the dialog. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 

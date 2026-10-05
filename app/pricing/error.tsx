@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function PricingError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Pricing error"
       description="We couldn't load pricing right now. Please try again."
       links={[{ href: ROUTES.HOME, label: 'Back to home' }]}

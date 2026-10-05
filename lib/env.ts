@@ -35,6 +35,13 @@ function getClerkInstanceSlug(key: string): string | null {
   return normalized;
 }
 
+function isAesKeyBase64(raw: string): boolean {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(raw) || raw.length % 4 !== 0) {
+    return false;
+  }
+  return [16, 24, 32].includes(Buffer.from(raw, 'base64').length);
+}
+
 const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url(),
@@ -84,6 +91,15 @@ const envSchema = z.object({
 
   // Cron / Jobs
   CRON_SECRET: z.string().min(1).optional(),
+
+  // BUG-319: Next.js derives server-action IDs from this key. Without it Next
+  // generates one, which changes when its cached copy expires (14 days) or the
+  // build cache is missed; a page loaded before such a deploy can no longer
+  // call its actions (subscribe included). Next imports it as an AES-GCM key.
+  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: z
+    .string()
+    .refine(isAesKeyBase64, 'Must be a base64 AES key of 16, 24 or 32 bytes')
+    .optional(),
 });
 
 export type Env = Omit<
@@ -183,6 +199,15 @@ function validateEnv(): Env {
         throw new Error('Invalid environment variables');
       }
     }
+  }
+
+  // Preview builds are checked too: they are where a missing key would first
+  // show, before production.
+  const isVercelDeploy =
+    isProductionRuntime || process.env.VERCEL_ENV === 'preview';
+  if (isVercelDeploy && !parsed.data.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY) {
+    logInvalidEnv({ NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ['Required'] });
+    throw new Error('Invalid environment variables');
   }
 
   if (isProductionRuntime && skipClerk) {

@@ -2,6 +2,24 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-05 UTC: DEBT-499 closed with BUG-318, and DEBT-498 increment 2a released.
+- **DEBT-499 closed (Resolved)** ([DEBT-499](../_archive/debt/debt-499-sentry-major-widens-data-collection.md#progress)).
+  - Sentry 11 with explicit restrictive settings is in production through promotion #1374.
+  - Server traces still arrive, read through the owner's Sentry CLI login: 940 spans in the first hours after the release (140 from the app's wrapper), none with a cookie, `authorization`, body or Clerk request-data attribute.
+- **BUG-318 closed with it** ([BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md#results-2026-10-05)).
+  - Sentry retained no cron secret, body, IP or Clerk refresh token. Two issues holding expired Clerk session tokens were deleted by the owner.
+  - No rotation or revocation is needed.
+  - Server-side sensitive fields were added.
+- **Released since the last entry.** #1376 (DEBT-498 increment 2a: lists name a result no score counts "Not scored") went out through promotion #1377 (`9171234b`):
+  - main CI **37355353192** `test` passed **18:33:33Z**;
+  - production assigned **18:33:36.016Z**;
+  - trees `f31404a7`, healthy production.
+- **Next.** DEBT-498 increment 2b (History's rows, filters and sorts). Then Dependabot's group update (#1368). Then the two application errors the Sentry audit surfaced, which go through investigation first:
+  - a uniqueness conflict on `POST /pricing`;
+  - a React "resumable slots" render error.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-498 and DEBT-500.
+- **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md).
+
 **Earlier** — 2026-10-05 UTC: DEBT-498 increment 2a, and the Sentry fix released.
 - **DEBT-498 increment 2a: lists name a result no score counts "Not scored"** ([DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
   - The covered surfaces: the question navigator (post-exam and tutor), the Review & Submit list, the session breakdown, the question page's session navigator and the Dashboard's recent activity.

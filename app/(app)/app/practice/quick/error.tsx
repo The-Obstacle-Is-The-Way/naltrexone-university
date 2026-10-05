@@ -5,15 +5,15 @@ import { ROUTES } from '@/lib/routes';
 
 export default function QuickPracticeError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorBoundaryPage
       error={error}
-      reset={reset}
+      retry={retry}
       title="Quick Practice error"
       description="We couldn't load quick practice right now. Please try again."
       links={[{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }]}

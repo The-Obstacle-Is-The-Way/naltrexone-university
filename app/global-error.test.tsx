@@ -17,7 +17,7 @@ describe('app/global-error', () => {
     const error = new Error('boom');
     (error as Error & { digest?: string }).digest = 'digest_123';
     const html = renderToStaticMarkup(
-      <GlobalErrorPage error={error} reset={() => {}} />,
+      <GlobalErrorPage error={error} retry={() => {}} />,
     );
     const doc = parseHtml(html);
     const tryAgainButton = doc.querySelector('button');
