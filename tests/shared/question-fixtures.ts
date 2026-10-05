@@ -85,20 +85,20 @@ export async function insertQuestion(
       },
       { revisionId, updatedAt },
     );
+    // In the transaction: a failed link leaves no question behind.
+    if (input.tagIds && input.tagIds.length > 0) {
+      await tx.insert(schema.questionTags).values(
+        input.tagIds.map((tagId) => ({
+          questionId: inserted.id,
+          tagId,
+        })),
+      );
+    }
     return { question: inserted, appended: revision };
   });
 
   const correctChoiceId = choiceIdByLabel(appended, 'B');
   const incorrectChoiceId = choiceIdByLabel(appended, 'A');
-
-  if (input.tagIds && input.tagIds.length > 0) {
-    await db.insert(schema.questionTags).values(
-      input.tagIds.map((tagId) => ({
-        questionId: question.id,
-        tagId,
-      })),
-    );
-  }
 
   return {
     id: question.id,

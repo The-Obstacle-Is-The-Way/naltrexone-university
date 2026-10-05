@@ -6,10 +6,10 @@
 **Latest** — 2026-10-05 UTC: DEBT-496's spec. The notices a learner sees when content changed are proven on real pages from database state, each with a screenshot ([DEBT-496](./debt-496-content-change-notices-route-level-proof.md#progress)).
 - **What it proves.** As the E2E user, on dedicated questions that are deleted afterwards, it shows three notices:
   - a corrected key flagged on review;
-  - a question placed under review, named on review;
+  - a question placed under review, labelled in History and named on review;
   - a withdrawn bookmark named on Bookmarks, with no content.
 
-  Two targeted mutations each fail one case. The three screenshots were viewed: each notice renders in its documented card.
+  Three targeted mutations each fail one case. The four screenshots were viewed: each notice renders in its documented card.
 - **How.** The question fixtures moved to `tests/shared/question-fixtures.ts`, so the E2E lane writes them as the integration lane does.
 - **Released since the last entry.** #1362 (DEBT-496 filed, rollback floors, CodeRabbit skipping promotions) went out through promotion #1363 (`4074cf4a`), the first promotion CodeRabbit skipped:
   - main CI **37290963421** `test` passed **09:46:46Z**;
