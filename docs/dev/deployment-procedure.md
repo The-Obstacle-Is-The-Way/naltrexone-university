@@ -56,6 +56,18 @@ completed row, treat incompatibility as a cache miss, or return unvalidated
 JSON. This is a per-change release obligation, not a permanent versioned
 envelope or upcaster framework.
 
+**Removing a shape's replay support sets a rollback floor.** The rule above
+follows actual writers. Once a shape's last writer has been gone for a full TTL,
+its parser may be removed, but every deployment that wrote the shape stays a
+technically possible rollback target. Rolling production back below a floor
+puts that writer back in serving traffic. The release that rolls forward must
+then restore the shape's replay parser and fixtures, and keep them for one full
+TTL after the rollback ends. Check this list before any production rollback:
+
+| Floor | Shape no longer read | Deployments below it |
+|-------|----------------------|----------------------|
+| #1360 (2026-10-04) | End and finalize outputs without `totals.scored` (DEBT-493) | Any production deployment assigned before #1350's, at 2026-10-03 20:02:33Z |
+
 ```text
 1. Promotion PR (dev → main): CI (GitHub Actions)
    └─ pnpm typecheck
