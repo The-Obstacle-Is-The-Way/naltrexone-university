@@ -14,9 +14,11 @@
 
 Dependabot opened #1369 on 2026-10-05, bumping `@sentry/nextjs` from 10.75.1 to 11.0.0, and its CI passed. Sentry v11 replaces `sendDefaultPii` with `dataCollection`, and its migration guide warns that leaving `dataCollection` unset "collects the categories below **by default**".
 
-None of our `Sentry.init` calls sets either option, and no test pins what they send, so a green major could change what goes to a third party.
+*The two paragraphs below describe the state before the upgrade, which promotion #1374 released on 2026-10-05. Production now runs 11.0.0 with the explicit settings in [Progress](#progress).*
 
-Checking that showed the current version is no better. Production already sends credentials on server error events, which is filed as [BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md). This record covers the missing guard; BUG-318 covers the live exposure. One change fixes both.
+None of our `Sentry.init` calls set either option, and no test pinned what they sent, so a green major could change what goes to a third party.
+
+Checking that showed the version then in production was no better. It sent credentials on server error events, filed as [BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md). This record covers the missing guard; BUG-318 covers the live exposure. One change fixes both.
 
 ## Evidence
 

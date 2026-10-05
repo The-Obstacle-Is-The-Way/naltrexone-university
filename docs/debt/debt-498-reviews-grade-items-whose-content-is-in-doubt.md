@@ -129,6 +129,10 @@ The code:
   - Every case was red first.
   - Ten targeted mutations each fail a test: both branches of the rule, both use cases' flags, and each surface's wiring, the page navigator's badge included.
   - DEBT-496's spec now asserts the Dashboard row ("Not scored"), and its screenshot was viewed.
+- **Contrast, from CodeRabbit's review of #1376.**
+  - Both themes were computed from `app/globals.css`.
+  - In the product's dark theme, the new forms pass AA, and add no new pair: muted "Not scored" measures 5.04:1 on the Dashboard row and 5.60:1 on the breakdown, and the `secondary` navigator 14.57:1.
+  - In light mode, unfinished and switched off (DEBT-421), tinted rows' small metadata and result text falls below 4.5:1, which predates this record. The figures are recorded in Pattern Registry F-11 for when light mode is finished.
 - **Not done yet:** History's rows, and its Correct and Incorrect filters and sorts (increment 2b).
 
 ## Verification

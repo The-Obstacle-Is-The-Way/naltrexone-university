@@ -12,7 +12,9 @@
 
 ## Summary
 
-Production runs `@sentry/nextjs` 10.75.1 with `Sentry.init({ dsn, tracesSampleRate, environment })` (`instrumentation.ts`). With that configuration, every server error event Sentry captures carries the request's credentials. That includes our `onRequestError` (`Sentry.captureRequestError`) and any `captureException` during a request. It carries:
+*Historical, until promotion #1374 on 2026-10-05. Production now runs `@sentry/nextjs` 11.0.0 with explicit restrictive settings (Fix, below).*
+
+Production ran `@sentry/nextjs` 10.75.1 with `Sentry.init({ dsn, tracesSampleRate, environment })` (`instrumentation.ts`). With that configuration, every server error event Sentry captured carried the request's credentials. That includes our `onRequestError` (`Sentry.captureRequestError`) and any `captureException` during a request. It carries:
 - every cookie, among them Clerk's session (`__session`), refresh (`__refresh`) and handshake (`__clerk_handshake`) tokens;
 - every header except the IP ones, unscrubbed, among them the cron route's `authorization: Bearer <CRON_SECRET>` and the Stripe and Svix webhook signatures;
 - the request path with its query string, including Clerk's `__clerk_handshake` token;
