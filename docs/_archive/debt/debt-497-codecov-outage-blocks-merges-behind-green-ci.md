@@ -1,12 +1,12 @@
 # DEBT-497: A Codecov Outage Blocks Every Merge Behind Green CI
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is written and tested (2026-10-05); the record closes once it is in production ([Progress](#progress))
+**Status:** Resolved — 2026-10-05: the fix is on `main` ([Progress](#progress))
 **Priority:** P3
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-05
+**Verification receipts:** #1366 merged `1ddfa9e2` after exact-head approval 5414512381 on `b4e2393f`; promotion #1367 merged `e5fd3c37`: main CI 37312392478 `test` passed 13:03:26Z, with the upload step succeeding and the new report step skipped. The fix is in CI, scripts and docs, so no Vercel deployment carries it; Vercel created none for `e5fd3c37`.
 
 ---
 
@@ -57,9 +57,12 @@ Option 4 is not justified by one outage. It is revisited if a second outage bloc
 - **Records.** ADR-020 gains its 2026-10-05 amendment, and AGENTS.md (How to Check) the Codecov outage procedure.
 - **Evidence.** The documentation case and the workflow case were red first. Five targeted mutations of the path set, one per path kind, each fail a case.
 
+**Released, 2026-10-05.** Promotion #1367 put the fix on `main`. Its first `main` run, CI 37312392478, uploaded coverage and skipped "Report a failed Codecov upload", as the step is designed to. CodeRabbit's review of #1366 narrowed two claims: the Impact now names ADR-020's existing exemptions, and the green-job criterion below now says why it holds.
+
 ## Verification
 
 - [x] `merge-reviewed-pr.ts` excuses a missing `codecov/patch` for a change confined to the extended paths, and still refuses a failed status, or any change touching code.
 - [x] Both cases are proven by red-first unit cases.
 - [x] CI reports a failed Codecov upload as a job warning and summary, without failing the job. The upload has no condition of its own, so it is skipped only when an earlier step failed, and then the job is already red. A green job with no warning therefore had an accepted upload.
 - [x] AGENTS.md records the outage procedure.
+- [x] On `main` through promotion #1367 (receipts above).

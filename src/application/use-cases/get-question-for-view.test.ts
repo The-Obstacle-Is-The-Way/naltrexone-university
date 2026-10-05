@@ -160,6 +160,34 @@ describe('GetQuestionForViewUseCase', () => {
     },
   );
 
+  // DEBT-498: a corrected key leaves the answer out of every score whatever
+  // the question's state, so its review must say so to be shown ungraded.
+  it('says the key was corrected for an answered question no longer available', async () => {
+    const { current, answered } = revisions('archived');
+    const keyed = (question: Question, correctLabel: 'A' | 'B') => ({
+      ...question,
+      choices: (['A', 'B'] as const).map((label, index) =>
+        createChoice({
+          questionId: question.id,
+          label,
+          textMd: `Choice ${label}`,
+          isCorrect: label === correctLabel,
+          sortOrder: index + 1,
+        }),
+      ),
+    });
+
+    await expect(
+      view([keyed(current, 'A'), keyed(answered, 'B')], {
+        attempts: [answerOf(answered)],
+      })({}),
+    ).resolves.toMatchObject({
+      question: { availability: 'withdrawn' },
+      superseded: false,
+      answerKeyChanged: true,
+    });
+  });
+
   it('does not mark a review of the current revision as updated', async () => {
     const { current } = revisions('published');
 

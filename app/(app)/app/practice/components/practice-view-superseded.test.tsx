@@ -25,7 +25,13 @@ function renderItem(input: {
   mode: 'tutor' | 'exam';
   superseded: boolean;
   answerKeyChanged?: boolean;
+  answeredCorrectly?: boolean;
 }): Document {
+  const question = {
+    ...createQuestionProps(),
+    superseded: input.superseded,
+    answerKeyChanged: input.answerKeyChanged ?? false,
+  };
   const props: PracticeViewProps = {
     sessionInfo: {
       sessionId: fixtureSession1Id,
@@ -36,14 +42,20 @@ function renderItem(input: {
       isMarkedForReview: false,
     },
     loadState: { status: 'ready' },
-    question: {
-      ...createQuestionProps(),
-      superseded: input.superseded,
-      answerKeyChanged: input.answerKeyChanged ?? false,
-    },
+    question,
     selectedChoiceId: null,
-    isAnswered: false,
-    submitResult: null,
+    isAnswered: input.answeredCorrectly !== undefined,
+    submitResult:
+      input.answeredCorrectly === undefined
+        ? null
+        : {
+            attemptId: crypto.randomUUID(),
+            isCorrect: input.answeredCorrectly,
+            correctChoiceId: question.choices[0]?.id ?? null,
+            explanationMd: 'Because of the earlier key.',
+            referenceMd: null,
+            choiceExplanations: [],
+          },
     isPending: false,
     bookmarkStatus: 'idle',
     isBookmarked: false,
@@ -108,5 +120,33 @@ describe('PracticeView: a session item updated since the session began', () => {
     );
     expect(notice?.getAttribute('data-tone')).toBe('caution');
     expect(sessionNotice(doc)).toBeNull();
+  });
+
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): the answer won't be scored, so
+  // its feedback is not graded against the earlier key.
+  it('shows a tutor answer graded on a corrected key as not scored, without the earlier explanation', () => {
+    const doc = renderItem({
+      mode: 'tutor',
+      superseded: true,
+      answerKeyChanged: true,
+      answeredCorrectly: true,
+    });
+
+    expect(doc.querySelector('[data-testid="verdict-pill"]')?.textContent).toBe(
+      'Not scored',
+    );
+    expect(doc.body.textContent).not.toContain('Because of the earlier key.');
+  });
+
+  it('keeps the grade of a tutor answer on an unchanged key', () => {
+    const doc = renderItem({
+      mode: 'tutor',
+      superseded: true,
+      answeredCorrectly: true,
+    });
+
+    expect(doc.querySelector('[data-testid="verdict-pill"]')?.textContent).toBe(
+      'Correct',
+    );
   });
 });

@@ -6,6 +6,7 @@ import {
   countsIfEndedNow,
   countsTowardScore,
   hadFairChanceAtEnd,
+  ungradedReason,
 } from './scoring';
 
 // ADR-022 Amendment (DEBT-494): an item counts when the learner had a fair
@@ -22,6 +23,27 @@ describe('contentInDoubt', () => {
   ] as const)('a question %s is in doubt: %s', (availability, inDoubt) => {
     expect(contentInDoubt(availability)).toBe(inDoubt);
   });
+});
+
+// ADR-022 Amendment 2026-10-05 (DEBT-498): what the score leaves out, the
+// page does not grade. A corrected key names its own reason, whatever the
+// question's state, because its explanation argues for the old answer.
+describe('ungradedReason', () => {
+  it.each([
+    ['available', false, null],
+    ['retired', false, null],
+    ['withdrawn', false, 'in_doubt'],
+    ['under_review', false, 'in_doubt'],
+    ['available', true, 'key_corrected'],
+    ['retired', true, 'key_corrected'],
+    ['withdrawn', true, 'key_corrected'],
+    ['under_review', true, 'key_corrected'],
+  ] as const)(
+    'an answer on a question %s, key corrected: %s, is ungraded as %s',
+    (availability, keyCorrected, reason) => {
+      expect(ungradedReason({ availability, keyCorrected })).toBe(reason);
+    },
+  );
 });
 
 describe('countsTowardScore', () => {

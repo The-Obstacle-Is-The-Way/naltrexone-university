@@ -2,6 +2,24 @@
 
 Update stanzas moved out of the [Technical Debt Register](./index.md), newest first, as each read when it left the index. A forward pointer such as "the Latest stanza above" refers to the register's Latest stanza when that update was written.
 
+**Earlier** — 2026-10-05 UTC: DEBT-497's fix, DEBT-498 filed, and DEBT-496 closed.
+- **DEBT-497: a Codecov outage no longer hides behind green CI, and no longer blocks unmeasured changes** ([DEBT-497](../_archive/debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md#progress)).
+  - The merge guard excuses a missing `codecov/patch` for changes confined to documentation and repository-tool configuration, as ADR-020 already did for manifests and workflows. A posted failure, or any measured path, still blocks.
+  - CI reports a failed upload as a job warning and summary, without failing the job.
+  - AGENTS.md records the outage procedure.
+  - Five targeted mutations of the path set each fail a case.
+- **DEBT-498 filed (P1): reviews grade items whose content is in doubt** ([DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md)).
+  - DEBT-496's screenshots showed a key-corrected review that puts the caution above the superseded key in green, a green "Correct" and the superseded explanation. Withdrawn and under-review reviews, the post-exam navigator, History rows and tutor feedback grade such items the same way, though no score counts them.
+  - Decided: what the score leaves out, the page does not grade. Each of those surfaces reads "Not scored", without success or destructive styling. A key-corrected review hides the superseded explanation and labels the old key "Answer before the correction".
+- **Released since the last entry.** #1364 (DEBT-496's spec) went out through promotion #1365 (`25c4748b`), which CodeRabbit skipped:
+  - main CI **37303140406** `test` passed **11:41:23Z**;
+  - production assigned **11:41:25.615Z**;
+  - trees `6b94e39a`, healthy production.
+- **DEBT-496 closed (Resolved).** Its spec is in production through promotion #1365 (receipts below), and the record is archived ([DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md#progress)).
+- **Next.** DEBT-498's implementation, in this order: the ADR-022 amendment and the Pattern Registry entries, then the code. It is decided, not yet built.
+- **What remains Active.** DEBT-414, DEBT-465, DEBT-497 and DEBT-498.
+- **Open decisions for the owner.** Unchanged from the [previous entry](./register-history-2026-10.md): when to bootstrap production content releases (DEBT-483), configuring the Resend webhook, and Massachusetts' second annual notice (DEBT-414 F19a).
+
 **Earlier** — 2026-10-05 UTC: DEBT-496's spec. The notices a learner sees when content changed are proven on real pages from database state, each with a screenshot ([DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md#progress)).
 - **What it proves.** As the E2E user, on dedicated questions that are deleted afterwards, it shows three notices:
   - a corrected key flagged on review;

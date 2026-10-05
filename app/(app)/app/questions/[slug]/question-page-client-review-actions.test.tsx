@@ -427,6 +427,53 @@ describe('QuestionView', () => {
     );
   });
 
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): what the score leaves out, the
+  // page does not grade.
+  function verdictOf(doc: Document) {
+    return doc.querySelector('[data-testid="verdict-pill"]')?.textContent;
+  }
+
+  function keyedChoiceText(doc: Document) {
+    return Array.from(doc.querySelectorAll('label')).find((label) =>
+      label.textContent?.includes('Choice A'),
+    )?.textContent;
+  }
+
+  it('shows an answer whose key was corrected as not scored, with the old key named and no explanation', () => {
+    const doc = renderReviewedQuestion({
+      availability: 'available',
+      superseded: true,
+      answerKeyChanged: true,
+    });
+
+    expect(verdictOf(doc)).toBe('Not scored');
+    expect(keyedChoiceText(doc)).toContain('Answer before the correction');
+    expect(
+      Array.from(doc.querySelectorAll('p')).some(
+        (element) => element.textContent === 'Explanation',
+      ),
+    ).toBe(false);
+  });
+
+  it.each(['withdrawn', 'under_review'] as const)(
+    'shows an answer on a question %s as not scored, with its key named',
+    (availability) => {
+      const doc = renderReviewedQuestion({ availability, superseded: false });
+
+      expect(verdictOf(doc)).toBe('Not scored');
+      expect(keyedChoiceText(doc)).toContain('Keyed answer');
+    },
+  );
+
+  it('keeps the grade of an answer on a retired question', () => {
+    const doc = renderReviewedQuestion({
+      availability: 'retired',
+      superseded: false,
+    });
+
+    expect(verdictOf(doc)).toBe('Incorrect');
+  });
+
   it('shows no update notice for the current version', () => {
     const doc = renderReviewedQuestion({
       availability: 'available',

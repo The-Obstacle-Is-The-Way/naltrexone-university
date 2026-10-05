@@ -270,6 +270,52 @@ describe('ChoiceButton', () => {
     expect(choiceTextClassTokens.has('text-muted-foreground')).toBe(false);
   });
 
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): an answer no score counts is
+  // shown ungraded: no verdict color, no dimming, and its role in words.
+  function renderUngraded(selected: boolean, note: string | null) {
+    const html = renderToStaticMarkup(
+      <ChoiceButton
+        name="choices"
+        label="A"
+        textMd="Choice A"
+        selected={selected}
+        disabled
+        correctness="ungraded"
+        note={note}
+        onClick={() => {}}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const wrapperLabel = doc
+      .querySelector('input[type="radio"]')
+      ?.closest('label');
+    return {
+      doc,
+      classTokens: getClassTokens(wrapperLabel?.getAttribute('class') ?? ''),
+    };
+  }
+
+  it('shows an ungraded choice at full strength, with no verdict color', () => {
+    const { classTokens } = renderUngraded(false, null);
+
+    expect(classTokens.has('opacity-50')).toBe(false);
+    for (const token of classTokens) {
+      expect(token).not.toMatch(/success|destructive/);
+    }
+  });
+
+  it('names an ungraded choice by its note', () => {
+    const { doc } = renderUngraded(false, 'Keyed answer');
+
+    expect(doc.body.textContent).toContain('Keyed answer');
+  });
+
+  it('keeps the neutral selected treatment on the ungraded choice the learner picked', () => {
+    const { classTokens } = renderUngraded(true, 'Your answer');
+
+    expect(classTokens.has('border-ring')).toBe(true);
+  });
+
   it('uses text-success (not text-success-foreground) for correct state', () => {
     const html = renderToStaticMarkup(
       <ChoiceButton

@@ -45,6 +45,7 @@ export function QuestionSurfaceBody({
       }))}
       selectedChoiceId={selectedChoiceId}
       correctChoiceId={correctChoiceId}
+      ungraded={feedback?.ungraded ?? null}
       disabled={disabled}
       canSubmitSelectedChoice={canSubmitSelectedChoice}
       onSelectChoice={onSelectChoice}

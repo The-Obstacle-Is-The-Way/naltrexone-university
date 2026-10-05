@@ -18,6 +18,22 @@ export function contentInDoubt(
 }
 
 /**
+ * Why an answered item is shown ungraded (ADR-022 Amendment 2026-10-05,
+ * DEBT-498): what the score leaves out, the page does not grade. A corrected
+ * key is named apart from other doubt, because the explanation written for
+ * the old key argues for the superseded answer.
+ */
+export type UngradedReason = 'key_corrected' | 'in_doubt';
+
+export function ungradedReason(input: {
+  availability: QuestionAvailability;
+  keyCorrected: boolean;
+}): UngradedReason | null {
+  if (input.keyCorrected) return 'key_corrected';
+  return contentInDoubt(input.availability) ? 'in_doubt' : null;
+}
+
+/**
  * ADR-022 Amendment (DEBT-494): an item counts toward a score when the
  * learner had a fair chance at it, recorded when its session ends, and its
  * content is not now in doubt. A fair chance never recorded (an attempt
