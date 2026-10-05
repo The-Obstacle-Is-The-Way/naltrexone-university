@@ -3,13 +3,14 @@ import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
-import { onlyRow } from '@/scripts/seed/only-row';
-import {
-  appendQuestionRevision,
-  choiceIdByLabel,
-} from '@/scripts/seed/question-revision-writer';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
+import {
+  addCurrentRevision,
+  insertQuestion,
+} from '@/tests/shared/question-fixtures';
+
+export { addCurrentRevision };
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -188,141 +189,12 @@ export async function answeredRevisionIdOf(
   return choice.revisionId;
 }
 
-// ADR-021 phase 2b: a second revision with its own choices, made current, as
-// the seed appends it. Choice C is correct and D is not; the stem and
-// difficulty change too.
-export async function addCurrentRevision(
-  db: DrizzleDb,
-  questionId: string,
-): Promise<{
-  revisionId: string;
-  correctChoiceId: string;
-  incorrectChoiceId: string;
-}> {
-  const appended = await appendQuestionRevision(db, questionId, {
-    stemMd: '# Revised stem',
-    explanationMd: '# Revised explanation',
-    referenceMd: 'Revised reference',
-    difficulty: 'hard',
-    choices: [
-      {
-        label: 'C',
-        textMd: 'Revised C',
-        isCorrect: true,
-        explanationMd: null,
-        sortOrder: 3,
-      },
-      {
-        label: 'D',
-        textMd: 'Revised D',
-        isCorrect: false,
-        explanationMd: null,
-        sortOrder: 4,
-      },
-    ],
-  });
-  return {
-    revisionId: appended.revisionId,
-    correctChoiceId: choiceIdByLabel(appended, 'C'),
-    incorrectChoiceId: choiceIdByLabel(appended, 'D'),
-  };
-}
-
 export async function createQuestion(
   db: DrizzleDb,
   cleanup: CleanupState,
-  input: {
-    id?: string;
-    slug: string;
-    status: schema.QuestionStatus;
-    difficulty: schema.QuestionDifficulty;
-    createdAt?: Date;
-    tagIds?: readonly string[];
-  },
-): Promise<{
-  id: string;
-  /** Its first revision, current until a test adds another. */
-  revisionId: string;
-  slug: string;
-  correctChoiceId: string;
-  incorrectChoiceId: string;
-}> {
-  const createdAt = input.createdAt ?? new Date();
-  const updatedAt = createdAt;
-
-  // ADR-021 phase 3: the question points at its first revision, written in
-  // the same transaction; the deferred key is checked at commit.
-  const revisionId = randomUUID();
-  const questionValues: typeof schema.questions.$inferInsert = {
-    slug: input.slug,
-    status: input.status,
-    currentRevisionId: revisionId,
-    createdAt,
-    updatedAt,
-  };
-
-  if (input.id) {
-    questionValues.id = input.id;
-  }
-
-  const { question, appended } = await db.transaction(async (tx) => {
-    const inserted = onlyRow(
-      await tx
-        .insert(schema.questions)
-        .values(questionValues)
-        .returning({ id: schema.questions.id }),
-      'Failed to insert question',
-    );
-    // ADR-021: revision 1, written as the seed writes it.
-    const revision = await appendQuestionRevision(
-      tx,
-      inserted.id,
-      {
-        stemMd: '# Stem',
-        explanationMd: '# Explanation',
-        referenceMd: null,
-        difficulty: input.difficulty,
-        choices: [
-          {
-            label: 'A',
-            textMd: 'Choice A',
-            isCorrect: false,
-            explanationMd: null,
-            sortOrder: 1,
-          },
-          {
-            label: 'B',
-            textMd: 'Choice B',
-            isCorrect: true,
-            explanationMd: null,
-            sortOrder: 2,
-          },
-        ],
-      },
-      { revisionId, updatedAt },
-    );
-    return { question: inserted, appended: revision };
-  });
-
+  input: Parameters<typeof insertQuestion>[1],
+): ReturnType<typeof insertQuestion> {
+  const question = await insertQuestion(db, input);
   cleanup.questionIds.push(question.id);
-
-  const correctChoiceId = choiceIdByLabel(appended, 'B');
-  const incorrectChoiceId = choiceIdByLabel(appended, 'A');
-
-  if (input.tagIds && input.tagIds.length > 0) {
-    await db.insert(schema.questionTags).values(
-      input.tagIds.map((tagId) => ({
-        questionId: question.id,
-        tagId,
-      })),
-    );
-  }
-
-  return {
-    id: question.id,
-    revisionId,
-    slug: input.slug,
-    correctChoiceId,
-    incorrectChoiceId,
-  };
+  return question;
 }
