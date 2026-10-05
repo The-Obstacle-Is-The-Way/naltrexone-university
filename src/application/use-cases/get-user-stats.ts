@@ -74,6 +74,11 @@ export type UserStatsOutput = {
         stemMd: string;
         difficulty: QuestionDifficulty;
         isCorrect: boolean;
+        /**
+         * The answer was graded on a key corrected since (ADR-022 Decision
+         * 4): no score counts it, so the row reads "Not scored" (DEBT-498).
+         */
+        answerKeyChanged: boolean;
       }
     | {
         isAvailable: false;
@@ -177,6 +182,8 @@ export class GetUserStatsUseCase {
               stemMd: question.stemMd,
               difficulty: question.difficulty,
               isCorrect: attempt.isCorrect,
+              answerKeyChanged:
+                !isOmittedOutcome(attempt.outcome) && question.answerKeyChanged,
             },
       unavailable,
       logger: this.logger,

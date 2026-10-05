@@ -152,6 +152,7 @@ describe('app/(app)/app/dashboard', () => {
               stemMd: 'Stem for correct',
               difficulty: 'easy',
               isCorrect: true,
+              answerKeyChanged: false,
             },
             {
               isAvailable: true,
@@ -165,6 +166,7 @@ describe('app/(app)/app/dashboard', () => {
               stemMd: 'Stem for incorrect',
               difficulty: 'hard',
               isCorrect: false,
+              answerKeyChanged: false,
             },
           ],
         })}
@@ -439,6 +441,7 @@ describe('app/(app)/app/dashboard', () => {
               stemMd: 'Answered stem',
               difficulty: 'hard',
               isCorrect: false,
+              answerKeyChanged: false,
             },
           ],
         })}
@@ -602,6 +605,7 @@ describe('app/(app)/app/dashboard', () => {
               stemMd: 'Stem for correct',
               difficulty: 'easy',
               isCorrect: true,
+              answerKeyChanged: false,
             },
             {
               isAvailable: false,

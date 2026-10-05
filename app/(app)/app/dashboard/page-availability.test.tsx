@@ -57,6 +57,7 @@ describe('Dashboard recent activity: question availability', () => {
       slug: 'q-held',
       stemMd: 'Answered stem',
       difficulty: 'hard',
+      answerKeyChanged: false,
     });
 
     expect(doc.body.textContent).toContain(label);
