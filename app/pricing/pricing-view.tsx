@@ -27,6 +27,11 @@ export type PricingViewProps = {
    * `manageBillingAction`, it leaves the plans in place.
    */
   bannerManageBillingAction?: (formData: FormData) => Promise<void>;
+  /**
+   * BUG-322: a failed checkout's message, shown inside the dialog that
+   * reopens for the selected plan, since that dialog covers the banner.
+   */
+  dialogErrorMessage?: string | undefined;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
 };
@@ -50,6 +55,7 @@ export function PricingView({
   manageBillingAction,
   manageBillingReason = 'manage_billing',
   bannerManageBillingAction,
+  dialogErrorMessage,
   subscribeMonthlyAction,
   subscribeAnnualAction,
 }: PricingViewProps) {
@@ -182,6 +188,9 @@ export function PricingView({
                     plan="monthly"
                     hasTrial={showTrialCtas}
                     initiallyOpen={isMonthlySelected}
+                    errorMessage={
+                      isMonthlySelected ? dialogErrorMessage : undefined
+                    }
                     subscribeAction={subscribeMonthlyAction}
                   />
                 ) : (
@@ -229,6 +238,9 @@ export function PricingView({
                     plan="annual"
                     hasTrial={showTrialCtas}
                     initiallyOpen={isAnnualSelected}
+                    errorMessage={
+                      isAnnualSelected ? dialogErrorMessage : undefined
+                    }
                     subscribeAction={subscribeAnnualAction}
                   />
                 ) : (

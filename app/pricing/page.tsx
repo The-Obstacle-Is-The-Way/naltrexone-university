@@ -194,11 +194,13 @@ const STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER: PricingBanner = {
 };
 
 // Shared by both render paths so banner/CTA decisions cannot drift apart.
-function buildPricingPresentation(
+export function buildPricingPresentation(
   pricingData: PricingData,
   resolvedSearchParams: PricingSearchParams,
 ): {
   banner: PricingBanner | null;
+  /** BUG-322: only a failed checkout's message reaches the plan's dialog. */
+  dialogErrorMessage: string | undefined;
   manageBillingReason: PricingBillingRecoveryReason | null;
   offerManageBillingInBanner: boolean;
   selectedPlan: PricingPlan | null;
@@ -233,6 +235,10 @@ function buildPricingPresentation(
     banner: stripeHoldsUnrecordedSubscription
       ? STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER
       : banner,
+    dialogErrorMessage:
+      normalizeSearchParam(resolvedSearchParams.checkout) === 'error'
+        ? banner?.message
+        : undefined,
     manageBillingReason,
     offerManageBillingInBanner: stripeHoldsUnrecordedSubscription,
     selectedPlan,
@@ -254,6 +260,7 @@ export async function DeferredPricingView({
   ]);
   const {
     banner,
+    dialogErrorMessage,
     manageBillingReason,
     offerManageBillingInBanner,
     selectedPlan,
@@ -265,6 +272,7 @@ export async function DeferredPricingView({
       isAuthenticated={pricingData.isAuthenticated}
       isEntitled={pricingData.isEntitled}
       banner={banner}
+      dialogErrorMessage={dialogErrorMessage}
       selectedPlan={selectedPlan}
       showTrialCtas={showTrialCtas}
       {...(manageBillingReason
@@ -299,6 +307,7 @@ async function renderInjectedPricingPage(input: {
   ]);
   const {
     banner,
+    dialogErrorMessage,
     manageBillingReason,
     offerManageBillingInBanner,
     selectedPlan,
@@ -313,6 +322,7 @@ async function renderInjectedPricingPage(input: {
         isAuthenticated={pricingData.isAuthenticated}
         isEntitled={pricingData.isEntitled}
         banner={banner}
+        dialogErrorMessage={dialogErrorMessage}
         selectedPlan={selectedPlan}
         showTrialCtas={showTrialCtas}
         {...(manageBillingReason

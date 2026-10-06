@@ -596,3 +596,38 @@ describe('pricing after a checkout Stripe refused as already subscribed', () => 
     expect(html).not.toContain('Manage billing');
   });
 });
+
+// BUG-322: only a failed checkout's message reaches the reopened plan dialog;
+// another banner, an info one or the portal's error, stays on the page.
+describe('the message the reopened plan dialog shows', () => {
+  let buildPricingPresentation: PricingPageModule['buildPricingPresentation'];
+  beforeAll(async () => {
+    ({ buildPricingPresentation } = await import('@/app/pricing/page'));
+  });
+
+  const signedInWithoutSubscription = {
+    isAuthenticated: true,
+    isEntitled: false,
+    reason: 'subscription_required' as const,
+    subscriptionStatus: null,
+  };
+
+  it('is the checkout error after a failed checkout', () => {
+    expect(
+      buildPricingPresentation(signedInWithoutSubscription, {
+        checkout: 'error',
+        plan: 'monthly',
+      }).dialogErrorMessage,
+    ).toBe('Checkout failed. Please try again.');
+  });
+
+  it.each([
+    ['the info banner a new user sees', { plan: 'monthly' }],
+    ["the billing portal's error", { portal: 'error', plan: 'annual' }],
+  ])('is nothing for %s', (_case, searchParams) => {
+    expect(
+      buildPricingPresentation(signedInWithoutSubscription, searchParams)
+        .dialogErrorMessage,
+    ).toBeUndefined();
+  });
+});
