@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, vi } from 'vitest';
 import * as reportClientError from '@/lib/report-client-error';
 import type { QuestionOrigin } from '@/lib/routes';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as questionController from '@/src/adapters/controllers/question-controller';
-import * as questionFeedbackController from '@/src/adapters/controllers/question-feedback-controller';
-import * as questionViewController from '@/src/adapters/controllers/question-view-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as questionActions from '@/src/adapters/controllers/question-actions';
+import * as questionFeedbackActions from '@/src/adapters/controllers/question-feedback-actions';
+import * as questionViewActions from '@/src/adapters/controllers/question-view-actions';
 import type { GetBookmarkStatusOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
@@ -23,35 +23,33 @@ export {
   QUESTION_PAGE_QUESTION_2_ID,
 } from './question-page-model.browser.fixtures';
 
-vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/question-feedback-controller', {
+vi.mock('@/src/adapters/controllers/question-view-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/question-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/question-feedback-actions', {
   spy: true,
 });
 vi.mock('@/lib/report-client-error', { spy: true });
 
 export const getQuestionBySlug = vi.mocked(
-  questionViewController.getQuestionBySlug,
+  questionViewActions.getQuestionBySlug,
 );
 export const getPreviousAttempt = vi.mocked(
-  questionViewController.getPreviousAttempt,
+  questionViewActions.getPreviousAttempt,
 );
-export const submitAnswer = vi.mocked(questionController.submitAnswer);
+export const submitAnswer = vi.mocked(questionActions.submitAnswer);
 export const getPracticeSessionReview = vi.mocked(
-  practiceController.getPracticeSessionReview,
+  practiceActions.getPracticeSessionReview,
 );
-export const getBookmarkStatus = vi.mocked(
-  bookmarkController.getBookmarkStatus,
-);
-export const setBookmark = vi.mocked(bookmarkController.setBookmark);
+export const getBookmarkStatus = vi.mocked(bookmarkActions.getBookmarkStatus);
+export const setBookmark = vi.mocked(bookmarkActions.setBookmark);
 export const getQuestionRating = vi.mocked(
-  questionFeedbackController.getQuestionRating,
+  questionFeedbackActions.getQuestionRating,
 );
-export const rateQuestion = vi.mocked(questionFeedbackController.rateQuestion);
+export const rateQuestion = vi.mocked(questionFeedbackActions.rateQuestion);
 export const submitQuestionReport = vi.mocked(
-  questionFeedbackController.submitQuestionReport,
+  questionFeedbackActions.submitQuestionReport,
 );
 export const reportClientErrorSpy = vi.mocked(
   reportClientError.reportClientError,

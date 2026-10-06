@@ -2,9 +2,9 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ROUTES } from '@/lib/routes';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as questionController from '@/src/adapters/controllers/question-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as questionActions from '@/src/adapters/controllers/question-actions';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { ok } from '@/tests/test-helpers/ok';
 import QuickPracticeClient from './quick-practice-client';
@@ -19,17 +19,17 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => useSearchParamsMock(),
 }));
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/question-actions', { spy: true });
 
 const getBookmarkQuestionIds = vi.mocked(
-  bookmarkController.getBookmarkQuestionIds,
+  bookmarkActions.getBookmarkQuestionIds,
 );
-const getNextQuestion = vi.mocked(questionController.getNextQuestion);
-const submitAnswer = vi.mocked(questionController.submitAnswer);
+const getNextQuestion = vi.mocked(questionActions.getNextQuestion);
+const submitAnswer = vi.mocked(questionActions.submitAnswer);
 const countAvailableQuestions = vi.mocked(
-  practiceController.countAvailableQuestions,
+  practiceActions.countAvailableQuestions,
 );
 
 const fixtureQuestionId = crypto.randomUUID();

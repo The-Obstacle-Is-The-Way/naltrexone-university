@@ -348,7 +348,7 @@ entry point.
 **Pattern:**
 ```typescript
 // src/adapters/controllers/tag-controller.ts
-'use server';
+import 'server-only';
 
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 
@@ -370,7 +370,7 @@ const getDeps = createDepsResolver<TagControllerDeps, TagControllerContainer>(
 **Allowed composition locations:**
 - `lib/container.ts` and `lib/container/**` — composition root and focused factory modules
 - `lib/controller-helpers.ts` — controller/container resolution helpers
-- `src/adapters/controllers/*.ts` — Server Actions (Controllers) resolving deps
+- `src/adapters/controllers/*-controller.ts` — Controllers resolving deps. They are `server-only`, not `'use server'`: a client chooses every argument of a server action, so only the thin `*-actions.ts` wrappers, which take only their input, are actions (BUG-324, 2026-10-06)
 - `app/api/**/route.ts` — Route Handlers calling factories
 - `tests/**/*.test.ts` — Test files (with fakes or injected deps)
 

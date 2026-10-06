@@ -4,8 +4,7 @@
 **Last Updated:** 2026-10-06
 
 **Now** — 2026-10-06.
-- **Verifying.** BUG-319: its fix is in production since 2026-10-05; the checks are stable server-action IDs across two production builds and the Sentry signals in its record, due 2026-10-19. BUG-323: the request limits in production, due 2026-10-19.
-- **In progress.** BUG-324 (P1): production ignores caller-supplied action dependencies, and form actions refuse input that is not form data; next, controller actions take only their input.
+- **Verifying.** BUG-319: its fix is in production since 2026-10-05; the checks are stable server-action IDs across two production builds and the Sentry signals in its record, due 2026-10-19. BUG-323: the request limits in production, due 2026-10-19. BUG-324: the production deploy passes the action-manifest check and practice, bookmarks and checkout work, due 2026-10-13.
 - **Next.** BUG-320 to BUG-322. Remaining security findings are filed with their fixes.
 - **Owner decisions pending.** None for bugs.
 
@@ -17,7 +16,7 @@
 |----|-------|----------|--------|
 | [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Verifying — stable action IDs across two production builds and the Sentry checks; due 2026-10-19 |
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — the limits reach production and answer 429 when exceeded; due 2026-10-19 |
-| [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) | Exported server actions accept caller-supplied dependencies | P1 | In Progress — production ignores the seams and form actions reject other input; next, controller actions take only their input |
+| [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) | Exported server actions accept caller-supplied dependencies | P1 | Verifying — the production deploy passes the action-manifest check and practice, bookmarks and checkout work; due 2026-10-13 |
 | [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) | A new user's first visit can fail when two requests create their row at once | P2 | Open — decided: retry the upsert once when the email's owner is the same Clerk user |
 | [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | Open — decided: sync the customer's subscriptions; else a notice and portal link |
 | [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md) | A checkout error is hidden behind the consent dialog that reopens | P2 | Open — decided: show the error inside the dialog |

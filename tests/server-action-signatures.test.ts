@@ -13,9 +13,15 @@ describe('server action signatures', () => {
 
     expect(files.filter((file) => file.startsWith('app/')).length).toBe(5);
     expect(
-      files.filter((file) => file.startsWith('src/adapters/controllers/'))
-        .length,
-    ).toBeGreaterThanOrEqual(8);
+      files.filter((file) => file.startsWith('src/adapters/controllers/')),
+    ).toEqual([
+      'src/adapters/controllers/bookmark-actions.ts',
+      'src/adapters/controllers/practice-actions.ts',
+      'src/adapters/controllers/question-actions.ts',
+      'src/adapters/controllers/question-feedback-actions.ts',
+      'src/adapters/controllers/question-view-actions.ts',
+      'src/adapters/controllers/tag-actions.ts',
+    ]);
   });
 
   it('every export takes at most its input, and no function declares its own action', () => {

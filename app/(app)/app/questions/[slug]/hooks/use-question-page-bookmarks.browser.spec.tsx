@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -13,11 +13,11 @@ import {
 } from './question-page-model.browser.fixtures';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getBookmarkStatus = vi.mocked(bookmarkController.getBookmarkStatus);
-const setBookmark = vi.mocked(bookmarkController.setBookmark);
+const getBookmarkStatus = vi.mocked(bookmarkActions.getBookmarkStatus);
+const setBookmark = vi.mocked(bookmarkActions.setBookmark);
 
 installReportClientErrorMocks(reportClientError);
 

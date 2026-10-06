@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   discardPracticeSession,
   endPracticeSession,
-  type GetIncompletePracticeSessionOutput,
   getIncompletePracticeSession,
-} from '@/src/adapters/controllers/practice-controller';
+} from '@/src/adapters/controllers/practice-actions';
+import type { GetIncompletePracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   type AbandonRequestToken,
   abandonIncompleteSession,

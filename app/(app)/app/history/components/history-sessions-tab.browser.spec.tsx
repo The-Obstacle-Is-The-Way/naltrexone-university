@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
 import { createSessionHistoryRow } from '@/src/application/test-helpers/view-rows';
 import { ok } from '@/tests/test-helpers/ok';
 import { HistorySessionsTab } from './history-sessions-tab';
@@ -18,10 +18,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 
 const getPracticeSessionReview = vi.mocked(
-  practiceController.getPracticeSessionReview,
+  practiceActions.getPracticeSessionReview,
 );
 
 function getBreakdownToggle(sessionId: string) {
