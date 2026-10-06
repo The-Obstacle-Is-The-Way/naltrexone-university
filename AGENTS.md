@@ -620,17 +620,35 @@ review of the same content.
 
 This is a **blocking requirement**. Violating this rule wastes human time fixing preventable issues.
 
+**Owner decision, 2026-10-06:** CodeRabbit reviews only what can merge.
+Its included allowance is metered per developer identity, and every agent
+session shares one. The hourly rate steps down with the past seven days' use,
+to one review an hour at 60 or more
+([rate limits](https://docs.coderabbit.ai/management/rate-limits)). Each push
+used to buy an automatic incremental review, though only the final head's
+approval counts: in the week before this decision, single PRs used 7 to 18
+reviews. `.coderabbit.yaml` therefore sets `auto_incremental_review: false`.
+CodeRabbit reviews by itself only when a PR opens or a draft is marked ready,
+and otherwise when asked with `@coderabbitai full review`. Open PRs as drafts
+until the full gate passes, fix findings in one push, and sync with `dev`
+before requesting a review. A later sync costs no review, because the merge
+command carries an unchanged approval (item 7).
+
 ### The Rule
 
 For feature PRs into `dev`:
 
-1. **Create the PR** via `gh pr create`
-2. **WAIT** for CodeRabbit to comment (1-2 minutes)
+1. **Create the PR as a draft** via `gh pr create --draft`, and pass the full
+   gate on a branch synced with `dev`. CodeRabbit skips drafts.
+2. **Mark it ready** with `gh pr ready`, which starts CodeRabbit's review, and
+   **WAIT** for CodeRabbit to comment (1-2 minutes, or until the next review
+   its allowance admits)
 3. **Read ALL CodeRabbit feedback** — do not skim or skip
 4. **Adjudicate every finding** before merging. A reviewer finding is a claim,
    not an order:
-   - Valid, in-scope issue that weakens a required property → fix it, push, and
-     wait for re-review.
+   - Valid, in-scope issue that weakens a required property → fix it, push the
+     fixes together, and request re-review with `@coderabbitai full review`;
+     CodeRabbit does not review a push by itself.
    - Technically possible but outside the documented threat model or invariant
      → reject it with a concrete receipt showing why no property is weakened.
    - False positive → reply with the disproving receipt for the record.
