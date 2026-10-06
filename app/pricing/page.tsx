@@ -183,12 +183,14 @@ function normalizeBillingRecoveryReason(
     : null;
 }
 
-// BUG-321: Stripe refused a checkout because it holds a subscription, and the
-// sync could not record it, so the database still shows none.
+// BUG-321: the checkout was refused because Stripe holds a subscription the
+// database still lacks. It states only what happened, since a stale URL can
+// show it too. With no local row the portal opens in its trial profile, which
+// lets a person view or cancel but not update a card.
 const STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER: PricingBanner = {
   tone: 'info',
   message:
-    "Stripe shows a subscription on your account that we couldn't load. Manage it in the billing portal, or try again in a minute.",
+    'Stripe reported an existing subscription on your account when you tried to check out. View or cancel it in the billing portal, or contact support@addictionboards.com.',
 };
 
 // Shared by both render paths so banner/CTA decisions cannot drift apart.

@@ -201,15 +201,22 @@ export class CreateCheckoutSessionUseCase {
         subscriptions: this.subscriptions,
       });
     } catch (error) {
-      // The refusal still stands, and the page offers the billing portal.
-      this.logger.error(
-        {
-          userId,
-          errorCode: isApplicationError(error) ? error.code : null,
-          errorName: error instanceof Error ? error.name : 'unknown',
-        },
-        'Could not record the subscription Stripe holds for a refused checkout',
-      );
+      // The refusal still stands, and the page offers the billing portal. The
+      // message is the app's own, so each failure can be told apart without
+      // logging provider data.
+      try {
+        this.logger.error(
+          {
+            userId,
+            errorCode: isApplicationError(error) ? error.code : null,
+            errorMessage: isApplicationError(error) ? error.message : null,
+            errorName: error instanceof Error ? error.name : 'unknown',
+          },
+          'Could not record the subscription Stripe holds for a refused checkout',
+        );
+      } catch {
+        // Logging must not change the checkout's answer.
+      }
     }
   }
 }

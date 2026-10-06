@@ -530,7 +530,7 @@ describe('app/pricing', () => {
 // has just updated; the parameter can only add a notice.
 describe('pricing after a checkout Stripe refused as already subscribed', () => {
   const NOTICE =
-    'Stripe shows a subscription on your account that we couldn&#x27;t load. Manage it in the billing portal, or try again in a minute.';
+    'Stripe reported an existing subscription on your account when you tried to check out. View or cancel it in the billing portal, or contact support@addictionboards.com.';
 
   async function renderSignedIn(entitlement: CheckEntitlementOutput) {
     const element = await PricingPage({

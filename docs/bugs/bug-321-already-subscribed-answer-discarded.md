@@ -82,10 +82,16 @@ Option 2, because it repairs the cause: the database learns of the subscription 
    - A signed-out visitor sees nothing.
 6. **Docs.** ADR-014 gains a dated amendment, and the subscription write-lock comment names this writer. The upsert takes the lock in its own transaction.
 
+**2026-10-06, the independent review's findings** (same pull request). It found no P0 to P2 issue; the fixes are below.
+- **The failure log names the app's reason,** its own error message, so each failure can be explained. Logging cannot change the refusal.
+- **The notice states only what happened.** "Stripe reported an existing subscription on your account when you tried to check out." A stale URL can show it, and the sync can also succeed for a subscription whose period has ended.
+- **It now says "view or cancel" and names support.** With no local row the billing portal opens in its trial profile, which does not let a person update a card.
+- **The new Stripe read records its worst-case cost.** A refusal that carries an idempotency key is tested.
+
 ## Verification
 
 - [x] An `ALREADY_SUBSCRIBED` refusal from Stripe with no local row syncs the subscription, and the page then shows the user as subscribed. This is covered by the use case, sync and page tests, red first, with the fake Stripe gateway.
-- [x] A sync that fails still shows a message and a portal link: the notice and its Manage billing button.
+- [x] A sync that fails still shows a message and a portal link: the notice and its Manage billing button. The portal lets the person view or cancel; the notice names support for a card update.
 - [x] The old test is kept as BUG-275's guard, because the new flow uses its own parameter, and new tests cover both outcomes.
 - [x] BUG-275's stale-link case still shows the database's state.
 - [ ] In production: any `Could not record the subscription Stripe holds for a refused checkout` error in two weeks is explained, or there is none.

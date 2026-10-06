@@ -110,10 +110,62 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
 
     await expect(subscriptions.findByUserId('user-1')).resolves.toBeNull();
     expect(logger.errorCalls).toEqual([
-      expect.objectContaining({
+      {
         msg: 'Could not record the subscription Stripe holds for a refused checkout',
-      }),
+        context: {
+          userId: 'user-1',
+          errorCode: null,
+          errorMessage: null,
+          errorName: 'Error',
+        },
+      },
     ]);
+  });
+
+  // The log names which of the app's own failures it was, so each one can be
+  // explained; the message is app-written and holds no provider data.
+  it("logs the app's reason when the sync refuses what Stripe listed", async () => {
+    const { logger, useCase } = await refusedCheckout({
+      blockingCustomerSubscriptions: [{ ...held, userId: 'user-2' }],
+    });
+
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toBe(
+      stripeRefusal,
+    );
+    expect(logger.errorCalls[0]?.context).toEqual({
+      userId: 'user-1',
+      errorCode: 'CONFLICT',
+      errorMessage:
+        "A subscription on this customer is not the signed-in user's",
+      errorName: 'ApplicationError',
+    });
+  });
+
+  it('still refuses when even the failure cannot be logged', async () => {
+    const { logger, useCase } = await refusedCheckout({
+      blockingCustomerSubscriptionsError: new Error('stripe down'),
+    });
+    logger.error = () => {
+      throw new Error('logger down');
+    };
+
+    await expect(useCase.execute(defaultCheckoutInput)).rejects.toBe(
+      stripeRefusal,
+    );
+  });
+
+  it('syncs a refused checkout that carries an idempotency key', async () => {
+    const { subscriptions, useCase } = await refusedCheckout();
+
+    await expect(
+      useCase.execute({
+        ...defaultCheckoutInput,
+        idempotencyKey: '0b9a3f9e-5d55-4bd5-9a52-4d3d0e6f8a11',
+      }),
+    ).rejects.toBe(stripeRefusal);
+    await expect(subscriptions.findByUserId('user-1')).resolves.toMatchObject({
+      status: 'active',
+    });
   });
 
   it('does not sync for any other checkout failure', async () => {

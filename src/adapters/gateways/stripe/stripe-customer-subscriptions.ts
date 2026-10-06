@@ -17,9 +17,15 @@ const SYNC_SOURCE = {
 } as const;
 
 /**
- * BUG-321: the customer's subscriptions that make Stripe refuse a new
- * checkout, each retrieved afresh and normalized, so our database can record
- * them. Reads only: nothing is cancelled or changed.
+ * BUG-321: the customer's subscriptions that make our checkout refuse a new
+ * one, each retrieved afresh and normalized, so our database can record them.
+ * Reads only: nothing is cancelled or changed.
+ *
+ * WHY sequential and bounded: a customer usually holds one blocking
+ * subscription, so a refused click costs one list and one retrieve. The list
+ * caps at SUBSCRIPTION_LIST_LIMIT, and the sync retries at most three version
+ * conflicts, so the worst case is 3 x (1 + 10) calls, each with the shared
+ * transient retry. Refused clicks are rate limited to 10 a minute.
  */
 export async function listStripeBlockingCustomerSubscriptions(input: {
   stripe: StripeClient;
