@@ -124,6 +124,8 @@ So the vulnerable functions are not merely unexecuted — they are not on any im
 
 `stream-json` via jayson and an additional `js-yaml` path via react-native/jest tooling enter the lockfile because `@clerk/ui` hard-depends on the Solana wallet-adapter stack, which in turn drags in `react-native@0.84.1`, `babel-jest`, `@solana/web3.js`, and `jayson`. `js-yaml` also enters through `gray-matter` (§D), independently of Clerk. With no Web3 strategy configured in application code, the unused Solana stack adds attack surface and lockfile mass. Worth a future check of whether Clerk offers an adapter-free build or a peer/optional arrangement; it must **not** be attacked with stub-package overrides, which would silently break Clerk's sign-in bundle if a Web3 strategy were ever enabled.
 
+*Corrected 2026-10-06: with the owner's approval, [DEBT-504](../../debt/debt-504-dependabot-alert-triage-2026-10.md) marked the adapters' `react-native` peer optional, so pnpm no longer installs React Native or its Jest tooling. The Solana adapters, `jayson` and `stream-json` stay installed, unchanged.*
+
 ## Remediation (single repo-owned PR to `dev`)
 
 1. `pnpm-workspace.yaml`: `fast-uri: 3.1.5` → `3.1.7`; `js-yaml: 3.15.1` → `3.15.2`. Comments rewritten to carry the advisory ids, publish dates, and the 3.1.8 follow-up. No `minimumReleaseAgeExclude` block is introduced.

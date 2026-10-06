@@ -317,6 +317,43 @@ Workflow for any future trust-policy exception:
 5. Name the exception in the PR body and remove it when the upstream chain
    no longer needs it.
 
+## Required peers a web build never imports
+
+pnpm installs every missing non-optional peer dependency by itself
+(`autoInstallPeers`), and an optional peer is never installed that way. A
+package that declares a peer it imports only from an entry point this app
+never resolves, such as a React Native `index.native.js`, therefore pulls
+that peer's whole tree into the install graph for nothing.
+
+The fix is to mark that peer optional for the declaring package through
+`packageExtensions`, which pnpm supports for `peerDependenciesMeta`. It
+removes or stubs no package and changes no code the app loads. A host that
+does use the peer still supplies it.
+
+```yaml
+packageExtensions:
+  '<declaring-package>':
+    peerDependenciesMeta:
+      <peer>:
+        optional: true
+```
+
+Before adding one:
+
+1. Find every file in the declaring package that imports the peer, and show
+   that each is reached only through an export condition or file extension
+   that Next.js and Vitest never select.
+2. Build the base commit and the branch, and compare what each deployment
+   traces (`.next/**/*.nft.json`) and bundles. Neither may contain the peer.
+3. Add the peer to `NEVER_INSTALLED` in
+   `tests/dependency-graph-policy.test.ts`, so a later update that declares
+   it again fails before the tree returns.
+
+The current entries are the three Solana mobile-wallet packages under
+`@clerk/ui` that declare `react-native`
+([DEBT-504](../debt/debt-504-dependabot-alert-triage-2026-10.md)). Remove an
+entry when upstream marks the peer optional itself.
+
 ## Audit hygiene under pnpm 11
 
 pnpm 11 reports and filters audit advisories by GHSA identifier. If this
