@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — after promotion, a green `main` run publishes no Playwright artifact; deleting the existing artifacts needs the owner's approval; due 2026-10-13
+**Status:** Verifying — after promotion, a green `main` run publishes no Playwright report, and reports uploaded before then are deleted; due 2026-10-13
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06 with its fix
 **Resolved:** —
@@ -70,7 +70,7 @@ Options 1 (revised), 2 (revised), 4 and 5.
   - A sign-in that finishes after its deadline never saves its state. If it finishes after the sign-out has checked for a session, that session is not signed out, and stays live until Clerk expires it.
   - The `setup` and `cleanup` projects also bound page waits and navigations at 15 seconds, so a hung wait fails with its own error.
   - Known limit: an attempt stopped from outside, such as a cancelled CI job, cannot sign out, and its session stays live until Clerk expires it. With nothing published, that session's token does not leave the runner.
-- **Option 5 deletes the existing artifacts.** That is a bulk delete of public artifacts, so it needs the owner's approval, as BUG-307's did. There are 980: 951 CI reports from 2026-09-14 and 29 hosted-checkout reports from 2026-09-07. The failure-output artifacts are clean and stay.
+- **Option 5 deletes the existing artifacts.** That is a bulk delete of public artifacts, so it needed the owner's approval, as BUG-307's did; the owner gave it on 2026-10-06. Every artifact named `playwright-report` or `stripe-hosted-checkout-report` was deleted. The failure-output artifacts are clean and stay, as do the mutation reports. Until this fix reaches `main`, runs there and the daily hosted smoke still upload reports, so a second deletion follows the promotion.
 
 Option 3 (redacting at the source) is what bringing the report back would need. It depends on Playwright's report internals, and nothing needs the report in CI.
 
@@ -90,8 +90,8 @@ Option 3 (redacting at the source) is what bringing the report back would need. 
 - [x] E2E console redaction removes the same shapes, including in a nested URL (`tests/e2e/helpers/e2e-log-redaction.test.ts`).
 - [x] Setup signs out the session of a failed attempt, including after either deadline passes, and never saves the state of a late sign-in; global setup reserves both deadlines once preparation ends (`tests/e2e/helpers/clerk-auth.test.ts`, `tests/e2e/helpers/clerk-session-deadlines.test.ts`, `playwright.config.test.ts`).
 - [x] BUG-307's archived closure has a forward pointer here; its scan was blind to embedded data.
-- [ ] After promotion, a green `main` run publishes no Playwright artifact.
-- [ ] The existing report artifacts are deleted (owner-approved), with the count recorded.
+- [x] The existing report artifacts are deleted, with the owner's approval of 2026-10-06: 984 deleted (955 CI, 29 hosted-checkout), none failed, none left.
+- [ ] After promotion, a green `main` run publishes no Playwright report, and the reports uploaded between the deletion and the promotion are deleted, with the count recorded.
 
 ## Related
 

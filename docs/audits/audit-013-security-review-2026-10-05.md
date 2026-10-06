@@ -28,7 +28,7 @@ The owner asked for a security review of recent work. They had lost track of a l
 | [BUG-325](../bugs/bug-325-malformed-requests-throw-and-write-oversized-logs.md) | Input handling, logging | P3 | Malformed requests made our code throw, or write the caller's text at error level. This is the owner's lead | Fixed in production; Verifying |
 | [BUG-326](../_archive/bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md) | Privacy, support | P3 | Error pages sent people, payers included, to the public GitHub issue tracker | Resolved; in production |
 | [BUG-327](../bugs/bug-327-dependabot-branches-build-with-preview-secrets.md) | Supply chain | P3 | Vercel built Dependabot branches with Preview secrets, against the owner's 2026-09-19 boundary | Fixed in production; Verifying |
-| [BUG-328](../bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md) | CI artifacts | P3 | Every public Playwright report carried Clerk development-instance tokens | Fixed, awaiting promotion; deleting the existing reports needs the owner |
+| [BUG-328](../bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md) | CI artifacts | P3 | Every public Playwright report carried Clerk development-instance tokens | Fixed, awaiting promotion; existing reports deleted |
 | [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md#findings-from-audit-013-2026-10-05) F21 | Renewal evidence | P4 | An early bounce report can be lost | Decided; not yet built |
 | [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md#findings-from-audit-013-2026-10-05) F22 | Renewal evidence | P4 | A trial cancelled in the portal is still offered "Add a card" | Decided; not yet built |
 
