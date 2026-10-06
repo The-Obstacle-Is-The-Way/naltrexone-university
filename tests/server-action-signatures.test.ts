@@ -1,33 +1,24 @@
-import { globSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import {
+  findServerActionModules,
+  scanServerActionFiles,
+} from '@/tests/server-action-source-scan';
 
-// A client can call an exported server action with any arguments it likes.
-// So an app-level action takes only its input, and a test injects its
-// dependencies through the logic module the action calls.
-const SERVER_ACTION_MODULES = globSync('app/**/*.ts')
-  .filter((file) => !/\.(test|spec)\.ts$/.test(file))
-  .filter((file) => /^\s*['"]use server['"]/.test(readFileSync(file, 'utf8')));
+// BUG-324: a client can call an exported server action with any arguments it
+// likes. So every export of a 'use server' module takes only its input, and a
+// test injects dependencies through the logic module the action calls.
+describe('server action signatures', () => {
+  it('finds the server action modules in app and the controllers', () => {
+    const files = findServerActionModules().map(({ file }) => file);
 
-describe('app-level server actions', () => {
-  it('finds the server action modules', () => {
-    expect(SERVER_ACTION_MODULES.length).toBeGreaterThanOrEqual(5);
+    expect(files.filter((file) => file.startsWith('app/')).length).toBe(5);
+    expect(
+      files.filter((file) => file.startsWith('src/adapters/controllers/'))
+        .length,
+    ).toBeGreaterThanOrEqual(8);
   });
 
-  it.each(SERVER_ACTION_MODULES)(
-    'every export of %s takes at most one parameter',
-    async (file) => {
-      const module: Record<string, unknown> = await import(path.resolve(file));
-      const exported = Object.entries(module).filter(
-        ([, value]) => typeof value === 'function',
-      );
-
-      expect(exported.length).toBeGreaterThan(0);
-      for (const [name, action] of exported)
-        expect({ name, length: (action as () => unknown).length }).toEqual({
-          name,
-          length: expect.toSatisfy((length: number) => length <= 1),
-        });
-    },
-  );
+  it('every export takes at most its input, and no function declares its own action', () => {
+    expect(scanServerActionFiles().flatMap(({ issues }) => issues)).toEqual([]);
+  });
 });
