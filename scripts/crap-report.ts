@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import ts from '@typescript/typescript6';
 import fg from 'fast-glob';
 import {
   type CoverageMap,
@@ -8,7 +9,6 @@ import {
   createCoverageMap,
   type FileCoverageData,
 } from 'istanbul-lib-coverage';
-import ts from 'typescript';
 
 export type CoverageLane = 'merged' | 'unit' | 'browser' | 'integration';
 

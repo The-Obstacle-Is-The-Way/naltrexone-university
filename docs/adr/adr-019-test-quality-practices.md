@@ -51,6 +51,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 - Observational posture is binding (above); suppressions require stated reasons; per-module ratchets, not global targets.
 - Mutation CI is a separate weekly workflow, never in the PR path initially; incremental mode bounds local cost.
 - `@stryker-mutator/typescript-checker` is explicitly deferred — it would peer-resolve the repo's `typescript` alias (`@typescript/typescript6`, the DEBT-460 dual-compiler seam).
+  *Corrected 2026-10-05: [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) (issue #813) removed the alias. The checker's peer would now resolve canonical `typescript`, TypeScript 7, which ships no compiler API, so the deferral stands for that reason instead.*
 - QA procedures declare execution modes honestly (toggle interactions are Playwright-or-human per DEBT-323) so agent runs can't silently skip steps.
 
 ## Compliance

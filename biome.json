@@ -40,7 +40,8 @@
           "options": {
             "paths": {
               "@sentry/nextjs": "Use the typed server-tracing boundary instead of importing the SDK directly.",
-              "next/font/google": "Builds must not fetch fonts: add the files to app/fonts and declare them in app/layout-fonts.ts."
+              "next/font/google": "Builds must not fetch fonts: add the files to app/fonts and declare them in app/layout-fonts.ts.",
+              "typescript": "Canonical typescript is TypeScript 7 and ships no compiler API; import the classic API from @typescript/typescript6 (DEBT-460)."
             }
           }
         }
