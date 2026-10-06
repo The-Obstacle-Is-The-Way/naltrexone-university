@@ -1,16 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import nextConfig from './next.config';
-import packageJson from './package.json';
 
 describe('next.config', () => {
-  it('keeps Next build on the TypeScript API while the DEBT-460 compiler alias is present', () => {
-    expect(packageJson.dependencies['@typescript/native']).toMatch(
-      /^npm:typescript@\^?7\./,
-    );
-    expect(packageJson.dependencies.typescript).toMatch(
-      /^npm:@typescript\/typescript6@\^?6\./,
-    );
-    expect(nextConfig.experimental?.useTypeScriptCli).toBe(false);
+  // Next 16.3 type checks builds through the canonical `typescript` package's
+  // CLI by default. With TypeScript 7 under its real name that CLI exists, so
+  // no opt-out may return, and type errors must still fail the build.
+  it('type checks builds through the default TypeScript CLI with no bypass', () => {
+    expect(nextConfig.experimental?.useTypeScriptCli).toBeUndefined();
     expect(nextConfig.typescript?.ignoreBuildErrors).not.toBe(true);
   });
 

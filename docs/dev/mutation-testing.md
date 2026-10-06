@@ -14,7 +14,8 @@ Coverage says a line was *executed*; mutation tests whether selected behavior ch
 
 - A fresh 2026-08-13 install resolved StrykerJS core and Vitest runner 9.6.1. The runner peer-accepts `vitest >= 2.0.0`; the pilot ran against the repo's installed Vitest 4.1.x.
 - The runner **enforces per-test coverage analysis internally** (`coverageAnalysis` is ignored) and by default asks Vitest for tests *related* to each mutated file (`vitest.related: true`). Related selection follows the import graph and can include far more than the colocated `foo.test.ts`. The explicit `plugins` entry below is required in this pnpm layout; wildcard auto-discovery did not load the runner.
-- **Skip `@stryker-mutator/typescript-checker` for now.** Its `typescript >= 3.6` peer resolves in this repo to the npm alias `@typescript/typescript6` (the TS6 preview build — see DEBT-460's dual-compiler seam). Revisit the checker only after the TS6/TS7 seam collapses.
+- **Skip `@stryker-mutator/typescript-checker` for now.** Its `typescript >= 3.6` peer resolves canonical `typescript`, which is TypeScript 7 and ships no compiler API (DEBT-460, issue #813). Revisit the checker when TypeScript 7 ships a stable compiler API.
+- **Stryker core needs TypeScript 6.** Its sandbox tsconfig preprocessor runs `import('typescript')` and calls the classic compiler API, without declaring a dependency. `packageExtensions` in `pnpm-workspace.yaml` gives `@stryker-mutator/core` the real `typescript@6` package, and `tests/typescript-compiler-topology.test.ts` fails if that route breaks. Without it, a run stops at once with `ts.parseConfigFileTextToJson is not a function`.
 - The runner documents **Vitest Browser Mode as unsupported**, although a local 9.6.1 smoke run completed; our integration lane is serial against a real shared Postgres. This pilot stays on the unit lane — see §2.
 
 ## 2. Scope policy — mutate only what the unit lane pins
