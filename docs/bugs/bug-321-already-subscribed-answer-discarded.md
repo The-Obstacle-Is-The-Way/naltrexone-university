@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — no unexplained failed sync on a refused checkout in production logs for two weeks; due 2026-10-20
+**Status:** Verifying — owner captures one refused-checkout outcome and contemporaneous logs; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -12,13 +12,15 @@
 
 ## Summary
 
-When Stripe already holds a subscription that our database does not, a signed-in user who presses "Start free trial" or "Subscribe" lands back on the same pricing page with no message. Stripe has refused a second Checkout, the page has ignored that answer, and the user can press again indefinitely.
+When Stripe already holds a subscription that our database does not, a signed-in user who presses "Start free trial" or "Subscribe" lands back on the same pricing page with no message. Our Stripe adapter has refused to create a second Checkout, the page has ignored that answer, and the user can press again indefinitely.
 
 If our database never learns of that subscription, the person is stuck. This happens when the success page's sync did not run and the webhook keeps failing. They may be paying, yet they have no access, the page still offers them a trial, and the only route to the billing portal (`/app/billing`) requires the access they lack.
 
 ## Evidence
 
-- **Stripe refuses.** The gateway sees a live subscription on the customer and throws `ALREADY_SUBSCRIBED` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:788-823`). That check has no period-end test, while our database check does (`src/application/use-cases/create-checkout-session.ts:117-127`).
+The page and test line references below describe the pre-fix source. The shipped flow is described under Progress; it was promoted through #1394 (`71964450`), assigned to production at 2026-10-06T08:37:25.065Z.
+
+- **The adapter refuses.** The gateway sees a live subscription on the customer and throws `ALREADY_SUBSCRIBED` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:788-823`). That check has no period-end test, while our database check does (`src/application/use-cases/create-checkout-session.ts:117-127`).
 - **The page ignores the refusal.** The action redirects to `/pricing?reason=manage_billing` (`app/pricing/subscribe-action.ts:42-44`). For signed-in users the page uses the database's reason and drops the URL's: `effectiveReason = pricingData.isAuthenticated ? (pricingData.reason ?? undefined) : (reason ?? undefined)` (`app/pricing/page.tsx:198-200`).
 - **A test locks this in.** `app/pricing/page-trial.test.tsx:198-226` asserts that a signed-in user with no local row and `?reason=manage_billing` sees the trial button and no "Manage billing". The behaviour came from BUG-275's fix (`cb58133a`), which rightly stopped stale return links from overriding the real state. But it also discards a fresh refusal from Stripe.
 - **When the database is behind Stripe:**
@@ -41,7 +43,7 @@ In the usual case, the page loops with no explanation for seconds or minutes. In
 Option 2, because it repairs the cause: the database learns of the subscription at the moment the user needs it. If the sync itself fails, Option 3's notice explains the state and offers the portal, so the user is never left without a message. BUG-275's protection against stale links stays.
 
 **Design (2026-10-06, from a read-only design review of the current code):**
-- **Only Stripe's refusal triggers it.** `CreateCheckoutSessionUseCase` catches the gateway's `ALREADY_SUBSCRIBED`, syncs, then rethrows the original error.
+- **Only the Stripe adapter's refusal triggers it.** `CreateCheckoutSessionUseCase` catches the gateway's `ALREADY_SUBSCRIBED`, syncs, then rethrows the original error.
   - The database's own refusal never reaches the gateway, so a subscriber who is already recorded triggers no sync.
   - Checkout errors are not cached under the idempotency key, so a retry runs the use case again.
 - **A new port method, `PaymentGateway.listBlockingCustomerSubscriptions`.** The gateway's refusal knows only a subscription's ID and status. And a webhook could write between that listing and our version read. So the sync fetches each subscription afresh, after reading the version.
@@ -94,7 +96,9 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 - [x] A sync that fails still shows a message and a portal link: the notice and its Manage billing button. The portal lets the person view or cancel; the notice names support for a card update.
 - [x] The old test is kept as BUG-275's guard, because the new flow uses its own parameter, and new tests cover both outcomes.
 - [x] BUG-275's stale-link case still shows the database's state.
-- [ ] In production: any `Could not record the subscription Stripe holds for a refused checkout` error in two weeks is explained, or there is none.
+- [ ] Owner, by 2026-10-20: capture one legitimate refused-checkout outcome and its Vercel logs within one hour. Record whether the local state recovers or the notice and portal fallback appear; explain any failed-sync line. Do not create a charge or change a subscription to manufacture the case. If no suitable request occurs, report “not observed” and retain Verifying; absence of retained logs is not success.
+
+*Corrected 2026-10-06: the two-week log check was not observable. The account API confirms Vercel Hobby, whose [runtime logs](https://vercel.com/docs/logs/runtime) retain one hour. `lib/logger.ts` writes pino to stdout; `instrumentation.ts` does not forward those lines to Sentry. The caught sync failure logs but is not thrown to `onRequestError`.*
 
 ## Related
 

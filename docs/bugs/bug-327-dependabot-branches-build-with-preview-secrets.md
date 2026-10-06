@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the next Dependabot PR gets no Vercel deployment and merges through the tooling; due 2026-10-20
+**Status:** Verifying — no deployment observed for #1404; a Dependabot merge through the tooling remains; due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -63,12 +63,15 @@ Option 1, plus the digest pin.
 - **Merging is unaffected.** `scripts/merge-reviewed-pr.ts` requires only the `test` check and Codecov's patch status, not a Vercel status, and the ruleset requires only `test`.
 - **`ci.yml`'s Postgres service** is pinned to the digest the hosted-checkout workflow already uses. `tests/ci-workflow.test.ts` now requires a digest for every service and job container, in every workflow.
 - **Docs.** `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
-- **Existing branches.** Vercel reads the setting from each branch's own commit. So the open Dependabot pull requests, created before this, keep deploying until Dependabot rebases them onto a `dev` that carries it.
+- **Existing branches.** Vercel reads the setting from each branch's own commit. So the open Dependabot pull requests, created before this, keep deploying until Dependabot rebases them onto a base that carries it (`dev` for routine updates, `main` for security updates).
 
 ## Verification
 
 - [x] A test, red first, pins the `vercel.json` exclusion for Dependabot branches.
-- [ ] The next Dependabot PR, created or rebased after this ships, gets no Vercel deployment (deployments API), and merges through the checked-in tooling.
+- [x] Observation 2026-10-06: security PR [#1404](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1404), targeting `main`, carries the exclusion on head `9ccfabe5`. GitHub's deployments API returns zero records for that SHA; its checks contain no Vercel deployment.
+- [ ] Owner/operator: a Dependabot PR with the exclusion merges through the checked-in tooling, due 2026-10-20. #1404 is still open and red; no merge proof is claimed.
+
+  Its [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37479614420) fails installation with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` for three versions: `@types/node@24.19.1`, `acorn@8.19.0` and `shell-quote@1.12.0`. The existing [security-patch playbook](../dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown) already covers waiting or a reviewed exact-version exception. No new debt is needed for a missing policy. Do not exempt unrelated lockfile churn merely to unblock the security bump.
 - [x] `ci.yml`'s Postgres image is pinned by digest, and the workflow test covers every workflow.
 - [x] `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
 

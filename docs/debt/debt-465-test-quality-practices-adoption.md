@@ -3,12 +3,14 @@
 **Status:** Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, which is done (2026-10-04); Part 4 re-scoped by the 2026-10-03 decision below and remains
 **Priority:** P2
 **Date:** 2026-08-13
-**Source:** [ADR-019](../adr/adr-019-test-quality-practices.md) (Proposed) + the 2026-08-13 audit of the test estate
+**Source:** [ADR-019](../adr/adr-019-test-quality-practices.md) (Accepted, amended 2026-10-03) + the 2026-08-13 audit of the test estate
 **Scope:** Execution of the four practices ADR-019 proposes to adopt. The runbooks are written and canonical; this item tracks the *work* — script, pilot, harness, and register activation. Owner-initiated waves; nothing here is a shortcut in shipped code.
 
 ---
 
 ## Description
+
+**2026-10-06 current position.** Parts 1–3 are complete as recorded below; Part 4 remains. The dated September audit and October 3 design assessment are historical. The October 4 mapping found five missing or misplaced proofs, so the October 3 claim that all candidate rules were already proven was too broad. The register closes those gaps; its title check proves test discovery, not the sufficiency of an assertion.
 
 **2026-09-21 audit forward pointer.** Part 1 is shipped: `package.json` exposes `quality:crap`, and the reporter requires all three Istanbul inputs. The top-25 table below is the **2026-08-22 baseline**, not a fresh measurement of today's tree. The opening 556-file census and “no ranked report” observation are likewise filing history. Part 2's pilot and second wave shipped on 2026-09-27 (below); widening to `src/domain/**` and the application layer remains. Parts 3–4 remain unimplemented: no acceptance directory exists, and QA-001/QA-002 both remain Draft without their required two complete evidenced runs. ADR-019 still requires a new ADR before a metric gates CI. The existing entitlement-loss E2E means that particular item in the older QA-gap inventory is no longer absent. [Current-tree audit and limits](./assets/active-audit-2026-09-21/verification.md).
 

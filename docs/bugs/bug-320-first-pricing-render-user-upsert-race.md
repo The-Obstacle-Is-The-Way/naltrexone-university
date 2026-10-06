@@ -69,7 +69,7 @@ Option 1, the smallest change that removes the failure without weakening identit
 - **Reproduced first.** `tests/integration/user-repository.integration.test.ts` runs six sessions that each upsert the same new user at once, for 20 rounds. Before the fix it failed with `ApplicationError: User could not be upserted due to a uniqueness constraint`, the production message.
 - **The fix.** `upsertByClerkId` (`src/adapters/repositories/drizzle-user-repository.ts`) catches a 23505 on `users_email_uq` and looks up the email's owner.
   - **The owner is the same Clerk user:** it retries the upsert once, and the retry takes the update path.
-  - **No row holds the email any more:** no retry, so a deleted user's row cannot come back; it maps to `CONFLICT` as before.
+  - **No row holds the email any more:** no retry in this branch; it maps to `CONFLICT` as before. This does not serialize deletion against the separate lookup and retry. DEBT-502 item 2 still owns that race.
   - **Another identity owns it:** it is still refused with `UserEmailOwnershipConflictError`, without a retry.
   - **A second failure:** it is mapped as before.
 - **Unit tests at the sanctioned boundary** (`drizzle-user-repository.test.ts`) pin each case:
@@ -85,6 +85,8 @@ Option 1, the smallest change that removes the failure without weakening identit
 - **The test-double contract register is re-adjudicated.** `FakeUserRepository`'s waiver stands, because the change is unique-index concurrency, which the waiver already excludes.
 
 ## Verification
+
+**Release evidence (2026-10-06).** #1391 merged as `9ee53ea9`; promotion #1392 merged as `0880c808`, an ancestor of the audited main. Vercel assigned it at 2026-10-06T07:00:58.475Z. The deleted Sentry events and the original red run cannot be reconstructed from the current issue list; they remain the original operator's historical receipts.
 
 - [x] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
 - [x] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
