@@ -26,7 +26,11 @@ export const PRICING_QUERY_PARAMS = {
 } as const;
 
 export type PricingPlan = 'monthly' | 'annual';
-export type PricingCheckoutStatus = 'cancel' | 'error' | 'rate_limited';
+export type PricingCheckoutStatus =
+  | 'already_subscribed'
+  | 'cancel'
+  | 'error'
+  | 'rate_limited';
 export type PricingPortalStatus = 'error';
 export type PricingRedirectReason =
   | 'manage_billing'

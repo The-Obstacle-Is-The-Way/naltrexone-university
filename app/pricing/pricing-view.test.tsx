@@ -40,6 +40,23 @@ describe('app/pricing/pricing-view', () => {
     expect(html).not.toContain('Manage billing');
   });
 
+  // BUG-321: a Manage billing button in the banner leaves the plans in place.
+  it('puts the banner Manage billing button beside the plans', () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={{ tone: 'info', message: 'Stripe shows a subscription.' }}
+        bannerManageBillingAction={async () => undefined}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    expect(html).toContain('Manage billing');
+    expect(html).toContain('Subscribe monthly');
+    expect(html).not.toContain('Subscription needs attention');
+  });
+
   it('keeps both list-bearing plan cards left-aligned', () => {
     const doc = parseHtml(
       renderToStaticMarkup(

@@ -5,10 +5,16 @@ import {
   NextResponse,
 } from 'next/server';
 import {
+  limitClerkBackendCalls,
+  loadContainerRateLimiter,
+  triggersClerkBackendCall,
+} from '@/lib/clerk-backend-call-limit';
+import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 
 export function parseSentryIngestOrigin(
   dsn: string | undefined,
@@ -228,30 +234,57 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
   return clerkMw;
 }
 
-export default async function proxy(
-  request: NextRequest,
-  event: NextFetchEvent,
-) {
-  // These exact public machine resources must not require even Clerk's
-  // anonymous dev-browser handshake, which redirects HTML requests.
-  if (
-    PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
-  ) {
-    return NextResponse.next();
-  }
-
-  if (shouldBypassClerkAuth()) {
-    return NextResponse.next();
-  }
-
-  const clerkMw = await getClerkMiddleware();
-  const response = await clerkMw(request, event);
-  if (response) {
-    logCheckoutSuccessAuthBounce(request, response);
-  }
-
-  return response;
+function usesProductionClerkInstance(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith('pk_live_') ===
+    true
+  );
 }
+
+export type ProxyDependencies = {
+  loadBackendCallLimiter: () => Promise<RateLimiter>;
+};
+
+export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
+  return async function proxy(request: NextRequest, event: NextFetchEvent) {
+    // These exact public machine resources must not require even Clerk's
+    // anonymous dev-browser handshake, which redirects HTML requests.
+    if (
+      PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
+    ) {
+      return NextResponse.next();
+    }
+
+    if (shouldBypassClerkAuth()) {
+      return NextResponse.next();
+    }
+
+    // BUG-323: limit requests that make Clerk call its Backend API, whose
+    // limit every signed-in page shares, before Clerk sees them. Only a
+    // production instance: a development instance handshakes every new browser
+    // session, so E2E, local work and Preview would trip the limit.
+    if (usesProductionClerkInstance() && triggersClerkBackendCall(request)) {
+      const limited = await limitClerkBackendCalls(
+        request,
+        loadBackendCallLimiter,
+        (failure) => console.error(failure),
+      );
+      if (limited) return limited;
+    }
+
+    const clerkMw = await getClerkMiddleware();
+    const response = await clerkMw(request, event);
+    if (response) {
+      logCheckoutSuccessAuthBounce(request, response);
+    }
+
+    return response;
+  };
+}
+
+export default createProxy({
+  loadBackendCallLimiter: loadContainerRateLimiter,
+});
 
 export const config = {
   matcher: [

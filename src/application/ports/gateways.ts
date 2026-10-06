@@ -104,6 +104,20 @@ export type CreateCustomerInput = {
 
 export type CreateCustomerOutput = { externalCustomerId: string };
 
+// A provider subscription normalized for our database.
+export type SubscriptionObservation = {
+  userId: string; // internal UUID
+  externalCustomerId: string; // opaque external id
+  externalSubscriptionId: string; // opaque external id
+  plan: SubscriptionPlan; // domain plan (monthly/annual)
+  status: SubscriptionStatus;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+  // DEBT-414 F02: service start and billing anchor, for yearly reminders.
+  startedAt: Date;
+  billingCycleAnchor: Date;
+};
+
 export type WebhookEventResult = {
   eventId: string;
   occurredAt?: Date;
@@ -113,18 +127,7 @@ export type WebhookEventResult = {
     | 'customer.subscription.updated'
     | 'customer.subscription.deleted'
     | (string & {});
-  subscriptionUpdate?: {
-    userId: string; // internal UUID
-    externalCustomerId: string; // opaque external id
-    externalSubscriptionId: string; // opaque external id
-    plan: SubscriptionPlan; // domain plan (monthly/annual)
-    status: SubscriptionStatus;
-    currentPeriodEnd: Date;
-    cancelAtPeriodEnd: boolean;
-    // DEBT-414 F02: service start and billing anchor, for yearly reminders.
-    startedAt: Date;
-    billingCycleAnchor: Date;
-  };
+  subscriptionUpdate?: SubscriptionObservation;
   initialSubscriptionConsent?: RenewalTermsSnapshot & {
     checkoutSessionId: string;
     userId: string;
@@ -201,6 +204,15 @@ export interface PaymentGateway {
     input: PortalSessionInput,
     options?: PaymentGatewayRequestOptions,
   ): Promise<PortalSessionOutput>;
+
+  /**
+   * BUG-321: the customer's subscriptions that block a new checkout, each
+   * retrieved afresh and normalized. It only reads: nothing is cancelled or
+   * changed.
+   */
+  listBlockingCustomerSubscriptions(input: {
+    externalCustomerId: string;
+  }): Promise<SubscriptionObservation[]>;
 
   /**
    * Verifies signature and normalizes the Stripe event for the use case/controller.

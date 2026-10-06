@@ -4,6 +4,7 @@ import {
   subscribeAnnualAction,
   subscribeMonthlyAction,
 } from '@/app/pricing/subscribe-actions';
+import { subscribeToPlan } from '@/app/pricing/subscribe-to-plan';
 import {
   AUTH_REDIRECT_QUERY_PARAM,
   ROUTES,
@@ -35,7 +36,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(createConsentForm(), {
+      subscribeToPlan('monthly', createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -59,7 +60,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeAnnualAction(createConsentForm(), {
+      subscribeToPlan('annual', createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -83,7 +84,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(createConsentForm(), {
+      subscribeToPlan('monthly', createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -116,7 +117,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(createConsentForm(), {
+      subscribeToPlan('monthly', createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
         logError: () => undefined,
@@ -141,7 +142,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(createConsentForm(), {
+      subscribeToPlan('monthly', createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -167,7 +168,10 @@ describe('app/pricing/subscribe-actions', () => {
     formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
 
     await expect(
-      subscribeMonthlyAction(formData, { createCheckoutSessionFn, redirectFn }),
+      subscribeToPlan('monthly', formData, {
+        createCheckoutSessionFn,
+        redirectFn,
+      }),
     ).rejects.toMatchObject({
       message: 'redirect:https://checkout/monthly',
     });
@@ -180,15 +184,18 @@ describe('app/pricing/subscribe-actions', () => {
     });
   });
 
-  it.each([subscribeMonthlyAction, subscribeAnnualAction])(
-    'rejects a browser submit without displayed consent identity',
-    async (action) => {
+  it.each(['monthly', 'annual'] as const)(
+    'rejects a %s browser submit without displayed consent identity',
+    async (plan) => {
       const createCheckoutSessionFn = vi.fn(async () =>
         ok({ url: 'https://checkout/unexpected' }),
       );
       const redirectFn = createRedirectFn();
       await expect(
-        action(new FormData(), { createCheckoutSessionFn, redirectFn }),
+        subscribeToPlan(plan, new FormData(), {
+          createCheckoutSessionFn,
+          redirectFn,
+        }),
       ).rejects.toThrow('redirect:/pricing?checkout=error&plan=');
       expect(createCheckoutSessionFn).not.toHaveBeenCalled();
     },
@@ -210,7 +217,10 @@ describe('app/pricing/subscribe-actions', () => {
       else form.set('renewalOptIn', value);
 
       await expect(
-        subscribeMonthlyAction(form, { createCheckoutSessionFn, redirectFn }),
+        subscribeToPlan('monthly', form, {
+          createCheckoutSessionFn,
+          redirectFn,
+        }),
       ).rejects.toMatchObject({
         message: `redirect:${toPricingRoute({ checkout: 'error', plan: 'monthly' })}`,
       });
@@ -225,7 +235,7 @@ describe('app/pricing/subscribe-actions', () => {
       ok({ url: 'https://checkout/unexpected' }),
     );
     await expect(
-      subscribeMonthlyAction(data, {
+      subscribeToPlan('monthly', data, {
         createCheckoutSessionFn,
         redirectFn: createRedirectFn(),
       }),
@@ -283,4 +293,15 @@ describe('app/pricing/subscribe-actions', () => {
       vi.unstubAllEnvs();
     }
   });
+
+  // A client can call an exported server action with any arguments, so the
+  // exported actions take only their form data; tests inject through
+  // subscribeToPlan.
+  it.each([subscribeMonthlyAction, subscribeAnnualAction])(
+    'exports an action that takes only its form data',
+    async (action) => {
+      expect(action.length).toBe(1);
+      await expect(action(new FormData())).rejects.toThrow('NEXT_REDIRECT');
+    },
+  );
 });

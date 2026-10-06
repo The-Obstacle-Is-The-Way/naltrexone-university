@@ -15,6 +15,7 @@ import type {
   RateLimitInput,
   RateLimitResult,
   SetTrialSubscriptionDefaultPaymentMethodInput,
+  SubscriptionObservation,
   TrialPaymentMethodSetupSessionInput,
   TrialPaymentMethodSetupSessionOutput,
   WebhookEventResult,
@@ -101,6 +102,9 @@ export class FakePaymentGateway implements PaymentGateway {
   readonly portalInputs: PortalSessionInput[] = [];
   readonly portalOptions: Array<PaymentGatewayRequestOptions | undefined> = [];
   readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
+  readonly blockingCustomerSubscriptionInputs: Array<{
+    externalCustomerId: string;
+  }> = [];
 
   private readonly externalCustomerId: string;
   private readonly checkoutUrl: string;
@@ -108,6 +112,9 @@ export class FakePaymentGateway implements PaymentGateway {
   private readonly trialSetupUrl: string;
   private readonly portalUrl: string;
   private readonly webhookResult: WebhookEventResult;
+  private readonly checkoutError: Error | undefined;
+  private readonly blockingCustomerSubscriptions: SubscriptionObservation[];
+  private readonly blockingCustomerSubscriptionsError: Error | undefined;
 
   constructor(input: {
     externalCustomerId: string;
@@ -116,6 +123,10 @@ export class FakePaymentGateway implements PaymentGateway {
     trialSetupUrl?: string;
     portalUrl: string;
     webhookResult: WebhookEventResult;
+    // BUG-321: a checkout Stripe refuses, and what it then lists.
+    checkoutError?: Error;
+    blockingCustomerSubscriptions?: SubscriptionObservation[];
+    blockingCustomerSubscriptionsError?: Error;
   }) {
     this.externalCustomerId = input.externalCustomerId;
     this.checkoutUrl = input.checkoutUrl;
@@ -123,6 +134,11 @@ export class FakePaymentGateway implements PaymentGateway {
     this.trialSetupUrl = input.trialSetupUrl ?? 'https://fake/trial-setup';
     this.portalUrl = input.portalUrl;
     this.webhookResult = input.webhookResult;
+    this.checkoutError = input.checkoutError;
+    this.blockingCustomerSubscriptions =
+      input.blockingCustomerSubscriptions ?? [];
+    this.blockingCustomerSubscriptionsError =
+      input.blockingCustomerSubscriptionsError;
   }
 
   async createCustomer(
@@ -140,7 +156,18 @@ export class FakePaymentGateway implements PaymentGateway {
   ): Promise<CheckoutSessionOutput> {
     this.checkoutInputs.push(input);
     this.checkoutOptions.push(options);
+    if (this.checkoutError) throw this.checkoutError;
     return { url: this.checkoutUrl };
+  }
+
+  async listBlockingCustomerSubscriptions(input: {
+    externalCustomerId: string;
+  }): Promise<SubscriptionObservation[]> {
+    this.blockingCustomerSubscriptionInputs.push(input);
+    if (this.blockingCustomerSubscriptionsError) {
+      throw this.blockingCustomerSubscriptionsError;
+    }
+    return this.blockingCustomerSubscriptions;
   }
 
   async createTrialPaymentMethodSetupSession(

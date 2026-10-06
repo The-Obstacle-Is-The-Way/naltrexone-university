@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -10,11 +10,11 @@ import { installReportClientErrorMocks } from '@/tests/test-helpers/report-clien
 import { useHistorySessions } from './use-history-sessions';
 
 const fixtureQ1Id = crypto.randomUUID();
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
 const getPracticeSessionReview = vi.mocked(
-  practiceController.getPracticeSessionReview,
+  practiceActions.getPracticeSessionReview,
 );
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 

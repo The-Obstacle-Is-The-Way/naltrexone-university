@@ -183,13 +183,26 @@ function normalizeBillingRecoveryReason(
     : null;
 }
 
+// BUG-321: the checkout was refused because Stripe holds a subscription the
+// database still lacks. It states only what happened, since a stale URL can
+// show it too. With no local row the portal opens in its trial profile, which
+// lets a person view or cancel but not update a card.
+const STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER: PricingBanner = {
+  tone: 'info',
+  message:
+    'Stripe reported an existing subscription on your account when you tried to check out. View or cancel it in the billing portal, or contact support@addictionboards.com.',
+};
+
 // Shared by both render paths so banner/CTA decisions cannot drift apart.
-function buildPricingPresentation(
+export function buildPricingPresentation(
   pricingData: PricingData,
   resolvedSearchParams: PricingSearchParams,
 ): {
   banner: PricingBanner | null;
+  /** BUG-322: only a failed checkout's message reaches the plan's dialog. */
+  dialogErrorMessage: string | undefined;
   manageBillingReason: PricingBillingRecoveryReason | null;
+  offerManageBillingInBanner: boolean;
   selectedPlan: PricingPlan | null;
   showTrialCtas: boolean;
 } {
@@ -209,9 +222,25 @@ function buildPricingPresentation(
     },
   );
 
+  // The database decides what the page offers; a stale copy of this
+  // parameter can only add the notice, never change the offer (BUG-275).
+  const stripeHoldsUnrecordedSubscription =
+    pricingData.isAuthenticated &&
+    !pricingData.isEntitled &&
+    manageBillingReason === null &&
+    normalizeSearchParam(resolvedSearchParams.checkout) ===
+      'already_subscribed';
+
   return {
-    banner,
+    banner: stripeHoldsUnrecordedSubscription
+      ? STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER
+      : banner,
+    dialogErrorMessage:
+      normalizeSearchParam(resolvedSearchParams.checkout) === 'error'
+        ? banner?.message
+        : undefined,
     manageBillingReason,
+    offerManageBillingInBanner: stripeHoldsUnrecordedSubscription,
     selectedPlan,
     showTrialCtas:
       !pricingData.isEntitled && pricingData.subscriptionStatus === null,
@@ -229,18 +258,28 @@ export async function DeferredPricingView({
     loadPricingData(deps),
     searchParams,
   ]);
-  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
-    buildPricingPresentation(pricingData, resolvedSearchParams);
+  const {
+    banner,
+    dialogErrorMessage,
+    manageBillingReason,
+    offerManageBillingInBanner,
+    selectedPlan,
+    showTrialCtas,
+  } = buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return (
     <PricingView
       isAuthenticated={pricingData.isAuthenticated}
       isEntitled={pricingData.isEntitled}
       banner={banner}
+      dialogErrorMessage={dialogErrorMessage}
       selectedPlan={selectedPlan}
       showTrialCtas={showTrialCtas}
       {...(manageBillingReason
         ? { manageBillingAction, manageBillingReason }
+        : {})}
+      {...(offerManageBillingInBanner
+        ? { bannerManageBillingAction: manageBillingAction }
         : {})}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
@@ -266,8 +305,14 @@ async function renderInjectedPricingPage(input: {
     input.searchParams,
     resolvedAuthNavFn(),
   ]);
-  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
-    buildPricingPresentation(pricingData, resolvedSearchParams);
+  const {
+    banner,
+    dialogErrorMessage,
+    manageBillingReason,
+    offerManageBillingInBanner,
+    selectedPlan,
+    showTrialCtas,
+  } = buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return MarketingLayout({
     authNavSlot,
@@ -277,10 +322,14 @@ async function renderInjectedPricingPage(input: {
         isAuthenticated={pricingData.isAuthenticated}
         isEntitled={pricingData.isEntitled}
         banner={banner}
+        dialogErrorMessage={dialogErrorMessage}
         selectedPlan={selectedPlan}
         showTrialCtas={showTrialCtas}
         {...(manageBillingReason
           ? { manageBillingAction, manageBillingReason }
+          : {})}
+        {...(offerManageBillingInBanner
+          ? { bannerManageBillingAction: manageBillingAction }
           : {})}
         subscribeMonthlyAction={subscribeMonthlyAction}
         subscribeAnnualAction={subscribeAnnualAction}

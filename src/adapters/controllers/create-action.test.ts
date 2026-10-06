@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createAction } from '@/src/adapters/controllers/create-action';
@@ -157,5 +157,34 @@ describe('createAction', () => {
 
     expect(fakeLogger.errorCalls).toHaveLength(1);
     expect(fakeLogger.errorCalls[0]?.msg).toBe('Unhandled error in controller');
+  });
+
+  describe('in a production build', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    // Only the 'use server' wrappers face clients, and they pass only the
+    // input (BUG-324). So a server-side caller's dependencies and logger reach
+    // the action in every build.
+    it('uses the dependencies and logger a server-side caller passes', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      const logger = new FakeLogger();
+      const getDeps = vi.fn(
+        async (deps?: { value: string }) => deps ?? { value: 'container' },
+      );
+      const action = createAction({
+        schema: z.object({}).strict(),
+        getDeps,
+        execute: async () => {
+          throw new Error('checkout failed');
+        },
+      });
+
+      await action({}, { value: 'server' }, { logger });
+
+      expect(getDeps).toHaveBeenCalledWith({ value: 'server' }, { logger });
+      expect(logger.errorCalls).toHaveLength(1);
+    });
   });
 });
