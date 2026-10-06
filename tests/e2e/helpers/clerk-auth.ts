@@ -2,7 +2,9 @@ import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { clerk } from '@clerk/testing/playwright';
 import type { Page } from '@playwright/test';
+import { withTimeout } from '@/lib/with-timeout';
 import { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
+import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
 import { installE2ELogRedaction } from './e2e-log-redaction';
 
 export { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
@@ -48,6 +50,42 @@ export async function ensureClerkE2ESession<TPage extends ClerkE2EPage>(input: {
     username: input.username,
   });
   await input.clerkDriver.waitForActiveSession(input.page);
+}
+
+// BUG-328: each setup attempt runs in a new browser, and teardown signs out
+// only the stored session. A failed attempt signs out its own session, or it
+// stays live until Clerk expires it. Both phases have deadlines, because
+// Clerk's sign-in and sign-out can run longer than any Playwright bound.
+export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
+  clerkDriver: ClerkE2EDriver<TPage>;
+  deadlines?: { signInMs: number; signOutMs: number };
+  page: TPage;
+  password: string;
+  saveState(): Promise<void>;
+  username: string;
+}): Promise<void> {
+  const deadlines = input.deadlines ?? CLERK_SESSION_DEADLINES;
+  let abandoned = false;
+  const signIn = async () => {
+    await ensureClerkE2ESession(input);
+    // A sign-in that finishes after its deadline never saves its state. If it
+    // finishes after the sign-out has checked for a session, that session is
+    // not signed out, and stays live until Clerk expires it.
+    if (!abandoned) await input.saveState();
+  };
+  try {
+    await withTimeout(signIn(), deadlines.signInMs);
+  } catch (error) {
+    abandoned = true;
+    await withTimeout(releaseClerkE2ESession(input), deadlines.signOutMs).catch(
+      () => {
+        console.warn(
+          'Could not confirm the sign-out after a failed setup attempt; a Clerk E2E session it created stays live until Clerk expires it',
+        );
+      },
+    );
+    throw error;
+  }
 }
 
 export async function releaseClerkE2ESession<
@@ -127,14 +165,16 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
   }
 
   installE2ELogRedaction(console);
-  await ensureClerkE2ESession({
+  await createClerkE2ESession({
     clerkDriver: playwrightClerkDriver,
     page,
     password: clerkPassword,
+    saveState: async () => {
+      await mkdir(dirname(E2E_CLERK_AUTH_STATE_PATH), { recursive: true });
+      await page.context().storageState({ path: E2E_CLERK_AUTH_STATE_PATH });
+    },
     username: clerkUsername,
   });
-  await mkdir(dirname(E2E_CLERK_AUTH_STATE_PATH), { recursive: true });
-  await page.context().storageState({ path: E2E_CLERK_AUTH_STATE_PATH });
 }
 
 export async function signOutClerkE2ESession(page: Page): Promise<void> {

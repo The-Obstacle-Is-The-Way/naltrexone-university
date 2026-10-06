@@ -37,6 +37,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/domain/value-objects/practice-mode.test.ts`: `returns true for tutor mode`
 - `src/domain/value-objects/practice-mode.test.ts`: `returns false for exam mode when not ended`
+- `src/application/use-cases/submit-answer-tutor.test.ts`: `grades a session answer against the revision the item was bound to`
 - `src/application/use-cases/get-practice-session-review.test.ts`: `redacts correctness for active exam sessions`
 
 ### R5. During an active exam, answers are saved as drafts only; answering a question for grading is refused.

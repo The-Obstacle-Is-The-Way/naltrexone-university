@@ -76,7 +76,9 @@ export function createResendWebhookHandler(
           { status: HTTP_SERVICE_UNAVAILABLE },
         );
       }
-      container.logger.error(
+      // BUG-325: anyone can send a bad signature, so it is a warning; the
+      // rate limiter bounds how many.
+      container.logger.warn(
         {
           route: '/api/webhooks/resend',
           error: projectSafeErrorDiagnostics(error),

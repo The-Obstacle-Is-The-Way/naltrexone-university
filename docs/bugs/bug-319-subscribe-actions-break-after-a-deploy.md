@@ -77,6 +77,11 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 
 **Released 2026-10-05.** #1379 was merged and promoted through #1380 (`048ca43f`). Production deployed it at 22:10 UTC, and that build passed the new key requirement.
 
+**2026-10-06, a first observation.**
+- **The event.** Sentry recorded one `UnrecognizedActionError` at 22:27 UTC on 2026-10-05, from a practice page. That was 17 minutes after this fix's own deploy, which changed every action ID when the key took effect.
+- **Its path.** It came from a hook's error report, not from an error page, which is this record's accepted scope.
+- **What it counts as.** A stale action after a deploy that changed the IDs, not a failure of the stable key. The error-page check below stays open.
+
 ## Verification
 
 Criteria to meet before closing.
@@ -90,6 +95,6 @@ Criteria to meet before closing.
 
 ## Related
 
-- [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md), [BUG-321](./bug-321-already-subscribed-answer-discarded.md), [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md): the other findings of the same hunt.
+- [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md), [BUG-321](./bug-321-already-subscribed-answer-discarded.md), [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md): the other findings of the same hunt.
 - [DEBT-501](../debt/debt-501-billing-operations-resilience.md), [DEBT-502](../debt/debt-502-account-identity-and-action-hardening.md).
 - [Next.js: Failed to find Server Action](https://nextjs.org/docs/messages/failed-to-find-server-action); [Vercel: Skew Protection](https://vercel.com/docs/skew-protection).

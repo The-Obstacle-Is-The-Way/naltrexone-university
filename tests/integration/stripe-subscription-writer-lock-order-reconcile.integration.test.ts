@@ -14,6 +14,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { createUser } from './helpers';
@@ -130,6 +131,7 @@ async function runCheckoutSuccessWriter(input: {
       harness.subscriptionWriter.db,
       priceIds,
     ),
+    rateLimiter: new FakeRateLimiter(),
     getClerkAuth: async () => ({
       userId: input.userId,
       redirectToSignIn: () => {

@@ -57,8 +57,9 @@ export default async function QuestionPage({
       normalizedTo: 'sessionId',
       hadAttemptId: true,
       hadSessionId: true,
-      slug,
-      from,
+      // BUG-325: the caller's text, so capped.
+      slug: slug.slice(0, 100),
+      from: from?.slice(0, 100),
     });
   }
 

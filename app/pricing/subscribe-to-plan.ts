@@ -20,10 +20,15 @@ export type SubscribeActionsDeps = {
   createCheckoutSessionFn: CreateCheckoutSessionFn;
   redirectFn: (url: string) => never;
   logError?: (context: Record<string, unknown>, msg: string) => void;
+  logWarn?: (context: Record<string, unknown>, msg: string) => void;
 };
 
-type ResolvedSubscribeActionsDeps = Omit<SubscribeActionsDeps, 'logError'> & {
+type ResolvedSubscribeActionsDeps = Omit<
+  SubscribeActionsDeps,
+  'logError' | 'logWarn'
+> & {
   logError: NonNullable<SubscribeActionsDeps['logError']>;
+  logWarn: NonNullable<SubscribeActionsDeps['logWarn']>;
 };
 
 async function getDeps(
@@ -44,6 +49,10 @@ async function getDeps(
       deps?.logError ??
       ((context: Record<string, unknown>, msg: string) =>
         requestLogger.error(context, msg)),
+    logWarn:
+      deps?.logWarn ??
+      ((context: Record<string, unknown>, msg: string) =>
+        requestLogger.warn(context, msg)),
   };
 }
 

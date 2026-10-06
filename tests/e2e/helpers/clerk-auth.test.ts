@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
+  createClerkE2ESession,
   ensureClerkE2ESession,
   releaseClerkE2ESession,
   requireStoredClerkE2ESession,
@@ -114,6 +115,198 @@ describe('ensureClerkE2ESession', () => {
     expect(page.visitedUrls).toEqual(['/', '/sign-in']);
     expect(clerkDriver.signInCount).toBe(1);
     expect(clerkDriver.waitForActiveSessionCount).toBe(1);
+  });
+});
+
+// BUG-328: each setup attempt runs in a new browser, and teardown signs out
+// only the stored session, so a failed attempt must sign out its own.
+describe('createClerkE2ESession', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const credentials = {
+    password: 'test-password',
+    username: 'test-user@example.test',
+  };
+
+  const never = () => new Promise<never>(() => {});
+
+  // Clerk's sign-in and sign-out run page.evaluate, which Playwright never
+  // times out, and its route handler retries each request for up to a minute.
+  it('signs out when sign-in passes its deadline', async () => {
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async signIn(): Promise<void> {
+        await super.signIn();
+        await never();
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 10, signOutMs: 1_000 },
+        page: new FakeClerkPage(),
+        saveState: async () => {},
+      }),
+    ).rejects.toThrow('Operation timed out after 10ms');
+    expect(clerkDriver.signOutCount).toBe(1);
+  });
+
+  it('never saves the state of an attempt that passed its deadline', async () => {
+    const signedIn = createDeferred<void>();
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async signIn(): Promise<void> {
+        await signedIn.promise;
+        await super.signIn();
+      }
+    })(false);
+    const saveState = vi.fn(async () => {});
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 10, signOutMs: 1_000 },
+        page: new FakeClerkPage(),
+        saveState,
+      }),
+    ).rejects.toThrow('Operation timed out');
+    signedIn.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(saveState).not.toHaveBeenCalled();
+  });
+
+  it('never saves the state of a sign-in that finishes during the sign-out', async () => {
+    const signedIn = createDeferred<void>();
+    let loads = 0;
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async load(): Promise<void> {
+        loads += 1;
+        // The second load is the sign-out's; let the late sign-in finish.
+        if (loads === 2) {
+          signedIn.resolve();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
+      override async signIn(): Promise<void> {
+        await signedIn.promise;
+        await super.signIn();
+      }
+    })(false);
+    const saveState = vi.fn(async () => {});
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 10, signOutMs: 1_000 },
+        page: new FakeClerkPage(),
+        saveState,
+      }),
+    ).rejects.toThrow('Operation timed out');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(saveState).not.toHaveBeenCalled();
+  });
+
+  it('stops waiting for a sign-out that passes its deadline', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override signOut(): Promise<void> {
+        return never();
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 1_000, signOutMs: 10 },
+        page: new FakeClerkPage(),
+        saveState: async () => {
+          throw new Error('disk full');
+        },
+      }),
+    ).rejects.toThrow('disk full');
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it('saves the session it creates', async () => {
+    const clerkDriver = new FakeClerkDriver(false);
+    const saveState = vi.fn(async () => {});
+
+    await createClerkE2ESession({
+      ...credentials,
+      clerkDriver,
+      page: new FakeClerkPage(),
+      saveState,
+    });
+
+    expect(saveState).toHaveBeenCalledOnce();
+    expect(clerkDriver.signOutCount).toBe(0);
+  });
+
+  it('signs out the session when saving it fails', async () => {
+    const clerkDriver = new FakeClerkDriver(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        page: new FakeClerkPage(),
+        saveState: async () => {
+          throw new Error('disk full');
+        },
+      }),
+    ).rejects.toThrow('disk full');
+    expect(clerkDriver.signOutCount).toBe(1);
+    expect(await clerkDriver.hasActiveSession()).toBe(false);
+  });
+
+  // A bounded Playwright wait inside the sign-in phase throws this.
+  it('signs out a session that signed in but never confirmed', async () => {
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async waitForActiveSession(): Promise<void> {
+        throw new Error('timed out waiting for the session');
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        page: new FakeClerkPage(),
+        saveState: async () => {},
+      }),
+    ).rejects.toThrow('timed out waiting for the session');
+    expect(clerkDriver.signOutCount).toBe(1);
+  });
+
+  it('keeps the original error when signing out fails too', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async signOut(): Promise<void> {
+        throw new Error('Clerk unavailable');
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        page: new FakeClerkPage(),
+        saveState: async () => {
+          throw new Error('disk full');
+        },
+      }),
+    ).rejects.toThrow('disk full');
+    expect(warn).toHaveBeenCalledWith(
+      'Could not confirm the sign-out after a failed setup attempt; a Clerk E2E session it created stays live until Clerk expires it',
+    );
   });
 });
 

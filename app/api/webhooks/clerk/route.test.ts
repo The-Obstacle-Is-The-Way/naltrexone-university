@@ -123,8 +123,10 @@ describe('POST /api/webhooks/clerk', () => {
     expect(res.status).toBe(400);
     expect(createContainer).toHaveBeenCalledTimes(1);
     expect(processClerkWebhook).not.toHaveBeenCalled();
-    expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0]).toMatchObject({
+    // BUG-325: anyone can send a bad signature, so it is a warning.
+    expect(logger.errorCalls).toEqual([]);
+    expect(logger.warnCalls).toHaveLength(1);
+    expect(logger.warnCalls[0]).toMatchObject({
       context: {
         route: '/api/webhooks/clerk',
         error: { name: 'Error' },

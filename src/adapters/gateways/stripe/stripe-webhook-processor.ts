@@ -404,7 +404,10 @@ export async function processStripeWebhookEvent({
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
 
-    logger.error(
+    // BUG-325: anyone can send a bad signature, so it is a warning. Stripe's
+    // reason (for example a timestamp outside tolerance) helps tell a
+    // misconfigured secret from a forgery.
+    logger.warn(
       { error: errorMessage },
       'Webhook signature verification failed',
     );

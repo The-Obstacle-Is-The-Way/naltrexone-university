@@ -175,7 +175,11 @@ describe('POST /api/webhooks/resend', () => {
     await expect(deliveries.findById(deliveryId)).resolves.toMatchObject({
       status: 'accepted',
     });
-    expect(logger.errorCalls.map((call) => call.msg)).toContain(
+    // BUG-325: anyone can send a bad signature, so it is a warning.
+    expect(logger.warnCalls.map((call) => call.msg)).toContain(
+      'Resend webhook signature verification failed',
+    );
+    expect(logger.errorCalls.map((call) => call.msg)).not.toContain(
       'Resend webhook signature verification failed',
     );
   });

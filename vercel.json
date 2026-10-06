@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "dependabot/**": false
+    }
+  },
   "buildCommand": "pnpm exec tsx scripts/verify-migration-ledger.ts pre && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts && pnpm exec tsx scripts/verify-migration-ledger.ts post && pnpm build",
   "crons": [
     {

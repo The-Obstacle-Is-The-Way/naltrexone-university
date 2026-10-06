@@ -12,6 +12,7 @@ import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizz
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import {
   CheckEntitlementUseCase,
@@ -220,6 +221,7 @@ export async function runCheckoutSuccessProviderContract(
       {
         authGateway: new FakeAuthGateway(user),
         subscriptionVersions: subscriptions,
+        rateLimiter: new FakeRateLimiter(),
         getClerkAuth: async () => ({
           userId: user.id,
           redirectToSignIn: () => redirectForProviderContract('/sign-in'),

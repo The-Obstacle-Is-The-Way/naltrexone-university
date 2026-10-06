@@ -5,8 +5,10 @@ import {
   stripeSubscriptionEndsByPeriodEnd,
   stripeSubscriptionStatusToSubscriptionStatus,
 } from '@/src/adapters/gateways/stripe';
+import { CHECKOUT_SUCCESS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { isSubscriptionObservationAttemptsExhaustedError } from '@/src/application/errors';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import {
@@ -97,6 +99,20 @@ function getStripeId(value: unknown): string | null {
  *
  * See ADR-014: Stripe eager sync pattern.
  */
+// BUG-325: anyone can put any text in session_id. A Stripe Checkout session
+// ID is cs_ and then letters, digits and underscores, so other text is
+// refused before Clerk or Stripe is called, and it is never logged.
+const CHECKOUT_SESSION_ID = /^cs_[A-Za-z0-9_]{1,255}$/;
+
+function isStripeResourceMissing(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'resource_missing'
+  );
+}
+
 export async function syncCheckoutSuccess(
   input: SyncCheckoutSuccessInput,
   deps?: CheckoutSuccessDeps,
@@ -126,6 +142,19 @@ export async function syncCheckoutSuccess(
     return redirectFn(CHECKOUT_ERROR_ROUTE);
   };
 
+  // A visit with an ID that is not a real session is a failed visit, not an
+  // error to report.
+  const failQuietly = (
+    reason: string,
+    context: Record<string, unknown>,
+  ): never => {
+    d.logger.info(
+      { reason, route: ROUTES.CHECKOUT_SUCCESS, ...context },
+      'Checkout success redirected to checkout error',
+    );
+    return redirectFn(CHECKOUT_ERROR_ROUTE);
+  };
+
   const assertions: CheckoutSuccessAssertions =
     createCheckoutSuccessAssertions(fail);
 
@@ -135,12 +164,36 @@ export async function syncCheckoutSuccess(
   assertions.assertNonEmptyString(sessionId, 'missing_session_id', {
     sessionId,
   });
+  if (!CHECKOUT_SESSION_ID.test(sessionId)) {
+    return failQuietly('invalid_session_id', {
+      sessionIdLength: sessionId.length,
+    });
+  }
 
   const clerkAuth = await d.getClerkAuth();
   if (!clerkAuth.userId) {
     const returnBackUrl = new URL(ROUTES.CHECKOUT_SUCCESS, d.appUrl);
     returnBackUrl.searchParams.set('session_id', sessionId);
     return clerkAuth.redirectToSignIn({ returnBackUrl });
+  }
+
+  // BUG-325: a well-shaped session ID still costs a Clerk lookup and a Stripe
+  // call, so each signed-in user is limited first. A buyer's confirmation
+  // matters more than the limit, so a limiter that fails lets the visit in.
+  const limit = await d.rateLimiter
+    .limit({
+      key: `checkout-success:${clerkAuth.userId}`,
+      ...CHECKOUT_SUCCESS_RATE_LIMIT,
+    })
+    .catch((error: unknown) => {
+      d.logger.warn?.(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Checkout success rate limiter failed; continuing without it',
+      );
+      return null;
+    });
+  if (limit && !limit.success) {
+    return failQuietly('rate_limited', {});
   }
 
   const user = await d.authGateway.requireUser();
@@ -155,7 +208,26 @@ export async function syncCheckoutSuccess(
       shouldRetry: isTransientExternalError,
       onRetry: createStripeOnRetry(d.logger, { sessionId }),
     },
-  );
+  ).catch((error: unknown) => {
+    if (isStripeResourceMissing(error)) {
+      // The same answer covers a session that exists under the other mode's
+      // key: a setup error that fails every buyer, so it stays an error.
+      if (
+        error instanceof Error &&
+        /similar object exists in (live|test) mode/.test(error.message)
+      ) {
+        d.logger.error(
+          { route: ROUTES.CHECKOUT_SUCCESS },
+          'Checkout success session exists only in the other Stripe mode',
+        );
+        return redirectFn(CHECKOUT_ERROR_ROUTE);
+      }
+      return failQuietly('invalid_session_id', {
+        sessionIdLength: sessionId.length,
+      });
+    }
+    throw error;
+  });
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);

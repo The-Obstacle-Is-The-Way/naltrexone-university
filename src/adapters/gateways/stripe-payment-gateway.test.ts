@@ -475,7 +475,8 @@ describe('StripePaymentGateway', () => {
     expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
   });
 
-  it('calls logger.error when webhook verification fails', async () => {
+  // BUG-325: anyone can send a bad signature, so it is a warning.
+  it('warns when webhook verification fails', async () => {
     // No event is injected, so the fake's verification throws.
     const stripe = new FakeStripeCheckoutClient();
     const logger = new FakeLogger();
@@ -487,10 +488,11 @@ describe('StripePaymentGateway', () => {
       ),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_SIGNATURE' });
 
-    expect(logger.errorCalls).toContainEqual({
+    expect(logger.warnCalls).toContainEqual({
       context: { error: 'FakeStripeCheckoutClient does not process webhooks' },
       msg: 'Webhook signature verification failed',
     });
+    expect(logger.errorCalls).toEqual([]);
   });
 
   it('forwards the consent-state secret to webhook processing', async () => {
