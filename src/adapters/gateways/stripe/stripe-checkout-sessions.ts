@@ -370,7 +370,9 @@ export async function createStripeTrialPaymentMethodSetupSession({
   return { sessionId: session.id, url: session.url };
 }
 
-function getBlockingSubscriptionStatus(
+// A subscription in one of these statuses makes Stripe-side checkout refuse a
+// second subscription; BUG-321's sync reads the same set.
+export function getBlockingSubscriptionStatus(
   subscription: StripeListedSubscription | undefined,
 ): StripeSubscriptionStatus | null {
   if (!subscription) return null;
