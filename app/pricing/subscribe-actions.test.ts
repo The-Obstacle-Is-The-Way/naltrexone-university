@@ -281,17 +281,49 @@ describe('app/pricing/subscribe-actions', () => {
       expect(url.searchParams.get('error_code')).toBeNull();
       expect(url.searchParams.get('error_message')).toBeNull();
 
+      // BUG-325: the key is the caller's text, so only its length is logged.
       expect(logError).toHaveBeenCalledWith(
-        expect.objectContaining({
+        {
           plan: 'monthly',
-          idempotencyKey: 'idem_1',
+          idempotencyKeyLength: 6,
           errorCode: 'INTERNAL_ERROR',
-        }),
+          errorMessage: longMessage,
+        },
         'Stripe checkout failed',
       );
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  // BUG-325: input the controller refuses is the caller's mistake, or a
+  // forgery, not a checkout failure, so it is not logged as one.
+  it('redirects a refused input to the error banner without logging it', async () => {
+    const logError = vi.fn();
+    const redirectFn = createRedirectFn();
+
+    await expect(
+      runSubscribeAction(
+        {
+          plan: 'annual',
+          idempotencyKey: 'x'.repeat(5000),
+          renewalOptIn: true,
+        },
+        {
+          createCheckoutSessionFn: async () =>
+            err('VALIDATION_ERROR', 'Invalid input'),
+          redirectFn,
+          logError,
+        },
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('redirect:/pricing?'),
+    });
+
+    expect(redirectFn).toHaveBeenCalledWith(
+      '/pricing?checkout=error&plan=annual',
+    );
+    expect(logError).not.toHaveBeenCalled();
   });
 
   // A client can call an exported server action with any arguments, so the

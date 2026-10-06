@@ -97,6 +97,20 @@ function getStripeId(value: unknown): string | null {
  *
  * See ADR-014: Stripe eager sync pattern.
  */
+// BUG-325: anyone can put any text in session_id. A Stripe Checkout session
+// ID is cs_ and then letters, digits and underscores, so other text is
+// refused before Clerk or Stripe is called, and it is never logged.
+const CHECKOUT_SESSION_ID = /^cs_[A-Za-z0-9_]{1,255}$/;
+
+function isStripeResourceMissing(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'resource_missing'
+  );
+}
+
 export async function syncCheckoutSuccess(
   input: SyncCheckoutSuccessInput,
   deps?: CheckoutSuccessDeps,
@@ -126,6 +140,19 @@ export async function syncCheckoutSuccess(
     return redirectFn(CHECKOUT_ERROR_ROUTE);
   };
 
+  // A visit with an ID that is not a real session is a failed visit, not an
+  // error to report.
+  const failQuietly = (
+    reason: string,
+    context: Record<string, unknown>,
+  ): never => {
+    d.logger.info(
+      { reason, route: ROUTES.CHECKOUT_SUCCESS, ...context },
+      'Checkout success redirected to checkout error',
+    );
+    return redirectFn(CHECKOUT_ERROR_ROUTE);
+  };
+
   const assertions: CheckoutSuccessAssertions =
     createCheckoutSuccessAssertions(fail);
 
@@ -135,6 +162,11 @@ export async function syncCheckoutSuccess(
   assertions.assertNonEmptyString(sessionId, 'missing_session_id', {
     sessionId,
   });
+  if (!CHECKOUT_SESSION_ID.test(sessionId)) {
+    return failQuietly('invalid_session_id', {
+      sessionIdLength: sessionId.length,
+    });
+  }
 
   const clerkAuth = await d.getClerkAuth();
   if (!clerkAuth.userId) {
@@ -155,7 +187,14 @@ export async function syncCheckoutSuccess(
       shouldRetry: isTransientExternalError,
       onRetry: createStripeOnRetry(d.logger, { sessionId }),
     },
-  );
+  ).catch((error: unknown) => {
+    if (isStripeResourceMissing(error)) {
+      return failQuietly('invalid_session_id', {
+        sessionIdLength: sessionId.length,
+      });
+    }
+    throw error;
+  });
 
   const stripeCustomerId = getStripeId(session.customer);
   const subscriptionId = getStripeId(session.subscription);

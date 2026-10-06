@@ -50,15 +50,20 @@ export async function runSubscribeAction(
     return deps.redirectFn(toPricingRoute({ checkout: 'rate_limited' }));
   }
 
-  deps.logError?.(
-    {
-      plan: input.plan,
-      idempotencyKey: input.idempotencyKey,
-      errorCode: result.error.code,
-      errorMessage: result.error.message,
-    },
-    'Stripe checkout failed',
-  );
+  // BUG-325: input the controller refuses is the caller's mistake, or a
+  // forgery, not a checkout failure. Other failures log the key's length,
+  // never the caller's text.
+  if (result.error.code !== 'VALIDATION_ERROR') {
+    deps.logError?.(
+      {
+        plan: input.plan,
+        idempotencyKeyLength: input.idempotencyKey?.length ?? null,
+        errorCode: result.error.code,
+        errorMessage: result.error.message,
+      },
+      'Stripe checkout failed',
+    );
+  }
 
   return deps.redirectFn(
     toPricingRoute({ checkout: 'error', plan: input.plan }),
