@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && tsx scripts/check-server-action-manifest.ts",
     "start": "next start",
     "prepare": "husky",
     "lint": "biome check . --error-on-warnings && pnpm lint:doubles",

@@ -72,20 +72,74 @@ export async function save(formData: FormData, deps: unknown) {}`);
     ]);
   });
 
-  it('allows createAction exports only in the controllers', () => {
+  it('rejects createAction exports, in the controllers too', () => {
     const source = `'use server';
 export const getThing = createAction({ schema, getDeps, execute });`;
 
     expect(
-      scanServerActionSource('src/adapters/controllers/thing.ts', source),
-    ).toEqual({
-      isServerActionModule: true,
-      exportedActions: ['getThing'],
-      issues: [],
-    });
-    expect(scan(source).issues).toEqual([
-      'app/example/actions.ts:2 getThing is not a function declaration',
+      scanServerActionSource('src/adapters/controllers/thing.ts', source)
+        .issues,
+    ).toEqual([
+      'src/adapters/controllers/thing.ts:2 getThing is not a function declaration',
     ]);
+  });
+
+  describe('a controller wrapper', () => {
+    const file = 'src/adapters/controllers/thing-actions.ts';
+    const wrapper = (body: string) =>
+      scanServerActionSource(
+        file,
+        `'use server';
+import * as controller from './thing-controller';
+export async function getThing(input: unknown) {
+  ${body}
+}`,
+      );
+
+    it('passes its input, alone, to the controller export of its name', () => {
+      expect(wrapper('return controller.getThing(input);')).toEqual({
+        isServerActionModule: true,
+        exportedActions: ['getThing'],
+        issues: [],
+      });
+    });
+
+    it.each([
+      ['another controller export', 'return controller.setThing(input);'],
+      [
+        'more than its input',
+        'return controller.getThing(input.data, input.deps);',
+      ],
+      ['part of its input', 'return controller.getThing(input.data);'],
+      [
+        'another statement first',
+        'void input;\n  return controller.getThing(input);',
+      ],
+    ])('rejects one that passes %s', (_case, body) => {
+      expect(wrapper(body).issues).toEqual([
+        `${file}:3 getThing must only return controller.getThing(input)`,
+      ]);
+    });
+
+    // Only a function declaration has its body checked, so a wrapper module
+    // takes no other form of export.
+    it.each([
+      [
+        'an arrow function',
+        'export const getThing = async (input: unknown) => controller.getThing(input, input);',
+      ],
+      [
+        'a function expression',
+        'export const getThing = async function (input: unknown) { return controller.getThing(input, input); };',
+      ],
+    ])('rejects %s export', (_case, line) => {
+      expect(
+        scanServerActionSource(
+          file,
+          `'use server';\nimport * as controller from './thing-controller';\n${line}`,
+        ).issues,
+      ).toEqual([`${file}:3 getThing is not a function declaration`]);
+    });
   });
 
   it("rejects 'use server' inside a function, in any module", () => {

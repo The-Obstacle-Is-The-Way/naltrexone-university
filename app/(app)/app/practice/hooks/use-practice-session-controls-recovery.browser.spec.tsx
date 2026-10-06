@@ -5,27 +5,27 @@ import { Button } from '@/components/ui/button';
 import * as reportClientError from '@/lib/report-client-error';
 import { TimeoutError } from '@/lib/with-timeout';
 import { err } from '@/src/adapters/controllers/action-result';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as tagController from '@/src/adapters/controllers/tag-controller';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as tagActions from '@/src/adapters/controllers/tag-actions';
 import { ApplicationConflictReasons } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeSessionControls } from './use-practice-session-controls';
 
-vi.mock('@/src/adapters/controllers/tag-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/tag-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getTags = vi.mocked(tagController.getTags);
+const getTags = vi.mocked(tagActions.getTags);
 const countAvailableQuestions = vi.mocked(
-  practiceController.countAvailableQuestions,
+  practiceActions.countAvailableQuestions,
 );
-const endPracticeSession = vi.mocked(practiceController.endPracticeSession);
+const endPracticeSession = vi.mocked(practiceActions.endPracticeSession);
 const getIncompletePracticeSession = vi.mocked(
-  practiceController.getIncompletePracticeSession,
+  practiceActions.getIncompletePracticeSession,
 );
-const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
+const startPracticeSession = vi.mocked(practiceActions.startPracticeSession);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -412,9 +412,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const sessionId = '11111111-1111-4111-8111-111111111129';
     const initialRefresh =
       createDeferred<
-        Awaited<
-          ReturnType<typeof practiceController.getIncompletePracticeSession>
-        >
+        Awaited<ReturnType<typeof practiceActions.getIncompletePracticeSession>>
       >();
     const incompleteSession = {
       sessionId,
@@ -673,11 +671,11 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const sessionId = '11111111-1111-4111-8111-111111111124';
     const abandonResult =
       createDeferred<
-        Awaited<ReturnType<typeof practiceController.endPracticeSession>>
+        Awaited<ReturnType<typeof practiceActions.endPracticeSession>>
       >();
     const startResult =
       createDeferred<
-        Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+        Awaited<ReturnType<typeof practiceActions.startPracticeSession>>
       >();
     arrangeControlDependencies();
     getIncompletePracticeSession

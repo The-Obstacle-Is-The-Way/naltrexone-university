@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import { err } from '@/src/adapters/controllers/action-result';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as tagController from '@/src/adapters/controllers/tag-controller';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as tagActions from '@/src/adapters/controllers/tag-actions';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
@@ -11,22 +11,22 @@ import { usePracticeSessionControls } from './use-practice-session-controls';
 
 const fixtureTag1Id = crypto.randomUUID();
 
-vi.mock('@/src/adapters/controllers/tag-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/tag-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getTags = vi.mocked(tagController.getTags);
+const getTags = vi.mocked(tagActions.getTags);
 const countAvailableQuestions = vi.mocked(
-  practiceController.countAvailableQuestions,
+  practiceActions.countAvailableQuestions,
 );
 const discardPracticeSession = vi.mocked(
-  practiceController.discardPracticeSession,
+  practiceActions.discardPracticeSession,
 );
-const endPracticeSession = vi.mocked(practiceController.endPracticeSession);
+const endPracticeSession = vi.mocked(practiceActions.endPracticeSession);
 const getIncompletePracticeSession = vi.mocked(
-  practiceController.getIncompletePracticeSession,
+  practiceActions.getIncompletePracticeSession,
 );
-const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
+const startPracticeSession = vi.mocked(practiceActions.startPracticeSession);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

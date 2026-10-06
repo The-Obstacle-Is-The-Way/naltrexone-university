@@ -12,15 +12,11 @@ describe('createDepsResolver', () => {
       async () => ({ value: fromContainer }),
     );
 
-  it('uses dependencies a test injects', async () => {
-    vi.stubEnv('NODE_ENV', 'test');
-
+  it('uses dependencies a caller injects', async () => {
     expect(await resolverWith('container')('injected')).toBe('injected');
   });
 
-  it('uses a container a test supplies', async () => {
-    vi.stubEnv('NODE_ENV', 'test');
-
+  it('uses a container a caller supplies', async () => {
     expect(
       await resolverWith('container')(undefined, {
         loadContainer: async () => ({ value: 'custom' }),
@@ -28,14 +24,15 @@ describe('createDepsResolver', () => {
     ).toBe('custom');
   });
 
-  // A client can pass its own arguments to an exported server action.
-  it('resolves from the default container in a production build', async () => {
+  // Only server code reaches the resolver: the 'use server' wrappers pass a
+  // client's input alone (BUG-324). So injection works in every build.
+  it('uses injected dependencies in a production build too', async () => {
     vi.stubEnv('NODE_ENV', 'production');
 
-    expect(
-      await resolverWith('container')('from a client', {
-        loadContainer: async () => ({ value: 'from a client' }),
-      }),
-    ).toBe('container');
+    expect(await resolverWith('container')('injected')).toBe('injected');
+  });
+
+  it('resolves from the default container when nothing is injected', async () => {
+    expect(await resolverWith('container')()).toBe('container');
   });
 });

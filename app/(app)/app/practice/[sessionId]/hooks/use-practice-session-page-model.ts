@@ -34,17 +34,17 @@ import { withTimeout } from '@/lib/with-timeout';
 import {
   endPracticeSession,
   finalizeExamAnswers,
-  type GetPracticeSessionSummaryOutput,
   getCompletedSessionQuestionsWithFeedback,
   getPracticeSessionReview,
   getPracticeSessionSummary,
   saveExamDraftAnswer,
   setPracticeSessionQuestionMark,
-} from '@/src/adapters/controllers/practice-controller';
+} from '@/src/adapters/controllers/practice-actions';
+import type { GetPracticeSessionSummaryOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   getNextQuestion,
   submitAnswer,
-} from '@/src/adapters/controllers/question-controller';
+} from '@/src/adapters/controllers/question-actions';
 import { EXAM_FINAL_DRAFT_FLUSH_GRACE_MS } from '@/src/domain/services';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;

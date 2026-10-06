@@ -10,9 +10,41 @@ const ROOTS = ['app', 'src', 'lib', 'components'];
 const TEST_SUPPORT =
   /\.(test|spec)\.tsx?$|test-helpers|\.browser\.probes\.tsx$/;
 
-// Until BUG-324's next step, the controllers export createAction results,
-// whose test seams a production build ignores (lib/action-test-seams.ts).
-const CREATE_ACTION_DIR = 'src/adapters/controllers/';
+// The browser-called controller actions (BUG-324) are thin wrappers: each
+// passes its input, alone, to the controller export of its own name, so no
+// client value can reach the controller's test dependencies.
+const CONTROLLER_WRAPPER = /^src\/adapters\/controllers\/[^/]+-actions\.ts$/;
+
+function wrapperIssue(
+  name: string,
+  declaration: ts.FunctionDeclaration,
+): string | undefined {
+  const [statement, ...rest] = declaration.body?.statements ?? [];
+  const call =
+    statement && ts.isReturnStatement(statement)
+      ? statement.expression
+      : undefined;
+  const [parameter] = declaration.parameters;
+  const [argument, ...extra] =
+    call && ts.isCallExpression(call) ? call.arguments : [];
+  const passesInputToItsName =
+    rest.length === 0 &&
+    call !== undefined &&
+    ts.isCallExpression(call) &&
+    ts.isPropertyAccessExpression(call.expression) &&
+    ts.isIdentifier(call.expression.expression) &&
+    call.expression.expression.text === 'controller' &&
+    call.expression.name.text === name &&
+    extra.length === 0 &&
+    argument !== undefined &&
+    ts.isIdentifier(argument) &&
+    parameter !== undefined &&
+    ts.isIdentifier(parameter.name) &&
+    argument.text === parameter.name.text;
+  return passesInputToItsName
+    ? undefined
+    : `${name} must only return controller.${name}(input)`;
+}
 
 export type ServerActionScan = {
   isServerActionModule: boolean;
@@ -60,14 +92,6 @@ function parameterIssue(
   if (parameter?.dotDotDotToken) return `${name} has a rest parameter`;
   if (parameter?.initializer) return `${name} has a default parameter`;
   return undefined;
-}
-
-function isCreateActionCall(node: ts.Expression): boolean {
-  return (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    node.expression.text === 'createAction'
-  );
 }
 
 export function scanServerActionSource(
@@ -119,26 +143,27 @@ export function scanServerActionSource(
       at(statement, 'has a default export');
     } else if (ts.isFunctionDeclaration(statement) && isExported(statement)) {
       const name = statement.name?.text ?? 'anonymous';
-      const issue = parameterIssue(name, statement.parameters);
+      const issue =
+        parameterIssue(name, statement.parameters) ??
+        (CONTROLLER_WRAPPER.test(file)
+          ? wrapperIssue(name, statement)
+          : undefined);
       if (issue) at(statement, issue);
       else exportedActions.push(name);
     } else if (ts.isVariableStatement(statement) && isExported(statement)) {
       for (const declaration of statement.declarationList.declarations) {
         const name = declaration.name.getText(ast);
         const value = declaration.initializer;
+        // A controller wrapper's body is checked only as a function
+        // declaration, so its module takes no other form of export.
         if (
           value &&
-          (ts.isArrowFunction(value) || ts.isFunctionExpression(value))
+          (ts.isArrowFunction(value) || ts.isFunctionExpression(value)) &&
+          !CONTROLLER_WRAPPER.test(file)
         ) {
           const issue = parameterIssue(name, value.parameters);
           if (issue) at(statement, issue);
           else exportedActions.push(name);
-        } else if (
-          value &&
-          isCreateActionCall(value) &&
-          file.startsWith(CREATE_ACTION_DIR)
-        ) {
-          exportedActions.push(name);
         } else {
           at(statement, `${name} is not a function declaration`);
         }

@@ -7,8 +7,8 @@ import type {
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import * as questionViewActions from '@/src/adapters/controllers/question-view-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
-import * as questionViewController from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -20,10 +20,10 @@ import {
 } from './question-page-model.browser.fixtures';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 
-vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/question-view-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getPreviousAttempt = vi.mocked(questionViewController.getPreviousAttempt);
+const getPreviousAttempt = vi.mocked(questionViewActions.getPreviousAttempt);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 
 const defaultQuestion: GetQuestionBySlugOutput = {

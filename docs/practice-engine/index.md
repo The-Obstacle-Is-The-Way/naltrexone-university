@@ -29,7 +29,7 @@ The Practice Engine is the core feature of Naltrexone University. It's the syste
 │  /app/bookmarks         — Saved questions (consumer)                │
 │  /app/questions/[slug]  — Question detail (attempt/review)          │
 └──────────────────────────────┬──────────────────────────────────────┘
-                               │ Server Actions ('use server')
+                               │ Server Actions (*-actions.ts wrappers)
 ┌──────────────────────────────┴──────────────────────────────────────┐
 │                      Controllers (adapters/)                        │
 │  question-controller    — getNextQuestion, submitAnswer             │
