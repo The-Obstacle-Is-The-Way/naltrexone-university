@@ -23,7 +23,7 @@ For grouped minor/patch Dependabot PRs:
 1. Read the PR body and upstream changelog links for every package in the group.
 2. Confirm the group does not include a known special-case tool. `@biomejs/biome` is intentionally split from the catch-all group because lint-rule shifts can block otherwise-good package updates.
 3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, the hosted gate omits E2E (see below) and the head must not be run locally with shared credentials; review the diff and changelogs and merge with the E2E gap disclosed. Treat the later promotion-PR E2E as evidence only for `dev`-targeted version updates; default-branch security updates have no promotion PR and receive only the post-merge `main` run, plus any separate fix PRs required to make the base truthful.
-4. Merge only when GitHub Actions, Vercel, Codecov, and CodeRabbit are clean on the latest head.
+4. Merge only when GitHub Actions, Codecov and CodeRabbit are clean on the latest head, and Vercel too for a branch it deploys. Vercel does not deploy Dependabot branches (BUG-327), so they have no Vercel status to wait for.
 
 If one package in a group causes an unrelated failure, split or defer that package. Do not let a style-tool or test-runner change hold unrelated patch updates hostage.
 
