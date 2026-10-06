@@ -823,3 +823,28 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - Every capture has zero axe violations, no horizontal overflow, a blocked unchecked submission, and the submit button reachable by scrolling.
   - The `f03b-dialog-*` and `f03b-banner-*` screenshots sit beside the measurements.
 - **Also updated:** the Pattern Registry (I-7's source, the plan consent composition and F-10's banner) and the billing QA script. The QA script covers both dialogs, and it now has a human step that completes the add-card on Stripe and checks the saved card (#1183 review).
+
+## Findings from AUDIT-013 (2026-10-05)
+
+The security review of recent work ([AUDIT-013](../audits/audit-013-security-review-2026-10-05.md)) found two renewal-evidence gaps that belong to this record. Neither is attacker-driven. Both were confirmed in code by an independent reviewer and again by the filer.
+
+**F21, an early bounce report can be lost (P4).**
+- **The gap.** Dispatch sends the notice first and stores Resend's email id only afterwards: `emailGateway.send`, then `persistOutcome` (`src/application/use-cases/dispatch-renewal-notice-delivery.ts:113-129`).
+- **What happens to an early report.** It finds no notice:
+  - the repository answers `'unknown'` (`drizzle-renewal-notice-delivery-repository.ts:349-356`);
+  - the controller ignores that (`resend-webhook-controller.ts:91-95`);
+  - the route answers 200, so Resend does not retry.
+- **Consequence.** A bounced notice would stay `accepted`, count as sent, and never raise the missed-deadline alert.
+- **Likelihood.** The window is the time between Resend accepting the message and our write, normally milliseconds, while bounces usually arrive later. So this is plausible, not observed.
+- **Decided.** Answer a retryable status to a failure-type report (`email.bounced`, `email.failed`, `email.suppressed`) whose email id is unknown, so Resend redelivers it after the id is stored. Delivery reports for unknown ids stay acknowledged.
+- **What this changes.** It narrows the 2026-09-30 rule that a report on an email that is not a notice is acknowledged and ignored. A failure report about foreign mail is then retried until Resend gives up, which costs nothing.
+
+**F22, a trial cancelled in the portal is still offered "Add a card" (P4).**
+- **The gap.** The add-card use case checks only for an unexpired trial (`src/application/use-cases/create-trial-payment-method-setup-session.ts:55-65`). The trial banner in `app/(app)/app/layout.tsx` and the billing page's renewal line show on the trial status alone. None of them reads `cancelAtPeriodEnd`, which already includes Stripe's portal-set `cancel_at`.
+- **Consequence.** A trial user who cancels in the portal and then adds a card gets an initial-offer renewal consent recorded and a renewal acknowledgment sent. Stripe still cancels at trial end and never charges. No money moves, but the record and the email state a renewal that will not happen.
+- **Decided.** When cancellation is scheduled:
+  - the use case refuses with `CONFLICT`;
+  - the banner and the billing line drop the renewal copy;
+  - the billing page offers a new subscription instead.
+
+  This is distinct from DEBT-501 item 4, a card added at or after trial end.
