@@ -4,8 +4,8 @@
 **Last Updated:** 2026-10-06
 
 **Now** — 2026-10-06.
-- **Verifying.** BUG-319: its fix is in production since 2026-10-05; the checks are stable server-action IDs across two production builds and the Sentry signals in its record, due 2026-10-19. BUG-323: the request limits in production, due 2026-10-19. BUG-324: the production deploy passes the action-manifest check and practice, bookmarks and checkout work, due 2026-10-13. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20.
-- **Next.** BUG-321 and BUG-322. Remaining security findings are filed with their fixes.
+- **Verifying.** BUG-319: its fix is in production since 2026-10-05; the checks are stable server-action IDs across two production builds and the Sentry signals in its record, due 2026-10-19. BUG-323: the request limits in production, due 2026-10-19. BUG-324: the production deploy passes the action-manifest check and practice, bookmarks and checkout work, due 2026-10-13. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-321: no unexplained failed sync on a refused checkout in production logs for two weeks, due 2026-10-20. BUG-322: the fix reaches production, due 2026-10-13.
+- **Next.** The remaining security findings, each filed with its fix.
 - **Owner decisions pending.** None for bugs.
 
 **Next Bug ID:** BUG-325
@@ -18,8 +18,8 @@
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — the limits reach production and answer 429 when exceeded; due 2026-10-19 |
 | [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) | Exported server actions accept caller-supplied dependencies | P1 | Verifying — the production deploy passes the action-manifest check and practice, bookmarks and checkout work; due 2026-10-13 |
 | [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) | A new user's first visit can fail when two requests create their row at once | P2 | Verifying — no `User could not be upserted` error in Sentry for two weeks after the deploy; due 2026-10-20 |
-| [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | Open — decided: sync the customer's subscriptions; else a notice and portal link |
-| [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md) | A checkout error is hidden behind the consent dialog that reopens | P2 | Open — decided: show the error inside the dialog |
+| [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | Verifying — no unexplained failed sync on a refused checkout in production logs for two weeks; due 2026-10-20 |
+| [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md) | A checkout error is hidden behind the consent dialog that reopens | P2 | Verifying — the fix reaches production; due 2026-10-13 |
 
 ## Parked (accepted risk)
 

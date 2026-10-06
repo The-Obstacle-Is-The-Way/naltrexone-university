@@ -143,6 +143,9 @@ describe('lib/routes', () => {
     expect(toPricingRoute({ reason: 'payment_processing' })).toBe(
       '/pricing?reason=payment_processing',
     );
+    expect(toPricingRoute({ checkout: 'already_subscribed' })).toBe(
+      '/pricing?checkout=already_subscribed',
+    );
     expect(toPricingRoute({ checkout: 'cancel' })).toBe(
       '/pricing?checkout=cancel',
     );
