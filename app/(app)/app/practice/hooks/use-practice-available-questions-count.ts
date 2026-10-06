@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { reportClientError } from '@/lib/report-client-error';
-import { countAvailableQuestions } from '@/src/adapters/controllers/practice-controller';
+import { countAvailableQuestions } from '@/src/adapters/controllers/practice-actions';
 import {
   type AvailableQuestionsCountFilters,
   type AvailableQuestionsCountStatus,

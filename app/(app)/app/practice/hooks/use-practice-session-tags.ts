@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { reportClientError } from '@/lib/report-client-error';
-import {
-  getTags,
-  type TagRow,
-} from '@/src/adapters/controllers/tag-controller';
+import { getTags } from '@/src/adapters/controllers/tag-actions';
+import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import { createTagsEffect } from '../practice-page-tags';
 
 export type UsePracticeSessionTagsOutput = {

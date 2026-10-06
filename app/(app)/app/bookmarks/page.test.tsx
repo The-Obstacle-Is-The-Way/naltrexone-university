@@ -133,21 +133,21 @@ function createBookmarkActionControllerDeps(overrides?: {
 let BookmarksView: typeof import('./page').BookmarksView;
 let createBookmarksPage: typeof import('./page').createBookmarksPage;
 let renderBookmarks: typeof import('./page').renderBookmarks;
-let removeBookmarkAction: typeof import('./bookmarks-actions').removeBookmarkAction;
+let removeBookmark: typeof import('./remove-bookmark').removeBookmark;
 let setBookmark: typeof import('@/src/adapters/controllers/bookmark-controller').setBookmark;
 
 beforeAll(async () => {
   const [pageModule, actionsModule, bookmarkControllerModule] =
     await Promise.all([
       import('./page'),
-      import('./bookmarks-actions'),
+      import('./remove-bookmark'),
       import('@/src/adapters/controllers/bookmark-controller'),
     ]);
 
   BookmarksView = pageModule.BookmarksView;
   createBookmarksPage = pageModule.createBookmarksPage;
   renderBookmarks = pageModule.renderBookmarks;
-  removeBookmarkAction = actionsModule.removeBookmarkAction;
+  removeBookmark = actionsModule.removeBookmark;
   setBookmark = bookmarkControllerModule.setBookmark;
 });
 
@@ -447,7 +447,7 @@ describe('app/(app)/app/bookmarks', () => {
     expect(html).toContain('No bookmarks yet.');
   });
 
-  it('calls revalidatePath when removeBookmarkAction succeeds', async () => {
+  it('calls revalidatePath when removeBookmark succeeds', async () => {
     const setBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
     const revalidatePathFn = vi.fn();
 
@@ -455,7 +455,7 @@ describe('app/(app)/app/bookmarks', () => {
     formData.set('questionId', fixtureQuestion1Id);
 
     await expect(
-      removeBookmarkAction(formData, {
+      removeBookmark(formData, {
         setBookmarkFn,
         revalidatePathFn,
         redirectFn: (url: string): never => {
@@ -481,7 +481,7 @@ describe('app/(app)/app/bookmarks', () => {
     formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
 
     await expect(
-      removeBookmarkAction(formData, {
+      removeBookmark(formData, {
         setBookmarkFn,
         revalidatePathFn: vi.fn(),
         redirectFn: (url: string): never => {
@@ -512,7 +512,7 @@ describe('app/(app)/app/bookmarks', () => {
       formData.set('questionId', questionId);
       formData.set('idempotencyKey', idempotencyKey);
 
-      return removeBookmarkAction(formData, {
+      return removeBookmark(formData, {
         setBookmarkFn: (input) => setBookmark(input, deps),
         revalidatePathFn,
         redirectFn: (url: string): never => {
@@ -538,11 +538,11 @@ describe('app/(app)/app/bookmarks', () => {
     expect(revalidatePathFn).toHaveBeenCalledTimes(2);
   });
 
-  it('redirects when removeBookmarkAction is missing questionId', async () => {
+  it('redirects when removeBookmark is missing questionId', async () => {
     const formData = new FormData();
 
     await expect(
-      removeBookmarkAction(formData, {
+      removeBookmark(formData, {
         redirectFn: (url: string): never => {
           throw new Error(`redirect:${url}`);
         },
@@ -552,12 +552,12 @@ describe('app/(app)/app/bookmarks', () => {
     });
   });
 
-  it('redirects when removeBookmarkAction receives empty questionId', async () => {
+  it('redirects when removeBookmark receives empty questionId', async () => {
     const formData = new FormData();
     formData.set('questionId', '');
 
     await expect(
-      removeBookmarkAction(formData, {
+      removeBookmark(formData, {
         redirectFn: (url: string): never => {
           throw new Error(`redirect:${url}`);
         },
@@ -567,12 +567,12 @@ describe('app/(app)/app/bookmarks', () => {
     });
   });
 
-  it('redirects when removeBookmarkAction cannot remove bookmark', async () => {
+  it('redirects when removeBookmark cannot remove bookmark', async () => {
     const formData = new FormData();
     formData.set('questionId', fixtureQuestion1Id);
 
     await expect(
-      removeBookmarkAction(formData, {
+      removeBookmark(formData, {
         setBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         revalidatePathFn: vi.fn(),
         redirectFn: (url: string): never => {

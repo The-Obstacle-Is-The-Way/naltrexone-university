@@ -101,6 +101,41 @@ function fakeWithPaymentMethod(
 }
 
 describe('StripePaymentGateway', () => {
+  // BUG-321: the blocking subscriptions a refused checkout is synced from.
+  describe('listBlockingCustomerSubscriptions', () => {
+    it("lists the customer's blocking subscriptions, normalized", async () => {
+      const stripe = new FakeStripeCheckoutClient();
+      stripe.seedSubscription(liveSubscription());
+
+      await expect(
+        createGateway(stripe).listBlockingCustomerSubscriptions({
+          externalCustomerId: 'cus_123',
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          userId: appUserId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+        }),
+      ]);
+    });
+
+    it('forwards the E2E owner, so another run cannot be synced', async () => {
+      const stripe = new FakeStripeCheckoutClient();
+      stripe.seedSubscription(
+        liveSubscription({ user_id: appUserId, e2e_owner: 'run-a' }),
+      );
+
+      await expect(
+        createGateway(stripe, {
+          webhookE2EOwner: 'run-b',
+        }).listBlockingCustomerSubscriptions({ externalCustomerId: 'cus_123' }),
+      ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    });
+  });
+
   it('keeps trial consent Session creation fail-closed until the dedicated secret is configured', async () => {
     const stripe = new FakeStripeCheckoutClient();
     const gateway = new StripePaymentGateway({

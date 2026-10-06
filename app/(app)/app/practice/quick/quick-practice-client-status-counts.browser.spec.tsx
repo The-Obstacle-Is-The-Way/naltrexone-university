@@ -1,9 +1,9 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { cleanup, render } from 'vitest-browser-react';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as questionController from '@/src/adapters/controllers/question-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as questionActions from '@/src/adapters/controllers/question-actions';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import {
   isValidQuestionProgressStatus,
@@ -22,19 +22,19 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => useSearchParamsMock(),
 }));
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/question-actions', { spy: true });
 
 const countAvailableQuestions = vi.mocked(
-  practiceController.countAvailableQuestions,
+  practiceActions.countAvailableQuestions,
 );
 const getBookmarkQuestionIds = vi.mocked(
-  bookmarkController.getBookmarkQuestionIds,
+  bookmarkActions.getBookmarkQuestionIds,
 );
-const setBookmark = vi.mocked(bookmarkController.setBookmark);
-const getNextQuestion = vi.mocked(questionController.getNextQuestion);
-const submitAnswer = vi.mocked(questionController.submitAnswer);
+const setBookmark = vi.mocked(bookmarkActions.setBookmark);
+const getNextQuestion = vi.mocked(questionActions.getNextQuestion);
+const submitAnswer = vi.mocked(questionActions.submitAnswer);
 
 const fixtureQuestionId = crypto.randomUUID();
 const fixtureChoiceAId = crypto.randomUUID();

@@ -12,7 +12,7 @@ import { withTimeout } from '@/lib/with-timeout';
 import {
   getBookmarkStatus,
   setBookmark,
-} from '@/src/adapters/controllers/bookmark-controller';
+} from '@/src/adapters/controllers/bookmark-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import { STANDARD_READ_TIMEOUT_MS } from '../../../shared/timeout-tiers';
 

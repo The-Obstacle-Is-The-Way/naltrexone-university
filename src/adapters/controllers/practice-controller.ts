@@ -1,6 +1,6 @@
-'use server';
+// WHY large-file: this controller is the server-side facade for the practice use-case cluster; splitting it would hide shared auth/rate-limit/action-result conventions. The actions a browser calls are thin wrappers in practice-actions.ts (BUG-324).
+import 'server-only';
 
-// WHY large-file: this controller is the server-action facade for the practice use-case cluster; splitting it would hide shared auth/rate-limit/action-result conventions.
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import {
   EXAM_DRAFT_SAVE_RATE_LIMIT,

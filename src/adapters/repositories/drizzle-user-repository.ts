@@ -54,32 +54,47 @@ export class DrizzleUserRepository implements UserRepository {
     );
   }
 
+  // After a write trips users_email_uq: the Clerk user whose row holds the
+  // email now, or null when none does. Undefined for any other error.
+  private async emailOwnerAfterConflict(
+    error: unknown,
+    email: string,
+  ): Promise<string | null | undefined> {
+    if (
+      !isPostgresUniqueViolation(error) ||
+      getPostgresConstraintName(error) !== 'users_email_uq'
+    ) {
+      return undefined;
+    }
+    const owner = await this.db.query.users.findFirst({
+      columns: { clerkUserId: true },
+      where: eq(users.email, email),
+    });
+    return owner?.clerkUserId ?? null;
+  }
+
+  private emailWriteError(
+    error: unknown,
+    clerkId: string,
+    owner: string | null | undefined,
+  ): ApplicationError {
+    if (owner && owner !== clerkId) {
+      return new UserEmailOwnershipConflictError(owner, { cause: error });
+    }
+    return this.mapDbError(error);
+  }
+
   private async mapEmailWriteError(
     error: unknown,
     clerkId: string,
     email: string,
   ): Promise<ApplicationError> {
-    if (
-      isPostgresUniqueViolation(error) &&
-      getPostgresConstraintName(error) === 'users_email_uq'
-    ) {
-      try {
-        const owner = await this.db.query.users.findFirst({
-          columns: { clerkUserId: true },
-          where: eq(users.email, email),
-        });
-
-        if (owner && owner.clerkUserId !== clerkId) {
-          return new UserEmailOwnershipConflictError(owner.clerkUserId, {
-            cause: error,
-          });
-        }
-      } catch (lookupError) {
-        return this.mapDbError(lookupError);
-      }
+    try {
+      const owner = await this.emailOwnerAfterConflict(error, email);
+      return this.emailWriteError(error, clerkId, owner);
+    } catch (lookupError) {
+      return this.mapDbError(lookupError);
     }
-
-    return this.mapDbError(error);
   }
 
   async findByClerkId(clerkId: string): Promise<User | null> {
@@ -127,41 +142,68 @@ export class DrizzleUserRepository implements UserRepository {
     options?: UpsertUserByClerkIdOptions,
   ): Promise<User> {
     const observedAt = options?.observedAt ?? this.now();
-    const observedAtParam = sql.param(observedAt, users.updatedAt);
-
     try {
-      const row = await this.db.transaction(async (tx) => {
-        const [upserted] = await tx
-          .insert(users)
-          .values({
-            clerkUserId: clerkId,
-            email,
-            createdAt: observedAt,
-            updatedAt: observedAt,
-          })
-          .onConflictDoUpdate({
-            target: users.clerkUserId,
-            set: {
-              email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
-              updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
-            },
-          })
-          .returning();
-
-        if (!upserted) {
-          throw new ApplicationError(
-            'INTERNAL_ERROR',
-            'Failed to ensure user row',
-          );
-        }
-
-        return upserted;
-      });
-
-      return this.toDomain(row);
+      return await this.upsertOnce(clerkId, email, observedAt);
     } catch (error) {
-      throw await this.mapEmailWriteError(error, clerkId, email);
+      let owner: string | null | undefined;
+      try {
+        owner = await this.emailOwnerAfterConflict(error, email);
+      } catch (lookupError) {
+        throw this.mapDbError(lookupError);
+      }
+      // BUG-320: a new user's first requests can each insert the row at once.
+      // The loser trips the email index, not the Clerk ID index the upsert
+      // resolves conflicts on. Postgres raises that only once the winner has
+      // committed, so the lookup sees the winner's row: this user's own. One
+      // more try then takes the update path. No owner means the row went away
+      // since, perhaps by a deletion, so it is not retried; another
+      // identity's email is still refused (BUG-284).
+      if (owner !== clerkId) {
+        throw this.emailWriteError(error, clerkId, owner);
+      }
+      try {
+        return await this.upsertOnce(clerkId, email, observedAt);
+      } catch (retryError) {
+        throw await this.mapEmailWriteError(retryError, clerkId, email);
+      }
     }
+  }
+
+  private async upsertOnce(
+    clerkId: string,
+    email: string,
+    observedAt: Date,
+  ): Promise<User> {
+    const observedAtParam = sql.param(observedAt, users.updatedAt);
+    const row = await this.db.transaction(async (tx) => {
+      const [upserted] = await tx
+        .insert(users)
+        .values({
+          clerkUserId: clerkId,
+          email,
+          createdAt: observedAt,
+          updatedAt: observedAt,
+        })
+        .onConflictDoUpdate({
+          target: users.clerkUserId,
+          set: {
+            email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
+            updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
+          },
+        })
+        .returning();
+
+      if (!upserted) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Failed to ensure user row',
+        );
+      }
+
+      return upserted;
+    });
+
+    return this.toDomain(row);
   }
 
   async updateEmailByClerkId(

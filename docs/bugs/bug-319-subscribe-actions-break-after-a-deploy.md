@@ -62,7 +62,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 **Scope limit.**
 - **Where the reload fires.** Only for an action whose failure reaches a route error page: the form actions on pricing, add-card, billing and bookmarks.
 - **Where it does not.** The practice flows and the question page call their actions through `runTransitionedAsyncAction`, which catches errors, so a stale action there shows the flow's own error. The global error page does not reload either, since the root layout calls no actions.
-- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file or export changes.
+- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file, export or declared arguments change. [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) did that once, on purpose, for the 22 actions those pages call. So `UnrecognizedActionError` events from those pages just after its deploy are that move, not a failure of this fix.
 
 ## Progress
 
@@ -81,7 +81,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 
 Criteria to meet before closing.
 
-- [ ] Two consecutive production builds give the same action IDs. Proof: call a page's action from a tab opened before a deploy, or compare the IDs in the pricing page's dynamic payload across two deployments.
+- [ ] Two consecutive production builds give the same action IDs. Proof: call a page's action from a tab opened before a deploy, or compare the IDs in the pricing page's dynamic payload across two deployments. Compare actions whose code did not change between the two builds: [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) changes the five app-level action IDs and moves the 22 browser-called controller actions, on purpose.
 - [x] "Try again" calls `retry` on every route error page. A test pins it, red first.
 - [x] A stale action on a payment form reloads the page by itself, with a test of the guard.
 - [x] A missing key fails a production build.

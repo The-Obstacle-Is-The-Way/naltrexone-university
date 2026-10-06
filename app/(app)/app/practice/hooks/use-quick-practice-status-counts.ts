@@ -6,7 +6,7 @@ import {
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { countAvailableQuestions } from '@/src/adapters/controllers/practice-controller';
+import { countAvailableQuestions } from '@/src/adapters/controllers/practice-actions';
 import {
   AllQuestionProgressStatuses,
   type QuestionDifficulty,

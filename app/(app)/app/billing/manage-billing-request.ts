@@ -1,0 +1,47 @@
+// The manage-billing action's logic, outside the 'use server' module so a
+// client cannot reach its test seams: an exported server action takes only its
+// form data, because a client can call one with any arguments.
+import { redirect } from 'next/navigation';
+import { runManageBillingAction } from '@/app/(app)/app/billing/manage-billing-action';
+import { logger as appLogger } from '@/lib/logger';
+import type {
+  CreatePortalSessionFn,
+  ManageBillingLogger,
+  RedirectFn,
+} from '@/lib/manage-billing/manage-billing-types';
+import { createPortalSession } from '@/src/adapters/controllers/billing-controller';
+
+export type ManageBillingActionDeps = {
+  createPortalSessionFn: CreatePortalSessionFn;
+  redirectFn: RedirectFn;
+  logger: ManageBillingLogger;
+};
+
+function getDeps(
+  deps?: Partial<ManageBillingActionDeps>,
+): ManageBillingActionDeps {
+  const createPortalSessionFn: CreatePortalSessionFn =
+    deps?.createPortalSessionFn ?? createPortalSession;
+
+  return {
+    createPortalSessionFn,
+    redirectFn: deps?.redirectFn ?? redirect,
+    logger: deps?.logger ?? appLogger,
+  };
+}
+
+export async function submitManageBilling(
+  formData: FormData,
+  deps?: Partial<ManageBillingActionDeps>,
+): Promise<void> {
+  const d = getDeps(deps);
+  const rawKey = formData.get('idempotencyKey');
+  const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
+
+  return runManageBillingAction({
+    createPortalSessionFn: d.createPortalSessionFn,
+    redirectFn: d.redirectFn,
+    logger: d.logger,
+    ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+  });
+}

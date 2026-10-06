@@ -1,7 +1,11 @@
+import { PgRelationalQuery } from 'drizzle-orm/pg-core/query-builders/query';
 import { drizzle, PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  UserEmailOwnershipConflictError,
+} from '@/src/application/errors';
 import { installMockTransactionBoundary } from '@/tests/shared/drizzle-mock-transaction';
 import { DrizzleUserRepository } from './drizzle-user-repository';
 
@@ -41,6 +45,8 @@ describe('DrizzleUserRepository error translation', () => {
     const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
     await expect(promise).rejects.toBeInstanceOf(ApplicationError);
     await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
+    // Only an email conflict with the same user is retried (BUG-320).
+    expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(1);
   });
 
   it('maps an email unique violation whose owner lookup fails to INTERNAL_ERROR with the lookup cause', async () => {
@@ -57,6 +63,113 @@ describe('DrizzleUserRepository error translation', () => {
     await expect(promise).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
       cause: lookupError,
+    });
+  });
+
+  // BUG-320: two first requests for one new user can insert at once. The
+  // loser trips the email index; the row is its own, so it tries once more.
+  // Inserts fail or answer at the prepared-query spy; the owner lookup is a
+  // relational read, answered at its own execute().
+  describe('an email conflict with the same user', () => {
+    const emailConflict = { code: '23505', constraint_name: 'users_email_uq' };
+    const row = {
+      id: '0b9a3f9e-5d55-4bd5-9a52-4d3d0e6f8a11',
+      clerkUserId: 'clerk_1',
+      email: 'a@example.com',
+      createdAt: new Date('2026-10-06T00:00:00Z'),
+      updatedAt: new Date('2026-10-06T00:00:00Z'),
+    };
+    const ownerLookups = () => vi.spyOn(PgRelationalQuery.prototype, 'execute');
+
+    it('retries once when its own row holds the email', async () => {
+      const lookups = ownerLookups().mockResolvedValueOnce({
+        clerkUserId: 'clerk_1',
+      });
+      vi.mocked(PostgresJsPreparedQuery.prototype.execute)
+        .mockRejectedValueOnce(emailConflict)
+        .mockResolvedValueOnce([row]);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com'),
+      ).resolves.toMatchObject({ id: row.id, email: row.email });
+      expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(lookups).toHaveBeenCalledTimes(1);
+    });
+
+    // No owner means the row went away after it won, perhaps by a deletion,
+    // so a retry could bring back a deleted user.
+    it('does not retry when no row holds the email any more', async () => {
+      ownerLookups().mockResolvedValueOnce(undefined);
+      vi.mocked(
+        PostgresJsPreparedQuery.prototype.execute,
+      ).mockRejectedValueOnce(emailConflict);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com'),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(
+        1,
+      );
+    });
+
+    it('refuses a retry that conflicts with another identity', async () => {
+      ownerLookups()
+        .mockResolvedValueOnce({ clerkUserId: 'clerk_1' })
+        .mockResolvedValueOnce({ clerkUserId: 'clerk_other' });
+      vi.mocked(PostgresJsPreparedQuery.prototype.execute)
+        .mockRejectedValueOnce(emailConflict)
+        .mockRejectedValueOnce(emailConflict);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com'),
+      ).rejects.toBeInstanceOf(UserEmailOwnershipConflictError);
+    });
+
+    it('maps an owner lookup that fails after the retry to INTERNAL_ERROR with its cause', async () => {
+      const lookupError = new Error('lookup boom');
+      ownerLookups()
+        .mockResolvedValueOnce({ clerkUserId: 'clerk_1' })
+        .mockRejectedValueOnce(lookupError);
+      vi.mocked(PostgresJsPreparedQuery.prototype.execute)
+        .mockRejectedValueOnce(emailConflict)
+        .mockRejectedValueOnce(emailConflict);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com'),
+      ).rejects.toMatchObject({ code: 'INTERNAL_ERROR', cause: lookupError });
+    });
+
+    it('gives up after one retry', async () => {
+      const lookups = ownerLookups()
+        .mockResolvedValueOnce({ clerkUserId: 'clerk_1' })
+        .mockResolvedValueOnce({ clerkUserId: 'clerk_1' });
+      vi.mocked(PostgresJsPreparedQuery.prototype.execute)
+        .mockRejectedValueOnce(emailConflict)
+        .mockRejectedValueOnce(emailConflict);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com'),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(lookups).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry when another identity owns the email', async () => {
+      ownerLookups().mockResolvedValueOnce({ clerkUserId: 'clerk_other' });
+      vi.mocked(
+        PostgresJsPreparedQuery.prototype.execute,
+      ).mockRejectedValueOnce(emailConflict);
+
+      await expect(
+        repo.upsertByClerkId('clerk_1', 'a@example.com'),
+      ).rejects.toBeInstanceOf(UserEmailOwnershipConflictError);
+      expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(
+        1,
+      );
     });
   });
 

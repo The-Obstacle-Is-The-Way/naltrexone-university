@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { PracticeFilters } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
-import * as questionController from '@/src/adapters/controllers/question-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
+import * as questionActions from '@/src/adapters/controllers/question-actions';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
@@ -14,15 +14,15 @@ import { usePracticeQuestionFlow } from './use-practice-question-flow';
 const fixtureAttempt1Id = crypto.randomUUID();
 const fixtureChoice1Id = crypto.randomUUID();
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/question-actions', { spy: true });
 
 const getBookmarkQuestionIds = vi.mocked(
-  bookmarkController.getBookmarkQuestionIds,
+  bookmarkActions.getBookmarkQuestionIds,
 );
-const setBookmark = vi.mocked(bookmarkController.setBookmark);
-const getNextQuestion = vi.mocked(questionController.getNextQuestion);
-const submitAnswer = vi.mocked(questionController.submitAnswer);
+const setBookmark = vi.mocked(bookmarkActions.setBookmark);
+const getNextQuestion = vi.mocked(questionActions.getNextQuestion);
+const submitAnswer = vi.mocked(questionActions.submitAnswer);
 
 const TEST_FILTERS = {
   tagSlugs: [],

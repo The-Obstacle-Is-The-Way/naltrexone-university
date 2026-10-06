@@ -6,6 +6,7 @@ import type {
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '../ports/repositories';
+import { syncCustomerSubscriptionFromProvider } from '../shared/sync-customer-subscription';
 
 export type CreateCheckoutSessionInput = {
   userId: string;
@@ -168,12 +169,54 @@ export class CreateCheckoutSessionUseCase {
         ? baseCheckoutSessionInput
         : { ...baseCheckoutSessionInput, trialPeriodDays };
 
-    if (input.idempotencyKey) {
-      return this.payments.createCheckoutSession(checkoutSessionInput, {
-        idempotencyKey: input.idempotencyKey,
-      });
+    try {
+      return input.idempotencyKey
+        ? await this.payments.createCheckoutSession(checkoutSessionInput, {
+            idempotencyKey: input.idempotencyKey,
+          })
+        : await this.payments.createCheckoutSession(checkoutSessionInput);
+    } catch (error) {
+      // BUG-321: our database showed no current subscription, yet Stripe
+      // refused because the customer holds one. Record it, so the page shows
+      // the truth, then refuse as before.
+      if (isApplicationError(error) && error.code === 'ALREADY_SUBSCRIBED') {
+        await this.recordSubscriptionStripeHolds(
+          input.userId,
+          stripeCustomerId,
+        );
+      }
+      throw error;
     }
+  }
 
-    return this.payments.createCheckoutSession(checkoutSessionInput);
+  private async recordSubscriptionStripeHolds(
+    userId: string,
+    externalCustomerId: string,
+  ): Promise<void> {
+    try {
+      await syncCustomerSubscriptionFromProvider({
+        userId,
+        externalCustomerId,
+        payments: this.payments,
+        subscriptions: this.subscriptions,
+      });
+    } catch (error) {
+      // The refusal still stands, and the page offers the billing portal. The
+      // message is the app's own, so each failure can be told apart without
+      // logging provider data.
+      try {
+        this.logger.error(
+          {
+            userId,
+            errorCode: isApplicationError(error) ? error.code : null,
+            errorMessage: isApplicationError(error) ? error.message : null,
+            errorName: error instanceof Error ? error.name : 'unknown',
+          },
+          'Could not record the subscription Stripe holds for a refused checkout',
+        );
+      } catch {
+        // Logging must not change the checkout's answer.
+      }
+    }
   }
 }

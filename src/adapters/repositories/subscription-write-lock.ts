@@ -10,6 +10,9 @@ type SubscriptionWriteLockDb = Pick<DrizzleDb, 'execute'>;
  * advisory(user) -> stripe_subscriptions -> stripe_customers. User deletion
  * is the fourth writer: its cascade order is FK-fixed to stripe_customers ->
  * stripe_subscriptions, so it takes this same advisory lock before DELETE.
+ * BUG-321's sync on a refused checkout is the fifth: it writes only through
+ * the subscription upsert, advisory(user) -> stripe_subscriptions, a prefix of
+ * that order.
  */
 export async function acquireSubscriptionWriteLock(
   db: SubscriptionWriteLockDb,

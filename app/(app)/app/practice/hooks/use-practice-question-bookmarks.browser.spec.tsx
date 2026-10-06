@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -11,12 +11,12 @@ import { usePracticeQuestionBookmarks } from './use-practice-question-bookmarks'
 const fixtureQuestion1Id = crypto.randomUUID();
 const fixtureQuestion2Id = crypto.randomUUID();
 
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
 
 const getBookmarkQuestionIds = vi.mocked(
-  bookmarkController.getBookmarkQuestionIds,
+  bookmarkActions.getBookmarkQuestionIds,
 );
-const setBookmark = vi.mocked(bookmarkController.setBookmark);
+const setBookmark = vi.mocked(bookmarkActions.setBookmark);
 
 function PracticeQuestionBookmarksProbe() {
   const [question, setQuestion] = useState(
