@@ -139,9 +139,36 @@ describe('requests that make Clerk call its Backend API', () => {
 
 describe('limiting requests that make Clerk call its Backend API', () => {
   const nonce = () => request('https://example.com/?__clerk_handshake_nonce=x');
+  const fromAddress = (url: string, init: { cookie?: string } = {}) => {
+    const r = request(url, init);
+    r.headers.set('x-forwarded-for', '203.0.113.7');
+    return r;
+  };
 
   it('counts each request per address, then site-wide, and lets it through under both', async () => {
     const limiter = new FakeRateLimiter([UNDER_LIMIT, UNDER_LIMIT]);
+
+    expect(
+      await limitClerkBackendCalls(
+        fromAddress('https://example.com/?__clerk_handshake_nonce=x'),
+        async () => limiter,
+        () => {},
+      ),
+    ).toBeNull();
+    expect(limiter.inputs).toEqual([
+      {
+        key: 'clerk-backend-call:203.0.113.7',
+        ...CLERK_BACKEND_CALL_RATE_LIMIT,
+      },
+      { key: 'clerk-backend-call:site', ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT },
+    ]);
+  });
+
+  // Without a readable client address every such request would share one
+  // per-address bucket, so one sender could refuse everyone else; the
+  // per-session and site-wide limits still apply.
+  it('skips the per-address limit when the client address is unknown', async () => {
+    const limiter = new FakeRateLimiter([UNDER_LIMIT]);
 
     expect(
       await limitClerkBackendCalls(
@@ -150,9 +177,8 @@ describe('limiting requests that make Clerk call its Backend API', () => {
         () => {},
       ),
     ).toBeNull();
-    expect(limiter.inputs).toEqual([
-      { key: 'clerk-backend-call:unknown', ...CLERK_BACKEND_CALL_RATE_LIMIT },
-      { key: 'clerk-backend-call:site', ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT },
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:site',
     ]);
   });
 
@@ -164,7 +190,7 @@ describe('limiting requests that make Clerk call its Backend API', () => {
       UNDER_LIMIT,
       UNDER_LIMIT,
     ]);
-    const refresh = request('https://example.com/pricing', {
+    const refresh = fromAddress('https://example.com/pricing', {
       cookie: `__session=${sessionToken(1, 'sess_replayed')}; __refresh_abc=x`,
     });
 
@@ -176,7 +202,7 @@ describe('limiting requests that make Clerk call its Backend API', () => {
       ),
     ).toBeNull();
     expect(limiter.inputs.map(({ key }) => key)).toEqual([
-      'clerk-backend-call:unknown',
+      'clerk-backend-call:203.0.113.7',
       'clerk-backend-call:session:sess_replayed',
       'clerk-backend-call:site',
     ]);
@@ -204,7 +230,7 @@ describe('limiting requests that make Clerk call its Backend API', () => {
     const limiter = new FakeRateLimiter([OVER_LIMIT]);
 
     const response = await limitClerkBackendCalls(
-      nonce(),
+      fromAddress('https://example.com/?__clerk_handshake_nonce=x'),
       async () => limiter,
       () => {},
     );
@@ -218,7 +244,7 @@ describe('limiting requests that make Clerk call its Backend API', () => {
     const limiter = new FakeRateLimiter([UNDER_LIMIT, OVER_LIMIT]);
 
     const response = await limitClerkBackendCalls(
-      nonce(),
+      fromAddress('https://example.com/?__clerk_handshake_nonce=x'),
       async () => limiter,
       () => {},
     );

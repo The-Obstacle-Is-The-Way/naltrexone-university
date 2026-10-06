@@ -240,15 +240,6 @@ function usesProductionClerkInstance(): boolean {
   );
 }
 
-let cachedBackendCallLimiter: RateLimiter | null = null;
-
-async function loadContainerRateLimiter(): Promise<RateLimiter> {
-  if (cachedBackendCallLimiter) return cachedBackendCallLimiter;
-  const { createContainer } = await import('@/lib/container');
-  cachedBackendCallLimiter = createContainer().createRateLimiter();
-  return cachedBackendCallLimiter;
-}
-
 export type ProxyDependencies = {
   loadBackendCallLimiter: () => Promise<RateLimiter>;
 };
@@ -291,7 +282,8 @@ export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
 }
 
 export default createProxy({
-  loadBackendCallLimiter: loadContainerRateLimiter,
+  loadBackendCallLimiter: async () =>
+    (await import('@/lib/container')).createContainer().createRateLimiter(),
 });
 
 export const config = {

@@ -107,12 +107,17 @@ export async function limitClerkBackendCalls(
 ): Promise<NextResponse | null> {
   try {
     const limiter = await loadLimiter();
-    const perAddress = await limiter.limit({
-      key: `clerk-backend-call:${getClientIp(request.headers)}`,
-      ...CLERK_BACKEND_CALL_RATE_LIMIT,
-    });
-    if (!perAddress.success)
-      return tooManyRequests(request, perAddress.retryAfterSeconds);
+    // Without a readable address every request would share one bucket, so
+    // one sender could refuse everyone; the other limits still apply.
+    const address = getClientIp(request.headers);
+    if (address !== 'unknown') {
+      const perAddress = await limiter.limit({
+        key: `clerk-backend-call:${address}`,
+        ...CLERK_BACKEND_CALL_RATE_LIMIT,
+      });
+      if (!perAddress.success)
+        return tooManyRequests(request, perAddress.retryAfterSeconds);
+    }
     const session = refreshingSession(request, Math.floor(Date.now() / 1000));
     if (session) {
       const perSession = await limiter.limit({

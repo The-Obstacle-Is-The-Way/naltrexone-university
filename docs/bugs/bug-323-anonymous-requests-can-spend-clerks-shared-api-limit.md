@@ -50,7 +50,7 @@ For as long as an attacker kept sending these requests, every signed-in page wou
 ## Resolution (decided)
 
 All five, under the owner's 2026-09-28 delegation. The owner approved the firewall rule (option 4) and the report to Clerk (option 5).
-- Per address: 30 a minute.
+- Per address: 30 a minute. A request with no readable client address skips this limit, so one sender cannot refuse every other such request through a shared bucket. The other two limits still apply, and on Vercel the address is always present. (Added after CodeRabbit's review.)
 - Per refreshing session: 6 a minute.
 - Site-wide: 1,000 a minute.
 - A limiter that fails lets the request through and logs `clerk_backend_call_limiter_failed`. Failing closed would break every real refresh while the database is down, and the firewall still bounds the volume.
