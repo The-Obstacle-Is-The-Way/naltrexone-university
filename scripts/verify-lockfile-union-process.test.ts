@@ -62,30 +62,26 @@ describe('verify-lockfile-union CLI', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('PASS');
-  }, 30_000);
+  });
 
   it('exits 28 when a newer transitive replaces the source resolution', () => {
     const result = verify('candidate-newer-transitive');
 
     expect(result.status).toBe(28);
     expect(result.stdout).toContain('FAIL (exit 28)');
-  }, 30_000);
+  });
 
   it.each([
     ['by its own path', () => SCRIPT],
     ['without its extension', () => SCRIPT.replace(/\.ts$/, '')],
     ['through a symlink', () => undefined],
-  ])(
-    'runs when invoked %s',
-    (_name, scriptPath) => {
-      const script = scriptPath() ?? linkToScript();
+  ])('runs when invoked %s', (_name, scriptPath) => {
+    const script = scriptPath() ?? linkToScript();
 
-      const result = verify('candidate-newer-transitive', script);
+    const result = verify('candidate-newer-transitive', script);
 
-      expect(result.status).toBe(28);
-    },
-    30_000,
-  );
+    expect(result.status).toBe(28);
+  });
 
   it('exits 2 with usage for bad arguments', () => {
     const result = cli(SCRIPT, ['--base', 'does-not-exist']);
@@ -94,5 +90,5 @@ describe('verify-lockfile-union CLI', () => {
     expect(result.stderr).toContain(
       'Usage: tsx scripts/verify-lockfile-union.ts',
     );
-  }, 30_000);
+  });
 });
