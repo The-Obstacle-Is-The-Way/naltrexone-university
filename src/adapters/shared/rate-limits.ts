@@ -14,6 +14,29 @@ export const STRIPE_WEBHOOK_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+// BUG-323: requests that make Clerk's SDK call Clerk's Backend API, whose
+// limit every signed-in page shares. A real person sends very few, so the
+// per-address limit leaves a shared hospital address untouched. A refresh is
+// also limited per session, since Clerk refreshes only a genuine one. The
+// site-wide cap bounds the total whatever the number of addresses, at about a
+// sixth of Clerk's production limit (1,000 per 10 seconds): high enough that
+// tripping it takes many addresses, low enough to keep most of the allowance
+// for signed-in pages.
+export const CLERK_BACKEND_CALL_RATE_LIMIT = {
+  limit: 30,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
+export const CLERK_BACKEND_CALL_SESSION_RATE_LIMIT = {
+  limit: 6,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
+export const CLERK_BACKEND_CALL_SITE_RATE_LIMIT = {
+  limit: 1000,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 export const CLERK_WEBHOOK_RATE_LIMIT = {
   limit: 100,
   windowMs: ONE_MINUTE_MS,
