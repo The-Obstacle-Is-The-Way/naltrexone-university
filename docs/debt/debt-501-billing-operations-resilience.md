@@ -59,6 +59,12 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - No live-mode purchase has been recorded working end to end. All hosted E2E tests run in test mode, and a paid monthly Checkout has none.
 - **Decided.** The owner makes one live purchase followed by a refund, under DEBT-465 Part 4's QA procedures, and records the live webhook's events.
 
+### 8. The checkout guard reads only the customer's first 10 subscriptions (P3)
+- **Evidence.** `createStripeCheckoutSession` lists the customer's subscriptions with `status: 'all'` and `limit: SUBSCRIPTION_LIST_LIMIT` (10), with no paging (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts`, the blocking check before session creation). Stripe lists newest first, and `all` includes ended subscriptions.
+- **Trigger.** A customer whose blocking subscription has more than ten of their other subscriptions listed ahead of it. The guard then misses it, and a second, double-billed subscription can start.
+- **Not BUG-321's sync.** BUG-321's sync (2026-10-06) reads the same first page in the same order, and runs only after this guard refused. So it sees the subscription that caused the refusal. Raised by CodeRabbit on #1393 and adjudicated there.
+- **Decided.** Page the guard's listing with `starting_after` while `has_more`, under a stated bound, and give BUG-321's listing the same paging. The adapter-owned `FakeStripeCheckoutClient` pages Checkout sessions but not subscriptions, so its subscription list and its shared contract scenario gain paging first.
+
 ## Verification
 
 Criteria to meet before closing: each item shipped with red-first tests, or deferred with its trigger in the register; and item 7's live purchase recorded.
