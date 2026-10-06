@@ -81,12 +81,14 @@ overrides:
   # four inherited CVEs (memory-safety on untrusted image input): CVE-2026-33327
   # (VIPS dimension overflow), CVE-2026-33328 (GIF integer overflow, 32-bit),
   # CVE-2026-35591 (TIFF tile-channel handling), CVE-2026-35590 (EXIF range
-  # validation). Patched in sharp 0.35.0 (libvips 8.18.3); pinned to 0.35.4, the
-  # latest patch. Next 16.3.4 itself declares ^0.35.4: it re-enabled AVIF
-  # optimization only once sharp 0.35.4 shipped the libheif 1.23.2 fix for
-  # GHSA-2xp9-vwfh-vxw4 (unauthenticated AVIF RCE in Image Optimization). The
-  # exact pin stays as defense-in-depth so no transitive range can resolve
-  # below that patched floor.
+  # validation). Patched in sharp 0.35.0 (libvips 8.18.3). GHSA-wq5f-xc86-pv6w
+  # (CVE-2026-96889; alert #83) — a memory-safety flaw in the bundled librsvg,
+  # a possible RCE on glibc Linux when decoding SVG — is fixed in 0.35.5
+  # (librsvg 2.63.2), the latest patch, which this pins. Next 16.3.4 itself
+  # declares ^0.35.4: it re-enabled AVIF optimization only once sharp 0.35.4
+  # shipped the libheif 1.23.2 fix for GHSA-2xp9-vwfh-vxw4 (unauthenticated
+  # AVIF RCE in Image Optimization). The exact pin stays as defense-in-depth so
+  # no transitive range can resolve below that patched floor.
   # No reachable attacker path here today: no next/image usage, no
   # images.remotePatterns in next.config.ts, no direct sharp import, no image
   # upload — so this is defense-in-depth for the installed binary and any future
@@ -94,8 +96,9 @@ overrides:
   # Vercel's own pipeline, not this sharp). Next's optimizer touches only
   # surviving 0.35 APIs (metadata/resize/rotate/format/toBuffer), none of the
   # removed surface (failOnError, paletteBitDepth, format.jp2k). Aged past the
-  # 7-day release gate (0.35.4 published 2026-08-26).
-  sharp: 0.35.4
+  # 7-day release gate (0.35.5 published 2026-09-27T13:46:24Z, with its
+  # @img/sharp-* 0.35.5 and libvips 1.3.4 platform packages).
+  sharp: 0.35.5
 packageExtensions:
   # DEBT-460 Cleanup A (issue #813): Stryker's sandbox TSConfigPreprocessor runs
   # `import('typescript')` and calls the classic compiler API
