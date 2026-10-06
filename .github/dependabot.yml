@@ -19,6 +19,11 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
+      # DEBT-505: lint-staged can stage another session's tracked edits during
+      # the hook. Remove after a tested pre-commit path safeguard or enforced
+      # isolated worktrees prevents the shared-clone race; verify the full gate.
+      - dependency-name: lint-staged
+        versions: ['>=17.6.0']
     groups:
       npm-minor-and-patch:
         applies-to: version-updates
