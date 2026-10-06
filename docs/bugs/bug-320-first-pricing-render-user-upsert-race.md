@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-05; resolution decided below
+**Status:** Verifying — no `User could not be upserted` error in Sentry for two weeks after the deploy; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -14,7 +14,7 @@
 
 The first time a newly signed-up user's app row is created, two concurrent requests can both try to insert it. The loser fails on the users table's email index and raises `ApplicationError: User could not be upserted due to a uniqueness constraint`. The user sees the pricing error page, at the moment they arrive to subscribe. A reload succeeds, but the page's "Try again" does not (BUG-319).
 
-Sentry recorded that error in production twice, on 2026-10-02 and 2026-10-04. This race is the leading explanation, by the elimination under Evidence, but no event shows the second request, so it is not proven. It may be the origin of the owner's report that a bug stopped a user from subscribing.
+Sentry recorded that error in production twice, on 2026-10-02 and 2026-10-04. This race is the leading explanation, by the elimination under Evidence. On 2026-10-06 a real-Postgres test reproduced the same message from concurrent first-time upserts, so the race produces it; no event shows which second request caused the production ones. It may be the origin of the owner's report that a bug stopped a user from subscribing.
 
 ## Evidence
 
@@ -59,13 +59,22 @@ A new user can meet an error page on their first visit to pricing, right after s
 
 Option 1, the smallest change that removes the failure without weakening identity safety. BUG-319's `retry` makes any remaining transient failure recoverable from the page.
 
+## Progress
+
+**2026-10-06, the fix.** Tests were written red first.
+- **Reproduced first.** `tests/integration/user-repository.integration.test.ts` runs six sessions that each upsert the same new user at once, for 20 rounds. Before the fix it failed with `ApplicationError: User could not be upserted due to a uniqueness constraint`, the production message.
+- **The fix.** `upsertByClerkId` (`src/adapters/repositories/drizzle-user-repository.ts`) catches a 23505 on `users_email_uq` and looks up the email's owner.
+  - **The owner is the same Clerk user, or no row holds the email any more:** it retries the upsert once. The retry takes the update path, or inserts if the row is gone.
+  - **Another identity owns it:** it is still refused with `UserEmailOwnershipConflictError`, without a retry.
+  - **A second failure:** it is mapped as before.
+- **Unit tests at the sanctioned boundary** (`drizzle-user-repository.test.ts`) pin each case: a retry for its own row and for no owner, giving up after one retry, and no retry for another identity. The inserts fail at the prepared-query spy, and the owner lookup is answered at the relational query's `execute`. The retry tests fail without the fix.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
-- [ ] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
-- [ ] A real-Postgres test of concurrent first-time upserts for one user ends with one row and no error.
+- [x] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
+- [x] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
+- [x] A real-Postgres test of concurrent first-time upserts for one user ends with one row and no error.
+- [ ] In production: no `User could not be upserted due to a uniqueness constraint` event in Sentry for two weeks after the deploy.
 - [x] The "race-free" note is qualified to the race it covered: a dated correction in the frozen register history (2026-10-05).
 
 ## Related
