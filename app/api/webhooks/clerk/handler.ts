@@ -89,7 +89,9 @@ export function createWebhookHandler(
     try {
       event = await verifyWebhook(req);
     } catch (error) {
-      container.logger.error(
+      // BUG-325: anyone can send a bad signature, so it is a warning; the
+      // rate limiter bounds how many.
+      container.logger.warn(
         {
           route: '/api/webhooks/clerk',
           error: projectSafeErrorDiagnostics(error),

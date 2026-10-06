@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — items 2, 3 and 6 in this pull request; item 1 shipped with BUG-324; item 4 deferred
+**Status:** Verifying — no Sentry error or error log from the fixed paths for two weeks after the deploy; due 2026-10-20
 **Priority:** P3 (first drafted as P2; lowered 2026-10-05, see item 5)
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -77,16 +77,29 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **The logger's redaction list** (`lib/logger.ts:27-46`) predates `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `DATABASE_URL`. Nothing logs `env` today. **Decided:** add them.
 - **CSP violation reports** reach Sentry's report endpoint. This is already recorded as known noise in DEBT-420 (archived), so it is not re-filed.
 
+## Progress
+
+**2026-10-06, the fix.** Tests were written red first.
+- **Item 1** shipped with BUG-324: every form action returns at once, without logging, for input that is not form data.
+- **Item 2.** `runSubscribeAction` (`app/pricing/subscribe-action.ts`) no longer logs a `VALIDATION_ERROR`, which is the caller's mistake or a forgery. Other checkout failures log the idempotency key's length, never the key.
+- **Item 3.** `syncCheckoutSuccess` refuses a `session_id` that is not `cs_` and then letters, digits and underscores (at most 255), before any Clerk or Stripe call. Stripe's `resource_missing` gets the same quiet failure, `invalid_session_id`, at info level with the ID's length only. Any other Stripe failure is still thrown. Real Stripe IDs and the existing fixtures fit the shape.
+- **Item 4** is deferred: production Sentry has none of these events in 14 days. The trigger is the first one.
+- **Item 6.**
+  - The question page caps the slug and origin in its telemetry line at 100 characters.
+  - All three webhooks log a failed signature check at warn. A Stripe payload failure behind a valid signature stays an error.
+  - The logger's redaction list covers every secret the env schema declares, and a test now checks it against the schema.
+  - BUG-323's limiter covers the handshake parameter.
+  - `CLERK_JWT_KEY` remains an optional owner setting. Without it, an unknown key ID costs one JWKS fetch, on an endpoint that is not rate-limited.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] Item 1: each exported action given a non-FormData argument redirects without throwing or logging. Red first.
-- [ ] Item 2: a refused subscribe never logs the raw key.
-- [ ] Item 3: a malformed or missing session redirects with `invalid_session_id` and sends nothing to Sentry.
-- [ ] Item 4: confirmed or refuted by test, and handled.
-- [ ] Item 5: the response plan is in the incident runbook (`docs/security/incident-response-and-breach-notification.md`).
-- [ ] Item 6: each decided change shipped, or deferred with its trigger in the register.
+- [x] Item 1: each exported action given a non-FormData argument returns without throwing or logging (BUG-324's `tests/server-action-input.test.ts`).
+- [x] Item 2: a refused subscribe never logs the raw key, and a refused input is not logged.
+- [x] Item 3: a malformed session ID, or one Stripe lacks, redirects with `invalid_session_id`, logged at info, with nothing thrown.
+- [x] Item 4: checked against 14 days of production Sentry (none), and deferred with its trigger.
+- [x] Item 5: the response plan is in the logging guide, `docs/dev/logging.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
+- [x] Item 6: each decided change shipped, except `CLERK_JWT_KEY`, an optional owner setting.
+- [ ] In production: no Sentry error or error log from these paths for two weeks after the deploy.
 
 ## Related
 

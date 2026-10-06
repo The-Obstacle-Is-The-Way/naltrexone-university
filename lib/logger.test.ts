@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import pino from 'pino';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -90,6 +91,28 @@ describe('logger', () => {
     };
     expect(records[0]?.err).toEqual(diagnostics);
     expect(records[1]?.error).toEqual(diagnostics);
+  });
+
+  // BUG-325: a secret env var attached to a log by mistake must not reach the
+  // logs. The list is checked against the env schema, so a new secret has to
+  // join it.
+  it('redacts every secret the env schema declares', async () => {
+    const { LOGGER_REDACT_PATHS } = await importLogger();
+    const schemaKeys = [
+      ...readFileSync('lib/env.ts', 'utf8').matchAll(
+        /^\s+([A-Z][A-Z0-9_]+):/gm,
+      ),
+    ].map((match) => match[1] ?? '');
+    const secrets = schemaKeys.filter(
+      (name) =>
+        !name.startsWith('NEXT_PUBLIC_') &&
+        /SECRET|_KEY$|TOKEN|DATABASE_URL/.test(name),
+    );
+
+    expect(secrets.length).toBeGreaterThanOrEqual(10);
+    expect(
+      secrets.filter((name) => !LOGGER_REDACT_PATHS.includes(`env.${name}`)),
+    ).toEqual([]);
   });
 
   it('uses LOG_LEVEL when provided', async () => {
