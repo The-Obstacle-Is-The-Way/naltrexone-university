@@ -58,6 +58,11 @@ Since [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-universit
   `@stryker-mutator/core` the real `typescript@6`, the same package
   `@typescript/typescript6` wraps, with no `npm:` alias. Without it, a run
   stops with `ts.parseConfigFileTextToJson is not a function`.
+- `biome.json`'s `noRestrictedImports` rejects any import of canonical
+  `typescript` with a message that points to `@typescript/typescript6`.
+  `tests/typescript-import-policy.test.ts` proves it through real lint. Without
+  it, a new source scanner fails typecheck with errors that do not name the
+  cause. Cleanup B must remove this rule.
 - `tests/typescript-compiler-topology.test.ts` and `next.config.test.ts` fail
   in any of these cases:
   - an alias returns;
