@@ -35,13 +35,15 @@ One fix (**#80**, source-map-js) is published but younger than the release gate.
 - **Declared, not used.** Three packages under `@clerk/ui`'s Solana wallet adapters declare `react-native` as a required peer: `@react-native-async-storage/async-storage`, `@solana-mobile/mobile-wallet-adapter-protocol` and `@solana-mobile/wallet-adapter-mobile`.
 - **Only React Native entry points import it.** For the Solana packages that is `lib/cjs/index.native.js`, selected only by the `react-native` export condition. For async-storage it is the native module files under `AsyncStorage.native.js`. The browser and node entries that Next.js resolves never import it, and async-storage's web `AsyncStorage.js` imports only `merge-options`.
 - **pnpm installed it anyway.** pnpm installs a missing required peer by itself. That put `react-native` and its Metro, Jest and Babel tooling into the graph: 171 packages (177 lockfile entries), `shell-quote` among them. The earlier `image-size` alerts (#48, #49), `js-yaml`'s second chain and `braces`' second chain came from the same tree.
-- **The deployed app never contained it.** The application imports only `@clerk/ui/themes` (`components/providers.tsx`); Clerk serves its sign-in UI itself. A controlled build of the base commit and of this branch gives the same 22 packages in the deployment traces and the same 7 in the bundles. Neither build contains a file that mentions React Native or Solana.
+- **The deployed app never loads the native adapters.** The application imports only `@clerk/ui/themes` (`components/providers.tsx`); Clerk loads its sign-in UI separately. Independent builds of the base commit and this branch have identical package-name sets across all deployment traces and the server bundle source maps. Neither includes React Native or Solana wallet-adapter modules. Text searches do find Solana identifiers in Clerk authentication wrappers and Sentry error filters, plus a React Native package name in Next's generated configuration; those strings are not imports of the removed peer. The [PR](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1411) records the comparison scope and results.
 
 ### The rest
 
 - **source-map-js (#80).** No attacker-supplied source map is parsed. PostCSS and Tailwind read repository CSS at build time; css-tree and magicast run only in tests. The playbook's maturity exception is for urgent fixes, and this one is neither reachable nor more than a day from the gate.
-- **sprintf-js (#81).** `js-yaml` loads `argparse` only in its command-line tool (`bin/js-yaml.js`); `gray-matter` calls the library. `argparse` passes only its own constant format strings.
+- **sprintf-js (#81).** `js-yaml` loads `argparse` only in its command-line tool (`bin/js-yaml.js`); `gray-matter` calls the library. `argparse` can format caller-supplied help templates, but this application never invokes that CLI; its templates are fixed by `js-yaml`.
 - **stream-json (#78, #79).** #78's Assembler is reached only through `jayson/lib/utils.js`, which no import path loads (§F). #79's JSONC parser and verifier (`stream-json/jsonc/`) do not exist in 1.9.1; the advisory's `<=3.5.0` range is wider than the code it describes.
+
+*Corrected 2026-10-06: the build evidence distinguishes absent native/adapter modules from harmless identifier strings; the earlier zero-mentions claim was false. The sprintf-js rationale relies on the unreachable CLI, not a restriction on argparse's formatting API.*
 
 ## Impact
 
@@ -69,7 +71,7 @@ Low. No alert is reachable by attacker input here. The cost of leaving them is a
 
 - [x] The guard test fails on the base lockfile and passes on the branch.
 - [x] A cold `pnpm install --frozen-lockfile` passes the release-age and trust policies.
-- [x] The base and branch builds trace and bundle the same packages, and neither contains React Native or Solana code.
+- [x] The base and branch builds have identical traced-package and server source-map package sets, with no React Native or Solana wallet-adapter modules; identifier-only text matches are accounted for above.
 - [ ] After promotion, alerts #82 and #83 read `fixed`, and Dependabot's #1404 is closed as superseded.
 - [ ] The `source-map-js` 1.2.2 override is promoted and alert #80 reads `fixed`.
 
