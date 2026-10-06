@@ -11,9 +11,9 @@
 
 This is a documentation correction, not a certification that every historical statement is proven. Source inspection, current execution, retained provider receipts and an operator's historical report are different evidence. A checked box in an older record is not a new reproduction. The tables below identify what was checked and what remains unverified.
 
-The audit used a separate clone and changed documentation only. It did not query Production or Preview databases, execute a Dependabot head, rotate an account or secret, or promote a release. Provider access was read-only. SDK probes used a recording transport and sent no event.
+The audit used a separate clone and changed documentation only. It did not query Production or Preview databases, execute a Dependabot head, rotate an account or secret, or promote a release. Provider account and deployment inspections were read-only. The required local E2E gate made authorized Clerk and Stripe TEST-mode writes. Offline SDK probes used a recording transport and sent no event.
 
-The [receipt ledger](./assets/external-audit-2026-10-06/receipts.md) records 182 referenced PRs, 62 distinct cited CodeRabbit approvals, 74 CI runs and 26 production assignments. Git ancestry was checked against the pinned main, not an assumed merge order. The numeric approvals were read from GitHub's reviews API. Their recorded commits agree with the cited heads. Promotions use AGENTS.md's separate reviewed-source rule; an absent promotion approval is not itself a defect.
+The [receipt ledger](./assets/external-audit-2026-10-06/receipts.md) records 185 referenced PRs, 63 distinct cited CodeRabbit approvals, 76 CI runs and 26 production assignments. Git ancestry was checked against the pinned main, not an assumed merge order. The numeric approvals were read from GitHub's reviews API. Their recorded commits agree with the cited heads. Promotions use AGENTS.md's separate reviewed-source rule; an absent promotion approval is not itself a defect.
 
 Archive discovery used `git log origin/main --since=2026-09-26 --diff-filter=R --name-status`, then selected destinations under `docs/_archive/{bugs,debt}`. Restricting the log to the destination directory first hid the renames in this clone. The resulting inventory is the 28 rows below.
 

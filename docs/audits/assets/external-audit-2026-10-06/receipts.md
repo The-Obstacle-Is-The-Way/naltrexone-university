@@ -192,6 +192,9 @@ Commands: `gh pr view <number> --json number,state,baseRefName,headRefOid,mergeC
 | [#1401](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1401) | dev | MERGED | b0de9a7f | yes |
 | [#1402](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1402) | dev | MERGED | 1eb23388 | yes |
 | [#1403](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1403) | main | MERGED | d5236183 | yes |
+| [#1404](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1404) | main | OPEN | — | — |
+| [#1405](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1405) | dev | MERGED | 24a4bb25 | yes |
+| [#1406](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1406) | main | MERGED | 0f324edd | yes |
 
 ## Cited numeric approval receipts
 
@@ -261,6 +264,7 @@ Command: `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/pulls/<numb
 | [5417478378](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1373#pullrequestreview-5417478378) | #1373 | `6102844dad01d2efd220d60274f7322097be63bb` | 2026-10-05T16:13:00Z |
 | [5425850565](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1395#pullrequestreview-5425850565) | #1395 | `1dc7635d7a0807f0cdd6405cc76f4af33fd08ed5` | 2026-10-06T08:38:34Z |
 | [5427874840](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1400#pullrequestreview-5427874840) | #1400 | `925197bb0f163833f33b84e5f594f42ba0543686` | 2026-10-06T11:49:53Z |
+| [5430633755](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1405#pullrequestreview-5430633755) | #1405 | `4e18861f3458818a42c9b0ac8bdf743a11a0ef55` | 2026-10-06T15:18:17Z |
 
 ## CI runs
 
@@ -342,6 +346,8 @@ Command: `gh run view <run> --json conclusion,headSha,jobs,createdAt,updatedAt,u
 | [37355353192](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37355353192) | `9171234b` | success | 2026-10-05T18:33:33Z |
 | [37440616852](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37440616852) | `3f4a0335` | success | 2026-10-06T09:18:32Z |
 | [37478735477](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37478735477) | `d5236183` | success | 2026-10-06T14:38:56Z |
+| [37479614420](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37479614420) | `9ccfabe5` | failure | 2026-10-06T14:31:53Z |
+| [37489435958](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37489435958) | `0f324edd` | success | 2026-10-06T15:53:41Z |
 
 ## Production assignments
 
