@@ -310,6 +310,7 @@ type PracticeFilters = {
 ---
 
 ## Practice Filter Resolution History
+
 Resolved on 2026-03-09 and later refined by [DEBT-291](../../_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md), [DEBT-292](../../_archive/debt/debt-292-filter-section-disclosure-indicator.md), [DEBT-294](../../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md), and [DEBT-295](../../_archive/debt/debt-295-filter-chip-unselected-text-weight.md). The current shipped state is:
 
 | Element | Shipped state | Effect |
