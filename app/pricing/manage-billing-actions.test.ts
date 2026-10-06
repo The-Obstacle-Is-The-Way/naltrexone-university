@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
+import { submitManageBilling } from '@/app/pricing/manage-billing-request';
 import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 
@@ -17,7 +17,7 @@ describe('app/pricing/manage-billing-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      manageBillingAction(new FormData(), {
+      submitManageBilling(new FormData(), {
         createPortalSessionFn,
         redirectFn,
       }),
@@ -33,7 +33,7 @@ describe('app/pricing/manage-billing-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      manageBillingAction(new FormData(), {
+      submitManageBilling(new FormData(), {
         createPortalSessionFn,
         redirectFn,
       }),
@@ -53,7 +53,7 @@ describe('app/pricing/manage-billing-actions', () => {
     formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
 
     await expect(
-      manageBillingAction(formData, {
+      submitManageBilling(formData, {
         createPortalSessionFn,
         redirectFn,
       }),

@@ -1,4 +1,6 @@
-'use server';
+// A helper for server actions, not one itself: a 'use server' module would make
+// it callable by a client with arguments of its choosing.
+import 'server-only';
 
 import { getRequestAuthState } from '@/lib/auth-request-cache';
 import { ApplicationError } from '@/src/application/errors';

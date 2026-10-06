@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createAction } from '@/src/adapters/controllers/create-action';
@@ -157,5 +157,33 @@ describe('createAction', () => {
 
     expect(fakeLogger.errorCalls).toHaveLength(1);
     expect(fakeLogger.errorCalls[0]?.msg).toBe('Unhandled error in controller');
+  });
+
+  describe('in a production build', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    // A client can pass its own dependencies and options to an exported
+    // action; production resolves them from the container instead.
+    it('ignores caller-supplied dependencies and options', async () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      const getDeps = vi.fn(async () => ({ value: 'container' }));
+      const execute = vi.fn(async (_input, _deps, meta) => meta.depsSource);
+      const action = createAction({
+        schema: z.object({}).strict(),
+        getDeps,
+        execute,
+      });
+
+      const result = await action(
+        {},
+        { value: 'from a client' },
+        { logger: new FakeLogger() },
+      );
+
+      expect(getDeps).toHaveBeenCalledWith(undefined, undefined);
+      expect(result).toEqual({ ok: true, data: 'default_container' });
+    });
   });
 });
