@@ -172,41 +172,47 @@ describe('readLockfileSpec', () => {
 });
 
 describe('runVerifyLockfileUnion', () => {
-  it('refuses a candidate whose lockfile is identical to a source', () => {
-    const files: Record<string, string> = {
-      base: base.text,
-      a: source826.text,
-      b: source827.text,
-      bundle: source827.text,
-    };
-    const fileReader: LockfileReader = {
-      isFile: (spec) => spec in files,
-      readFile: (spec) => files[spec] ?? '',
-      resolveCommit: () => null,
-      showLockfile: () => '',
-    };
-    const err: string[] = [];
+  it.each([
+    ['a', source826],
+    ['b', source827],
+  ])(
+    'refuses a candidate whose lockfile is identical to source %s',
+    (name, duplicated) => {
+      const files: Record<string, string> = {
+        base: base.text,
+        a: source826.text,
+        b: source827.text,
+        bundle: duplicated.text,
+      };
+      const fileReader: LockfileReader = {
+        isFile: (spec) => spec in files,
+        readFile: (spec) => files[spec] ?? '',
+        resolveCommit: () => null,
+        showLockfile: () => '',
+      };
+      const err: string[] = [];
 
-    const exitCode = runVerifyLockfileUnion(
-      [
-        '--base',
-        'base',
-        '--source',
-        'a',
-        '--source',
-        'b',
-        '--candidate',
-        'bundle',
-      ],
-      fileReader,
-      { out: () => undefined, err: (text) => err.push(text) },
-    );
+      const exitCode = runVerifyLockfileUnion(
+        [
+          '--base',
+          'base',
+          '--source',
+          'a',
+          '--source',
+          'b',
+          '--candidate',
+          'bundle',
+        ],
+        fileReader,
+        { out: () => undefined, err: (text) => err.push(text) },
+      );
 
-    expect(exitCode).toBe(2);
-    expect(err.join('\n')).toContain(
-      'The candidate bundle has the same lockfile as source b',
-    );
-  });
+      expect(exitCode).toBe(2);
+      expect(err.join('\n')).toContain(
+        `The candidate bundle has the same lockfile as source ${name}`,
+      );
+    },
+  );
 
   it('rethrows an unexpected reader failure instead of reporting a usage error', () => {
     const failingReader: LockfileReader = {

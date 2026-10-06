@@ -83,12 +83,14 @@ The example bundles #826, #827 and #828, which is how #829 was built.
 
    If this install fails, stop. The manifest from step 3 is wrong, for example a mistyped specifier, and the lockfile still holds step 4's specifiers. Fix `package.json`, stage it, and repeat step 5.
 
-6. Verify, and paste the printed table into the PR body. Run the frozen install first: `pnpm exec` installs a stale `node_modules` before it runs anything (pnpm's `verify-deps-before-run`), and steps 4 and 5 leave `node_modules` stale, so a frozen install run afterwards could no longer fail:
+6. Verify, and paste the printed table into the PR body:
 
    ```sh
    pnpm install --frozen-lockfile
-   pnpm exec tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
+   node --import tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    ```
+
+   If the frozen install fails, stop: the lockfile does not match `package.json`, so go back to step 5. Run the verifier through `node --import tsx`, not `pnpm exec`. Steps 4 and 5 leave `node_modules` stale, and `pnpm exec` then runs a plain `pnpm install` first (pnpm's `verify-deps-before-run`), which can rewrite `pnpm-lock.yaml` before the verifier reads it.
 
    The two checks cover different things. The frozen install proves that the lockfile matches `package.json`. The verifier proves that the lockfile is the union of the sources, and each importer entry it compares includes the manifest `specifier`. So a pin dropped or altered while resolving step 3 fails one check or the other.
 
@@ -108,7 +110,7 @@ Failure codes add up when several categories fail; 28 means extra, missing and u
 
 A correct bundle can still report missing when the sources overlap. For example, one source drops `is-number@6.0.0` because it moves to 7, while another source's new dependency still needs 6. The bundle rightly keeps 6.0.0, so the verifier reports the first source's removal as missing, and no regeneration clears it. Treat that the same way as a conflict: confirm in `pnpm why` that the kept entry is needed, then record the overlap and the decision in the PR.
 
-Peer suffixes overlap in the same way. pnpm writes a package's resolved peers into its key, as in `stripe@22.5.0(@types/node@24.13.4)`. If one source bumps `@types/node` and another bumps `stripe`, a correct bundle has a key that neither source has. It then reports that key as extra, the sources' own keys as missing, and the importer entry as a conflict. Regenerating or recreating the sources does not clear it, because the sources already share a base. Confirm that every unexpected key combines versions the sources chose, then record the overlap in the PR. The verifier has no override flag.
+Peer suffixes overlap in the same way. pnpm writes a package's resolved peers into its key, as in `stripe@22.5.0(@types/node@24.13.4)`. If one source bumps `@types/node` and another bumps `stripe`, a correct bundle has a key that neither source has. It then reports that key as extra, the sources' own keys as missing, and the importer entry as a conflict. Regenerating or recreating the sources does not clear it, because the sources already share a base. Confirm that every unexpected key combines versions the sources chose, then record the overlap in the PR. The report shortens long values, so compare the full entries in the lockfiles themselves. The verifier has no override flag.
 
 Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced #829's lockfile byte for byte, with `package.json` identical to #826's. The verifier printed #829's hand-built counts: packages 54 / 23 / 7 into a union of 74, snapshots 72 / 38 / 22 into 92, importer entries 10 / 5 / 5 into 12, and 72 / 86 key deltas, all matched. The same steps without the cutoff exited 28, with 385 extra, 18 missing and 14 unmatched entries.
 

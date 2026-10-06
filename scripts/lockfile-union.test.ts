@@ -530,6 +530,26 @@ describe('compareLockfileUnion', () => {
       /directives are not allowed/,
     ],
     [
+      'a leading document marker',
+      "---\nlockfileVersion: '9.0'\n",
+      /document markers and directives are not allowed/,
+    ],
+    [
+      'a %YAML 1.2 directive',
+      "%YAML 1.2\n---\nlockfileVersion: '9.0'\n",
+      /document markers and directives are not allowed/,
+    ],
+    [
+      'a redefined !! tag handle',
+      "%TAG !! tag:example.com,2000:\n---\nlockfileVersion: '9.0'\n",
+      /document markers and directives are not allowed/,
+    ],
+    [
+      'an unknown directive',
+      "%FOO bar\n---\nlockfileVersion: '9.0'\n",
+      /document markers and directives are not allowed/,
+    ],
+    [
       'an infinite number',
       "lockfileVersion: '9.0'\nsettings: {a: -.inf}\n",
       /non-finite numbers are not allowed/,
