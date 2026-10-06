@@ -98,5 +98,5 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 
 ## Related
 
-- [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-322](./bug-322-checkout-error-hidden-behind-dialog.md), [DEBT-501](../debt/debt-501-billing-operations-resilience.md): the same hunt.
+- [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md), [DEBT-501](../debt/debt-501-billing-operations-resilience.md): the same hunt.
 - BUG-275 (archived): the stale-return-link fix this must preserve.

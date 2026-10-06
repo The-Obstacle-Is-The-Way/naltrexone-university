@@ -79,5 +79,5 @@ Criteria to meet before closing: each item shipped with red-first tests, or defe
 
 ## Related
 
-- [BUG-319](../bugs/bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-320](../bugs/bug-320-first-pricing-render-user-upsert-race.md), [BUG-321](../bugs/bug-321-already-subscribed-answer-discarded.md), [BUG-322](../bugs/bug-322-checkout-error-hidden-behind-dialog.md), [DEBT-502](./debt-502-account-identity-and-action-hardening.md): the same hunt.
+- [BUG-319](../bugs/bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-320](../bugs/bug-320-first-pricing-render-user-upsert-race.md), [BUG-321](../bugs/bug-321-already-subscribed-answer-discarded.md), [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md), [DEBT-502](./debt-502-account-identity-and-action-hardening.md): the same hunt.
 - DEBT-422 (archived): reconcile paging deferred, without this item's restart-at-zero starvation.
