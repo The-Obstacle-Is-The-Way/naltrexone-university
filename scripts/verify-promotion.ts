@@ -2,10 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import {
-  exactHeadApproval,
+  type CarryEvidence,
+  currentApproval,
   hasSuccessfulCheckRun,
+  headPushedAt,
   pullRequestSchema,
   REPOSITORY,
+  readCarryEvidence,
   readMergeEvidence,
 } from './merge-reviewed-pr';
 
@@ -100,6 +103,9 @@ export function runVerifyPromotion(
       commit,
       source.pullRequest,
       source.reviewPages,
+      // The source PR's diff is taken against the merge's first parent, dev
+      // just before the merge; dev now contains the PR and shows no diff.
+      readCarryEvidence(source.pullRequest, source.reviewPages, commit.base),
     );
     if (receipt.number !== sourceNumber)
       throw new Error('Source PR number changed');
@@ -110,14 +116,14 @@ export function runVerifyPromotion(
     '',
     `Promotion: #${pr.number}; Head: \`${pr.headRefOid}\`; Base: \`${pr.baseRefOid}\`.`,
     '',
-    '| Source PR | Merge | Reviewed head | Approval ID | Approved before merge |',
+    '| Source PR | Merge | Merged head | Approval ID | Approved before merge |',
     '| --- | --- | --- | --- | --- |',
     ...sources.map(
       (source) =>
-        `| #${source.number} | ${source.merge} | ${source.head} | ${source.approvalId} | ${source.approvedAt} < ${source.mergedAt} |`,
+        `| #${source.number} | ${source.merge} | ${source.carriedFrom ? `${source.head} (carried from ${source.carriedFrom})` : source.head} | ${source.approvalId} | ${source.approvedAt} < ${source.mergedAt} |`,
     ),
     '',
-    'All source PRs target dev and currently have zero unresolved threads. Their exact-head approvals predate their merges. Thread state is a current API observation, not a reconstructed historical snapshot; the enforced thread-resolution rule and source merge receipts cover the merge-time obligation.',
+    'All source PRs target dev and currently have zero unresolved threads. Their CodeRabbit approvals predate their merges and cover the merged head: exactly, or carried from an approved head whose reviewable diff is unchanged. Thread state is a current API observation, not a reconstructed historical snapshot; the enforced thread-resolution rule and source merge receipts cover the merge-time obligation.',
     '',
     'Promotion CI test is successful and posted threads are resolved. Its own CodeRabbit approval is not required. Refresh this proof if either branch moves; merge only the verified head with --match-head-commit.',
   ].join('\n');
@@ -232,10 +238,10 @@ export function firstParentMerges(input: string) {
     .trim()
     .split('\n')
     .map((line) => {
-      const [merge, , head] = z
+      const [merge, base, head] = z
         .tuple([sha, sha, sha])
         .parse(line.trim().split(/\s+/));
-      return { merge, head };
+      return { merge, base, head };
     });
 }
 
@@ -274,6 +280,7 @@ export function checkSourceProvenance(
   commit: { merge: string; head: string },
   input: unknown,
   reviews: unknown,
+  carry?: CarryEvidence,
 ) {
   const pr = sourceSchema.parse(input);
   if (pr.mergeCommit.oid !== commit.merge || pr.headRefOid !== commit.head) {
@@ -284,13 +291,20 @@ export function checkSourceProvenance(
   if (pr.reviewThreads.nodes.some((thread) => !thread.isResolved)) {
     throw new Error('Source PR has unresolved findings');
   }
-  const approval = exactHeadApproval(reviews, commit.head);
+  const approval = currentApproval(
+    reviews,
+    commit.head,
+    headPushedAt(input, commit.head),
+    carry,
+  );
   if (Date.parse(approval.submitted_at) >= Date.parse(pr.mergedAt)) {
     throw new Error('Source approval must exist before the source merge');
   }
   return {
     number: pr.number,
-    ...commit,
+    merge: commit.merge,
+    head: commit.head,
+    carriedFrom: approval.carriedFrom,
     approvalId: approval.id,
     approvedAt: approval.submitted_at,
     mergedAt: pr.mergedAt,
