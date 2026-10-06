@@ -51,7 +51,7 @@ this audit does not claim to have queried production or Preview.
 
 ## Verification
 
-**2026-10-06 forward pointer.** The clinical label and scoring tail below was decided by [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md). Held, withdrawn and retired are distinct availability values; scoring follows `src/domain/services/scoring.ts`. The dated “Deferred” closeout is history, not an outstanding owner decision. DEBT-498 separately tracks the remaining History grade presentation.
+*Corrected 2026-10-06: the clinical label and scoring tail below was decided by [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) and implemented by [DEBT-493](../debt/debt-493-learner-scores-and-labels-when-content-changes.md), so it is not an outstanding owner decision; DEBT-498 tracks the remaining History grade presentation.*
 
 The stage/abandon/reapply probe, source paths above, existing real-Postgres
 exclusion tests, #1300 git/CI receipts and the documentation guard establish

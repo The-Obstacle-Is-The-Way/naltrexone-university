@@ -86,12 +86,12 @@ Option 1, the smallest change that removes the failure without weakening identit
 
 ## Verification
 
-**Release evidence (2026-10-06).** #1391 merged as `9ee53ea9`; promotion #1392 merged as `0880c808`, an ancestor of the audited main. Vercel assigned it at 2026-10-06T07:00:58.475Z. The deleted Sentry events and the original red run cannot be reconstructed from the current issue list; they remain the original operator's historical receipts.
+Shipped in #1391 and promoted in #1392, in production since 2026-10-06 07:00Z. The Sentry events that first showed the race have since been deleted, so they cannot be re-read; the original red run is recorded in #1391.
 
 - [x] A 23505 on `users_email_uq` whose owner is the same Clerk user returns the row instead of throwing. It is pinned at the sanctioned error-translation boundary, red first.
 - [x] A cross-identity conflict still raises `UserEmailOwnershipConflictError`.
 - [x] A real-Postgres test of concurrent first-time upserts for one user ends with one row and no error.
-- [ ] In production: no `User could not be upserted due to a uniqueness constraint` event in Sentry for two weeks after the deploy. This is weak evidence on its own, since the error was seen twice in about three days. Record the result, and reopen if it recurs.
+- [ ] Engineering, by 2026-10-20: a Sentry search through its API finds no `User could not be upserted due to a uniqueness constraint` event in Sentry for two weeks after the deploy. This is weak evidence on its own, since the error was seen twice in about three days. Record the result, and reopen if it recurs.
 - [x] The "race-free" note is qualified to the race it covered: a dated correction in the frozen register history (2026-10-05).
 
 ## Related

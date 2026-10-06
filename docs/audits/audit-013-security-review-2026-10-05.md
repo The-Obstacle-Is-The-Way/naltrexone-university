@@ -23,8 +23,8 @@ The owner asked for a security review of recent work. They had lost track of a l
 
 | Record | Family | Priority | Finding | State on 2026-10-06 |
 |--------|--------|----------|---------|---------------------|
-| [BUG-323](../bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Availability, Clerk | P1 | Some anonymous request shapes make Clerk's SDK spend the Backend API allowance every signed-in page shares | Firewall rule and middleware limits in production; Verifying |
-| [BUG-324](../bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) | Server actions | P1 | Exported server actions accepted caller-supplied dependencies, so one request could run many actions | Fixed in production; Verifying |
+| [BUG-323](../_archive/bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Availability, Clerk | P1 | Some anonymous request shapes make Clerk's SDK spend the Backend API allowance every signed-in page shares | Firewall rule and middleware limits in production; Verifying |
+| [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) | Server actions | P1 | Exported server actions accepted caller-supplied dependencies, so one request could run many actions | Fixed in production; Verifying |
 | [BUG-325](../bugs/bug-325-malformed-requests-throw-and-write-oversized-logs.md) | Input handling, logging | P3 | Malformed requests made our code throw, or write the caller's text at error level. This is the owner's lead | Fixed in production; Verifying |
 | [BUG-326](../_archive/bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md) | Privacy, support | P3 | Error pages sent people, payers included, to the public GitHub issue tracker | Resolved; in production |
 | [BUG-327](../bugs/bug-327-dependabot-branches-build-with-preview-secrets.md) | Supply chain | P3 | Vercel built Dependabot branches with Preview secrets, against the owner's 2026-09-19 boundary | Fixed in production; Verifying |

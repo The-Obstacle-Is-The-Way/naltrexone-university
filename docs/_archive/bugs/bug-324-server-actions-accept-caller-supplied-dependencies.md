@@ -1,12 +1,12 @@
 # BUG-324: Exported Server Actions Accept Caller-Supplied Dependencies
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the production deploy passes the action-manifest check and practice, bookmarks and checkout work; due 2026-10-13
+**Status:** Resolved — 2026-10-06: every exported action takes only its input, in production
 **Priority:** P1
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-06
+**Verification receipts:** #1387 and #1389, promotions #1388 and #1390 (production 2026-10-06 06:17Z). Production build logs show the manifest check passing; `main` CI's E2E passed on #1390; Sentry shows no server-action error since.
 
 ---
 
@@ -16,7 +16,7 @@ Most exported server actions took, besides their input, optional dependencies an
 
 DEBT-502 item 5 first recorded this for the subscribe actions, as hardening. An independent review on 2026-10-05 showed it is wider and worse:
 - **It reaches every controller action:** all 29 built by `createAction`, the five app-level actions in four modules, and `requireEntitledUserId`, which was itself exported as an action.
-- **One request can run many actions.** React accepts other server actions as arguments ([`use server`](https://react.dev/reference/rsc/use-server)). Each action run that way with the real container makes its own Clerk `currentUser()` call. That is the same shared allowance as [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), reachable here by any free account.
+- **One request can run many actions.** React accepts other server actions as arguments ([`use server`](https://react.dev/reference/rsc/use-server)). Each action run that way with the real container makes its own Clerk `currentUser()` call. That is the same shared allowance as [BUG-323](bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), reachable here by any free account.
 
 A second independent review, on 2026-10-06, found the same class through the input itself:
 - **The app's form actions read their input by calling its methods,** such as `formData.get(...)`, without checking that it is form data.
@@ -53,7 +53,7 @@ Option 1 is shipped. Option 2 was the temporary stopgap and has been removed. Op
 - **The 29 controller actions use option 1.** It landed on 2026-10-06; see Progress.
 - **Option 4 for every form action** (added 2026-10-06). A form action whose input is not form data returns at once, with nothing logged: no form sends that, and logging it would let anyone fill the logs.
 - **Accepted until option 1 lands: production drops the checkout logger.** The subscribe logic passes its request-scoped logger to the checkout controller as an option, and option 2 drops every option in production. So the controller's own error log loses the request ID; the subscribe flow's "Stripe checkout failed" log keeps it. Option 1 gives server-side callers a core that is not an action, which ends this. (Ended 2026-10-06.)
-- **This changes five action IDs on purpose.** Next encodes an action's declared argument count in its ID, so the subscribe, manage-billing and remove-bookmark actions get new IDs. A page opened before the deploy reloads on its next submit, through [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md)'s recovery.
+- **This changes five action IDs on purpose.** Next encodes an action's declared argument count in its ID, so the subscribe, manage-billing and remove-bookmark actions get new IDs. A page opened before the deploy reloads on its next submit, through [BUG-319](../../bugs/bug-319-subscribe-actions-break-after-a-deploy.md)'s recovery.
 
 ## Progress
 
@@ -103,10 +103,10 @@ Option 1 is shipped. Option 2 was the temporary stopgap and has been removed. Op
 - [x] Exported controller actions take only their input; the signature guard stops allowing `createAction` exports; the checkout logger reaches the controller again in production.
 - [x] A post-build check reads the action manifest: every action's ID declares at most one argument.
 - [x] `requireEntitledUserId` is not a server-action export in the shipped source. The post-build check validates argument bits; it does not assert that this particular name is absent. The original production-manifest observation is a separate operator receipt.
-- [ ] In production after promotion: the Vercel build log shows the manifest check passing, and practice, bookmarks and checkout work.
+- [x] The production build log shows the manifest check passing (read through Vercel's API); `main` CI's E2E, which runs practice, bookmarks and checkout against a production build of the promoted code in Stripe test mode, passed on the promotion; and Sentry has no server-action error since the deploy. *Corrected 2026-10-06: these replace an owner's signed-in click-through, which would add nothing they do not cover.*
 
 ## Related
 
-- [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md): the same shared Clerk allowance, reached without an account.
-- [DEBT-502](../debt/debt-502-account-identity-and-action-hardening.md) item 5: where this was first recorded.
-- [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md): reading identity from the session token, which would make each action run cost no Clerk call at all.
+- [BUG-323](bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md): the same shared Clerk allowance, reached without an account.
+- [DEBT-502](../../debt/debt-502-account-identity-and-action-hardening.md) item 5: where this was first recorded.
+- [DEBT-503](../../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md): reading identity from the session token, which would make each action run cost no Clerk call at all.

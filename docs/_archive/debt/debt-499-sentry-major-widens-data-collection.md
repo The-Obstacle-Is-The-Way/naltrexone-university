@@ -22,7 +22,7 @@ Checking that showed the version then in production was no better. It sent crede
 
 ## Evidence
 
-**External correction, 2026-10-06.** The committed SDK case has **ten** probe values, including a development-browser JWT in a breadcrumb. An offline replay of its request and breadcrumb with installed Sentry 11.0.0 defaults emitted eight; the session cookie and bearer were filtered. With the shipped settings it emitted zero, still sent the error, and reported `httpBodies: []`. Thus the table's “eight” is reproduced, but “eight of nine, all but two” is incorrect. The committed test exercises only the restrictive configuration; the default comparison is a separate probe, not a second test configuration. The original v10 probe and historical span counts below remain attributed receipts. This audit did not establish a v10 support-end date; staying on its exposed configuration is rejected on the observed collection behavior alone.
+*Corrected 2026-10-06: the committed SDK case has ten probe values, adding a breadcrumb's development-browser JWT; Sentry 11's defaults emit eight of the ten, not eight of nine, and the shipped settings none.*
 
 - **Measured through the real SDK, 2026-10-05.** One `captureRequestError` call, our `onRequestError`, carried nine credential-bearing values, each generated at random for the run:
   - three Clerk cookies: `__session`, `__refresh` and `__clerk_handshake`;
@@ -42,7 +42,7 @@ Checking that showed the version then in production was no better. It sent crede
 
   The 11.0.0 runs are `lib/sentry-data-collection-sdk.test.ts`, with and without the settings. The 10.75.1 run used an isolated install with install scripts disabled.
 
-  **Correction, 2026-10-06.** The preceding historical attribution is superseded: `lib/sentry-data-collection-sdk.test.ts:30` configures only the restrictive settings. The defaults comparison is a separate offline replay, recorded in the [external audit receipt](../../audits/assets/external-audit-2026-10-06/receipts.md).
+  *Corrected 2026-10-06: `lib/sentry-data-collection-sdk.test.ts:30` configures only the restrictive settings; the defaults comparison was a separate offline replay ([receipt](../../audits/assets/external-audit-2026-10-06/receipts.md)).*
 
 - **Sentry's migration guide** (`MIGRATION.md` on `develop`, read 2026-10-05) gives v10's default as "cookies: not collected" and "httpBodies: not collected (size only)". That holds for spans but not for error events in 10.75.1; see BUG-318's source references.
 - **Sentry's own filter.** v11 always replaces with `[Filtered]` the value of a key whose name contains one of its sensitive snippets: `auth`, `token`, `session`, `jwt`, `cookie`, `sid`, `nonce` and others (`@sentry/core` 11.0.0, `filtering-snippets.js`). Checked against the cookie names in the installed Clerk SDK (`@clerk/backend` 3.18.1), with suffixed variants such as `__session_<suffix>` matching as their base name:
@@ -80,7 +80,7 @@ See BUG-318 for the live exposure. Without a pinned setting, every Sentry major 
 
 ## Options
 
-**Current assessment, 2026-10-06.** The original options below are preserved as history. Option 2's claim that v10 stops receiving fixes is withdrawn: [Sentry's migration guide](https://github.com/getsentry/sentry-javascript/blob/develop/MIGRATION.md#no-version-support-timeline) gives no fixed support timeline and decides backports case by case. Rejecting the exposed configuration remains justified by its observed collection behavior. The probe-count correction in [Evidence](#evidence) also supersedes Option 1's count.
+*Corrected 2026-10-06: Option 2's claim that v10 stops receiving fixes is withdrawn, since [Sentry's migration guide](https://github.com/getsentry/sentry-javascript/blob/develop/MIGRATION.md#no-version-support-timeline) sets no support timeline and Sentry decides backports case by case; Option 1's count is eight of ten.*
 
 1. **Merge #1369 as-is.** Rejected: it keeps eight of the nine values flowing.
 2. **Stay on v10.** Rejected: v10 is the live exposure, and stops receiving fixes.

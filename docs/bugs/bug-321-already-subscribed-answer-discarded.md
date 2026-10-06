@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — owner captures one refused-checkout outcome and contemporaneous logs; due 2026-10-20
+**Status:** Verifying — a Stripe test-mode E2E reproduces the refused checkout and its sync; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -18,7 +18,7 @@ If our database never learns of that subscription, the person is stuck. This hap
 
 ## Evidence
 
-The page and test line references below describe the pre-fix source. The shipped flow is described under Progress; it was promoted through #1394 (`71964450`), assigned to production at 2026-10-06T08:37:25.065Z.
+All line references in this section are at `9ee53ea9`, before the fix. The shipped flow is described under Progress; it was promoted through #1394 (`71964450`), assigned to production at 2026-10-06T08:37:25.065Z.
 
 - **The adapter refuses.** The gateway sees a live subscription on the customer and throws `ALREADY_SUBSCRIBED` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:788-823`). That check has no period-end test, while our database check does (`src/application/use-cases/create-checkout-session.ts:117-127`).
 - **The page ignores the refusal.** The action redirects to `/pricing?reason=manage_billing` (`app/pricing/subscribe-action.ts:42-44`). For signed-in users the page uses the database's reason and drops the URL's: `effectiveReason = pricingData.isAuthenticated ? (pricingData.reason ?? undefined) : (reason ?? undefined)` (`app/pricing/page.tsx:198-200`).
@@ -96,7 +96,10 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 - [x] A sync that fails still shows a message and a portal link: the notice and its Manage billing button. The portal lets the person view or cancel; the notice names support for a card update.
 - [x] The old test is kept as BUG-275's guard, because the new flow uses its own parameter, and new tests cover both outcomes.
 - [x] BUG-275's stale-link case still shows the database's state.
-- [ ] Owner, by 2026-10-20: capture one legitimate refused-checkout outcome and its Vercel logs within one hour. Record whether the local state recovers or the notice and portal fallback appear; explain any failed-sync line. Do not create a charge or change a subscription to manufacture the case. If no suitable request occurs, report “not observed” and retain Verifying; absence of retained logs is not success.
+- [ ] Engineering, by 2026-10-20: a Stripe test-mode E2E reproduces the case end to end. A test customer holds a live subscription with no local row; pressing Subscribe syncs it and the page shows the person as subscribed. A run whose sync fails shows the notice and the portal link. The tests above use the fake gateway, so only a real-provider run proves Stripe's list response and the sync together.
+- **Known limit.** A failed sync in production is visible for an hour at most: it goes only to pino, Vercel Hobby keeps runtime logs for one hour, and nothing forwards it to Sentry. Production outcomes of this path therefore cannot close this record.
+
+*Corrected 2026-10-06 (#1410 review): the one-hour production capture had no exit, because the case is rare; replaced by a reproducible test-mode run.*
 
 *Corrected 2026-10-06: the two-week log check was not observable. The account API confirms Vercel Hobby, whose [runtime logs](https://vercel.com/docs/logs/runtime) retain one hour. `lib/logger.ts` writes pino to stdout; `instrumentation.ts` does not forward those lines to Sentry. The caught sync failure logs but is not thrown to `onRequestError`.*
 

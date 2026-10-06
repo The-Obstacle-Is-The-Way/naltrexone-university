@@ -29,7 +29,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   - Any client can call a server action with arguments of its choosing. With a plain string, `formData.get` throws a `TypeError` before authentication. The error is unhandled, so `onRequestError` sends it to Sentry (`instrumentation.ts`).
   - The subscribe actions are on the public pricing page. Confirmed in source.
 - **Decided.** Each exported action checks `formData instanceof FormData` first, and otherwise does nothing and logs nothing.
-- **Shipped with [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) (2026-10-06).** Every form action returns at once for input that is not form data. `tests/server-action-input.test.ts` checks every exported action.
+- **Shipped with [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) (2026-10-06).** Every form action returns at once for input that is not form data. `tests/server-action-input.test.ts` checks every exported action.
 
 ### 2. A refused subscribe logs the raw idempotency key at error level (P3)
 
@@ -125,9 +125,9 @@ This is likely the report the owner remembered, that "a user with certain parame
 - [x] Item 4: decided with a trigger; production Sentry had none of these errors in 14 days.
 - [x] Item 5: the response plan is in the logging guide, `docs/dev/logging.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
 - [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` stays an optional owner setting.
-- [ ] Owner, by 2026-10-20: search Sentry for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions and a contemporaneous one-hour Vercel capture cover their content and level. The original 14-day historical search remains an operator receipt.
+- [ ] Engineering, by 2026-10-20: search Sentry through its API for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions cover their content and level, and no production log capture has been made. *Corrected 2026-10-06 (#1410 review): no one-hour Vercel capture exists.* The original 14-day historical search remains an operator receipt.
 
 ## Related
 
-- [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
+- [BUG-323](../_archive/bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
 - BUG-318 (archived): what Sentry may collect. This record covers how much can be sent.

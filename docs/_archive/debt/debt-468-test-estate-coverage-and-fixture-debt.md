@@ -1,6 +1,6 @@
 # DEBT-468: Test-Estate Coverage Gaps and Shared-Fixture Debt
 
-**Status:** Resolved — 2026-09-27; all four Parts and all five Resolution items complete, and every Verification bullet re-verified on `main` before archival. The helper-location tail was completed later that day (see its dated correction below).
+**Status:** Resolved — 2026-09-27; all four Parts and all five Resolution items complete, and every Verification bullet re-verified on `main` before archival. One tail is Deferred: folding the out-of-place `*-test-helpers` modules. *Corrected 2026-10-06: that tail was completed later on 2026-09-27; see the Deferred tail note below.*
 **Priority:** P2
 **Date:** 2026-08-14
 **Source:** Owner-directed estate-wide investigation (2026-08-14): four parallel read-only sweeps (backend file-presence with indirect-coverage cross-checks; `app/**`+`components/**` lane mapping; E2E/integration flow-surface diff; test-double inventory) plus executed coverage on all three vitest lanes, merged with `istanbul-lib-coverage`. All lanes green during measurement: unit 436 files / 3,853 tests; browser 64 / 398; integration 38+1 skipped / 244+2 skipped; build clean.

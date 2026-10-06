@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-05; resolution decided below
+**Status:** Open — resolution decided in the record
 **Priority:** P3
 **Date:** 2026-10-05
 **Resolved:** —
@@ -12,7 +12,7 @@
 
 ## Summary
 
-Dependabot opened #1370 on 2026-10-05, bumping `vitest` from 4.1.11 to 5.0.1 on its own. CI's typecheck fails across the browser-mode specs (`*.browser.spec.tsx`) with `TS2349: This expression is not callable`. The failed mixed-version tree needs a coordinated migration. The compiler error alone does not establish which API change caused it.
+Dependabot opened #1370 on 2026-10-05, bumping `vitest` from 4.1.11 to 5.0.1 on its own. CI's typecheck fails across the browser-mode specs (`*.browser.spec.tsx`) with `TS2349: This expression is not callable`. `@vitest/browser-playwright` and `@vitest/coverage-v8` stayed at ^4.1.11 (`package.json:93-94`), so the bumped tree mixed majors and needs a coordinated migration. The compiler error alone does not establish which API change caused it.
 
 ## Evidence
 
