@@ -153,10 +153,12 @@ export class DrizzleUserRepository implements UserRepository {
       }
       // BUG-320: a new user's first requests can each insert the row at once.
       // The loser trips the email index, not the Clerk ID index the upsert
-      // resolves conflicts on. When the email is this user's own, or no longer
-      // held, one more try takes the update or insert path. Another identity's
-      // email is still refused (BUG-284).
-      if (owner === undefined || (owner !== null && owner !== clerkId)) {
+      // resolves conflicts on. Postgres raises that only once the winner has
+      // committed, so the lookup sees the winner's row: this user's own. One
+      // more try then takes the update path. No owner means the row went away
+      // since, perhaps by a deletion, so it is not retried; another
+      // identity's email is still refused (BUG-284).
+      if (owner !== clerkId) {
         throw this.emailWriteError(error, clerkId, owner);
       }
       try {

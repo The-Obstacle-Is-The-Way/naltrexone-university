@@ -130,7 +130,9 @@ describe('DrizzleUserRepository', () => {
 
   // BUG-320: a new user's first requests can each insert their row at once.
   // The loser trips users_email_uq, not the Clerk ID index the upsert resolves
-  // conflicts on, yet the row it lost to is the same user's.
+  // conflicts on, yet the row it lost to is the same user's. Half the sessions
+  // upsert inside an outer transaction, as the Clerk webhook does, so the
+  // retry also runs from a savepoint.
   it('ends concurrent first-time upserts for one new user with one row and no error', async () => {
     const sessions = Array.from({ length: 6 }, () => createIntegrationDb());
     try {
@@ -140,11 +142,18 @@ describe('DrizzleUserRepository', () => {
         const email = `it-${randomUUID()}@example.com`;
 
         const results = await Promise.allSettled(
-          sessions.map((session) =>
-            new DrizzleUserRepository(session.db).upsertByClerkId(
-              clerkUserId,
-              email,
-            ),
+          sessions.map((session, index) =>
+            index % 2 === 0
+              ? new DrizzleUserRepository(session.db).upsertByClerkId(
+                  clerkUserId,
+                  email,
+                )
+              : session.db.transaction((tx) =>
+                  new DrizzleUserRepository(tx).upsertByClerkId(
+                    clerkUserId,
+                    email,
+                  ),
+                ),
           ),
         );
         const rows = await db
