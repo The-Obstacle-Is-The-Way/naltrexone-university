@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is in this pull request; deleting the existing artifacts needs the owner's approval
+**Status:** Verifying — after promotion, a green `main` run publishes no Playwright artifact; deleting the existing artifacts needs the owner's approval; due 2026-10-13
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06 with its fix
 **Resolved:** —
@@ -27,7 +27,7 @@ A dev-browser token lets its holder act as the shared TEST user while that brows
   - inside it: one distinct `__clerk_db_jwt` value, one `dvb_` value and three distinct `__clerk_testing_token` values.
 - **Breadth (independent reviewer).** All 16 sampled reports from 2026-09-06 to 2026-10-05 carry them. 895 CI and 30 hosted-checkout reports are in retention.
 - **Where they come from.** `@clerk/testing`'s `setupClerkTestingToken` route handler calls `route.fetch`. Playwright 1.63 records each call as a step of `tests/e2e/global.setup.ts`, with the full Clerk API URL, query string included, as the step's subtitle.
-- **The uploads.**
+- **The uploads, at filing.**
   - `.github/workflows/ci.yml:154-164` uploads `playwright-report/` after every non-cancelled run. `.github/workflows/stripe-hosted-checkout-smoke.yml:105-115` does the same.
   - The `!**/trace.zip` exclusion does not match trace copies inside the HTML report (`data/<sha1>.zip`). Only CI's `trace: 'off'` (`playwright.config.ts:23`) keeps traces out.
 - **When a session can outlive the upload.**
@@ -45,23 +45,26 @@ A dev-browser token lets its holder act as the shared TEST user while that brows
 
 ## Resolution (decided)
 
-Options 1, 2, 4 and 5.
-- Option 1 removes most exposure, since most runs pass.
-- Option 2 guards the failure uploads and proves the fix, instead of trusting a blind scan again.
-- Option 4 closes the path to a live session.
-- Option 5 deletes the existing artifacts. That is a bulk delete of public artifacts, so it needs the owner's approval, as BUG-307's did.
+Options 1 (revised), 2, 4 and 5.
+- **Option 1, revised: the HTML report is never uploaded.** The tokens sit in the setup steps that every run executes: `setupClerkTestingToken`'s route handler records each Clerk API call, with both tokens in its URL, as a step. A report upload gated on the scan would therefore be refused on every failed run. Both workflows drop the report upload. With tracing off in CI, the report adds little to the failure output and the job log.
+- **Option 2 guards the failure output.** `scripts/ci/scan-playwright-output.ts test-results` runs only when E2E failed, before the `test-results/` upload, and the upload requires it to pass. The scan:
+  - reads every file the upload publishes;
+  - opens zip files and reports' embedded data;
+  - fails closed on data it cannot read;
+  - prints counts only.
+- **Option 4 closes the path to a live session.** `createClerkE2ESession` signs out the session when a setup attempt fails after signing in. If the sign-out also fails, it warns and keeps the original error. Known limit: a setup attempt stopped by its timeout closes the page first, and that session stays live until Clerk expires it.
+- **Option 5 deletes the existing artifacts.** That is a bulk delete of public artifacts, so it needs the owner's approval, as BUG-307's did.
 
-Option 3 depends on Playwright's report internals, and is not needed once the others hold.
+Option 3 (redacting at the source) is what bringing the report back would need. It depends on Playwright's report internals, and nothing needs the report in CI.
 
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] Workflow policy tests, red first: the HTML report uploads only on E2E failure in both workflows, and the scan step runs before any upload.
-- [ ] The scan fails on a fixture report carrying each shape inside its embedded data, and passes on a clean one.
-- [ ] Setup signs out every session it creates, with a test.
+- [x] Workflow policy tests, red first (`tests/ci-workflow.test.ts`): no workflow uploads the HTML report; in both E2E workflows the scan runs only when E2E failed, before the failure-output upload, and that upload requires the scan to pass.
+- [x] The scan fails on fixture output carrying each shape in a report's embedded data, a zip file or a plain file, fails closed on data it cannot read, and passes clean output (`scripts/ci/scan-playwright-output.test.ts`). On this clone's last local run it refused the report (4, 4 and 3 matches) and passed `test-results/`.
+- [x] Setup signs out the session of a failed attempt (`tests/e2e/helpers/clerk-auth.test.ts`).
+- [x] BUG-307's archived closure has a forward pointer here; its scan was blind to embedded data.
+- [ ] After promotion, a green `main` run publishes no Playwright artifact.
 - [ ] The existing report artifacts are deleted (owner-approved), with the count recorded.
-- [ ] BUG-307's archived closure gets a forward pointer here; its scan was blind to embedded data.
 
 ## Related
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
+  createClerkE2ESession,
   ensureClerkE2ESession,
   releaseClerkE2ESession,
   requireStoredClerkE2ESession,
@@ -114,6 +115,92 @@ describe('ensureClerkE2ESession', () => {
     expect(page.visitedUrls).toEqual(['/', '/sign-in']);
     expect(clerkDriver.signInCount).toBe(1);
     expect(clerkDriver.waitForActiveSessionCount).toBe(1);
+  });
+});
+
+// BUG-328: each setup attempt runs in a new browser, and teardown signs out
+// only the stored session, so a failed attempt must sign out its own.
+describe('createClerkE2ESession', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const credentials = {
+    password: 'test-password',
+    username: 'test-user@example.test',
+  };
+
+  it('saves the session it creates', async () => {
+    const clerkDriver = new FakeClerkDriver(false);
+    const saveState = vi.fn(async () => {});
+
+    await createClerkE2ESession({
+      ...credentials,
+      clerkDriver,
+      page: new FakeClerkPage(),
+      saveState,
+    });
+
+    expect(saveState).toHaveBeenCalledOnce();
+    expect(clerkDriver.signOutCount).toBe(0);
+  });
+
+  it('signs out the session when saving it fails', async () => {
+    const clerkDriver = new FakeClerkDriver(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        page: new FakeClerkPage(),
+        saveState: async () => {
+          throw new Error('disk full');
+        },
+      }),
+    ).rejects.toThrow('disk full');
+    expect(clerkDriver.signOutCount).toBe(1);
+    expect(await clerkDriver.hasActiveSession()).toBe(false);
+  });
+
+  it('signs out a session that signed in but never confirmed', async () => {
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async waitForActiveSession(): Promise<void> {
+        throw new Error('timed out waiting for the session');
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        page: new FakeClerkPage(),
+        saveState: async () => {},
+      }),
+    ).rejects.toThrow('timed out waiting for the session');
+    expect(clerkDriver.signOutCount).toBe(1);
+  });
+
+  it('keeps the original error when signing out fails too', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async signOut(): Promise<void> {
+        throw new Error('Clerk unavailable');
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        page: new FakeClerkPage(),
+        saveState: async () => {
+          throw new Error('disk full');
+        },
+      }),
+    ).rejects.toThrow('disk full');
+    expect(warn).toHaveBeenCalledWith(
+      'Could not sign out the Clerk E2E session after a failed setup attempt; it stays live until Clerk expires it',
+    );
   });
 });
 

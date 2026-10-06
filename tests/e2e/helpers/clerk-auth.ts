@@ -50,6 +50,29 @@ export async function ensureClerkE2ESession<TPage extends ClerkE2EPage>(input: {
   await input.clerkDriver.waitForActiveSession(input.page);
 }
 
+// BUG-328: each setup attempt runs in a new browser, and teardown signs out
+// only the stored session. A failed attempt signs out its own session, or it
+// stays live until Clerk expires it.
+export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
+  clerkDriver: ClerkE2EDriver<TPage>;
+  page: TPage;
+  password: string;
+  saveState(): Promise<void>;
+  username: string;
+}): Promise<void> {
+  try {
+    await ensureClerkE2ESession(input);
+    await input.saveState();
+  } catch (error) {
+    await releaseClerkE2ESession(input).catch(() => {
+      console.warn(
+        'Could not sign out the Clerk E2E session after a failed setup attempt; it stays live until Clerk expires it',
+      );
+    });
+    throw error;
+  }
+}
+
 export async function releaseClerkE2ESession<
   TPage extends ClerkE2EPage,
 >(input: { clerkDriver: ClerkE2EDriver<TPage>; page: TPage }): Promise<void> {
@@ -127,14 +150,16 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
   }
 
   installE2ELogRedaction(console);
-  await ensureClerkE2ESession({
+  await createClerkE2ESession({
     clerkDriver: playwrightClerkDriver,
     page,
     password: clerkPassword,
+    saveState: async () => {
+      await mkdir(dirname(E2E_CLERK_AUTH_STATE_PATH), { recursive: true });
+      await page.context().storageState({ path: E2E_CLERK_AUTH_STATE_PATH });
+    },
     username: clerkUsername,
   });
-  await mkdir(dirname(E2E_CLERK_AUTH_STATE_PATH), { recursive: true });
-  await page.context().storageState({ path: E2E_CLERK_AUTH_STATE_PATH });
 }
 
 export async function signOutClerkE2ESession(page: Page): Promise<void> {

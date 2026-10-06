@@ -273,6 +273,24 @@ describe('CI workflow', () => {
 });
 
 describe('Playwright artifact publication', () => {
+  function jobSteps(workflowPath: string): WorkflowStep[] {
+    return Object.values(readParsedWorkflow(workflowPath).jobs ?? {}).flatMap(
+      (job) => job.steps ?? [],
+    );
+  }
+
+  // BUG-328: Clerk's testing-token route handler records each Clerk API call,
+  // tokens included, as a setup step, so every HTML report carries them.
+  it.each(WORKFLOW_PATHS)('never uploads the HTML report in %s', (path) => {
+    const uploads = jobSteps(path).filter((step) =>
+      step.uses?.startsWith('actions/upload-artifact@'),
+    );
+
+    for (const upload of uploads) {
+      expect(upload.with?.path).not.toContain('playwright-report');
+    }
+  });
+
   it.each([
     [CI_WORKFLOW_PATH, 'E2E smoke', 'e2e_smoke'],
     [
@@ -281,28 +299,32 @@ describe('Playwright artifact publication', () => {
       'hosted_e2e',
     ],
   ])(
-    'splits reports from failure-only results in %s',
+    'uploads failure output only after a passing scan in %s',
     (workflowPath, e2eStepName, e2eStepId) => {
       const e2e = findParsedStep(workflowPath, e2eStepName);
-      const report = findParsedStep(workflowPath, 'Upload Playwright report');
+      const scan = findParsedStep(workflowPath, 'Scan Playwright output');
       const failureOutput = findParsedStep(
         workflowPath,
         'Upload Playwright failure output',
       );
+      const names = jobSteps(workflowPath).map((step) => step.name);
+      const failed = `!cancelled() && steps.${e2eStepId}.outcome == 'failure'`;
 
       expect(e2e.id).toBe(e2eStepId);
-      expect(report.if).toBe(`\${{ !cancelled() }}`);
-      expect(report.with?.path).toContain('playwright-report/');
-      expect(report.with?.path).not.toContain('test-results/');
-      expect(failureOutput.if).toBe(
-        `\${{ !cancelled() && steps.${e2eStepId}.outcome == 'failure' }}`,
+      expect(scan.id).toBe('playwright_output_scan');
+      expect(scan.if).toBe(`\${{ ${failed} }}`);
+      expect(scan.run).toBe(
+        'pnpm exec tsx scripts/ci/scan-playwright-output.ts test-results',
       );
-      expect(failureOutput.with?.path).toContain('test-results/');
-
-      for (const upload of [report, failureOutput]) {
-        expect(upload.with?.path).toContain('!**/.auth/**');
-        expect(upload.with?.path).toContain('!**/trace.zip');
-      }
+      expect(failureOutput.if).toBe(
+        `\${{ ${failed} && steps.playwright_output_scan.outcome == 'success' }}`,
+      );
+      expect(failureOutput.with?.path).toBe(
+        'test-results/\n!**/.auth/**\n!**/trace.zip\n',
+      );
+      expect(names.indexOf('Upload Playwright failure output')).toBeGreaterThan(
+        names.indexOf('Scan Playwright output'),
+      );
     },
   );
 });
