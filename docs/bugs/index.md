@@ -8,7 +8,7 @@
 - **Next.** The remaining security findings, each filed with its fix.
 - **Owner decisions pending.** None for bugs.
 
-**Next Bug ID:** BUG-328
+**Next Bug ID:** BUG-329
 
 ## Active
 
@@ -22,6 +22,7 @@
 | [BUG-325](./bug-325-malformed-requests-throw-and-write-oversized-logs.md) | Malformed anonymous requests make our code throw and write oversized error logs | P3 | Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20 |
 | [BUG-326](./bug-326-error-pages-send-people-to-public-issue-tracker.md) | Error pages send learners and payers to the public GitHub issue tracker | P3 | Verifying — the fix reaches production; due 2026-10-13 |
 | [BUG-327](./bug-327-dependabot-branches-build-with-preview-secrets.md) | Dependabot branches are built on Vercel with Preview secrets | P3 | Verifying — the next Dependabot PR gets no Vercel deployment and merges through the tooling; due 2026-10-20 |
+| [BUG-328](./bug-328-playwright-reports-embed-clerk-dev-tokens.md) | Public Playwright reports still carry Clerk development-instance tokens | P3 | In Progress — the fix is in this pull request; deleting old artifacts needs the owner |
 
 ## Parked (accepted risk)
 
