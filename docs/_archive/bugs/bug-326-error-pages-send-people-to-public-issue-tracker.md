@@ -1,12 +1,12 @@
 # BUG-326: Error Pages Send Learners and Payers to the Public GitHub Issue Tracker
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the fix reaches production; due 2026-10-13
+**Status:** Resolved — 2026-10-06: the fix is in production
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-06
+**Verification receipts:** #1400 merged `5dcbbd9b` after exact-head approval 5427874840 on `925197bb` (local full gate passed on that head); promotion #1403 merged `d5236183`: main CI 37478735477 `test` passed, production assigned 2026-10-06T14:38:59.425Z, healthy production.
 
 ---
 
@@ -44,8 +44,8 @@ Option 1. The address already exists, is the one the privacy policy names, and n
 
 - [x] Tests, red first: every error page's report link is a `mailto:` to the support address, carries the error ID when the error has one, and never points at GitHub.
 - [x] The copy reads as contacting support, not filing an issue.
-- [ ] The fix reaches production.
+- [x] The fix reaches production: promotion #1403, assigned 2026-10-06T14:38:59.425Z.
 
 ## Related
 
-- [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md): the error pages this button sits on.
+- [BUG-319](../../bugs/bug-319-subscribe-actions-break-after-a-deploy.md): the error pages this button sits on.

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
+import { SETUP_PREPARATION_BUDGET_MS } from './tests/e2e/helpers/clerk-session-deadlines';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -18,6 +19,32 @@ describe('playwright config', () => {
     expect(setupProject?.teardown).toBe('cleanup');
     expect(cleanupProject?.testMatch).toEqual(/global-teardown\.ts/);
     expect(cleanupProject?.use?.storageState).toBeUndefined();
+  });
+
+  // BUG-328: global setup reserves its session deadlines once preparation
+  // ends (tests/e2e/helpers/clerk-session-deadlines.test.ts); until then it
+  // has the preparation budget.
+  it('gives global setup its preparation budget', () => {
+    const setup = config.projects?.find((project) => project.name === 'setup');
+
+    expect(setup?.timeout).toBe(SETUP_PREPARATION_BUDGET_MS);
+  });
+
+  // BUG-328: Playwright page waits have no timeout by default. Bounded waits
+  // make a hung Clerk wait fail with its own error, well inside the deadlines.
+  it('bounds page waits in global setup and teardown', () => {
+    const testTimeout = config.timeout ?? 30_000;
+
+    for (const name of ['setup', 'cleanup']) {
+      const use = config.projects?.find(
+        (project) => project.name === name,
+      )?.use;
+
+      for (const timeout of [use?.actionTimeout, use?.navigationTimeout]) {
+        expect(timeout).toBeGreaterThan(0);
+        expect(timeout).toBeLessThanOrEqual(testTimeout / 2);
+      }
+    }
   });
 
   it('defers cleanup auth-state loading until global teardown executes', () => {

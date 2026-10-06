@@ -151,20 +151,16 @@ jobs:
           E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
           E2E_STRIPE_OWNER: github-ci
 
-      - name: Upload Playwright report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            !**/.auth/**
-            !**/trace.zip
-          retention-days: 30
-          if-no-files-found: ignore
+      # BUG-328: every HTML report carries Clerk development tokens from the
+      # setup steps, so it is never uploaded. A failed run uploads its failure
+      # output only after this scan finds no token in it.
+      - name: Scan Playwright output
+        id: playwright_output_scan
+        if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' }}
+        run: pnpm exec tsx scripts/ci/scan-playwright-output.ts test-results
 
       - name: Upload Playwright failure output
-        if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' }}
+        if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' && steps.playwright_output_scan.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-test-results
