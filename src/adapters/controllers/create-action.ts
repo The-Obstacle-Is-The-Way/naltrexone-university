@@ -1,5 +1,4 @@
 import type { ZodType } from 'zod';
-import { testSeam } from '@/lib/action-test-seams';
 import type { LoadContainerFn } from '@/lib/controller-helpers';
 import type { Logger } from '@/src/application/ports/logger';
 import type { ActionResult } from './action-result';
@@ -42,9 +41,7 @@ export function createAction<
   deps?: TDeps,
   options?: ActionOptions<TContainer>,
 ) => Promise<ActionResult<TOutput>> {
-  return async (input, callerDeps, callerOptions) => {
-    const deps = testSeam(callerDeps);
-    const options = testSeam(callerOptions);
+  return async (input, deps, options) => {
     const parsed = config.schema.safeParse(input);
     if (!parsed.success) {
       return handleError(

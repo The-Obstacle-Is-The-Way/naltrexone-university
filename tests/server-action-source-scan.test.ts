@@ -72,19 +72,15 @@ export async function save(formData: FormData, deps: unknown) {}`);
     ]);
   });
 
-  it('allows createAction exports only in the controllers', () => {
+  it('rejects createAction exports, in the controllers too', () => {
     const source = `'use server';
 export const getThing = createAction({ schema, getDeps, execute });`;
 
     expect(
-      scanServerActionSource('src/adapters/controllers/thing.ts', source),
-    ).toEqual({
-      isServerActionModule: true,
-      exportedActions: ['getThing'],
-      issues: [],
-    });
-    expect(scan(source).issues).toEqual([
-      'app/example/actions.ts:2 getThing is not a function declaration',
+      scanServerActionSource('src/adapters/controllers/thing.ts', source)
+        .issues,
+    ).toEqual([
+      'src/adapters/controllers/thing.ts:2 getThing is not a function declaration',
     ]);
   });
 

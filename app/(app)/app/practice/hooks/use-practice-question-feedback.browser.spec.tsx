@@ -2,21 +2,19 @@ import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as clientError from '@/lib/report-client-error';
-import * as questionFeedbackController from '@/src/adapters/controllers/question-feedback-controller';
+import * as questionFeedbackActions from '@/src/adapters/controllers/question-feedback-actions';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionFeedback } from './use-practice-question-feedback';
 
-vi.mock('@/src/adapters/controllers/question-feedback-controller', {
+vi.mock('@/src/adapters/controllers/question-feedback-actions', {
   spy: true,
 });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getQuestionRating = vi.mocked(
-  questionFeedbackController.getQuestionRating,
-);
-const rateQuestion = vi.mocked(questionFeedbackController.rateQuestion);
+const getQuestionRating = vi.mocked(questionFeedbackActions.getQuestionRating);
+const rateQuestion = vi.mocked(questionFeedbackActions.rateQuestion);
 const submitQuestionReport = vi.mocked(
-  questionFeedbackController.submitQuestionReport,
+  questionFeedbackActions.submitQuestionReport,
 );
 const reportClientError = vi.mocked(clientError.reportClientError);
 

@@ -1,5 +1,4 @@
 import { cache } from 'react';
-import { testSeam } from '@/lib/action-test-seams';
 import type { createContainer } from '@/lib/container';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 
@@ -49,15 +48,12 @@ export function createDepsResolver<TDeps, TContainer>(
   loadContainer: LoadContainerFn<TContainer>,
 ) {
   return async function getDeps(
-    callerDeps?: TDeps,
-    callerOptions?: { loadContainer?: LoadContainerFn<TContainer> },
+    deps?: TDeps,
+    options?: { loadContainer?: LoadContainerFn<TContainer> },
   ): Promise<TDeps> {
-    const deps = testSeam(callerDeps);
     if (deps) return deps;
 
-    const container = await (
-      testSeam(callerOptions)?.loadContainer ?? loadContainer
-    )();
+    const container = await (options?.loadContainer ?? loadContainer)();
     return resolveFromContainer(container);
   };
 }

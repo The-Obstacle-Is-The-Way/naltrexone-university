@@ -81,7 +81,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 
 Criteria to meet before closing.
 
-- [ ] Two consecutive production builds give the same action IDs. Proof: call a page's action from a tab opened before a deploy, or compare the IDs in the pricing page's dynamic payload across two deployments. Compare actions whose code did not change between the two builds: [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) changes five app-level action IDs on purpose.
+- [ ] Two consecutive production builds give the same action IDs. Proof: call a page's action from a tab opened before a deploy, or compare the IDs in the pricing page's dynamic payload across two deployments. Compare actions whose code did not change between the two builds: [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) changes the five app-level action IDs and moves the 22 browser-called controller actions, on purpose.
 - [x] "Try again" calls `retry` on every route error page. A test pins it, red first.
 - [x] A stale action on a payment form reloads the page by itself, with a test of the guard.
 - [x] A missing key fails a production build.

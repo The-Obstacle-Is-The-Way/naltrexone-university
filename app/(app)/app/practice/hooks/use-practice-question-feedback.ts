@@ -18,7 +18,7 @@ import {
   getQuestionRating,
   rateQuestion,
   submitQuestionReport,
-} from '@/src/adapters/controllers/question-feedback-controller';
+} from '@/src/adapters/controllers/question-feedback-actions';
 import type {
   QuestionFeedbackCategory,
   QuestionFeedbackRating,

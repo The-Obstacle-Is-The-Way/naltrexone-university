@@ -5,8 +5,8 @@ import {
   type ReviewHydrationState,
   type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
+import { getPreviousAttempt } from '@/src/adapters/controllers/question-view-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
-import { getPreviousAttempt } from '@/src/adapters/controllers/question-view-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UseQuestionPagePreviousAttemptInput = {

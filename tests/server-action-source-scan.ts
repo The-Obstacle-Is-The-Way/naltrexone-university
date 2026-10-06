@@ -10,10 +10,6 @@ const ROOTS = ['app', 'src', 'lib', 'components'];
 const TEST_SUPPORT =
   /\.(test|spec)\.tsx?$|test-helpers|\.browser\.probes\.tsx$/;
 
-// Until BUG-324's next step, the controllers export createAction results,
-// whose test seams a production build ignores (lib/action-test-seams.ts).
-const CREATE_ACTION_DIR = 'src/adapters/controllers/';
-
 export type ServerActionScan = {
   isServerActionModule: boolean;
   exportedActions: string[];
@@ -60,14 +56,6 @@ function parameterIssue(
   if (parameter?.dotDotDotToken) return `${name} has a rest parameter`;
   if (parameter?.initializer) return `${name} has a default parameter`;
   return undefined;
-}
-
-function isCreateActionCall(node: ts.Expression): boolean {
-  return (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    node.expression.text === 'createAction'
-  );
 }
 
 export function scanServerActionSource(
@@ -133,12 +121,6 @@ export function scanServerActionSource(
           const issue = parameterIssue(name, value.parameters);
           if (issue) at(statement, issue);
           else exportedActions.push(name);
-        } else if (
-          value &&
-          isCreateActionCall(value) &&
-          file.startsWith(CREATE_ACTION_DIR)
-        ) {
-          exportedActions.push(name);
         } else {
           at(statement, `${name} is not a function declaration`);
         }

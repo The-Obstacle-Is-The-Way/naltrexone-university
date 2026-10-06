@@ -13,10 +13,8 @@ import {
 } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
-import {
-  type GetPracticeSessionReviewOutput,
-  getPracticeSessionReview,
-} from '@/src/adapters/controllers/practice-controller';
+import { getPracticeSessionReview } from '@/src/adapters/controllers/practice-actions';
+import type { GetPracticeSessionReviewOutput } from '@/src/adapters/controllers/practice-controller';
 
 const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
