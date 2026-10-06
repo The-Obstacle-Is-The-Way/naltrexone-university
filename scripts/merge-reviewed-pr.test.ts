@@ -3,9 +3,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   checkCarriesMain,
   checkFeatureMerge,
-  type DependabotCarryEvidence,
   runMergeReviewedPr,
 } from './merge-reviewed-pr';
+import {
+  HEAD,
+  MAIN,
+  OLD_HEAD,
+  pullRequest,
+  pushedAt,
+  pushes,
+  review,
+} from './merge-reviewed-pr-test-helpers';
 
 vi.mock('node:child_process', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:child_process')>()),
@@ -13,73 +21,11 @@ vi.mock('node:child_process', async (importOriginal) => ({
 }));
 afterEach(() => vi.resetAllMocks());
 
-const HEAD = 'a'.repeat(40);
-const OLD_HEAD = 'b'.repeat(40);
-const MAIN = 'c'.repeat(40);
 const REPO = 'repos/The-Obstacle-Is-The-Way/naltrexone-university';
 // GitHub's compare of main against a ref: behind_by counts main's commits
 // the ref lacks (DEBT-491).
 const compareWithMain = (behind = 0) =>
   JSON.stringify({ behind_by: behind, base_commit: { sha: MAIN } });
-const review = (state = 'APPROVED', commit = HEAD) => ({
-  id: 123,
-  user: { login: 'coderabbitai[bot]' },
-  state,
-  commit_id: commit,
-  submitted_at: '2026-09-22T03:00:00Z',
-});
-const pullRequest = () => ({
-  number: 987,
-  state: 'OPEN',
-  isDraft: false,
-  baseRefName: 'dev',
-  headRefOid: HEAD,
-  mergeable: 'MERGEABLE',
-  mergeStateStatus: 'CLEAN',
-  reviewThreads: {
-    nodes: [{ isResolved: true }],
-    pageInfo: { hasNextPage: false },
-  },
-  author: { login: 'The-Obstacle-Is-The-Way' },
-  files: {
-    nodes: [{ path: 'src/example.ts' }],
-    pageInfo: { hasNextPage: false },
-  },
-  commits: {
-    nodes: [
-      {
-        commit: {
-          oid: HEAD,
-          statusCheckRollup: {
-            contexts: {
-              nodes: [
-                {
-                  __typename: 'CheckRun',
-                  name: 'test',
-                  status: 'COMPLETED',
-                  conclusion: 'SUCCESS',
-                },
-                {
-                  __typename: 'StatusContext',
-                  context: 'CodeRabbit',
-                  state: 'SUCCESS',
-                },
-                {
-                  __typename: 'CheckRun',
-                  name: 'codecov/patch',
-                  status: 'COMPLETED',
-                  conclusion: 'SUCCESS',
-                },
-              ],
-              pageInfo: { hasNextPage: false },
-            },
-          },
-        },
-      },
-    ],
-  },
-});
-
 describe('feature merge decision', () => {
   it('accepts exact-head approval even when a later comment has no verdict', () => {
     expect(
@@ -110,6 +56,43 @@ describe('feature merge decision', () => {
     ['dismissed approval', [[review('DISMISSED')]]],
   ])('refuses %s', (_name, pages) => {
     expect(() => checkFeatureMerge(pullRequest(), pages)).toThrow('exact-head');
+  });
+
+  // GitHub keeps an approval when a later push only merges the base branch,
+  // and repoints it to the new head (changelog 2023-06-06). An approval
+  // submitted before the head was pushed cannot have reviewed that head.
+  it('refuses an approval GitHub carried onto a head pushed after it', () => {
+    const pr = pullRequest(pushedAt('2026-09-22T04:00:00Z'));
+
+    expect(() => checkFeatureMerge(pr, [[review()]])).toThrow(
+      'predates the push of the head',
+    );
+  });
+
+  it('dates the push by the earliest GitHub Actions check suite', () => {
+    const pr = pullRequest(
+      pushedAt('2026-09-22T04:00:00Z', '2026-09-22T02:30:00Z'),
+    );
+
+    expect(checkFeatureMerge(pr, [[review()]])).toMatchObject({ head: HEAD });
+  });
+
+  it.each([
+    [
+      'no GitHub Actions check suite',
+      { pageInfo: { hasNextPage: false }, nodes: [] },
+    ],
+    [
+      'a truncated check-suite list',
+      {
+        pageInfo: { hasNextPage: true },
+        nodes: [{ createdAt: '2026-09-22T02:00:00Z' }],
+      },
+    ],
+  ])('fails closed on %s', (_name, checkSuites) => {
+    expect(() =>
+      checkFeatureMerge(pullRequest(checkSuites), [[review()]]),
+    ).toThrow('cannot date the push of the head');
   });
 
   it.each([
@@ -288,158 +271,6 @@ describe('feature merge decision', () => {
 // rebase whose only new change is the lockfile, which its path filters exclude.
 // Its approval carries to the rebased head only when every other file's diff is
 // byte-identical at both heads.
-describe('Dependabot approval carried across a rebase', () => {
-  const manifest = {
-    filename: 'package.json',
-    status: 'modified',
-    patch: '@@ -1 +1 @@\n-"resend": "6.18.0"\n+"resend": "6.28.1"',
-  };
-  const lockfile = (patch: string) => ({
-    filename: 'pnpm-lock.yaml',
-    status: 'modified',
-    patch,
-  });
-  const dependabotPr = () => {
-    const pr = pullRequest();
-    pr.author = { login: 'dependabot' };
-    pr.files = {
-      nodes: [{ path: 'package.json' }, { path: 'pnpm-lock.yaml' }],
-      pageInfo: { hasNextPage: false },
-    };
-    return pr;
-  };
-  const evidence = (
-    current: DependabotCarryEvidence['current'] = [
-      manifest,
-      lockfile('rebased'),
-    ],
-  ): DependabotCarryEvidence => ({
-    approvedHead: OLD_HEAD,
-    approved: [manifest, lockfile('original')],
-    current,
-  });
-
-  it('carries the approval when only the lockfile changed since it', () => {
-    expect(
-      checkFeatureMerge(
-        dependabotPr(),
-        [[review('APPROVED', OLD_HEAD)]],
-        evidence(),
-      ),
-    ).toMatchObject({
-      head: HEAD,
-      approvalId: 123,
-      carriedFrom: OLD_HEAD,
-    });
-  });
-
-  it('refuses when a reviewable file changed since the approval', () => {
-    const changed = { ...manifest, patch: `${manifest.patch}\n+"extra": "1"` };
-
-    expect(() =>
-      checkFeatureMerge(
-        dependabotPr(),
-        [[review('APPROVED', OLD_HEAD)]],
-        evidence([changed, lockfile('rebased')]),
-      ),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses when a reviewable file was added since the approval', () => {
-    expect(() =>
-      checkFeatureMerge(
-        dependabotPr(),
-        [[review('APPROVED', OLD_HEAD)]],
-        evidence([
-          manifest,
-          lockfile('rebased'),
-          { filename: 'src/new.ts', status: 'added', patch: '+x' },
-        ]),
-      ),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses when a renamed file now comes from another path', () => {
-    const renamed = (previous: string) => ({
-      filename: 'src/config.ts',
-      previous_filename: previous,
-      status: 'renamed',
-      patch: '@@ -1 +1 @@\n-a\n+b',
-    });
-
-    expect(() =>
-      checkFeatureMerge(dependabotPr(), [[review('APPROVED', OLD_HEAD)]], {
-        approvedHead: OLD_HEAD,
-        approved: [manifest, renamed('src/a.ts'), lockfile('original')],
-        current: [manifest, renamed('src/b.ts'), lockfile('rebased')],
-      }),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses when a file was renamed onto the lockfile path', () => {
-    expect(() =>
-      checkFeatureMerge(
-        dependabotPr(),
-        [[review('APPROVED', OLD_HEAD)]],
-        evidence([
-          manifest,
-          {
-            filename: 'pnpm-lock.yaml',
-            previous_filename: 'src/secret.ts',
-            status: 'renamed',
-            patch: 'rebased',
-          },
-        ]),
-      ),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses when a reviewable diff is unavailable', () => {
-    const { patch: _omitted, ...withoutPatch } = manifest;
-
-    expect(() =>
-      checkFeatureMerge(dependabotPr(), [[review('APPROVED', OLD_HEAD)]], {
-        approvedHead: OLD_HEAD,
-        approved: [withoutPatch, lockfile('original')],
-        current: [withoutPatch, lockfile('rebased')],
-      }),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses a PR that Dependabot did not author', () => {
-    const pr = dependabotPr();
-    pr.author = { login: 'The-Obstacle-Is-The-Way' };
-
-    expect(() =>
-      checkFeatureMerge(pr, [[review('APPROVED', OLD_HEAD)]], evidence()),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses when CodeRabbit last requested changes', () => {
-    expect(() =>
-      checkFeatureMerge(
-        dependabotPr(),
-        [
-          [
-            review('APPROVED', OLD_HEAD),
-            { ...review('CHANGES_REQUESTED', OLD_HEAD), id: 124 },
-          ],
-        ],
-        evidence(),
-      ),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-
-  it('refuses evidence for another approved head', () => {
-    expect(() =>
-      checkFeatureMerge(dependabotPr(), [[review('APPROVED', OLD_HEAD)]], {
-        ...evidence(),
-        approvedHead: 'c'.repeat(40),
-      }),
-    ).toThrow('exact-head CodeRabbit approval');
-  });
-});
-
 describe("dev keeps main's promotion history (DEBT-491)", () => {
   it('accepts a PR head that contains main', () => {
     expect(checkCarriesMain({ main: MAIN, headContainsMain: true })).toBe(
@@ -545,7 +376,6 @@ describe('merge command', () => {
 
   it('reads both diffs for a rebased Dependabot PR and records the carried approval', () => {
     const pr = pullRequest();
-    pr.author = { login: 'dependabot' };
     pr.files = {
       nodes: [{ path: 'package.json' }, { path: 'pnpm-lock.yaml' }],
       pageInfo: { hasNextPage: false },
@@ -591,9 +421,47 @@ describe('merge command', () => {
     ]);
   });
 
-  it('reads no diffs for a Dependabot PR approved on its current head', () => {
-    const pr = pullRequest();
-    pr.author = { login: 'dependabot' };
+  it('reads both diffs for an approval GitHub repointed onto a later head', () => {
+    const pr = {
+      ...pullRequest(pushedAt('2026-09-22T04:00:00Z')),
+      ...pushes(
+        [OLD_HEAD, '2026-09-22T02:00:00Z'],
+        [HEAD, '2026-09-22T04:00:00Z'],
+      ),
+    };
+    const files = JSON.stringify({
+      files: [{ filename: 'src/example.ts', status: 'modified', patch: '+x' }],
+    });
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce(files)
+      .mockReturnValueOnce(files)
+      .mockReturnValueOnce(compareWithMain());
+
+    const receipt = runMergeReviewedPr(['987'], () => {});
+
+    expect(receipt).toMatchObject({ carriedFrom: OLD_HEAD, head: HEAD });
+    expect(vi.mocked(execFileSync).mock.calls[2]?.[1]).toEqual([
+      'api',
+      `${REPO}/compare/dev...${OLD_HEAD}`,
+    ]);
+    expect(vi.mocked(execFileSync).mock.calls[3]?.[1]).toEqual([
+      'api',
+      `${REPO}/compare/dev...${HEAD}`,
+    ]);
+  });
+
+  it('reads no diffs for a PR approved after its current head was pushed', () => {
+    const pr = {
+      ...pullRequest(),
+      ...pushes(
+        [OLD_HEAD, '2026-09-22T01:00:00Z'],
+        [HEAD, '2026-09-22T02:00:00Z'],
+      ),
+    };
     vi.mocked(execFileSync)
       .mockReturnValueOnce(
         JSON.stringify({ data: { repository: { pullRequest: pr } } }),
@@ -609,7 +477,6 @@ describe('merge command', () => {
 
   it('refuses to carry when a compare reaches GitHub’s 300-file ceiling', () => {
     const pr = pullRequest();
-    pr.author = { login: 'dependabot' };
     vi.mocked(execFileSync)
       .mockReturnValueOnce(
         JSON.stringify({ data: { repository: { pullRequest: pr } } }),
@@ -692,7 +559,7 @@ describe('merge command', () => {
           data: { repository: { pullRequest: pullRequest() } },
         }),
       )
-      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', OLD_HEAD)]]));
+      .mockReturnValueOnce(JSON.stringify([[review('CHANGES_REQUESTED')]]));
     expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
       'exact-head',
     );

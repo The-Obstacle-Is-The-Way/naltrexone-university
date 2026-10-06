@@ -46,10 +46,8 @@ export const pullRequestSchema = z.object({
     ]),
   }),
 });
-// Feature merges also read the author and changed files (the promotion schema
-// does not).
+// Feature merges also read the changed files (the promotion schema does not).
 const featurePullRequestSchema = pullRequestSchema.extend({
-  author: z.object({ login: z.string() }).nullable(),
   files: z.object({
     pageInfo,
     nodes: z.array(z.object({ path: z.string() })),
@@ -68,6 +66,92 @@ const reviewPagesSchema = z.array(
 );
 
 type CheckNodes = z.infer<typeof checks>['nodes'];
+
+// GitHub keeps an approval when a later push only merges the base branch and
+// repoints it to the new head (changelog 2023-06-06), so a review's commit_id
+// alone does not prove CodeRabbit reviewed that head. GitHub Actions creates a
+// head's check suite when the head is pushed, and re-running CI keeps it, so
+// the earliest suite dates the push.
+const headCheckSuitesSchema = z.object({
+  commits: z.object({
+    nodes: z.tuple([
+      z.object({
+        commit: z.object({
+          oid: sha,
+          checkSuites: z.object({
+            pageInfo,
+            nodes: z.array(z.object({ createdAt: z.iso.datetime() })),
+          }),
+        }),
+      }),
+    ]),
+  }),
+});
+
+// The PR's recent heads, each with its GitHub Actions check suites.
+const pushesSchema = z.object({
+  pushes: z.object({
+    pageInfo: z.object({ hasPreviousPage: z.boolean() }),
+    nodes: z.array(
+      z.object({
+        commit: z.object({
+          oid: sha,
+          checkSuites: z.object({
+            pageInfo: z.object({ hasNextPage: z.boolean() }),
+            nodes: z.array(z.object({ createdAt: z.iso.datetime() })),
+          }),
+        }),
+      }),
+    ),
+  }),
+});
+
+// The PR head when an approval was submitted: the commit whose first push is
+// the latest at or before then. GitHub's repointed approval no longer names
+// that head. A push landing while CodeRabbit is still reviewing would be
+// mistaken for the reviewed head; GitHub carries an approval only across a push
+// that adds no new changes, and the diff comparison still checks content.
+export function headPushedAsOf(
+  input: unknown,
+  time: string,
+): string | undefined {
+  const parsed = pushesSchema.safeParse(input);
+  if (!parsed.success || parsed.data.pushes.pageInfo.hasPreviousPage) {
+    return undefined;
+  }
+  const limit = Date.parse(time);
+  let found: { oid: string; pushed: number } | undefined;
+  for (const { commit } of parsed.data.pushes.nodes) {
+    if (commit.checkSuites.pageInfo.hasNextPage) return undefined;
+    const created = commit.checkSuites.nodes.map((suite) =>
+      Date.parse(suite.createdAt),
+    );
+    if (!created.length) continue;
+    const pushed = Math.min(...created);
+    if (pushed <= limit && (!found || pushed > found.pushed)) {
+      found = { oid: commit.oid, pushed };
+    }
+  }
+  return found?.oid;
+}
+
+export function headPushedAt(input: unknown, head: string): string {
+  const parsed = headCheckSuitesSchema.safeParse(input);
+  const commit = parsed.data?.commits.nodes[0].commit;
+  const created = commit?.checkSuites.nodes.map((suite) =>
+    Date.parse(suite.createdAt),
+  );
+  if (
+    commit?.oid !== head ||
+    commit.checkSuites.pageInfo.hasNextPage ||
+    !created?.length
+  ) {
+    throw new Error(
+      'GitHub Actions check suites cannot date the push of the head; refusing merge',
+    );
+  }
+  return new Date(Math.min(...created)).toISOString();
+}
 
 export function hasSuccessfulCheckRun(nodes: CheckNodes, name: string) {
   return nodes.some(
@@ -126,8 +210,9 @@ const compareFilesSchema = z.array(
 );
 
 // A PR's own diff at two heads, each against its merge base with the PR's base
-// branch, from GitHub's compare API.
-export type DependabotCarryEvidence = {
+// branch, from GitHub's compare API, for CodeRabbit's latest decisive review.
+export type CarryEvidence = {
+  reviewId: number;
   approvedHead: string;
   approved: z.infer<typeof compareFilesSchema>;
   current: z.infer<typeof compareFilesSchema>;
@@ -137,11 +222,17 @@ export type DependabotCarryEvidence = {
 // may differ between the reviewed head and the current one.
 const CODERABBIT_UNREVIEWED_PATH = 'pnpm-lock.yaml';
 
-function isDependabot(author: { login: string } | null): boolean {
-  return author?.login === 'dependabot' || author?.login === 'dependabot[bot]';
+// A patch without its hunk headers' positions, git patch-id's notion of the
+// same change: dev's edits elsewhere in a file move the PR's hunks but leave
+// each changed line and its context intact. Hunk boundaries stay marked.
+function hunkBodies(patch: string) {
+  return patch
+    .split('\n')
+    .map((line) => (line.startsWith('@@') ? '@@' : line))
+    .join('\n');
 }
 
-function reviewableDiffIsIdentical(evidence: DependabotCarryEvidence) {
+function reviewableDiffIsIdentical(evidence: CarryEvidence) {
   const approved = compareFilesSchema.parse(evidence.approved);
   const current = compareFilesSchema.parse(evidence.current);
   // Only the lockfile's own diff is skipped; a rename onto its path would
@@ -162,11 +253,11 @@ function reviewableDiffIsIdentical(evidence: DependabotCarryEvidence) {
       const other = after[index];
       return (
         file.patch !== undefined &&
-        other !== undefined &&
+        other?.patch !== undefined &&
         other.filename === file.filename &&
         other.previous_filename === file.previous_filename &&
         other.status === file.status &&
-        other.patch === file.patch
+        hunkBodies(other.patch) === hunkBodies(file.patch)
       );
     })
   );
@@ -186,26 +277,27 @@ function latestDecisiveCodeRabbitReview(
     .at(-1);
 }
 
-// Dependabot PRs: CodeRabbit reviews once, when the PR opens, and skips a
-// rebase whose only new change is the lockfile. Its approval carries to the
-// current head only when it is CodeRabbit's latest decisive review and every
-// other file's diff is byte-identical at both heads.
-function carriedDependabotApproval(
-  author: { login: string } | null,
+// An approval carries to a later head only when it is CodeRabbit's latest
+// decisive review and the diff CodeRabbit reviews (every file but the lockfile
+// its path filters exclude) is the same at both heads, hunk positions aside.
+// CodeRabbit has then reviewed exactly the change being merged. Two cases need this: a Dependabot
+// rebase whose only new change is the lockfile, which CodeRabbit skips, and a
+// push that only merges dev or main into the branch, after which GitHub
+// repoints the approval itself to the new head (changelog 2023-06-06).
+export function carriedApproval(
   reviewPages: unknown,
   head: string,
-  evidence: DependabotCarryEvidence | undefined,
+  evidence: CarryEvidence,
 ) {
   const reviews = reviewPagesSchema.safeParse(reviewPages);
   if (!reviews.success) throw new Error('Invalid GitHub review response');
   const latest = latestDecisiveCodeRabbitReview(reviews.data);
   if (
-    !isDependabot(author) ||
-    !evidence ||
     latest?.state !== 'APPROVED' ||
     !latest.submitted_at ||
-    latest.commit_id === head ||
-    evidence.approvedHead !== latest.commit_id ||
+    latest.id !== evidence.reviewId ||
+    evidence.approvedHead === head ||
+    (latest.commit_id !== head && latest.commit_id !== evidence.approvedHead) ||
     !reviewableDiffIsIdentical(evidence)
   ) {
     throw new Error('Missing current exact-head CodeRabbit approval');
@@ -213,23 +305,14 @@ function carriedDependabotApproval(
   return {
     id: latest.id,
     submitted_at: latest.submitted_at,
-    carriedFrom: latest.commit_id,
+    carriedFrom: evidence.approvedHead,
   };
-}
-
-export function latestCodeRabbitApprovalHead(
-  reviewPages: unknown,
-): string | null {
-  const reviews = reviewPagesSchema.safeParse(reviewPages);
-  if (!reviews.success) return null;
-  const latest = latestDecisiveCodeRabbitReview(reviews.data);
-  return latest?.state === 'APPROVED' ? latest.commit_id : null;
 }
 
 export function checkFeatureMerge(
   input: unknown,
   reviewPages: unknown,
-  carry?: DependabotCarryEvidence,
+  carry?: CarryEvidence,
 ) {
   const parsed = featurePullRequestSchema.safeParse(input);
   if (!parsed.success) throw new Error('Invalid GitHub merge response');
@@ -253,18 +336,12 @@ export function checkFeatureMerge(
   if (pr.reviewThreads.nodes.some((thread) => !thread.isResolved)) {
     throw new Error('PR has unresolved review threads');
   }
-  let approval: { id: number; submitted_at: string; carriedFrom?: string };
-  try {
-    approval = exactHeadApproval(reviewPages, pr.headRefOid);
-  } catch (error) {
-    if (carry === undefined) throw error;
-    approval = carriedDependabotApproval(
-      pr.author,
-      reviewPages,
-      pr.headRefOid,
-      carry,
-    );
-  }
+  const approval = currentApproval(
+    reviewPages,
+    pr.headRefOid,
+    headPushedAt(input, pr.headRefOid),
+    carry,
+  );
   if (!hasSuccessfulCheckRun(contexts.nodes, 'test')) {
     throw new Error('CI test has not succeeded on the exact head');
   }
@@ -310,7 +387,11 @@ export function checkCarriesMain(ancestry: {
   );
 }
 
-export function exactHeadApproval(reviewPages: unknown, head: string) {
+export function exactHeadApproval(
+  reviewPages: unknown,
+  head: string,
+  pushedAt: string,
+) {
   const reviews = reviewPagesSchema.safeParse(reviewPages);
   if (!reviews.success) throw new Error('Invalid GitHub review response');
   const approval = reviews.data
@@ -325,7 +406,32 @@ export function exactHeadApproval(reviewPages: unknown, head: string) {
   if (approval?.state !== 'APPROVED' || !approval.submitted_at) {
     throw new Error('Missing current exact-head CodeRabbit approval');
   }
+  if (Date.parse(approval.submitted_at) < Date.parse(pushedAt)) {
+    throw new Error(
+      'The CodeRabbit approval predates the push of the head, so GitHub carried it forward from an earlier head. Dismiss it and request `@coderabbitai full review` (AGENTS.md, The Rule, item 7)',
+    );
+  }
   return { id: approval.id, submitted_at: approval.submitted_at };
+}
+
+// The exact-head approval, or else a carried one. A failed carry reports why
+// the exact-head approval is missing, which names the refresh to request.
+export function currentApproval(
+  reviewPages: unknown,
+  head: string,
+  pushedAt: string,
+  carry?: CarryEvidence,
+): { id: number; submitted_at: string; carriedFrom?: string } {
+  try {
+    return exactHeadApproval(reviewPages, head, pushedAt);
+  } catch (error) {
+    if (carry === undefined) throw error;
+    try {
+      return carriedApproval(reviewPages, head, carry);
+    } catch {
+      throw error;
+    }
+  }
 }
 
 const query = `query($number:Int!) {
@@ -334,10 +440,21 @@ const query = `query($number:Int!) {
       number state isDraft baseRefName headRefOid mergeable mergeStateStatus
       baseRefOid headRefName headRepository { nameWithOwner }
       mergeCommit { oid } mergedAt
-      author { login }
       reviewThreads(first:100) { nodes { isResolved } pageInfo { hasNextPage } }
       files(first:100) { nodes { path } pageInfo { hasNextPage } }
-      commits(last:1) { nodes { commit { oid statusCheckRollup {
+      pushes: commits(last:100) {
+        pageInfo { hasPreviousPage }
+        nodes { commit { oid
+          checkSuites(first:20, filterBy:{appId:15368}) {
+            pageInfo { hasNextPage } nodes { createdAt }
+          }
+        } }
+      }
+      commits(last:1) { nodes { commit { oid
+        checkSuites(first:20, filterBy:{appId:15368}) {
+          pageInfo { hasNextPage } nodes { createdAt }
+        }
+        statusCheckRollup {
         contexts(first:100) {
           pageInfo { hasNextPage }
           nodes { __typename
@@ -428,23 +545,35 @@ export function readMainAncestry(head: string) {
   };
 }
 
-// Reads the carry evidence only for a Dependabot PR whose latest CodeRabbit
-// verdict is an approval on an earlier head.
-export function readDependabotCarryEvidence(
+// Evidence for carrying CodeRabbit's latest approval to the current head. The
+// approved head is the review's own commit, or, when GitHub has repointed the
+// approval to the current head, the head as of the approval. Both diffs are
+// taken against `base`: the PR's base branch for an open PR, or the merge's
+// first parent for a merged one, whose head the base branch already contains.
+export function readCarryEvidence(
   pullRequest: unknown,
   reviewPages: unknown,
-): DependabotCarryEvidence | undefined {
-  const parsed = featurePullRequestSchema.safeParse(pullRequest);
-  if (!parsed.success || !isDependabot(parsed.data.author)) return undefined;
-  const approvedHead = latestCodeRabbitApprovalHead(reviewPages);
-  if (!approvedHead || approvedHead === parsed.data.headRefOid) {
-    return undefined;
-  }
-  const base = parsed.data.baseRefName;
+  base?: string,
+): CarryEvidence | undefined {
+  const parsed = z
+    .object({ baseRefName: z.string(), headRefOid: sha })
+    .safeParse(pullRequest);
+  const reviews = reviewPagesSchema.safeParse(reviewPages);
+  if (!parsed.success || !reviews.success) return undefined;
+  const latest = latestDecisiveCodeRabbitReview(reviews.data);
+  if (latest?.state !== 'APPROVED' || !latest.submitted_at) return undefined;
+  const head = parsed.data.headRefOid;
+  const approvedHead =
+    latest.commit_id === head
+      ? headPushedAsOf(pullRequest, latest.submitted_at)
+      : latest.commit_id;
+  if (!approvedHead || approvedHead === head) return undefined;
+  const compareBase = base ?? parsed.data.baseRefName;
   return {
+    reviewId: latest.id,
     approvedHead,
-    approved: readCompareFiles(base, approvedHead),
-    current: readCompareFiles(base, parsed.data.headRefOid),
+    approved: readCompareFiles(compareBase, approvedHead),
+    current: readCompareFiles(compareBase, head),
   };
 }
 
@@ -468,7 +597,7 @@ export function runMergeReviewedPr(
   const receipt = checkFeatureMerge(
     evidence.pullRequest,
     evidence.reviewPages,
-    readDependabotCarryEvidence(evidence.pullRequest, evidence.reviewPages),
+    readCarryEvidence(evidence.pullRequest, evidence.reviewPages),
   );
   if (receipt.number !== Number(number))
     throw new Error('PR number changed during verification');
