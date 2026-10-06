@@ -80,6 +80,8 @@ The owner had the Sentry CLI logged in to the project (`novamindnyc` / `addictio
 
 ## Verification
 
+**External correction, 2026-10-06.** The current `lib/sentry-data-collection-sdk.test.ts` covers ten values, including a breadcrumb's development-browser JWT. Replaying that case offline emitted eight with v11 defaults and zero with the shipped settings. The error still reached the recording transport and body capture was disabled. The earlier nine-value v10 probe and deleted-event inventory are historical operator receipts, not reconstructed here. Span inspection alone does not establish every error-event field; the real-SDK error test supplies that separate evidence.
+
 - [x] Production runs the fix, and the real-SDK test passes in the gate on that commit: #1373 merged `86c62eb9` after exact-head approval 5417478378 on `6102844d` (gate passed on that head), released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
 - [x] What reaches Sentry after the release carries no cookie, credential header, body or IP. This was proven through the real SDK in the gate on the released head, and from Sentry's side by the span audit in Results (6), since no server error event has occurred since.
 - [x] The owner's checks above are done and recorded here (Results).

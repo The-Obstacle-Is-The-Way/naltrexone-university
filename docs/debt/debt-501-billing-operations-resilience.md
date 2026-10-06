@@ -12,7 +12,7 @@
 
 ## Summary
 
-The owner-requested adversarial hunt of the payment flows (2026-10-05) found no defect that charges an ordinary Checkout buyer without granting access. It did find gaps in billing operations. Each one can leave a payer without access, or charge someone twice, when the service grows, an operator changes something, or timing is unlucky. None is triggered today. Each item names its trigger. Every claim below was checked in code. The live (non-test) purchase path has never been recorded working end to end.
+The owner-requested adversarial hunt of the payment flows (2026-10-05) found no defect that charges an ordinary Checkout buyer without granting access. It did find gaps in billing operations. Each one can leave a payer without access, or charge someone twice, when the service grows, an operator changes something, or timing is unlucky. Each item names its trigger. Source inspection establishes the failure paths, not that no production account has encountered them. The live (non-test) purchase path has never been recorded working end to end.
 
 ## Items
 
@@ -23,7 +23,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - Rows are never removed, so canceled subscriptions and lapsed trials count too.
 - **Trigger.** Somewhere between roughly 500 and 1,000 rows (an estimate, not measured).
 - **Impact.** For users past that point, a missed webhook is never repaired. A stopped-early run that overruns `maxDuration = 60` also kills the deleted-account cleanup that runs after it (BUG-262's safety net).
-- **Decided.** Resume from a cursor stored between runs, recorded per run. Exclude rows that are terminal and past their period end.
+- **Decided.** Persist a keyset cursor over a stable unique order, with a bounded sweep and explicit wraparound. Checkpoint completed pages and tolerate replay after a crash; coordinate concurrent cron runs so neither overwrites newer progress. A numeric offset over a changing table is not sufficient. Do not exclude a row solely because its local status is terminal: repairing stale local state is this job's purpose. Any pruning policy needs an independently justified terminal-state contract and periodic reconciliation coverage. Test restart, wraparound, insert/delete interleavings and provider failure against real Postgres.
 
 ### 2. Only one price ID per plan is recognized (P2)
 
@@ -39,16 +39,19 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 - **Evidence.** The normalizer requires `subscription.metadata.user_id` (`stripe-subscription-normalizer.ts:37-55`). The controller logs `metadata_missing` and returns 200 without recording the event (`stripe-webhook-controller.ts:679-689`), although the customer's own `metadata.user_id` and the `stripe_customers` mapping could identify the user.
 - **Trigger.** Support creating a subscription in the Dashboard (the natural repair for "I paid but can't get in"), a Payment Link, or a script.
-- **Decided.** Fall back to the customer's mapping, and record unresolved events in the ledger so they can be found.
+- **Decided.** Fall back only to the trusted local `stripe_customers` mapping, with explicit agreement checks when subscription metadata is present. Customer metadata alone is not an ownership authority. Persist an unresolved outcome in the event ledger with a retry or operator disposition; a receipt marked handled must not make later repair impossible. Prove missing, conflicting and subsequently repaired mappings through signed-webhook integration cases.
 
 ### 4. A card added at or after trial end is never applied (P3)
 
 - **Evidence.**
   - The trial is checked only when the add-card session is created (`create-trial-payment-method-setup-session.ts:57-65`).
   - The session lasts Stripe's default 24 hours (`stripe-checkout-sessions.ts:276-299`, no `expires_at`).
-  - With `missing_payment_method: 'cancel'`, Stripe cancels at trial end, and a canceled subscription cannot take a default payment method, so the webhook fails for days.
+  - With `missing_payment_method: 'cancel'`, Stripe cancels at trial end. [Stripe documents canceled subscriptions as largely immutable](https://docs.stripe.com/api/subscriptions/cancel), allowing updates only to metadata and cancellation details. The handler's default-payment-method update can therefore fail after cancellation. Repeated webhook failure is a possible outcome; its duration has not been reproduced.
   - The billing page only says "Stripe is confirming your card".
-- **Decided.** Expire the add-card session at trial end. On completion against a canceled trial, tell the user to start a paid subscription instead of failing silently.
+- **Options.** Expiration alone cannot prevent a completion racing cancellation. Stripe accepts `expires_at` only 30 minutes–24 hours after creation ([API reference](https://docs.stripe.com/api/checkout/sessions/create)), so setting it to every trial end is invalid.
+- **Decided.** Set expiry to the earlier of trial end and 24 hours only when at least 30 minutes remain; otherwise refuse a new setup with an explicit recovery message. Recheck the provider subscription at completion and treat a canceled trial as a terminal business outcome, without renewal consent or an acknowledgment that promises renewal. Offer paid Checkout only when the existing subscription no longer blocks it. Test the expiry bounds and completion/cancellation race through the provider contract and real-Postgres persistence.
+
+  *Corrected 2026-10-06: the original expiry-only decision omitted Stripe's bounds and the completion race.*
 
 ### 5. The success page tells someone who paid that "Checkout failed" (P3)
 
@@ -70,8 +73,8 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 - **Evidence.** `createStripeCheckoutSession` lists the customer's subscriptions with `status: 'all'` and `limit: SUBSCRIPTION_LIST_LIMIT` (10), with no paging (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts`, the blocking check before session creation). Stripe lists newest first, and `all` includes ended subscriptions.
 - **Trigger.** A customer whose blocking subscription has more than ten of their other subscriptions listed ahead of it. The guard then misses it, and a second, double-billed subscription can start.
-- **Not BUG-321's sync.** BUG-321's sync (2026-10-06) reads the same first page in the same order, and runs only after this guard refused. So it sees the subscription that caused the refusal. Raised by CodeRabbit on #1393 and adjudicated there.
-- **Decided.** Page the guard's listing with `starting_after` while `has_more`, under a stated bound, and give BUG-321's listing the same paging. The adapter-owned `FakeStripeCheckoutClient` pages Checkout sessions but not subscriptions, so its subscription list and its shared contract scenario gain paging first.
+- **Not BUG-321's sync.** BUG-321's sync (2026-10-06) reads the same first page in the same order, and runs only after this guard refused. A second listing usually sees the subscription that caused the refusal, but the two calls are not a snapshot: concurrent changes can alter the first page. The sync already fails safely when it cannot find a blocker; this is not proof that it always sees the original one. Raised by CodeRabbit on #1393 and adjudicated there.
+- **Decided.** Page the guard's listing with `starting_after` while `has_more`, under a stated bound, and give BUG-321's listing the same paging. If the bound is exhausted before absence is proved, refuse Checkout with a recoverable error; never treat a truncated list as no blocking subscription. The adapter-owned `FakeStripeCheckoutClient` pages Checkout sessions but not subscriptions, so its subscription list and its shared contract scenario gain paging first.
 
 ## Verification
 

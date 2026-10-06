@@ -159,7 +159,7 @@ identifier was printed.
 *(2026-10-06 forward pointer: this scan was blind. The report keeps its data
 in a zip embedded in its one file, and the scan never opened it. Every report
 carried Clerk development tokens there;
-[BUG-328](../../bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md)
+[BUG-328](bug-328-playwright-reports-embed-clerk-dev-tokens.md)
 records the measurement and stops uploading the report.)*
 
 ## Verification

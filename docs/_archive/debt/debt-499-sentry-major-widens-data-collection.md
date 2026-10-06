@@ -22,6 +22,8 @@ Checking that showed the version then in production was no better. It sent crede
 
 ## Evidence
 
+**External correction, 2026-10-06.** The committed SDK case has **ten** probe values, including a development-browser JWT in a breadcrumb. An offline replay of its request and breadcrumb with installed Sentry 11.0.0 defaults emitted eight; the session cookie and bearer were filtered. With the shipped settings it emitted zero, still sent the error, and reported `httpBodies: []`. Thus the table's “eight” is reproduced, but “eight of nine, all but two” is incorrect. The committed test exercises only the restrictive configuration; the default comparison is a separate probe, not a second test configuration. The original v10 probe and historical span counts below remain attributed receipts. This audit did not establish a v10 support-end date; staying on its exposed configuration is rejected on the observed collection behavior alone.
+
 - **Measured through the real SDK, 2026-10-05.** One `captureRequestError` call, our `onRequestError`, carried nine credential-bearing values, each generated at random for the run:
   - three Clerk cookies: `__session`, `__refresh` and `__clerk_handshake`;
   - a cron `Bearer` header;
