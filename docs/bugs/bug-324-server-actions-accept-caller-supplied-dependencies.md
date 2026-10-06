@@ -80,7 +80,16 @@ Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
 - **A post-build check reads the action manifest** (`scripts/check-server-action-manifest.ts`). `pnpm build` runs it, so CI, the local gate and every Vercel deploy fail if any action's ID declares more than its first argument. It fails closed when the manifest lists no actions.
   - On a build from the previous code, it reported all 29 controller actions.
   - On this code: "server actions: 38, all take only their input". That is 28 actions, Clerk's cache action and nine `'use cache'` functions, which the check skips.
-- **The 22 browser-called actions get new IDs,** because they moved module. A page opened before the deploy reloads on its next call, through BUG-319's recovery.
+- **The 22 browser-called actions get new IDs,** because they moved module and now declare one argument.
+  - A page opened before the deploy gets an error from each of them until its next full load: a reload, "Try again" on an error page, or a navigation after the deploy.
+  - The hooks catch these errors themselves, so BUG-319's automatic reload, which runs only on route error pages, does not fire. That is BUG-319's accepted scope. An automatic reload from a hook could also discard unsaved work, such as an exam answer.
+  - This happens once, for this deploy, which is promoted at a quiet hour.
+- **The independent review of this step** found no way left to pass dependencies or options. Its other findings are fixed here:
+  - this record had said a stale page reloads by itself;
+  - the architecture records still told authors to mark controllers `'use server'`;
+  - nothing checked what a wrapper does with its input. The scan now requires each wrapper's body to be exactly `return controller.<sameName>(input)`.
+  - The manifest check skipped `'use cache'` functions, which a client can call by ID. It now applies the same rule to them; all nine pass.
+  - Nothing pinned the check into `pnpm build`. A test now does.
 
 ## Verification
 

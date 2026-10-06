@@ -11,8 +11,8 @@ const MANIFEST = '.next/server/server-reference-manifest.json';
 const ID = /^[0-9a-f]{42}$/;
 // next/dist/shared/lib/server-reference-info.js: bit 7 marks 'use cache',
 // bits 6 to 1 mark the first six arguments as used, bit 0 marks a rest
-// parameter. An action that takes only its input sets at most bit 6.
-const USE_CACHE = 0x80;
+// parameter. An action that takes only its input sets at most bit 6. A client
+// can call a 'use cache' function by its ID too, so the rule covers both.
 const BEYOND_FIRST_ARGUMENT = 0x3f;
 
 type ManifestEntry = { exportedName?: unknown; filename?: unknown };
@@ -37,7 +37,7 @@ export function serverActionManifestIssues(manifest: unknown): string[] {
     const name = `${String(filename)} ${String(exportedName)}`;
     if (!ID.test(id)) return [`${name} has an unreadable action ID`];
     const infoByte = Number.parseInt(id.slice(0, 2), 16);
-    if (infoByte & USE_CACHE || !(infoByte & BEYOND_FIRST_ARGUMENT)) return [];
+    if (!(infoByte & BEYOND_FIRST_ARGUMENT)) return [];
     return [
       `${name} declares more than its input (info byte ${id.slice(0, 2)})`,
     ];

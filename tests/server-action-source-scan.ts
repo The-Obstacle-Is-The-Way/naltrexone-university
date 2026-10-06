@@ -10,6 +10,42 @@ const ROOTS = ['app', 'src', 'lib', 'components'];
 const TEST_SUPPORT =
   /\.(test|spec)\.tsx?$|test-helpers|\.browser\.probes\.tsx$/;
 
+// The browser-called controller actions (BUG-324) are thin wrappers: each
+// passes its input, alone, to the controller export of its own name, so no
+// client value can reach the controller's test dependencies.
+const CONTROLLER_WRAPPER = /^src\/adapters\/controllers\/[^/]+-actions\.ts$/;
+
+function wrapperIssue(
+  name: string,
+  declaration: ts.FunctionDeclaration,
+): string | undefined {
+  const [statement, ...rest] = declaration.body?.statements ?? [];
+  const call =
+    statement && ts.isReturnStatement(statement)
+      ? statement.expression
+      : undefined;
+  const [parameter] = declaration.parameters;
+  const [argument, ...extra] =
+    call && ts.isCallExpression(call) ? call.arguments : [];
+  const passesInputToItsName =
+    rest.length === 0 &&
+    call !== undefined &&
+    ts.isCallExpression(call) &&
+    ts.isPropertyAccessExpression(call.expression) &&
+    ts.isIdentifier(call.expression.expression) &&
+    call.expression.expression.text === 'controller' &&
+    call.expression.name.text === name &&
+    extra.length === 0 &&
+    argument !== undefined &&
+    ts.isIdentifier(argument) &&
+    parameter !== undefined &&
+    ts.isIdentifier(parameter.name) &&
+    argument.text === parameter.name.text;
+  return passesInputToItsName
+    ? undefined
+    : `${name} must only return controller.${name}(input)`;
+}
+
 export type ServerActionScan = {
   isServerActionModule: boolean;
   exportedActions: string[];
@@ -107,7 +143,11 @@ export function scanServerActionSource(
       at(statement, 'has a default export');
     } else if (ts.isFunctionDeclaration(statement) && isExported(statement)) {
       const name = statement.name?.text ?? 'anonymous';
-      const issue = parameterIssue(name, statement.parameters);
+      const issue =
+        parameterIssue(name, statement.parameters) ??
+        (CONTROLLER_WRAPPER.test(file)
+          ? wrapperIssue(name, statement)
+          : undefined);
       if (issue) at(statement, issue);
       else exportedActions.push(name);
     } else if (ts.isVariableStatement(statement) && isExported(statement)) {

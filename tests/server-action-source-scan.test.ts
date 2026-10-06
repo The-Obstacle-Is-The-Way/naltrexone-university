@@ -84,6 +84,44 @@ export const getThing = createAction({ schema, getDeps, execute });`;
     ]);
   });
 
+  describe('a controller wrapper', () => {
+    const file = 'src/adapters/controllers/thing-actions.ts';
+    const wrapper = (body: string) =>
+      scanServerActionSource(
+        file,
+        `'use server';
+import * as controller from './thing-controller';
+export async function getThing(input: unknown) {
+  ${body}
+}`,
+      );
+
+    it('passes its input, alone, to the controller export of its name', () => {
+      expect(wrapper('return controller.getThing(input);')).toEqual({
+        isServerActionModule: true,
+        exportedActions: ['getThing'],
+        issues: [],
+      });
+    });
+
+    it.each([
+      ['another controller export', 'return controller.setThing(input);'],
+      [
+        'more than its input',
+        'return controller.getThing(input.data, input.deps);',
+      ],
+      ['part of its input', 'return controller.getThing(input.data);'],
+      [
+        'another statement first',
+        'void input;\n  return controller.getThing(input);',
+      ],
+    ])('rejects one that passes %s', (_case, body) => {
+      expect(wrapper(body).issues).toEqual([
+        `${file}:3 getThing must only return controller.getThing(input)`,
+      ]);
+    });
+  });
+
   it("rejects 'use server' inside a function, in any module", () => {
     const result = scan(`export async function Page() {
   async function save(formData: FormData) {

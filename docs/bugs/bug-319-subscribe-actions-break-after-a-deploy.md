@@ -62,7 +62,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 **Scope limit.**
 - **Where the reload fires.** Only for an action whose failure reaches a route error page: the form actions on pricing, add-card, billing and bookmarks.
 - **Where it does not.** The practice flows and the question page call their actions through `runTransitionedAsyncAction`, which catches errors, so a stale action there shows the flow's own error. The global error page does not reload either, since the root layout calls no actions.
-- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file or export changes.
+- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file, export or declared arguments change. [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) did that once, on purpose, for the 22 actions those pages call. So `UnrecognizedActionError` events from those pages just after its deploy are that move, not a failure of this fix.
 
 ## Progress
 

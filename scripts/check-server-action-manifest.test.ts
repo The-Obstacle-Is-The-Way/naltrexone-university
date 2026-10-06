@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -26,12 +32,20 @@ describe('serverActionManifestIssues', () => {
     ).toEqual([]);
   });
 
-  it("skips 'use cache' functions, which a client cannot call", () => {
+  // A client can call a 'use cache' function by its ID too, so the same rule
+  // applies: the type bit is not the argument bits.
+  it("holds 'use cache' functions to the same rule", () => {
     expect(
       serverActionManifestIssues({
-        node: { [id('40')]: entry('save'), [id('ff')]: entry('cached') },
+        node: {
+          [id('80')]: entry('cached'),
+          [id('c0')]: entry('cachedWithInput'),
+          [id('e0')]: entry('cachedWithTwo', 'components/page.tsx'),
+        },
       }),
-    ).toEqual([]);
+    ).toEqual([
+      'components/page.tsx cachedWithTwo declares more than its input (info byte e0)',
+    ]);
   });
 
   it.each([
@@ -62,6 +76,16 @@ describe('serverActionManifestIssues', () => {
     expect(serverActionManifestIssues(null)).toEqual([
       'the manifest lists no server actions; check that Next has not changed its format',
     ]);
+  });
+});
+
+describe('the build', () => {
+  it('runs this check after next build, so every deploy is checked', () => {
+    const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+
+    expect(scripts.build).toBe(
+      'next build && tsx scripts/check-server-action-manifest.ts',
+    );
   });
 });
 
