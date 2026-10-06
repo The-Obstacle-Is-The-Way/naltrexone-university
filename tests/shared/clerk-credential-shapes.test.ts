@@ -38,6 +38,29 @@ describe('redactClerkCredentials', () => {
     );
   });
 
+  it('redacts the whole value, even one holding a percent sign', () => {
+    expect(
+      redactClerkCredentials('__clerk_testing_token=abc%2Bdef&next=1'),
+    ).toBe('__clerk_testing_token=[redacted]&next=1');
+  });
+
+  it('redacts a JSON Web Token that follows a percent-encoded separator', () => {
+    expect(redactClerkCredentials(`next%3Dtoken%3D${jwt}%26a`)).toBe(
+      'next%3Dtoken%3D[redacted]%26a',
+    );
+  });
+
+  // A long run of token-like text must not make the match quadratic.
+  it('handles a long run of token-like text in linear time', () => {
+    const text = 'eyJ'.repeat(80_000);
+    const started = performance.now();
+
+    redactClerkCredentials(text);
+    countClerkCredentials(text);
+
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
   it('leaves text without a credential unchanged', () => {
     expect(redactClerkCredentials('GET /app?plan=monthly 200')).toBe(
       'GET /app?plan=monthly 200',

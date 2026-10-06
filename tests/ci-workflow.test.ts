@@ -278,19 +278,20 @@ describe('Playwright artifact publication', () => {
     ...globSync('.github/workflows/*.yaml'),
   ].sort();
   const SCAN_COMMAND = 'pnpm exec tsx scripts/ci/scan-playwright-output.ts';
+  const SCAN_GATE = "steps.playwright_output_scan.outcome == 'success'";
+  // Uploads that carry no browser output, each with its reason. Any other
+  // upload must pass the Playwright output scan.
+  const UNSCANNED_UPLOADS: Record<string, string> = {
+    '.github/workflows/mutation.yml#mutation-report':
+      'Stryker mutation report; the job runs Vitest, no browser and no Clerk',
+  };
 
   function jobsOf(workflowPath: string): WorkflowJob[] {
     return Object.values(readParsedWorkflow(workflowPath).jobs ?? {});
   }
 
-  function runsPlaywright(job: WorkflowJob): boolean {
-    return (job.steps ?? []).some((step) =>
-      /\btest:e2e\b|\bplaywright test\b/.test(step.run ?? ''),
-    );
-  }
-
   function isUpload(step: WorkflowStep): boolean {
-    return step.uses?.startsWith('actions/upload-artifact@') ?? false;
+    return /upload/i.test(step.uses ?? '');
   }
 
   function published(upload: WorkflowStep): string[] {
@@ -299,13 +300,6 @@ describe('Playwright artifact publication', () => {
       .map((entry) => entry.trim())
       .filter((entry) => entry && !entry.startsWith('!'));
   }
-
-  // Guards the rules below from passing because they found no job to check.
-  it('finds every job that runs Playwright', () => {
-    expect(
-      ALL_WORKFLOWS.filter((path) => jobsOf(path).some(runsPlaywright)),
-    ).toEqual([CI_WORKFLOW_PATH, STRIPE_HOSTED_WORKFLOW_PATH].sort());
-  });
 
   // BUG-328: Clerk's testing-token route handler records each Clerk API call,
   // tokens included, as a setup step, so every HTML report carries them. The
@@ -325,35 +319,54 @@ describe('Playwright artifact publication', () => {
   );
 
   it.each(ALL_WORKFLOWS)(
-    'uploads Playwright output only after the scan passes it in %s',
+    'uploads only what the scan passed, unless exempt, in %s',
     (path) => {
-      for (const job of jobsOf(path).filter(runsPlaywright)) {
+      for (const job of jobsOf(path)) {
         const steps = job.steps ?? [];
-        const scanIndex = steps.findIndex(
-          (step) => step.id === 'playwright_output_scan',
-        );
-        const scanned = (steps[scanIndex]?.run ?? '')
-          .replace(SCAN_COMMAND, '')
-          .trim()
-          .split(/\s+/);
+        steps.forEach((upload, index) => {
+          if (!isUpload(upload)) return;
+          if (UNSCANNED_UPLOADS[`${path}#${upload.with?.name}`]) return;
 
-        steps.forEach((step, index) => {
-          if (!isUpload(step)) return;
+          const scanIndex = steps.findIndex(
+            (step) => step.id === 'playwright_output_scan',
+          );
+          const scan = steps[scanIndex];
           expect(scanIndex).toBeGreaterThanOrEqual(0);
           expect(scanIndex).toBeLessThan(index);
-          expect(steps[scanIndex]?.run?.startsWith(`${SCAN_COMMAND} `)).toBe(
-            true,
+          // Nothing may change the output between the scan and the upload.
+          expect(steps.slice(scanIndex + 1, index).every(isUpload)).toBe(true);
+          expect(scan?.run).toMatch(
+            /^pnpm exec tsx scripts\/ci\/scan-playwright-output\.ts( [\w./-]+)+$/,
           );
-          expect(step.if).toContain(
-            "steps.playwright_output_scan.outcome == 'success'",
+          expect(scan?.['continue-on-error']).toBeUndefined();
+          expect(upload.if).not.toContain('||');
+          expect(upload.if).toMatch(
+            new RegExp(`&& ${SCAN_GATE.replace(/[.()]/g, '\\$&')} }}$`),
           );
-          for (const entry of published(step)) {
+          const scanned = (scan?.run ?? '')
+            .replace(SCAN_COMMAND, '')
+            .split(' ');
+          for (const entry of published(upload)) {
             expect(scanned).toContain(entry.replace(/\/$/, ''));
           }
         });
       }
     },
   );
+
+  it('keeps every exemption pointing at a real upload', () => {
+    const uploads = ALL_WORKFLOWS.flatMap((path) =>
+      jobsOf(path).flatMap((job) =>
+        (job.steps ?? [])
+          .filter(isUpload)
+          .map((upload) => `${path}#${upload.with?.name}`),
+      ),
+    );
+
+    for (const exemption of Object.keys(UNSCANNED_UPLOADS)) {
+      expect(uploads).toContain(exemption);
+    }
+  });
 
   it.each([
     [CI_WORKFLOW_PATH, 'E2E smoke', 'e2e_smoke'],

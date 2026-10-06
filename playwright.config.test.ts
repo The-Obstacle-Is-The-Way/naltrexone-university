@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
+import {
+  CLERK_SESSION_DEADLINES,
+  SETUP_PREPARATION_BUDGET_MS,
+} from './tests/e2e/helpers/clerk-session-deadlines';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -20,10 +24,21 @@ describe('playwright config', () => {
     expect(cleanupProject?.use?.storageState).toBeUndefined();
   });
 
-  // BUG-328: Playwright page waits have no timeout by default, so a hung Clerk
-  // wait ran until the test timeout closed the page, and a failed setup
-  // attempt could not sign out the session it had created.
-  it('bounds every page wait in global setup and teardown', () => {
+  // BUG-328: a failed setup attempt signs out its session within its own
+  // deadlines, so the setup test must outlast preparation plus both deadlines.
+  it('gives global setup time to sign out after a failed sign-in', () => {
+    const setup = config.projects?.find((project) => project.name === 'setup');
+
+    expect(setup?.timeout).toBeGreaterThanOrEqual(
+      SETUP_PREPARATION_BUDGET_MS +
+        CLERK_SESSION_DEADLINES.signInMs +
+        CLERK_SESSION_DEADLINES.signOutMs,
+    );
+  });
+
+  // BUG-328: Playwright page waits have no timeout by default. Bounded waits
+  // make a hung Clerk wait fail with its own error, well inside the deadlines.
+  it('bounds page waits in global setup and teardown', () => {
     const testTimeout = config.timeout ?? 30_000;
 
     for (const name of ['setup', 'cleanup']) {

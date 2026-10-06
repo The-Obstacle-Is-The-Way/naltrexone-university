@@ -2,7 +2,9 @@ import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { clerk } from '@clerk/testing/playwright';
 import type { Page } from '@playwright/test';
+import { withTimeout } from '@/lib/with-timeout';
 import { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
+import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
 import { installE2ELogRedaction } from './e2e-log-redaction';
 
 export { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
@@ -52,23 +54,34 @@ export async function ensureClerkE2ESession<TPage extends ClerkE2EPage>(input: {
 
 // BUG-328: each setup attempt runs in a new browser, and teardown signs out
 // only the stored session. A failed attempt signs out its own session, or it
-// stays live until Clerk expires it.
+// stays live until Clerk expires it. Both phases have deadlines, because
+// Clerk's sign-in and sign-out can run longer than any Playwright bound.
 export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
   clerkDriver: ClerkE2EDriver<TPage>;
+  deadlines?: { signInMs: number; signOutMs: number };
   page: TPage;
   password: string;
   saveState(): Promise<void>;
   username: string;
 }): Promise<void> {
-  try {
+  const deadlines = input.deadlines ?? CLERK_SESSION_DEADLINES;
+  let abandoned = false;
+  const signIn = async () => {
     await ensureClerkE2ESession(input);
-    await input.saveState();
+    // A sign-in that finishes after its deadline has already been signed out.
+    if (!abandoned) await input.saveState();
+  };
+  try {
+    await withTimeout(signIn(), deadlines.signInMs);
   } catch (error) {
-    await releaseClerkE2ESession(input).catch(() => {
-      console.warn(
-        'Could not confirm the sign-out after a failed setup attempt; a Clerk E2E session it created stays live until Clerk expires it',
-      );
-    });
+    abandoned = true;
+    await withTimeout(releaseClerkE2ESession(input), deadlines.signOutMs).catch(
+      () => {
+        console.warn(
+          'Could not confirm the sign-out after a failed setup attempt; a Clerk E2E session it created stays live until Clerk expires it',
+        );
+      },
+    );
     throw error;
   }
 }

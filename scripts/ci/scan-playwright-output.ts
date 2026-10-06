@@ -1,6 +1,7 @@
 // BUG-328: CI uploads Playwright's failure output only after this scan passes
 // it. The upload may publish only what the scan has read in full: regular,
-// UTF-8 text files of the types Playwright writes there. Anything else (a zip,
+// UTF-8 text files. Under our config Playwright writes only error-context.md
+// there; the other text types allow for files a test adds. Anything else (a zip,
 // an HTML report, an image, a symbolic link) is refused rather than decoded,
 // because a scanner that tries to decode every format eventually misses one.
 // It prints counts and file paths only, never a matched value.

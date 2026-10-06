@@ -52,14 +52,16 @@ A dev-browser token lets its holder act as the shared TEST user while that brows
 Options 1 (revised), 2 (revised), 4 and 5.
 - **Option 1, revised: the HTML report is never uploaded.** The tokens sit in the setup steps that every run executes: `setupClerkTestingToken`'s route handler records each Clerk API call, with both tokens in its URL, as a step. A report upload gated on a scan would be refused on every failed run, so both workflows drop it. With tracing off in CI, the report adds little to the failure output and the job log.
 - **Option 2, revised: the failure output passes an allow-list before it uploads.** `scripts/ci/scan-playwright-output.ts test-results` runs only when E2E failed, before the `test-results/` upload, which requires it to pass.
-  - It accepts only regular UTF-8 text files of the types Playwright writes there (`.md`, `.txt`, `.json`, `.log`). It refuses anything else, such as a zip, a report, an image or a symbolic link, instead of decoding it. A first version decoded zips and reports, and the independent review found formats it would miss; decoding every format is a race the scan cannot win.
-  - It looks for the Clerk credential shapes in raw, percent-encoded and JSON-escaped form. The shapes are defined once, in `tests/shared/clerk-credential-shapes.ts`, which E2E console redaction also uses, so the redaction and the scan cannot drift apart.
+  - It accepts only regular UTF-8 text files (`.md`, `.txt`, `.json`, `.log`); under our config Playwright writes only `error-context.md` there. It refuses anything else, such as a zip, a report, an image or a symbolic link, instead of decoding it. A first version decoded zips and reports, and the independent review found formats it would miss; decoding every format is a race the scan cannot win.
+  - It looks for the Clerk credential shapes after undoing percent-encoding and JSON escapes. The shapes are defined once, in `tests/shared/clerk-credential-shapes.ts`, which E2E console redaction also uses, so the two look for the same things. Redaction works on the text as logged, raw or singly percent-encoded; only the scan decodes further.
   - It skips only what the upload never publishes: hidden files, which include the stored auth state, and `trace.zip`. A missing directory means nothing to upload; any other read error fails the step.
   - It prints counts and file paths only.
-  - `tests/ci-workflow.test.ts` applies the rules to every workflow job that runs Playwright: no upload of the report or of hidden files, and every upload path scanned first.
+  - `tests/ci-workflow.test.ts` covers every upload in every workflow: none uploads the report or hidden files, and each one passes the scan, with nothing between the two steps and no way around its result, or is listed as an exemption with its reason. The mutation report is the one exemption.
 - **Option 4: a failed setup attempt signs out its own session.**
   - `createClerkE2ESession` signs out when an attempt fails after signing in. If the sign-out also fails, it warns and keeps the original error.
-  - The `setup` and `cleanup` projects bound every page wait at 15 seconds, against about 5 seconds for CI's whole setup. A hung Clerk step therefore fails inside setup, with time left to sign out.
+  - Both phases have deadlines: 30 seconds to sign in and 20 to sign out (`tests/e2e/helpers/clerk-session-deadlines.ts`). Clerk's sign-in and sign-out run `page.evaluate`, which Playwright never times out, and its route handler retries each request for up to about a minute. The setup project's timeout covers 30 seconds of preparation plus both deadlines; CI's whole setup takes about 5 seconds.
+  - A sign-in that finishes after its deadline does not save its state.
+  - The `setup` and `cleanup` projects also bound page waits and navigations at 15 seconds, so a hung wait fails with its own error.
   - Known limit: an attempt stopped from outside, such as a cancelled CI job, cannot sign out, and its session stays live until Clerk expires it. With nothing published, that session's token does not leave the runner.
 - **Option 5 deletes the existing artifacts.** That is a bulk delete of public artifacts, so it needs the owner's approval, as BUG-307's did. There are 980: 951 CI reports from 2026-09-14 and 29 hosted-checkout reports from 2026-09-07. The failure-output artifacts are clean and stay.
 
@@ -67,10 +69,10 @@ Option 3 (redacting at the source) is what bringing the report back would need. 
 
 ## Verification
 
-- [x] Workflow policy tests, red first (`tests/ci-workflow.test.ts`), over every workflow: no upload of the report or of hidden files; in every job that runs Playwright, each upload path is scanned first and the upload requires the scan to pass. They fail on the pre-fix workflow, on an upload of `.`, and on `include-hidden-files: true`.
-- [x] The scan refuses zips, reports, images, files without a text type, invalid UTF-8, UTF-16 text and symbolic links, and fails on an unreadable directory. It finds each credential shape in raw and encoded form, and passes clean output (`scripts/ci/scan-playwright-output.test.ts`, `tests/shared/clerk-credential-shapes.test.ts`). On this clone's last local run it refused the report and passed `test-results/`.
+- [x] Workflow policy tests, red first (`tests/ci-workflow.test.ts`), over every upload in every workflow: no report or hidden files; each upload passes the scan or is a listed exemption. They fail on the pre-fix workflow, an upload of `.`, `include-hidden-files: true`, `|| true` on the scan, `|| always()` on the upload, a scan placed before E2E, `continue-on-error` on the scan, an upload through another action, and an unlisted upload.
+- [x] The scan refuses zips, reports, images, files without a text type, invalid UTF-8, UTF-16 text and symbolic links, and fails on an unreadable directory. It finds each credential shape in raw and encoded form, in linear time, and passes clean output (`scripts/ci/scan-playwright-output.test.ts`, `tests/shared/clerk-credential-shapes.test.ts`). On this clone's last local run it refused the report and passed `test-results/`.
 - [x] E2E console redaction removes the same shapes, including in a nested URL (`tests/e2e/helpers/e2e-log-redaction.test.ts`).
-- [x] Setup signs out the session of a failed attempt, and its page waits are bounded (`tests/e2e/helpers/clerk-auth.test.ts`, `playwright.config.test.ts`).
+- [x] Setup signs out the session of a failed attempt, including after either deadline passes, and the setup timeout covers both deadlines (`tests/e2e/helpers/clerk-auth.test.ts`, `playwright.config.test.ts`).
 - [x] BUG-307's archived closure has a forward pointer here; its scan was blind to embedded data.
 - [ ] After promotion, a green `main` run publishes no Playwright artifact.
 - [ ] The existing report artifacts are deleted (owner-approved), with the count recorded.

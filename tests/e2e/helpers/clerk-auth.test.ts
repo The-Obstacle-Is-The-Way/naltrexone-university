@@ -130,6 +130,77 @@ describe('createClerkE2ESession', () => {
     username: 'test-user@example.test',
   };
 
+  const never = () => new Promise<never>(() => {});
+
+  // Clerk's sign-in and sign-out run page.evaluate, which Playwright never
+  // times out, and its route handler retries each request for up to a minute.
+  it('signs out when sign-in passes its deadline', async () => {
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async signIn(): Promise<void> {
+        await super.signIn();
+        await never();
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 10, signOutMs: 1_000 },
+        page: new FakeClerkPage(),
+        saveState: async () => {},
+      }),
+    ).rejects.toThrow('Operation timed out after 10ms');
+    expect(clerkDriver.signOutCount).toBe(1);
+  });
+
+  it('never saves the state of an attempt that passed its deadline', async () => {
+    const signedIn = createDeferred<void>();
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async signIn(): Promise<void> {
+        await signedIn.promise;
+        await super.signIn();
+      }
+    })(false);
+    const saveState = vi.fn(async () => {});
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 10, signOutMs: 1_000 },
+        page: new FakeClerkPage(),
+        saveState,
+      }),
+    ).rejects.toThrow('Operation timed out');
+    signedIn.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(saveState).not.toHaveBeenCalled();
+  });
+
+  it('stops waiting for a sign-out that passes its deadline', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override signOut(): Promise<void> {
+        return never();
+      }
+    })(false);
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 1_000, signOutMs: 10 },
+        page: new FakeClerkPage(),
+        saveState: async () => {
+          throw new Error('disk full');
+        },
+      }),
+    ).rejects.toThrow('disk full');
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
   it('saves the session it creates', async () => {
     const clerkDriver = new FakeClerkDriver(false);
     const saveState = vi.fn(async () => {});
@@ -162,7 +233,7 @@ describe('createClerkE2ESession', () => {
     expect(await clerkDriver.hasActiveSession()).toBe(false);
   });
 
-  // The setup project's bounded waits turn a hung Clerk step into this error.
+  // A bounded Playwright wait inside the sign-in phase throws this.
   it('signs out a session that signed in but never confirmed', async () => {
     const clerkDriver = new (class extends FakeClerkDriver {
       override async waitForActiveSession(): Promise<void> {
