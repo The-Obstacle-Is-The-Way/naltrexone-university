@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 
 const APPLICATION_FAKE_BARREL_PATH =
   'src/application/test-helpers/fakes/index.ts';

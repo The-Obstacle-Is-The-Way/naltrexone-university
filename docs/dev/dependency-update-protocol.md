@@ -27,6 +27,93 @@ For grouped minor/patch Dependabot PRs:
 
 If one package in a group causes an unrelated failure, split or defer that package. Do not let a style-tool or test-runner change hold unrelated patch updates hostage.
 
+## Bundling Overlapping Dependabot PRs
+
+PRs #805 and #829 set the pattern: when Dependabot PRs overlap, one repo-owned bundle regenerates `pnpm-lock.yaml` from current `dev`, and the bundle is proven to be exactly the union of the source PRs. Serially merging generated lockfiles is not an alternative.
+
+### Decision rule
+
+- Bundle when two or more open Dependabot PRs were generated from the same parent and merging one would invalidate the others' lockfiles, or when a source PR needs a repo-owned companion fix (#805's Next config pin, #829's Stripe CLI assertion and Biome schema).
+- The isolation rules above still apply. Runtime-contract majors and dev-tooling majors keep their own PRs. A billing-sensitive package such as `stripe` joins a bundle only with its own recorded audit, as in #829.
+- Leave the source PRs open and unmerged. Close them as superseded only after the bundle has exact-head CodeRabbit approval.
+- Never hand-merge or textually merge `pnpm-lock.yaml`. pnpm generates the bundle lockfile; the verifier below only reads it.
+
+### Procedure
+
+The example bundles #826, #827 and #828, which is how #829 was built.
+
+1. Fetch the source heads into local read-only refs. They live outside `refs/heads`, so nothing checks out, tracks or pushes Dependabot's branches:
+
+   ```sh
+   git fetch origin +refs/pull/826/head:refs/pr/826 +refs/pull/827/head:refs/pr/827 +refs/pull/828/head:refs/pr/828
+   ```
+
+2. Confirm the sources share one parent and that its manifest and lockfile match current `dev`. If not, ask Dependabot to rebase first:
+
+   ```sh
+   git rev-parse refs/pr/826^ refs/pr/827^ refs/pr/828^   # must print one commit three times
+   git diff --quiet refs/pr/826^ origin/dev -- package.json pnpm-lock.yaml
+   ```
+
+3. Branch from current `dev`, apply each source's `package.json` change and stage the result. Dependabot has already applied `increase-if-necessary`, so these are the bundle's only manifest changes:
+
+   ```sh
+   git switch -c chore/bundle-dependabot-826-828 origin/dev
+   git diff refs/pr/826^ refs/pr/826 -- package.json | git apply --3way   # repeat for each source that changes package.json
+   git add package.json
+   ```
+
+   `--3way` merges each patch against the base it was made from. Git still reports a conflict when two sources edit neighbouring lines, even when they change different dependencies. Resolve each conflict before applying the next patch, since a conflicted `package.json` blocks further applies. Keep every source's specifier change, not either side whole, then run `git add package.json`.
+
+4. Regenerate with scoped `pnpm update` commands at the source versions, under a maturity cutoff that matches when Dependabot generated the sources. `minimumReleaseAge` counts back from the current time, so a later regeneration admits transitives Dependabot could not see. That is how #829 first picked up `baseline-browser-mapping@2.11.15` when every source had 2.11.14. Use the oldest source head's commit time:
+
+   ```sh
+   CUTOFF=$(( ($(date +%s) - $(git log -1 --format=%ct refs/pr/826)) / 60 + 10080 ))
+   # Every package any source bumps: #826's five, #827's Biome and #828's Stripe.
+   pnpm update @clerk/nextjs@7.7.6 @clerk/ui@1.30.3 next@16.3.1 @clerk/testing@2.2.24 @stripe/cli@1.50.1 \
+     @biomejs/biome@2.5.8 stripe@22.5.0 --lockfile-only --config.minimum-release-age=$CUTOFF
+   ```
+
+5. `pnpm update` rewrites caret ranges (`^22.4.0` became `^22.5.0`), which breaks `increase-if-necessary`. Restore the staged manifest and resynchronize the lockfile's specifiers under the same cutoff:
+
+   ```sh
+   git checkout -- package.json
+   pnpm install --lockfile-only --config.minimum-release-age=$CUTOFF
+   ```
+
+   If this install fails, stop. The manifest from step 3 is wrong, for example a mistyped specifier, and the lockfile still holds step 4's specifiers. Fix `package.json`, stage it, and repeat step 5.
+
+6. Verify, and paste the printed table into the PR body:
+
+   ```sh
+   pnpm install --frozen-lockfile
+   node --import tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
+   ```
+
+   If the frozen install fails, stop: the lockfile does not match `package.json`, so go back to step 5. Run the verifier through `node --import tsx`, not `pnpm exec`. Steps 4 and 5 leave `node_modules` stale, and `pnpm exec` then runs a plain `pnpm install` first (pnpm's `verify-deps-before-run`), which can rewrite `pnpm-lock.yaml` before the verifier reads it.
+
+   The two checks cover different things. The frozen install proves that the lockfile matches `package.json`. The verifier proves that the lockfile is the union of the sources, and each importer entry it compares includes the manifest `specifier`. So a pin dropped or altered while resolving step 3 fails one check or the other.
+
+Each argument is a git revision or a lockfile path. The verifier refuses a name that is both, and a candidate that is also a source, by name or by identical content. Revisions always come from the repository in the current directory, even inside a git hook that exports `GIT_DIR`. It parses the YAML and compares every root and workspace importer, including whether it exists at all, and each importer's dependencies. It also compares every `packages` and `snapshots` entry, and the top-level metadata such as `lockfileVersion`, `settings` and `overrides`. Key order and layout never count as changes. The script runs the same way through a symlink or without its `.ts` extension.
+
+| Exit | Meaning |
+|---:|---|
+| 0 | The candidate changes exactly the union of the source changes. |
+| 1 | Unexpected failure, such as `git` being unavailable. Nothing was verified. |
+| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a document that is not a pnpm lockfile, or YAML that pnpm never writes (a `---` document marker or any directive such as `%YAML` or `%TAG`, anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
+| 4 | Extra: the candidate changes an entry no source changes. |
+| 8 | Missing: the candidate omits a source change. |
+| 16 | Unmatched: the candidate changes an entry to a value no source proposes. |
+| 32 | Conflict: two sources change one entry differently. |
+
+Failure codes add up when several categories fail; 28 means extra, missing and unmatched. A newer transitive usually means a wrong cutoff: regenerate rather than edit the lockfile. A conflict needs a deliberate choice, such as asking Dependabot to recreate the sources from one base or bundling fewer of them. Record that choice in the PR.
+
+A correct bundle can still report missing when the sources overlap. For example, one source drops `is-number@6.0.0` because it moves to 7, while another source's new dependency still needs 6. The bundle rightly keeps 6.0.0, so the verifier reports the first source's removal as missing, and no regeneration clears it. Treat that the same way as a conflict: confirm in `pnpm why` that the kept entry is needed, then record the overlap and the decision in the PR.
+
+Peer suffixes overlap in the same way. pnpm writes a package's resolved peers into its key, as in `stripe@22.5.0(@types/node@24.13.4)`. If one source bumps `@types/node` and another bumps `stripe`, a correct bundle has a key that neither source has. It then reports that key as extra, the sources' own keys as missing, and the importer entry as a conflict. Regenerating or recreating the sources does not clear it, because the sources already share a base. Confirm that every unexpected key combines versions the sources chose, then record the overlap in the PR. The report shortens long values, so compare the full entries in the lockfiles themselves. The verifier has no override flag.
+
+Receipt, 2026-10-05: starting from the sources' parent, steps 3 to 5 reproduced #829's lockfile byte for byte, with `package.json` identical to #826's. The verifier printed #829's hand-built counts: packages 54 / 23 / 7 into a union of 74, snapshots 72 / 38 / 22 into 92, importer entries 10 / 5 / 5 into 12, and 72 / 86 key deltas, all matched. The same steps without the cutoff exited 28, with 385 extra, 18 missing and 14 unmatched entries.
+
 ## Runtime-Contract Majors
 
 Reject isolated major updates that change the runtime contract:
