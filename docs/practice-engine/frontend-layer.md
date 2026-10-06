@@ -104,6 +104,6 @@ Interactive hooks typically wrap async calls in try/catch and check `ActionResul
 | Tag load failure | "Tags unavailable." static text | No action needed |
 | Session end failure | `ErrorCard` + idempotency key rotation | Retry |
 | Navigator load failure | `ErrorCard` + "Retry navigator" | Retry |
-| Uncaught error | Next.js error boundary (`error.tsx`) | "Try again" / "Back to Dashboard" / "Report issue" |
+| Uncaught error | Next.js error boundary (`error.tsx`) | "Try again" / "Back to Dashboard" / "Contact support" |
 
 Most failures surface via `ErrorCard`, inline error text, or notifications. Fire-and-forget UI actions report through `reportClientError()` via `fireAndForget`; they do not rely on raw `console` logging anymore.

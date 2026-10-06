@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is in this pull request
+**Status:** Verifying — the fix reaches production; due 2026-10-13
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -32,12 +32,19 @@ So a person whose payment just failed is invited to describe it in public, under
 
 Option 1. The address already exists, is the one the privacy policy names, and needs no new data processor. Including the error ID lets support find the server-side event without asking the person for details.
 
+## Progress
+
+**2026-10-06, the fix.** Tests were written red first.
+- **`lib/support.ts`** exports `SUPPORT_EMAIL` and `supportMailtoHref({ page, errorId })`. The link is `mailto:` to support, with the subject "Addiction Boards support: <page>", plus "(error ID <digest>)" when the error has one. `REPORT_ISSUE_URL` is gone.
+- **Every route error page** (`components/error-boundary-page.tsx`) **and the global error page** (`app/global-error.tsx`) show "Contact support" with that link, in place of "Report issue" opening a GitHub issue in a new tab.
+- **Tests** check both pages' link, with and without an error ID, and that neither page mentions GitHub. The browser spec checks the link.
+- **Docs.** The frontend standards and the practice-engine overview name the new button.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] Tests, red first: every error page's report link is a `mailto:` to the support address, carries the error ID when the error has one, and never points at GitHub.
-- [ ] The copy reads as contacting support, not filing an issue.
+- [x] Tests, red first: every error page's report link is a `mailto:` to the support address, carries the error ID when the error has one, and never points at GitHub.
+- [x] The copy reads as contacting support, not filing an issue.
+- [ ] The fix reaches production.
 
 ## Related
 

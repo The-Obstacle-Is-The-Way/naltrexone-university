@@ -185,7 +185,10 @@ describe('ErrorBoundaryPage (browser)', () => {
       .element(screen.getByRole('link', { name: 'Back to Dashboard' }))
       .toHaveAttribute('href', '/app/dashboard');
     await expect
-      .element(screen.getByRole('link', { name: 'Report issue' }))
-      .toHaveAttribute('target', '_blank');
+      .element(screen.getByRole('link', { name: 'Contact support' }))
+      .toHaveAttribute(
+        'href',
+        expect.stringMatching(/^mailto:support@addictionboards\.com\?/),
+      );
   });
 });

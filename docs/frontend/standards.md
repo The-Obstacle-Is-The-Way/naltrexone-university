@@ -114,7 +114,7 @@ the mandatory pattern enforcement summary.
 
 // External link as button
 <Button asChild variant="outline">
-  <a href={url} target="_blank" rel="noreferrer noopener">Report issue</a>
+  <a href={url} target="_blank" rel="noreferrer noopener">Open the guide</a>
 </Button>
 
 // Icon button
@@ -927,7 +927,7 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 
 | File | Component(s) | Purpose |
 |------|-------------|---------|
-| `error-boundary-page.tsx` | ErrorBoundaryPage | Reusable error boundary content (Try again + nav links + Report issue) |
+| `error-boundary-page.tsx` | ErrorBoundaryPage | Reusable error boundary content (Try again + nav links + Contact support, an email to support with the error ID; BUG-326) |
 | `error-card.tsx` | ErrorCard | Inline error alert |
 | `get-started-cta.tsx` | GetStartedCta | Marketing CTA |
 | `auth-nav.tsx` | AuthNav | Auth-aware nav buttons |
