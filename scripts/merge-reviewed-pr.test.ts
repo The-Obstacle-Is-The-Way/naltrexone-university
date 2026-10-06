@@ -26,6 +26,10 @@ const REPO = 'repos/The-Obstacle-Is-The-Way/naltrexone-university';
 // the ref lacks (DEBT-491).
 const compareWithMain = (behind = 0) =>
   JSON.stringify({ behind_by: behind, base_commit: { sha: MAIN } });
+// GitHub's compare of a base with a head: the head's changes since their merge
+// base.
+const compared = (files: unknown[], mergeBase = MAIN) =>
+  JSON.stringify({ merge_base_commit: { sha: mergeBase }, files });
 describe('feature merge decision', () => {
   it('accepts exact-head approval even when a later comment has no verdict', () => {
     expect(
@@ -391,20 +395,16 @@ describe('merge command', () => {
       )
       .mockReturnValueOnce(JSON.stringify([[review('APPROVED', OLD_HEAD)]]))
       .mockReturnValueOnce(
-        JSON.stringify({
-          files: [
-            manifest,
-            { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'x' },
-          ],
-        }),
+        compared([
+          manifest,
+          { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'x' },
+        ]),
       )
       .mockReturnValueOnce(
-        JSON.stringify({
-          files: [
-            manifest,
-            { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'y' },
-          ],
-        }),
+        compared([
+          manifest,
+          { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'y' },
+        ]),
       )
       .mockReturnValueOnce(compareWithMain());
 
@@ -421,37 +421,69 @@ describe('merge command', () => {
     ]);
   });
 
-  it('reads both diffs for an approval GitHub repointed onto a later head', () => {
-    const pr = {
+  describe('an approval GitHub repointed onto a later head', () => {
+    const earlierBase = 'd'.repeat(40);
+    const laterBase = 'e'.repeat(40);
+    const pr = () => ({
       ...pullRequest(pushedAt('2026-09-22T04:00:00Z')),
       ...pushes(
         [OLD_HEAD, '2026-09-22T02:00:00Z'],
         [HEAD, '2026-09-22T04:00:00Z'],
       ),
-    };
-    const files = JSON.stringify({
-      files: [{ filename: 'src/example.ts', status: 'modified', patch: '+x' }],
     });
-    vi.mocked(execFileSync)
-      .mockReturnValueOnce(
-        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
-      )
-      .mockReturnValueOnce(JSON.stringify([[review()]]))
-      .mockReturnValueOnce(files)
-      .mockReturnValueOnce(files)
-      .mockReturnValueOnce(compareWithMain());
+    const change = (start: number) => [
+      {
+        filename: 'AGENTS.md',
+        status: 'modified',
+        patch: `@@ -${start},2 +${start},2 @@\n a\n-b\n+c`,
+      },
+    ];
+    // dev inserted four lines after line 1 between the two merge bases.
+    const devInserted = [
+      {
+        filename: 'AGENTS.md',
+        status: 'modified',
+        patch: '@@ -1,1 +1,5 @@\n x\n+1\n+2\n+3\n+4',
+      },
+    ];
+    const respond = (baseChangesMergeBase: string) =>
+      vi
+        .mocked(execFileSync)
+        .mockReturnValueOnce(
+          JSON.stringify({ data: { repository: { pullRequest: pr() } } }),
+        )
+        .mockReturnValueOnce(JSON.stringify([[review()]]))
+        .mockReturnValueOnce(compared(change(10), earlierBase))
+        .mockReturnValueOnce(compared(change(14), laterBase))
+        .mockReturnValueOnce(compared(devInserted, baseChangesMergeBase))
+        .mockReturnValueOnce(compareWithMain());
 
-    const receipt = runMergeReviewedPr(['987'], () => {});
+    it('reads both diffs and dev’s changes between their merge bases', () => {
+      respond(earlierBase);
 
-    expect(receipt).toMatchObject({ carriedFrom: OLD_HEAD, head: HEAD });
-    expect(vi.mocked(execFileSync).mock.calls[2]?.[1]).toEqual([
-      'api',
-      `${REPO}/compare/dev...${OLD_HEAD}`,
-    ]);
-    expect(vi.mocked(execFileSync).mock.calls[3]?.[1]).toEqual([
-      'api',
-      `${REPO}/compare/dev...${HEAD}`,
-    ]);
+      const receipt = runMergeReviewedPr(['987'], () => {});
+
+      expect(receipt).toMatchObject({ carriedFrom: OLD_HEAD, head: HEAD });
+      expect(
+        vi
+          .mocked(execFileSync)
+          .mock.calls.slice(2, 5)
+          .map((call) => call[1]),
+      ).toEqual([
+        ['api', `${REPO}/compare/dev...${OLD_HEAD}`],
+        ['api', `${REPO}/compare/dev...${HEAD}`],
+        ['api', `${REPO}/compare/${earlierBase}...${laterBase}`],
+      ]);
+    });
+
+    it('refuses to carry when the earlier merge base is not in the later one', () => {
+      respond('f'.repeat(40));
+
+      expect(() => runMergeReviewedPr(['987'], () => {})).toThrow(
+        'predates the push of the head',
+      );
+      expect(execFileSync).toHaveBeenCalledTimes(5);
+    });
   });
 
   it('reads no diffs for a PR approved after its current head was pushed', () => {
@@ -483,13 +515,13 @@ describe('merge command', () => {
       )
       .mockReturnValueOnce(JSON.stringify([[review('APPROVED', OLD_HEAD)]]))
       .mockReturnValueOnce(
-        JSON.stringify({
-          files: Array.from({ length: 300 }, (_, index) => ({
+        compared(
+          Array.from({ length: 300 }, (_, index) => ({
             filename: `file-${index}.ts`,
             status: 'modified',
             patch: 'x',
           })),
-        }),
+        ),
       );
 
     expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(

@@ -116,7 +116,7 @@ export function runVerifyPromotion(
     '',
     `Promotion: #${pr.number}; Head: \`${pr.headRefOid}\`; Base: \`${pr.baseRefOid}\`.`,
     '',
-    '| Source PR | Merge | Reviewed head | Approval ID | Approved before merge |',
+    '| Source PR | Merge | Merged head | Approval ID | Approved before merge |',
     '| --- | --- | --- | --- | --- |',
     ...sources.map(
       (source) =>

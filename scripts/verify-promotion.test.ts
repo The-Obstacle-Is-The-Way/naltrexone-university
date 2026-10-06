@@ -302,7 +302,13 @@ describe('first-parent provenance', () => {
         { merge: MERGE, head: HEAD },
         source('2026-09-22T03:23:00Z'),
         reviews(),
-        { reviewId: 123, approvedHead: BASE, approved: files, current: files },
+        {
+          reviewId: 123,
+          approvedHead: BASE,
+          approved: files,
+          current: files,
+          baseChanges: [],
+        },
       ),
     ).toMatchObject({ head: HEAD, approvalId: 123, carriedFrom: BASE });
   });
@@ -318,6 +324,7 @@ describe('first-parent provenance', () => {
           approvedHead: BASE,
           approved: [{ filename: 'src/a.ts', status: 'modified', patch: '+x' }],
           current: [{ filename: 'src/a.ts', status: 'modified', patch: '+y' }],
+          baseChanges: [],
         },
       ),
     ).toThrow('predates the push of the head');
@@ -434,6 +441,7 @@ describe('promotion proof command', () => {
       },
     };
     const files = JSON.stringify({
+      merge_base_commit: { sha: BASE },
       files: [{ filename: 'src/a.ts', status: 'modified', patch: '+x' }],
     });
     vi.mocked(execFileSync)

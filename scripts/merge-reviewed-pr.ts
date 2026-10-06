@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
+import { hunkBodies, hunksMovedOnlyByBase } from './diff-hunks';
 
 export const REPOSITORY = 'The-Obstacle-Is-The-Way/naltrexone-university';
 const sha = z.string().regex(/^[a-f0-9]{40}$/);
@@ -71,7 +72,9 @@ type CheckNodes = z.infer<typeof checks>['nodes'];
 // repoints it to the new head (changelog 2023-06-06), so a review's commit_id
 // alone does not prove CodeRabbit reviewed that head. GitHub Actions creates a
 // head's check suite when the head is pushed, and re-running CI keeps it, so
-// the earliest suite dates the push.
+// the earliest suite dates the push. Suites belong to the commit, so one made
+// earlier for the same commit elsewhere dates the push earlier (AGENTS.md, How
+// to Check).
 const headCheckSuitesSchema = z.object({
   commits: z.object({
     nodes: z.tuple([
@@ -211,30 +214,43 @@ const compareFilesSchema = z.array(
 
 // A PR's own diff at two heads, each against its merge base with the PR's base
 // branch, from GitHub's compare API, for CodeRabbit's latest decisive review.
+// `baseChanges` is the base branch's diff from the approved head's merge base
+// to the current one, which is empty when the merge base did not move.
 export type CarryEvidence = {
   reviewId: number;
   approvedHead: string;
   approved: z.infer<typeof compareFilesSchema>;
   current: z.infer<typeof compareFilesSchema>;
+  baseChanges: z.infer<typeof compareFilesSchema>;
 };
 
 // CodeRabbit's path filters exclude the lockfile, so it is the one file that
 // may differ between the reviewed head and the current one.
 const CODERABBIT_UNREVIEWED_PATH = 'pnpm-lock.yaml';
 
-// A patch without its hunk headers' positions, git patch-id's notion of the
-// same change: dev's edits elsewhere in a file move the PR's hunks but leave
-// each changed line and its context intact. Hunk boundaries stay marked.
-function hunkBodies(patch: string) {
-  return patch
-    .split('\n')
-    .map((line) => (line.startsWith('@@') ? '@@' : line))
-    .join('\n');
+// A file's hunks may move only by the base's own edits to that file; the
+// base's change must be a modification whose patch GitHub shows.
+function hunksMoveWithBase(
+  baseChanges: z.infer<typeof compareFilesSchema>,
+  path: string,
+  approved: string,
+  current: string,
+) {
+  const change = baseChanges.find(
+    (file) => file.filename === path || file.previous_filename === path,
+  );
+  if (change === undefined) return hunksMovedOnlyByBase(approved, current, '');
+  return (
+    change.status === 'modified' &&
+    change.patch !== undefined &&
+    hunksMovedOnlyByBase(approved, current, change.patch)
+  );
 }
 
 function reviewableDiffIsIdentical(evidence: CarryEvidence) {
   const approved = compareFilesSchema.parse(evidence.approved);
   const current = compareFilesSchema.parse(evidence.current);
+  const baseChanges = compareFilesSchema.parse(evidence.baseChanges);
   // Only the lockfile's own diff is skipped; a rename onto its path would
   // hide the removal of the renamed file.
   const reviewable = (files: typeof approved) =>
@@ -257,7 +273,13 @@ function reviewableDiffIsIdentical(evidence: CarryEvidence) {
         other.filename === file.filename &&
         other.previous_filename === file.previous_filename &&
         other.status === file.status &&
-        hunkBodies(other.patch) === hunkBodies(file.patch)
+        hunkBodies(other.patch) === hunkBodies(file.patch) &&
+        hunksMoveWithBase(
+          baseChanges,
+          file.previous_filename ?? file.filename,
+          file.patch,
+          other.patch,
+        )
       );
     })
   );
@@ -279,8 +301,9 @@ function latestDecisiveCodeRabbitReview(
 
 // An approval carries to a later head only when it is CodeRabbit's latest
 // decisive review and the diff CodeRabbit reviews (every file but the lockfile
-// its path filters exclude) is the same at both heads, hunk positions aside.
-// CodeRabbit has then reviewed exactly the change being merged. Two cases need this: a Dependabot
+// its path filters exclude) is the same at both heads, its hunks moved only by
+// the base's own edits. CodeRabbit has then reviewed exactly the change being
+// merged. Two cases need this: a Dependabot
 // rebase whose only new change is the lockfile, which CodeRabbit skips, and a
 // push that only merges dev or main into the branch, after which GitHub
 // repoints the approval itself to the new head (changelog 2023-06-06).
@@ -297,10 +320,14 @@ export function carriedApproval(
     !latest.submitted_at ||
     latest.id !== evidence.reviewId ||
     evidence.approvedHead === head ||
-    (latest.commit_id !== head && latest.commit_id !== evidence.approvedHead) ||
-    !reviewableDiffIsIdentical(evidence)
+    (latest.commit_id !== head && latest.commit_id !== evidence.approvedHead)
   ) {
     throw new Error('Missing current exact-head CodeRabbit approval');
+  }
+  if (!reviewableDiffIsIdentical(evidence)) {
+    throw new Error(
+      `The reviewable diff changed since the approved head ${evidence.approvedHead}`,
+    );
   }
   return {
     id: latest.id,
@@ -415,7 +442,8 @@ export function exactHeadApproval(
 }
 
 // The exact-head approval, or else a carried one. A failed carry reports why
-// the exact-head approval is missing, which names the refresh to request.
+// the exact-head approval is missing, which names the refresh to request, with
+// the carry's own failure as the cause.
 export function currentApproval(
   reviewPages: unknown,
   head: string,
@@ -428,8 +456,10 @@ export function currentApproval(
     if (carry === undefined) throw error;
     try {
       return carriedApproval(reviewPages, head, carry);
-    } catch {
-      throw error;
+    } catch (carryError) {
+      throw new Error(error instanceof Error ? error.message : String(error), {
+        cause: carryError,
+      });
     }
   }
 }
@@ -508,16 +538,19 @@ export function readMergeEvidence(number: string) {
 // truncated, so it cannot prove two diffs identical.
 const COMPARE_FILE_LIMIT = 300;
 
-function readCompareFiles(base: string, head: string) {
-  const { files } = z
-    .object({ files: compareFilesSchema })
+function readCompare(base: string, head: string) {
+  const compare = z
+    .object({
+      merge_base_commit: z.object({ sha }),
+      files: compareFilesSchema,
+    })
     .parse(
       JSON.parse(gh(['api', `repos/${REPOSITORY}/compare/${base}...${head}`])),
     );
-  if (files.length >= COMPARE_FILE_LIMIT) {
+  if (compare.files.length >= COMPARE_FILE_LIMIT) {
     throw new Error('Compare response may be truncated; refusing to carry');
   }
-  return files;
+  return { mergeBase: compare.merge_base_commit.sha, files: compare.files };
 }
 
 // behind_by counts the base's commits that the head lacks.
@@ -569,11 +602,22 @@ export function readCarryEvidence(
       : latest.commit_id;
   if (!approvedHead || approvedHead === head) return undefined;
   const compareBase = base ?? parsed.data.baseRefName;
+  const approved = readCompare(compareBase, approvedHead);
+  const current = readCompare(compareBase, head);
+  let baseChanges: CarryEvidence['baseChanges'] = [];
+  if (approved.mergeBase !== current.mergeBase) {
+    // The base branch only moves forward, so the approved head's merge base
+    // must be an ancestor of the current one.
+    const moved = readCompare(approved.mergeBase, current.mergeBase);
+    if (moved.mergeBase !== approved.mergeBase) return undefined;
+    baseChanges = moved.files;
+  }
   return {
     reviewId: latest.id,
     approvedHead,
-    approved: readCompareFiles(compareBase, approvedHead),
-    current: readCompareFiles(compareBase, head),
+    approved: approved.files,
+    current: current.files,
+    baseChanges,
   };
 }
 

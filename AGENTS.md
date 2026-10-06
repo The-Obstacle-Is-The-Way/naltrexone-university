@@ -655,9 +655,11 @@ For feature PRs into `dev`:
    push from the head's earliest GitHub Actions check suite. They accept an
    approval submitted before the head's push only as a carried approval (How
    to Check below), which needs the PR's reviewable diff unchanged since the
-   approved head. A sync changes that diff when `dev` edited lines within three
-   lines of the PR's own changes; the refusal then asks for this refresh. Sync
-   with `dev` before requesting a review when you can.
+   approved head. A sync changes that diff when `dev` edited lines near the
+   PR's own changes, within a hunk's context or close enough to join two hunks.
+   A force-push that drops the approved head from the PR cannot carry either.
+   The refusal then asks for this refresh. Sync with `dev` before requesting a
+   review when you can.
 
 ### Guard and Scanner Review Discipline
 
@@ -708,14 +710,19 @@ approval on an earlier head, or one GitHub repointed to the current head, whose
 approved head is then the PR head pushed most recently at or before the
 approval. GitHub's compare API must show every file except `pnpm-lock.yaml`
 itself, which CodeRabbit's path filters exclude, with the same status, rename
-source and hunks at both heads. Hunk positions are ignored, as in
-`git patch-id`, but every changed and context line must match; a rename onto the
-lockfile path is compared like any other file. This covers a Dependabot rebase
-whose only new change is the lockfile, which CodeRabbit skips, and a sync that
-merges `dev` or `main` into the branch. The receipt then names the approved head
-as `carriedFrom`. A push landing while CodeRabbit is still reviewing could be
-mistaken for the reviewed head; GitHub repoints an approval only across pushes
-that add no new changes. It also requires zero unresolved
+source and hunks at both heads. Every changed and context line must match, and
+a hunk may sit elsewhere only by the lines `dev`'s own edits between the two
+merge bases added or removed above it, as a clean rebase moves it; a rename onto
+the lockfile path is compared like any other file. This covers a Dependabot
+rebase whose only new change is the lockfile, which CodeRabbit skips, and a sync
+that merges `dev` or `main` into the branch. The receipt then names the approved
+head as `carriedFrom`. Two residual risks remain. A push landing while
+CodeRabbit is still reviewing could be mistaken for the reviewed head; GitHub
+documents repointing only where no new changes are introduced, and #1381 showed
+no repoint across a push that changed content. A head's push is dated from its
+check suites anywhere in the repository, so a suite created earlier for the same
+commit elsewhere dates the push earlier and falls back to GitHub's own repoint,
+as before the 2026-10-06 fix. It also requires zero unresolved
 threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
 ADR-020, except on a complete changed-file list confined to paths coverage
 never measures: `package.json`, `pnpm-lock.yaml`, `.github/`, Markdown

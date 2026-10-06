@@ -40,6 +40,7 @@ describe('CodeRabbit approval carried to a later head', () => {
     approvedHead: OLD_HEAD,
     approved: [manifest, lockfile('original')],
     current,
+    baseChanges: [],
   });
 
   it('carries the approval when only the lockfile changed since it', () => {
@@ -96,6 +97,7 @@ describe('CodeRabbit approval carried to a later head', () => {
         approvedHead: OLD_HEAD,
         approved: [manifest, renamed('src/a.ts'), lockfile('original')],
         current: [manifest, renamed('src/b.ts'), lockfile('rebased')],
+        baseChanges: [],
       }),
     ).toThrow('exact-head CodeRabbit approval');
   });
@@ -127,6 +129,7 @@ describe('CodeRabbit approval carried to a later head', () => {
         approvedHead: OLD_HEAD,
         approved: [withoutPatch, lockfile('original')],
         current: [withoutPatch, lockfile('rebased')],
+        baseChanges: [],
       }),
     ).toThrow('exact-head CodeRabbit approval');
   });
@@ -153,27 +156,88 @@ describe('CodeRabbit approval carried to a later head', () => {
     ).toMatchObject({ head: HEAD, approvalId: 123, carriedFrom: OLD_HEAD });
   });
 
-  // git patch-id's notion of the same change: dev's edits elsewhere in a file
-  // move the PR's hunks without changing them.
-  it('carries an approval when dev only moved the PR’s hunks within a file', () => {
-    const hunk = (header: string) => ({
+  // dev's edits elsewhere in a file between the two merge bases move the
+  // PR's hunks without changing them, as a clean rebase would.
+  describe('hunk positions', () => {
+    const agents = (patch: string) => ({
       filename: 'AGENTS.md',
       status: 'modified',
-      patch: `${header}\n context\n-old\n+new\n context`,
+      patch,
     });
-
-    expect(
+    const hunk = (start: number) =>
+      `@@ -${start},3 +${start},3 @@ ## The Rule\n context\n-old\n+new\n context`;
+    // dev inserted four lines after line 3 of AGENTS.md.
+    const devInsertedFourLines = agents(
+      '@@ -1,3 +1,7 @@\n a\n b\n c\n+1\n+2\n+3\n+4',
+    );
+    const moved = (
+      current: string,
+      baseChanges: CarryEvidence['baseChanges'],
+    ): CarryEvidence => ({
+      reviewId: 123,
+      approvedHead: OLD_HEAD,
+      approved: [agents(hunk(10))],
+      current: [agents(current)],
+      baseChanges,
+    });
+    const check = (carry: CarryEvidence) =>
       checkFeatureMerge(
         pullRequest(pushedAt('2026-09-22T04:00:00Z')),
         [[review()]],
-        {
-          reviewId: 123,
-          approvedHead: OLD_HEAD,
-          approved: [hunk('@@ -10,3 +10,3 @@ ## The Rule')],
-          current: [hunk('@@ -14,3 +14,3 @@ ## The Rule (amended)')],
-        },
-      ),
-    ).toMatchObject({ carriedFrom: OLD_HEAD });
+        carry,
+      );
+
+    it('carries an approval when dev’s edits above a hunk explain its move', () => {
+      expect(check(moved(hunk(14), [devInsertedFourLines]))).toMatchObject({
+        carriedFrom: OLD_HEAD,
+      });
+    });
+
+    it('refuses a hunk that moved without a dev edit to explain it', () => {
+      expect(() => check(moved(hunk(14), []))).toThrow(
+        'predates the push of the head',
+      );
+    });
+
+    it('refuses a hunk that moved further than dev’s edits explain', () => {
+      expect(() => check(moved(hunk(40), [devInsertedFourLines]))).toThrow(
+        'predates the push of the head',
+      );
+    });
+
+    it('refuses a hunk that dev’s edits should have moved but did not', () => {
+      expect(() => check(moved(hunk(10), [devInsertedFourLines]))).toThrow(
+        'predates the push of the head',
+      );
+    });
+
+    it('refuses when dev edited inside the lines a hunk covers', () => {
+      const devEditedLineEleven = agents('@@ -8,4 +8,4 @@\n a\n b\n c\n-x\n+y');
+
+      expect(() => check(moved(hunk(10), [devEditedLineEleven]))).toThrow(
+        'predates the push of the head',
+      );
+    });
+
+    it('refuses when dev changed the file and its diff is unavailable', () => {
+      expect(() =>
+        check(moved(hunk(10), [{ filename: 'AGENTS.md', status: 'modified' }])),
+      ).toThrow('predates the push of the head');
+    });
+
+    it('refuses the same lines split into different hunks', () => {
+      const split = (first: number, second: number) =>
+        `@@ -${first},2 +${first},2 @@\n a\n-b\n+c\n@@ -${second},2 +${second},2 @@\n d\n-e\n+f`;
+      const joined = (start: number) =>
+        `@@ -${start},4 +${start},4 @@\n a\n-b\n+c\n d\n-e\n+f`;
+
+      expect(() =>
+        check({
+          ...moved(joined(10), []),
+          approved: [agents(split(10, 12))],
+        }),
+      ).toThrow('predates the push of the head');
+    });
   });
 
   it('refuses when dev changed the context around a PR hunk', () => {
@@ -192,6 +256,7 @@ describe('CodeRabbit approval carried to a later head', () => {
           approvedHead: OLD_HEAD,
           approved: [hunk('never merge')],
           current: [hunk('always merge')],
+          baseChanges: [],
         },
       ),
     ).toThrow('predates the push of the head');
@@ -207,6 +272,27 @@ describe('CodeRabbit approval carried to a later head', () => {
         evidence([changed, lockfile('rebased')]),
       ),
     ).toThrow('predates the push of the head');
+  });
+
+  it('names the approved head whose diff changed as the refusal’s cause', () => {
+    const changed = { ...manifest, patch: `${manifest.patch}\n+"extra": "1"` };
+    let refusal: unknown;
+    try {
+      checkFeatureMerge(
+        pullRequest(pushedAt('2026-09-22T04:00:00Z')),
+        [[review()]],
+        evidence([changed, lockfile('rebased')]),
+      );
+    } catch (error) {
+      refusal = error;
+    }
+
+    expect(refusal).toMatchObject({
+      message: expect.stringContaining('predates the push of the head'),
+      cause: {
+        message: `The reviewable diff changed since the approved head ${OLD_HEAD}`,
+      },
+    });
   });
 
   it('refuses evidence read for another review', () => {
