@@ -3,7 +3,7 @@
 **Project:** Naltrexone University
 **Date:** 2026-10-05 (review); filed 2026-10-06
 **Scope:** What an anonymous or low-privilege user can make the server log, report to Sentry, or spend. Authorization, input validation, redirects, webhook authenticity, payment integrity and answer-key secrecy across everything merged to `dev` since 2026-09-26. Secrets, CI artifacts, HTTP headers and caching, dependencies, and personal data sent to third parties.
-**Status:** Active — every finding is filed; the audit is archived once each one is resolved or deferred
+**Status:** Active — the findings below are filed, except the ones accepted without a record and one withheld until its fix ships; the audit is archived once each filed finding is resolved or deferred
 
 ---
 
@@ -43,7 +43,7 @@ One further finding, about CI artifacts, is withheld until its fix ships. Its re
 
 The reviewers' reports hold the evidence for each.
 - **Authorization.** Every learner action resolves the caller before any read. Attempt, session, bookmark and idempotency queries filter on the caller.
-- **Answer keys and withdrawn content.** Exam keys wait for the session to end. Grading requires a choice from the bound revision. Withdrawn content is shown only to a learner who answered it.
+- **Answer keys and withdrawn content.** In an exam session, answer keys stay hidden until the session ends; the standalone-page exception above is accepted. Grading requires a choice from the bound revision. Withdrawn content is shown only to a learner who answered it.
 - **SQL.** There is no raw SQL built from input. Filters are enums and pagination is capped.
 - **Redirects.** Stripe, portal and add-card URLs, and acknowledgment links, are built from the configured app URL, never the Host header.
 - **Webhooks and cron.** Stripe, Clerk and Resend verify signatures over the raw body. Cron routes compare digests in constant time. In production the client address comes only from Vercel's header.

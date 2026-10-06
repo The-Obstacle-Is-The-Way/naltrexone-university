@@ -843,8 +843,9 @@ The security review of recent work ([AUDIT-013](../audits/audit-013-security-rev
 - **The gap.** The add-card use case checks only for an unexpired trial (`src/application/use-cases/create-trial-payment-method-setup-session.ts:55-65`). The trial banner in `app/(app)/app/layout.tsx` and the billing page's renewal line show on the trial status alone. None of them reads `cancelAtPeriodEnd`, which already includes Stripe's portal-set `cancel_at`.
 - **Consequence.** A trial user who cancels in the portal and then adds a card gets an initial-offer renewal consent recorded and a renewal acknowledgment sent. Stripe still cancels at trial end and never charges. No money moves, but the record and the email state a renewal that will not happen.
 - **Decided.** When cancellation is scheduled:
-  - the use case refuses with `CONFLICT`;
-  - the banner and the billing line drop the renewal copy;
-  - the billing page offers a new subscription instead.
+  - the trial banner shows when access ends and links to billing, in place of the "Add a card" dialog, so the dialog cannot be opened;
+  - the billing line drops the renewal copy;
+  - the billing page offers a new subscription instead;
+  - the use case still refuses with `CONFLICT`, for a page loaded before the cancellation.
 
   This is distinct from DEBT-501 item 4, a card added at or after trial end.
