@@ -1,6 +1,6 @@
 # Logging
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-10-06
 
 ## Source of truth
 
@@ -51,3 +51,17 @@ That child logger automatically carries `requestId`, and can also include `userI
 - Do not log secrets/PII. `lib/logger.ts` redacts common sensitive fields, but treat that as defense-in-depth, not permission to log secrets.
 - When adding new adapters, inject `logger` via constructor/deps instead of importing global singletons.
 - Structured logs and Sentry complement each other. Use logs for request-local diagnosis; use Sentry for exception aggregation and client/server telemetry.
+- Do not log the caller's text. Log its length or a fixed reason instead. Input a request could forge is a warning or a quiet failure, not an error, but never silence a refusal your own server raises (BUG-325).
+- Log a failed webhook signature check at warn: anyone can send one. An invalid payload behind a valid signature stays an error.
+
+## Sentry flood or quota exhaustion
+
+The browser needs Sentry's client key (DSN), so the key is public, as Sentry intends. Anyone can therefore post events straight to Sentry, without our server. The project is on Sentry's Developer plan, with 5,000 errors a month and no per-key rate limit. Spike protection is on, and limits the damage while you respond (BUG-325 item 5).
+
+If Sentry shows a sudden flood of garbage events, or the month's usage jumps:
+
+1. In the project's inbound filters, block the source IP addresses.
+2. Create a new client key, set it as `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` in Vercel, redeploy, then revoke the old key.
+
+This is a monitoring outage, not a data breach. Escalate to the [incident response procedure](../security/incident-response-and-breach-notification.md) only if the events carry personal data.
+

@@ -37,6 +37,14 @@ export const CLERK_BACKEND_CALL_SITE_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+// BUG-325: each checkout-success visit costs a Clerk user lookup and a Stripe
+// call. A buyer lands there once or twice, so ten a minute per signed-in user
+// leaves real visits untouched.
+export const CHECKOUT_SUCCESS_RATE_LIMIT = {
+  limit: 10,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 export const CLERK_WEBHOOK_RATE_LIMIT = {
   limit: 100,
   windowMs: ONE_MINUTE_MS,

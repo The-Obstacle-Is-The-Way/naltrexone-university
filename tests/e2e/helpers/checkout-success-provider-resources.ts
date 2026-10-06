@@ -16,6 +16,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeAuthGateway,
   type FakeLogger,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import type { User } from '@/src/domain/entities';
 
@@ -346,6 +347,7 @@ export async function assertOpenSessionRejected(input: {
       {
         authGateway: new FakeAuthGateway(input.user),
         subscriptionVersions: input.subscriptions,
+        rateLimiter: new FakeRateLimiter(),
         getClerkAuth: async () => ({
           userId: input.user.id,
           redirectToSignIn: () => {

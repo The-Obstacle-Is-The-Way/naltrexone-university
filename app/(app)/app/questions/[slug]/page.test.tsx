@@ -257,6 +257,34 @@ describe('app/(app)/app/questions/[slug]', () => {
     }
   });
 
+  // BUG-325: the slug and origin are the caller's text, so the telemetry
+  // line keeps at most the first 100 characters of each.
+  it('caps the caller-supplied slug and origin in the telemetry line', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    try {
+      await QuestionPage({
+        params: Promise.resolve({ slug: 's'.repeat(5000) }),
+        searchParams: Promise.resolve({
+          mode: 'review',
+          from: 'f'.repeat(5000),
+          attemptId: '00000000-0000-4000-8000-000000000002',
+          sessionId: '00000000-0000-4000-8000-000000000001',
+        }),
+      } as never);
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        '[Telemetry]',
+        expect.objectContaining({
+          event: 'review_identifier_normalized',
+          slug: 's'.repeat(100),
+          from: 'f'.repeat(100),
+        }),
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
   it('normalizes mixed review attemptId/sessionId arrays by preferring the first sessionId value', async () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     try {

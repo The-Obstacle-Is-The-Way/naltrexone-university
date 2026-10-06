@@ -18,6 +18,7 @@ import type { RateLimiter } from '@/src/application/ports/gateways';
 
 type StripeWebhookRouteLogger = {
   error: (context: unknown, message: string) => void;
+  warn: (context: unknown, message: string) => void;
 };
 
 export type StripeWebhookRouteContainer = {
@@ -91,10 +92,20 @@ export function createWebhookHandler(
         (error.code === 'INVALID_WEBHOOK_SIGNATURE' ||
           error.code === 'INVALID_WEBHOOK_PAYLOAD')
       ) {
-        container.logger.error(
-          { error: projectSafeErrorDiagnostics(error) },
-          'Stripe webhook validation failed',
-        );
+        // BUG-325: anyone can send a bad signature, so it is a warning; a bad
+        // payload behind a valid signature means Stripe sent something
+        // unexpected, so it stays an error.
+        if (error.code === 'INVALID_WEBHOOK_SIGNATURE') {
+          container.logger.warn(
+            { error: projectSafeErrorDiagnostics(error) },
+            'Stripe webhook signature verification failed',
+          );
+        } else {
+          container.logger.error(
+            { error: projectSafeErrorDiagnostics(error) },
+            'Stripe webhook validation failed',
+          );
+        }
         return NextResponse.json(
           { error: 'Webhook validation failed' },
           { status: HTTP_BAD_REQUEST },

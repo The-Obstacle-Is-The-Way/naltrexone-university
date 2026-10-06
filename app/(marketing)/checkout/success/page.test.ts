@@ -5,6 +5,7 @@ import { ROUTES } from '@/lib/routes';
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeRateLimiter,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -59,6 +60,7 @@ describe('runCheckoutSuccessPage', () => {
       subscriptionVersions: {
         findObservationVersionByUserId: async () => null,
       },
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: null,
         redirectToSignIn,
@@ -133,6 +135,7 @@ describe('runCheckoutSuccessPage', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -229,6 +232,7 @@ describe('runCheckoutSuccessPage', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -316,6 +320,7 @@ describe('runCheckoutSuccessPage', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -405,6 +410,7 @@ describe('runCheckoutSuccessPage', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -486,8 +492,10 @@ describe('getCheckoutSuccessDeps', () => {
       updatedAt: new Date('2026-02-01T00:00:00Z'),
     };
 
+    const rateLimiter = new FakeRateLimiter();
     const fakeContainer = {
       createAuthGateway: () => new FakeAuthGateway(user),
+      createRateLimiter: () => rateLimiter,
       logger: new FakeLogger(),
       env: {
         NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_monthly',
@@ -538,6 +546,7 @@ describe('getCheckoutSuccessDeps', () => {
       annual: 'price_annual',
     });
     expect(deps.appUrl).toBe('https://example.com');
+    expect(deps.rateLimiter).toBe(rateLimiter);
     expect(typeof deps.transaction).toBe('function');
 
     const result = await deps.transaction(async (tx) => {
