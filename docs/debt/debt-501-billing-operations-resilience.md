@@ -17,6 +17,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 ## Items
 
 ### 1. The daily reconcile never reaches the tail once the table grows (P2)
+
 - **Evidence.**
   - The all-pages sweep starts at offset 0 on every run (`src/adapters/jobs/reconcile-all-stripe-subscription-pages.ts:131`) and stops after a 40-second budget (`:12`, `:142-147`). It logs "resume at offset N", but nothing ever resumes there: the cron passes no offset (`app/api/cron/reconcile-stripe-subscriptions/route-handler.ts:220-221`).
   - Rows are never removed, so canceled subscriptions and lapsed trials count too.
@@ -25,6 +26,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - **Decided.** Resume from a cursor stored between runs, recorded per run. Exclude rows that are terminal and past their period end.
 
 ### 2. Only one price ID per plan is recognized (P2)
+
 - **Evidence.** `getSubscriptionPlanFromPriceId` matches only the current environment's monthly and annual IDs (`src/adapters/config/stripe-prices.ts:15-22`). Any other ID fails:
   - webhooks return 500 (`stripe-subscription-normalizer.ts:99-105`);
   - reads throw `INTERNAL_ERROR` (`drizzle-subscription-repository.ts:44-51`), as in DEBT-310's incident;
@@ -34,11 +36,13 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - **Decided.** A recognized list of legacy price IDs per plan, configured alongside the current ones. Add an operator check that refuses a price change while live subscriptions use an ID the list doesn't hold. Until this ships, the runbook must say: never change a price ID.
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3)
+
 - **Evidence.** The normalizer requires `subscription.metadata.user_id` (`stripe-subscription-normalizer.ts:37-55`). The controller logs `metadata_missing` and returns 200 without recording the event (`stripe-webhook-controller.ts:679-689`), although the customer's own `metadata.user_id` and the `stripe_customers` mapping could identify the user.
 - **Trigger.** Support creating a subscription in the Dashboard (the natural repair for "I paid but can't get in"), a Payment Link, or a script.
 - **Decided.** Fall back to the customer's mapping, and record unresolved events in the ledger so they can be found.
 
 ### 4. A card added at or after trial end is never applied (P3)
+
 - **Evidence.**
   - The trial is checked only when the add-card session is created (`create-trial-payment-method-setup-session.ts:57-65`).
   - The session lasts Stripe's default 24 hours (`stripe-checkout-sessions.ts:276-299`, no `expires_at`).
@@ -47,14 +51,17 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - **Decided.** Expire the add-card session at trial end. On completion against a canceled trial, tell the user to start a paid subscription instead of failing silently.
 
 ### 5. The success page tells someone who paid that "Checkout failed" (P3)
+
 - **Evidence.** Every validation failure in `app/(marketing)/checkout/success/checkout-success-sync.tsx` redirects to `?checkout=error`. That includes `user_id_mismatch` (`:190-196`): paid on account A, returned signed in to account B. B can then buy again, creating a second customer and a second charge.
 - **Decided.** A specific message for a mismatched account ("This purchase belongs to another account"), and no repurchase offer on that path.
 
 ### 6. The Stripe circuit breaker also counts ordinary 4xx errors (P3)
+
 - **Evidence.** `src/adapters/shared/circuit-breaker.ts:62-76` counts every thrown error, and one breaker is shared per instance (`stripe-retry.ts:11-16,43`). Five consecutive client errors fail every Stripe call in that instance for 60 seconds, Checkout included.
 - **Decided.** Count only transient failures: network errors, 5xx and 429.
 
 ### 7. Stripe settings not recorded in the repository (P3, owner)
+
 - Not recorded: the live webhook endpoint's event list (last recorded in DEBT-406, before the add-card flow, so `checkout.session.expired` may be missing), the live Price IDs, and the live Checkout payment-method settings.
 - No live-mode purchase has been recorded working end to end. All hosted E2E tests run in test mode, and a paid monthly Checkout has none.
 - **Decided.** The owner makes one live purchase followed by a refund, under DEBT-465 Part 4's QA procedures, and records the live webhook's events.

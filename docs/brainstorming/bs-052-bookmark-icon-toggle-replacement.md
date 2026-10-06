@@ -248,17 +248,20 @@ When the bookmark state toggles:
 ## Phasing
 
 ### Phase 1: Bookmarks page only
+
 - Replace "Remove" pill with filled `BookmarkToggle` icon
 - Decide whether to remove `AlertDialog` immediately or keep it until undo/optimistic reversal exists
 - Update redirect/toast flow or replace it with a local state transition
 - Narrowest surface area, but not behavior-free because the current list removes the item entirely
 
 ### Phase 2: Practice + review action bars
+
 - Replace "Bookmark" / "Remove bookmark" text pills with `BookmarkToggle`
 - Keep existing toggle logic and toast notifications
 - Higher cross-cutting impact — touches quick practice, tutor session practice, post-exam review, question review, and session-review action bar layout
 
 ### Phase 3 (optional): Corner-positioned bookmark icon on question surfaces
+
 - Add a small bookmark icon in the top-right corner of applicable question surfaces (for example history rows/cards or bookmark rows)
 - This is the "bookmark in the corner" pattern — visible bookmark state at a glance without needing to open the question
 - Largest scope — would touch card components across multiple pages
