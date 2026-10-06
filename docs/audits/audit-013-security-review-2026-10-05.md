@@ -25,7 +25,7 @@ The owner asked for a security review of recent work. They had lost track of a l
 | [BUG-324](../bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) | Server actions | P1 | Exported server actions accepted caller-supplied dependencies, so one request could run many actions | Fixed in production; Verifying |
 | [BUG-325](../bugs/bug-325-malformed-requests-throw-and-write-oversized-logs.md) | Input handling, logging | P3 | Malformed requests made our code throw, or write the caller's text at error level. This is the owner's lead | Fixed in production; Verifying |
 | [BUG-326](../bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md) | Privacy, support | P3 | Error pages sent people, payers included, to the public GitHub issue tracker | Fixed, awaiting promotion; Verifying |
-| [BUG-327](../bugs/bug-327-dependabot-branches-build-with-preview-secrets.md) | Supply chain | P3 | Vercel built Dependabot branches with Preview secrets, against the owner's 2026-09-19 boundary | Fix in review |
+| [BUG-327](../bugs/bug-327-dependabot-branches-build-with-preview-secrets.md) | Supply chain | P3 | Vercel built Dependabot branches with Preview secrets, against the owner's 2026-09-19 boundary | Fixed, awaiting promotion; Verifying |
 | [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md#findings-from-audit-013-2026-10-05) F21 | Renewal evidence | P4 | An early bounce report can be lost | Decided; not yet built |
 | [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md#findings-from-audit-013-2026-10-05) F22 | Renewal evidence | P4 | A trial cancelled in the portal is still offered "Add a card" | Decided; not yet built |
 
