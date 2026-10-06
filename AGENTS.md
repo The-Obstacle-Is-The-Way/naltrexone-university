@@ -646,6 +646,21 @@ For feature PRs into `dev`:
    (PR #1038, 2026-09-23). `@coderabbitai review` refuses with "Already reviewed
    the last commit" in this state.
 
+   GitHub also carries an approval forward by itself. After a push that only
+   merges `dev` or `main` into the branch, it repoints the existing APPROVED
+   review to the new head
+   ([changelog, 2023-06-06](https://github.blog/changelog/2023-06-06-security-enhancements-to-required-approvals-on-pull-requests/)),
+   so the approval looks current though CodeRabbit never reviewed that head
+   (#1381, 2026-10-06). The merge command and the promotion proof date each
+   push from the head's earliest GitHub Actions check suite. They accept an
+   approval submitted before the head's push only as a carried approval (How
+   to Check below), which needs the PR's reviewable diff unchanged since the
+   approved head. A sync changes that diff when `dev` edited lines near the
+   PR's own changes, within a hunk's context or close enough to join two hunks.
+   A force-push that drops the approved head from the PR cannot carry either.
+   The refusal then asks for this refresh. Sync with `dev` before requesting a
+   review when you can.
+
 ### Guard and Scanner Review Discipline
 
 Before implementing a reviewer suggestion against an executable policy scanner,
@@ -689,14 +704,25 @@ pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER> --merge
 ```
 
 The command reads all review pages and requires the latest decisive CodeRabbit
-review on the current SHA to be APPROVED. One exception covers Dependabot:
-CodeRabbit reviews a Dependabot PR when it opens and skips a later rebase whose
-only new change is the lockfile, which its path filters exclude. For a
-Dependabot-authored PR only, its latest decisive review may be an approval on an
-earlier head, provided GitHub's compare API shows every file except
-`pnpm-lock.yaml` itself with a byte-identical diff, status and rename source at
-both heads; a rename onto the lockfile path is compared like any other file. The
-receipt then names the approved head as `carriedFrom`. It also requires zero unresolved
+review on the current SHA to be APPROVED and submitted after that SHA was pushed.
+A carried approval may stand in for it: CodeRabbit's latest decisive review is an
+approval on an earlier head, or one GitHub repointed to the current head, whose
+approved head is then the PR head pushed most recently at or before the
+approval. GitHub's compare API must show every file except `pnpm-lock.yaml`
+itself, which CodeRabbit's path filters exclude, with the same status, rename
+source and hunks at both heads. Every changed and context line must match, and
+a hunk may sit elsewhere only by the lines `dev`'s own edits between the two
+merge bases added or removed above it, as a clean rebase moves it; a rename onto
+the lockfile path is compared like any other file. This covers a Dependabot
+rebase whose only new change is the lockfile, which CodeRabbit skips, and a sync
+that merges `dev` or `main` into the branch. The receipt then names the approved
+head as `carriedFrom`. Two residual risks remain. A push landing while
+CodeRabbit is still reviewing could be mistaken for the reviewed head; GitHub
+documents repointing only where no new changes are introduced, and #1381 showed
+no repoint across a push that changed content. A head's push is dated from its
+check suites anywhere in the repository, so a suite created earlier for the same
+commit elsewhere dates the push earlier and falls back to GitHub's own repoint,
+as before the 2026-10-06 fix. It also requires zero unresolved
 threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
 ADR-020, except on a complete changed-file list confined to paths coverage
 never measures: `package.json`, `pnpm-lock.yaml`, `.github/`, Markdown
@@ -756,7 +782,8 @@ For each promotion:
    `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER>` (fetch `origin`
    first). It verifies same-repository `dev` → `main`, up-to-date ancestry,
    every first-parent merge's source PR, the actual second-parent head, formal
-   approval predating the source merge, zero unresolved source/promotion
+   approval predating the source merge (exact-head, or carried as in How to
+   Check, with each source diff taken against the merge's first parent), zero unresolved source/promotion
    threads, and successful `test` and `codecov/patch` checks on the promotion. Direct commits, ambiguous PR associations, missing approvals or
    incomplete evidence fail closed. Its complete output must be in the
    promotion PR body before the merge.

@@ -19,7 +19,8 @@ afterEach(() => vi.resetAllMocks());
 const HEAD = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
 const MERGE = 'c'.repeat(40);
-const source = () => ({
+const REPOSITORY_API = `repos/${REPOSITORY}`;
+const source = (pushedAt = '2026-09-22T03:10:00Z', commitOid = HEAD) => ({
   number: 987,
   state: 'MERGED',
   baseRefName: 'dev',
@@ -29,6 +30,19 @@ const source = () => ({
   reviewThreads: {
     nodes: [{ isResolved: true }],
     pageInfo: { hasNextPage: false },
+  },
+  commits: {
+    nodes: [
+      {
+        commit: {
+          oid: commitOid,
+          checkSuites: {
+            pageInfo: { hasNextPage: false },
+            nodes: [{ createdAt: pushedAt }],
+          },
+        },
+      },
+    ],
   },
 });
 const reviews = (commit = HEAD, time = '2026-09-22T03:22:32Z') => [
@@ -183,7 +197,7 @@ describe('promotion readiness', () => {
 describe('first-parent provenance', () => {
   it('retains the merge SHA and actual second-parent head', () => {
     expect(firstParentMerges(`${MERGE} ${BASE} ${HEAD}\n`)).toEqual([
-      { merge: MERGE, head: HEAD },
+      { merge: MERGE, base: BASE, head: HEAD },
     ]);
   });
 
@@ -250,6 +264,70 @@ describe('first-parent provenance', () => {
         reviews(),
       ),
     ).toThrow();
+  });
+
+  it('refuses a source approval GitHub carried onto a head pushed after it', () => {
+    expect(() =>
+      checkSourceProvenance(
+        { merge: MERGE, head: HEAD },
+        source('2026-09-22T03:23:00Z'),
+        reviews(),
+      ),
+    ).toThrow('predates the push of the head');
+  });
+
+  it.each([
+    ['check suites for a different commit', () => source(undefined, BASE)],
+    [
+      'no head commit in the response',
+      () => {
+        const { commits: _commits, ...rest } = source();
+        return rest;
+      },
+    ],
+  ])('cannot date the source push from %s', (_name, input) => {
+    expect(() =>
+      checkSourceProvenance({ merge: MERGE, head: HEAD }, input(), reviews()),
+    ).toThrow('cannot date the push of the head');
+  });
+
+  // A source PR that merged dev after its approval: GitHub repointed the
+  // approval to the merged head, and the PR's diff against dev just before
+  // the merge is unchanged since the approved head.
+  it('accepts a carried source approval whose reviewable diff is unchanged', () => {
+    const files = [{ filename: 'src/a.ts', status: 'modified', patch: '+x' }];
+
+    expect(
+      checkSourceProvenance(
+        { merge: MERGE, head: HEAD },
+        source('2026-09-22T03:23:00Z'),
+        reviews(),
+        {
+          reviewId: 123,
+          approvedHead: BASE,
+          approved: files,
+          current: files,
+          baseChanges: [],
+        },
+      ),
+    ).toMatchObject({ head: HEAD, approvalId: 123, carriedFrom: BASE });
+  });
+
+  it('refuses a carried source approval whose reviewable diff changed', () => {
+    expect(() =>
+      checkSourceProvenance(
+        { merge: MERGE, head: HEAD },
+        source('2026-09-22T03:23:00Z'),
+        reviews(),
+        {
+          reviewId: 123,
+          approvedHead: BASE,
+          approved: [{ filename: 'src/a.ts', status: 'modified', patch: '+x' }],
+          current: [{ filename: 'src/a.ts', status: 'modified', patch: '+y' }],
+          baseChanges: [],
+        },
+      ),
+    ).toThrow('predates the push of the head');
   });
 
   it('refuses approval on a superseded source head', () => {
@@ -335,6 +413,69 @@ describe('promotion proof command', () => {
         .filter(({ file }) => file === 'gh')
         .every(({ args }) => args?.[0] === 'api'),
     ).toBe(true);
+  });
+
+  it('compares a carried source approval against the merge’s first parent and shows the carry', () => {
+    const approvedHead = 'd'.repeat(40);
+    const pr = promotion();
+    pr.headRefOid = MERGE;
+    const commit = pr.commits.nodes[0]?.commit;
+    if (!commit) throw new Error('Missing fixture');
+    commit.oid = MERGE;
+    const merged = {
+      ...source('2026-09-22T03:23:00Z'),
+      pushes: {
+        pageInfo: { hasPreviousPage: false },
+        nodes: [
+          [approvedHead, '2026-09-22T03:10:00Z'],
+          [HEAD, '2026-09-22T03:23:00Z'],
+        ].map(([oid, createdAt]) => ({
+          commit: {
+            oid,
+            checkSuites: {
+              pageInfo: { hasNextPage: false },
+              nodes: [{ createdAt }],
+            },
+          },
+        })),
+      },
+    };
+    const files = JSON.stringify({
+      merge_base_commit: { sha: BASE },
+      files: [{ filename: 'src/a.ts', status: 'modified', patch: '+x' }],
+    });
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[]]))
+      .mockReturnValueOnce('')
+      .mockReturnValueOnce(`${MERGE} ${BASE} ${HEAD}\n`)
+      .mockReturnValueOnce(
+        JSON.stringify([[{ number: 987, merge_commit_sha: MERGE }]]),
+      )
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: merged } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify(reviews()))
+      .mockReturnValueOnce(files)
+      .mockReturnValueOnce(files);
+    const output: string[] = [];
+
+    runVerifyPromotion(['990'], (value) => output.push(value));
+
+    const calls = vi.mocked(execFileSync).mock.calls;
+    expect(calls[7]?.[1]).toEqual([
+      'api',
+      `${REPOSITORY_API}/compare/${BASE}...${approvedHead}`,
+    ]);
+    expect(calls[8]?.[1]).toEqual([
+      'api',
+      `${REPOSITORY_API}/compare/${BASE}...${HEAD}`,
+    ]);
+    expect(output.join('\n')).toContain(
+      `| ${HEAD} (carried from ${approvedHead}) |`,
+    );
   });
 
   it('does not emit a passing receipt when ancestry cannot be proved', () => {
