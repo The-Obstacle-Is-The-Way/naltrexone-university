@@ -544,7 +544,10 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
   // commit, so every service or job container is pinned by digest, in every
   // workflow.
   it('pins every container image by digest, in every workflow', () => {
-    const images = globSync('.github/workflows/*.yml').flatMap((file) => {
+    const images = [
+      ...globSync('.github/workflows/*.yml'),
+      ...globSync('.github/workflows/*.yaml'),
+    ].flatMap((file) => {
       const jobs = Object.values(
         (
           parse(readFileSync(file, 'utf8')) as {
@@ -570,9 +573,11 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     });
 
     expect(images.length).toBeGreaterThanOrEqual(2);
-    expect(images.filter(({ image }) => !image.includes('@sha256:'))).toEqual(
-      [],
-    );
+    expect(
+      images.filter(
+        ({ image }) => !/^[^@\s]+@sha256:[0-9a-f]{64}$/.test(image),
+      ),
+    ).toEqual([]);
   });
 
   it('pins dependencies that execute in the secret-bearing hosted workflow', () => {
