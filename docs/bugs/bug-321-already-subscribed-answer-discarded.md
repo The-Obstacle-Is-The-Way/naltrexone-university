@@ -33,16 +33,35 @@ In the usual case, the page loops with no explanation for seconds or minutes. In
 ## Options
 
 1. **Honor the URL's `reason` again.** Rejected: it reintroduces BUG-275's stale-link problem.
-2. **On `ALREADY_SUBSCRIBED`, sync that customer's subscriptions from Stripe before redirecting.** This uses the existing reconcile-by-customer path. The database then reflects what Stripe holds, and the page shows the true state: access, or "Manage billing".
+2. **On `ALREADY_SUBSCRIBED`, sync that customer's subscriptions from Stripe before redirecting.** The database then reflects what Stripe holds, and the page shows the true state: access, or "Manage billing". (Corrected 2026-10-06: the record first said this "uses the existing reconcile-by-customer path". No such path exists. The daily reconcile lists a customer's subscriptions only for a customer it reached through an existing row, and it also cancels duplicates, which must never run on a user's request. So the sync has to be built.)
 3. **Show a one-time "you already have a subscription" notice** carried by the action, with a portal link built from the Stripe customer.
 
 ## Resolution (decided)
 
 Option 2, because it repairs the cause: the database learns of the subscription at the moment the user needs it. If the sync itself fails, Option 3's notice explains the state and offers the portal, so the user is never left without a message. BUG-275's protection against stale links stays.
 
+**Design (2026-10-06, from a read-only design review of the current code):**
+- **Only Stripe's refusal triggers it.** `CreateCheckoutSessionUseCase` catches the gateway's `ALREADY_SUBSCRIBED`, syncs, then rethrows the original error.
+  - The database's own refusal never reaches the gateway, so a subscriber who is already recorded triggers no sync.
+  - Checkout errors are not cached under the idempotency key, so a retry runs the use case again.
+- **A new port method, `PaymentGateway.listBlockingCustomerSubscriptions`.** The gateway's refusal knows only a subscription's ID and status. And a webhook could write between that listing and our version read. So the sync fetches each subscription afresh, after reading the version.
+  - The Stripe adapter lists the customer's subscriptions and keeps those the refusal treats as blocking.
+  - It retrieves and normalizes each one through the existing path, which requires `metadata.user_id`.
+  - It only reads: it never cancels or changes a subscription.
+- **A new helper, `syncCustomerSubscriptionFromProvider`, in `src/application/shared/`.**
+  - It picks the canonical subscription with the existing comparator.
+  - It persists it through `persistSubscriptionObservation`, with the version fence and the per-user write lock that every writer uses.
+  - It refuses any subscription whose `user_id` or customer is not the signed-in user's.
+- **Security.** The customer ID comes only from our own mapping for the signed-in user; the action takes no customer ID.
+- **The page.**
+  - The action redirects to `/pricing?checkout=already_subscribed`. The page still takes its state from the database.
+  - A synced subscriber sees access or "Manage billing".
+  - Only a signed-in user who is still not entitled, and has no billing-recovery reason, also sees a notice with a "Manage billing" button.
+- **Why this does not reopen BUG-275.** The new parameter is never put into a sign-up return link. A stale copy of it can only add a notice; it never changes what the page offers. `reason=manage_billing` stays ignored for signed-in users.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
+Criteria to meet before closing.
 
 - [ ] An `ALREADY_SUBSCRIBED` refusal with no local row syncs the subscription, and the user gains access. Red first, with the fake Stripe gateway.
 - [ ] A sync that fails still shows a message and a portal link.
