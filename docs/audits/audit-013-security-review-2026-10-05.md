@@ -1,9 +1,11 @@
 # AUDIT-013 — Security Review of Recent Work
 
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
 **Project:** Naltrexone University
 **Date:** 2026-10-05 (review); filed 2026-10-06
 **Scope:** What an anonymous or low-privilege user can make the server log, report to Sentry, or spend. Authorization, input validation, redirects, webhook authenticity, payment integrity and answer-key secrecy across everything merged to `dev` since 2026-09-26. Secrets, CI artifacts, HTTP headers and caching, dependencies, and personal data sent to third parties.
-**Status:** Active — the findings below are filed, except the ones accepted without a record and one withheld until its fix ships; the audit is archived once each filed finding is resolved or deferred
+**Status:** Active — the findings below are filed, except those accepted without a record and one withheld until its fix ships; closes under the archive convention above
 
 ---
 
