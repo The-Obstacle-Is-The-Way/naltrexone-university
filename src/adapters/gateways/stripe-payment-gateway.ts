@@ -20,12 +20,14 @@ import type {
   PortalSessionInput,
   PortalSessionOutput,
   SetTrialSubscriptionDefaultPaymentMethodInput,
+  SubscriptionObservation,
   TrialPaymentMethodSetupSessionInput,
   TrialPaymentMethodSetupSessionOutput,
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
+import { listStripeBlockingCustomerSubscriptions } from './stripe/stripe-customer-subscriptions';
 import { callStripeWithRetry } from './stripe/stripe-retry';
 import type { CheckoutDisclosureResolver } from './stripe/stripe-webhook-processor';
 
@@ -179,6 +181,18 @@ export class StripePaymentGateway implements PaymentGateway {
       input,
       options,
       logger: this.deps.logger,
+    });
+  }
+
+  async listBlockingCustomerSubscriptions(input: {
+    externalCustomerId: string;
+  }): Promise<SubscriptionObservation[]> {
+    return listStripeBlockingCustomerSubscriptions({
+      stripe: this.deps.stripe,
+      externalCustomerId: input.externalCustomerId,
+      priceIds: this.deps.priceIds,
+      logger: this.deps.logger,
+      webhookE2EOwner: this.deps.webhookE2EOwner,
     });
   }
 

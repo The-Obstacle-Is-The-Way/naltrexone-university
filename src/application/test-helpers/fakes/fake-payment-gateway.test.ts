@@ -115,6 +115,86 @@ describe('FakePaymentGateway', () => {
     });
   });
 
+  // BUG-321: a checkout Stripe refuses, and the customer's subscriptions it
+  // then lists, are canned answers the use case's sync is tested against.
+  describe('a refused checkout and the customer subscriptions it lists', () => {
+    const observation = {
+      userId: 'user_1',
+      externalCustomerId: 'cus_123',
+      externalSubscriptionId: 'sub_1',
+      plan: 'monthly' as const,
+      status: 'active' as const,
+      currentPeriodEnd: new Date('2026-11-01T00:00:00Z'),
+      cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-10-01T00:00:00Z'),
+      billingCycleAnchor: new Date('2026-10-01T00:00:00Z'),
+    };
+    const checkout = {
+      userId: 'user_1',
+      externalCustomerId: 'cus_123',
+      ...createTestRenewalTerms('monthly'),
+      successUrl: 'https://app/success',
+      cancelUrl: 'https://app/cancel',
+    };
+
+    it('throws the configured checkout error and still records the input', async () => {
+      const refusal = new Error('already subscribed');
+      const gateway = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://fake/checkout',
+        portalUrl: 'https://fake/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+        checkoutError: refusal,
+      });
+
+      await expect(gateway.createCheckoutSession(checkout)).rejects.toBe(
+        refusal,
+      );
+      expect(gateway.checkoutInputs).toEqual([checkout]);
+    });
+
+    it('lists the configured subscriptions and records the customer asked for', async () => {
+      const gateway = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://fake/checkout',
+        portalUrl: 'https://fake/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+        blockingCustomerSubscriptions: [observation],
+      });
+
+      await expect(
+        gateway.listBlockingCustomerSubscriptions({
+          externalCustomerId: 'cus_123',
+        }),
+      ).resolves.toEqual([observation]);
+      expect(gateway.blockingCustomerSubscriptionInputs).toEqual([
+        { externalCustomerId: 'cus_123' },
+      ]);
+    });
+
+    it('lists none by default, and throws a configured listing error', async () => {
+      const failure = new Error('stripe down');
+      const failing = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://fake/checkout',
+        portalUrl: 'https://fake/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+        blockingCustomerSubscriptionsError: failure,
+      });
+
+      await expect(
+        createGateway().listBlockingCustomerSubscriptions({
+          externalCustomerId: 'cus_123',
+        }),
+      ).resolves.toEqual([]);
+      await expect(
+        failing.listBlockingCustomerSubscriptions({
+          externalCustomerId: 'cus_123',
+        }),
+      ).rejects.toBe(failure);
+    });
+  });
+
   describe('createPortalSession', () => {
     it('returns configured portal URL and records input', async () => {
       const gateway = createGateway();

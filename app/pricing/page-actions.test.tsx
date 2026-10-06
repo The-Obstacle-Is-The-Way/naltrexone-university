@@ -384,7 +384,9 @@ describe('app/pricing', () => {
     });
   });
 
-  it('runSubscribeAction redirects to /pricing?reason=manage_billing when already subscribed', async () => {
+  // BUG-321: the page reads the subscription from the database, which the
+  // checkout's sync has just updated; this parameter only adds a notice.
+  it('runSubscribeAction redirects to /pricing?checkout=already_subscribed when already subscribed', async () => {
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -405,7 +407,9 @@ describe('app/pricing', () => {
         },
       );
 
-    await expect(action()).rejects.toThrow('/pricing?reason=manage_billing');
+    await expect(action()).rejects.toThrow(
+      '/pricing?checkout=already_subscribed',
+    );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       renewalOptIn: true,

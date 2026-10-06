@@ -22,6 +22,11 @@ export type PricingViewProps = {
   showTrialCtas?: boolean;
   manageBillingAction?: (formData: FormData) => Promise<void>;
   manageBillingReason?: PricingBillingRecoveryReason;
+  /**
+   * BUG-321: a Manage billing button inside the banner only. Unlike
+   * `manageBillingAction`, it leaves the plans in place.
+   */
+  bannerManageBillingAction?: (formData: FormData) => Promise<void>;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
 };
@@ -44,9 +49,11 @@ export function PricingView({
   showTrialCtas = false,
   manageBillingAction,
   manageBillingReason = 'manage_billing',
+  bannerManageBillingAction,
   subscribeMonthlyAction,
   subscribeAnnualAction,
 }: PricingViewProps) {
+  const bannerAction = manageBillingAction ?? bannerManageBillingAction;
   const isMonthlySelected = selectedPlan === 'monthly';
   const isAnnualSelected = selectedPlan === 'annual';
 
@@ -74,10 +81,10 @@ export function PricingView({
           >
             <span>{banner.message}</span>
             <div className="ml-4 flex items-center gap-3">
-              {manageBillingAction ? (
+              {bannerAction ? (
                 <AuthAwareCta
                   isAuthenticated={isAuthenticated}
-                  formAction={manageBillingAction}
+                  formAction={bannerAction}
                   signUpHref={getManageBillingSignUpHref(manageBillingReason)}
                   buttonProps={{
                     variant: 'outline',
