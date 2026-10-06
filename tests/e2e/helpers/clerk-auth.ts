@@ -66,7 +66,7 @@ export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
   } catch (error) {
     await releaseClerkE2ESession(input).catch(() => {
       console.warn(
-        'Could not sign out the Clerk E2E session after a failed setup attempt; it stays live until Clerk expires it',
+        'Could not confirm the sign-out after a failed setup attempt; a Clerk E2E session it created stays live until Clerk expires it',
       );
     });
     throw error;

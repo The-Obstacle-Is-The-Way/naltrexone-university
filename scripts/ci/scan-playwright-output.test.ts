@@ -1,104 +1,18 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { deflateRawSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  runFromCommandLine,
-  scanPlaywrightReport,
-} from './scan-playwright-output';
+import { runFromCommandLine } from './scan-playwright-output';
 
-type Entry = { name: string; text: string; store?: boolean; flags?: number };
-
-// A zip of the shape Playwright writes: local file headers, deflated or stored.
-function zipOf(entries: Entry[]) {
-  return Buffer.concat(
-    entries.flatMap(({ name, text, store, flags = 0x0800 }) => {
-      const raw = Buffer.from(text, 'utf8');
-      const data = store ? raw : deflateRawSync(raw);
-      const nameBytes = Buffer.from(name, 'utf8');
-      const header = Buffer.alloc(30);
-      header.writeUInt32LE(0x04034b50, 0);
-      header.writeUInt16LE(20, 4);
-      header.writeUInt16LE(flags, 6);
-      header.writeUInt16LE(store ? 0 : 8, 8);
-      header.writeUInt32LE(data.length, 18);
-      header.writeUInt32LE(raw.length, 22);
-      header.writeUInt16LE(nameBytes.length, 26);
-      return [header, nameBytes, data];
-    }),
-  );
-}
-
-function reportOf(entries: Entry[], outside = '', zip = zipOf(entries)) {
-  return `<!doctype html><html><body>${outside}<template id="playwrightReportBase64">data:application/zip;base64,${zip.toString('base64')}</template></body></html>`;
-}
-
-const clean = [{ name: 'report.json', text: '{"steps":["GET /app"]}' }];
-
-// BUG-328: Clerk development tokens hid inside the zip Playwright embeds in
-// its HTML report, where a plain-text scan could not see them.
-describe('scanPlaywrightReport', () => {
-  it('finds nothing in a clean report, and reads its embedded data', () => {
-    expect(scanPlaywrightReport(reportOf(clean))).toEqual({
-      entries: 1,
-      found: { clerkDbJwt: 0, devBrowserToken: 0, clerkTestingToken: 0 },
-    });
-  });
-
-  it.each([
-    ['clerkDbJwt', 'GET https://x.clerk.test/v1/client?__clerk_db_jwt=abc123'],
-    ['devBrowserToken', 'cookie dvb_2abcDEF345'],
-    ['clerkTestingToken', 'GET /v1/me?__clerk_testing_token=xyz789'],
-  ])('counts %s inside the embedded data', (shape, text) => {
-    const scan = scanPlaywrightReport(
-      reportOf([...clean, { name: 'steps.json', text }]),
-    );
-
-    expect(scan.found[shape as keyof typeof scan.found]).toBe(1);
-  });
-
-  it('reads stored entries too', () => {
-    const scan = scanPlaywrightReport(
-      reportOf([{ name: 'a.json', text: 'dvb_2abc', store: true }]),
-    );
-
-    expect(scan.found.devBrowserToken).toBe(1);
-  });
-
-  it('counts a shape outside the embedded data as well', () => {
-    const scan = scanPlaywrightReport(
-      reportOf(clean, '<p>__clerk_db_jwt=leaked</p>'),
-    );
-
-    expect(scan.found.clerkDbJwt).toBe(1);
-  });
-
-  // A scan that cannot see the embedded data would pass blindly, as BUG-307's
-  // closure scan did.
-  it('fails closed when it cannot find the embedded data', () => {
-    expect(() =>
-      scanPlaywrightReport('<html><body>no data</body></html>'),
-    ).toThrow('embedded report data not found');
-  });
-
-  it('fails closed on an entry whose sizes follow its data', () => {
-    expect(() =>
-      scanPlaywrightReport(
-        reportOf([], '', zipOf([{ name: 'a', text: 'x', flags: 0x0808 }])),
-      ),
-    ).toThrow('cannot be read');
-  });
-
-  it('fails closed when the zip stops before its end', () => {
-    expect(() =>
-      scanPlaywrightReport(
-        reportOf([], '', Buffer.concat([zipOf(clean), Buffer.from('junk')])),
-      ),
-    ).toThrow('cannot be read');
-  });
-});
-
+// BUG-328: the failure-output upload publishes only what this scan has read
+// in full and found free of Clerk credentials. Anything it cannot read as
+// text, it refuses instead of trying to decode.
 describe('runFromCommandLine', () => {
   let root: string | undefined;
 
@@ -125,6 +39,12 @@ describe('runFromCommandLine', () => {
     return root;
   };
 
+  const scan = (files: Record<string, string | Buffer>) => {
+    const out = output();
+    const code = runFromCommandLine(['test-results'], withFiles(files), out);
+    return { code, lines: out.lines };
+  };
+
   it('refuses to run without a directory to scan', () => {
     const out = output();
 
@@ -135,76 +55,111 @@ describe('runFromCommandLine', () => {
   });
 
   it('passes when there is no output to upload', () => {
-    const out = output();
-
-    expect(runFromCommandLine(['test-results'], withFiles({}), out)).toBe(0);
-    expect(out.lines).toEqual(['no Playwright output to scan']);
+    expect(scan({})).toEqual({
+      code: 0,
+      lines: ['no Playwright output to scan'],
+    });
   });
 
-  it('passes clean output, printing counts', () => {
-    const out = output();
-    const dir = withFiles({
-      'test-results/run/error-context.md': '# Page snapshot',
-      'test-results/.last-run.json': '{"status":"failed"}',
+  it('passes clean text output, printing counts', () => {
+    expect(
+      scan({
+        'test-results/run/error-context.md': '# Page snapshot',
+        'test-results/run/notes.json': '{"status":"failed"}',
+      }),
+    ).toEqual({
+      code: 0,
+      lines: [
+        'Playwright output: 2 files; parameter=0 devBrowserToken=0 jsonWebToken=0',
+      ],
     });
-
-    expect(runFromCommandLine(['test-results'], dir, out)).toBe(0);
-    expect(out.lines).toEqual([
-      'Playwright output: 2 files, 0 zip entries; clerkDbJwt=0 devBrowserToken=0 clerkTestingToken=0',
-    ]);
   });
 
   // Clerk development instances put the dev-browser token in redirect URLs,
   // which an error message can quote.
-  it('fails on a token in the output, printing counts and never the value', () => {
-    const out = output();
-    const dir = withFiles({
+  it('fails on a credential, printing counts and never the value', () => {
+    const { code, lines } = scan({
       'test-results/run/error-context.md':
-        'navigating to "http://localhost:3000/app?__clerk_db_jwt=secretvalue123"',
+        'navigated to "http://localhost:3000/app?__clerk_db_jwt=secretvalue123"',
     });
+
+    expect(code).toBe(1);
+    expect(lines.join('\n')).toContain('parameter=1');
+    expect(lines.join('\n')).not.toContain('secretvalue123');
+  });
+
+  it('finds a credential in an encoded form', () => {
+    expect(
+      scan({
+        'test-results/run/error-context.md':
+          'redirect_url=%2Fapp%3F__clerk_testing_token%3Dvalue1',
+      }).code,
+    ).toBe(1);
+  });
+
+  it.each([
+    ['a zip', 'test-results/data/0a1b.zip', Buffer.from('PK\u0003\u0004')],
+    ['an HTML report', 'test-results/report/index.html', '<html></html>'],
+    ['an image', 'test-results/run/test-failed-1.png', Buffer.from([0x89])],
+    ['a file without an extension', 'test-results/run/blob', 'text'],
+  ])('refuses %s, whose type it does not read', (_label, name, content) => {
+    expect(scan({ [name]: content })).toEqual({
+      code: 1,
+      lines: [
+        `refused ${name}: not a text type the scan reads`,
+        'Playwright output: 1 files; parameter=0 devBrowserToken=0 jsonWebToken=0',
+      ],
+    });
+  });
+
+  it.each([
+    ['invalid UTF-8', Buffer.from([0x23, 0xff, 0xfe])],
+    ['UTF-16 text', Buffer.from('# page\n', 'utf16le')],
+  ])('refuses a text file holding %s', (_label, content) => {
+    expect(
+      scan({ 'test-results/run/error-context.md': content }).lines[0],
+    ).toBe('refused test-results/run/error-context.md: not UTF-8 text');
+  });
+
+  it('refuses a symbolic link, which the upload would follow', () => {
+    const dir = withFiles({ 'outside/secret.md': 'dvb_2abcDEF345ghi' });
+    mkdirSync(path.join(dir, 'test-results'));
+    symlinkSync(
+      path.join(dir, 'outside/secret.md'),
+      path.join(dir, 'test-results/link.md'),
+    );
+    const out = output();
 
     expect(runFromCommandLine(['test-results'], dir, out)).toBe(1);
-    expect(out.lines.join('\n')).toContain('clerkDbJwt=1');
-    expect(out.lines.join('\n')).not.toContain('secretvalue123');
+    expect(out.lines[0]).toBe(
+      'refused test-results/link.md: not a regular file',
+    );
   });
 
-  it('decodes an HTML report it finds', () => {
-    const dir = withFiles({
-      'test-results/copy/index.html': reportOf([
-        { name: 's.json', text: 'cookie dvb_2abc' },
-      ]),
-    });
-
-    expect(runFromCommandLine(['test-results'], dir, output())).toBe(1);
+  // The upload excludes hidden files and trace.zip, so they never leave the
+  // runner; the stored auth state lives in the hidden `.auth` directory.
+  it('skips what the upload never publishes', () => {
+    expect(
+      scan({
+        'test-results/.auth/e2e-user.json': '{"value":"dvb_2abcDEF345ghi"}',
+        'test-results/.last-run.json': '{"status":"failed"}',
+        'test-results/run/trace.zip': Buffer.from('PK\u0003\u0004'),
+      }),
+    ).toEqual({ code: 0, lines: ['no Playwright output to scan'] });
   });
 
-  it('opens zip files', () => {
-    const dir = withFiles({
-      'test-results/data/0a1b.zip': zipOf([
-        { name: 'trace.network', text: '__clerk_testing_token=abc' },
-      ]),
-    });
+  // Only a missing directory means there is nothing to upload.
+  it('fails closed when it cannot read a directory', () => {
+    const dir = withFiles({ 'test-results': 'a file, not a directory' });
 
-    expect(runFromCommandLine(['test-results'], dir, output())).toBe(1);
-  });
-
-  // The upload excludes these, so they never leave the runner.
-  it('skips the stored auth state and trace.zip files', () => {
-    const dir = withFiles({
-      'test-results/.auth/e2e-user.json': '{"value":"dvb_2abc"}',
-      'test-results/run/trace.zip': zipOf([
-        { name: 'trace.network', text: '__clerk_db_jwt=abc' },
-      ]),
-    });
-
-    expect(runFromCommandLine(['test-results'], dir, output())).toBe(0);
+    expect(() => runFromCommandLine(['test-results'], dir, output())).toThrow(
+      'ENOTDIR',
+    );
   });
 
   it('scans only the directories it is given', () => {
     const dir = withFiles({
-      'playwright-report/index.html': reportOf([
-        { name: 's.json', text: '__clerk_db_jwt=abc' },
-      ]),
+      'playwright-report/index.html': '__clerk_db_jwt=value1',
       'test-results/run/error-context.md': '# Page snapshot',
     });
 

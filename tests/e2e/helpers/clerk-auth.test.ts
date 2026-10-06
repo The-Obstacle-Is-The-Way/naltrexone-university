@@ -162,6 +162,7 @@ describe('createClerkE2ESession', () => {
     expect(await clerkDriver.hasActiveSession()).toBe(false);
   });
 
+  // The setup project's bounded waits turn a hung Clerk step into this error.
   it('signs out a session that signed in but never confirmed', async () => {
     const clerkDriver = new (class extends FakeClerkDriver {
       override async waitForActiveSession(): Promise<void> {
@@ -199,7 +200,7 @@ describe('createClerkE2ESession', () => {
       }),
     ).rejects.toThrow('disk full');
     expect(warn).toHaveBeenCalledWith(
-      'Could not sign out the Clerk E2E session after a failed setup attempt; it stays live until Clerk expires it',
+      'Could not confirm the sign-out after a failed setup attempt; a Clerk E2E session it created stays live until Clerk expires it',
     );
   });
 });

@@ -273,23 +273,87 @@ describe('CI workflow', () => {
 });
 
 describe('Playwright artifact publication', () => {
-  function jobSteps(workflowPath: string): WorkflowStep[] {
-    return Object.values(readParsedWorkflow(workflowPath).jobs ?? {}).flatMap(
-      (job) => job.steps ?? [],
+  const ALL_WORKFLOWS = [
+    ...globSync('.github/workflows/*.yml'),
+    ...globSync('.github/workflows/*.yaml'),
+  ].sort();
+  const SCAN_COMMAND = 'pnpm exec tsx scripts/ci/scan-playwright-output.ts';
+
+  function jobsOf(workflowPath: string): WorkflowJob[] {
+    return Object.values(readParsedWorkflow(workflowPath).jobs ?? {});
+  }
+
+  function runsPlaywright(job: WorkflowJob): boolean {
+    return (job.steps ?? []).some((step) =>
+      /\btest:e2e\b|\bplaywright test\b/.test(step.run ?? ''),
     );
   }
 
-  // BUG-328: Clerk's testing-token route handler records each Clerk API call,
-  // tokens included, as a setup step, so every HTML report carries them.
-  it.each(WORKFLOW_PATHS)('never uploads the HTML report in %s', (path) => {
-    const uploads = jobSteps(path).filter((step) =>
-      step.uses?.startsWith('actions/upload-artifact@'),
-    );
+  function isUpload(step: WorkflowStep): boolean {
+    return step.uses?.startsWith('actions/upload-artifact@') ?? false;
+  }
 
-    for (const upload of uploads) {
-      expect(upload.with?.path).not.toContain('playwright-report');
-    }
+  function published(upload: WorkflowStep): string[] {
+    return (upload.with?.path ?? '')
+      .split('\n')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry && !entry.startsWith('!'));
+  }
+
+  // Guards the rules below from passing because they found no job to check.
+  it('finds every job that runs Playwright', () => {
+    expect(
+      ALL_WORKFLOWS.filter((path) => jobsOf(path).some(runsPlaywright)),
+    ).toEqual([CI_WORKFLOW_PATH, STRIPE_HOSTED_WORKFLOW_PATH].sort());
   });
+
+  // BUG-328: Clerk's testing-token route handler records each Clerk API call,
+  // tokens included, as a setup step, so every HTML report carries them. The
+  // scan skips hidden files because the upload leaves them out.
+  it.each(ALL_WORKFLOWS)(
+    'never uploads the HTML report or hidden files in %s',
+    (path) => {
+      for (const upload of jobsOf(path).flatMap((job) =>
+        (job.steps ?? []).filter(isUpload),
+      )) {
+        expect(upload.with?.path).not.toContain('playwright-report');
+        expect(String(upload.with?.['include-hidden-files'] ?? false)).toBe(
+          'false',
+        );
+      }
+    },
+  );
+
+  it.each(ALL_WORKFLOWS)(
+    'uploads Playwright output only after the scan passes it in %s',
+    (path) => {
+      for (const job of jobsOf(path).filter(runsPlaywright)) {
+        const steps = job.steps ?? [];
+        const scanIndex = steps.findIndex(
+          (step) => step.id === 'playwright_output_scan',
+        );
+        const scanned = (steps[scanIndex]?.run ?? '')
+          .replace(SCAN_COMMAND, '')
+          .trim()
+          .split(/\s+/);
+
+        steps.forEach((step, index) => {
+          if (!isUpload(step)) return;
+          expect(scanIndex).toBeGreaterThanOrEqual(0);
+          expect(scanIndex).toBeLessThan(index);
+          expect(steps[scanIndex]?.run?.startsWith(`${SCAN_COMMAND} `)).toBe(
+            true,
+          );
+          expect(step.if).toContain(
+            "steps.playwright_output_scan.outcome == 'success'",
+          );
+          for (const entry of published(step)) {
+            expect(scanned).toContain(entry.replace(/\/$/, ''));
+          }
+        });
+      }
+    },
+  );
 
   it.each([
     [CI_WORKFLOW_PATH, 'E2E smoke', 'e2e_smoke'],
@@ -299,7 +363,7 @@ describe('Playwright artifact publication', () => {
       'hosted_e2e',
     ],
   ])(
-    'uploads failure output only after a passing scan in %s',
+    'scans and uploads failure output only when E2E failed in %s',
     (workflowPath, e2eStepName, e2eStepId) => {
       const e2e = findParsedStep(workflowPath, e2eStepName);
       const scan = findParsedStep(workflowPath, 'Scan Playwright output');
@@ -307,23 +371,16 @@ describe('Playwright artifact publication', () => {
         workflowPath,
         'Upload Playwright failure output',
       );
-      const names = jobSteps(workflowPath).map((step) => step.name);
       const failed = `!cancelled() && steps.${e2eStepId}.outcome == 'failure'`;
 
       expect(e2e.id).toBe(e2eStepId);
-      expect(scan.id).toBe('playwright_output_scan');
       expect(scan.if).toBe(`\${{ ${failed} }}`);
-      expect(scan.run).toBe(
-        'pnpm exec tsx scripts/ci/scan-playwright-output.ts test-results',
-      );
+      expect(scan.run).toBe(`${SCAN_COMMAND} test-results`);
       expect(failureOutput.if).toBe(
         `\${{ ${failed} && steps.playwright_output_scan.outcome == 'success' }}`,
       );
       expect(failureOutput.with?.path).toBe(
         'test-results/\n!**/.auth/**\n!**/trace.zip\n',
-      );
-      expect(names.indexOf('Upload Playwright failure output')).toBeGreaterThan(
-        names.indexOf('Scan Playwright output'),
       );
     },
   );

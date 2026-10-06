@@ -8,6 +8,15 @@ config({ path: '.env', override: false, quiet: true });
 
 const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
 
+// BUG-328: page waits have no timeout by default. Bounded waits make a hung
+// Clerk step fail inside global setup, which then signs out the session it
+// created, instead of running until the test timeout closes the page. CI's
+// whole setup takes about 5 seconds.
+const SESSION_LIFECYCLE_TIMEOUTS = {
+  actionTimeout: 15_000,
+  navigationTimeout: 15_000,
+};
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -30,10 +39,12 @@ export default defineConfig({
       retries: process.env.CI ? 2 : 1,
       teardown: 'cleanup',
       testMatch: /global\.setup\.ts/,
+      use: SESSION_LIFECYCLE_TIMEOUTS,
     },
     {
       name: 'cleanup',
       testMatch: /global-teardown\.ts/,
+      use: SESSION_LIFECYCLE_TIMEOUTS,
     },
     {
       name: 'chromium',

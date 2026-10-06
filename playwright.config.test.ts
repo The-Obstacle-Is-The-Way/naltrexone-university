@@ -20,6 +20,24 @@ describe('playwright config', () => {
     expect(cleanupProject?.use?.storageState).toBeUndefined();
   });
 
+  // BUG-328: Playwright page waits have no timeout by default, so a hung Clerk
+  // wait ran until the test timeout closed the page, and a failed setup
+  // attempt could not sign out the session it had created.
+  it('bounds every page wait in global setup and teardown', () => {
+    const testTimeout = config.timeout ?? 30_000;
+
+    for (const name of ['setup', 'cleanup']) {
+      const use = config.projects?.find(
+        (project) => project.name === name,
+      )?.use;
+
+      for (const timeout of [use?.actionTimeout, use?.navigationTimeout]) {
+        expect(timeout).toBeGreaterThan(0);
+        expect(timeout).toBeLessThanOrEqual(testTimeout / 2);
+      }
+    }
+  });
+
   it('defers cleanup auth-state loading until global teardown executes', () => {
     const source = readFileSync('playwright.config.ts', 'utf8');
 
