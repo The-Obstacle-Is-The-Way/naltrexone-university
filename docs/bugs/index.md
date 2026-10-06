@@ -8,12 +8,13 @@
 - **Next.** Archive each Verifying record when its check passes. Every AUDIT-013 finding is now filed.
 - **Owner decisions pending.** BUG-319: whether to adopt Skew Protection; BUG-323: whether to keep the firewall rule as defence in depth.
 
-**Next Bug ID:** BUG-329
+**Next Bug ID:** BUG-330
 
 ## Active
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
+| [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P3 | Open — canonicalize generated instance names before passing them to child commands |
 | [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Verifying — stable action IDs across two production builds and the Sentry checks; due 2026-10-19 |
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — the limits reach production and answer 429 when exceeded; due 2026-10-19 |
 | [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) | Exported server actions accept caller-supplied dependencies | P1 | Verifying — the production deploy passes the action-manifest check and practice, bookmarks and checkout work; due 2026-10-13 |

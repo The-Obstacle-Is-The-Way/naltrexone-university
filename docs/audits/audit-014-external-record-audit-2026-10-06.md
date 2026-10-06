@@ -46,6 +46,8 @@ All source paths below refer to the baseline above. Line numbers in a dated pre-
 
 The decided simplification removes this extra ID and manual propagation, retaining logger injection. Adding AsyncLocalStorage would retain a second correlation mechanism without an established need. Before implementation, the owner checks private consumers; repository inspection cannot establish those. Local correlation and hosted grouping are explicitly distinguished.
 
+The local shipping gate also reproduced [BUG-329](../bugs/bug-329-local-test-target-changes-in-child-commands.md): a long generated local instance name changes when a child command resolves it again. E2E failed at Docker startup before provider tests. The record contains the pure resolver reproduction, options and canonicalization decision. A short explicit instance is the audit workaround; no resolver code changed.
+
 ## Recently archived records
 
 Each row's referenced PRs, numeric approvals and CI conclusions were checked where present in the receipt ledger. An old production assignment outside the returned Vercel inventory remains an attributed operator receipt, even when GitHub confirms a successful deployment. Current source or a passing current test does not reproduce the historical red run, screenshots, production database census or local gate counts.
@@ -83,7 +85,7 @@ Each row's referenced PRs, numeric approvals and CI conclusions were checked whe
 
 ## Registers, guides and publication checks
 
-- Active bug/debt row statuses now match their record verbatim. Every Verifying bug is in Now with its check and due date. BUG-328 is removed from Active; its inbound and outbound links follow the archive convention. Next IDs are BUG-329, DEBT-505 and AUDIT-015.
+- Active bug/debt row statuses now match their record verbatim. Every Verifying bug is in Now with its check and due date. BUG-328 is removed from Active; its inbound and outbound links follow the archive convention. Next IDs are BUG-330, DEBT-505 and AUDIT-015.
 - Deferred rows have revive triggers. Completed historical tails are linked forward rather than reopened. The production bootstrap row is an owner-reported operational state; it was not checked against the database.
 - The logging guide now states actual retention and the absence of a pino-to-Sentry transport. The dependency protocol distinguishes Dependabot scheduling from pnpm's release-age check. Testing guidance points to the archived artifact record.
 - The documentation guard passes with no broken live links or invalid register metadata. It reports 44 pre-existing missing archive targets; these are not proof of a new broken link, and replacements were not invented. The heading suite passes seven cases. Re-run both after edits, as the task requires.
