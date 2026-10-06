@@ -8,7 +8,7 @@
 - **Next.** The remaining security findings, each filed with its fix.
 - **Owner decisions pending.** None for bugs.
 
-**Next Bug ID:** BUG-327
+**Next Bug ID:** BUG-328
 
 ## Active
 
@@ -21,6 +21,7 @@
 | [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | Verifying — no unexplained failed sync on a refused checkout in production logs for two weeks; due 2026-10-20 |
 | [BUG-325](./bug-325-malformed-requests-throw-and-write-oversized-logs.md) | Malformed anonymous requests make our code throw and write oversized error logs | P3 | Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20 |
 | [BUG-326](./bug-326-error-pages-send-people-to-public-issue-tracker.md) | Error pages send learners and payers to the public GitHub issue tracker | P3 | Verifying — the fix reaches production; due 2026-10-13 |
+| [BUG-327](./bug-327-dependabot-branches-build-with-preview-secrets.md) | Dependabot branches are built on Vercel with Preview secrets | P3 | In Progress — the fix is in this pull request |
 
 ## Parked (accepted risk)
 
