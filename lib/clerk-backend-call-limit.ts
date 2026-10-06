@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getClientIp } from '@/lib/request-ip';
 import {
   CLERK_BACKEND_CALL_RATE_LIMIT,
+  CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
   CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
 } from '@/src/adapters/shared/rate-limits';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
@@ -25,43 +26,46 @@ type ClerkRequest = {
   headers: Pick<Headers, 'get'>;
 };
 
-// Reads only the expiry; Clerk verifies the token itself.
-function expiresBefore(token: string, nowSeconds: number): boolean {
+// Reads only the claims; Clerk verifies the token itself.
+function claims(token: string): { exp?: unknown; sid?: unknown } | undefined {
   try {
     const payload: unknown = JSON.parse(
       Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'),
     );
-    const exp =
-      payload && typeof payload === 'object' && 'exp' in payload
-        ? payload.exp
-        : undefined;
-    return typeof exp === 'number' && exp <= nowSeconds;
+    return payload && typeof payload === 'object' ? payload : undefined;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+// The session a GET would refresh: an expired session token alongside a
+// refresh cookie. Its ID keys the per-session limit.
+function refreshingSession(
+  request: ClerkRequest,
+  nowSeconds: number,
+): { id: string } | undefined {
+  if (request.method !== 'GET') return undefined;
+  const cookies = request.cookies.getAll();
+  if (!cookies.some(({ name }) => name.startsWith('__refresh_')))
+    return undefined;
+  for (const { name, value } of cookies) {
+    if (name !== '__session' && !name.startsWith('__session_')) continue;
+    const payload = claims(value);
+    if (typeof payload?.exp === 'number' && payload.exp <= nowSeconds)
+      return { id: typeof payload.sid === 'string' ? payload.sid : 'unknown' };
+  }
+  return undefined;
 }
 
 export function triggersClerkBackendCall(
   request: ClerkRequest,
   nowSeconds = Math.floor(Date.now() / 1000),
 ): boolean {
-  if (
+  return (
     HANDSHAKE_NAMES.some(
       (name) =>
         request.nextUrl.searchParams.has(name) || request.cookies.has(name),
-    )
-  )
-    return true;
-  if (request.method !== 'GET') return false;
-  const cookies = request.cookies.getAll();
-  const hasRefresh = cookies.some(({ name }) => name.startsWith('__refresh_'));
-  return (
-    hasRefresh &&
-    cookies.some(
-      ({ name, value }) =>
-        (name === '__session' || name.startsWith('__session_')) &&
-        expiresBefore(value, nowSeconds),
-    )
+    ) || refreshingSession(request, nowSeconds) !== undefined
   );
 }
 
@@ -89,7 +93,8 @@ function tooManyRequests(
 }
 
 /**
- * Limits these requests per client address, then site-wide, before they reach
+ * Limits these requests per client address, per refreshing session, then
+ * site-wide, before they reach
  * Clerk. Returns the 429 response, or null to continue. A limiter failure,
  * including one while loading it, lets the request through: failing closed
  * would break every real session refresh while the database is down, and the
@@ -108,6 +113,15 @@ export async function limitClerkBackendCalls(
     });
     if (!perAddress.success)
       return tooManyRequests(request, perAddress.retryAfterSeconds);
+    const session = refreshingSession(request, Math.floor(Date.now() / 1000));
+    if (session) {
+      const perSession = await limiter.limit({
+        key: `clerk-backend-call:session:${session.id}`,
+        ...CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
+      });
+      if (!perSession.success)
+        return tooManyRequests(request, perSession.retryAfterSeconds);
+    }
     const site = await limiter.limit({
       key: 'clerk-backend-call:site',
       ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT,

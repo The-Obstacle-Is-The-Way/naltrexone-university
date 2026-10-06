@@ -6,6 +6,7 @@ import {
 } from '@/lib/clerk-backend-call-limit';
 import {
   CLERK_BACKEND_CALL_RATE_LIMIT,
+  CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
   CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
   ONE_MINUTE_MS,
 } from '@/src/adapters/shared/rate-limits';
@@ -42,22 +43,28 @@ function request(
 }
 
 // A session token's payload is read only for its expiry; the SDK verifies it.
-function sessionToken(exp: number): string {
+function sessionToken(exp: number, sid = 'sess_a'): string {
   const part = (value: object) =>
     Buffer.from(JSON.stringify(value)).toString('base64url');
-  return `${part({ alg: 'RS256' })}.${part({ exp })}.signature`;
+  return `${part({ alg: 'RS256' })}.${part({ exp, sid })}.signature`;
 }
 
 // BUG-323: some requests make Clerk's SDK call Clerk's Backend API, whose
 // limit every signed-in page shares. They are limited before Clerk sees them.
 describe('requests that make Clerk call its Backend API', () => {
-  it('are limited to 30 a minute per address and 300 a minute site-wide', () => {
+  // The site-wide cap is a share of what it protects: Clerk's production
+  // limit is 1,000 calls per 10 seconds, about 6,000 a minute.
+  it('are limited per address, per session and site-wide', () => {
     expect(CLERK_BACKEND_CALL_RATE_LIMIT).toEqual({
       limit: 30,
       windowMs: ONE_MINUTE_MS,
     });
+    expect(CLERK_BACKEND_CALL_SESSION_RATE_LIMIT).toEqual({
+      limit: 6,
+      windowMs: ONE_MINUTE_MS,
+    });
     expect(CLERK_BACKEND_CALL_SITE_RATE_LIMIT).toEqual({
-      limit: 300,
+      limit: 1000,
       windowMs: ONE_MINUTE_MS,
     });
   });
@@ -147,6 +154,48 @@ describe('limiting requests that make Clerk call its Backend API', () => {
       { key: 'clerk-backend-call:unknown', ...CLERK_BACKEND_CALL_RATE_LIMIT },
       { key: 'clerk-backend-call:site', ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT },
     ]);
+  });
+
+  // Clerk refreshes only a genuine session, whose ID is fixed, so one session
+  // replayed from many addresses is still limited.
+  it('also counts a session refresh against its session', async () => {
+    const limiter = new FakeRateLimiter([
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+      UNDER_LIMIT,
+    ]);
+    const refresh = request('https://example.com/pricing', {
+      cookie: `__session=${sessionToken(1, 'sess_replayed')}; __refresh_abc=x`,
+    });
+
+    expect(
+      await limitClerkBackendCalls(
+        refresh,
+        async () => limiter,
+        () => {},
+      ),
+    ).toBeNull();
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:unknown',
+      'clerk-backend-call:session:sess_replayed',
+      'clerk-backend-call:site',
+    ]);
+  });
+
+  it('answers 429 when one session refreshes too often', async () => {
+    const limiter = new FakeRateLimiter([UNDER_LIMIT, OVER_LIMIT]);
+    const refresh = request('https://example.com/pricing', {
+      cookie: `__session=${sessionToken(1)}; __refresh_abc=x`,
+    });
+
+    const response = await limitClerkBackendCalls(
+      refresh,
+      async () => limiter,
+      () => {},
+    );
+
+    expect(response?.status).toBe(429);
+    expect(limiter.inputs).toHaveLength(2);
   });
 
   // One address over its own limit stops counting toward the site budget, so

@@ -1,0 +1,108 @@
+# BUG-323: Anonymous Requests Can Spend Clerk's Shared Backend API Limit
+
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
+**Status:** Verifying — the limits reach production and answer 429 when exceeded; due 2026-10-19
+**Priority:** P1
+**Date:** 2026-10-05
+**Resolved:** —
+**Verification receipts:** —
+
+---
+
+## Summary
+
+Some request shapes make Clerk's SDK, inside our middleware, call Clerk's Backend API with our secret key before the request is answered. Anyone can send them, without an account.
+
+Clerk limits each production instance's Backend API calls, and every signed-in page shares that allowance: `currentUser()` is one such call. So enough of these requests would use the allowance up, and every signed-in page, practice and subscribe would fail until they stopped. People could still sign in, but nothing behind sign-in would work.
+
+This record is deliberately general. The repository is public, and the behaviour is in Clerk's SDK, which other Clerk customers also run.
+
+## Evidence
+
+- **Clerk's SDK.** In `@clerk/backend` 3.18.1, used by `@clerk/nextjs` 7.9.x, two request shapes lead to a Backend API call before Clerk answers:
+  - a request carrying a handshake value;
+  - a GET whose session token has expired but can be refreshed.
+
+  Neither needs a valid account, and nothing checks the value before the call. Both were read in the SDK source.
+- **Measured on our development instance only, 2026-10-05.**
+  - Requests of the first shape each made a Backend API call.
+  - Enough of them left an unrelated Backend API call rate-limited for the rest of the window.
+  - The same number of ordinary requests did not.
+
+  Production was not tested.
+- **Clerk's documented limit.** Clerk documents a per-instance Backend API limit ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)), and states that `currentUser()` counts against it.
+- **Our middleware runs Clerk on every page and API route** (`proxy.ts`, the `config.matcher`). So these requests reach the SDK unless something stops them first.
+- **Prior art.** Clerk's tracker has an issue on the same code path, about failure handling rather than abuse: [clerk/javascript#9114](https://github.com/clerk/javascript/issues/9114).
+
+## Impact
+
+For as long as an attacker kept sending these requests, every signed-in page would fail. That includes the pricing page for a signed-in learner and the add-card flow. Nothing is lost permanently; the damage is the outage.
+
+## Options
+
+1. **A per-address limit in our middleware,** before Clerk runs.
+2. **A per-session limit on refreshes.** Clerk refreshes only a genuine session, whose ID is fixed, so one session replayed from many addresses is still limited.
+3. **A site-wide limit.** Many addresses together can get past a per-address limit; a site-wide cap bounds the total.
+4. **A Vercel firewall rule** at the edge.
+5. **Tell Clerk,** so the SDK stops spending a customer's allowance on unchecked requests.
+
+## Resolution (decided)
+
+All five, under the owner's 2026-09-28 delegation. The owner approved the firewall rule (option 4) and the report to Clerk (option 5).
+- Per address: 30 a minute.
+- Per refreshing session: 6 a minute.
+- Site-wide: 1,000 a minute.
+- A limiter that fails lets the request through and logs `clerk_backend_call_limiter_failed`. Failing closed would break every real refresh while the database is down, and the firewall still bounds the volume.
+
+**The site-wide cap is a trade-off, sized on purpose** (corrected 2026-10-05, before shipping, from a first figure of 300).
+- The cap cannot tell a real request from a forged one. So filling it refuses the real ones too, until the minute resets.
+- The people refused are returning visitors whose short-lived session token has expired. They see the page below. People already signed in, whose browser keeps its token fresh, are unaffected, and so are signed-out visitors.
+- That is the trade: without the cap, an attack drains Clerk's allowance and every signed-in page fails; with it, an attack delays returning visitors by a minute.
+- The cap is therefore sized against what it protects. Clerk allows 1,000 calls per 10 seconds, about 6,000 a minute. A cap of 1,000 a minute keeps over 80% of that allowance for signed-in pages.
+- Tripping the cap takes about 34 addresses at the per-address limit; at 300 it would have taken 10.
+- The per-session limit means replaying one genuine session helps an attacker no further.
+- Better discrimination, so that forged requests alone fill the cap, is tracked in [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md).
+
+What a limited person sees:
+- a browser gets a short page asking them to wait a minute and try again;
+- other clients get a JSON 429;
+- both carry `Retry-After`;
+- the response clears the handshake cookies, so the next request does not count again.
+
+## Progress
+
+- **2026-10-05, firewall.** The owner approved a Vercel firewall rule for these requests, which went live the same day. It was checked in production: normal pages were unaffected, and requests over the limit got 429. It also narrows the owner's 2026-09-20 decision against firewall rules (SPEC-017 E1, archived) to this one case.
+- **2026-10-05, report.** Reported to Clerk's security team (security@clerk.dev), following Clerk's vulnerability disclosure policy. No reply yet.
+- **2026-10-05, code.** The middleware limits (options 1 to 3) were added in the pull request that files this record.
+  - Tests in `proxy-clerk-backend-calls.test.ts`, red first, cover:
+    - each request shape, and the look-alikes it must ignore;
+    - each limit;
+    - the browser page and the cleared cookies;
+    - a failing or unloadable limiter;
+    - the proxy answering before Clerk runs.
+  - Each rule was deliberately broken in turn, and every break was caught by a test.
+
+## Operations
+
+- **Rollback.**
+  - Disable the firewall rule in the Vercel dashboard (Firewall, custom rules).
+  - Revert the pull request.
+- **Under attack:**
+  - Vercel's Attack Mode is available on every plan.
+  - The limiter's failures show in the logs as `clerk_backend_call_limiter_failed`.
+  - Clerk refusals show as 429s from `currentUser()` in Sentry.
+- **Unknown.** Vercel's Hobby plan includes a fixed number of rate-limited requests. Vercel has not documented what happens beyond it.
+
+## Verification
+
+- [x] The firewall stopgap is live and checked in production.
+- [x] The report to Clerk is filed.
+- [x] Unit tests, red first, cover the request shapes, both limits, the 429 responses and the fail-open path, and every deliberate break was caught.
+- [ ] In production after promotion: a request that would reach Clerk is answered 429 once over the limit, and normal pages are unaffected.
+- [ ] Decide whether to keep the firewall rule as defence in depth (recommended), and record the decision.
+
+## Related
+
+- [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md): the structural follow-ups. They are reading identity from the session token so signed-in pages stop spending the allowance, telling forged requests apart before they count, and alerting when a cap trips.
+- SPEC-017 (archived), E1: the earlier firewall decision.
