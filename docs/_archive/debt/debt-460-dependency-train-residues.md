@@ -427,14 +427,14 @@ if (name !== 'typescript' || Number.parseInt(version, 10) < 7) {
 }
 console.log({ resolved, name, version });
 NODE
-# Every suite that exercises a consumer module. Re-run the census above first,
-# and add the suite of any consumer it finds that is not covered here.
+# Every suite that exercises a consumer module, plus the topology guard. Re-run
+# the census above first, and add the suite of any consumer it does not cover.
 pnpm test --run tests/architecture-boundaries.test.ts tests/controller-output-datetime \
   src/adapters/controllers/controller-output-datetime-contract.test.ts \
   tests/fake-contract-register tests/playwright-lane-policy.test.ts tests/skip-policy \
   tests/test-double-fidelity scripts/crap-report tests/rule-to-test-register.test.ts \
   tests/server-action-input.test.ts tests/server-action-signatures.test.ts \
-  tests/server-action-source-scan.test.ts
+  tests/server-action-source-scan.test.ts tests/typescript-compiler-topology.test.ts
 ```
 
 ### Blocker 3 (independent of TS6-vs-TS7): the Next config pin
