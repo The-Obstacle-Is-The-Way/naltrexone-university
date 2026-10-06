@@ -4,7 +4,7 @@
 // every export of a 'use server' module takes only its input. It reads the
 // syntax because Function.length ignores default and rest parameters.
 import { globSync, readFileSync } from 'node:fs';
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 
 const ROOTS = ['app', 'src', 'lib', 'components'];
 const TEST_SUPPORT =

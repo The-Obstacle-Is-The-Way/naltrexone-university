@@ -1,4 +1,4 @@
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 
 // DEBT-465 Part 3 (ADR-019 amendment): the rule-to-test register states each
 // business rule in plain language and names the tests that prove it. This

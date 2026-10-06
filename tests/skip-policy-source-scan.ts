@@ -1,4 +1,4 @@
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 import { DOCUMENTED_SKIP_POLICY_ALLOWANCES } from './skip-policy-source-scan-allowances';
 import type { SkipPolicySourceFile } from './skip-policy-source-scan-files';
 import {

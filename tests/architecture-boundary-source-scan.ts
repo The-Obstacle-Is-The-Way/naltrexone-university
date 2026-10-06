@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import ts from '@typescript/typescript6';
 import fg from 'fast-glob';
-import ts from 'typescript';
 
 export type ArchitectureSourceFile = {
   filePath: string;
