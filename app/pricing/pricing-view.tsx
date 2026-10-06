@@ -54,6 +54,10 @@ export function PricingView({
   subscribeAnnualAction,
 }: PricingViewProps) {
   const bannerAction = manageBillingAction ?? bannerManageBillingAction;
+  // BUG-322: an error banner sits under the dialog that reopens for the
+  // selected plan, so that dialog repeats it.
+  const checkoutErrorMessage =
+    banner?.tone === 'error' ? banner.message : undefined;
   const isMonthlySelected = selectedPlan === 'monthly';
   const isAnnualSelected = selectedPlan === 'annual';
 
@@ -182,6 +186,9 @@ export function PricingView({
                     plan="monthly"
                     hasTrial={showTrialCtas}
                     initiallyOpen={isMonthlySelected}
+                    errorMessage={
+                      isMonthlySelected ? checkoutErrorMessage : undefined
+                    }
                     subscribeAction={subscribeMonthlyAction}
                   />
                 ) : (
@@ -229,6 +236,9 @@ export function PricingView({
                     plan="annual"
                     hasTrial={showTrialCtas}
                     initiallyOpen={isAnnualSelected}
+                    errorMessage={
+                      isAnnualSelected ? checkoutErrorMessage : undefined
+                    }
                     subscribeAction={subscribeAnnualAction}
                   />
                 ) : (

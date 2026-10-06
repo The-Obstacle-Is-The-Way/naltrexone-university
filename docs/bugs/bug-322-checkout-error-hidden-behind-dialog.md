@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-05; resolution decided below
+**Status:** Verifying — the fix reaches production; due 2026-10-13
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -36,13 +36,20 @@ A willing buyer whose Checkout fails sees nothing explain why, and may assume th
 
 Option 2. The dialog is where the person retries, so the explanation belongs there. The page banner stays for a closed dialog.
 
+## Progress
+
+**2026-10-06, the fix.**
+- **`PlanConsentDialog` takes an `errorMessage`.** It shows above the consent controls as an `ErrorCard`, the registry's persistent inline error (F-3), which carries `role="alert"`.
+- **`PricingView` passes an error banner's message only to the dialog that reopens for the selected plan.** A dialog the person opens for the other plan shows none. The page banner stays for a closed dialog.
+- **Tests,** written red first in `plan-consent-dialog.browser.spec.tsx`. The reopened dialog contains the error as a visible alert; the other plan's dialog contains none. A server-rendered test cannot see a Radix dialog's portal, so the check is a browser test.
+- **Viewed.** A screenshot from Chromium with the app's stylesheet shows the error card inside the open dialog, above the terms, with the page banner blurred under the overlay. It is not committed.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] With `?checkout=error&plan=monthly`, the open dialog contains the error as an alert. Red first.
-- [ ] A browser test confirms the alert is visible and announced while the dialog is open.
-- [ ] A screenshot of the dialog showing the error is viewed.
+- [x] With `?checkout=error&plan=monthly`, the open dialog contains the error as an alert. Red first.
+- [x] A browser test confirms the alert is visible while the dialog is open, as an element with `role="alert"`, which screen readers announce.
+- [x] A screenshot of the dialog showing the error is viewed.
+- [ ] The fix reaches production.
 
 ## Related
 

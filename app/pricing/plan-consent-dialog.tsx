@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import type { PricingAction } from '@/app/pricing/pricing-auth-cta';
 import { ConsentSubmitButton } from '@/components/consent-submit-button';
 import { ConsentTerms } from '@/components/consent-terms';
+import { ErrorCard } from '@/components/error-card';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,9 +37,15 @@ export function PlanConsentDialog({
   plan,
   hasTrial,
   initiallyOpen = false,
+  errorMessage,
   subscribeAction,
 }: PlanConsentDetailsProps & {
   initiallyOpen?: boolean;
+  /**
+   * BUG-322: why the last attempt failed. The dialog covers the page's
+   * banner, so the reopened dialog shows it where the person retries.
+   */
+  errorMessage?: string | undefined;
   subscribeAction: PricingAction;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -78,6 +85,9 @@ export function PlanConsentDialog({
               : 'Review the terms, then subscribe.'}
           </DialogDescription>
         </DialogHeader>
+        {errorMessage ? (
+          <ErrorCard className="p-4">{errorMessage}</ErrorCard>
+        ) : null}
         <form
           action={subscribeAction}
           aria-label={`Subscribe ${plan} plan`}

@@ -279,3 +279,44 @@ for (const state of ['subscribed', 'needs attention'] as const) {
       .toBeVisible();
   });
 }
+
+// BUG-322: a failed checkout returns to pricing with the plan's dialog open,
+// and the dialog covers the page's error banner. The error shows inside it.
+test('shows a checkout error inside the dialog that reopens for its plan', async () => {
+  const screen = await render(
+    <PricingView
+      isEntitled={false}
+      banner={{ tone: 'error', message: 'Checkout failed. Please try again.' }}
+      selectedPlan="monthly"
+      subscribeMonthlyAction={async () => undefined}
+      subscribeAnnualAction={async () => undefined}
+    />,
+  );
+
+  const dialog = screen.getByRole('dialog');
+  await expect.element(dialog).toBeVisible();
+  await expect
+    .element(dialog.getByRole('alert'))
+    .toHaveTextContent('Checkout failed. Please try again.');
+  await expect.element(dialog.getByRole('alert')).toBeVisible();
+});
+
+test('shows no error in a dialog the person opens for the other plan', async () => {
+  const screen = await render(
+    <PricingView
+      isEntitled={false}
+      banner={{ tone: 'error', message: 'Checkout failed. Please try again.' }}
+      selectedPlan="monthly"
+      subscribeMonthlyAction={async () => undefined}
+      subscribeAnnualAction={async () => undefined}
+    />,
+  );
+  await userEvent.keyboard('{Escape}');
+  await screen
+    .getByRole('button', { name: 'Subscribe annual', exact: true })
+    .click();
+
+  const dialog = screen.getByRole('dialog');
+  await expect.element(dialog).toBeVisible();
+  await expect.element(dialog.getByRole('alert')).not.toBeInTheDocument();
+});
