@@ -657,9 +657,9 @@ For feature PRs into `dev`:
    to Check below), which needs the PR's reviewable diff unchanged since the
    approved head. A sync changes that diff when `dev` edited lines near the
    PR's own changes, within a hunk's context or close enough to join two hunks.
-   A force-push that drops the approved head from the PR cannot carry either.
-   The refusal then asks for this refresh. Sync with `dev` before requesting a
-   review when you can.
+   A force-push after which GitHub repointed the approval cannot carry either,
+   because the approved head has left the PR. The refusal then asks for this
+   refresh. Sync with `dev` before requesting a review when you can.
 
 ### Guard and Scanner Review Discipline
 

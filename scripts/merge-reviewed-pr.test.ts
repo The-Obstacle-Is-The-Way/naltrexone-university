@@ -507,13 +507,21 @@ describe('merge command', () => {
     expect(execFileSync).toHaveBeenCalledTimes(3);
   });
 
-  it('refuses to carry when a compare reaches GitHub’s 300-file ceiling', () => {
-    const pr = pullRequest();
+  // A truncated compare cannot prove the diff unchanged, so the refusal is the
+  // missing exact-head approval and its instruction to request a full review.
+  it('does not carry when a compare reaches GitHub’s 300-file ceiling', () => {
+    const pr = {
+      ...pullRequest(pushedAt('2026-09-22T04:00:00Z')),
+      ...pushes(
+        [OLD_HEAD, '2026-09-22T02:00:00Z'],
+        [HEAD, '2026-09-22T04:00:00Z'],
+      ),
+    };
     vi.mocked(execFileSync)
       .mockReturnValueOnce(
         JSON.stringify({ data: { repository: { pullRequest: pr } } }),
       )
-      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', OLD_HEAD)]]))
+      .mockReturnValueOnce(JSON.stringify([[review()]]))
       .mockReturnValueOnce(
         compared(
           Array.from({ length: 300 }, (_, index) => ({
@@ -525,7 +533,7 @@ describe('merge command', () => {
       );
 
     expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
-      'may be truncated',
+      '@coderabbitai full review',
     );
     expect(execFileSync).toHaveBeenCalledTimes(3);
   });
