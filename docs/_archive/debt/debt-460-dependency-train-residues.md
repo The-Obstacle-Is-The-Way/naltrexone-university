@@ -37,12 +37,13 @@ Since [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-universit
 - `typescript` is TypeScript 7 and owns `tsc`. `pnpm typecheck` and Next's
   build-time type check both use it, and `next.config.ts` no longer pins
   `useTypeScriptCli`.
-- `@typescript/typescript6` serves the classic compiler API. Eleven owned
+- `@typescript/typescript6` serves the classic compiler API. Twelve owned
   modules import it:
   - under `tests/`: `architecture-boundary-source-scan.ts`,
     `controller-output-datetime-source-scan.ts`,
     `fake-contract-register-source-scan.ts`, `playwright-lane-policy.test.ts`,
-    `skip-policy-source-scan.ts`, `skip-policy-source-scan-script-kind.ts`,
+    `server-action-source-scan.ts`, `skip-policy-source-scan.ts`,
+    `skip-policy-source-scan-script-kind.ts`,
     `test-double-fidelity-port-double-scan.ts` and
     `test-double-fidelity-source-scan.ts`;
   - under `scripts/`: `crap-report.ts`, `crap-report.test.ts` and
@@ -301,7 +302,7 @@ node -e "console.log(JSON.stringify(require('typescript/package.json').exports,n
 *Corrected 2026-10-05: the probe targeted `@typescript/native` while the aliases
 stood; [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) made canonical `typescript` the TypeScript 7 package.*
 
-### Blocker 2 (ours): eleven modules use the classic compiler API
+### Blocker 2 (ours): twelve modules use the classic compiler API
 
 The 2026-08-19 classification of the original three consumers:
 
@@ -318,16 +319,16 @@ node -e "const a=require('@typescript/native/unstable/ast'); console.log({create
 # { createSourceFile: 'undefined', forEachChild: 'undefined' }
 ```
 
-*Corrected 2026-10-05: there are now eleven consumer modules, listed in
+*Corrected 2026-10-06: there are now twelve consumer modules, listed in
 "Current TypeScript topology". The contract test above reaches the API through
 `tests/controller-output-datetime-source-scan.ts`, and
 `tests/server-span-family-boundary.test.ts` was removed when the span scanner
-became a typed runtime boundary. Cleanup B must classify and port all eleven.
+became a typed runtime boundary. Cleanup B must classify and port all twelve.
 The dated probe above targeted `@typescript/native`; since [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) the
 same probe reads `require('typescript/unstable/ast')` and prints the same
 result.*
 
-**Trigger:** all eleven run on a supported TS7-era API. A green behavior suite
+**Trigger:** all twelve run on a supported TS7-era API. A green behavior suite
 is not sufficient by itself: today it runs against TypeScript 6. First census
 all three TypeScript package names, including subpaths, and inspect every hit:
 
@@ -431,7 +432,9 @@ NODE
 pnpm test --run tests/architecture-boundaries.test.ts tests/controller-output-datetime \
   src/adapters/controllers/controller-output-datetime-contract.test.ts \
   tests/fake-contract-register tests/playwright-lane-policy.test.ts tests/skip-policy \
-  tests/test-double-fidelity scripts/crap-report tests/rule-to-test-register.test.ts
+  tests/test-double-fidelity scripts/crap-report tests/rule-to-test-register.test.ts \
+  tests/server-action-input.test.ts tests/server-action-signatures.test.ts \
+  tests/server-action-source-scan.test.ts
 ```
 
 ### Blocker 3 (independent of TS6-vs-TS7): the Next config pin
