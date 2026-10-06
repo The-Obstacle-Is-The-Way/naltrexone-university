@@ -295,8 +295,12 @@ describe('proxy with the Clerk Backend API limit', () => {
     vi.restoreAllMocks();
   });
 
-  async function proxyWith(limiter: FakeRateLimiter) {
+  async function proxyWith(
+    limiter: FakeRateLimiter,
+    publishableKey = 'pk_live_x',
+  ) {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = publishableKey;
     const clerkRuns = vi.fn();
     vi.doMock('@clerk/nextjs/server', () => ({
       clerkMiddleware: () => async () => {
@@ -338,6 +342,25 @@ describe('proxy with the Clerk Backend API limit', () => {
       ),
     );
 
+    expect(clerkRuns).toHaveBeenCalledTimes(1);
+  });
+
+  // The allowance at stake is the production instance's. A development
+  // instance handshakes every new browser session, so E2E, local work and
+  // Preview would trip the limit with legitimate traffic.
+  it('leaves a development Clerk instance unlimited', async () => {
+    const { proxy, clerkRuns, loadBackendCallLimiter } = await proxyWith(
+      new FakeRateLimiter([OVER_LIMIT]),
+      'pk_test_x',
+    );
+
+    await proxy(
+      ...proxyInvocation(
+        'https://example.com/pricing?__clerk_handshake_nonce=x',
+      ),
+    );
+
+    expect(loadBackendCallLimiter).not.toHaveBeenCalled();
     expect(clerkRuns).toHaveBeenCalledTimes(1);
   });
 

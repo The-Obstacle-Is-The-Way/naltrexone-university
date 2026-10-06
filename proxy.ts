@@ -233,6 +233,13 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
   return clerkMw;
 }
 
+function usesProductionClerkInstance(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith('pk_live_') ===
+    true
+  );
+}
+
 let cachedBackendCallLimiter: RateLimiter | null = null;
 
 async function loadContainerRateLimiter(): Promise<RateLimiter> {
@@ -261,8 +268,10 @@ export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
     }
 
     // BUG-323: limit requests that make Clerk call its Backend API, whose
-    // limit every signed-in page shares, before Clerk sees them.
-    if (triggersClerkBackendCall(request)) {
+    // limit every signed-in page shares, before Clerk sees them. Only a
+    // production instance: a development instance handshakes every new browser
+    // session, so E2E, local work and Preview would trip the limit.
+    if (usesProductionClerkInstance() && triggersClerkBackendCall(request)) {
       const limited = await limitClerkBackendCalls(
         request,
         loadBackendCallLimiter,

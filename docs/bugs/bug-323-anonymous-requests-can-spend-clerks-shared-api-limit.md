@@ -54,6 +54,9 @@ All five, under the owner's 2026-09-28 delegation. The owner approved the firewa
 - Per refreshing session: 6 a minute.
 - Site-wide: 1,000 a minute.
 - A limiter that fails lets the request through and logs `clerk_backend_call_limiter_failed`. Failing closed would break every real refresh while the database is down, and the firewall still bounds the volume.
+- **The limits apply only on a production Clerk instance** (a `pk_live_` key). The allowance at stake is production's.
+  - A development instance handshakes every new browser session, and that serves E2E, local work and Preview.
+  - The first version limited every instance. During this pull request's own gate, 9 of 63 E2E tests stopped at the limit page, because the suite opens dozens of sessions from one address.
 
 **The site-wide cap is a trade-off, sized on purpose** (corrected 2026-10-05, before shipping, from a first figure of 300).
 - The cap cannot tell a real request from a forged one. So filling it refuses the real ones too, until the minute resets.
@@ -99,6 +102,7 @@ What a limited person sees:
 - [x] The firewall stopgap is live and checked in production.
 - [x] The report to Clerk is filed.
 - [x] Unit tests, red first, cover the request shapes, both limits, the 429 responses and the fail-open path, and every deliberate break was caught.
+- [x] The full E2E suite passes with the limits in place (they stay off on the development instance it uses).
 - [ ] In production after promotion: a request that would reach Clerk is answered 429 once over the limit, and normal pages are unaffected.
 - [ ] Decide whether to keep the firewall rule as defence in depth (recommended), and record the decision.
 
