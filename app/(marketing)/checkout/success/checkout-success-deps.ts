@@ -27,6 +27,7 @@ export async function getCheckoutSuccessDeps(
     subscriptionVersions: container.createSubscriptionRepository(),
     getClerkAuth: auth,
     logger: container.logger,
+    rateLimiter: container.createRateLimiter(),
     stripe: getStripe(),
     priceIds: {
       monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,

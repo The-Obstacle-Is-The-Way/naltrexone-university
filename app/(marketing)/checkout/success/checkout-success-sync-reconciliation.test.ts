@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeRateLimiter,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -50,6 +51,7 @@ describe('syncCheckoutSuccess retry logging', () => {
       const deps = {
         authGateway: new FakeAuthGateway(user),
         subscriptionVersions: subscriptions,
+        rateLimiter: new FakeRateLimiter(),
         getClerkAuth: async () => ({
           userId: 'clerk_user_1',
           redirectToSignIn: () => {
@@ -145,6 +147,7 @@ describe('syncCheckoutSuccess retry logging', () => {
       const deps = {
         authGateway: new FakeAuthGateway(user),
         subscriptionVersions: subscriptions,
+        rateLimiter: new FakeRateLimiter(),
         getClerkAuth: async () => ({
           userId: 'clerk_user_1',
           redirectToSignIn: () => {
@@ -251,6 +254,7 @@ describe('syncCheckoutSuccess', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -346,6 +350,7 @@ describe('syncCheckoutSuccess', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -428,6 +433,7 @@ describe('syncCheckoutSuccess', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -510,6 +516,7 @@ describe('syncCheckoutSuccess', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -592,6 +599,7 @@ describe('syncCheckoutSuccess', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -665,6 +673,7 @@ describe('syncCheckoutSuccess', () => {
     const deps = {
       authGateway: new FakeAuthGateway(user),
       subscriptionVersions: subscriptions,
+      rateLimiter: new FakeRateLimiter(),
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {

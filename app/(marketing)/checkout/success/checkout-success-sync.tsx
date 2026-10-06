@@ -5,8 +5,10 @@ import {
   stripeSubscriptionEndsByPeriodEnd,
   stripeSubscriptionStatusToSubscriptionStatus,
 } from '@/src/adapters/gateways/stripe';
+import { CHECKOUT_SUCCESS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { isSubscriptionObservationAttemptsExhaustedError } from '@/src/application/errors';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import {
@@ -173,6 +175,25 @@ export async function syncCheckoutSuccess(
     const returnBackUrl = new URL(ROUTES.CHECKOUT_SUCCESS, d.appUrl);
     returnBackUrl.searchParams.set('session_id', sessionId);
     return clerkAuth.redirectToSignIn({ returnBackUrl });
+  }
+
+  // BUG-325: a well-shaped session ID still costs a Clerk lookup and a Stripe
+  // call, so each signed-in user is limited first. A buyer's confirmation
+  // matters more than the limit, so a limiter that fails lets the visit in.
+  const limit = await d.rateLimiter
+    .limit({
+      key: `checkout-success:${clerkAuth.userId}`,
+      ...CHECKOUT_SUCCESS_RATE_LIMIT,
+    })
+    .catch((error: unknown) => {
+      d.logger.warn?.(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Checkout success rate limiter failed; continuing without it',
+      );
+      return null;
+    });
+  if (limit && !limit.success) {
+    return failQuietly('rate_limited', {});
   }
 
   const user = await d.authGateway.requireUser();

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ROUTES } from '@/lib/routes';
+import type { RateLimitResult } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeRateLimiter,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { syncCheckoutSuccess } from './checkout-success-sync';
@@ -22,7 +24,10 @@ const redirectFn = (url: string): never => {
 
 // What a session ID that is not Stripe's costs: nothing past the shape check,
 // or one Stripe call that answers "no such session".
-function depsRecordingCalls(retrieveSession: () => Promise<never>) {
+function depsRecordingCalls(
+  retrieveSession: () => Promise<never>,
+  rateLimiter = new FakeRateLimiter(),
+) {
   const calls = { clerk: 0, stripe: 0 };
   const logger = new FakeLogger();
   const deps: CheckoutSuccessDeps = {
@@ -43,6 +48,7 @@ function depsRecordingCalls(retrieveSession: () => Promise<never>) {
       };
     },
     logger,
+    rateLimiter,
     stripe: {
       checkout: {
         sessions: {
@@ -130,5 +136,55 @@ describe('syncCheckoutSuccess with a session ID that is not a real one', () => {
     await expect(
       syncCheckoutSuccess({ sessionId: 'cs_test_real' }, deps, redirectFn),
     ).rejects.toBe(failure);
+  });
+});
+
+// BUG-325: a session ID of the right shape still costs a Clerk lookup and a
+// Stripe call, so each signed-in user is limited before either.
+describe('syncCheckoutSuccess under its per-user limit', () => {
+  const overLimit: RateLimitResult = {
+    success: false,
+    limit: 10,
+    remaining: 0,
+    retryAfterSeconds: 60,
+  };
+
+  it('redirects quietly, before the user lookup and Stripe, once over the limit', async () => {
+    const rateLimiter = new FakeRateLimiter([overLimit]);
+    const { deps, calls, logger } = depsRecordingCalls(async () => {
+      throw new Error('should not fetch a session');
+    }, rateLimiter);
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test_real' }, deps, redirectFn),
+    ).rejects.toMatchObject({ url: CHECKOUT_ERROR_ROUTE });
+
+    expect(rateLimiter.inputs).toEqual([
+      { key: 'checkout-success:clerk_user_1', limit: 10, windowMs: 60_000 },
+    ]);
+    expect(calls.stripe).toBe(0);
+    expect(logger.errorCalls).toEqual([]);
+    expect(logger.infoCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({ reason: 'rate_limited' }),
+      }),
+    ]);
+  });
+
+  // A buyer's confirmation matters more than the limit, so a limiter that
+  // fails lets the visit through.
+  it('lets the visit through when the limiter fails', async () => {
+    const failure = new Error('Stripe is down');
+    const { deps, calls } = depsRecordingCalls(
+      async () => {
+        throw failure;
+      },
+      new FakeRateLimiter(new Error('database unavailable')),
+    );
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test_real' }, deps, redirectFn),
+    ).rejects.toBe(failure);
+    expect(calls.stripe).toBe(1);
   });
 });

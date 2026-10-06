@@ -296,10 +296,12 @@ describe('app/pricing/subscribe-actions', () => {
     }
   });
 
-  // BUG-325: input the controller refuses is the caller's mistake, or a
-  // forgery, not a checkout failure, so it is not logged as one.
-  it('redirects a refused input to the error banner without logging it', async () => {
+  // BUG-325: a refused input is the caller's mistake, a forgery, or an offer
+  // that changed since the page loaded. It is not a checkout failure, so it is
+  // a warning with bounded content, never the caller's text.
+  it('warns about a refused input, with its length, instead of logging an error', async () => {
     const logError = vi.fn();
+    const logWarn = vi.fn();
     const redirectFn = createRedirectFn();
 
     await expect(
@@ -314,6 +316,7 @@ describe('app/pricing/subscribe-actions', () => {
             err('VALIDATION_ERROR', 'Invalid input'),
           redirectFn,
           logError,
+          logWarn,
         },
       ),
     ).rejects.toMatchObject({
@@ -324,6 +327,15 @@ describe('app/pricing/subscribe-actions', () => {
       '/pricing?checkout=error&plan=annual',
     );
     expect(logError).not.toHaveBeenCalled();
+    expect(logWarn).toHaveBeenCalledWith(
+      {
+        plan: 'annual',
+        idempotencyKeyLength: 5000,
+        errorCode: 'VALIDATION_ERROR',
+        errorMessage: 'Invalid input',
+      },
+      'Stripe checkout refused its input',
+    );
   });
 
   // A client can call an exported server action with any arguments, so the
