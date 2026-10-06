@@ -23,6 +23,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 ## Items
 
 ### 1. The public subscribe and billing actions throw on input that isn't form data (P3)
+
 - **Evidence.**
   - `subscribeMonthlyAction` and `subscribeAnnualAction` (`app/pricing/subscribe-actions.ts:49-55`) call `formData.get` before any check, as does `manageBillingAction` (`app/pricing/manage-billing-actions.ts:32-37`).
   - Any client can call a server action with arguments of its choosing. With a plain string, `formData.get` throws a `TypeError` before authentication. The error is unhandled, so `onRequestError` sends it to Sentry (`instrumentation.ts`).
@@ -31,6 +32,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **Shipped with [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) (2026-10-06).** Every form action returns at once for input that is not form data. `tests/server-action-input.test.ts` checks every exported action.
 
 ### 2. A refused subscribe logs the raw idempotency key at error level (P3)
+
 - **Evidence.**
   - A form post with valid consent fields and a huge `idempotencyKey` fails the controller's input check before authentication (`src/adapters/controllers/billing-controller.ts:37-50`).
   - `runSubscribeAction` then logs `{ plan, idempotencyKey, errorCode, errorMessage }` at error level as "Stripe checkout failed" (`app/pricing/subscribe-action.ts:50-59`).
@@ -38,6 +40,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **Decided.** Never log the key, only its length. A `VALIDATION_ERROR` is a warning, not a checkout failure, since it covers the caller's mistake, a forgery, and an offer that changed since the page loaded. Other failures stay errors. (First decided as silence for `VALIDATION_ERROR`, corrected after the independent review: our server raises "the displayed offer has changed" itself, and silence would hide a deploy that broke every checkout.)
 
 ### 3. `/checkout/success?session_id=` makes a Stripe call and a Sentry error per request (P3, signed in)
+
 - **Evidence.**
   - The page checks only that `session_id` is not empty (`app/(marketing)/checkout/success/checkout-success-sync.tsx:132-136`).
   - It then calls `requireUser` (Clerk) and `checkout.sessions.retrieve` (Stripe) (`:146-157`). Stripe's 404 is not transient, so it is thrown, unhandled, and reaches Sentry. Its message contains the submitted text.
@@ -48,6 +51,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   - Treat Stripe's `resource_missing` as a quiet `invalid_session_id`, logged at info. The exception is a session that exists under the other Stripe mode's key: that is a setup error, so it stays an error.
 
 ### 4. Next.js's own refusals of malformed action posts may reach Sentry (P3)
+
 - **Evidence (traced in Next's action handler, not confirmed by a test).** Next.js refuses some malformed server-action posts by throwing, and the reviewer traced those errors into `onRequestError`. None needs an account.
 - **Decided at filing.** Confirm with a test, and filter them in the server `beforeSend` if they arrive.
 - **Revised 2026-10-06: not filtered, with a trigger.**
@@ -56,6 +60,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   - If they ever appear and add noise, filter them by Next's error code then. Until then, our own errors keep the simpler path to Sentry.
 
 ### 5. The Sentry quota: accepted, as Sentry advises (P4)
+
 - **The concern.** The project is on Sentry's free plan, with a fixed monthly error quota and no on-demand budget. Once the month is used up, real errors are dropped until the next cycle. A flood costs no money, but it would blind monitoring.
 - **Why server-side fixes cannot settle it.** The project has one client key, and it is public in the production JavaScript (a non-printing match, 2026-10-05). Anyone can post events straight to Sentry's ingest endpoint, without touching our server.
 - **What Sentry says.**
@@ -72,6 +77,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   Spike protection limits the damage meanwhile. (First drafted as the primary P2 fix, and corrected after the owner challenged it on 2026-10-05.)
 
 ### 6. Smaller sources of per-request log lines (P4)
+
 - **Question page.** `app/(app)/app/questions/[slug]/page.tsx:53-62` logs the URL's `slug` and `from` uncapped, when review parameters are present. Needs sign-in. **Decided:** cap both, or log only flags.
 - **Unsigned webhook posts.** A request with a bogus signature header passes the header-presence check, then costs one rate-limiter write and two error lines before verification fails (Stripe `app/api/stripe/webhook/handler.ts:48-100`, Clerk and Resend similarly). The limiter bounds it (Audit #21 and SPEC-017 accepted this residual). **Decided:** log failed verifications at warn, once per limiter window. **Narrowed 2026-10-06:** a failed signature check, which anyone can cause, logs at warn with fixed text and the safe diagnostics. An invalid payload after a valid signature means the provider sent something unexpected, so it stays at error. The limiter already bounds the count, so "once per window" is dropped.
 - **Cron routes.** A warn line per unauthenticated request, with fixed text. **Accepted:** bounded and contentless.

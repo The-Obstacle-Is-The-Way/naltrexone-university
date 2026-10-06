@@ -1,9 +1,11 @@
 'use client';
 
-import { useRef } from 'react';
+import { useId, useRef } from 'react';
+import { useFormStatus } from 'react-dom';
 import type { PricingAction } from '@/app/pricing/pricing-auth-cta';
 import { ConsentSubmitButton } from '@/components/consent-submit-button';
 import { ConsentTerms } from '@/components/consent-terms';
+import { ErrorCard } from '@/components/error-card';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,16 +34,36 @@ export function PlanConsentDetails({
   );
 }
 
+// BUG-322: why the last attempt failed. It hides while a retry is pending, so
+// a retry that fails again shows, and announces, it afresh.
+function CheckoutError({ id, message }: { id: string; message: string }) {
+  const { pending } = useFormStatus();
+  if (pending) return null;
+  return (
+    <div id={id}>
+      <ErrorCard className="p-4">{message}</ErrorCard>
+    </div>
+  );
+}
+
 export function PlanConsentDialog({
   plan,
   hasTrial,
   initiallyOpen = false,
+  errorMessage,
   subscribeAction,
 }: PlanConsentDetailsProps & {
   initiallyOpen?: boolean;
+  /**
+   * BUG-322: why the last attempt failed. The dialog covers the page's
+   * banner, so the reopened dialog shows it where the person retries.
+   */
+  errorMessage?: string | undefined;
   subscribeAction: PricingAction;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const descriptionId = useId();
+  const errorId = useId();
   const pricing = PRICING_DATA[plan];
   const consent = pricing.consent[hasTrial ? 'trial' : 'standard'];
   return (
@@ -57,6 +79,11 @@ export function PlanConsentDialog({
       </DialogTrigger>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        // Focus moves to the title on open, which can cut off the error's
+        // alert, so the dialog's description includes it.
+        aria-describedby={
+          errorMessage ? `${descriptionId} ${errorId}` : descriptionId
+        }
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           titleRef.current?.focus();
@@ -72,7 +99,7 @@ export function PlanConsentDialog({
               ? 'Start your 7-day free trial'
               : `Subscribe to ${pricing.name}`}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             {hasTrial
               ? 'Review the terms, then start. No payment method is needed today.'
               : 'Review the terms, then subscribe.'}
@@ -83,6 +110,9 @@ export function PlanConsentDialog({
           aria-label={`Subscribe ${plan} plan`}
           className="space-y-4"
         >
+          {errorMessage ? (
+            <CheckoutError id={errorId} message={errorMessage} />
+          ) : null}
           <IdempotencyKeyField />
           <input
             type="hidden"
