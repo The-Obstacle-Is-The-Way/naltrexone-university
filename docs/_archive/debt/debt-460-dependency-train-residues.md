@@ -1,6 +1,6 @@
 # DEBT-460: Dependency Upgrade Train Residues (TS7 Dual-Compiler Seam, Clerk `createRouteMatcher` Deprecation, Biome Schema Pin Drift)
 
-**Status:** Deferred / Parked — standing rules; Cleanup B (one TypeScript package) blocked upstream; Cleanup A (de-alias) done in PR #1384 for issue #813
+**Status:** Deferred / Parked — standing rules; Cleanup B (one TypeScript package) blocked by Blockers 1 and 2; Cleanup A (de-alias) done in PR #1384 for issue #813
 **Priority:** P4
 **Date:** 2026-07-20
 **Baseline confirmed:** 2026-07-20 (each part verified against the installed packages and checked-in config on `dev`/`main` at `9f11e674`, promoted via PR #685 merge `b5fd6880`)
@@ -48,7 +48,9 @@ Since [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-universit
   - under `scripts/`: `crap-report.ts`, `crap-report.test.ts` and
     `rule-to-test-register.ts`.
 
-  The suites that exercise them are in the Cleanup B probe below.
+  The suites that exercise them are in the Cleanup B probe below. The topology
+  guard, `tests/typescript-compiler-topology.test.ts`, also loads
+  `@typescript/typescript6`, and Cleanup B must rewrite it too.
 - Stryker's sandbox `TSConfigPreprocessor` runs `import('typescript')` and
   calls the classic API (`parseConfigFileTextToJson`), but declares no
   `typescript` dependency. `packageExtensions` in `pnpm-workspace.yaml` gives
@@ -75,8 +77,9 @@ rg -l -g '*.{js,cjs,mjs}' -g '!**/typescript/**' -g '!**/@typescript/**' \
 ```
 
 It finds `next` and Stryker. A wider search for `typescript/package.json` also
-finds `tsx`, `jiti`, `playwright` and `@babel/core`. They only read package
-metadata, which TypeScript 7 still ships.
+finds `tsx`, `jiti`, `playwright` and `@babel/core`. The last three match only
+`@babel/preset-typescript/package.json`. `tsx` reads TypeScript's version and
+`tsconfig` metadata, which TypeScript 7 still ships.
 
 Verification outcomes, with commands and counts in [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384):
 - `tsc` reports 7.x and `tsc6` 6.x.
@@ -258,6 +261,10 @@ ts_peer_rows | cut -f1 | \
 ts_peer_rows | awk -F '\t' '$3 == "optional" { n++ } END { print n + 0 }'  # 42 optional
 ```
 
+*Corrected 2026-10-05: on the current lockfile the probe prints 46
+declarations, 43 names and 43 optional. The added name is another optional
+`@solana/*` peer; the three required declarations are unchanged.*
+
 ### Blocker 1 (upstream, not ours): TS7 ships no stable compiler API
 
 `typescript@7.0.2` maps its package-root export `"."` to
@@ -307,7 +314,7 @@ The 2026-08-19 classification of the original three consumers:
 The 2026-08-19 export probe that corrected the first two classifications:
 
 ```bash
-node -e "const a=require('typescript/unstable/ast'); console.log({createSourceFile:typeof a.createSourceFile,forEachChild:typeof a.forEachChild})"
+node -e "const a=require('@typescript/native/unstable/ast'); console.log({createSourceFile:typeof a.createSourceFile,forEachChild:typeof a.forEachChild})"
 # { createSourceFile: 'undefined', forEachChild: 'undefined' }
 ```
 
@@ -315,17 +322,19 @@ node -e "const a=require('typescript/unstable/ast'); console.log({createSourceFi
 "Current TypeScript topology". The contract test above reaches the API through
 `tests/controller-output-datetime-source-scan.ts`, and
 `tests/server-span-family-boundary.test.ts` was removed when the span scanner
-became a typed runtime boundary. Cleanup B must classify and port all eleven.*
+became a typed runtime boundary. Cleanup B must classify and port all eleven.
+The dated probe above targeted `@typescript/native`; since [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) the
+same probe reads `require('typescript/unstable/ast')` and prints the same
+result.*
 
 **Trigger:** all eleven run on a supported TS7-era API. A green behavior suite
 is not sufficient by itself: today it runs against TypeScript 6. First census
 all three TypeScript package names, including subpaths, and inspect every hit:
 
 ```bash
-rg -n \
+rg -n -g '*.{ts,tsx,js,mjs,cjs,mts,cts}' -g '!node_modules' -g '!.next' \
   -e "['\"](?:typescript|@typescript/typescript6|@typescript/native)(?:/[^'\"]*)?['\"]" \
-  -e '`(?:typescript|@typescript/typescript6|@typescript/native)(?:/[^`]*)?`' \
-  src tests scripts
+  -e '`(?:typescript|@typescript/typescript6|@typescript/native)(?:/[^`]*)?`' .
 ```
 
 The expected topology distinguishes the two cleanups:
@@ -428,7 +437,8 @@ pnpm test --run tests/architecture-boundaries.test.ts tests/controller-output-da
 ### Blocker 3 (independent of TS6-vs-TS7): the Next config pin
 
 **Cleared by Cleanup A ([PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384)).** The pin is removed; see "Current
-TypeScript topology" above.
+TypeScript topology" above. The rest of this section records the 2026-08-19
+analysis and plan.
 
 `next.config.ts`'s `experimental.useTypeScriptCli: false` is gated on the
 **name** `typescript` resolving to a package whose bin is not `tsc` — not on
@@ -564,17 +574,16 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
    together, keep the Stryker `packageExtensions` range on TypeScript 6, keep
    `typecheck` on bare `tsc`, and do not mistake a package-root version object
    for a compiler API. Cleanup A was done in [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384). *Corrected
-   2026-10-05: this rule covered the two aliases until that PR removed them.*
+   2026-10-05: this rule covered the two aliases until that PR removed them,
+   and Dependabot now updates both TypeScript packages.*
    Consolidation to one
    dependency still uses the enumerated triggers in "One-dependency
    consolidation checklist" above; do not restate it as the unevaluable "when
    consumers can run on the TS7-era API". Third-party TypeScript peer ranges
    are **not** part of that consolidation criterion; the 2026-08-19 census
-   clears the ranges, while the source sweep, current-`dev` de-alias experiment,
-   and required full gate check actual compatibility. Dependabot's updater
-   behavior is confirmed from its implementation record above; do not use an
-   unchanged PR as evidence unless a newer eligible alias target existed during
-   that run.
+   clears the ranges, while the source sweep, the 2026-08-19 de-alias
+   experiment, and the required full gate check actual compatibility. Only the
+   Stryker `packageExtensions` range stays outside Dependabot's updates.
 2. **Part 2 (gated migration):** before accepting any `@clerk/nextjs` major bump, migrate `proxy.ts` off `createRouteMatcher` per Clerk's guide, updating the `proxy.test.ts` DI seam in the same change. This is the binding trigger; no action needed until then.
 3. **Part 3 (fold into next Biome PR):** when reviewing the next Biome group PR, update the `$schema` URL in `biome.json` to the new version in the same PR (or run `biome migrate`). Optionally make that a standing checklist step for the `biome` Dependabot group.
 
