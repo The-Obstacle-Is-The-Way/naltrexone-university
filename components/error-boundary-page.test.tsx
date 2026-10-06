@@ -44,4 +44,27 @@ describe('ErrorBoundaryPage', () => {
     expect(headingClass).toContain('tracking-tight');
     expect(headingClass).toContain('text-foreground');
   });
+
+  // BUG-326: support by email, with the page and error ID, never a public
+  // issue tracker.
+  it('offers support by email with the page and error ID, not a public tracker', () => {
+    const html = renderToStaticMarkup(
+      <ErrorBoundaryPage
+        {...baseProps}
+        title="Billing"
+        error={Object.assign(new Error('boom'), { digest: 'digest-123' })}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const contact = [...doc.querySelectorAll('a')].find(
+      (link) => link.textContent === 'Contact support',
+    );
+
+    expect(contact?.getAttribute('href')).toBe(
+      `mailto:support@addictionboards.com?subject=${encodeURIComponent(
+        'Addiction Boards support: Billing (error ID digest-123)',
+      )}`,
+    );
+    expect(html).not.toContain('github.com');
+  });
 });

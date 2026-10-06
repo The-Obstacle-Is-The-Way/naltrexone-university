@@ -43,4 +43,24 @@ describe('app/global-error', () => {
       'text-2xl font-bold font-heading tracking-tight text-foreground',
     );
   });
+
+  // BUG-326: support by email, with the error ID, never a public tracker.
+  it('offers support by email with the error ID, not a public tracker', () => {
+    const html = renderToStaticMarkup(
+      <GlobalErrorPage
+        error={Object.assign(new Error('boom'), { digest: 'digest_123' })}
+        retry={() => {}}
+      />,
+    );
+    const contact = [...parseHtml(html).querySelectorAll('a')].find(
+      (link) => link.textContent === 'Contact support',
+    );
+
+    expect(contact?.getAttribute('href')).toBe(
+      `mailto:support@addictionboards.com?subject=${encodeURIComponent(
+        'Addiction Boards support: Something went wrong (error ID digest_123)',
+      )}`,
+    );
+    expect(html).not.toContain('github.com');
+  });
 });
