@@ -128,6 +128,61 @@ describe('DrizzleUserRepository', () => {
     );
   });
 
+  // BUG-320: a new user's first requests can each insert their row at once.
+  // The loser trips users_email_uq, not the Clerk ID index the upsert resolves
+  // conflicts on, yet the row it lost to is the same user's. Half the sessions
+  // upsert inside an outer transaction, as the Clerk webhook does, so the
+  // retry also runs from a savepoint.
+  it('ends concurrent first-time upserts for one new user with one row and no error', async () => {
+    const sessions = Array.from({ length: 6 }, () => createIntegrationDb());
+    try {
+      await Promise.all(sessions.map((session) => session.sql`select 1`));
+      for (let round = 0; round < 20; round += 1) {
+        const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+        const email = `it-${randomUUID()}@example.com`;
+
+        const results = await Promise.allSettled(
+          sessions.map((session, index) =>
+            index % 2 === 0
+              ? new DrizzleUserRepository(session.db).upsertByClerkId(
+                  clerkUserId,
+                  email,
+                )
+              : session.db.transaction((tx) =>
+                  new DrizzleUserRepository(tx).upsertByClerkId(
+                    clerkUserId,
+                    email,
+                  ),
+                ),
+          ),
+        );
+        const rows = await db
+          .select({ id: schema.users.id })
+          .from(schema.users)
+          .where(eq(schema.users.clerkUserId, clerkUserId));
+        cleanup.userIds.push(...rows.map(({ id }) => id));
+
+        expect(
+          results.flatMap((result) =>
+            result.status === 'rejected' ? [String(result.reason)] : [],
+          ),
+        ).toEqual([]);
+        expect(rows).toHaveLength(1);
+        expect(
+          new Set(
+            results.map((result) =>
+              result.status === 'fulfilled' ? result.value.id : undefined,
+            ),
+          ),
+        ).toEqual(new Set([rows[0]?.id]));
+      }
+    } finally {
+      await Promise.all(
+        sessions.map((session) => closeConnection(session.sql)),
+      );
+    }
+  });
+
   it('upserts users by clerk id and can find them', async () => {
     const repo = new DrizzleUserRepository(db);
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
