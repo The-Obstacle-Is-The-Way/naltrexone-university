@@ -5,14 +5,14 @@
 
 **Now** — 2026-10-05.
 - **In progress.** DEBT-498 increment 2b, History's rows and filters, follows the payment bugs (BUG-320 to BUG-322).
-- **Next.** DEBT-501's two P2 items (the reconcile cursor and legacy price IDs), then DEBT-502.
+- **Next.** DEBT-503 item 1 (identity from the session token), then DEBT-501's two P2 items (the reconcile cursor and legacy price IDs), then DEBT-502.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Whether a re-created account gets a fresh trial (DEBT-502).
   - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); and the counsel review.
   - The production content bootstrap (DEBT-483, Deferred below).
 
-**Next Debt ID:** DEBT-503 · **Next Frontend ID:** FE-056
+**Next Debt ID:** DEBT-504 · **Next Frontend ID:** FE-056
 
 ## Active
 
@@ -24,6 +24,7 @@
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — resolution decided in the record |
 | [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — decided per item; items 1 and 2 first |
 | [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
+| [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | Open — decided per item; item 1 (identity from the session token) first |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 

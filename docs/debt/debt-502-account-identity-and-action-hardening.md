@@ -35,9 +35,9 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 - **Evidence.** The sign-in path throws `INTERNAL_ERROR` (`clerk-auth-gateway.ts:36-39`), and the webhook skips the user (`clerk-webhook-controller.ts:264-272`). The fallback to `emailAddresses[0]` can pick an unverified address (`clerk-user-provisioner.ts:54-64`).
 - **Decided.** The owner confirms in the Clerk dashboard that a verified email is required for every sign-up method. Record the setting, and use only verified addresses.
 
-### 4. Clerk's rate limit is a single point of failure for signed-in traffic (P3, at scale)
+### 4. Clerk's rate limit is a single point of failure for signed-in traffic (moved to DEBT-503 on 2026-10-05)
 - **Evidence.** Every signed-in render and action calls `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65`), and Checkout makes two. Clerk documents 1,000 requests per 10 seconds in production.
-- **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. This is triggered by sustained traffic above a tenth of the limit.
+- **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. *Moved 2026-10-05 to [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md), at P2 and without waiting for the traffic trigger: BUG-323 showed the allowance can be spent from outside.*
 
 ### 5. Exported payment server actions accept caller-supplied dependencies (P3, hardening)
 - **Evidence.** `subscribeMonthlyAction(formData, deps?)` and `subscribeAnnualAction` (`app/pricing/subscribe-actions.ts:82-94`) take an optional `deps` used for test injection. A client calls a server action with arguments of its choosing. React decodes them only as data, or as references to registered server actions, never arbitrary code. So a crafted `deps` can only fail the caller's own request, or call actions the caller could call anyway.
