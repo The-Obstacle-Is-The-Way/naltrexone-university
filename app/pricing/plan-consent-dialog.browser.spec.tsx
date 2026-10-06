@@ -282,41 +282,91 @@ for (const state of ['subscribed', 'needs attention'] as const) {
 
 // BUG-322: a failed checkout returns to pricing with the plan's dialog open,
 // and the dialog covers the page's error banner. The error shows inside it.
-test('shows a checkout error inside the dialog that reopens for its plan', async () => {
+for (const plan of ['monthly', 'annual'] as const) {
+  const other = plan === 'monthly' ? 'annual' : 'monthly';
+
+  test(`shows a checkout error inside the ${plan} dialog, as part of what it announces`, async () => {
+    const screen = await render(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'error',
+          message: 'Checkout failed. Please try again.',
+        }}
+        dialogErrorMessage="Checkout failed. Please try again."
+        selectedPlan={plan}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog');
+    const alert = dialog.getByRole('alert');
+    await expect
+      .element(alert)
+      .toHaveTextContent('Checkout failed. Please try again.');
+    await expect.element(alert).toBeVisible();
+    // Focus moves to the title on open, which can cut off the alert, so the
+    // dialog's description also points at the error.
+    await expect
+      .element(dialog)
+      .toHaveAccessibleDescription(
+        expect.stringContaining('Checkout failed. Please try again.'),
+      );
+  });
+
+  test(`shows no error in the ${other} dialog the person opens instead`, async () => {
+    const screen = await render(
+      <PricingView
+        isEntitled={false}
+        banner={{
+          tone: 'error',
+          message: 'Checkout failed. Please try again.',
+        }}
+        dialogErrorMessage="Checkout failed. Please try again."
+        selectedPlan={plan}
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    await userEvent.keyboard('{Escape}');
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+    await screen
+      .getByRole('button', {
+        name: other === 'monthly' ? 'Subscribe monthly' : 'Subscribe annual',
+        exact: true,
+      })
+      .click();
+
+    const dialog = screen.getByRole('dialog');
+    await expect.element(dialog).toBeVisible();
+    await expect.element(dialog.getByRole('alert')).not.toBeInTheDocument();
+  });
+}
+
+// A retry that fails again lands on the same page; hiding the error while the
+// retry is pending lets it appear, and be announced, again.
+test('hides the error while a retry is pending', async () => {
+  const pending = createDeferred<void>();
   const screen = await render(
-    <PricingView
-      isEntitled={false}
-      banner={{ tone: 'error', message: 'Checkout failed. Please try again.' }}
-      selectedPlan="monthly"
-      subscribeMonthlyAction={async () => undefined}
-      subscribeAnnualAction={async () => undefined}
+    <PlanConsentDialog
+      plan="monthly"
+      hasTrial
+      initiallyOpen
+      errorMessage="Checkout failed. Please try again."
+      subscribeAction={() => pending.promise}
     />,
   );
-
   const dialog = screen.getByRole('dialog');
-  await expect.element(dialog).toBeVisible();
-  await expect
-    .element(dialog.getByRole('alert'))
-    .toHaveTextContent('Checkout failed. Please try again.');
   await expect.element(dialog.getByRole('alert')).toBeVisible();
-});
-
-test('shows no error in a dialog the person opens for the other plan', async () => {
-  const screen = await render(
-    <PricingView
-      isEntitled={false}
-      banner={{ tone: 'error', message: 'Checkout failed. Please try again.' }}
-      selectedPlan="monthly"
-      subscribeMonthlyAction={async () => undefined}
-      subscribeAnnualAction={async () => undefined}
-    />,
-  );
-  await userEvent.keyboard('{Escape}');
-  await screen
-    .getByRole('button', { name: 'Subscribe annual', exact: true })
-    .click();
-
-  const dialog = screen.getByRole('dialog');
-  await expect.element(dialog).toBeVisible();
-  await expect.element(dialog.getByRole('alert')).not.toBeInTheDocument();
+  await dialog.getByRole('checkbox').click();
+  try {
+    await dialog
+      .getByRole('button', { name: 'Start free trial', exact: true })
+      .click();
+    await expect.element(dialog.getByRole('alert')).not.toBeInTheDocument();
+  } finally {
+    pending.resolve();
+    await pending.promise;
+  }
 });

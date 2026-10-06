@@ -27,6 +27,11 @@ export type PricingViewProps = {
    * `manageBillingAction`, it leaves the plans in place.
    */
   bannerManageBillingAction?: (formData: FormData) => Promise<void>;
+  /**
+   * BUG-322: a failed checkout's message, shown inside the dialog that
+   * reopens for the selected plan, since that dialog covers the banner.
+   */
+  dialogErrorMessage?: string | undefined;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
 };
@@ -50,14 +55,11 @@ export function PricingView({
   manageBillingAction,
   manageBillingReason = 'manage_billing',
   bannerManageBillingAction,
+  dialogErrorMessage,
   subscribeMonthlyAction,
   subscribeAnnualAction,
 }: PricingViewProps) {
   const bannerAction = manageBillingAction ?? bannerManageBillingAction;
-  // BUG-322: an error banner sits under the dialog that reopens for the
-  // selected plan, so that dialog repeats it.
-  const checkoutErrorMessage =
-    banner?.tone === 'error' ? banner.message : undefined;
   const isMonthlySelected = selectedPlan === 'monthly';
   const isAnnualSelected = selectedPlan === 'annual';
 
@@ -187,7 +189,7 @@ export function PricingView({
                     hasTrial={showTrialCtas}
                     initiallyOpen={isMonthlySelected}
                     errorMessage={
-                      isMonthlySelected ? checkoutErrorMessage : undefined
+                      isMonthlySelected ? dialogErrorMessage : undefined
                     }
                     subscribeAction={subscribeMonthlyAction}
                   />
@@ -237,7 +239,7 @@ export function PricingView({
                     hasTrial={showTrialCtas}
                     initiallyOpen={isAnnualSelected}
                     errorMessage={
-                      isAnnualSelected ? checkoutErrorMessage : undefined
+                      isAnnualSelected ? dialogErrorMessage : undefined
                     }
                     subscribeAction={subscribeAnnualAction}
                   />

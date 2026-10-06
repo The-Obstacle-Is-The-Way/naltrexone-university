@@ -18,7 +18,7 @@ The banner is covered by the plan's consent dialog, which reopens. The overlay b
 
 ## Evidence
 
-- **The error redirect keeps the plan.** It goes to `toPricingRoute({ checkout: 'error', plan })` (`app/pricing/subscribe-action.ts:60-62`; also `subscribe-actions.ts:68` for a malformed form).
+- **The error redirect keeps the plan.** It goes to `toPricingRoute({ checkout: 'error', plan })` (`app/pricing/subscribe-action.ts:60-62`; also `subscribe-actions.ts:68` for a malformed form, lines at filing; BUG-324 since moved that redirect to `subscribe-to-plan.ts`).
 - **The plan in the URL reopens the dialog.** It makes `isMonthlySelected` (or the annual equivalent) true, which becomes `initiallyOpen`. `PlanConsentDialog` passes that to `<Dialog defaultOpen={initiallyOpen}>` (`app/pricing/plan-consent-dialog.tsx:48`, `app/pricing/pricing-view.tsx:172-179`). The dialog's `key` is unchanged, so one already open stays open.
 - **The banner sits under the overlay.** The banner (`app/pricing/pricing-view.tsx:65-100`) renders under the dialog overlay (`bg-background/80 backdrop-blur-sm`, `components/ui/dialog.tsx`).
 - **Tests cover the text only.** The page tests check the banner's text, not that it can be seen while the dialog is open.
@@ -39,15 +39,22 @@ Option 2. The dialog is where the person retries, so the explanation belongs the
 ## Progress
 
 **2026-10-06, the fix.**
-- **`PlanConsentDialog` takes an `errorMessage`.** It shows above the consent controls as an `ErrorCard`, the registry's persistent inline error (F-3), which carries `role="alert"`.
-- **`PricingView` passes an error banner's message only to the dialog that reopens for the selected plan.** A dialog the person opens for the other plan shows none. The page banner stays for a closed dialog.
-- **Tests,** written red first in `plan-consent-dialog.browser.spec.tsx`. The reopened dialog contains the error as a visible alert; the other plan's dialog contains none. A server-rendered test cannot see a Radix dialog's portal, so the check is a browser test.
+- **`PlanConsentDialog` takes an `errorMessage`.** It shows at the top of the consent form as an `ErrorCard`, the registry's persistent inline error (F-3), which carries `role="alert"`.
+- **Only a failed checkout's message reaches the dialog.** `buildPricingPresentation` derives `dialogErrorMessage` from `checkout=error` alone. `PricingView` gives it only to the dialog that reopens for the selected plan, so a dialog for the other plan shows none. The page banner stays for a closed dialog.
+- **Tests,** written red first in `plan-consent-dialog.browser.spec.tsx`. For both plans, the reopened dialog contains the error as a visible alert, and the other plan's dialog contains none. A server-rendered test cannot see a Radix dialog's portal, so these are browser tests.
 - **Viewed.** A screenshot from Chromium with the app's stylesheet shows the error card inside the open dialog, above the terms, with the page banner blurred under the overlay. It is not committed.
+
+**2026-10-06, the independent review's findings** (same pull request). It found no P0 to P2 issue; the fixes are below.
+- **Focus moves to the title as the dialog opens, which can cut off the alert's announcement.** The dialog's `aria-describedby` now names the error with the description, so it is read with the dialog. A browser test checks the dialog's accessible description.
+- **A retry that failed again changed nothing.** The card now hides while a retry is pending, then mounts, and is announced, again. A browser test checks that it is hidden while pending.
+- **Any error-toned banner reached the dialog.** Only `checkout=error` does now, and a unit test checks that an info banner and the portal's error do not.
+- **Deliberate:** the error reappears each time that plan's dialog opens, since the URL still carries it. The banner says the same, and Dismiss clears both.
+- **The pattern registry** lists the card in the plan consent composition.
 
 ## Verification
 
 - [x] With `?checkout=error&plan=monthly`, the open dialog contains the error as an alert. Red first.
-- [x] A browser test confirms the alert is visible while the dialog is open, as an element with `role="alert"`, which screen readers announce.
+- [x] A browser test confirms the alert is in the open dialog, visible to the browser, with `role="alert"` and in the dialog's accessible description. The browser lane loads no stylesheet, so whether it shows above the overlay is checked by the screenshot.
 - [x] A screenshot of the dialog showing the error is viewed.
 - [ ] The fix reaches production.
 
