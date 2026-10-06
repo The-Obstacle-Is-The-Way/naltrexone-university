@@ -23,13 +23,15 @@ const level =
  * `projectSafeErrorDiagnostics`; Pino redaction is not that boundary.
  */
 // Never log these env vars if accidentally attached. The logger test checks
-// this list against every secret the env schema declares (BUG-325).
+// this list against every secret the env schema declares, and every one the
+// source reads from process.env (BUG-325).
 export const SECRET_ENV_NAMES: readonly string[] = [
   'CLERK_SECRET_KEY',
   'CLERK_WEBHOOK_SIGNING_SECRET',
   'CONSENT_STATE_SECRET',
   'CRON_SECRET',
   'DATABASE_URL',
+  'E2E_CLERK_USER_PASSWORD',
   'NEXT_SERVER_ACTIONS_ENCRYPTION_KEY',
   'RESEND_API_KEY',
   'RESEND_WEBHOOK_SECRET',
