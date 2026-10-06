@@ -28,10 +28,11 @@ Inspected at `af21b710` (the code is unchanged from main `0f324edd`):
   into `run-local-test-db.ts`, which resolves it again. The environment retains
   the original database port while the second resolution changes the project.
 
-In the audit clone, run this read-only probe:
+From any clone, run this read-only probe with a fixed long-path fixture. The
+fixture directory need not exist; the resolver only uses the path string:
 
 ```bash
-pnpm exec tsx -e "import {resolveLocalTestTarget,createLocalTestTargetEnv} from './scripts/resolve-local-test-target';const a=resolveLocalTestTarget({env:{}});const b=resolveLocalTestTarget({env:createLocalTestTargetEnv(a)});console.log(JSON.stringify({firstLength:a.instanceId.length,secondLength:b.instanceId.length,sameInstance:a.instanceId===b.instanceId,sameProject:a.composeProjectName===b.composeProjectName,samePort:a.dbPort===b.dbPort}));"
+pnpm exec tsx -e "import {resolveLocalTestTarget,createLocalTestTargetEnv} from './scripts/resolve-local-test-target';const cwd='/tmp/naltrexone-university-external-audit-20261006';const a=resolveLocalTestTarget({env:{},cwd});const b=resolveLocalTestTarget({env:createLocalTestTargetEnv(a),cwd});console.log(JSON.stringify({firstLength:a.instanceId.length,secondLength:b.instanceId.length,sameInstance:a.instanceId===b.instanceId,sameProject:a.composeProjectName===b.composeProjectName,samePort:a.dbPort===b.dbPort}));"
 ```
 
 Output: `firstLength=54`, `secondLength=48`, `sameInstance=false`,
