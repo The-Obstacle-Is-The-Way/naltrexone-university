@@ -100,7 +100,7 @@ Each argument is a git revision or a lockfile path. The verifier refuses a name 
 |---:|---|
 | 0 | The candidate changes exactly the union of the source changes. |
 | 1 | Unexpected failure, such as `git` being unavailable. Nothing was verified. |
-| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a document that is not a pnpm lockfile, or YAML that pnpm never writes (`%YAML` or `%TAG` directives, anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
+| 2 | Usage or input error: a missing revision or file, an unreadable path, invalid YAML, a document that is not a pnpm lockfile, or YAML that pnpm never writes (a `---` document marker or any directive such as `%YAML` or `%TAG`, anchors, aliases, explicit tags, non-string keys, or `.nan` and `.inf`). |
 | 4 | Extra: the candidate changes an entry no source changes. |
 | 8 | Missing: the candidate omits a source change. |
 | 16 | Unmatched: the candidate changes an entry to a value no source proposes. |
