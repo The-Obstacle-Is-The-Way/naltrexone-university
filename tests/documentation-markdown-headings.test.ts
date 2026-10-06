@@ -7,13 +7,27 @@ import { describe, expect, it } from 'vitest';
 function headingsWithoutBlankLines(source: string): number[] {
   const lines = source.split('\n');
   const flagged: number[] = [];
-  let inFence = false;
+  // A fence closes only on its own character, at least as long, with nothing
+  // after it (CommonMark), so a fenced example of a shorter fence stays in.
+  let fence: { char: string; length: number } | null = null;
   lines.forEach((line, index) => {
-    if (/^\s*(```|~~~)/.test(line)) {
-      inFence = !inFence;
-      return;
+    const marker = /^\s{0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (marker) {
+      const run = marker[1] ?? '';
+      if (!fence) {
+        fence = { char: run[0] ?? '`', length: run.length };
+        return;
+      }
+      if (
+        run[0] === fence.char &&
+        run.length >= fence.length &&
+        (marker[2] ?? '').trim() === ''
+      ) {
+        fence = null;
+        return;
+      }
     }
-    if (inFence || !/^#{1,6}\s/.test(line)) return;
+    if (fence || !/^#{1,6}\s/.test(line)) return;
     const textBefore = index > 0 && lines[index - 1]?.trim() !== '';
     const textAfter =
       index + 1 < lines.length && lines[index + 1]?.trim() !== '';
@@ -45,6 +59,16 @@ describe('headingsWithoutBlankLines', () => {
       1,
     ]);
     expect(headingsWithoutBlankLines('Text.\n## Part\n\nMore.')).toEqual([2]);
+  });
+
+  // A fence closes only on its own character, at least as long, with nothing
+  // after it, so a fenced example of a shorter fence stays inside it.
+  it('keeps a longer fence open across a shorter fence inside it', () => {
+    expect(
+      headingsWithoutBlankLines(
+        '````md\n```\n# example heading\n```\n````\n\nText.\n# Live heading\nMore.',
+      ),
+    ).toEqual([8]);
   });
 
   it('ignores a hash inside a code fence, and one not followed by a space', () => {
