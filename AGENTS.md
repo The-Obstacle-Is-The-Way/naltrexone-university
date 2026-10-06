@@ -958,6 +958,10 @@ The indexes' earlier content is frozen, unchanged, in
 - **Files.** No file under `docs/` may exceed 300 KiB. Attach screenshots to
   the pull request, or compress them. The files already over the budget are
   listed in `scripts/documentation-asset-budget.ts`, and the list only shrinks.
+- **Headings.** Leave a blank line before and after every heading in live
+  Markdown, as CodeRabbit's markdownlint check (MD022) expects;
+  `tests/documentation-markdown-headings.test.ts` enforces it. Archived
+  records stay as written.
 
 The guard (`scripts/documentation-archive.ts`) enforces each of these:
 - one Now stanza, at most 2 KiB, and no Latest, Earlier or update-history label;

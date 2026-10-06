@@ -162,19 +162,23 @@ These surfaces were part of the original complaint, but no longer belong in the 
 These are the surfaces that still justify keeping this doc active:
 
 ### Dashboard (`app/(app)/app/dashboard/page.tsx`)
+
 - 4 stat cards (Total answered, Overall accuracy, etc.)
 - Current streak card
 - Ready to practice CTA card
 
 ### Question flow (`components/question/feedback.tsx`)
+
 - Wrong-answer explanation cards
 - Reference top divider
 
 ### Shared primitives / shared surfaces (`components/ui/`)
+
 - Notification provider toast shells
 - Any future read-only or decorative inner containers that currently inherit a stronger dark border by default
 
 ### Deliberately settled, not currently open
+
 - Choice buttons
 - Filter chips
 - Inputs
