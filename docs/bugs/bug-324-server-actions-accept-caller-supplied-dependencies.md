@@ -58,7 +58,7 @@ Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
 ## Progress
 
 **2026-10-05, the stopgap** (the pull request that files this record). Tests were written red first:
-- `testSeam` drops a seam in a production build.
+- `testSeam` drops a seam in a production build. After CodeRabbit's review it fails closed: only a known test or development run (`NODE_ENV` of `test` or `development`) keeps one, so an unset or unexpected value drops it too.
 - `createAction` and `createDepsResolver` ignore caller-supplied dependencies and options there; removing the guard fails a test.
 - `tests/server-action-signatures.test.ts` imports every `'use server'` module under `app/` and checks that each export takes at most one parameter. Adding a second parameter fails it.
 - `tests/server-action-wrappers.test.ts` calls each exported app-level action with empty form data and checks Next's real redirect, including its target.
