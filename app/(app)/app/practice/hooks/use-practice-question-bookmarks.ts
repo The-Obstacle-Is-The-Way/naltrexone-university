@@ -12,7 +12,7 @@ import { reportClientError } from '@/lib/report-client-error';
 import {
   getBookmarkQuestionIds,
   setBookmark,
-} from '@/src/adapters/controllers/bookmark-controller';
+} from '@/src/adapters/controllers/bookmark-actions';
 
 export type UsePracticeQuestionBookmarksInput = {
   question: BookmarkableQuestion | null;

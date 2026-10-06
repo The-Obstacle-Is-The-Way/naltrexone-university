@@ -137,7 +137,8 @@ If we later add narrower aliases (e.g., `@/domain/*`), they must remain a conven
 Server Actions are **controllers** in Clean Architecture terms.
 
 - They live in `src/adapters/controllers/`
-- They are implemented as `'use server'` entry points
+- Controllers are `server-only` modules (`*-controller.ts`) that server code and tests call with injected dependencies
+- The actions a browser calls are thin `'use server'` wrappers in `*-actions.ts` beside them, each taking only its input. A client chooses every argument of a server action, so a controller is never one itself (BUG-324, amended 2026-10-06)
 - They follow the controller conventions in `docs/_archive/specs/spec-010-server-actions.md`
 
 **Why not `/app/(app)/app/_actions/`?**
@@ -227,7 +228,7 @@ If starting with flat structure, migrate in this order:
 - [ ] All use cases in `src/application/use-cases/`
 - [ ] All repository/gateway interfaces in `src/application/ports/`
 - [ ] All implementations in `src/adapters/`
-- [ ] Server actions in `src/adapters/controllers/` with `'use server'`
+- [ ] Controllers in `src/adapters/controllers/` are `server-only`; browser-called actions are one-parameter `'use server'` wrappers in `*-actions.ts`
 - [ ] Composition root centered on `lib/container.ts` (with supporting modules under `lib/container/**`)
 - [ ] No circular dependencies between layers
 - [ ] Path aliases configured in `tsconfig.json`

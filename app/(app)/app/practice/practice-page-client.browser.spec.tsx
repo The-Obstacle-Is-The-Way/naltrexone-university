@@ -1,24 +1,24 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, render } from 'vitest-browser-react';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as tagController from '@/src/adapters/controllers/tag-controller';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as tagActions from '@/src/adapters/controllers/tag-actions';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import PracticePageClient from './practice-page-client';
 
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/tag-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/tag-actions', { spy: true });
 
-const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
+const startPracticeSession = vi.mocked(practiceActions.startPracticeSession);
 
 beforeEach(() => {
-  vi.mocked(practiceController.getIncompletePracticeSession).mockResolvedValue(
+  vi.mocked(practiceActions.getIncompletePracticeSession).mockResolvedValue(
     ok(null),
   );
-  vi.mocked(practiceController.countAvailableQuestions).mockResolvedValue(
+  vi.mocked(practiceActions.countAvailableQuestions).mockResolvedValue(
     ok({ count: 50 }),
   );
-  vi.mocked(tagController.getTags).mockResolvedValue(ok({ rows: [] }));
+  vi.mocked(tagActions.getTags).mockResolvedValue(ok({ rows: [] }));
 });
 
 afterEach(async () => {
@@ -40,7 +40,7 @@ test('enables the real session starter while session start is idle', async () =>
 test('disables the real session starter while session start is loading', async () => {
   const result =
     createDeferred<
-      Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+      Awaited<ReturnType<typeof practiceActions.startPracticeSession>>
     >();
   startPracticeSession.mockReturnValue(result.promise);
   const screen = await render(<PracticePageClient />);

@@ -1,20 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import * as questionFeedbackController from '@/src/adapters/controllers/question-feedback-controller';
+import * as questionFeedbackActions from '@/src/adapters/controllers/question-feedback-actions';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import { ok } from '@/tests/test-helpers/ok';
 import { useQuestionPageFeedback } from './use-question-page-feedback';
 
-vi.mock('@/src/adapters/controllers/question-feedback-controller', {
+vi.mock('@/src/adapters/controllers/question-feedback-actions', {
   spy: true,
 });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getQuestionRating = vi.mocked(
-  questionFeedbackController.getQuestionRating,
-);
+const getQuestionRating = vi.mocked(questionFeedbackActions.getQuestionRating);
 const submitQuestionReport = vi.mocked(
-  questionFeedbackController.submitQuestionReport,
+  questionFeedbackActions.submitQuestionReport,
 );
 
 const questionId = '11111111-1111-4111-8111-111111111111';

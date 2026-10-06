@@ -5,8 +5,8 @@ import * as reportClientError from '@/lib/report-client-error';
 import { TimeoutError } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err } from '@/src/adapters/controllers/action-result';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import { ApplicationConflictReasons } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -18,13 +18,13 @@ import { usePracticeSessionStart } from './use-practice-session-start';
 
 const fixtureSession1Id = crypto.randomUUID();
 
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 vi.mock('../client-navigation', { spy: true });
 
-const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
+const startPracticeSession = vi.mocked(practiceActions.startPracticeSession);
 const getIncompletePracticeSession = vi.mocked(
-  practiceController.getIncompletePracticeSession,
+  practiceActions.getIncompletePracticeSession,
 );
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const navigateToSpy = vi.mocked(clientNavigation.navigateTo);

@@ -164,26 +164,27 @@ describe('createAction', () => {
       vi.unstubAllEnvs();
     });
 
-    // A client can pass its own dependencies and options to an exported
-    // action; production resolves them from the container instead.
-    it('ignores caller-supplied dependencies and options', async () => {
+    // Only the 'use server' wrappers face clients, and they pass only the
+    // input (BUG-324). So a server-side caller's dependencies and logger reach
+    // the action in every build.
+    it('uses the dependencies and logger a server-side caller passes', async () => {
       vi.stubEnv('NODE_ENV', 'production');
-      const getDeps = vi.fn(async () => ({ value: 'container' }));
-      const execute = vi.fn(async (_input, _deps, meta) => meta.depsSource);
+      const logger = new FakeLogger();
+      const getDeps = vi.fn(
+        async (deps?: { value: string }) => deps ?? { value: 'container' },
+      );
       const action = createAction({
         schema: z.object({}).strict(),
         getDeps,
-        execute,
+        execute: async () => {
+          throw new Error('checkout failed');
+        },
       });
 
-      const result = await action(
-        {},
-        { value: 'from a client' },
-        { logger: new FakeLogger() },
-      );
+      await action({}, { value: 'server' }, { logger });
 
-      expect(getDeps).toHaveBeenCalledWith(undefined, undefined);
-      expect(result).toEqual({ ok: true, data: 'default_container' });
+      expect(getDeps).toHaveBeenCalledWith({ value: 'server' }, { logger });
+      expect(logger.errorCalls).toHaveLength(1);
     });
   });
 });

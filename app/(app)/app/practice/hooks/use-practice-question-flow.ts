@@ -15,7 +15,7 @@ import { useIsMounted } from '@/lib/use-is-mounted';
 import {
   getNextQuestion,
   submitAnswer,
-} from '@/src/adapters/controllers/question-controller';
+} from '@/src/adapters/controllers/question-actions';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 

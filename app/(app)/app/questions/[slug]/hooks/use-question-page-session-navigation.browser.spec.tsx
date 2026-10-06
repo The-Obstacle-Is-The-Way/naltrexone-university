@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import type { QuestionOrigin } from '@/lib/routes';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import {
@@ -12,11 +12,11 @@ import {
 } from './question-page-model.browser.fixtures';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
 const getPracticeSessionReview = vi.mocked(
-  practiceController.getPracticeSessionReview,
+  practiceActions.getPracticeSessionReview,
 );
 
 installReportClientErrorMocks(reportClientError);

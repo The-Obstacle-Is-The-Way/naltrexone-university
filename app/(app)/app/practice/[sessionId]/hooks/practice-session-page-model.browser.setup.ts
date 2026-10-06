@@ -1,33 +1,31 @@
 import { vi } from 'vitest';
-import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
-import * as practiceController from '@/src/adapters/controllers/practice-controller';
-import * as questionController from '@/src/adapters/controllers/question-controller';
+import * as bookmarkActions from '@/src/adapters/controllers/bookmark-actions';
+import * as practiceActions from '@/src/adapters/controllers/practice-actions';
+import * as questionActions from '@/src/adapters/controllers/question-actions';
 
-vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/question-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 
 const practiceSessionPageModelBrowserMocks = {
-  getNextQuestionMock: vi.mocked(questionController.getNextQuestion),
-  submitAnswerMock: vi.mocked(questionController.submitAnswer),
-  getBookmarkQuestionIdsMock: vi.mocked(
-    bookmarkController.getBookmarkQuestionIds,
-  ),
-  setBookmarkMock: vi.mocked(bookmarkController.setBookmark),
+  getNextQuestionMock: vi.mocked(questionActions.getNextQuestion),
+  submitAnswerMock: vi.mocked(questionActions.submitAnswer),
+  getBookmarkQuestionIdsMock: vi.mocked(bookmarkActions.getBookmarkQuestionIds),
+  setBookmarkMock: vi.mocked(bookmarkActions.setBookmark),
   getPracticeSessionReviewMock: vi.mocked(
-    practiceController.getPracticeSessionReview,
+    practiceActions.getPracticeSessionReview,
   ),
   getCompletedSessionQuestionsWithFeedbackMock: vi.mocked(
-    practiceController.getCompletedSessionQuestionsWithFeedback,
+    practiceActions.getCompletedSessionQuestionsWithFeedback,
   ),
   getPracticeSessionSummaryMock: vi.mocked(
-    practiceController.getPracticeSessionSummary,
+    practiceActions.getPracticeSessionSummary,
   ),
-  endPracticeSessionMock: vi.mocked(practiceController.endPracticeSession),
-  finalizeExamAnswersMock: vi.mocked(practiceController.finalizeExamAnswers),
-  saveExamDraftAnswerMock: vi.mocked(practiceController.saveExamDraftAnswer),
+  endPracticeSessionMock: vi.mocked(practiceActions.endPracticeSession),
+  finalizeExamAnswersMock: vi.mocked(practiceActions.finalizeExamAnswers),
+  saveExamDraftAnswerMock: vi.mocked(practiceActions.saveExamDraftAnswer),
   setPracticeSessionQuestionMarkMock: vi.mocked(
-    practiceController.setPracticeSessionQuestionMark,
+    practiceActions.setPracticeSessionQuestionMark,
   ),
 };
 

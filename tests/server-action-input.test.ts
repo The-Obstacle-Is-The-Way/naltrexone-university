@@ -27,7 +27,7 @@ const ACTIONS = findServerActionModules().flatMap(({ file, exportedActions }) =>
 
 describe('exported server actions and their input', () => {
   it('finds the exported actions', () => {
-    expect(ACTIONS.length).toBeGreaterThanOrEqual(30);
+    expect(ACTIONS.length).toBe(28);
   });
 
   it.each(ACTIONS)(
