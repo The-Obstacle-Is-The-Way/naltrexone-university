@@ -37,7 +37,8 @@ export type ClerkCredentialCounts = {
 // each starts with `eyJ`. A regular expression for it rescans long runs of
 // token characters from every position, in quadratic time. Splitting the run
 // on its dots and checking neighbouring segments is linear, and finds a token
-// wherever it starts within the run.
+// wherever it starts within the run. Overlapping candidates merge into one
+// span, so a look-alike segment in front of a token cannot leave part of it.
 function jsonWebTokenSpans(run: string): [number, number][] {
   const segments = run.split('.');
   const offsets: number[] = [];
@@ -60,8 +61,10 @@ function jsonWebTokenSpans(run: string): [number, number][] {
       continue;
     }
     const start = (offsets[i] ?? 0) + at;
-    spans.push([start, (offsets[i + 2] ?? 0) + (segments[i + 2] ?? '').length]);
-    i += 2;
+    const stop = (offsets[i + 2] ?? 0) + (segments[i + 2] ?? '').length;
+    const last = spans.at(-1);
+    if (last && start <= last[1]) last[1] = Math.max(last[1], stop);
+    else spans.push([start, stop]);
   }
   return spans;
 }

@@ -61,6 +61,18 @@ describe('redactClerkCredentials', () => {
     );
   });
 
+  // A segment holding `eyJ` just before a token must not hide part of it.
+  it('redacts a token preceded by token-like segments, as one span', () => {
+    const lookalike = 'xeyJabcdefgh';
+
+    expect(redactClerkCredentials(`a ${lookalike}.${lookalike}.${jwt} b`)).toBe(
+      `a ${lookalike}.x[redacted] b`,
+    );
+    expect(countClerkCredentials(`a ${lookalike}.${jwt} b`).jsonWebToken).toBe(
+      1,
+    );
+  });
+
   // Runs of token-like text must not make the match quadratic.
   it.each([
     ['eyJ', 'eyJ'.repeat(80_000)],

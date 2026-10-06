@@ -38,13 +38,19 @@ type WorkflowStep = {
   with?: Record<string, string>;
 };
 
+type RunDefaults = {
+  run?: { shell?: string; 'working-directory'?: string };
+};
+
 type WorkflowJob = {
+  defaults?: RunDefaults;
   env?: Record<string, string>;
   steps?: WorkflowStep[];
   uses?: string;
 };
 
 type WorkflowDocument = {
+  defaults?: RunDefaults;
   jobs?: Record<string, WorkflowJob>;
 };
 
@@ -360,8 +366,16 @@ describe('Playwright artifact publication', () => {
             /^pnpm exec tsx scripts\/ci\/scan-playwright-output\.ts( [\w./-]+)+$/,
           );
           expect(scan?.['continue-on-error']).toBeUndefined();
-          expect(scan?.shell).toBeUndefined();
-          expect(scan?.['working-directory']).toBeUndefined();
+          // Neither the step nor a job or workflow default may change how,
+          // or where, the scan runs.
+          for (const run of [
+            scan,
+            job.defaults?.run,
+            readParsedWorkflow(path).defaults?.run,
+          ]) {
+            expect(run?.shell).toBeUndefined();
+            expect(run?.['working-directory']).toBeUndefined();
+          }
           expect(upload.if).not.toContain('||');
           expect(upload.if).toMatch(
             new RegExp(`&& ${SCAN_GATE.replace(/[.()]/g, '\\$&')} }}$`),
