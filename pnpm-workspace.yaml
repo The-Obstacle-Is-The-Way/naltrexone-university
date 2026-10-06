@@ -103,8 +103,9 @@ packageExtensions:
   # would otherwise resolve the root TypeScript 7, whose package root exports
   # only version metadata. Declaring the real typescript 6 package gives it the
   # same compiler @typescript/typescript6 wraps, with no npm: alias. Remove this
-  # when Stryker declares or stops needing TypeScript; Dependabot does not update
-  # this range, so advance it with the @typescript/typescript6 pin.
+  # when Stryker declares or stops needing TypeScript. Dependabot does not update
+  # this range. Keep it on the same major as @typescript/typescript6; the
+  # lockfile, not the range, keeps both on one typescript@6 package.
   '@stryker-mutator/core':
     dependencies:
       typescript: ^6.0.3

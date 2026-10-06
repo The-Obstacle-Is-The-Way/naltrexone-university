@@ -44,7 +44,7 @@ The implementation builds a small repo-owned reporter, in the repo's established
 Reference core of the complexity walker (the implementation is TDD-first, with a colocated `crap-report.test.ts` over fixture source and coverage, matching the repository's 20 existing script-test suites). The decision tests must separately pin `&&`, `||`, `??`, `&&=`, `||=`, and `??=` so assignment operators cannot silently fall through the binary-expression walker:
 
 ```ts
-import ts from 'typescript';
+import ts from '@typescript/typescript6';
 
 const DECISION_KINDS = new Set([
   ts.SyntaxKind.IfStatement, ts.SyntaxKind.ForStatement, ts.SyntaxKind.ForOfStatement,

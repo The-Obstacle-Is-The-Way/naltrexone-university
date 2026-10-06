@@ -1,10 +1,10 @@
 # DEBT-460: Dependency Upgrade Train Residues (TS7 Dual-Compiler Seam, Clerk `createRouteMatcher` Deprecation, Biome Schema Pin Drift)
 
-**Status:** Deferred / Parked (standing rules and one-dependency consolidation; Cleanup A, the de-alias, shipped for issue #813 on 2026-10-05) — 2026-10-05
+**Status:** Deferred / Parked — standing rules; Cleanup B (one TypeScript package) blocked upstream; Cleanup A (de-alias) done in PR #1384 for issue #813
 **Priority:** P4
 **Date:** 2026-07-20
 **Baseline confirmed:** 2026-07-20 (each part verified against the installed packages and checked-in config on `dev`/`main` at `9f11e674`, promoted via PR #685 merge `b5fd6880`)
-**Latest update confirmed:** 2026-10-05 (issue #813 de-alias against `dev` at `0f5dd886`; see "Cleanup A implemented (2026-10-05)" below). Earlier: 2026-08-19 (PR #811 audit against `dev` at `4e05cca4` — de-alias experiment, enumerated consolidation blockers, and correction receipts; see "One-dependency consolidation checklist" below)
+**Latest update confirmed:** 2026-10-05 (issue #813, [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384): Cleanup A; see "Current TypeScript topology" below). Earlier: 2026-08-19 (PR #811 audit against `dev` at `4e05cca4` — de-alias experiment, enumerated consolidation blockers, and correction receipts; see "One-dependency consolidation checklist" below)
 
 ## Register final-wave disposition (2026-07-23)
 
@@ -12,50 +12,33 @@ This was the 2026-07-23 final-wave disposition: the three residues were durable
 upgrade rules rather than current executable work, so this record was archived
 for filing and represented by one Deferred/Parked register row. The 2026-08-19
 audit subsequently separated a viable **de-alias candidate** from the still
-blocked one-dependency consolidation; that candidate is tracked in issue #813. This
-record remains parked and is not resolved:
+blocked one-dependency consolidation; that candidate, Cleanup A, was done in
+[PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) for issue #813. This record remains parked and is not resolved:
 
-1. advance both TypeScript pins together; consolidate to one TypeScript
-   dependency only when the enumerated triggers in "One-dependency
-   consolidation checklist" clear (third-party peer ranges are not among them);
-   treat both aliases as a manual update surface because updater jobs skip aliases
-   (2026-10-05: the aliases are gone, so Dependabot can see both packages; the
-   remaining manual surface is the Stryker `packageExtensions` TypeScript range
-   in `pnpm-workspace.yaml`, which moves with `@typescript/typescript6`);
+1. advance `typescript` (TypeScript 7) and `@typescript/typescript6` together,
+   and keep the Stryker `packageExtensions` TypeScript range in
+   `pnpm-workspace.yaml` on TypeScript 6, because Dependabot does not update it;
+   consolidate to one TypeScript dependency only when the enumerated triggers in
+   "One-dependency consolidation checklist" clear (third-party peer ranges are
+   not among them);
 2. migrate `proxy.ts` off `createRouteMatcher` **before** accepting any
    `@clerk/nextjs` major bump; and
 3. fold the `biome.json` `$schema` bump into every Biome Dependabot PR.
 
-## Cleanup A implemented (2026-10-05)
+*Corrected 2026-10-05: rule 1 used to treat two `npm:` aliases as a manual
+update surface, because updater jobs skip aliases. [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) replaced them
+with the real package names, which leaves the Stryker range as the manual
+surface.*
 
-Issue #813 asked for the dependency-source census to be repeated before the
-de-alias, and for each consumer that loads the classic API from canonical
-`typescript` to be routed to TypeScript 6 where supported. Measured against
-`origin/dev` at `0f5dd886`:
+## Current TypeScript topology
 
-- **Third-party loaders.** Searching the installed packages for
-  `require('typescript')`, `import('typescript')`, `from 'typescript'`,
-  `resolve('typescript…')` and `typescript/lib/typescript` finds two: `next` and
-  `@stryker-mutator/core`. A wider search for `typescript/package.json` adds
-  `tsx`, `jiti`, `playwright` and `@babel/core`. The last three match only
-  `@babel/preset-typescript/package.json`, and `tsx` reads version and
-  `tsconfig` metadata, which TypeScript 7 still ships.
-- **Next** needed the Blocker 3 pin only because of the aliases, so it is gone.
-  `next.config.test.ts` now requires `useTypeScriptCli` to stay unset and
-  `ignoreBuildErrors` never to be `true`.
-- **Stryker**, adopted after the 2026-08-19 audit (ADR-019, weekly `Mutation`
-  workflow), was the one blocker. Its sandbox `TSConfigPreprocessor` runs
-  `await import('typescript')` and calls `parseConfigFileTextToJson`, but it
-  declares no `typescript` dependency. Under a canonical TypeScript 7 a run
-  failed with `TypeError: ts.parseConfigFileTextToJson is not a function`.
-  Stryker 10.0.0 (2026-08-14) has the same code. pnpm's documented
-  `packageExtensions` now declares `typescript: ^6.0.3` for
-  `@stryker-mutator/core`. That is the real package `@typescript/typescript6`
-  itself wraps, so the route needs no `npm:` alias and adds no new package.
-  The route was found by the PR #1381 adversarial review, after this record
-  had first called Cleanup A blocked.
-- **Owned consumers grew from three to eleven**, and all now import
-  `@typescript/typescript6`:
+Since [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) (issue #813, Cleanup A):
+
+- `typescript` is TypeScript 7 and owns `tsc`. `pnpm typecheck` and Next's
+  build-time type check both use it, and `next.config.ts` no longer pins
+  `useTypeScriptCli`.
+- `@typescript/typescript6` serves the classic compiler API. Eleven owned
+  modules import it:
   - under `tests/`: `architecture-boundary-source-scan.ts`,
     `controller-output-datetime-source-scan.ts`,
     `fake-contract-register-source-scan.ts`, `playwright-lane-policy.test.ts`,
@@ -65,42 +48,43 @@ de-alias, and for each consumer that loads the classic API from canonical
   - under `scripts/`: `crap-report.ts`, `crap-report.test.ts` and
     `rule-to-test-register.ts`.
 
-  `tests/server-span-family-boundary.test.ts` and
-  `src/adapters/controllers/controller-output-datetime-contract.test.ts` no
-  longer exist.
-- **Contract.** `tests/typescript-compiler-topology.test.ts` requires all of
-  the following, and fails if any one breaks:
-  - both compilers declared under their real names, with no `npm:` alias
-    anywhere in `package.json`;
-  - canonical `typescript` resolving to 7.x;
-  - `@typescript/typescript6` serving the classic API;
-  - Stryker resolving a TypeScript 6 that has `parseConfigFileTextToJson`.
+  The suites that exercise them are in the Cleanup B probe below.
+- Stryker's sandbox `TSConfigPreprocessor` runs `import('typescript')` and
+  calls the classic API (`parseConfigFileTextToJson`), but declares no
+  `typescript` dependency. `packageExtensions` in `pnpm-workspace.yaml` gives
+  `@stryker-mutator/core` the real `typescript@6`, the same package
+  `@typescript/typescript6` wraps, with no `npm:` alias. Without it, a run
+  stops with `ts.parseConfigFileTextToJson is not a function`.
+- `tests/typescript-compiler-topology.test.ts` and `next.config.test.ts` fail
+  in any of these cases:
+  - an alias returns;
+  - canonical `typescript` stops being 7.x;
+  - the classic API moves;
+  - Stryker loses TypeScript 6;
+  - the Next pin returns;
+  - `ignoreBuildErrors` is set.
 
-Receipts on the implementation branch:
+The census behind this searched the installed packages for code that loads
+canonical `typescript`:
 
-- **Compilers:** `tsc --version` reports 7.0.2 and `tsc6 --version` 6.0.3.
-  `pnpm typecheck` runs on TypeScript 7.
-- **Install:** `pnpm install --frozen-lockfile` passes.
-- **Peers:** `pnpm peers check` reports only the pre-existing `ws@7.5.13` /
-  `utf-8-validate@6.0.6` mismatch.
-- **Owned consumers:** the eleven consumers' suites pass (224 tests).
-- **Stryker:**
-  `pnpm exec stryker run --mutate src/domain/services/answer-key.ts --force --concurrency 2`
-  passes. Its debug log shows `TSConfigPreprocessor Rewriting file`, so the
-  preprocessor ran on TypeScript 6. The initial run covered 2,865 tests and
-  the score is 100%.
-- **Build:** `pnpm build` type checks through Next's default TypeScript 7 CLI
-  ("Running TypeScript … Finished TypeScript"). A planted
-  `const probe: number = 'not a number'` made it fail with TS2322 and
-  "Failed to type check". With the probe removed, all 27 static pages
-  generate.
-- **Webpack:** no checked-in build or CI command selects it, so
-  `next build --webpack` is not part of this gate, as issue #813 allows.
+```bash
+rg -l -g '*.{js,cjs,mjs}' -g '!**/typescript/**' -g '!**/@typescript/**' \
+  -e "require\(['\"]typescript['\"]\)" -e "from ['\"]typescript['\"]" \
+  -e "import\(['\"]typescript['\"]\)" -e "resolve\(['\"]typescript(/[^'\"]*)?['\"]" \
+  -e "['\"]typescript/lib/typescript(\.js)?['\"]" node_modules/.pnpm
+```
 
-The register row's instruction to record the 2026-07-27 Dependabot
-aliased-specifier outcome is moot now that no alias remains. Cleanup B (one
-TypeScript dependency) stays blocked by Blockers 1 and 2. It must port all
-eleven consumers and remove the Stryker `packageExtensions` route.
+It finds `next` and Stryker. A wider search for `typescript/package.json` also
+finds `tsx`, `jiti`, `playwright` and `@babel/core`. They only read package
+metadata, which TypeScript 7 still ships.
+
+Verification outcomes, with commands and counts in [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384):
+- `tsc` reports 7.x and `tsc6` 6.x.
+- The frozen install and the peer check show nothing new.
+- The consumer suites pass.
+- A planted type error fails `pnpm build`.
+- A scoped Stryker run and a hosted `Mutation` workflow run on the branch
+  pass, with the preprocessor on TypeScript 6.
 
 ---
 
@@ -300,19 +284,19 @@ is not ready, and even the two parser-only consumers need more than an import
 rewrite.
 
 **Trigger:** TypeScript 7 publishes a stable, non-`unstable/` compiler-API entry
-point. Probe — note it must target `@typescript/native`, **not** `typescript`,
-because while the aliases stand the name `typescript` resolves to the TS6 shim
-(which has no `exports` field at all, so probing it returns `undefined` and
-tells you nothing):
+point. Probe the canonical `typescript` package, which is TypeScript 7:
 
 ```bash
-node -e "console.log(require('@typescript/native'))"
-node -e "console.log(JSON.stringify(require('@typescript/native/package.json').exports,null,1))"
+node -e "console.log(require('typescript'))"
+node -e "console.log(JSON.stringify(require('typescript/package.json').exports,null,1))"
 ```
 
-After Cleanup A this probe targets `typescript` instead.
+*Corrected 2026-10-05: the probe targeted `@typescript/native` while the aliases
+stood; [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) made canonical `typescript` the TypeScript 7 package.*
 
-### Blocker 2 (ours): three files use the classic compiler API
+### Blocker 2 (ours): eleven modules use the classic compiler API
+
+The 2026-08-19 classification of the original three consumers:
 
 | File | Surface used | Port difficulty |
 | --- | --- | --- |
@@ -323,43 +307,48 @@ After Cleanup A this probe targets `typescript` instead.
 The 2026-08-19 export probe that corrected the first two classifications:
 
 ```bash
-node -e "const a=require('@typescript/native/unstable/ast'); console.log({createSourceFile:typeof a.createSourceFile,forEachChild:typeof a.forEachChild})"
+node -e "const a=require('typescript/unstable/ast'); console.log({createSourceFile:typeof a.createSourceFile,forEachChild:typeof a.forEachChild})"
 # { createSourceFile: 'undefined', forEachChild: 'undefined' }
 ```
 
-**Trigger:** all three run on a supported TS7-era API. A green behavior suite is
-not sufficient by itself: today it runs against the TS6 shim. First census all
-three TypeScript package names, including subpaths, and inspect every hit:
+*Corrected 2026-10-05: there are now eleven consumer modules, listed in
+"Current TypeScript topology". The contract test above reaches the API through
+`tests/controller-output-datetime-source-scan.ts`, and
+`tests/server-span-family-boundary.test.ts` was removed when the span scanner
+became a typed runtime boundary. Cleanup B must classify and port all eleven.*
+
+**Trigger:** all eleven run on a supported TS7-era API. A green behavior suite
+is not sufficient by itself: today it runs against TypeScript 6. First census
+all three TypeScript package names, including subpaths, and inspect every hit:
 
 ```bash
 rg -n \
   -e "['\"](?:typescript|@typescript/typescript6|@typescript/native)(?:/[^'\"]*)?['\"]" \
   -e '`(?:typescript|@typescript/typescript6|@typescript/native)(?:/[^`]*)?`' \
-  src tests
+  src tests scripts
 ```
 
 The expected topology distinguishes the two cleanups:
 
-- current aliases (before 2026-10-05): bare `typescript` imports resolving to
+- the former aliases: bare `typescript` imports resolving to
   `@typescript/typescript6@6.0.2`; Blocker 2 remains;
-- Cleanup A (shipped 2026-10-05): every owned consumer imports
-  `@typescript/typescript6`, eleven files at that date, and Blocker 2 still
-  remains; and
+- Cleanup A (current, [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384)): every owned consumer imports
+  `@typescript/typescript6`; Blocker 2 still remains; and
 - Cleanup B: no `@typescript/typescript6`, `@typescript/native`, or
   `unstable/` import remains. Each consumer targets a published stable entry
   point in the canonical `typescript` package.
 
 For Cleanup B, make both dependency topology and package identity part of the
-gate before running the actual three-path behavior suite. The root manifest
+gate before running the consumer behavior suites. The root manifest
 must declare exactly one compiler package under the canonical `typescript`
 name, without an `npm:` alias. The lockfile `packages` section must likewise
 contain exactly one `typescript@...` compiler package at major 7 or newer, and
 neither file may retain the two old alias names. The platform-specific
 `@typescript/typescript-*` packages shipped by native TypeScript are expected
 artifacts and are not extra compiler dependencies. These assertions
-intentionally fail on today's alias topology: the manifest has two aliased
-declarations and the lockfile has both `typescript@6.0.3` (behind the TS6 shim)
-and `typescript@7.0.2`. After consolidation, the final identity probe must print
+intentionally fail today: the manifest declares `@typescript/typescript6` beside
+`typescript`, and the lockfile has both `typescript@6.0.3` (behind
+`@typescript/typescript6` and the Stryker route) and `typescript@7.0.2`. After consolidation, the final identity probe must print
 a canonical TypeScript 7-or-newer manifest path and version. The source-scan
 helper is exercised by `architecture-boundaries.test.ts` and is not itself a
 test file:
@@ -428,17 +417,18 @@ if (name !== 'typescript' || Number.parseInt(version, 10) < 7) {
 }
 console.log({ resolved, name, version });
 NODE
-# The consumer suites as of 2026-10-05 (224 tests). Re-run the census above
-# first; a consumer added since then needs its suite here too.
+# Every suite that exercises a consumer module. Re-run the census above first,
+# and add the suite of any consumer it finds that is not covered here.
 pnpm test --run tests/architecture-boundaries.test.ts tests/controller-output-datetime \
+  src/adapters/controllers/controller-output-datetime-contract.test.ts \
   tests/fake-contract-register tests/playwright-lane-policy.test.ts tests/skip-policy \
-  tests/test-double-fidelity scripts/crap-report.test.ts scripts/rule-to-test
+  tests/test-double-fidelity scripts/crap-report tests/rule-to-test-register.test.ts
 ```
 
 ### Blocker 3 (independent of TS6-vs-TS7): the Next config pin
 
-**Cleared 2026-10-05 by Cleanup A.** The pin is removed; see "Cleanup A
-implemented (2026-10-05)" above.
+**Cleared by Cleanup A ([PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384)).** The pin is removed; see "Current
+TypeScript topology" above.
 
 `next.config.ts`'s `experimental.useTypeScriptCli: false` is gated on the
 **name** `typescript` resolving to a package whose bin is not `tsc` — not on
@@ -487,9 +477,9 @@ keep it conditional on Webpack becoming an intentional project mode.
 
 ### The two cleanups are not the same change
 
-- **Cleanup A — de-alias.** **Shipped 2026-10-05** for
+- **Cleanup A — de-alias.** **Done in [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384)** for
   [issue #813](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/813);
-  see "Cleanup A implemented (2026-10-05)" above. The original plan follows.
+  see "Current TypeScript topology" above. The original plan follows.
   Install both packages under their real published names: `typescript` → real
   `typescript@7`, `@typescript/typescript6` → real `@typescript/typescript6`.
   Rewrite the three imports above to `from '@typescript/typescript6'`, drop the
@@ -532,6 +522,10 @@ The 2026-07-20 dependency upgrade train (PRs #677, #679, #678, #680, #682; promo
 
 ### Part 1 — TypeScript 7 dual-compiler seam (from #682)
 
+*Corrected 2026-10-05: [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) replaced the two aliases below with the real
+package names; see "Current TypeScript topology". This part describes the
+aliased layout.*
+
 PR #682 adopted the native TypeScript 7 compiler using Microsoft's side-by-side split, via two intentionally aliased `package.json` entries:
 
 - `"@typescript/native": "npm:typescript@^7.0.2"` — the native (Go) compiler. It owns the **`tsc`** bin, so `pnpm typecheck` (`tsc --noEmit`) runs native TS7. Verified: `tsc --version` → `7.0.2`; full-repo `pnpm typecheck` completes in under a second, multi-core.
@@ -566,10 +560,12 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 ## Resolution
 
-1. **Part 1 (standing rule plus tracked cleanup):** while the aliases remain,
-   treat them as one unit — advance both pins together, keep `typecheck` on bare
-   `tsc`, and do not mistake a package-root version object for a compiler API.
-   Cleanup A is a viable candidate tracked in issue #813. Consolidation to one
+1. **Part 1 (standing rule):** advance `typescript` and `@typescript/typescript6`
+   together, keep the Stryker `packageExtensions` range on TypeScript 6, keep
+   `typecheck` on bare `tsc`, and do not mistake a package-root version object
+   for a compiler API. Cleanup A was done in [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384). *Corrected
+   2026-10-05: this rule covered the two aliases until that PR removed them.*
+   Consolidation to one
    dependency still uses the enumerated triggers in "One-dependency
    consolidation checklist" above; do not restate it as the unevaluable "when
    consumers can run on the TS7-era API". Third-party TypeScript peer ranges
@@ -586,13 +582,13 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 - Part 1: on every topology, `node_modules/.bin/tsc --version` must report 7.x
   or newer; run the all-three-package import census from "Blocker 2" and verify
-  its route-specific expected topology. The current aliases, the released-Next
-  route that retains them, and Cleanup A intentionally keep the TS6 shim, so
-  only those routes also require `node_modules/.bin/tsc6 --version` → 6.x.
+  its route-specific expected topology. Cleanup A, the current topology, keeps
+  `@typescript/typescript6`, so it also requires
+  `node_modules/.bin/tsc6 --version` → 6.x.
   Cleanup B removes that shim: require `test ! -e node_modules/.bin/tsc6`, then
   require the complete manifest/lockfile one-dependency assertion block **and**
   the canonical package identity/version assertion from "Blocker 2" to pass
-  *before* the exact 18-test three-path command. That means one non-aliased root
+  *before* the consumer-suite command. That means one non-aliased root
   `typescript` declaration, one TypeScript 7+ compiler package in the lockfile,
   and no `@typescript/native` or `@typescript/typescript6` residue; do not count
   the native platform artifacts as extra compilers. Also run the
@@ -609,6 +605,7 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 - PRs: [#677](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/677), [#678](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/678), [#679](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/679), [#680](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/680), [#682](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/682) (train), [#685](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/685) (promotion, merge `b5fd6880`)
 - Current bundle, audited checklist, and de-alias candidate: [PR #805](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/805), [PR #811](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/811), [issue #813](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/813)
+- De-alias (Cleanup A): [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384)
 - Upstream regression: [Next #96589](https://github.com/vercel/next.js/issues/96589), [Next #97015](https://github.com/vercel/next.js/issues/97015), [Next PR #97334](https://github.com/vercel/next.js/pull/97334)
 - Dependabot alias evidence: [dependabot-core PR #15070](https://github.com/dependabot/dependabot-core/pull/15070), [dependabot-core issue #15847](https://github.com/dependabot/dependabot-core/issues/15847)
 - Precedent for grouped residue docs: [DEBT-457](./debt-457-wave2-determinacy-and-test-hygiene-residues.md); for Stripe-group isolation rationale: DEBT-393 (see `.github/dependabot.yml` comment)
