@@ -27,7 +27,9 @@ function headingsWithoutBlankLines(source: string): number[] {
         return;
       }
     }
-    if (fence || !/^#{1,6}\s/.test(line)) return;
+    // CommonMark ATX heading: up to three spaces, one to six hashes, then a
+    // space or the end of the line.
+    if (fence || !/^ {0,3}#{1,6}(\s|$)/.test(line)) return;
     const textBefore = index > 0 && lines[index - 1]?.trim() !== '';
     const textAfter =
       index + 1 < lines.length && lines[index + 1]?.trim() !== '';
@@ -59,6 +61,16 @@ describe('headingsWithoutBlankLines', () => {
       1,
     ]);
     expect(headingsWithoutBlankLines('Text.\n## Part\n\nMore.')).toEqual([2]);
+  });
+
+  // CommonMark allows up to three spaces before a heading, and a heading with
+  // no text; a hash with no space after it is not a heading.
+  it('recognizes an indented heading and an empty one, but not #123', () => {
+    expect(headingsWithoutBlankLines('Text.\n   ## Indented\n\nMore.')).toEqual(
+      [2],
+    );
+    expect(headingsWithoutBlankLines('Text.\n##\nMore.')).toEqual([2]);
+    expect(headingsWithoutBlankLines('See\n#123\nfor details.')).toEqual([]);
   });
 
   // A fence closes only on its own character, at least as long, with nothing
