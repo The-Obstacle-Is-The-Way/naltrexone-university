@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is in this pull request
+**Status:** Verifying — the next Dependabot PR gets no Vercel deployment and merges through the tooling; due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -56,14 +56,21 @@ Option 1, plus the digest pin.
 - Before shipping, confirm the exact `deploymentEnabled` branch-pattern syntax in Vercel's documentation. Confirm also that `scripts/merge-reviewed-pr.ts` accepts a PR with no Vercel status.
 - The protocol's "Vercel/Codecov checks … remain separate merge requirements" line changes to match.
 
+## Progress
+
+**2026-10-06, the fix.** Tests were written red first.
+- **`vercel.json`** sets `git.deploymentEnabled` to `{ "dependabot/**": false }`. Vercel's documentation confirms the form: a map of minimatch patterns, where unlisted branches stay enabled and any matching true rule wins. `tests/vercel-config.test.ts` pins the exclusion, and fails if any rule could re-enable a Dependabot branch.
+- **Merging is unaffected.** `scripts/merge-reviewed-pr.ts` requires only the `test` check and Codecov's patch status, not a Vercel status, and the ruleset requires only `test`.
+- **`ci.yml`'s Postgres service** is pinned to the digest the hosted-checkout workflow already uses. `tests/ci-workflow.test.ts` now requires a digest for every service and job container, in every workflow.
+- **Docs.** `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
+- **Existing branches.** Vercel reads the setting from each branch's own commit. So the open Dependabot pull requests, created before this, keep deploying until Dependabot rebases them onto a `dev` that carries it.
+
 ## Verification
 
-Criteria to meet before closing; none is met yet.
-
-- [ ] A test, red first, pins the `vercel.json` exclusion for Dependabot branches.
-- [ ] The next Dependabot PR gets no Vercel deployment (deployments API), and merges through the checked-in tooling.
-- [ ] `ci.yml`'s Postgres image is pinned by digest, and the workflow test covers every workflow.
-- [ ] `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
+- [x] A test, red first, pins the `vercel.json` exclusion for Dependabot branches.
+- [ ] The next Dependabot PR, created or rebased after this ships, gets no Vercel deployment (deployments API), and merges through the checked-in tooling.
+- [x] `ci.yml`'s Postgres image is pinned by digest, and the workflow test covers every workflow.
+- [x] `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
 
 ## Related
 

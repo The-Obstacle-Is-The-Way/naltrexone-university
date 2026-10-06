@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -537,6 +537,41 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     expect(stepBlock).toContain('timeout-minutes: 12');
     expect(stepBlock).toContain(
       'bash scripts/ci/install-playwright-chromium.sh',
+    );
+  });
+
+  // BUG-327: a mutable tag can change what runs between two runs of the same
+  // commit, so every service or job container is pinned by digest, in every
+  // workflow.
+  it('pins every container image by digest, in every workflow', () => {
+    const images = globSync('.github/workflows/*.yml').flatMap((file) => {
+      const jobs = Object.values(
+        (
+          parse(readFileSync(file, 'utf8')) as {
+            jobs?: Record<
+              string,
+              {
+                container?: { image?: string } | string;
+                services?: Record<string, { image?: string }>;
+              }
+            >;
+          }
+        ).jobs ?? {},
+      );
+      return jobs
+        .flatMap((job) => [
+          ...Object.values(job.services ?? {}).map((service) => service.image),
+          typeof job.container === 'string'
+            ? job.container
+            : job.container?.image,
+        ])
+        .filter((image): image is string => typeof image === 'string')
+        .map((image) => ({ file, image }));
+    });
+
+    expect(images.length).toBeGreaterThanOrEqual(2);
+    expect(images.filter(({ image }) => !image.includes('@sha256:'))).toEqual(
+      [],
     );
   });
 
