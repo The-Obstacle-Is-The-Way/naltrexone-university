@@ -51,7 +51,7 @@ That child logger automatically carries `requestId`, and can also include `userI
 - Do not log secrets/PII. `lib/logger.ts` redacts common sensitive fields, but treat that as defense-in-depth, not permission to log secrets.
 - When adding new adapters, inject `logger` via constructor/deps instead of importing global singletons.
 - Structured logs and Sentry complement each other. Use logs for request-local diagnosis; use Sentry for exception aggregation and client/server telemetry.
-- Do not log the caller's text. Log its length or a fixed reason instead. Input a request could forge is a warning or a quiet failure, not an error, but never silence a refusal your own server raises (BUG-325).
+- Do not log the caller's text. Log its length or a fixed reason instead. A refusal a request could forge is a warning or a quiet failure, not an error. A `VALIDATION_ERROR` your own server raises, such as a changed offer, is logged at warn: never silenced, and not an error. Other failures stay errors (BUG-325).
 - Log a failed webhook signature check at warn: anyone can send one. An invalid payload behind a valid signature stays an error.
 
 ## Sentry flood or quota exhaustion

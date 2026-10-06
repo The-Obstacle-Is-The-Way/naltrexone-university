@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import type { reportClientError } from '@/lib/report-client-error';
 import { reloadCurrentPage } from '@/lib/stale-server-action';
-import { REPORT_ISSUE_URL } from '@/lib/support';
+import { supportMailtoHref } from '@/lib/support';
 import { useReportCaughtError } from '@/lib/use-report-caught-error';
 import { useStaleServerActionReload } from '@/lib/use-stale-server-action-reload';
 
@@ -67,8 +67,8 @@ export function ErrorBoundaryPage({
           </Button>
         ))}
         <Button asChild variant="outline">
-          <a href={REPORT_ISSUE_URL} target="_blank" rel="noreferrer noopener">
-            Report issue
+          <a href={supportMailtoHref({ page: title, errorId: error.digest })}>
+            Contact support
           </a>
         </Button>
       </div>
