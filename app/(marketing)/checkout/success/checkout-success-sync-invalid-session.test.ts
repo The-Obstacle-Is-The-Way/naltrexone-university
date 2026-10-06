@@ -3,6 +3,7 @@ import { ROUTES } from '@/lib/routes';
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { syncCheckoutSuccess } from './checkout-success-sync';
 import type { CheckoutSuccessDeps } from './checkout-success-types';
@@ -31,7 +32,7 @@ function depsRecordingCalls(retrieveSession: () => Promise<never>) {
       createdAt: new Date('2026-02-01T00:00:00Z'),
       updatedAt: new Date('2026-02-01T00:00:00Z'),
     }),
-    subscriptionVersions: { findObservationVersionByUserId: async () => null },
+    subscriptionVersions: new FakeSubscriptionRepository(),
     getClerkAuth: async () => {
       calls.clerk += 1;
       return {
