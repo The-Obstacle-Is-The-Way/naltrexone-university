@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync, statSync } from 'node:fs';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import pino from 'pino';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -110,6 +110,36 @@ describe('logger', () => {
     );
 
     expect(secrets.length).toBeGreaterThanOrEqual(10);
+    expect(secrets.filter((name) => !SECRET_ENV_NAMES.includes(name))).toEqual(
+      [],
+    );
+  });
+
+  // Some credentials are read outside the schema, such as the E2E sign-in
+  // password, so every process.env read in the source is checked too.
+  it('names every secret the source reads from process.env', async () => {
+    const { SECRET_ENV_NAMES } = await importLogger();
+    const read = new Set(
+      ['app', 'lib', 'src', 'tests', 'scripts']
+        .flatMap((root) => [
+          ...globSync(`${root}/**/*.ts`),
+          ...globSync(`${root}/**/*.tsx`),
+        ])
+        .filter((file) => statSync(file).isFile())
+        .flatMap((file) => [
+          ...readFileSync(file, 'utf8').matchAll(
+            /process\.env\.([A-Z][A-Z0-9_]+)/g,
+          ),
+        ])
+        .map((match) => match[1] ?? ''),
+    );
+    const secrets = [...read].filter(
+      (name) =>
+        !name.startsWith('NEXT_PUBLIC_') &&
+        !name.startsWith('ALLOW_') &&
+        /SECRET|PASSWORD|_KEY$|TOKEN|DATABASE_URL/.test(name),
+    );
+
     expect(secrets.filter((name) => !SECRET_ENV_NAMES.includes(name))).toEqual(
       [],
     );
