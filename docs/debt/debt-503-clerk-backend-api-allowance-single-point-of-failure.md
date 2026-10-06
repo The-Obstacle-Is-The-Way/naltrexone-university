@@ -21,6 +21,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 ## Items
 
 ### 1. Read identity from the session token, not the Backend API (P2)
+
 - **Evidence.** `ClerkAuthGateway.getCurrentUser` calls `currentUser()` on every signed-in render and action (`src/adapters/gateways/clerk-auth-gateway.ts`, through `lib/container.ts:61-65`). The middleware has already verified the session token, which carries the Clerk user ID.
 - **Decided.**
   - Resolve the app user from the verified token's user ID and our own `users` table.
@@ -31,6 +32,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 - **Care.** BUG-284's identity rules and BUG-320's provisioning race must hold. Test-first against the maintained fakes and real Postgres.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)
+
 - **Evidence.** BUG-323's site-wide cap counts every request that would make Clerk call its Backend API, real or forged. So an attacker who fills it also delays real returning visitors. It is sized at about a sixth of Clerk's allowance, so filling it takes many addresses, but the lever exists.
 - **Options.**
   1. Count only failed lookups. Clerk's answer, read after the middleware runs, shows whether a lookup succeeded.
@@ -39,10 +41,12 @@ This record holds the structural fixes, so that the allowance stops being the on
 - **Decided.** Revisit when Clerk replies, and after item 1 ships, when the caps can rise. Option 1 is the first candidate.
 
 ### 3. Alert when a cap trips or Clerk refuses a call (P3)
+
 - **Evidence.** Today a tripped cap is visible only as 429 responses, and a Clerk refusal only as errors from `currentUser()`.
 - **Decided.** Count trips and Clerk 429s per minute, and log one summary line per minute, not one per request, so the alert cannot itself flood the logs. Add a Sentry alert on that line, routed to the owner, with Vercel's Attack Mode as the documented response.
 
 ### 4. Measure the real volume of these requests (P3)
+
 - **Decided.** Record the per-minute count of requests that would make Clerk call its Backend API. Retune BUG-323's caps from that number instead of from the allowance alone.
 
 ## Verification

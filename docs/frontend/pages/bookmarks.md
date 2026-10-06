@@ -423,6 +423,7 @@ Recent activity rows link into question review with `from=dashboard&mode=review&
 BS-053 landed with the lightest clean-architecture-friendly version of the options above: **extract the shared toggle logic downward, keep page-specific state in the page model hooks.**
 
 ### What is shared
+
 - `toggleBookmark` controller action — reused unchanged by practice and question review
 - `getBookmarks` controller action — reused unchanged by practice and question review
 - `ToggleBookmarkUseCase`, `GetBookmarksUseCase`, repository port, and Drizzle implementation — unchanged
@@ -433,6 +434,7 @@ BS-053 landed with the lightest clean-architecture-friendly version of the optio
   - post-success key rotation
 
 ### What remains surface-specific
+
 - `usePracticeQuestionBookmarks` still owns the practice/quick-practice bookmark set, retry scheduling, message state, and bookmark-to-toast handoff
 - `useQuestionPageModel` owns the review-page bookmark membership for the current question and exposes:
   - `bookmarkStatus`
@@ -441,6 +443,7 @@ BS-053 landed with the lightest clean-architecture-friendly version of the optio
   - `onToggleBookmark`
 
 ### Why this shape
+
 - It removes the question review page's dependency on the practice route module
 - It avoids a god-hook that tries to own both practice-set state and review-page state
 - It fixes the idempotency retry hole in one place shared by both consumers
@@ -506,6 +509,7 @@ BS-053 landed with the lightest clean-architecture-friendly version of the optio
 Direct implementation/support files with bookmark-specific behavior:
 
 ### Domain
+
 | File | Purpose |
 |------|---------|
 | `src/domain/entities/bookmark.ts` | Entity type |
@@ -513,6 +517,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `src/domain/value-objects/question-progress-status.ts` | Defines `'bookmarked'` quick-practice status filter |
 
 ### Application
+
 | File | Purpose |
 |------|---------|
 | `src/application/ports/bookmark-repository.ts` | Repository interface |
@@ -522,6 +527,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `src/application/use-cases/count-available-questions.ts` | Consumes bookmark-backed status filters for quick-practice counts |
 
 ### Adapters
+
 | File | Purpose |
 |------|---------|
 | `src/adapters/controllers/bookmark-controller.ts` | Server actions (toggleBookmark, getBookmarks) |
@@ -530,6 +536,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `src/adapters/repositories/drizzle-question-repository.ts` | Implements `status === 'bookmarked'` via bookmarks subquery |
 
 ### Frontend — Bookmarks Page
+
 | File | Purpose |
 |------|---------|
 | `app/(app)/app/bookmarks/page.tsx` | Page component (server) |
@@ -541,6 +548,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `app/(app)/app/bookmarks/error.tsx` | Error boundary |
 
 ### Frontend — Practice (bookmark consumer)
+
 | File | Purpose |
 |------|---------|
 | `app/(app)/app/shared/bookmark-toggle.ts` | Route-agnostic `toggleBookmarkForQuestion()` helper shared by practice and question review |
@@ -557,6 +565,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `app/(app)/app/practice/practice-page-types.ts` | Displays `"Bookmarked"` status label |
 
 ### Frontend — Question Review Page
+
 | File | Purpose |
 |------|---------|
 | `app/(app)/app/questions/[slug]/page.tsx` | Page component (server) |
@@ -569,6 +578,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `app/(app)/app/dashboard/page.tsx` | Links recent sessions/activity into question review |
 
 ### Shared
+
 | File | Purpose |
 |------|---------|
 | `lib/routes.ts` | `ROUTES.APP_BOOKMARKS`, `QuestionOrigin`, and `toQuestionRoute()` |
@@ -576,6 +586,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `db/schema.ts` (lines 479-501, 507-526, 580-589) | Table definition, indexes, user/question relations, bookmark relations |
 
 ### Direct Bookmark Test Files
+
 | File | Type |
 |------|------|
 | `src/domain/value-objects/question-progress-status.test.ts` | Unit |
