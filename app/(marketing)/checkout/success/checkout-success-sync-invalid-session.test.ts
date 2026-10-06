@@ -127,6 +127,31 @@ describe('syncCheckoutSuccess with a session ID that is not a real one', () => {
     ]);
   });
 
+  // Stripe answers resource_missing for a session that exists under the other
+  // mode's key too. That is a setup error that would fail every buyer, so it
+  // stays an error, with fixed text.
+  it('reports a session that exists only in the other Stripe mode as an error', async () => {
+    const { deps, logger } = depsRecordingCalls(async () => {
+      throw Object.assign(
+        new Error(
+          "No such checkout.session: 'cs_live_x'; a similar object exists in live mode, but a test mode key was used to make this request.",
+        ),
+        { type: 'StripeInvalidRequestError', code: 'resource_missing' },
+      );
+    });
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_live_x' }, deps, redirectFn),
+    ).rejects.toMatchObject({ url: CHECKOUT_ERROR_ROUTE });
+
+    expect(logger.errorCalls).toEqual([
+      {
+        msg: 'Checkout success session exists only in the other Stripe mode',
+        context: { route: ROUTES.CHECKOUT_SUCCESS },
+      },
+    ]);
+  });
+
   it('still reports any other Stripe failure', async () => {
     const failure = new Error('Stripe is down');
     const { deps } = depsRecordingCalls(async () => {

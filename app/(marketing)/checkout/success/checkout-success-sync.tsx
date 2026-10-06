@@ -210,6 +210,18 @@ export async function syncCheckoutSuccess(
     },
   ).catch((error: unknown) => {
     if (isStripeResourceMissing(error)) {
+      // The same answer covers a session that exists under the other mode's
+      // key: a setup error that fails every buyer, so it stays an error.
+      if (
+        error instanceof Error &&
+        /similar object exists in (live|test) mode/.test(error.message)
+      ) {
+        d.logger.error(
+          { route: ROUTES.CHECKOUT_SUCCESS },
+          'Checkout success session exists only in the other Stripe mode',
+        );
+        return redirectFn(CHECKOUT_ERROR_ROUTE);
+      }
       return failQuietly('invalid_session_id', {
         sessionIdLength: sessionId.length,
       });

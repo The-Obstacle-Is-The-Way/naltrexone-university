@@ -157,8 +157,10 @@ describe('processStripeWebhookEvent', () => {
         'Invalid webhook signature: FakeStripeCheckoutClient does not process webhooks',
     });
 
-    expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0]).toMatchObject({
+    // BUG-325: anyone can send a bad signature, so it is a warning.
+    expect(logger.errorCalls).toEqual([]);
+    expect(logger.warnCalls).toHaveLength(1);
+    expect(logger.warnCalls[0]).toMatchObject({
       msg: 'Webhook signature verification failed',
       context: { error: 'FakeStripeCheckoutClient does not process webhooks' },
     });
