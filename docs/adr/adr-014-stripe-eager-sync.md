@@ -61,6 +61,14 @@ Implementation lives at:
 - Keep eager sync idempotent and use the same DB upsert shape as webhook processing.
 - Webhooks continue to handle non-interactive/async changes.
 
+### Amendment 2026-10-06: a second eager sync, on a refused checkout (BUG-321)
+
+Stripe refuses a new checkout when the customer already holds a blocking subscription. Our database can lack that subscription when the success-page sync did not run and the webhook has not landed or keeps failing.
+
+- **When it runs.** `CreateCheckoutSessionUseCase` syncs only on the gateway's `ALREADY_SUBSCRIBED`. The database's own refusal never reaches the gateway.
+- **How.** `syncCustomerSubscriptionFromProvider` lists the customer's blocking subscriptions through `PaymentGateway.listBlockingCustomerSubscriptions`. It retrieves each one afresh, and writes the canonical one through `persistSubscriptionObservation` and the repository's upsert. That is the same version fence, write lock and write guard as every other writer.
+- **What it never does.** It only reads Stripe, and only for the signed-in user's own customer. It never cancels duplicates; that stays with reconcile.
+
 ---
 
 ## Compliance

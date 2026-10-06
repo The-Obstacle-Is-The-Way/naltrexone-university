@@ -183,6 +183,14 @@ function normalizeBillingRecoveryReason(
     : null;
 }
 
+// BUG-321: Stripe refused a checkout because it holds a subscription, and the
+// sync could not record it, so the database still shows none.
+const STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER: PricingBanner = {
+  tone: 'info',
+  message:
+    "Stripe shows a subscription on your account that we couldn't load. Manage it in the billing portal, or try again in a minute.",
+};
+
 // Shared by both render paths so banner/CTA decisions cannot drift apart.
 function buildPricingPresentation(
   pricingData: PricingData,
@@ -190,6 +198,7 @@ function buildPricingPresentation(
 ): {
   banner: PricingBanner | null;
   manageBillingReason: PricingBillingRecoveryReason | null;
+  offerManageBillingInBanner: boolean;
   selectedPlan: PricingPlan | null;
   showTrialCtas: boolean;
 } {
@@ -209,9 +218,21 @@ function buildPricingPresentation(
     },
   );
 
+  // The database decides what the page offers; a stale copy of this
+  // parameter can only add the notice, never change the offer (BUG-275).
+  const stripeHoldsUnrecordedSubscription =
+    pricingData.isAuthenticated &&
+    !pricingData.isEntitled &&
+    manageBillingReason === null &&
+    normalizeSearchParam(resolvedSearchParams.checkout) ===
+      'already_subscribed';
+
   return {
-    banner,
+    banner: stripeHoldsUnrecordedSubscription
+      ? STRIPE_HOLDS_UNRECORDED_SUBSCRIPTION_BANNER
+      : banner,
     manageBillingReason,
+    offerManageBillingInBanner: stripeHoldsUnrecordedSubscription,
     selectedPlan,
     showTrialCtas:
       !pricingData.isEntitled && pricingData.subscriptionStatus === null,
@@ -229,8 +250,13 @@ export async function DeferredPricingView({
     loadPricingData(deps),
     searchParams,
   ]);
-  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
-    buildPricingPresentation(pricingData, resolvedSearchParams);
+  const {
+    banner,
+    manageBillingReason,
+    offerManageBillingInBanner,
+    selectedPlan,
+    showTrialCtas,
+  } = buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return (
     <PricingView
@@ -241,6 +267,9 @@ export async function DeferredPricingView({
       showTrialCtas={showTrialCtas}
       {...(manageBillingReason
         ? { manageBillingAction, manageBillingReason }
+        : {})}
+      {...(offerManageBillingInBanner
+        ? { bannerManageBillingAction: manageBillingAction }
         : {})}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
@@ -266,8 +295,13 @@ async function renderInjectedPricingPage(input: {
     input.searchParams,
     resolvedAuthNavFn(),
   ]);
-  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
-    buildPricingPresentation(pricingData, resolvedSearchParams);
+  const {
+    banner,
+    manageBillingReason,
+    offerManageBillingInBanner,
+    selectedPlan,
+    showTrialCtas,
+  } = buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return MarketingLayout({
     authNavSlot,
@@ -281,6 +315,9 @@ async function renderInjectedPricingPage(input: {
         showTrialCtas={showTrialCtas}
         {...(manageBillingReason
           ? { manageBillingAction, manageBillingReason }
+          : {})}
+        {...(offerManageBillingInBanner
+          ? { bannerManageBillingAction: manageBillingAction }
           : {})}
         subscribeMonthlyAction={subscribeMonthlyAction}
         subscribeAnnualAction={subscribeAnnualAction}

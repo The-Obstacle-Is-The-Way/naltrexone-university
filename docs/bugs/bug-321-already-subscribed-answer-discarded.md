@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — filed 2026-10-05; resolution decided below
+**Status:** Verifying — no unexplained failed sync on a refused checkout in production logs for two weeks; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -59,14 +59,36 @@ Option 2, because it repairs the cause: the database learns of the subscription 
   - Only a signed-in user who is still not entitled, and has no billing-recovery reason, also sees a notice with a "Manage billing" button.
 - **Why this does not reopen BUG-275.** The new parameter is never put into a sign-up return link. A stale copy of it can only add a notice; it never changes what the page offers. `reason=manage_billing` stays ignored for signed-in users.
 
+## Progress
+
+**2026-10-06, the fix.** Tests were written red first, in this order.
+1. **The port and the fake.** `PaymentGateway.listBlockingCustomerSubscriptions` returns `SubscriptionObservation`s, the type the webhook already produced. `FakePaymentGateway` gains a canned checkout error and canned listings; the test-double register re-adjudicates its waiver.
+2. **The sync** (`src/application/shared/sync-customer-subscription.ts`).
+   - It records the canonical blocking subscription through `persistSubscriptionObservation`.
+   - It writes nothing when a listed subscription names another user or customer, and fails when none is listed.
+   - It keeps a row the write guard prefers.
+3. **The trigger** (`create-checkout-session.ts`).
+   - Only the gateway's `ALREADY_SUBSCRIBED` runs the sync, then the original refusal is rethrown.
+   - A failed sync is logged as `Could not record the subscription Stripe holds for a refused checkout`.
+   - The database's own refusal, and any other checkout failure, run no sync.
+4. **The Stripe adapter** (`stripe-customer-subscriptions.ts`).
+   - It lists with the same blocking statuses as the refusal, and retrieves and normalizes each subscription.
+   - It refuses a subscription without `metadata.user_id`, one that another E2E run owns, or one under another customer.
+   - It is tested over the contracted `FakeStripeCheckoutClient`.
+5. **The page.**
+   - The action redirects to `/pricing?checkout=already_subscribed`.
+   - The page shows the database's state: access once the sync recorded it, or the billing card for a record that needs attention.
+   - It adds a notice with a Manage billing button, beside the plans, only for a signed-in user who is still not entitled and has no billing-recovery reason.
+   - A signed-out visitor sees nothing.
+6. **Docs.** ADR-014 gains a dated amendment, and the subscription write-lock comment names this writer. The upsert takes the lock in its own transaction.
+
 ## Verification
 
-Criteria to meet before closing.
-
-- [ ] An `ALREADY_SUBSCRIBED` refusal with no local row syncs the subscription, and the user gains access. Red first, with the fake Stripe gateway.
-- [ ] A sync that fails still shows a message and a portal link.
-- [ ] The test that locks in the old behaviour is replaced by tests of both outcomes.
-- [ ] BUG-275's stale-link case still shows the database's state.
+- [x] An `ALREADY_SUBSCRIBED` refusal from Stripe with no local row syncs the subscription, and the page then shows the user as subscribed. This is covered by the use case, sync and page tests, red first, with the fake Stripe gateway.
+- [x] A sync that fails still shows a message and a portal link: the notice and its Manage billing button.
+- [x] The old test is kept as BUG-275's guard, because the new flow uses its own parameter, and new tests cover both outcomes.
+- [x] BUG-275's stale-link case still shows the database's state.
+- [ ] In production: any `Could not record the subscription Stripe holds for a refused checkout` error in two weeks is explained, or there is none.
 
 ## Related
 

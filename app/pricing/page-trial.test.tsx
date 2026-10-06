@@ -195,6 +195,7 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe annual');
   });
 
+  // BUG-275: a stale return link must not override the signed-in state.
   it('uses authenticated entitlement state over stale return reason params', async () => {
     const checkEntitlementUseCase = new FakeUseCase<
       CheckEntitlementInput,
@@ -521,5 +522,77 @@ describe('app/pricing', () => {
     expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe monthly');
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
+  });
+});
+
+// BUG-321: Stripe refused a checkout because it already holds a subscription.
+// The page still takes its state from the database, which the checkout's sync
+// has just updated; the parameter can only add a notice.
+describe('pricing after a checkout Stripe refused as already subscribed', () => {
+  const NOTICE =
+    'Stripe shows a subscription on your account that we couldn&#x27;t load. Manage it in the billing portal, or try again in a minute.';
+
+  async function renderSignedIn(entitlement: CheckEntitlementOutput) {
+    const element = await PricingPage({
+      searchParams: Promise.resolve({ checkout: 'already_subscribed' }),
+      authNavFn: () => <div>AuthNav</div>,
+      deps: {
+        authGateway: new FakeAuthGateway(pricingTestUser),
+        checkEntitlementUseCase: new FakeUseCase<
+          CheckEntitlementInput,
+          CheckEntitlementOutput
+        >(entitlement),
+      },
+    });
+    return renderToStaticMarkup(element);
+  }
+
+  it('shows a notice with Manage billing beside the plans when the sync could not record it', async () => {
+    const html = await renderSignedIn({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+
+    expect(html).toContain(NOTICE);
+    expect(html).toContain('Manage billing');
+    expect(html).toContain('Start 7-day free trial');
+  });
+
+  it('shows the recorded subscription, and no notice, once the sync recorded it', async () => {
+    const html = await renderSignedIn({
+      isEntitled: true,
+      reason: null,
+      subscriptionStatus: 'active',
+      hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
+    });
+
+    expect(html).toContain('already subscribed');
+    expect(html).not.toContain(NOTICE);
+  });
+
+  it('shows the billing card, and no notice, when the record needs attention', async () => {
+    const html = await renderSignedIn({
+      isEntitled: false,
+      reason: 'manage_billing',
+      subscriptionStatus: 'unpaid',
+      hasActiveSubscriptionPeriod: true,
+      trialEndsAt: null,
+    });
+
+    expect(html).toContain('Subscription needs attention');
+    expect(html).not.toContain(NOTICE);
+  });
+
+  it('shows no notice to a signed-out visitor', async () => {
+    const { html } = await renderAnonymousPricingPage({
+      checkout: 'already_subscribed',
+    });
+
+    expect(html).not.toContain(NOTICE);
+    expect(html).not.toContain('Manage billing');
   });
 });

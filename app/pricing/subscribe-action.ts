@@ -39,8 +39,11 @@ export async function runSubscribeAction(
     );
   }
 
+  // BUG-321: the checkout's sync has recorded what Stripe holds, so the page
+  // shows it from the database; this parameter only adds a notice when the
+  // record is still missing.
   if (result.error.code === 'ALREADY_SUBSCRIBED') {
-    return deps.redirectFn(toPricingRoute({ reason: 'manage_billing' }));
+    return deps.redirectFn(toPricingRoute({ checkout: 'already_subscribed' }));
   }
 
   if (result.error.code === 'RATE_LIMITED') {
