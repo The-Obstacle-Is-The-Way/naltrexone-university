@@ -179,6 +179,40 @@ describe('createClerkE2ESession', () => {
     expect(saveState).not.toHaveBeenCalled();
   });
 
+  it('never saves the state of a sign-in that finishes during the sign-out', async () => {
+    const signedIn = createDeferred<void>();
+    let loads = 0;
+    const clerkDriver = new (class extends FakeClerkDriver {
+      override async load(): Promise<void> {
+        loads += 1;
+        // The second load is the sign-out's; let the late sign-in finish.
+        if (loads === 2) {
+          signedIn.resolve();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
+      override async signIn(): Promise<void> {
+        await signedIn.promise;
+        await super.signIn();
+      }
+    })(false);
+    const saveState = vi.fn(async () => {});
+
+    await expect(
+      createClerkE2ESession({
+        ...credentials,
+        clerkDriver,
+        deadlines: { signInMs: 10, signOutMs: 1_000 },
+        page: new FakeClerkPage(),
+        saveState,
+      }),
+    ).rejects.toThrow('Operation timed out');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(saveState).not.toHaveBeenCalled();
+  });
+
   it('stops waiting for a sign-out that passes its deadline', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const clerkDriver = new (class extends FakeClerkDriver {

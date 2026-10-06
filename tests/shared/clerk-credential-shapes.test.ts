@@ -50,9 +50,24 @@ describe('redactClerkCredentials', () => {
     );
   });
 
-  // A long run of token-like text must not make the match quadratic.
-  it('handles a long run of token-like text in linear time', () => {
-    const text = 'eyJ'.repeat(80_000);
+  it.each([
+    ['a JSON newline escape', '\\n'],
+    ['a hyphen', 'x-'],
+    ['an underscore', 'token_'],
+    ['a dotted prefix', 'v1.'],
+  ])('redacts a JSON Web Token after %s', (_label, prefix) => {
+    expect(redactClerkCredentials(`a ${prefix}${jwt} b`)).toBe(
+      `a ${prefix}[redacted] b`,
+    );
+  });
+
+  // Runs of token-like text must not make the match quadratic.
+  it.each([
+    ['eyJ', 'eyJ'.repeat(80_000)],
+    ['.eyJ', '.eyJ'.repeat(80_000)],
+    ['%41eyJ', '%41eyJ'.repeat(50_000)],
+    ['eyJ segments', `${'eyJ'.repeat(20)}.`.repeat(5_000)],
+  ])('handles a long run of %s in linear time', (_label, text) => {
     const started = performance.now();
 
     redactClerkCredentials(text);

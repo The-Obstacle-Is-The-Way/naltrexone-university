@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
-import { SETUP_TIMEOUT_MS } from './tests/e2e/helpers/clerk-session-deadlines';
+import { SETUP_PREPARATION_BUDGET_MS } from './tests/e2e/helpers/clerk-session-deadlines';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
@@ -40,7 +40,7 @@ export default defineConfig({
       retries: process.env.CI ? 2 : 1,
       teardown: 'cleanup',
       testMatch: /global\.setup\.ts/,
-      timeout: SETUP_TIMEOUT_MS,
+      timeout: SETUP_PREPARATION_BUDGET_MS,
       use: SESSION_LIFECYCLE_TIMEOUTS,
     },
     {

@@ -68,7 +68,9 @@ export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
   let abandoned = false;
   const signIn = async () => {
     await ensureClerkE2ESession(input);
-    // A sign-in that finishes after its deadline has already been signed out.
+    // A sign-in that finishes after its deadline never saves its state. If it
+    // finishes after the sign-out has checked for a session, that session is
+    // not signed out, and stays live until Clerk expires it.
     if (!abandoned) await input.saveState();
   };
   try {

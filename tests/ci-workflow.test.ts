@@ -27,11 +27,13 @@ const WORKFLOW_PATHS = [
 
 type WorkflowStep = {
   'continue-on-error'?: boolean;
+  'working-directory'?: string;
   env?: Record<string, string>;
   id?: string;
   if?: string;
   name?: string;
   run?: string;
+  shell?: string;
   uses?: string;
   with?: Record<string, string>;
 };
@@ -279,12 +281,17 @@ describe('Playwright artifact publication', () => {
   ].sort();
   const SCAN_COMMAND = 'pnpm exec tsx scripts/ci/scan-playwright-output.ts';
   const SCAN_GATE = "steps.playwright_output_scan.outcome == 'success'";
-  // Uploads that carry no browser output, each with its reason. Any other
-  // upload must pass the Playwright output scan.
+  // Uploads that carry no browser output, keyed by workflow, artifact name
+  // and path, each with its reason. Any other upload must pass the Playwright
+  // output scan.
   const UNSCANNED_UPLOADS: Record<string, string> = {
-    '.github/workflows/mutation.yml#mutation-report':
+    '.github/workflows/mutation.yml#mutation-report#reports/mutation':
       'Stryker mutation report; the job runs Vitest, no browser and no Clerk',
   };
+
+  function uploadKey(path: string, upload: WorkflowStep): string {
+    return `${path}#${upload.with?.name}#${upload.with?.path}`;
+  }
 
   function jobsOf(workflowPath: string): WorkflowJob[] {
     return Object.values(readParsedWorkflow(workflowPath).jobs ?? {});
@@ -302,18 +309,32 @@ describe('Playwright artifact publication', () => {
   }
 
   // BUG-328: Clerk's testing-token route handler records each Clerk API call,
-  // tokens included, as a setup step, so every HTML report carries them. The
-  // scan skips hidden files because the upload leaves them out.
+  // tokens included, as a setup step, so every HTML report carries them. No
+  // step names the report, whatever its means of publishing. The scan skips
+  // hidden files because the upload leaves them out.
   it.each(ALL_WORKFLOWS)(
-    'never uploads the HTML report or hidden files in %s',
+    'never publishes the HTML report or hidden files in %s',
     (path) => {
-      for (const upload of jobsOf(path).flatMap((job) =>
-        (job.steps ?? []).filter(isUpload),
-      )) {
-        expect(upload.with?.path).not.toContain('playwright-report');
-        expect(String(upload.with?.['include-hidden-files'] ?? false)).toBe(
+      for (const step of jobsOf(path).flatMap((job) => job.steps ?? [])) {
+        expect(JSON.stringify(step)).not.toContain('playwright-report');
+        if (!isUpload(step)) continue;
+        expect(String(step.with?.['include-hidden-files'] ?? false)).toBe(
           'false',
         );
+      }
+    },
+  );
+
+  // Any other step that names the failure output could publish it unscanned.
+  it.each(ALL_WORKFLOWS)(
+    'names test-results only in the scan and scanned uploads in %s',
+    (path) => {
+      for (const step of jobsOf(path).flatMap((job) => job.steps ?? [])) {
+        if (!JSON.stringify(step).includes('test-results')) continue;
+        expect(
+          step.id === 'playwright_output_scan' ||
+            (isUpload(step) && step.if?.includes(SCAN_GATE)),
+        ).toBe(true);
       }
     },
   );
@@ -325,7 +346,7 @@ describe('Playwright artifact publication', () => {
         const steps = job.steps ?? [];
         steps.forEach((upload, index) => {
           if (!isUpload(upload)) return;
-          if (UNSCANNED_UPLOADS[`${path}#${upload.with?.name}`]) return;
+          if (UNSCANNED_UPLOADS[uploadKey(path, upload)]) return;
 
           const scanIndex = steps.findIndex(
             (step) => step.id === 'playwright_output_scan',
@@ -339,6 +360,8 @@ describe('Playwright artifact publication', () => {
             /^pnpm exec tsx scripts\/ci\/scan-playwright-output\.ts( [\w./-]+)+$/,
           );
           expect(scan?.['continue-on-error']).toBeUndefined();
+          expect(scan?.shell).toBeUndefined();
+          expect(scan?.['working-directory']).toBeUndefined();
           expect(upload.if).not.toContain('||');
           expect(upload.if).toMatch(
             new RegExp(`&& ${SCAN_GATE.replace(/[.()]/g, '\\$&')} }}$`),
@@ -359,7 +382,7 @@ describe('Playwright artifact publication', () => {
       jobsOf(path).flatMap((job) =>
         (job.steps ?? [])
           .filter(isUpload)
-          .map((upload) => `${path}#${upload.with?.name}`),
+          .map((upload) => uploadKey(path, upload)),
       ),
     );
 
