@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import type { reportClientError } from '@/lib/report-client-error';
 import { ROUTES } from '@/lib/routes';
-import { REPORT_ISSUE_URL } from '@/lib/support';
+import { supportMailtoHref } from '@/lib/support';
 import { useReportCaughtError } from '@/lib/use-report-caught-error';
 
 export default function GlobalError({
@@ -53,11 +53,12 @@ export default function GlobalError({
               </Button>
               <Button asChild variant="outline">
                 <a
-                  href={REPORT_ISSUE_URL}
-                  target="_blank"
-                  rel="noreferrer noopener"
+                  href={supportMailtoHref({
+                    page: 'Something went wrong',
+                    errorId: error.digest,
+                  })}
                 >
-                  Report issue
+                  Contact support
                 </a>
               </Button>
             </div>

@@ -91,6 +91,8 @@ Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
   - The manifest check skipped `'use cache'` functions, which a client can call by ID. It now applies the same rule to them; all nine pass.
   - Nothing pinned the check into `pnpm build`. A test now does.
 
+**2026-10-06, in production.** Promotion #1390 (`51c14544`) reached production at 06:17:47 UTC. Its Vercel build log shows "server actions: 38, all take only their input". The signed-in check of practice, bookmarks and checkout is still open.
+
 ## Verification
 
 - [x] A production build ignored caller-supplied dependencies on controller actions (the stopgap, replaced by option 1).

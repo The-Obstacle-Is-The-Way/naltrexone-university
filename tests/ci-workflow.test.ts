@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -27,22 +27,30 @@ const WORKFLOW_PATHS = [
 
 type WorkflowStep = {
   'continue-on-error'?: boolean;
+  'working-directory'?: string;
   env?: Record<string, string>;
   id?: string;
   if?: string;
   name?: string;
   run?: string;
+  shell?: string;
   uses?: string;
   with?: Record<string, string>;
 };
 
+type RunDefaults = {
+  run?: { shell?: string; 'working-directory'?: string };
+};
+
 type WorkflowJob = {
+  defaults?: RunDefaults;
   env?: Record<string, string>;
   steps?: WorkflowStep[];
   uses?: string;
 };
 
 type WorkflowDocument = {
+  defaults?: RunDefaults;
   jobs?: Record<string, WorkflowJob>;
 };
 
@@ -273,6 +281,130 @@ describe('CI workflow', () => {
 });
 
 describe('Playwright artifact publication', () => {
+  const ALL_WORKFLOWS = [
+    ...globSync('.github/workflows/*.yml'),
+    ...globSync('.github/workflows/*.yaml'),
+  ].sort();
+  const SCAN_COMMAND = 'pnpm exec tsx scripts/ci/scan-playwright-output.ts';
+  const SCAN_GATE = "steps.playwright_output_scan.outcome == 'success'";
+  // Uploads that carry no browser output, keyed by workflow, artifact name
+  // and path, each with its reason. Any other upload must pass the Playwright
+  // output scan.
+  const UNSCANNED_UPLOADS: Record<string, string> = {
+    '.github/workflows/mutation.yml#mutation-report#reports/mutation':
+      'Stryker mutation report; the job runs Vitest, no browser and no Clerk',
+  };
+
+  function uploadKey(path: string, upload: WorkflowStep): string {
+    return `${path}#${upload.with?.name}#${upload.with?.path}`;
+  }
+
+  function jobsOf(workflowPath: string): WorkflowJob[] {
+    return Object.values(readParsedWorkflow(workflowPath).jobs ?? {});
+  }
+
+  function isUpload(step: WorkflowStep): boolean {
+    return /upload/i.test(step.uses ?? '');
+  }
+
+  function published(upload: WorkflowStep): string[] {
+    return (upload.with?.path ?? '')
+      .split('\n')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry && !entry.startsWith('!'));
+  }
+
+  // BUG-328: Clerk's testing-token route handler records each Clerk API call,
+  // tokens included, as a setup step, so every HTML report carries them. No
+  // step names the report, whatever its means of publishing. The scan skips
+  // hidden files because the upload leaves them out.
+  it.each(ALL_WORKFLOWS)(
+    'never publishes the HTML report or hidden files in %s',
+    (path) => {
+      for (const step of jobsOf(path).flatMap((job) => job.steps ?? [])) {
+        expect(JSON.stringify(step)).not.toContain('playwright-report');
+        if (!isUpload(step)) continue;
+        expect(String(step.with?.['include-hidden-files'] ?? false)).toBe(
+          'false',
+        );
+      }
+    },
+  );
+
+  // Any other step that names the failure output could publish it unscanned.
+  it.each(ALL_WORKFLOWS)(
+    'names test-results only in the scan and scanned uploads in %s',
+    (path) => {
+      for (const step of jobsOf(path).flatMap((job) => job.steps ?? [])) {
+        if (!JSON.stringify(step).includes('test-results')) continue;
+        expect(
+          step.id === 'playwright_output_scan' ||
+            (isUpload(step) && step.if?.includes(SCAN_GATE)),
+        ).toBe(true);
+      }
+    },
+  );
+
+  it.each(ALL_WORKFLOWS)(
+    'uploads only what the scan passed, unless exempt, in %s',
+    (path) => {
+      for (const job of jobsOf(path)) {
+        const steps = job.steps ?? [];
+        steps.forEach((upload, index) => {
+          if (!isUpload(upload)) return;
+          if (UNSCANNED_UPLOADS[uploadKey(path, upload)]) return;
+
+          const scanIndex = steps.findIndex(
+            (step) => step.id === 'playwright_output_scan',
+          );
+          const scan = steps[scanIndex];
+          expect(scanIndex).toBeGreaterThanOrEqual(0);
+          expect(scanIndex).toBeLessThan(index);
+          // Nothing may change the output between the scan and the upload.
+          expect(steps.slice(scanIndex + 1, index).every(isUpload)).toBe(true);
+          expect(scan?.run).toMatch(
+            /^pnpm exec tsx scripts\/ci\/scan-playwright-output\.ts( [\w./-]+)+$/,
+          );
+          expect(scan?.['continue-on-error']).toBeUndefined();
+          // Neither the step nor a job or workflow default may change how,
+          // or where, the scan runs.
+          for (const run of [
+            scan,
+            job.defaults?.run,
+            readParsedWorkflow(path).defaults?.run,
+          ]) {
+            expect(run?.shell).toBeUndefined();
+            expect(run?.['working-directory']).toBeUndefined();
+          }
+          expect(upload.if).not.toContain('||');
+          expect(upload.if).toMatch(
+            new RegExp(`&& ${SCAN_GATE.replace(/[.()]/g, '\\$&')} }}$`),
+          );
+          const scanned = (scan?.run ?? '')
+            .replace(SCAN_COMMAND, '')
+            .split(' ');
+          for (const entry of published(upload)) {
+            expect(scanned).toContain(entry.replace(/\/$/, ''));
+          }
+        });
+      }
+    },
+  );
+
+  it('keeps every exemption pointing at a real upload', () => {
+    const uploads = ALL_WORKFLOWS.flatMap((path) =>
+      jobsOf(path).flatMap((job) =>
+        (job.steps ?? [])
+          .filter(isUpload)
+          .map((upload) => uploadKey(path, upload)),
+      ),
+    );
+
+    for (const exemption of Object.keys(UNSCANNED_UPLOADS)) {
+      expect(uploads).toContain(exemption);
+    }
+  });
+
   it.each([
     [CI_WORKFLOW_PATH, 'E2E smoke', 'e2e_smoke'],
     [
@@ -281,28 +413,25 @@ describe('Playwright artifact publication', () => {
       'hosted_e2e',
     ],
   ])(
-    'splits reports from failure-only results in %s',
+    'scans and uploads failure output only when E2E failed in %s',
     (workflowPath, e2eStepName, e2eStepId) => {
       const e2e = findParsedStep(workflowPath, e2eStepName);
-      const report = findParsedStep(workflowPath, 'Upload Playwright report');
+      const scan = findParsedStep(workflowPath, 'Scan Playwright output');
       const failureOutput = findParsedStep(
         workflowPath,
         'Upload Playwright failure output',
       );
+      const failed = `!cancelled() && steps.${e2eStepId}.outcome == 'failure'`;
 
       expect(e2e.id).toBe(e2eStepId);
-      expect(report.if).toBe(`\${{ !cancelled() }}`);
-      expect(report.with?.path).toContain('playwright-report/');
-      expect(report.with?.path).not.toContain('test-results/');
+      expect(scan.if).toBe(`\${{ ${failed} }}`);
+      expect(scan.run).toBe(`${SCAN_COMMAND} test-results`);
       expect(failureOutput.if).toBe(
-        `\${{ !cancelled() && steps.${e2eStepId}.outcome == 'failure' }}`,
+        `\${{ ${failed} && steps.playwright_output_scan.outcome == 'success' }}`,
       );
-      expect(failureOutput.with?.path).toContain('test-results/');
-
-      for (const upload of [report, failureOutput]) {
-        expect(upload.with?.path).toContain('!**/.auth/**');
-        expect(upload.with?.path).toContain('!**/trace.zip');
-      }
+      expect(failureOutput.with?.path).toBe(
+        'test-results/\n!**/.auth/**\n!**/trace.zip\n',
+      );
     },
   );
 });
@@ -538,6 +667,46 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     expect(stepBlock).toContain(
       'bash scripts/ci/install-playwright-chromium.sh',
     );
+  });
+
+  // BUG-327: a mutable tag can change what runs between two runs of the same
+  // commit, so every service or job container is pinned by digest, in every
+  // workflow.
+  it('pins every container image by digest, in every workflow', () => {
+    const images = [
+      ...globSync('.github/workflows/*.yml'),
+      ...globSync('.github/workflows/*.yaml'),
+    ].flatMap((file) => {
+      const jobs = Object.values(
+        (
+          parse(readFileSync(file, 'utf8')) as {
+            jobs?: Record<
+              string,
+              {
+                container?: { image?: string } | string;
+                services?: Record<string, { image?: string }>;
+              }
+            >;
+          }
+        ).jobs ?? {},
+      );
+      return jobs
+        .flatMap((job) => [
+          ...Object.values(job.services ?? {}).map((service) => service.image),
+          typeof job.container === 'string'
+            ? job.container
+            : job.container?.image,
+        ])
+        .filter((image): image is string => typeof image === 'string')
+        .map((image) => ({ file, image }));
+    });
+
+    expect(images.length).toBeGreaterThanOrEqual(2);
+    expect(
+      images.filter(
+        ({ image }) => !/^[^@\s]+@sha256:[0-9a-f]{64}$/.test(image),
+      ),
+    ).toEqual([]);
   });
 
   it('pins dependencies that execute in the secret-bearing hosted workflow', () => {

@@ -8,6 +8,7 @@ Scope:
 - The `drizzle.mock` transaction boundary for repository error-translation unit tests (`drizzle-mock-transaction`)
 - Clerk webhook event builders that default from the recorded `tests/fixtures/clerk` payloads (`clerk-events`)
 - A real Next `NextRequest`/`NextFetchEvent` pair for invoking the proxy (`next-proxy-invocation`)
+- The Clerk credential shapes that E2E console redaction removes and the CI failure-output scan refuses (`clerk-credential-shapes`)
 - Helpers that are suite-agnostic and can be used by unit, browser, integration, or E2E tests
 
 Rules:

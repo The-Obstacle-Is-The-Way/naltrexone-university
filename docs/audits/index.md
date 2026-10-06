@@ -2,7 +2,7 @@
 
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-22 — archived-disposition metadata only; the archive convention/index-link maintenance remains dated 2026-09-21, and the prior audit cycle remains dated 2026-06-13.
-**Next ID:** AUDIT-013
+**Next ID:** AUDIT-014
 
 **2026-09-22 metadata maintenance:** five archived reports gain their existing register dispositions. Audit dates are labeled as audit dates, not inferred fix or deployment dates; AUDIT-011 uses its explicitly recorded March 19 resolution date. AUDIT-009 records a completed zero-finding report, not a newly shipped runtime fix. No audit is rerun by this maintenance. [Evidence and sample](../debt/assets/archive-metadata-2026-09-22/verification.md#brainstorming-and-audit-follow-through).
 
@@ -16,6 +16,7 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
+| AUDIT-013 | [Security Review of Recent Work](./audit-013-security-review-2026-10-05.md) | 2026-10-05 | Abuse of logs, Sentry and shared provider limits; authorization, input, redirects, webhooks, payments and answer keys since 2026-09-26; secrets, CI, headers, dependencies | Five bugs (BUG-323 to BUG-327) and DEBT-414 F21/F22 filed; one CI-artifact finding withheld until fixed |
 
 ## Archived Audits
 

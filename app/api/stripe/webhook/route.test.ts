@@ -36,6 +36,7 @@ function createPaymentGatewayStub(): PaymentGateway {
 
 function createTestDeps() {
   const loggerError = vi.fn();
+  const loggerWarn = vi.fn();
   const limit = vi.fn<RateLimiter['limit']>(async () => ({
     success: true,
     limit: 1000,
@@ -86,7 +87,7 @@ function createTestDeps() {
   const createStripeWebhookDeps = vi.fn(() => deps);
   const createRateLimiter = vi.fn<() => RateLimiter>(() => rateLimiter);
   const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
-    logger: { error: loggerError },
+    logger: { error: loggerError, warn: loggerWarn },
     createStripeWebhookDeps,
     createRateLimiter,
   }));
@@ -98,6 +99,7 @@ function createTestDeps() {
     createContainer,
     processStripeWebhook,
     loggerError,
+    loggerWarn,
     createStripeWebhookDeps,
     createRateLimiter,
     rateLimiter,
@@ -144,7 +146,8 @@ describe('POST /api/stripe/webhook', () => {
   });
 
   it('returns 400 when signature verification fails', async () => {
-    const { POST, processStripeWebhook, loggerError } = createTestDeps();
+    const { POST, processStripeWebhook, loggerError, loggerWarn } =
+      createTestDeps();
 
     processStripeWebhook.mockRejectedValue(
       new ApplicationError(
@@ -165,15 +168,18 @@ describe('POST /api/stripe/webhook', () => {
     await expect(res.json()).resolves.toEqual({
       error: 'Webhook validation failed',
     });
-    expect(loggerError).toHaveBeenCalledWith(
+    // BUG-325: anyone can send a bad signature, so it is a warning; a bad
+    // payload behind a valid signature stays an error.
+    expect(loggerWarn).toHaveBeenCalledWith(
       {
         error: {
           name: 'ApplicationError',
           code: 'INVALID_WEBHOOK_SIGNATURE',
         },
       },
-      'Stripe webhook validation failed',
+      'Stripe webhook signature verification failed',
     );
+    expect(loggerError).not.toHaveBeenCalled();
   });
 
   it('returns 400 when payload validation fails', async () => {
@@ -314,7 +320,7 @@ describe('POST /api/stripe/webhook', () => {
       pruneExpiredWindows: async () => 0,
     };
     const createContainer = vi.fn<() => StripeWebhookRouteContainer>(() => ({
-      logger: { error: vi.fn() },
+      logger: { error: vi.fn(), warn: vi.fn() },
       createRateLimiter: () => rateLimiter,
       createStripeWebhookDeps,
     }));
