@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — no Sentry error or error log from the fixed paths for two weeks after the deploy; due 2026-10-20
+**Status:** Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20
 **Priority:** P3 (first drafted as P2; lowered 2026-10-05, see item 5)
 **Date:** 2026-10-05 (found); filed 2026-10-06
 **Resolved:** —
@@ -35,31 +35,34 @@ This is likely the report the owner remembered, that "a user with certain parame
   - A form post with valid consent fields and a huge `idempotencyKey` fails the controller's input check before authentication (`src/adapters/controllers/billing-controller.ts:37-50`).
   - `runSubscribeAction` then logs `{ plan, idempotencyKey, errorCode, errorMessage }` at error level as "Stripe checkout failed" (`app/pricing/subscribe-action.ts:50-59`).
   - Server actions accept 1 MB bodies by default. Pino escapes control characters, so no forged lines are possible; the problem is size and mislabelling. Confirmed in source.
-- **Decided.** A `VALIDATION_ERROR` redirects quietly. Other failures log the error code and the key's length, never the key itself.
+- **Decided.** Never log the key, only its length. A `VALIDATION_ERROR` is a warning, not a checkout failure, since it covers the caller's mistake, a forgery, and an offer that changed since the page loaded. Other failures stay errors. (First decided as silence for `VALIDATION_ERROR`, corrected after the independent review: our server raises "the displayed offer has changed" itself, and silence would hide a deploy that broke every checkout.)
 
 ### 3. `/checkout/success?session_id=` makes a Stripe call and a Sentry error per request (P3, signed in)
 - **Evidence.**
   - The page checks only that `session_id` is not empty (`app/(marketing)/checkout/success/checkout-success-sync.tsx:132-136`).
   - It then calls `requireUser` (Clerk) and `checkout.sessions.retrieve` (Stripe) (`:146-157`). Stripe's 404 is not transient, so it is thrown, unhandled, and reaches Sentry. Its message contains the submitted text.
   - Any free account can repeat this, spending the shared Clerk and Stripe limits. Nothing leaks back, and another user's real session still fails the ownership check. Confirmed in source.
-- **Decided.** Check the `cs_test_`/`cs_live_` shape first. Treat Stripe's `resource_missing` as the existing `invalid_session_id` failure, logged at info level.
+- **Decided.**
+  - Refuse text that is not shaped like a Stripe Checkout session ID (`cs_` and then letters, digits and underscores) before any call. The shape is broad enough for test fixtures and real IDs alike.
+  - Limit each signed-in user to ten visits a minute, before the Clerk lookup and the Stripe call. A limiter that fails lets the visit through.
+  - Treat Stripe's `resource_missing` as a quiet `invalid_session_id`, logged at info. The exception is a session that exists under the other Stripe mode's key: that is a setup error, so it stays an error.
 
 ### 4. Next.js's own refusals of malformed action posts may reach Sentry (P3)
-- **Evidence (traced by the reviewer, not yet confirmed by a test).**
-  - A post with a foreign `Origin` is refused with `E80` after `console.error` (`next/dist/server/app-render/action-handler.js:446-470`).
-  - A no-JavaScript form post naming an unknown action throws `E975` (`:744`).
-  - The reviewer traced both into `onRequestError`. Neither needs an account.
-- **Decided.** Confirm with a test that drives `onRequestError` with each error. If they arrive, drop them in the server `beforeSend` by `__NEXT_ERROR_CODE`. Our own errors keep reaching Sentry.
-- **Checked 2026-10-06: deferred.** Production Sentry has no issue in the last 14 days for `E80`, `E975`, "Invalid Server Actions request" or "Failed to find Server Action". Filtering an error that has never arrived would be blind. The trigger is the first such event, and the record's deferred row names it.
+- **Evidence (traced in Next's action handler, not confirmed by a test).** Next.js refuses some malformed server-action posts by throwing, and the reviewer traced those errors into `onRequestError`. None needs an account.
+- **Decided at filing.** Confirm with a test, and filter them in the server `beforeSend` if they arrive.
+- **Revised 2026-10-06: not filtered, with a trigger.**
+  - A server-side filter would not protect the quota: anyone can post events straight to Sentry (item 5).
+  - Production Sentry shows none of these errors in the 14 days to 2026-10-06, so they are not noise today.
+  - If they ever appear and add noise, filter them by Next's error code then. Until then, our own errors keep the simpler path to Sentry.
 
 ### 5. The Sentry quota: accepted, as Sentry advises (P4)
-- **The concern.** The project is on Sentry's free Developer plan: 5,000 errors a month, with no on-demand budget. About 1,280 were accepted in the last 30 days, and at most 149 on one day. Once the month is used up, real errors are dropped until the next cycle. A flood costs no money, but it would blind monitoring.
+- **The concern.** The project is on Sentry's free plan, with a fixed monthly error quota and no on-demand budget. Once the month is used up, real errors are dropped until the next cycle. A flood costs no money, but it would blind monitoring.
 - **Why server-side fixes cannot settle it.** The project has one client key, and it is public in the production JavaScript (a non-printing match, 2026-10-05). Anyone can post events straight to Sentry's ingest endpoint, without touching our server.
 - **What Sentry says.**
   - Its [DSN explainer](https://docs.sentry.io/concepts/key-terms/dsn-explainer/) says DSNs "are safe to keep public because they only allow submission of new events". It calls abuse "a rare occurrence", and names IP blocking and key rotation as the controls.
   - [Spike protection](https://docs.sentry.io/pricing/quotas/spike-protection) is on automatically on every plan. It is on here (`quotas:spike-protection-disabled: false`), and drops events once volume passes a threshold derived from the project's baseline.
 - **What was tried and rejected.**
-  - **A per-key cap.** The owner approved 200 a day, but Sentry ignored it: the API answered 200 and `rateLimit` read back `null`. Per-key rate limits need the Business or Enterprise plan. Nothing else changed.
+  - **A per-key cap.** The owner approved one, but Sentry ignored it: per-key rate limits need a higher plan. Nothing else changed.
   - **A `tunnel` route,** drafted and then rejected after review. Sentry's tunnel exists to get past ad blockers, not to stop abuse. It would add an endpoint to secure, and it would turn attack traffic into our own Vercel function invocations.
   - **A plan upgrade,** to defend a risk the vendor rates rare. Not proportionate.
 - **Decided: accept, with a response plan.** If Sentry shows a sudden flood of garbage events, or the month's usage jumps:
@@ -73,7 +76,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **Unsigned webhook posts.** A request with a bogus signature header passes the header-presence check, then costs one rate-limiter write and two error lines before verification fails (Stripe `app/api/stripe/webhook/handler.ts:48-100`, Clerk and Resend similarly). The limiter bounds it (Audit #21 and SPEC-017 accepted this residual). **Decided:** log failed verifications at warn, once per limiter window. **Narrowed 2026-10-06:** a failed signature check, which anyone can cause, logs at warn with fixed text and the safe diagnostics. An invalid payload after a valid signature means the provider sent something unexpected, so it stays at error. The limiter already bounds the count, so "once per window" is dropped.
 - **Cron routes.** A warn line per unauthenticated request, with fixed text. **Accepted:** bounded and contentless.
 - **Malformed Clerk handshake token.** A garbage `__clerk_handshake` logs `Clerk: unable to resolve handshake` inside Clerk's SDK. **Decided:** BUG-323's limiter covers this parameter too.
-- **`CLERK_JWT_KEY` is unset** in every Vercel environment (names read 2026-10-05). So a token with an unknown key ID makes Clerk's SDK fetch the key set. That endpoint is not rate-limited, so the cost is middleware time only. **Decided:** the owner sets `CLERK_JWT_KEY` for production, letting tokens be verified without a network call.
+- **Clerk's optional `CLERK_JWT_KEY`** lets the middleware verify session tokens without fetching Clerk's signing keys over the network. **Decided:** an optional owner setting; the cost without it is middleware time only.
 - **The logger's redaction list** (`lib/logger.ts:27-46`) predates `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `DATABASE_URL`. Nothing logs `env` today. **Decided:** add them.
 - **CSP violation reports** reach Sentry's report endpoint. This is already recorded as known noise in DEBT-420 (archived), so it is not re-filed.
 
@@ -81,25 +84,42 @@ This is likely the report the owner remembered, that "a user with certain parame
 
 **2026-10-06, the fix.** Tests were written red first.
 - **Item 1** shipped with BUG-324: every form action returns at once, without logging, for input that is not form data.
-- **Item 2.** `runSubscribeAction` (`app/pricing/subscribe-action.ts`) no longer logs a `VALIDATION_ERROR`, which is the caller's mistake or a forgery. Other checkout failures log the idempotency key's length, never the key.
-- **Item 3.** `syncCheckoutSuccess` refuses a `session_id` that is not `cs_` and then letters, digits and underscores (at most 255), before any Clerk or Stripe call. Stripe's `resource_missing` gets the same quiet failure, `invalid_session_id`, at info level with the ID's length only. Any other Stripe failure is still thrown. Real Stripe IDs and the existing fixtures fit the shape.
-- **Item 4** is deferred: production Sentry has none of these events in 14 days. The trigger is the first one.
+- **Item 2.** `runSubscribeAction` (`app/pricing/subscribe-action.ts`) logs the idempotency key's length, never the key. A `VALIDATION_ERROR` is logged at warn ("Stripe checkout refused its input"), and other failures at error.
+- **Item 3.** `syncCheckoutSuccess` (`app/(marketing)/checkout/success/checkout-success-sync.tsx`):
+  - refuses a `session_id` that is not `cs_` and then up to 255 letters, digits and underscores, before any call;
+  - limits each signed-in user to ten visits a minute (`CHECKOUT_SUCCESS_RATE_LIMIT`), keyed by the session's Clerk user, before the user lookup and Stripe;
+  - treats Stripe's `resource_missing` as a quiet `invalid_session_id` at info, with only the ID's length. A session that exists in the other Stripe mode is logged at error.
+- **Item 4** is not filtered, for the reason and with the trigger above.
+- **Item 5.** The response plan is in `docs/dev/logging.md`.
 - **Item 6.**
   - The question page caps the slug and origin in its telemetry line at 100 characters.
-  - All three webhooks log a failed signature check at warn. A Stripe payload failure behind a valid signature stays an error.
-  - The logger's redaction list covers every secret the env schema declares, and a test now checks it against the schema.
+  - Every failed webhook signature check logs at warn: the three routes, and Stripe's processor, which keeps Stripe's reason. A Stripe payload failure behind a valid signature stays an error.
+  - The logger redacts each secret the env schema declares, at the top level and one level down. A test checks the list against the schema and round-trips a log through pino.
   - BUG-323's limiter covers the handshake parameter.
-  - `CLERK_JWT_KEY` remains an optional owner setting. Without it, an unknown key ID costs one JWKS fetch, on an endpoint that is not rate-limited.
+
+**2026-10-06, the independent review's findings** (same pull request), all fixed above:
+- **(P2)** Silencing every `VALIDATION_ERROR` hid real failures.
+- **(P2)** A well-shaped session ID still cost a Clerk lookup and a Stripe call per request, for any account.
+- **(P3)** Stripe's processor still logged a forged signature at error.
+- **(P3)** `resource_missing` also covers a session from the other Stripe mode.
+- **(P3)** An error-log check could not be measured: runtime logs are kept briefly, and pino does not feed Sentry.
+- **(P3)** The record read too much like a recipe.
+- **(P4)** Smaller points.
+
+**Known gap.**
+- The new checkout-success tests hand-build their dependencies and Stripe's error, as the existing checkout-success tests do.
+- The maintained `FakeStripeCheckoutClient` throws a plain error for an unknown session, not Stripe's `resource_missing`.
+- Giving it Stripe's answer needs a shared provider-contract scenario. That is carried to this register's Deferred table at closeout.
 
 ## Verification
 
 - [x] Item 1: each exported action given a non-FormData argument returns without throwing or logging (BUG-324's `tests/server-action-input.test.ts`).
-- [x] Item 2: a refused subscribe never logs the raw key, and a refused input is not logged.
-- [x] Item 3: a malformed session ID, or one Stripe lacks, redirects with `invalid_session_id`, logged at info, with nothing thrown.
-- [x] Item 4: checked against 14 days of production Sentry (none), and deferred with its trigger.
+- [x] Item 2: a refused subscribe never logs the raw key, and a refused input is a warning.
+- [x] Item 3: a malformed session ID, or one Stripe lacks, redirects with `invalid_session_id`, logged at info, with nothing thrown. Each signed-in user is limited before Clerk and Stripe, and a session from the other Stripe mode stays an error.
+- [x] Item 4: decided with a trigger; production Sentry had none of these errors in 14 days.
 - [x] Item 5: the response plan is in the logging guide, `docs/dev/logging.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
-- [x] Item 6: each decided change shipped, except `CLERK_JWT_KEY`, an optional owner setting.
-- [ ] In production: no Sentry error or error log from these paths for two weeks after the deploy.
+- [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` stays an optional owner setting.
+- [ ] In production: no Sentry event from these paths for two weeks after the deploy. Runtime logs are kept only briefly, so Sentry is the evidence.
 
 ## Related
 

@@ -96,8 +96,8 @@ describe('logger', () => {
   // BUG-325: a secret env var attached to a log by mistake must not reach the
   // logs. The list is checked against the env schema, so a new secret has to
   // join it.
-  it('redacts every secret the env schema declares', async () => {
-    const { LOGGER_REDACT_PATHS } = await importLogger();
+  it('names every secret the env schema declares', async () => {
+    const { SECRET_ENV_NAMES } = await importLogger();
     const schemaKeys = [
       ...readFileSync('lib/env.ts', 'utf8').matchAll(
         /^\s+([A-Z][A-Z0-9_]+):/gm,
@@ -110,9 +110,36 @@ describe('logger', () => {
     );
 
     expect(secrets.length).toBeGreaterThanOrEqual(10);
-    expect(
-      secrets.filter((name) => !LOGGER_REDACT_PATHS.includes(`env.${name}`)),
-    ).toEqual([]);
+    expect(secrets.filter((name) => !SECRET_ENV_NAMES.includes(name))).toEqual(
+      [],
+    );
+  });
+
+  it('removes a secret logged at the top level or one level down', async () => {
+    const { LOGGER_REDACT_PATHS } = await importLogger();
+    const lines: string[] = [];
+    const redacting = pino(
+      {
+        level: 'info',
+        base: null,
+        timestamp: false,
+        redact: { paths: [...LOGGER_REDACT_PATHS], remove: true },
+      },
+      { write: (line: string) => lines.push(line) },
+    );
+
+    redacting.info(
+      {
+        CRON_SECRET: 'secret-top',
+        env: { DATABASE_URL: 'secret-env' },
+        config: { STRIPE_SECRET_KEY: 'secret-nested' },
+        kept: 'visible',
+      },
+      'attached by mistake',
+    );
+
+    expect(lines.join('')).toContain('visible');
+    expect(lines.join('')).not.toMatch(/secret-(top|env|nested)/);
   });
 
   it('uses LOG_LEVEL when provided', async () => {
