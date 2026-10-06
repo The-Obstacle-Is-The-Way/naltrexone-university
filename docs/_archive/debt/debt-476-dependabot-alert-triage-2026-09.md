@@ -23,6 +23,8 @@ The installed `stream-json@1.9.1` remains covered by the owner's September 16 `n
 
 The register's Deferred row retains the actual remaining trigger: a supported Solana/Clerk update adopts the jayson major or removes the unused adapter tree, or a reachability change makes the vulnerable filters relevant. Re-audit then; reopen the alert if its dismissal no longer holds. The optional adapter-free Clerk observation is deferred until an upstream-supported variant exists and is prioritized, not silently claimed implemented. This follow-up is accepted-risk monitoring, not unfinished fast-uri remediation.
 
+*Corrected 2026-10-06: [Clerk UI 1.38.0](https://github.com/clerk/javascript/releases/tag/%40clerk%2Fui%401.38.0) supplies the upstream-supported Solana-tree removal; npm publication at 2026-09-30T21:37:27.585Z makes it eligible after 2026-10-07T21:37:27.585Z, and [DEBT-504](../../debt/debt-504-dependabot-alert-triage-2026-10.md) tracks its full-gate and promotion follow-up.*
+
 
 ### Correction — 2026-10-04: alert #55 reopened
 
