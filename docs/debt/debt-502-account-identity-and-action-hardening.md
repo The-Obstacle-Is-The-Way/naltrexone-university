@@ -30,7 +30,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
   3. a Clerk instance switch, which is what happened in BUG-078.
 - **Impact.** The deleted person's email also stays in our database, a privacy residue.
 - **Decided.**
-  - The sign-in path checks the tombstones before inserting.
+  - The sign-in path takes the existing Clerk tombstone lock, checks the tombstone and provisions in the same short transaction, using transaction-bound repositories. A separate preflight check still races deletion. Preserve the deletion path's lock order; provider reads happen outside the transaction and their result is revalidated under the lock. Prove both interleavings against real Postgres. (`DrizzleDeletedClerkUserRepository.lock` and `clerk-webhook-controller.ts` already define that lock.)
   - An operator command, with a runbook, deletes a row whose Clerk user is confirmed gone, under the same locks as the webhook.
 
 ### 3. A Clerk user with no email can never get an app row (P3, depends on Clerk settings)
@@ -51,7 +51,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 ### 6. Smaller items (P3)
 
 - **`CONSENT_STATE_SECRET` is optional** in the production schema (`lib/env.ts:52`), yet "Add a card" fails without it. It is set in Production and Preview (names checked 2026-10-05). Decided: require it in production.
-- **No sign-in URL is set** on `ClerkProvider` (`components/providers.tsx:71-77`), so a returning user goes through sign-up, then to the accounts subdomain. Decided: set sign-in and sign-up URLs, then check the return to `/pricing?plan=…`.
+- **No sign-in URL prop is set** on `ClerkProvider` (`components/providers.tsx:71-77`). Clerk also reads `NEXT_PUBLIC_CLERK_SIGN_IN_URL` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL` (`@clerk/nextjs/dist/cjs/utils/mergeNextClerkPropsWithEnv.js`), so source omission alone does not prove the deployed redirect. Decided: establish one explicit app-route configuration, check the deployed environment by presence only, then test sign-in, sign-up and the return to `/pricing?plan=…`. The project environment API, read without decryption on 2026-10-06, lists neither URL variable. The reported accounts-subdomain journey remains unverified in this audit.
 - **A signed-out "Add a card" loses its way back** (`app/(app)/app/trial-payment-method-action-handler.ts:60-62`). Decided: carry a return path.
 - **Deleting an account and signing up again grants a fresh 7-day trial**, because eligibility is per app row. Decided: owner's call whether to key trial eligibility on the email's history.
 - **The shared E2E user's seed re-points the row by email** (`tests/e2e/helpers/seed-test-user.ts:166-168`), the reassignment BUG-284 removed from production. So the fail-closed identity path is never exercised end to end. Decided: seed by Clerk ID.

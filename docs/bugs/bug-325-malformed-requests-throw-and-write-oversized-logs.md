@@ -119,13 +119,13 @@ This is likely the report the owner remembered, that "a user with certain parame
 
 ## Verification
 
-- [x] Item 1: each exported action given a non-FormData argument returns without throwing or logging (BUG-324's `tests/server-action-input.test.ts`).
+- [x] Item 1: source inspection shows each form-action wrapper returns before logging or delegation for a non-FormData input. BUG-324's `tests/server-action-input.test.ts` proves no probe member is invoked; it swallows rejections and does not assert logging. *Corrected 2026-10-06: narrowed the test claim to its actual assertion.*
 - [x] Item 2: a refused subscribe never logs the raw key, and a refused input is a warning.
 - [x] Item 3: a malformed session ID, or one Stripe lacks, redirects with `invalid_session_id`, logged at info, with nothing thrown. Each signed-in user is limited before Clerk and Stripe, and a session from the other Stripe mode stays an error.
 - [x] Item 4: decided with a trigger; production Sentry had none of these errors in 14 days.
 - [x] Item 5: the response plan is in the logging guide, `docs/dev/logging.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
 - [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` stays an optional owner setting.
-- [ ] In production: no Sentry event from these paths for two weeks after the deploy. Runtime logs are kept only briefly, so Sentry is the evidence.
+- [ ] Owner, by 2026-10-20: search Sentry for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions and a contemporaneous one-hour Vercel capture cover their content and level. The original 14-day historical search remains an operator receipt.
 
 ## Related
 

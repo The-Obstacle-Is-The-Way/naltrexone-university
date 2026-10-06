@@ -1,12 +1,12 @@
 # BUG-328: Public Playwright Reports Still Carry Clerk Development-Instance Tokens
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — after promotion, a green `main` run publishes no Playwright report, and reports uploaded before then are deleted; due 2026-10-13
+**Status:** Resolved — 2026-10-06; promoted, green main E2E, zero artifacts, and report cleanup recorded
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06 with its fix
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-06
+**Verification receipts:** [#1405](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1405), [promotion #1406](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1406), [main CI](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37489435958).
 
 ---
 
@@ -70,7 +70,7 @@ Options 1 (revised), 2 (revised), 4 and 5.
   - A sign-in that finishes after its deadline never saves its state. If it finishes after the sign-out has checked for a session, that session is not signed out, and stays live until Clerk expires it.
   - The `setup` and `cleanup` projects also bound page waits and navigations at 15 seconds, so a hung wait fails with its own error.
   - Known limit: an attempt stopped from outside, such as a cancelled CI job, cannot sign out, and its session stays live until Clerk expires it. With nothing published, that session's token does not leave the runner.
-- **Option 5 deletes the existing artifacts.** That is a bulk delete of public artifacts, so it needed the owner's approval, as BUG-307's did; the owner gave it on 2026-10-06. Every artifact named `playwright-report` or `stripe-hosted-checkout-report` was deleted. The failure-output artifacts are clean and stay, as do the mutation reports. Until this fix reaches `main`, runs there and the daily hosted smoke still upload reports, so a second deletion follows the promotion.
+- **Option 5 deletes the existing artifacts.** That is a bulk delete of public artifacts, so it needed the owner's approval, as BUG-307's did; the owner gave it on 2026-10-06. Every artifact named `playwright-report` or `stripe-hosted-checkout-report` was deleted. The failure-output artifacts are clean and stay, as do the mutation reports. The post-promotion cleanup found none to delete; its count is recorded below.
 
 Option 3 (redacting at the source) is what bringing the report back would need. It depends on Playwright's report internals, and nothing needs the report in CI.
 
@@ -91,9 +91,10 @@ Option 3 (redacting at the source) is what bringing the report back would need. 
 - [x] Setup signs out the session of a failed attempt, including after either deadline passes, and never saves the state of a late sign-in; global setup reserves both deadlines once preparation ends (`tests/e2e/helpers/clerk-auth.test.ts`, `tests/e2e/helpers/clerk-session-deadlines.test.ts`, `playwright.config.test.ts`).
 - [x] BUG-307's archived closure has a forward pointer here; its scan was blind to embedded data.
 - [x] The existing report artifacts are deleted, with the owner's approval of 2026-10-06: 984 deleted (955 CI, 29 hosted-checkout), none failed, none left.
-- [ ] After promotion, a green `main` run publishes no Playwright report, and the reports uploaded between the deletion and the promotion are deleted, with the count recorded.
+- [x] Promotion #1406 merged as `0f324edd`, carrying #1405 merge `24a4bb25` and exact-head approval 5430633755 on `4e18861f`. Main run 37489435958 passed E2E; scan and upload steps skipped; the artifacts API reports zero artifacts. Vercel confirms production assignment at 2026-10-06T15:53:43.858Z.
+- [x] Cleanup receipt: the owner reports 984 reports deleted with approval and no upload between deletion and promotion, so the second deletion count is **0**. The external audit read the complete current artifact listing and found zero report artifacts. Historical deletion count and authorization are retained owner evidence; the listing cannot reconstruct deleted artifacts. No artifact was deleted by this audit.
 
 ## Related
 
 - BUG-305, BUG-306 and BUG-307 (archived): the earlier Clerk credential leaks in CI.
-- [BUG-327](./bug-327-dependabot-branches-build-with-preview-secrets.md): the same audit's CI and build exposure.
+- [BUG-327](../../bugs/bug-327-dependabot-branches-build-with-preview-secrets.md): the same audit's CI and build exposure.
