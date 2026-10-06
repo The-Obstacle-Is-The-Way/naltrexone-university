@@ -87,7 +87,7 @@ Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
 - **The independent review of this step** found no way left to pass dependencies or options. Its other findings are fixed here:
   - this record had said a stale page reloads by itself;
   - the architecture records still told authors to mark controllers `'use server'`;
-  - nothing checked what a wrapper does with its input. The scan now requires each wrapper's body to be exactly `return controller.<sameName>(input)`.
+  - nothing checked what a wrapper does with its input. The scan now requires each wrapper's body to be exactly `return controller.<sameName>(input)`. After CodeRabbit's review, it also accepts only function declarations in a wrapper module, so an arrow or function-expression export cannot skip that check.
   - The manifest check skipped `'use cache'` functions, which a client can call by ID. It now applies the same rule to them; all nine pass.
   - Nothing pinned the check into `pnpm build`. A test now does.
 

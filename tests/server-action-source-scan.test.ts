@@ -120,6 +120,26 @@ export async function getThing(input: unknown) {
         `${file}:3 getThing must only return controller.getThing(input)`,
       ]);
     });
+
+    // Only a function declaration has its body checked, so a wrapper module
+    // takes no other form of export.
+    it.each([
+      [
+        'an arrow function',
+        'export const getThing = async (input: unknown) => controller.getThing(input, input);',
+      ],
+      [
+        'a function expression',
+        'export const getThing = async function (input: unknown) { return controller.getThing(input, input); };',
+      ],
+    ])('rejects %s export', (_case, line) => {
+      expect(
+        scanServerActionSource(
+          file,
+          `'use server';\nimport * as controller from './thing-controller';\n${line}`,
+        ).issues,
+      ).toEqual([`${file}:3 getThing is not a function declaration`]);
+    });
   });
 
   it("rejects 'use server' inside a function, in any module", () => {

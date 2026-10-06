@@ -154,9 +154,12 @@ export function scanServerActionSource(
       for (const declaration of statement.declarationList.declarations) {
         const name = declaration.name.getText(ast);
         const value = declaration.initializer;
+        // A controller wrapper's body is checked only as a function
+        // declaration, so its module takes no other form of export.
         if (
           value &&
-          (ts.isArrowFunction(value) || ts.isFunctionExpression(value))
+          (ts.isArrowFunction(value) || ts.isFunctionExpression(value)) &&
+          !CONTROLLER_WRAPPER.test(file)
         ) {
           const issue = parameterIssue(name, value.parameters);
           if (issue) at(statement, issue);
