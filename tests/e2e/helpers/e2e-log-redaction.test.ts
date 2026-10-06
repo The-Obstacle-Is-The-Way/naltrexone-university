@@ -54,6 +54,29 @@ describe('installE2ELogRedaction', () => {
     );
   });
 
+  // BUG-328: the redaction and the upload scan share one definition of a
+  // Clerk credential, so a value in a nested URL or on its own is removed too.
+  it('redacts Clerk credentials in nested URLs and on their own', () => {
+    const fake = createFakeLogTarget();
+    installE2ELogRedaction(fake.target);
+    const jwt = ['eyJhbGciOiJSUzI1NiJ9', 'eyJzdWIiOiJ1c2VyXzEifQ', 'c2ln'].join(
+      '.',
+    );
+
+    fake.target.warn(
+      `redirect_url=%2Fapp%3F__clerk_testing_token%3Dvalue1 dvb_2abcDEF345ghi ${jwt}`,
+    );
+
+    expect(fake.captured).toEqual([
+      {
+        method: 'warn',
+        values: [
+          'redirect_url=%2Fapp%3F__clerk_testing_token%3D[redacted] [redacted] [redacted]',
+        ],
+      },
+    ]);
+  });
+
   it('redacts every standing Stripe TEST object identifier shape', () => {
     const prefixes = [
       'cus',
