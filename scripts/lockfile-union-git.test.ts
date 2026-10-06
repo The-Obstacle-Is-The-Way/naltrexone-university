@@ -348,34 +348,30 @@ describe('verify-lockfile-union against a real git repository', () => {
     expect(result.exitCode).toBe(0);
   });
 
-  // Root reads files regardless of mode, so this only holds for other users.
-  it.skipIf(process.getuid?.() === 0)(
-    'exits with the usage code for a candidate file it may not read',
-    () => {
-      const { directory, env } = createRepository();
-      const candidate = path.join(directory, 'unreadable.yaml');
-      writeFileSync(candidate, fixture('candidate-union').text);
-      chmodSync(candidate, 0o000);
+  it('exits with the usage code for a candidate file it may not read', () => {
+    const { directory, env } = createRepository();
+    const candidate = path.join(directory, 'unreadable.yaml');
+    writeFileSync(candidate, fixture('candidate-union').text);
+    chmodSync(candidate, 0o000);
 
-      const result = run(
-        [
-          '--base',
-          'main',
-          '--source',
-          'refs/pr/826',
-          '--source',
-          'refs/pr/827',
-          '--candidate',
-          'unreadable.yaml',
-        ],
-        directory,
-        env,
-      );
+    const result = run(
+      [
+        '--base',
+        'main',
+        '--source',
+        'refs/pr/826',
+        '--source',
+        'refs/pr/827',
+        '--candidate',
+        'unreadable.yaml',
+      ],
+      directory,
+      env,
+    );
 
-      expect(result.exitCode).toBe(2);
-      expect(result.err).toContain('cannot read "unreadable.yaml"');
-    },
-  );
+    expect(result.exitCode).toBe(2);
+    expect(result.err).toContain('cannot read "unreadable.yaml"');
+  });
 
   it('fails closed when git cannot list its repository-local variables', () => {
     const { directory, env } = createRepository();
