@@ -5,9 +5,9 @@ import {
   NextResponse,
 } from 'next/server';
 import {
-  carriesClerkHandshake,
-  limitClerkHandshake,
-} from '@/lib/clerk-handshake-limit';
+  limitClerkBackendCalls,
+  triggersClerkBackendCall,
+} from '@/lib/clerk-backend-call-limit';
 import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
@@ -233,20 +233,20 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
   return clerkMw;
 }
 
-let cachedHandshakeLimiter: RateLimiter | null = null;
+let cachedBackendCallLimiter: RateLimiter | null = null;
 
 async function loadContainerRateLimiter(): Promise<RateLimiter> {
-  if (cachedHandshakeLimiter) return cachedHandshakeLimiter;
+  if (cachedBackendCallLimiter) return cachedBackendCallLimiter;
   const { createContainer } = await import('@/lib/container');
-  cachedHandshakeLimiter = createContainer().createRateLimiter();
-  return cachedHandshakeLimiter;
+  cachedBackendCallLimiter = createContainer().createRateLimiter();
+  return cachedBackendCallLimiter;
 }
 
 export type ProxyDependencies = {
-  loadHandshakeLimiter: () => Promise<RateLimiter>;
+  loadBackendCallLimiter: () => Promise<RateLimiter>;
 };
 
-export function createProxy({ loadHandshakeLimiter }: ProxyDependencies) {
+export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
   return async function proxy(request: NextRequest, event: NextFetchEvent) {
     // These exact public machine resources must not require even Clerk's
     // anonymous dev-browser handshake, which redirects HTML requests.
@@ -260,12 +260,12 @@ export function createProxy({ loadHandshakeLimiter }: ProxyDependencies) {
       return NextResponse.next();
     }
 
-    // BUG-323: a handshake parameter makes Clerk call its Backend API, whose
-    // limit every signed-in page shares; limit it per address first.
-    if (carriesClerkHandshake(request)) {
-      const limited = await limitClerkHandshake(
+    // BUG-323: limit requests that make Clerk call its Backend API, whose
+    // limit every signed-in page shares, before Clerk sees them.
+    if (triggersClerkBackendCall(request)) {
+      const limited = await limitClerkBackendCalls(
         request,
-        loadHandshakeLimiter,
+        loadBackendCallLimiter,
         (failure) => console.error(failure),
       );
       if (limited) return limited;
@@ -281,7 +281,9 @@ export function createProxy({ loadHandshakeLimiter }: ProxyDependencies) {
   };
 }
 
-export default createProxy({ loadHandshakeLimiter: loadContainerRateLimiter });
+export default createProxy({
+  loadBackendCallLimiter: loadContainerRateLimiter,
+});
 
 export const config = {
   matcher: [

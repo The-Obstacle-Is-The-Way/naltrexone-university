@@ -14,12 +14,17 @@ export const STRIPE_WEBHOOK_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
-// BUG-323: each request carrying Clerk's handshake nonce makes one call to
-// Clerk's Backend API, whose limit every signed-in page shares. A real person
-// sends one per session refresh, so 30 a minute per address leaves a shared
-// hospital address untouched while capping a flood from one address.
-export const CLERK_HANDSHAKE_RATE_LIMIT = {
+// BUG-323: requests that make Clerk's SDK call Clerk's Backend API, whose
+// limit every signed-in page shares. A real person sends very few, so the
+// per-address limit leaves a shared hospital address untouched; the site-wide
+// limit caps the total whatever the number of addresses.
+export const CLERK_BACKEND_CALL_RATE_LIMIT = {
   limit: 30,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
+export const CLERK_BACKEND_CALL_SITE_RATE_LIMIT = {
+  limit: 300,
   windowMs: ONE_MINUTE_MS,
 } as const;
 
