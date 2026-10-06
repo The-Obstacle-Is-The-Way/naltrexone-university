@@ -23,7 +23,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - Rows are never removed, so canceled subscriptions and lapsed trials count too.
 - **Trigger.** Somewhere between roughly 500 and 1,000 rows (an estimate, not measured).
 - **Impact.** For users past that point, a missed webhook is never repaired. A stopped-early run that overruns `maxDuration = 60` also kills the deleted-account cleanup that runs after it (BUG-262's safety net).
-- **Decided.** Record when each row was last reconciled (`last_reconciled_at`) and process rows oldest first: never-reconciled rows, then by that time, then by ID, stamping each row as it completes. Every row is reached in turn with no cursor or run state. A crashed or stopped-early run leaves its unstamped rows first in line, and overlapping runs only repeat idempotent work. Do not exclude a row solely because its local status is terminal: repairing stale local state is this job's purpose. Any pruning policy needs an independently justified terminal-state contract. Test the ordering, a crash mid-run, interleaved inserts and deletes, and provider failure against real Postgres.
+- **Decided.** Record each row's last reconcile attempt and process rows oldest first: never-attempted rows, then by last attempt, then by ID. Stamp every attempt (`last_attempted_at`), and record a failed attempt's error separately, so a row that keeps failing moves to the back instead of starving the tail. Every row is reached in turn with no cursor or run state. A crashed or stopped-early run leaves its unstamped rows first in line, and overlapping runs only repeat idempotent work. Do not exclude a row solely because its local status is terminal: repairing stale local state is this job's purpose. Any pruning policy needs an independently justified terminal-state contract. Test the ordering, a crash mid-run, interleaved inserts and deletes, and provider failure against real Postgres.
 
   *Corrected 2026-10-06: oldest-first order replaces #1410's keyset cursor with wraparound, checkpoints and run coordination, which needed more state for the same guarantee; terminal rows stay included, as #1410 decided (#1410 review).*
 
@@ -54,8 +54,6 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - The billing page only says "Stripe is confirming your card".
 - **Options.** Expiration alone cannot prevent a completion racing cancellation. Stripe accepts `expires_at` only 30 minutes–24 hours after creation ([API reference](https://docs.stripe.com/api/checkout/sessions/create)), so setting it to every trial end is invalid.
 - **Decided.** Set expiry to the earlier of trial end and 24 hours only when at least 30 minutes remain; otherwise refuse a new setup with an explicit recovery message. Recheck the provider subscription at completion and treat a canceled trial as a terminal business outcome, without renewal consent or an acknowledgment that promises renewal. Offer paid Checkout only when the existing subscription no longer blocks it. Test the expiry bounds and completion/cancellation race through the provider contract and real-Postgres persistence.
-
-  *Corrected 2026-10-06: Stripe accepts an `expires_at` only 30 minutes to 24 hours ahead, so the expiry is bounded and a setup too close to the trial's end is refused (#1410).*
 
   *Corrected 2026-10-06: the original expiry-only decision omitted Stripe's bounds and the completion race.*
 

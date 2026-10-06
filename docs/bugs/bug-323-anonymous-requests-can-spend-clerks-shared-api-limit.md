@@ -1,12 +1,12 @@
 # BUG-323: Anonymous Requests Can Spend Clerk's Shared Backend API Limit
 
-> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Resolved — 2026-10-06: the limits are live in production, which runs Clerk's live instance
+**Status:** Verifying — owner confirms the production limiter writes its rows; due 2026-10-19
 **Priority:** P1
 **Date:** 2026-10-05
-**Resolved:** 2026-10-06
-**Verification receipts:** #1385, promotion #1386 (production 2026-10-06 03:51Z). On 2026-10-06 the production sign-in page served a `pk_live_` key and Clerk reported a production instance.
+**Resolved:** —
+**Verification receipts:** —
 
 ---
 
@@ -65,7 +65,7 @@ All five, under the owner's 2026-09-28 delegation. The owner approved the firewa
 - The cap is therefore sized against what it protects. Clerk documents 1,000 calls per 10 seconds. The 1,000-per-minute cap bounds request count over its own window; it does not reserve 80% of every Clerk window or prove a bound on SDK retries. Matching the vendor window and counting call cost are open in DEBT-503 item 2.
 - Tripping the cap takes about 34 addresses at the per-address limit; at 300 it would have taken 10.
 - The per-session limit bounds repeated requests assigned to the same session bucket. It does not replace the address and site limits.
-- Better discrimination, so that forged requests alone fill the cap, is tracked in [DEBT-503](../../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md).
+- Better discrimination, so that forged requests alone fill the cap, is tracked in [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md).
 
 What a limited person sees:
 - a browser gets a short page asking them to wait a minute and try again;
@@ -105,10 +105,11 @@ What a limited person sees:
 - [x] The report to Clerk is filed.
 - [x] Unit tests, red first, cover the request shapes, all three limits, the 429 responses and the fail-open path, and every deliberate break was caught.
 - [x] The full E2E suite passes with the limits in place (they stay off on the development instance it uses).
-- [x] Production runs Clerk's live instance, the condition that turns the limits on (`proxy.ts:239` checks for a `pk_live_` publishable key). The publishable key is public, so read its prefix from the production sign-in page. The unit tests above cover the limits and their 429 responses. Do not exceed the limits in production to see a 429: the firewall answers first, and reaching the middleware's limit would spend Clerk's shared allowance on purpose, which is what this bug protects. *Corrected 2026-10-06: a production 429 cannot be observed safely, so the check is the condition that enables the limits (#1410 review).*
+- [x] Production runs Clerk's live instance, the condition that turns the limits on (`proxy.ts:239`): on 2026-10-06 the production sign-in page served a `pk_live_` key and Clerk reported a production instance.
+- [ ] Owner, by 2026-10-19: a read-only count of production `rate_limits` rows whose key starts with `clerk-backend-call:` in the last 24 hours is above zero, which shows the limiter runs. It needs production database access, which engineering does not use. A live key shows only that the limiter is called: it fails open, logging to stdout that Vercel keeps for an hour. *Corrected 2026-10-06: a `pk_live_` key proves the limiter is called, not that it works (#1410 review).*
 - [x] Keep the firewall rule as defence in depth. Decided 2026-10-06 under the owner's delegation: it costs nothing, answers before any Clerk call, and the project's only rate-limit rule slot has no better use.
 
 ## Related
 
-- [DEBT-503](../../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md): the structural follow-ups. They are reading identity from the session token so signed-in pages stop spending the allowance, telling forged requests apart before they count, and alerting when a cap trips.
+- [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md): the structural follow-ups. They are reading identity from the session token so signed-in pages stop spending the allowance, telling forged requests apart before they count, and alerting when a cap trips.
 - SPEC-017 (archived), E1: the earlier firewall decision.

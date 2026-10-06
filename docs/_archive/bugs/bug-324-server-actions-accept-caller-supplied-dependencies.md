@@ -16,7 +16,7 @@ Most exported server actions took, besides their input, optional dependencies an
 
 DEBT-502 item 5 first recorded this for the subscribe actions, as hardening. An independent review on 2026-10-05 showed it is wider and worse:
 - **It reaches every controller action:** all 29 built by `createAction`, the five app-level actions in four modules, and `requireEntitledUserId`, which was itself exported as an action.
-- **One request can run many actions.** React accepts other server actions as arguments ([`use server`](https://react.dev/reference/rsc/use-server)). Each action run that way with the real container makes its own Clerk `currentUser()` call. That is the same shared allowance as [BUG-323](bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), reachable here by any free account.
+- **One request can run many actions.** React accepts other server actions as arguments ([`use server`](https://react.dev/reference/rsc/use-server)). Each action run that way with the real container makes its own Clerk `currentUser()` call. That is the same shared allowance as [BUG-323](../../bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), reachable here by any free account.
 
 A second independent review, on 2026-10-06, found the same class through the input itself:
 - **The app's form actions read their input by calling its methods,** such as `formData.get(...)`, without checking that it is form data.
@@ -91,7 +91,7 @@ Option 1 is shipped. Option 2 was the temporary stopgap and has been removed. Op
   - The manifest check skipped `'use cache'` functions, which a client can call by ID. It now applies the same rule to them; all nine pass.
   - Nothing pinned the check into `pnpm build`. A test now does.
 
-**2026-10-06, in production.** Promotion #1390 (`51c14544`) reached production at 06:17:47 UTC. Its Vercel build log shows "server actions: 38, all take only their input". The signed-in check of practice, bookmarks and checkout is still open.
+**2026-10-06, in production.** Promotion #1390 (`51c14544`) reached production at 06:17:47 UTC. Its Vercel build log shows "server actions: 38, all take only their input". The signed-in check of practice, bookmarks and checkout was later replaced by `main` CI's E2E on #1390 and a clean Sentry (see Verification).
 
 ## Verification
 
@@ -107,6 +107,6 @@ Option 1 is shipped. Option 2 was the temporary stopgap and has been removed. Op
 
 ## Related
 
-- [BUG-323](bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md): the same shared Clerk allowance, reached without an account.
+- [BUG-323](../../bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md): the same shared Clerk allowance, reached without an account.
 - [DEBT-502](../../debt/debt-502-account-identity-and-action-hardening.md) item 5: where this was first recorded.
 - [DEBT-503](../../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md): reading identity from the session token, which would make each action run cost no Clerk call at all.

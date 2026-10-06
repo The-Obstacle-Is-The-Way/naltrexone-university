@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — remove the request-ID helper and the per-call logger option; keep the Logger port in each controller's dependencies
+**Status:** Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies
 **Priority:** P4
 **Date:** 2026-10-06
 **Resolved:** —
@@ -60,7 +60,9 @@ Option 3, in a separate code PR:
   (`src/adapters/controllers/create-action.ts`) and the threaded
   `{ logger: requestLogger }` in `app/pricing/subscribe-to-plan.ts`. Without the
   request ID it only repeats `handleError`'s default logger, and it is the
-  optional per-call channel that BUG-324's stopgap dropped unnoticed.
+  optional per-call channel that BUG-324's stopgap dropped in production, as an
+  accepted trade-off. Once `ActionOptions` has no `logger`, passing one fails
+  typecheck, so the type system keeps it from returning.
   `handleError` logs through the controller's resolved `Logger` when one exists.
 - Keep the `Logger` port and its injection through dependencies. Do not replace
   it with implicit global context, an environment switch, or a framework import
@@ -82,6 +84,9 @@ from the Drains API (#1410 review).*
   unexpected error is logged through the controller's resolved `Logger`.
 - [ ] `lib/request-context.ts` and `ActionOptions.logger` are gone, and no
   caller passes a logger per call.
+- [ ] Engineering, within an hour of the promotion: one production request's
+  server lines appear together under its Vercel request ID
+  (`vercel logs --request-id`). Record counts and statuses only.
 
 ## Related
 

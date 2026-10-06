@@ -50,6 +50,8 @@ Option 2, in its own PR when it is next in the queue:
 Criteria to meet before closing; none is met yet.
 
 - [ ] The first-party Vitest packages use compatible 5.x versions and are grouped in Dependabot. Independently versioned adapters use releases whose peer ranges support that version; they need not be on major 5. Installed `vitest-browser-react` 2.3.0 already declares `vitest: ^4.0.0 || ^5.0.0`. Peer compatibility still needs a passing browser lane.
+
+  *Corrected 2026-10-06: the closing criterion asks for compatible peer ranges, not major 5 everywhere, and the migration first reproduces the incompatible boundary (#1410).*
 - [ ] Every lane passes in the full gate.
 - [ ] The CRAP report and Stryker run.
 - [ ] #1370 is closed as superseded.

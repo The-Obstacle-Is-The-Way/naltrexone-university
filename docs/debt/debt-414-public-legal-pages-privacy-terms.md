@@ -828,11 +828,11 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
 
 ## Open operational limits
 
-The dated legal matrix and owner attestations are historical evidence, not a new legal certification. Counsel's Q1–Q7 and the owner's provider configuration and live-purchase checks remain open. The engineering source calls a pino error line an “alert” in several notice-deadline paths; `lib/logger.ts` does not forward it to Sentry. F07 is not operationally verified until the owner records how a missed deadline reaches an operator within a useful window. Hobby runtime logs retain one hour. Decide and test a bounded notification path, the same one [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 3 decides; do not close this requirement on the presence of `logger.error` alone.
+The dated legal matrix and owner attestations are historical evidence, not a new legal certification. Counsel's Q1–Q7 and the owner's provider configuration and live-purchase checks remain open. The engineering source calls a pino error line an “alert” in several notice-deadline paths; `lib/logger.ts` does not forward it to Sentry. F07 is not operationally verified until a bounded notification path, the one [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 3 decides, is built and a test event is shown to reach the operator. Hobby runtime logs retain one hour, so do not close this requirement on the presence of `logger.error` alone.
 
 ## Findings from AUDIT-013 (2026-10-05)
 
-The security review of recent work ([AUDIT-013](../audits/audit-013-security-review-2026-10-05.md)) found two renewal-evidence gaps that belong to this record. Neither is attacker-driven. Both were confirmed in code by an independent reviewer and again by the filer.
+The security review of recent work ([AUDIT-013](../_archive/audits/audit-013-security-review-2026-10-05.md)) found two renewal-evidence gaps that belong to this record. Neither is attacker-driven. Both were confirmed in code by an independent reviewer and again by the filer.
 
 **F21, an early bounce report can be lost (P4).**
 - **The gap.** Dispatch sends the notice first and stores Resend's email id only afterwards: `emailGateway.send`, then `persistOutcome` (`src/application/use-cases/dispatch-renewal-notice-delivery.ts:113-129`).

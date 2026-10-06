@@ -129,5 +129,5 @@ This is likely the report the owner remembered, that "a user with certain parame
 
 ## Related
 
-- [BUG-323](../_archive/bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
+- [BUG-323](bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
 - BUG-318 (archived): what Sentry may collect. This record covers how much can be sent.

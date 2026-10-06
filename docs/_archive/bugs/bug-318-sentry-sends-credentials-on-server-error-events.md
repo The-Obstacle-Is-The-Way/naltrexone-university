@@ -53,7 +53,7 @@ DEBT-499's upgrade fixes this. It moves to `@sentry/nextjs` 11 and gives every r
 
 It adds `beforeSend` and `beforeBreadcrumb` scrubbers, which redact credential query parameters in the URLs that Sentry's filters do not reach. `lib/sentry-data-collection-sdk.test.ts` replays the scenario above through the real Sentry 11 SDK and `captureRequestError`, and none of the nine values is sent. With Sentry 11's defaults instead of our settings, eight of them are sent, and body capture is on. So merging Dependabot's #1369 as-is would have kept most of this exposure.
 
-*Corrected 2026-10-06: the test now covers ten values (nine request values plus a breadcrumb's development-browser JWT); Sentry 11's defaults send eight of the ten, and the shipped settings none.*
+*Corrected 2026-10-06: the test covers ten values (nine request values plus a breadcrumb's development-browser JWT) and runs only the shipped settings, which send none; "eight sent with defaults" comes from a separate offline replay (eight of ten), and span inspection alone does not establish every error-event field.*
 
 ## Owner checks (owner-only: Sentry and secret access)
 
