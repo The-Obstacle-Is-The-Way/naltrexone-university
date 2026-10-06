@@ -141,3 +141,9 @@ export async function limitClerkBackendCalls(
     return null;
   }
 }
+
+// The production limiter: the container's database-backed rate limiter.
+export async function loadContainerRateLimiter(): Promise<RateLimiter> {
+  const { createContainer } = await import('@/lib/container');
+  return createContainer().createRateLimiter();
+}

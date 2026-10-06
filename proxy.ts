@@ -6,6 +6,7 @@ import {
 } from 'next/server';
 import {
   limitClerkBackendCalls,
+  loadContainerRateLimiter,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
@@ -282,8 +283,7 @@ export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
 }
 
 export default createProxy({
-  loadBackendCallLimiter: async () =>
-    (await import('@/lib/container')).createContainer().createRateLimiter(),
+  loadBackendCallLimiter: loadContainerRateLimiter,
 });
 
 export const config = {

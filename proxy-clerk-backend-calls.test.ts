@@ -141,7 +141,8 @@ describe('limiting requests that make Clerk call its Backend API', () => {
   const nonce = () => request('https://example.com/?__clerk_handshake_nonce=x');
   const fromAddress = (url: string, init: { cookie?: string } = {}) => {
     const r = request(url, init);
-    r.headers.set('x-forwarded-for', '203.0.113.7');
+    // The header Vercel sets in production, which getClientIp reads first.
+    r.headers.set('x-vercel-forwarded-for', '203.0.113.7');
     return r;
   };
 
@@ -210,8 +211,8 @@ describe('limiting requests that make Clerk call its Backend API', () => {
 
   it('answers 429 when one session refreshes too often', async () => {
     const limiter = new FakeRateLimiter([UNDER_LIMIT, OVER_LIMIT]);
-    const refresh = request('https://example.com/pricing', {
-      cookie: `__session=${sessionToken(1)}; __refresh_abc=x`,
+    const refresh = fromAddress('https://example.com/pricing', {
+      cookie: `__session=${sessionToken(1, 'sess_busy')}; __refresh_abc=x`,
     });
 
     const response = await limitClerkBackendCalls(
@@ -221,7 +222,10 @@ describe('limiting requests that make Clerk call its Backend API', () => {
     );
 
     expect(response?.status).toBe(429);
-    expect(limiter.inputs).toHaveLength(2);
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call:203.0.113.7',
+      'clerk-backend-call:session:sess_busy',
+    ]);
   });
 
   // One address over its own limit stops counting toward the site budget, so
@@ -314,6 +318,35 @@ describe('limiting requests that make Clerk call its Backend API', () => {
   });
 });
 
+describe('the default limiter', () => {
+  afterEach(() => {
+    restoreProcessEnv(ORIGINAL_ENV);
+    vi.resetModules();
+  });
+
+  it('is the container rate limiter, built without touching the database', async () => {
+    Object.assign(process.env, {
+      DATABASE_URL: 'postgresql://user:password@localhost:5432/db',
+      STRIPE_SECRET_KEY: 'sk_test_dummy',
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_test_dummy',
+      STRIPE_WEBHOOK_SECRET: 'whsec_dummy',
+      NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_dummy_monthly',
+      NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_dummy_annual',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_SKIP_CLERK: 'true',
+    });
+    vi.resetModules();
+    const { loadContainerRateLimiter } = await import(
+      '@/lib/clerk-backend-call-limit'
+    );
+
+    const limiter = await loadContainerRateLimiter();
+
+    expect(typeof limiter.limit).toBe('function');
+    expect(typeof limiter.pruneExpiredWindows).toBe('function');
+  });
+});
+
 describe('proxy with the Clerk Backend API limit', () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
@@ -387,6 +420,24 @@ describe('proxy with the Clerk Backend API limit', () => {
     );
 
     expect(loadBackendCallLimiter).not.toHaveBeenCalled();
+    expect(clerkRuns).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failing limiter and still hands the request to Clerk', async () => {
+    const reported = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { proxy, clerkRuns } = await proxyWith(
+      new FakeRateLimiter(new Error('database unavailable')),
+    );
+
+    await proxy(
+      ...proxyInvocation(
+        'https://example.com/pricing?__clerk_handshake_nonce=x',
+      ),
+    );
+
+    expect(reported).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'clerk_backend_call_limiter_failed' }),
+    );
     expect(clerkRuns).toHaveBeenCalledTimes(1);
   });
 
