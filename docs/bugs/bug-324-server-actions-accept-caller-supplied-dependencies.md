@@ -47,10 +47,10 @@ Any free account could drain the Clerk allowance that every signed-in page depen
 
 ## Resolution (decided)
 
-Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
+Option 1 is shipped. Option 2 was the temporary stopgap and has been removed. Option 3 is rejected. *Corrected 2026-10-06: the decision states the final implementation; the dated Progress preserves the sequence.*
 - **The app-level actions get option 1 now.** Their logic moves to `subscribe-to-plan.ts`, `manage-billing-request.ts` (both copies) and `remove-bookmark.ts`.
 - **`requireEntitledUserId` is no longer a `'use server'` module.**
-- **The 29 controller actions get option 2 now and option 1 next.** Option 1 landed on 2026-10-06; see Progress.
+- **The 29 controller actions use option 1.** It landed on 2026-10-06; see Progress.
 - **Option 4 for every form action** (added 2026-10-06). A form action whose input is not form data returns at once, with nothing logged: no form sends that, and logging it would let anyone fill the logs.
 - **Accepted until option 1 lands: production drops the checkout logger.** The subscribe logic passes its request-scoped logger to the checkout controller as an option, and option 2 drops every option in production. So the controller's own error log loses the request ID; the subscribe flow's "Stripe checkout failed" log keeps it. Option 1 gives server-side callers a core that is not an action, which ends this. (Ended 2026-10-06.)
 - **This changes five action IDs on purpose.** Next encodes an action's declared argument count in its ID, so the subscribe, manage-billing and remove-bookmark actions get new IDs. A page opened before the deploy reloads on its next submit, through [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md)'s recovery.
@@ -79,7 +79,7 @@ Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
   - The input guard checks all 28 actions.
 - **A post-build check reads the action manifest** (`scripts/check-server-action-manifest.ts`). `pnpm build` runs it, so CI, the local gate and every Vercel deploy fail if any action's ID declares more than its first argument. It fails closed when the manifest lists no actions.
   - On a build from the previous code, it reported all 29 controller actions.
-  - On this code: "server actions: 38, all take only their input". That is 28 actions, Clerk's cache action and nine `'use cache'` functions, which the check skips.
+  - On this code: "server actions: 38, all take only their input". That is 28 actions, Clerk's cache action and nine `'use cache'` functions. The final check includes all 38 entries, including cached functions.
 - **The 22 browser-called actions get new IDs,** because they moved module and now declare one argument.
   - A page opened before the deploy gets an error from each of them until its next full load: a reload, "Try again" on an error page, or a navigation after the deploy.
   - The hooks catch these errors themselves, so BUG-319's automatic reload, which runs only on route error pages, does not fire. That is BUG-319's accepted scope. An automatic reload from a hook could also discard unsaved work, such as an exam answer.
@@ -97,12 +97,12 @@ Option 2 now, as the stopgap, and option 1 as the fix. Option 3 is rejected.
 
 - [x] A production build ignored caller-supplied dependencies on controller actions (the stopgap, replaced by option 1).
 - [x] The app-level actions take only their form data, enforced by the signature guard.
-- [x] Every form action ignores input that is not form data, and no exported action calls a member of its input (`tests/server-action-input.test.ts`).
+- [x] Every form-action wrapper checks `instanceof FormData` in source. `tests/server-action-input.test.ts` exercises all 28 exports and asserts that none invokes a member of its probe input. It catches rejected promises and does not spy on logging, so that test alone does not prove “no throw” or “no log”.
 - [x] The signature guard reads the syntax of every `'use server'` module, in `app/`, `src/`, `lib/` and `components/`.
 - [x] The `'use server'` barrel is removed.
 - [x] Exported controller actions take only their input; the signature guard stops allowing `createAction` exports; the checkout logger reaches the controller again in production.
 - [x] A post-build check reads the action manifest: every action's ID declares at most one argument.
-- [x] The production build's action manifest no longer lists `requireEntitledUserId` (the post-build check's listing, and the gate's build).
+- [x] `requireEntitledUserId` is not a server-action export in the shipped source. The post-build check validates argument bits; it does not assert that this particular name is absent. The original production-manifest observation is a separate operator receipt.
 - [ ] In production after promotion: the Vercel build log shows the manifest check passing, and practice, bookmarks and checkout work.
 
 ## Related

@@ -36,7 +36,7 @@ This behavior is covered by `lib/logger.test.ts`.
 
 ## Request-scoped logging
 
-Route handlers should create a request context and derive a child logger:
+Five existing entry points create a request context and derive a child logger:
 
 ```ts
 const ctx = createRequestContext();
@@ -44,6 +44,23 @@ const logger = getRequestLogger(ctx);
 ```
 
 That child logger automatically carries `requestId`, and can also include `userId` when available.
+
+The duplicate ID and manual propagation are planned for removal in
+[DEBT-504](../debt/debt-504-duplicate-request-correlation.md). Do not extend this
+pattern to new routes. Keep explicit logger injection.
+
+## Retention and verification
+
+The account APIs confirmed Vercel Hobby and Sentry Developer on 2026-10-06.
+Vercel [retains Hobby runtime logs for one hour](https://vercel.com/docs/logs/runtime).
+Capture an operational check while its logs still exist; a two-week retrospective
+absence check cannot use this store.
+
+`lib/logger.ts` writes pino JSON to stdout. `instrumentation.ts` initializes
+Sentry exception/tracing capture, with no pino integration or log forwarding.
+A caught error that is only logged is not thereby a Sentry event. An alert on
+such an outcome needs explicit, bounded telemetry or a retained operational
+receipt; do not claim a Sentry search proves its absence.
 
 ## Practices
 

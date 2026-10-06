@@ -62,6 +62,10 @@ The dismissal above hid the one trigger that can arrive without our action: a fi
 - **The other two triggers** need code or configuration to change, and the Deferred row still carries them: a glob built from untrusted input, and Clerk enabling Web3 sign-in.
 - **Alert #55** (`stream-json`, [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md)) was dismissed by the owner on 2026-09-16 and is left as the owner decided.
 
+## External readback — 2026-10-06
+
+GitHub reports alert #77 open with no patched version, and npm still reports `braces` 3.0.3 as latest. Alert #55 is also open now; the earlier statement that it was left dismissed is historical. Its package advisory lists a patched release, but adopting it through the supported parent dependency remains DEBT-476's separate decision. No alert was dismissed or changed by this audit.
+
 ## Related
 
 - [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md) §F: the same unused Solana tree, for `stream-json`.
