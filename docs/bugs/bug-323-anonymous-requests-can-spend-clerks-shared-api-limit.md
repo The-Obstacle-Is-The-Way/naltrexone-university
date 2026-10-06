@@ -42,7 +42,7 @@ For as long as an attacker kept sending these requests, every signed-in page wou
 ## Options
 
 1. **A per-address limit in our middleware,** before Clerk runs.
-2. **A per-session limit on refreshes.** Clerk refreshes only a genuine session, whose ID is fixed, so one session replayed from many addresses is still limited.
+2. **A per-session limit on refreshes.** This groups refresh attempts by the session claim read before Clerk verifies it. It is a supplementary limit, not proof of an authenticated identity.
 3. **A site-wide limit.** Many addresses together can get past a per-address limit; a site-wide cap bounds the total.
 4. **A Vercel firewall rule** at the edge.
 5. **Tell Clerk,** so the SDK stops spending a customer's allowance on unchecked requests.
@@ -50,7 +50,7 @@ For as long as an attacker kept sending these requests, every signed-in page wou
 ## Resolution (decided)
 
 All five, under the owner's 2026-09-28 delegation. The owner approved the firewall rule (option 4) and the report to Clerk (option 5).
-- Per address: 30 a minute. A request with no readable client address skips this limit, so one sender cannot refuse every other such request through a shared bucket. The other two limits still apply, and on Vercel the address is always present. (Added after CodeRabbit's review.)
+- Per address: 30 a minute. A request with no readable client address skips this limit, so one sender cannot refuse every other such request through a shared bucket. The other two limits still apply, and the platform normally supplies the address; the code explicitly handles its absence. (Added after CodeRabbit's review.)
 - Per refreshing session: 6 a minute.
 - Site-wide: 1,000 a minute.
 - A limiter that fails lets the request through and logs `clerk_backend_call_limiter_failed`. Failing closed would break every real refresh while the database is down, and the firewall still bounds the volume.
@@ -62,9 +62,9 @@ All five, under the owner's 2026-09-28 delegation. The owner approved the firewa
 - The cap cannot tell a real request from a forged one. So filling it refuses the real ones too, until the minute resets.
 - The people refused are returning visitors whose short-lived session token has expired. They see the page below. People already signed in, whose browser keeps its token fresh, are unaffected, and so are signed-out visitors.
 - That is the trade: without the cap, an attack drains Clerk's allowance and every signed-in page fails; with it, an attack delays returning visitors by a minute.
-- The cap is therefore sized against what it protects. Clerk allows 1,000 calls per 10 seconds, about 6,000 a minute. A cap of 1,000 a minute keeps over 80% of that allowance for signed-in pages.
+- The cap is therefore sized against what it protects. Clerk documents 1,000 calls per 10 seconds. The 1,000-per-minute cap bounds request count over its own window; it does not reserve 80% of every Clerk window or prove a bound on SDK retries. Matching the vendor window and counting call cost are open in DEBT-503 item 2.
 - Tripping the cap takes about 34 addresses at the per-address limit; at 300 it would have taken 10.
-- The per-session limit means replaying one genuine session helps an attacker no further.
+- The per-session limit bounds repeated requests assigned to the same session bucket. It does not replace the address and site limits.
 - Better discrimination, so that forged requests alone fill the cap, is tracked in [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md).
 
 What a limited person sees:
@@ -99,9 +99,11 @@ What a limited person sees:
 
 ## Verification
 
+**External audit, 2026-10-06:** #1385 merged as `8d78fe98` and promotion #1386 as `0e25259b`; the production assignment was 2026-10-06T03:51:13.211Z. The source and unit cases implement the production-key branch. The earlier firewall, disclosure and local mutation receipts below are the original operator's reports; this audit has not independently reproduced them. Production enforcement remains the owner's check, not an inference from development E2E.
+
 - [x] The firewall stopgap is live and checked in production.
 - [x] The report to Clerk is filed.
-- [x] Unit tests, red first, cover the request shapes, both limits, the 429 responses and the fail-open path, and every deliberate break was caught.
+- [x] Unit tests, red first, cover the request shapes, all three limits, the 429 responses and the fail-open path, and every deliberate break was caught.
 - [x] The full E2E suite passes with the limits in place (they stay off on the development instance it uses).
 - [ ] In production after promotion: a request that would reach Clerk is answered 429 once over the limit, and normal pages are unaffected.
 - [ ] Decide whether to keep the firewall rule as defence in depth (recommended), and record the decision.
