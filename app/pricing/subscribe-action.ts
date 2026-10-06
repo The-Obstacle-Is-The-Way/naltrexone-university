@@ -17,6 +17,7 @@ type SubscribeActionDeps = {
   ) => Promise<ActionResult<{ url: string }>>;
   redirectFn: RedirectFn;
   logError?: LogErrorFn;
+  logWarn?: LogErrorFn;
 };
 
 export async function runSubscribeAction(
@@ -50,15 +51,21 @@ export async function runSubscribeAction(
     return deps.redirectFn(toPricingRoute({ checkout: 'rate_limited' }));
   }
 
-  deps.logError?.(
-    {
-      plan: input.plan,
-      idempotencyKey: input.idempotencyKey,
-      errorCode: result.error.code,
-      errorMessage: result.error.message,
-    },
-    'Stripe checkout failed',
-  );
+  // BUG-325: never the caller's text, only the key's length; the messages are
+  // the app's own. A refused input is the caller's mistake, a forgery, or an
+  // offer that changed since the page loaded, so it is a warning, not a
+  // checkout failure.
+  const context = {
+    plan: input.plan,
+    idempotencyKeyLength: input.idempotencyKey?.length ?? null,
+    errorCode: result.error.code,
+    errorMessage: result.error.message,
+  };
+  if (result.error.code === 'VALIDATION_ERROR') {
+    deps.logWarn?.(context, 'Stripe checkout refused its input');
+  } else {
+    deps.logError?.(context, 'Stripe checkout failed');
+  }
 
   return deps.redirectFn(
     toPricingRoute({ checkout: 'error', plan: input.plan }),

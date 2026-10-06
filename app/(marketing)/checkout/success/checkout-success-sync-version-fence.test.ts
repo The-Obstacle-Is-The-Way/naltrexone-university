@@ -9,6 +9,7 @@ import { SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS } from '@/src/application/shared/
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeRateLimiter,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -83,6 +84,7 @@ function createHarness(subscriptions: FakeSubscriptionRepository): {
   const deps: CheckoutSuccessDeps = {
     authGateway: new FakeAuthGateway(user),
     subscriptionVersions: subscriptions,
+    rateLimiter: new FakeRateLimiter(),
     getClerkAuth: async () => ({
       userId: 'clerk_user_1',
       redirectToSignIn: () => {

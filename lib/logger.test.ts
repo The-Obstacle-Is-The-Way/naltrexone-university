@@ -1,3 +1,4 @@
+import { globSync, readFileSync, statSync } from 'node:fs';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 import pino from 'pino';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -90,6 +91,85 @@ describe('logger', () => {
     };
     expect(records[0]?.err).toEqual(diagnostics);
     expect(records[1]?.error).toEqual(diagnostics);
+  });
+
+  // BUG-325: a secret env var attached to a log by mistake must not reach the
+  // logs. The list is checked against the env schema, so a new secret has to
+  // join it.
+  it('names every secret the env schema declares', async () => {
+    const { SECRET_ENV_NAMES } = await importLogger();
+    const schemaKeys = [
+      ...readFileSync('lib/env.ts', 'utf8').matchAll(
+        /^\s+([A-Z][A-Z0-9_]+):/gm,
+      ),
+    ].map((match) => match[1] ?? '');
+    const secrets = schemaKeys.filter(
+      (name) =>
+        !name.startsWith('NEXT_PUBLIC_') &&
+        /SECRET|_KEY$|TOKEN|DATABASE_URL/.test(name),
+    );
+
+    expect(secrets.length).toBeGreaterThanOrEqual(10);
+    expect(secrets.filter((name) => !SECRET_ENV_NAMES.includes(name))).toEqual(
+      [],
+    );
+  });
+
+  // Some credentials are read outside the schema, such as the E2E sign-in
+  // password, so every process.env read in the source is checked too.
+  it('names every secret the source reads from process.env', async () => {
+    const { SECRET_ENV_NAMES } = await importLogger();
+    const read = new Set(
+      ['app', 'lib', 'src', 'tests', 'scripts']
+        .flatMap((root) => [
+          ...globSync(`${root}/**/*.ts`),
+          ...globSync(`${root}/**/*.tsx`),
+        ])
+        .filter((file) => statSync(file).isFile())
+        .flatMap((file) => [
+          ...readFileSync(file, 'utf8').matchAll(
+            /process\.env\.([A-Z][A-Z0-9_]+)/g,
+          ),
+        ])
+        .map((match) => match[1] ?? ''),
+    );
+    const secrets = [...read].filter(
+      (name) =>
+        !name.startsWith('NEXT_PUBLIC_') &&
+        !name.startsWith('ALLOW_') &&
+        /SECRET|PASSWORD|_KEY$|TOKEN|DATABASE_URL/.test(name),
+    );
+
+    expect(secrets.filter((name) => !SECRET_ENV_NAMES.includes(name))).toEqual(
+      [],
+    );
+  });
+
+  it('removes a secret logged at the top level or one level down', async () => {
+    const { LOGGER_REDACT_PATHS } = await importLogger();
+    const lines: string[] = [];
+    const redacting = pino(
+      {
+        level: 'info',
+        base: null,
+        timestamp: false,
+        redact: { paths: [...LOGGER_REDACT_PATHS], remove: true },
+      },
+      { write: (line: string) => lines.push(line) },
+    );
+
+    redacting.info(
+      {
+        CRON_SECRET: 'secret-top',
+        env: { DATABASE_URL: 'secret-env' },
+        config: { STRIPE_SECRET_KEY: 'secret-nested' },
+        kept: 'visible',
+      },
+      'attached by mistake',
+    );
+
+    expect(lines.join('')).toContain('visible');
+    expect(lines.join('')).not.toMatch(/secret-(top|env|nested)/);
   });
 
   it('uses LOG_LEVEL when provided', async () => {

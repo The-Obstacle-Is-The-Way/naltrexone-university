@@ -1,5 +1,8 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
-import type { AuthGateway } from '@/src/application/ports/gateways';
+import type {
+  AuthGateway,
+  RateLimiter,
+} from '@/src/application/ports/gateways';
 import type {
   StripeCustomerRepository,
   SubscriptionRepository,
@@ -66,6 +69,8 @@ export type CheckoutSuccessDeps = {
   >;
   getClerkAuth: () => Promise<ClerkAuthLike>;
   logger: CheckoutSuccessLogger;
+  // BUG-325: limits each signed-in user before the Clerk and Stripe calls.
+  rateLimiter: Pick<RateLimiter, 'limit'>;
   stripe: StripeClientLike;
   priceIds: StripePriceIds;
   appUrl: string;
@@ -95,6 +100,7 @@ export type CheckoutSuccessSearchParams = {
 
 export type CheckoutSuccessContainerLike = {
   createAuthGateway: () => AuthGateway;
+  createRateLimiter: () => RateLimiter;
   logger: CheckoutSuccessLogger;
   env: {
     NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: string;

@@ -1,12 +1,12 @@
 # BUG-322: A Checkout Error Is Hidden Behind the Consent Dialog That Reopens
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the fix reaches production; due 2026-10-13
+**Status:** Resolved — 2026-10-06: the fix is in production
 **Priority:** P2
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-06
+**Verification receipts:** #1395 merged `dc99046b` after exact-head approval 5425850565 on `1dc7635d` (local full gate passed on that head); promotion #1396 merged `3f4a0335`: main CI 37440616852 `test` passed, production assigned 2026-10-06T09:18:35.614Z, healthy production.
 
 ---
 
@@ -56,8 +56,8 @@ Option 2. The dialog is where the person retries, so the explanation belongs the
 - [x] With `?checkout=error&plan=monthly`, the open dialog contains the error as an alert. Red first.
 - [x] A browser test confirms the alert is in the open dialog, visible to the browser, with `role="alert"` and in the dialog's accessible description. The browser lane loads no stylesheet, so whether it shows above the overlay is checked by the screenshot.
 - [x] A screenshot of the dialog showing the error is viewed.
-- [ ] The fix reaches production.
+- [x] The fix reaches production (2026-10-06, receipts above).
 
 ## Related
 
-- [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-321](./bug-321-already-subscribed-answer-discarded.md): the same hunt.
+- [BUG-319](../../bugs/bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-321](../../bugs/bug-321-already-subscribed-answer-discarded.md): the same hunt.

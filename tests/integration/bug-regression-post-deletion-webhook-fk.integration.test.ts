@@ -49,6 +49,8 @@ function createPost(deps: StripeWebhookDeps, logger: FakeLogger) {
       logger: {
         error: (context: unknown, message: string) =>
           logger.error({ context }, message),
+        warn: (context: unknown, message: string) =>
+          logger.warn({ context }, message),
       },
       createRateLimiter: () => new FakeRateLimiter(),
       createStripeWebhookDeps: () => deps,
