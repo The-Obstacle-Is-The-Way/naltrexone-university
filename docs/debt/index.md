@@ -12,7 +12,6 @@
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
   - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); and the counsel review.
   - The production content bootstrap (DEBT-483, Deferred below).
-  - Whether a critical or high Next.js fix may skip the 7-day release-age gate, and how to watch for Next.js advisories (DEBT-509).
 
 **Next Debt ID:** DEBT-510 · **Next Frontend ID:** FE-056
 
@@ -30,7 +29,7 @@
 | [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
 | [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Open — resolution decided below; it must ship before paid acquisition |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
-| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — two Next.js fixes (one critical, one high) are unreleased; the response below awaits owner confirmation |
+| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — response decided and watcher added (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 

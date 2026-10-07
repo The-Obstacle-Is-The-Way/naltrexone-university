@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — two Next.js fixes (one critical, one high) are unreleased; the response below awaits owner confirmation
+**Status:** Open — response decided and watcher added (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -14,7 +14,7 @@
 
 Next.js's September 30 security release fixed seven advisories in 16.3.8. Two more, one critical and one high, were held back and will ship in a later release. When they ship, the 7-day release-age gate (`minimumReleaseAge: 10080`) keeps them out of this repository for a week unless an exception is taken.
 
-Nothing here would notice that release. The seven September 30 advisories are not in GitHub's advisory database, so Dependabot raised no alert for any of them. This repository learned of the release only because CodeRabbit searched the web while reviewing #1409.
+Nothing here would have noticed that release. The seven September 30 advisories are not in GitHub's advisory database, so Dependabot raised no alert for any of them. This repository learned of the release only because CodeRabbit searched the web while reviewing #1409. On 2026-10-07 the owner delegated both decisions below: when a fix may skip the gate, and how to watch for advisories.
 
 ## Evidence
 
@@ -24,7 +24,7 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 - **Still unreleased.** `vercel/next.js` has published no advisory since the seven on 2026-09-30. Next.js 16.4.0 (npm, 2026-10-06T18:35Z) lists no security fix; its security entries are upgrade-prompt tooling.
 - **Versions.** `dev` and `main` run `next` 16.3.6. #1409 moves it to 16.3.7, and to 16.3.8 once that version clears the release-age gate at 2026-10-07T16:07:21Z.
 - **A separate critical, already fixed.** GHSA-vcvr-r3jv-pc5j (remote code execution in `next/og`'s Node `ImageResponse`) was published on 2026-09-30 and is fixed in 16.3.6, which `dev` and `main` already run. The September 30 note still calls the critical fix pending, so it is not this one. `app/opengraph-image.tsx` renders constant content and reads no request input, so it was not exposed either.
-- **No alerts.** `gh api 'advisories?ghsa_id=<id>'` returns nothing for any of the seven IDs, reviewed or unreviewed. They exist only as repository advisories on `vercel/next.js`. The repository has no Dependabot alert for any of them. Earlier `next` advisories did reach the database, including alerts #28–#31, #41–#42 and #59–#62, and GHSA-vcvr-r3jv-pc5j was reviewed on publication, so coverage is inconsistent rather than absent.
+- **No alerts.** `gh api 'advisories?ghsa_id=<id>'` returns nothing for any of the seven IDs, reviewed or unreviewed. They exist only as repository advisories on `vercel/next.js`, and several give their ranges as `16.3.?`, which may be why they were not imported. The repository has no Dependabot alert for any of them. Earlier `next` advisories did reach the database, including alerts #28–#31, #41–#42 and #59–#62, and GHSA-vcvr-r3jv-pc5j was reviewed on publication, so coverage is inconsistent rather than absent.
 
 ## Exposure to the Seven Published Advisories
 
@@ -40,44 +40,35 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 
 No production surface is affected, so #1409 takes 16.3.8 through the normal gate, without an exception.
 
-## Response When the Pending Fixes Ship
+## Response When the Pending Fixes Ship — Decided 2026-10-07
 
-Proposed; the owner confirms or changes it before this record leaves Open.
+The rule now lives in the supply-chain playbook, [When a fix is urgent](../dev/supply-chain-overrides.md#when-a-fix-is-urgent). In short: the 7-day gate defends against malicious publishes, which are usually pulled within hours to days, while a critical framework flaw can be exploited within hours of disclosure. So a critical or high fix that affects this app, or whose exposure cannot be ruled out, ships the same day under exact-version exceptions. Everything else waits for the gate.
 
-1. **Assess.** Compare each new advisory's affected configuration with this app:
+For the two pending Next.js fixes:
+
+1. **Assess** each advisory against this app:
    - App Router, built with Turbopack and hosted on Vercel;
    - `cacheComponents` with `'use cache'`, and a static `next/og` Open Graph image;
    - Clerk middleware in `proxy.ts`, and Server Actions;
    - no `images` configuration, Draft Mode, root params or root-level catch-all.
+2. **If urgent,** list exact versions in `minimumReleaseAgeExclude`: `next` and each same-version companion pnpm refuses. `next` pins `@next/env` and eight `@next/swc-*` platform packages, published with it; for 16.3.8, `@next/env` was published 11 minutes earlier. Then run the full gate, get exact-head review, and promote.
+3. **Otherwise,** take the fix through the normal path once it clears the gate.
 
-   An advisory's statement that Vercel-hosted deployments are unaffected counts for production. It does not cover `next dev`.
-2. **Critical or high, and affected or not ruled out.** Take the fixed version the same day through the [urgent CVE procedure](../dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown): exact-version `minimumReleaseAgeExclude` entries, each with the advisory ID and a removal date. `next` pins same-version `@next/env` and eight `@next/swc-*` platform packages, published with it (for 16.3.8, `@next/env` 11 minutes earlier). The exception therefore names each exact version that pnpm refuses, not `next` alone. Then run the full gate, get exact-head review, and promote.
-3. **Otherwise.** Take the fix through the normal path once it clears the 7-day gate.
+## Watcher — Added 2026-10-07
 
-## Watching for the Release
+[Advisories Dependabot cannot see](../dev/supply-chain-overrides.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every six hours. The script reads `vercel/next.js`'s published advisories and opens one issue for each advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.
 
-No automated check exists. Until one does, run this at every dependency bundle and at least weekly:
-
-```sh
-gh api 'repos/vercel/next.js/security-advisories?sort=published&direction=desc&per_page=10' \
-  --jq '.[] | [.ghsa_id, .severity, .published_at, .summary] | @tsv'
-```
-
-Next.js also announces releases on [its blog](https://nextjs.org/blog).
-
-Options for a lasting watcher, for the owner to choose:
-
-- **A scheduled workflow (recommended).** It runs the query above and opens a GitHub issue for any advisory whose vulnerable range includes the locked `next` version. The register's weekly due-check job is the precedent for a scheduled job that opens issues.
-- **A manual check.** Add the query to the weekly Dependabot bundle procedure in [the dependency update protocol](../dev/dependency-update-protocol.md).
+A local run on 2026-10-07 read 69 published advisories and would have opened none: the newest is from 2026-09-30. Under AGENTS.md's evidence rule, the watcher is proven only after its first hosted run on `main`.
 
 ## Exit
 
-Close when both pending advisories are published and assessed, and their fix is in production or this record says why it does not apply. A watcher must also be in place, or the owner must have declined one.
+Close when the watcher has a successful hosted run, and both pending advisories are published, assessed, and either fixed in production or recorded here as not applying.
 
 ## Verification
 
 - [x] Primary sources read, and the seven published advisories assessed against this app (2026-10-07).
-- [ ] The owner confirms or changes the response above.
+- [x] Response decided under the owner's delegation, and recorded in the supply-chain playbook (2026-10-07).
+- [x] Watcher implemented test-first, with a local run against the live advisory list (2026-10-07).
+- [ ] The watcher's first hosted run on `main` succeeds (dispatch it after promotion).
 - [ ] Both pending advisories are published and assessed.
 - [ ] The fix is in production, or this record says why it does not apply.
-- [ ] A watcher is in place, or the owner has declined one.

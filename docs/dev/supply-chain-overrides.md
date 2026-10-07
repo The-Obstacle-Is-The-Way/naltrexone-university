@@ -90,6 +90,45 @@ window. Do not use package-wide bootstrap exceptions.
 PR #382 removed the dated DEBT-394 bootstrap exceptions after they aged
 out. There are no current package-wide bootstrap exceptions.
 
+### When a fix is urgent
+
+Decided on 2026-10-07 (DEBT-509). The 7-day gate defends against a
+malicious publish, such as a hijacked maintainer account. Those are usually
+found and pulled within hours to days; the September 2025 `chalk` and
+`debug` hijack was unpublished the same day. A disclosed critical flaw in
+the framework the app runs on can be exploited faster than that:
+React2Shell (CVE-2025-55182, December 2025) was attacked within hours. So
+the gate yields only when the vulnerability is the larger risk.
+
+- **Urgent:** a critical or high advisory whose affected configuration
+  matches this app, or whose exposure the advisory text cannot rule out.
+  Take the fix the same day, through the workflow above.
+- **Not urgent:** everything else, including a critical advisory for a
+  feature the app does not use. An advisory's statement that
+  Vercel-hosted deployments are protected settles production, but not
+  `next dev`. Wait for the gate.
+
+The exception narrows the gate; every other check still applies:
+
+- Name only the exact versions that the official advisory or release notes
+  give as fixed, plus the same-version companions pnpm refuses. For `next`,
+  those are `@next/env` and the `@next/swc-*` platform binaries, published
+  with it.
+- `trustPolicy: no-downgrade` still runs, so a version published with weaker
+  provenance than its predecessors is still refused.
+- The full gate, exact-head review and promotion still apply.
+
+### Advisories Dependabot cannot see
+
+Dependabot alerts come from GitHub's advisory database, and an upstream
+repository's own advisory can miss it. None of Next.js's 2026-09-30
+advisories reached it, so no alert fired (DEBT-509). Every six hours,
+`.github/workflows/upstream-advisory-watch.yml` reads the published
+advisories of the repositories listed in `scripts/upstream-advisory-watch.ts`
+and opens one issue per new advisory. Triage each issue with the rule above,
+record the outcome in it, and close it. Add a repository to the list when the
+app depends on it as directly as it depends on Next.js.
+
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 
 > Historical snapshot: alert #46 later retargeted the patched v3 floor to
