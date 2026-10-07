@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — stable action IDs across two production builds and the Sentry checks; due 2026-10-19
+**Status:** Verifying — the Sentry checks, and a real-SDK test that the stale-action event reaches Sentry; due 2026-10-19
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
 **Date:** 2026-10-05
 **Resolved:** —
@@ -62,7 +62,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 **Scope limit.**
 - **Where the reload fires.** Only for an action whose failure reaches a route error page: the form actions on pricing, add-card, billing and bookmarks.
 - **Where it does not.** The practice flows and the question page call their actions through `runTransitionedAsyncAction`, which catches errors, so a stale action there shows the flow's own error. The global error page does not reload either, since the root layout calls no actions.
-- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file, export or declared arguments change. [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) did that once, on purpose, for the 22 actions those pages call. So `UnrecognizedActionError` events from those pages just after its deploy are that move, not a failure of this fix.
+- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file, export or declared arguments change. [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) did that once, on purpose, for the 22 actions those pages call. So `UnrecognizedActionError` events from those pages just after its deploy are that move, not a failure of this fix.
 
 ## Progress
 
@@ -86,12 +86,12 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 
 Criteria to meet before closing.
 
-- [ ] Two consecutive production builds give the same action IDs. Proof: call a page's action from a tab opened before a deploy, or compare the IDs in the pricing page's dynamic payload across two deployments. Compare actions whose code did not change between the two builds: [BUG-324](./bug-324-server-actions-accept-caller-supplied-dependencies.md) changes the five app-level action IDs and moves the 22 browser-called controller actions, on purpose.
+- [x] Two consecutive production builds give the same action IDs. Next.js derives each ID from the action encryption key, the module path and the export name (plus a byte recording whether it is a `'use cache'` function and how many of its first six parameters it declares, with one bit for a rest parameter or more than six; Next reads these from the signature, not from what the body uses), so editing an action's body leaves its ID unchanged and changing its parameter list can change it, as can a Next.js upgrade: three local production builds on 2026-10-06 gave 38 identical IDs with the same key, and different ones with another key. Production's key was created 2026-10-05T19:00Z and has not changed since (Vercel's environment metadata; no value read), and a Vercel build without it fails (`lib/env.test.ts`). So production builds keep the IDs of actions whose code did not change. [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) changed the five app-level action IDs and moved the 22 browser-called controller actions, on purpose. *Corrected 2026-10-06: proven by deterministic builds and the key's metadata instead of a stale tab across a deploy.*
 - [x] "Try again" calls `retry` on every route error page. A test pins it, red first.
 - [x] A stale action on a payment form reloads the page by itself, with a test of the guard.
 - [x] A missing key fails a production build.
-- [ ] Owner, by 2026-10-19: search Sentry for the recorded resume-error message and affected route since the production assignment. The old issue was deleted under BUG-318, so searching only its issue key cannot detect a recurrence. Record query, time range, count and ingestion health, either way.
-- [ ] Sentry receives an `UnrecognizedActionError` from the error pages if a stale action ever happens; record the first one, or none, after two weeks. The event is sent just before the reload, so first confirm with one forced stale action that it arrives; otherwise "none" means nothing.
+- [ ] Engineering, by 2026-10-19: search Sentry through its API for the recorded resume-error message and affected route since the production assignment. The old issue was deleted under BUG-318, so searching only its issue key cannot detect a recurrence. Record query, time range, count and ingestion health, either way.
+- [ ] Engineering, by 2026-10-19: a test through the real Sentry SDK, as BUG-318's privacy test does, proves the error pages send an `UnrecognizedActionError` before they reload; then record the first production event, or none, after two weeks. Without that test, "none" would mean nothing, because the event is sent just before the reload. *Corrected 2026-10-06: a real-SDK test replaces forcing a stale action in production.*
 
 ## Related
 

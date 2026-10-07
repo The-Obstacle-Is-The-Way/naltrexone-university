@@ -707,7 +707,7 @@ The Drizzle adapter reads a revision's content, difficulty and choices from the 
 
 ## Verified closeout — 2026-09-30 UTC
 
-**2026-10-06 forward pointer.** Both scoring/label tails listed below were subsequently decided in ADR-022 and implemented under [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md). They are no longer deferred owner decisions. Stored grades remain historical; current score inclusion excludes content in doubt and corrected keys. [DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md) owns the remaining History presentation.
+*Corrected 2026-10-06: both scoring and label tails below were decided in ADR-022 and implemented under [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md); [DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md) owns the remaining History presentation.*
 
 ADR-021's phases 1–3 are implemented, reviewed, promoted to `main` and release-verified: revisions, binding, review, the database contract (`0043`, `0044`) and the code contract (#1248, #1249). Each dated section above carries its increment's receipts; its "Not yet" and "Next" lines are historical execution notes, superseded by this section. Every Verification bullet was re-checked on `main` at `96973534` (tree `903b25fb`) before archival.
 

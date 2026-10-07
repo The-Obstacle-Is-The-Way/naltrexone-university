@@ -16,13 +16,14 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
-| AUDIT-014 | [External audit of bug and debt records](./audit-014-external-record-audit-2026-10-06.md) | 2026-10-06 | Live records, recent closures, source, tests, GitHub receipts and vendor/account evidence | Documentation corrections; DEBT-504 filed; historical and owner-only limits remain explicit |
-| AUDIT-013 | [Security Review of Recent Work](./audit-013-security-review-2026-10-05.md) | 2026-10-05 | Abuse of logs, Sentry and shared provider limits; authorization, input, redirects, webhooks, payments and answer keys since 2026-09-26; secrets, CI, headers, dependencies | Six bugs (BUG-323 to BUG-328) and DEBT-414 F21/F22 filed; artifact fix promoted through #1406 |
+| — | None | — | — | — |
 
 ## Archived Audits
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
+| AUDIT-014 | [External Audit of Bug and Debt Records](../_archive/audits/audit-014-external-record-audit-2026-10-06.md) | 2026-10-06 | Live records, recent closures, source, tests, GitHub receipts and vendor/account evidence | Resolved 2026-10-06 on publication (#1410, promotion #1415). Records corrected; BUG-329 and DEBT-504 filed; a follow-up review corrected its decisions and checks. |
+| AUDIT-013 | [Security Review of Recent Work](../_archive/audits/audit-013-security-review-2026-10-05.md) | 2026-10-05 | Abuse of logs, Sentry and shared provider limits; authorization, input, redirects, webhooks, payments and answer keys since 2026-09-26; secrets, CI, headers, dependencies | Resolved 2026-10-06 on publication (#1402, promotion #1403). Six bugs (BUG-323 to BUG-328) and DEBT-414 F21/F22 filed. |
 | AUDIT-012 | [Repository Organization, Dev Tooling & Agent Documentation](../_archive/audits/audit-012-repo-org-devx.md) | 2026-06-13 | CI/CD & dev tooling, AGENTS/CLAUDE/.claude/rules accuracy, file org vs Clean Architecture, code quality vs Clean Code + PoSD | Resolved 2026-06-13. Code/doc findings fixed, CI/security platform gaps filed as BUG-248/BUG-249, stricter TS flags and residual esbuild advisories filed as DEBT-418/DEBT-419. |
 | AUDIT-011 | [Error Observability & Defensive Coding Sweep](../_archive/audits/audit-011-error-observability-defensive-coding.md) | 2026-03-07 | Error handling, type safety, array access, concurrency | Resolved 2026-03-19. BUG-201, BUG-202 resolved; BUG-199 invalidated; DEBT-286 resolved (PR #218). |
 | AUDIT-010 | Exam Secrecy and Cross-Layer Invariant Sweep | 2026-03-02 | Exam-answer secrecy invariant enforcement across use cases, controllers, projections, retry/review | Resolved 2026-03-19. All 6 bugs (BUG-180–185) resolved and archived. |
