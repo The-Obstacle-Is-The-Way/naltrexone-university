@@ -97,8 +97,9 @@ overrides:
   # GHSA-wq5f-xc86-pv6w (alert #83) then moved the floor to 0.35.5: the bundled
   # librsvg had a memory-safety flaw (CVE-2026-96889) reachable through SVG
   # decoding, with possible RCE on glibc Linux. 0.35.5 ships librsvg 2.63.2 in
-  # libvips 1.3.4 and is a patch release on the same API. Aged past the 7-day
-  # release gate (0.35.5 and its @img packages published 2026-09-27).
+  # libvips 8.18.7 (the @img/sharp-libvips 1.3.4 packages) and is a patch
+  # release on the same API. Aged past the 7-day release gate (0.35.5 and its
+  # @img packages published 2026-09-27).
   sharp: 0.35.5
 packageExtensions:
   # DEBT-460 Cleanup A (issue #813): Stryker's sandbox TSConfigPreprocessor runs
