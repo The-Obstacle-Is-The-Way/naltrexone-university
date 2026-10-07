@@ -791,6 +791,12 @@ summary.
    The merge guard applies it without any override.
 5. After recovery, re-run CI once.
 
+**A dropped notification (DEBT-510, 2026-10-07)** is not an outage. The upload
+succeeded and Codecov's public API lists it as processed, yet no
+`codecov/patch` posted. CI's "Send Codecov notifications" step retries it near
+the end of the job. If the check is still missing about five minutes after
+the job, record that on the PR and re-run CI once.
+
 ### Reviewed-Source Promotions
 
 **Owner decision, 2026-09-22:** `dev` → `main` promotions do not require their
