@@ -68,8 +68,8 @@ Option 1, plus the digest pin.
 ## Verification
 
 - [x] A test, red first, pins the `vercel.json` exclusion for Dependabot branches.
-- [x] Observation 2026-10-06: security PR [#1404](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1404), targeting `main`, carries the exclusion on head `9ccfabe5`. GitHub's deployments API returns zero records for that SHA; its checks contain no Vercel deployment.
-- [ ] Owner/operator: a Dependabot PR with the exclusion merges through the checked-in tooling, due 2026-10-20. #1404 is still open and red; no merge proof is claimed.
+- [x] Observation 2026-10-06: security PR [#1404](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1404), targeting `main`, carries the exclusion on head `9ccfabe5`. GitHub's deployments API returns zero records for that SHA; its checks contain no Vercel deployment. Dependabot later force-pushed #1404 to `aa516b6a`; that head also has zero deployments and no Vercel status, and its [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37499618792) fails on the same three versions.
+- [ ] Engineering, by 2026-10-20: a Dependabot PR with the exclusion merges through the checked-in tooling: #1404 once its versions clear the seven-day cooldown, or its successor. #1404 is still open and red; no merge proof is claimed.
 
   Its [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37479614420) fails installation with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` for three versions: `@types/node@24.19.1`, `acorn@8.19.0` and `shell-quote@1.12.0`. The existing [security-patch playbook](../dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown) already covers waiting or a reviewed exact-version exception. No new debt is needed for a missing policy. Do not exempt unrelated lockfile churn merely to unblock the security bump.
 - [x] `ci.yml`'s Postgres image is pinned by digest, and the workflow test covers every workflow.

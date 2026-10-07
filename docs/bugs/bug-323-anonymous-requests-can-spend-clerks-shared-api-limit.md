@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the limits reach production and answer 429 when exceeded; due 2026-10-19
+**Status:** Verifying — owner confirms the production limiter writes its rows; due 2026-10-19
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -105,8 +105,9 @@ What a limited person sees:
 - [x] The report to Clerk is filed.
 - [x] Unit tests, red first, cover the request shapes, all three limits, the 429 responses and the fail-open path, and every deliberate break was caught.
 - [x] The full E2E suite passes with the limits in place (they stay off on the development instance it uses).
-- [ ] In production after promotion: a request that would reach Clerk is answered 429 once over the limit, and normal pages are unaffected.
-- [ ] Decide whether to keep the firewall rule as defence in depth (recommended), and record the decision.
+- [x] Production runs Clerk's live instance, the condition that turns the limits on (`proxy.ts:239`): on 2026-10-06 the production sign-in page served a `pk_live_` key and Clerk reported a production instance.
+- [ ] Owner, by 2026-10-19: a read-only count of production `rate_limits` rows whose key starts with `clerk-backend-call:` in the last 24 hours is above zero, which shows the limiter runs. The limiter counts only handshake or expired-session requests, so if the count is zero, send one request with `?__clerk_handshake_nonce=check` and count again; zero after that fails the check. It needs production database access, which engineering does not use. A live key shows only that the limiter is called: it fails open, logging to stdout that Vercel keeps for an hour; [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) will alert on that failure. *Corrected 2026-10-06: a `pk_live_` key proves the limiter is called, not that it works (#1410 review).*
+- [x] Keep the firewall rule as defence in depth. Decided 2026-10-06 under the owner's delegation: it costs nothing, answers before any Clerk call, and the project's only rate-limit rule slot has no better use.
 
 ## Related
 
