@@ -167,7 +167,7 @@ Commands: `gh pr view <number> --json number,state,baseRefName,headRefOid,mergeC
 | [#1372](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1372) | main | MERGED | f32160d8 | yes |
 | [#1373](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1373) | dev | MERGED | 86c62eb9 | yes |
 | [#1374](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1374) | main | MERGED | 2998928c | yes |
-| [#1375](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1375) | dev | OPEN | — | — |
+| [#1375](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1375) | dev | CLOSED, not merged (2026-10-06 16:19Z; read earlier as OPEN) | — | — |
 | [#1376](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1376) | dev | MERGED | bcb2161f | yes |
 | [#1377](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1377) | main | MERGED | 9171234b | yes |
 | [#1379](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1379) | dev | MERGED | 0f5dd886 | yes |

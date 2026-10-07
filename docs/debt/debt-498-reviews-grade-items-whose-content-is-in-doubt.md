@@ -13,7 +13,7 @@
 
 ## Summary
 
-**Current position, 2026-10-06:** the answer views, navigators, session breakdown and Dashboard are fixed in production (increments 1 and 2a below). History's rows and result filters remain. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
+**Current position:** the answer views, navigators, session breakdown and Dashboard are fixed in production (increments 1 and 2a below). History's rows and result filters remain. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
 
 [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) leaves an item out of every score when its content is in doubt: its answer key was corrected after the learner answered, it was withdrawn, or it is under review. The reason given is that such an item "should neither penalize nor credit the learner". The pages that show the attempt still grade it.
 
