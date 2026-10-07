@@ -182,21 +182,28 @@ describe('the setup and teardown entry points', () => {
       customer('mine', 'github-ci-9-1', 0),
     ]);
     const warnings: string[] = [];
+    const infos: string[] = [];
 
     await sweepE2EStripeCustomers({
       env,
       store,
       nowMs: NOW,
       warn: (m) => warnings.push(m),
+      info: (m) => infos.push(m),
     });
     await deleteE2ERunStripeCustomer({
       env,
       store,
       warn: (m) => warnings.push(m),
+      info: (m) => infos.push(m),
     });
 
     expect(store.deleted).toEqual(['old', 'mine']);
     expect(warnings).toEqual([]);
+    expect(infos).toEqual([
+      '[E2E_STRIPE_OWNER] Swept 1 stale per-run CI customer(s).',
+      '[E2E_STRIPE_OWNER] Deleted 1 customer(s) of this run attempt.',
+    ]);
   });
 
   it('warns instead of failing the run when Stripe refuses', async () => {

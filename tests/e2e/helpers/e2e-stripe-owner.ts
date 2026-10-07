@@ -141,6 +141,8 @@ type EntryPointInput = {
   env?: E2EStripeOwnerEnv;
   store?: E2EStripeCustomerStore;
   warn?: (message: string) => void;
+  /** Count-only evidence for the run log; never an ID. */
+  info?: (message: string) => void;
 };
 
 function resolveEntryPoint({
@@ -184,12 +186,17 @@ export async function sweepE2EStripeCustomers(
   const target = resolveEntryPoint(input);
   if (!target) return;
   try {
-    const { failed } = await sweepStaleCiCustomers({
+    const { deleted, failed } = await sweepStaleCiCustomers({
       store: target.store,
       email: target.email,
       currentOwner: target.owner,
       nowMs: input.nowMs ?? Date.now(),
     });
+    if (deleted > 0) {
+      (input.info ?? console.log)(
+        `[E2E_STRIPE_OWNER] Swept ${deleted} stale per-run CI customer(s).`,
+      );
+    }
     if (failed > 0) {
       warn(
         `[E2E_STRIPE_OWNER] ${failed} could not be deleted; the next run's sweep retries them.`,
@@ -210,8 +217,12 @@ export async function deleteE2ERunStripeCustomer(
   const warn = input.warn ?? console.warn;
   const target = resolveEntryPoint(input);
   if (!target) return;
+  if (!isDisposableCiOwner(target.owner)) return;
   try {
-    await deleteRunCustomer(target);
+    const { deleted } = await deleteRunCustomer(target);
+    (input.info ?? console.log)(
+      `[E2E_STRIPE_OWNER] Deleted ${deleted} customer(s) of this run attempt.`,
+    );
   } catch (error) {
     warn(
       `[E2E_STRIPE_OWNER] Run customer kept for the next sweep: ${describeError(error)}`,
