@@ -6,14 +6,14 @@
 **Now** — 2026-10-07.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
 - **Verifying.** DEBT-498: increment 2b, History's rows, result filters and sorts, awaits its release, due 2026-10-14.
-- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-503 item 1 (identity from the session token), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
+- **Next.** DEBT-503 item 1 (identity from the session token; it also ends DEBT-508's Clerk 429s when E2E runs overlap), then DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-511 (legal notices read the address from Clerk at send time; it needs DEBT-505's alerts and must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
   - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); and the counsel review.
   - The production content bootstrap (DEBT-483, Deferred below).
 
-**Next Debt ID:** DEBT-507 · **Next Frontend ID:** FE-056
+**Next Debt ID:** DEBT-512 · **Next Frontend ID:** FE-056
 
 ## Active
 
@@ -28,6 +28,7 @@
 | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | Open — decided per item; item 1 (identity from the session token) first |
 | [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
 | [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Open — resolution decided below; it must ship before paid acquisition |
+| [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; it must ship before paid acquisition, after DEBT-505 |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
