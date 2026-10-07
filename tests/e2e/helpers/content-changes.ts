@@ -20,6 +20,8 @@ export type ContentChanges = {
   keyCorrectedAttempt(): Promise<ReviewedAttempt>;
   /** The E2E user answered; the question was then placed under review. */
   heldAttempt(): Promise<ReviewedAttempt>;
+  /** The E2E user answered correctly; nothing changed since. */
+  scoredAttempt(): Promise<ReviewedAttempt>;
   /** The E2E user bookmarked the question; it was then withdrawn. */
   withdrawnBookmark(): Promise<void>;
   /** Deletes the dedicated questions and closes the connection. */
@@ -84,6 +86,11 @@ export async function openContentChanges(): Promise<ContentChanges> {
         const created = await question('held');
         const attemptId = await answerCorrectly(created);
         await setQuestionState(db, created, 'under_review');
+        return { slug: created.slug, attemptId };
+      },
+      async scoredAttempt() {
+        const created = await question('scored');
+        const attemptId = await answerCorrectly(created);
         return { slug: created.slug, attemptId };
       },
       async withdrawnBookmark() {
