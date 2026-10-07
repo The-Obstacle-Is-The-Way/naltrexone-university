@@ -374,55 +374,59 @@ describe('GetAttemptedQuestionsUseCase', () => {
   });
 
   it('orders globally by incorrect-first before pagination', async () => {
+    const questions = [
+      createQuestion({
+        id: 'q-correct-recent',
+        slug: 'q-correct-recent',
+        stemMd: 'Correct recent',
+      }),
+      createQuestion({
+        id: 'q-incorrect-recent',
+        slug: 'q-incorrect-recent',
+        stemMd: 'Incorrect recent',
+      }),
+      createQuestion({
+        id: 'q-correct-old',
+        slug: 'q-correct-old',
+        stemMd: 'Correct old',
+      }),
+      createQuestion({
+        id: 'q-incorrect-old',
+        slug: 'q-incorrect-old',
+        stemMd: 'Incorrect old',
+      }),
+    ];
     const useCase = new GetAttemptedQuestionsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q-correct-recent',
-          isCorrect: true,
-          answeredAt: new Date('2026-02-04T00:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q-incorrect-recent',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-03T00:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q-correct-old',
-          isCorrect: true,
-          answeredAt: new Date('2026-02-02T00:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q-incorrect-old',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T00:00:00Z'),
-        }),
-      ]),
-      new FakeQuestionRepository([
-        createQuestion({
-          id: 'q-correct-recent',
-          slug: 'q-correct-recent',
-          stemMd: 'Correct recent',
-        }),
-        createQuestion({
-          id: 'q-incorrect-recent',
-          slug: 'q-incorrect-recent',
-          stemMd: 'Incorrect recent',
-        }),
-        createQuestion({
-          id: 'q-correct-old',
-          slug: 'q-correct-old',
-          stemMd: 'Correct old',
-        }),
-        createQuestion({
-          id: 'q-incorrect-old',
-          slug: 'q-incorrect-old',
-          stemMd: 'Incorrect old',
-        }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-correct-recent',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-04T00:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-incorrect-recent',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-03T00:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-correct-old',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-02T00:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q-incorrect-old',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T00:00:00Z'),
+          }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
       new FakeLogger(),
     );
 
