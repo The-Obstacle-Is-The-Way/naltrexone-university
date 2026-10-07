@@ -30,6 +30,16 @@ const compareWithMain = (behind = 0) =>
 // base.
 const compared = (files: unknown[], mergeBase = MAIN) =>
   JSON.stringify({ merge_base_commit: { sha: mergeBase }, files });
+// A compare listing GitHub's maximum of 300 files, which may be truncated.
+const atCeiling = (mergeBase = MAIN) =>
+  compared(
+    Array.from({ length: 300 }, (_, index) => ({
+      filename: `file-${index}.ts`,
+      status: 'modified',
+      patch: 'x',
+    })),
+    mergeBase,
+  );
 describe('feature merge decision', () => {
   it('accepts exact-head approval even when a later comment has no verdict', () => {
     expect(
@@ -484,6 +494,39 @@ describe('merge command', () => {
       );
       expect(execFileSync).toHaveBeenCalledTimes(5);
     });
+
+    it('refuses to carry when the current head’s compare reaches the ceiling', () => {
+      vi.mocked(execFileSync)
+        .mockReturnValueOnce(
+          JSON.stringify({ data: { repository: { pullRequest: pr() } } }),
+        )
+        .mockReturnValueOnce(JSON.stringify([[review()]]))
+        .mockReturnValueOnce(compared(change(10), earlierBase))
+        .mockReturnValueOnce(atCeiling(laterBase));
+
+      expect(() => runMergeReviewedPr(['987'], () => {})).toThrow(
+        'predates the push of the head',
+      );
+      expect(execFileSync).toHaveBeenCalledTimes(4);
+    });
+
+    // Unread base changes must not pass for none, which would accept hunks
+    // that dev's edits should have moved.
+    it('refuses to carry when dev’s changes between the merge bases reach the ceiling', () => {
+      vi.mocked(execFileSync)
+        .mockReturnValueOnce(
+          JSON.stringify({ data: { repository: { pullRequest: pr() } } }),
+        )
+        .mockReturnValueOnce(JSON.stringify([[review()]]))
+        .mockReturnValueOnce(compared(change(10), earlierBase))
+        .mockReturnValueOnce(compared(change(10), laterBase))
+        .mockReturnValueOnce(atCeiling(earlierBase));
+
+      expect(() => runMergeReviewedPr(['987'], () => {})).toThrow(
+        'predates the push of the head',
+      );
+      expect(execFileSync).toHaveBeenCalledTimes(5);
+    });
   });
 
   it('reads no diffs for a PR approved after its current head was pushed', () => {
@@ -522,15 +565,7 @@ describe('merge command', () => {
         JSON.stringify({ data: { repository: { pullRequest: pr } } }),
       )
       .mockReturnValueOnce(JSON.stringify([[review()]]))
-      .mockReturnValueOnce(
-        compared(
-          Array.from({ length: 300 }, (_, index) => ({
-            filename: `file-${index}.ts`,
-            status: 'modified',
-            patch: 'x',
-          })),
-        ),
-      );
+      .mockReturnValueOnce(atCeiling());
 
     expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
       '@coderabbitai full review',
