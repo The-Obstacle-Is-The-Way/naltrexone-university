@@ -66,6 +66,8 @@ An item that does not count leaves both the numerator and the denominator. This 
 - dashboard accuracy, overall and over seven days;
 - the Review & Submit warning, which counts only scored unanswered items. Unavailable items are listed as "Won't be scored".
 
+*Extended 2026-10-07 (DEBT-498): an answer on a key corrected since is listed "Won't be scored" too, since this rule leaves it out, including an exam draft on such a key, since submission grades it against the revision it was given.*
+
 **Activity counts are not scores.** "Total answered" and the streak count the work the learner did, so they keep counting every attempt.
 
 **Scores are derived at read time** from the immutable attempts and the current state of the content. No stored grade is rewritten, and no new column is needed. A later withdrawal, hold, lift or key correction is therefore reflected on every surface at once. When a hold lifts and the question is published again, its items count once more, except an attempt whose key was corrected.
@@ -153,7 +155,9 @@ A review of a key-corrected attempt therefore says "This attempt isn't scored." 
 > - **The choices** keep the learner's selection, marked "Your answer", and drop the success and destructive styling. The choice keyed in the revision answered is marked in words.
 > - **A key-corrected item** marks the old key "Answer before the correction" and does not show the explanation or reference written for it, because they argue for the superseded answer. The notice's link to the corrected question is the way to the current answer.
 > - **A withdrawn or held item** marks its key "Keyed answer" and keeps its explanation, beneath the caution that already says not to rely on them. Decision 2 shows that content to the learner who answered.
-> - **Lists** (History, the Dashboard's recent activity, the session breakdown and the post-exam navigator) show "Not scored" in place of the result. History's Correct and Incorrect filters follow what each row shows.
+> - **Lists** (History, the Dashboard's recent activity, the session breakdown and the post-exam navigator) show "Not scored" in place of the result. History's Correct and Incorrect filters follow what each row shows. Its Incorrect-first and Correct-first sorts place such a row after every graded row, since ranking it with either verdict would credit or penalize it.
+>
+> *Extended 2026-10-07 (DEBT-498 increment 2b): the sort placement, which this Amendment had left undecided.*
 
 **Consequences.**
 - **A page and a score agree.** An item that no score counts is never shown as credited or penalized.

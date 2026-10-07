@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { isResultNotScored } from '@/app/(app)/app/shared/components/review-navigator-utils';
 import { ErrorCard } from '@/components/error-card';
 import {
   questionAvailabilityHeading,
@@ -71,30 +72,36 @@ function getTagKindLabel(kind: 'topic' | 'substance' | 'treatment'): string {
   return 'Treatment';
 }
 
-function getResultBadge(isCorrect: boolean) {
-  if (isCorrect) {
+function getResultBadge(row: AttemptedQuestionRow) {
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts is
+  // named, in the row's muted tone, not graded.
+  if (
+    isResultNotScored({
+      isCorrect: row.isCorrect,
+      availability: row.availability,
+      answerKeyChanged: row.isAvailable && row.answerKeyChanged,
+    })
+  ) {
+    return <span className="text-muted-foreground">Not scored</span>;
+  }
+  if (row.isCorrect) {
     return <span className="text-success">Correct</span>;
   }
   return <span className="text-destructive">Incorrect</span>;
 }
-
-type QuestionMetadataRow = Pick<
-  AttemptedQuestionRow,
-  'isCorrect' | 'lastAnsweredAt' | 'sessionId' | 'sessionMode'
->;
 
 function QuestionMetadata({
   row,
   middleLabel,
   middleLabelClassName,
 }: {
-  row: QuestionMetadataRow;
+  row: AttemptedQuestionRow;
   middleLabel: string;
   middleLabelClassName?: string;
 }) {
   return (
     <div className="text-xs text-muted-foreground">
-      {getResultBadge(row.isCorrect)}
+      {getResultBadge(row)}
       <span className="mx-2">•</span>
       <span className={middleLabelClassName}>{middleLabel}</span>
       <span className="mx-2">•</span>

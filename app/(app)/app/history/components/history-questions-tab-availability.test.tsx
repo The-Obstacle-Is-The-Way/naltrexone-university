@@ -76,3 +76,89 @@ describe('HistoryQuestionsTab: question availability', () => {
     expect(doc.querySelectorAll('a[href*="/app/questions/"]')).toHaveLength(0);
   });
 });
+
+// ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts reads
+// "Not scored", in the row's muted tone, in place of Correct or Incorrect.
+describe('HistoryQuestionsTab: results no score counts', () => {
+  function resultOf(doc: Document) {
+    return Array.from(doc.querySelectorAll('span')).find((span) =>
+      ['Correct', 'Incorrect', 'Not scored'].includes(span.textContent ?? ''),
+    );
+  }
+
+  function expectNotScored(doc: Document) {
+    const result = resultOf(doc);
+    expect(result?.textContent).toBe('Not scored');
+    expect(result?.classList.contains('text-muted-foreground')).toBe(true);
+    expect(result?.classList.contains('text-success')).toBe(false);
+    expect(result?.classList.contains('text-destructive')).toBe(false);
+  }
+
+  it.each([
+    ['on a withdrawn question', { availability: 'withdrawn' }],
+    ['on a question under review', { availability: 'under_review' }],
+    ['graded on a key corrected since', { answerKeyChanged: true }],
+  ] as const)('names an answer %s Not scored', (_name, marks) => {
+    expectNotScored(
+      renderRows([
+        createAvailableAttemptedQuestionRow({ isCorrect: true, ...marks }),
+      ]),
+    );
+  });
+
+  it('keeps the grade of an answer on a retired question', () => {
+    const result = resultOf(
+      renderRows([
+        createAvailableAttemptedQuestionRow({
+          availability: 'retired',
+          isCorrect: true,
+        }),
+      ]),
+    );
+
+    expect(result?.textContent).toBe('Correct');
+    expect(result?.classList.contains('text-success')).toBe(true);
+  });
+
+  it.each([
+    ['withdrawn', 'withdrawn'],
+    ['under review', 'under_review'],
+    ['that no longer exists', null],
+  ] as const)(
+    'names an omitted attempt on a question %s Not scored',
+    (_name, availability) => {
+      expectNotScored(
+        renderRows([
+          {
+            isAvailable: false,
+            availability,
+            questionId: crypto.randomUUID(),
+            isCorrect: false,
+            sessionId: null,
+            sessionMode: null,
+            lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+          },
+        ]),
+      );
+    },
+  );
+
+  it('keeps the grade of an omitted attempt on a retired question', () => {
+    const result = resultOf(
+      renderRows([
+        {
+          isAvailable: false,
+          availability: 'retired',
+          questionId: crypto.randomUUID(),
+          isCorrect: false,
+          sessionId: null,
+          sessionMode: null,
+          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
+        },
+      ]),
+    );
+
+    expect(result?.textContent).toBe('Incorrect');
+    expect(result?.classList.contains('text-destructive')).toBe(true);
+  });
+});

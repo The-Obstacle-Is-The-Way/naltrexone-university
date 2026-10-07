@@ -514,6 +514,58 @@ describe('GetNextQuestionUseCase', () => {
       });
     });
 
+    // DEBT-498: the answer is graded against the key it was given, so once
+    // that key is corrected the item counts toward no score.
+    it('says a tutor answer on a retired question whose key was corrected since will not count', async () => {
+      const keyed = (correctId: 'c2' | 'c3', revisionId?: string) =>
+        createQuestion({
+          id: 'q2',
+          status: 'archived',
+          ...(revisionId ? { revisionId } : {}),
+          choices: (['c2', 'c3'] as const).map((id, index) =>
+            createChoice({
+              id,
+              questionId: 'q2',
+              label: index === 0 ? 'A' : 'B',
+              textMd: `Choice ${id}`,
+              isCorrect: id === correctId,
+              sortOrder: index + 1,
+            }),
+          ),
+        });
+      const current = keyed('c3');
+      const answered = keyed('c2', crypto.randomUUID());
+      const { getNextQuestion } = createTestDeps({
+        questions: [createSingleChoiceQuestion('q1', 'c1'), current, answered],
+        sessions: [
+          createPracticeSession({
+            questionIds: ['q1', 'q2'],
+            questionStates: [
+              createQuestionState('q1'),
+              createQuestionState('q2', {
+                questionRevisionId: answered.revisionId,
+                latestSelectedChoiceId: 'c2',
+                latestIsCorrect: true,
+                latestAnsweredAt: ANSWERED_AT,
+              }),
+            ],
+          }),
+        ],
+      });
+
+      await expect(
+        getNextQuestion.execute({
+          userId: USER_ID,
+          sessionId: SESSION_ID,
+          questionId: 'q2',
+        }),
+      ).resolves.toMatchObject({
+        unavailable: true,
+        availability: 'retired',
+        countsIfEndedNow: false,
+      });
+    });
+
     it('is refused by the answerable-question narrowing in tests', async () => {
       const { getNextQuestion } = unavailableItemDeps();
       const output = await getNextQuestion.execute({
