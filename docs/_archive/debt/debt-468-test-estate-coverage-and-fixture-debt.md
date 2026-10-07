@@ -1,8 +1,8 @@
 # DEBT-468: Test-Estate Coverage Gaps and Shared-Fixture Debt
 
-**Status:** Resolved — 2026-09-27; all four Parts and all five Resolution items complete, and every Verification bullet re-verified on `main` before archival. One tail is Deferred: folding the out-of-place `*-test-helpers` modules.
+**Status:** Resolved — 2026-09-27; all four Parts and all five Resolution items complete, and every Verification bullet re-verified on `main` before archival. The `*-test-helpers` location tail, Deferred at archival, closed the same day (see the Deferred tail note).
 
-*Corrected 2026-10-06: that tail was completed later on 2026-09-27; see the Deferred tail note below.*
+*Corrected 2026-10-07: the status said that tail was still Deferred; it closed on 2026-09-27.*
 **Priority:** P2
 **Date:** 2026-08-14
 **Source:** Owner-directed estate-wide investigation (2026-08-14): four parallel read-only sweeps (backend file-presence with indirect-coverage cross-checks; `app/**`+`components/**` lane mapping; E2E/integration flow-surface diff; test-double inventory) plus executed coverage on all three vitest lanes, merged with `istanbul-lib-coverage`. All lanes green during measurement: unit 436 files / 3,853 tests; browser 64 / 398; integration 38+1 skipped / 244+2 skipped; build clean.
@@ -32,7 +32,7 @@ Each Verification bullet was re-checked on `main` at `59b96438`:
 
 The dated sections below keep their original "open" and "remains" wording as historical execution receipts, superseded by this section.
 
-**Deferred tail** (2026-09-27 UTC: resolved the same day. The three `src/` outliers moved into `test-helpers/` directories. The convention, `app/**` and `components/**` keeping suffix-named helpers beside their suites since every `app/` folder is a route segment, is written down in `.claude/rules/testing.md` and guarded by `tests/test-support-location-policy.test.ts`): twelve `*-test-helpers.ts(x)` modules live outside any `test-helpers/` directory (Part 3 consistency note: eleven on 2026-09-26, plus the #1139 lock-order harness, which follows `tests/integration/`'s sibling pattern). Each folds into a standard location when its suite is next edited; the index Deferred table carries this. DEBT-465 keeps the write guard's two equivalent mutants for its mutation pilot, and the index's DEBT-472 remainder row carries the ratcheted casts and doubles.
+**Deferred tail** (closed 2026-09-27 UTC, the same day): twelve `*-test-helpers.ts(x)` modules lived outside any `test-helpers/` directory (Part 3 consistency note: eleven on 2026-09-26, plus the #1139 lock-order harness, which follows `tests/integration/`'s sibling pattern). The three `src/` outliers moved into `test-helpers/` directories. The others are in their standard location under the convention now written in `.claude/rules/testing.md` and guarded by `tests/test-support-location-policy.test.ts`: `app/**` and `components/**` keep suffix-named helpers beside their suites, since every `app/` folder is a route segment, and `tests/integration/` keeps them beside its suites. No index row remains. DEBT-465 keeps the write guard's two equivalent mutants for its mutation pilot, and the index's DEBT-472 remainder row carries the ratcheted casts and doubles.
 
 ---
 

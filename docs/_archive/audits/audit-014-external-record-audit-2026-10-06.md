@@ -102,4 +102,4 @@ Each row's referenced PRs, numeric approvals and CI conclusions were checked whe
 
 ## Shipping
 
-One documentation PR to `dev`, with the exact head, local gate, CodeRabbit adjudication and guarded merge receipt on that PR. No promotion is part of this audit. This report remains active while the owner checks and evidence limits above remain open; it does not claim 100% independent verification.
+One documentation PR to `dev`, with the exact head, local gate, CodeRabbit adjudication and guarded merge receipt on that PR. No promotion is part of this audit. The report was resolved on publication; each remaining check and evidence limit is tracked in the record it concerns. It does not claim 100% independent verification.

@@ -45,7 +45,10 @@ The product is pre-revenue with no active users, so nothing has been missed yet.
 Option 2.
 - **The port.** Add an `OperationalAlerts` port in the application layer, with one method per alert kind, taking only fixed fields: the kind, a count and a non-identifying reference. Use cases and jobs call it where they now log an alert.
 - **The adapter.** Implement it with `Sentry.captureMessage` in an outer-layer adapter, so no vendor import enters the application or domain layers.
-- **The volume bound.** Each alert kind has one cooldown key on the existing Postgres limiter, at most one event per kind per six hours. A limiter error suppresses the event, so an outage cannot break the bound.
+- **The volume bound.** Two cooldowns per alert kind, each six hours.
+  - An in-process cooldown is checked first and is always on.
+  - Then one cooldown key on the existing Postgres limiter makes it at most one event per kind across all instances.
+  - If that key cannot be read, the event is still sent, tagged as sent without the shared cooldown, and the in-process cooldown bounds it to one per kind per server instance. Suppressing it instead would silence BUG-323's alert, since that alert reports this same database failing.
 - **Keep the log line** beside each alert, for immediate diagnosis.
 - **Renewal notices are detected from state.** The renewal job already computes missed deadlines from the database each run, so a deadline missed while logs were lost is still found on the next run.
 - **Who uses it:**
@@ -57,7 +60,7 @@ Option 2.
 
 ## Verification
 
-- [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the cooldown holds under concurrent calls and survives a restart; a limiter error suppresses the event.
+- [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
 - [ ] Engineering: one test event per alert kind reaches the Sentry issue alert routed to the owner, recorded with counts only.
 - [ ] The alerts listed above no longer exist as log lines alone.
 

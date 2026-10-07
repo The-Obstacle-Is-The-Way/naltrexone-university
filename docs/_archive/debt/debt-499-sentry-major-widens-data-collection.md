@@ -40,7 +40,7 @@ Checking that showed the version then in production was no better. It sent crede
   | 11.0.0 with no `dataCollection` (#1369 as-is) | 8: all but `__session` and the cron `Bearer` | on |
   | 11.0.0 with this record's settings | none | off |
 
-  The 11.0.0 runs are `lib/sentry-data-collection-sdk.test.ts`, with and without the settings. The 10.75.1 run used an isolated install with install scripts disabled.
+  The 11.0.0 run with this record's settings is `lib/sentry-data-collection-sdk.test.ts`; the run with no `dataCollection` was a separate offline replay. The 10.75.1 run used an isolated install with install scripts disabled.
 
   *Corrected 2026-10-06: `lib/sentry-data-collection-sdk.test.ts:30` configures only the restrictive settings; the defaults comparison was a separate offline replay ([receipt](../../audits/assets/external-audit-2026-10-06/receipts.md)).*
 
@@ -82,7 +82,7 @@ See BUG-318 for the live exposure. Without a pinned setting, every Sentry major 
 
 *Corrected 2026-10-06: Option 2's claim that v10 stops receiving fixes is withdrawn, since [Sentry's migration guide](https://github.com/getsentry/sentry-javascript/blob/develop/MIGRATION.md#no-version-support-timeline) sets no support timeline and Sentry decides backports case by case; Option 1's count is eight of ten.*
 
-1. **Merge #1369 as-is.** Rejected: it keeps eight of the nine values flowing.
+1. **Merge #1369 as-is.** Rejected: it keeps eight of the ten values flowing.
 2. **Stay on v10.** Rejected: v10 is the live exposure, and stops receiving fixes.
 3. **Upgrade in our own PR, with explicit restrictive settings on every runtime, scrubbers for URLs, and a test through the real SDK.** Recommended.
 
