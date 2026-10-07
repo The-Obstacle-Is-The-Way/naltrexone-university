@@ -22,15 +22,33 @@ This record holds the structural fixes, so that the allowance stops being the on
 
 ### 1. Read identity from the session token, not the Backend API (P2)
 
-- **Evidence.** `ClerkAuthGateway.getCurrentUser` calls `currentUser()` on every signed-in render and action (`src/adapters/gateways/clerk-auth-gateway.ts`, through `lib/container.ts:61-65`). The middleware has already verified the session token, which carries the Clerk user ID.
+- **Evidence.**
+  - **Every signed-in request spends a Backend API call.** `ClerkAuthGateway.getCurrentUser` calls `currentUser()` on every signed-in render and action (`src/adapters/gateways/clerk-auth-gateway.ts`, through `lib/container.ts`), and retries a 429 up to three times.
+  - **The ID is already verified locally.** `currentUser()` is `auth()` followed by `users.getUser(userId)` (`@clerk/nextjs` 7.9.4). So the call fetches a profile for an ID `auth()` already trusts. `auth()` accepts only the token the middleware verified, under an HMAC header signature, and throws if the middleware did not run.
+  - **Checkout spends a second call.** Billing's `getClerkUserId` makes another `currentUser()` just for the ID.
+  - **Today the only deletion guard is Clerk's 404.** The tombstones `user.deleted` writes are read only by the webhook. On sign-in, Clerk's 404 is what stops a deleted user's leftover row from being served.
+  - **CI meets the limit too.** On 2026-10-07, two overlapping CI runs met this lookup's 429s, and signed-in pages rendered as signed out ([DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)).
 - **Decided.**
-  - Resolve the app user from the verified token's user ID and our own `users` table.
-  - Call the Backend API only to provision a user seen for the first time, or when our row is missing.
-  - Email changes arrive through the Clerk webhook. Document stale/missed-update recovery, verified-email selection and deletion races with DEBT-502; the fast path must not bypass tombstones or silently change ownership rules.
+  - **Session identity.** `getCurrentUser()` reads the Clerk user ID from `auth()`, then reads our `users` row and the deletion tombstone together.
+    - A tombstoned ID returns no user, even if a leftover row exists, and makes no Clerk call.
+    - An existing row is returned, with no Clerk call and no write.
+    - A missing row is provisioned with one Backend API lookup by ID, through today's `ensureClerkUser`, so BUG-284's identity rules and BUG-320's retry hold unchanged. A Clerk 404 there returns no user.
+    - Users are never provisioned from token claims. A first visit while Clerk is down fails closed.
+  - **Fresh email where it matters.** `requireUser({ currentEmail: true })` refreshes the email from Clerk through the same provisioning path, after the tombstone check. Only Stripe checkout and trial card setup ask for it, after their rate limiter and idempotency replay. A refreshed row whose ID differs is a conflict. Billing reads the Clerk ID from the session, so checkout spends one call instead of two, and a refused or replayed one spends none.
+  - **Email freshness.** Email changes otherwise arrive through Clerk's `user.updated` webhook, retried by Clerk's delivery and recorded by the webhook controller. Provisioning, the billing refresh and BUG-284's stale-owner resolver also correct it. Operator recovery is a replay from the Clerk Dashboard, documented in the runbook. A reconcile job waits for its trigger: any `user.updated` failure older than the retry window.
+  - **Deletion races.**
+    - A tombstone committed before the read returns no user.
+    - One committed after the read serves that one response, as today.
+    - Between Clerk's deletion and its webhook, a still-valid token (about 60 seconds) is served its own row. A billing refresh gets Clerk's 404 and is refused. This is bounded, and changes no ownership.
+    - Provisioning racing a deletion stays DEBT-502 item 2, with one call site for its fix.
+  - **Proof.** The skip-Clerk composition test asserts that a signed-in request with an existing row calls `auth()` and never `currentUser()` or the Backend API. A source guard keeps `currentUser` out of the code. A shared contract runs the five session-identity scenarios against the maintained fakes and real Postgres.
+  - **Not adopted.** A custom session-token claim for the email: claims must never provision a user, and freshness is handled above.
 
   This removes the largest consumer of the allowance, but does not by itself justify raising BUG-323's caps; item 2 still needs a burst and retry budget. It moves here from DEBT-502 item 4.
 
   *Corrected 2026-10-06: the decision now names the recovery of a stale or missed email update, verified-email selection and deletion races (#1410).*
+
+  *Corrected 2026-10-07: the plan read every caller. "Backend API only to provision" also needs the billing refresh and BUG-284's resolver. The tombstone read is required, since Clerk's 404 was the only sign-in guard. Checkout's second call is removed. The token's trust comes from the middleware's HMAC-signed headers.*
 - **Care.** BUG-284's identity rules and BUG-320's provisioning race must hold. Test-first against the maintained fakes and real Postgres.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)

@@ -19,7 +19,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 ### 1. An email change to an address a stale row holds locks the person out (P3)
 
 - **Evidence.** `ensureClerkUser` validates before it resolves (`src/adapters/gateways/clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:305-311`). `clerk-auth-gateway.test.ts:356-405` locks this in.
-- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:49`). The person cannot change their email back in the app.
+- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:49`). The person cannot change their email back in the app. Once [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 ships, signed-in pages read the person's own row by Clerk ID, so the lockout narrows to the billing refresh (checkout and trial card setup) and the webhook.
 - **Decided.** When Clerk confirms the stale owner's current email differs, move that owner's row first, as the new-user path already does, then continue. The refusal stays for an owner that Clerk cannot confirm.
 
 ### 2. A row whose Clerk user no longer exists blocks its email permanently, and nothing repairs it (P3)
