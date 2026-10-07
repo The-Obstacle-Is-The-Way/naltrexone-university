@@ -6,13 +6,15 @@ import {
   type AdvisoryIssue,
   type AdvisoryIssues,
   createGithubAdvisoryIssues,
+  DEPENDENCY_REPOSITORIES,
   directDependencySpecifiers,
   listUpstreamAdvisories,
   raiseUpstreamAdvisories,
   runUpstreamAdvisoryWatch,
   type UpstreamAdvisory,
   WATCH_START,
-  WATCHED_REPOSITORIES,
+  watchedRepositories,
+  watchUpstreamAdvisories,
 } from './upstream-advisory-watch';
 
 vi.mock('node:child_process', () => ({ execFileSync: vi.fn() }));
@@ -234,10 +236,6 @@ describe('GitHub advisory source', () => {
     );
   });
 
-  it('watches only Next.js today', () => {
-    expect(WATCHED_REPOSITORIES).toEqual(['vercel/next.js']);
-  });
-
   it.each([
     { ghsa_id: 'not-an-id' },
     { cve_id: 42 },
@@ -363,6 +361,67 @@ describe('GitHub issue adapter', () => {
   });
 });
 
+describe('watched repositories', () => {
+  // A dependency added without a watch decision fails here, not silently.
+  it('maps every direct dependency in package.json, and nothing else', () => {
+    const manifest = directDependencySpecifiers(
+      readFileSync('package.json', 'utf8'),
+    );
+    expect(Object.keys(DEPENDENCY_REPOSITORIES).sort()).toEqual(
+      Object.keys(manifest).sort(),
+    );
+  });
+
+  it('names a GitHub owner and repository for each mapped dependency', () => {
+    for (const repository of Object.values(DEPENDENCY_REPOSITORIES)) {
+      if (repository !== null)
+        expect(repository).toMatch(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
+    }
+  });
+
+  it('leaves unwatched only the dependencies that publish no repository', () => {
+    expect(
+      Object.entries(DEPENDENCY_REPOSITORIES)
+        .filter(([, repository]) => repository === null)
+        .map(([name]) => name),
+    ).toEqual(['server-only']);
+  });
+
+  it('watches each repository once, including the ones whose advisories Dependabot missed', () => {
+    const repositories = watchedRepositories();
+    expect(new Set(repositories).size).toBe(repositories.length);
+    expect(repositories).toEqual([...repositories].sort());
+    expect(repositories).toEqual(
+      expect.arrayContaining([
+        'vercel/next.js',
+        'getsentry/sentry-javascript',
+        'vitejs/vite',
+        'clerk/javascript',
+      ]),
+    );
+  });
+});
+
+describe('watching several repositories', () => {
+  it('raises what it can read and names the repositories it could not', async () => {
+    const issues = new MemoryIssues();
+    const outcome = await watchUpstreamAdvisories(
+      ['broken/repo', 'vercel/next.js'],
+      manifest,
+      issues,
+      async (repository) => {
+        if (repository === 'broken/repo') throw new Error('HTTP 404');
+        return [advisory()];
+      },
+    );
+    expect(outcome).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      unreadable: ['broken/repo'],
+    });
+    expect(issues.issues).toHaveLength(1);
+  });
+});
+
 describe('watch command outcome', () => {
   const output = () => {
     const messages: string[] = [];
@@ -380,7 +439,10 @@ describe('watch command outcome', () => {
   it('reports the advisories raised and returns zero', async () => {
     const { messages, errors, sink } = output();
     expect(
-      await runUpstreamAdvisoryWatch(async () => ['GHSA-aaaa-bbbb-cccc'], sink),
+      await runUpstreamAdvisoryWatch(
+        async () => ({ raised: ['GHSA-aaaa-bbbb-cccc'], unreadable: [] }),
+        sink,
+      ),
     ).toBe(0);
     expect(messages).toEqual([
       'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
@@ -388,12 +450,37 @@ describe('watch command outcome', () => {
     expect(errors).toEqual([]);
   });
 
-  it('wires the default check: reads each watched repository, lists issues, and opens one per new advisory', async () => {
-    const run = vi
-      .mocked(execFileSync)
-      .mockReturnValueOnce(JSON.stringify([[apiAdvisory]]))
-      .mockReturnValueOnce(JSON.stringify([[]]))
-      .mockReturnValueOnce('');
+  it('fails the run, after raising what it could, when a repository is unreadable', async () => {
+    const { messages, errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({
+          raised: ['GHSA-aaaa-bbbb-cccc'],
+          unreadable: ['broken/repo', 'gone/repo'],
+        }),
+        sink,
+      ),
+    ).toBe(1);
+    expect(messages).toEqual([
+      'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
+    ]);
+    expect(errors).toEqual([
+      'Could not read advisories for: broken/repo, gone/repo',
+    ]);
+  });
+
+  it('wires the default check: reads every watched repository, lists issues once, and opens one per new advisory', async () => {
+    const run = vi.mocked(execFileSync).mockImplementation((_file, args) => {
+      const path = args?.[3] ?? '';
+      if (
+        path ===
+        'repos/vercel/next.js/security-advisories?state=published&per_page=100'
+      )
+        return JSON.stringify([[apiAdvisory]]);
+      if (path.includes('/security-advisories?') || path.includes('/issues?'))
+        return JSON.stringify([[]]);
+      return '';
+    });
     const { messages, errors, sink } = output();
     expect(await runUpstreamAdvisoryWatch(undefined, sink)).toBe(0);
     expect(errors).toEqual([]);
@@ -401,23 +488,35 @@ describe('watch command outcome', () => {
       'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
     ]);
     const calls = run.mock.calls.map(([, args]) => args ?? []);
-    expect(calls.slice(0, 2).map((args) => args[3])).toEqual([
-      'repos/vercel/next.js/security-advisories?state=published&per_page=100',
-      'repos/{owner}/{repo}/issues?state=all&per_page=100',
-    ]);
-    const createArgs = calls[2] ?? [];
-    expect(createArgs.slice(0, 4)).toEqual([
+    expect(
+      calls
+        .map((args) => args[3] ?? '')
+        .filter((path) => path.includes('/security-advisories?')),
+    ).toEqual(
+      watchedRepositories().map(
+        (repository) =>
+          `repos/${repository}/security-advisories?state=published&per_page=100`,
+      ),
+    );
+    const creates = calls.filter((args) => args[1] === 'create');
+    expect(creates).toHaveLength(1);
+    expect(creates[0]?.slice(0, 4)).toEqual([
       'issue',
       'create',
       '--title',
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
     ]);
-    expect(createArgs[5]).toMatch(/`package\.json` pins `next` at `[^`]+`/);
+    expect(creates[0]?.[5]).toMatch(/`package\.json` pins `next` at `[^`]+`/);
   });
 
   it('reports a quiet run', async () => {
     const { messages, sink } = output();
-    expect(await runUpstreamAdvisoryWatch(async () => [], sink)).toBe(0);
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({ raised: [], unreadable: [] }),
+        sink,
+      ),
+    ).toBe(0);
     expect(messages).toEqual(['Upstream advisories raised: none']);
   });
 

@@ -3,11 +3,83 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 // Dependabot alerts come from GitHub's advisory database, and an upstream
-// advisory can miss it: none of Next.js's 2026-09-30 advisories, whose
-// version ranges read `16.3.?`, reached it (DEBT-509). This job reads each
-// watched repository's own published advisories and opens one issue per new
-// advisory. Ranges are copied, not evaluated, because they can be malformed.
-export const WATCHED_REPOSITORIES = ['vercel/next.js'] as const;
+// repository's own advisory can miss it. On 2026-10-07, 12 advisories
+// published by this app's dependency repositories were absent, in Next.js,
+// Sentry and Vite (DEBT-509). This job reads every dependency repository's
+// published advisories and opens one issue per new advisory. Ranges are
+// copied, not evaluated, because they can be malformed.
+
+// The repository that publishes each direct dependency's advisories, taken
+// from its npm `repository` field, or null when it names none. A test keeps
+// the keys equal to package.json's dependencies and devDependencies, so a new
+// dependency cannot go unwatched.
+export const DEPENDENCY_REPOSITORIES: Readonly<Record<string, string | null>> =
+  {
+    '@biomejs/biome': 'biomejs/biome',
+    '@clerk/nextjs': 'clerk/javascript',
+    '@clerk/testing': 'clerk/javascript',
+    '@clerk/ui': 'clerk/javascript',
+    '@noble/hashes': 'paulmillr/noble-hashes',
+    '@playwright/test': 'microsoft/playwright',
+    '@sentry/nextjs': 'getsentry/sentry-javascript',
+    '@stripe/cli': 'stripe/stripe-cli',
+    '@stryker-mutator/core': 'stryker-mutator/stryker-js',
+    '@stryker-mutator/vitest-runner': 'stryker-mutator/stryker-js',
+    '@tailwindcss/postcss': 'tailwindlabs/tailwindcss',
+    '@types/istanbul-lib-coverage': 'DefinitelyTyped/DefinitelyTyped',
+    '@types/node': 'DefinitelyTyped/DefinitelyTyped',
+    '@types/react': 'DefinitelyTyped/DefinitelyTyped',
+    '@types/react-dom': 'DefinitelyTyped/DefinitelyTyped',
+    '@typescript/typescript6': 'microsoft/TypeScript',
+    '@vitejs/plugin-react': 'vitejs/vite-plugin-react',
+    '@vitest/browser-playwright': 'vitest-dev/vitest',
+    '@vitest/coverage-v8': 'vitest-dev/vitest',
+    'class-variance-authority': 'joe-bell/cva',
+    clsx: 'lukeed/clsx',
+    dotenv: 'motdotla/dotenv',
+    'drizzle-kit': 'drizzle-team/drizzle-orm',
+    'drizzle-orm': 'drizzle-team/drizzle-orm',
+    'fast-glob': 'mrmlnc/fast-glob',
+    'gray-matter': 'jonschlinkert/gray-matter',
+    husky: 'typicode/husky',
+    'istanbul-lib-coverage': 'istanbuljs/istanbuljs',
+    jsdom: 'jsdom/jsdom',
+    'lint-staged': 'lint-staged/lint-staged',
+    'lucide-react': 'lucide-icons/lucide',
+    next: 'vercel/next.js',
+    'next-themes': 'pacocoursey/next-themes',
+    pino: 'pinojs/pino',
+    postgres: 'porsager/postgres',
+    'radix-ui': 'radix-ui/primitives',
+    react: 'react/react',
+    'react-dom': 'react/react',
+    'react-markdown': 'remarkjs/react-markdown',
+    'rehype-sanitize': 'rehypejs/rehype-sanitize',
+    'remark-gfm': 'remarkjs/remark-gfm',
+    resend: 'resend/resend-node',
+    'server-only': null, // a marker package with no source repository
+    stripe: 'stripe/stripe-node',
+    'tailwind-merge': 'dcastil/tailwind-merge',
+    tailwindcss: 'tailwindlabs/tailwindcss',
+    tsx: 'privatenumber/tsx',
+    'tw-animate-css': 'Wombosvideo/tw-animate-css',
+    typescript: 'microsoft/TypeScript',
+    vite: 'vitejs/vite',
+    vitest: 'vitest-dev/vitest',
+    'vitest-browser-react': 'vitest-community/vitest-browser-react',
+    yaml: 'eemeli/yaml',
+    zod: 'colinhacks/zod',
+  };
+
+export function watchedRepositories(): string[] {
+  return [
+    ...new Set(
+      Object.values(DEPENDENCY_REPOSITORIES).filter(
+        (repository): repository is string => repository !== null,
+      ),
+    ),
+  ].sort();
+}
 
 // Advisories published before this were triaged by hand in DEBT-509.
 export const WATCH_START = '2026-10-01T00:00:00Z';
@@ -275,27 +347,49 @@ export function createGithubAdvisoryIssues(
   };
 }
 
+export type WatchOutcome = { raised: string[]; unreadable: string[] };
+
+// One unreadable repository (renamed, archived or briefly failing) must not
+// stop alerts from the others; the run still fails afterwards, so it is seen.
+export async function watchUpstreamAdvisories(
+  repositories: readonly string[],
+  manifest: Readonly<Record<string, string>>,
+  issues: AdvisoryIssues,
+  list: (repository: string) => Promise<UpstreamAdvisory[]> = (repository) =>
+    listUpstreamAdvisories(repository),
+): Promise<WatchOutcome> {
+  const advisories: UpstreamAdvisory[] = [];
+  const unreadable: string[] = [];
+  for (const repository of repositories) {
+    try {
+      advisories.push(...(await list(repository)));
+    } catch {
+      unreadable.push(repository);
+    }
+  }
+  return {
+    raised: await raiseUpstreamAdvisories(advisories, manifest, issues),
+    unreadable,
+  };
+}
+
 export async function runUpstreamAdvisoryWatch(
-  check = async () =>
-    raiseUpstreamAdvisories(
-      (
-        await Promise.all(
-          WATCHED_REPOSITORIES.map((repository) =>
-            listUpstreamAdvisories(repository),
-          ),
-        )
-      ).flat(),
+  check = () =>
+    watchUpstreamAdvisories(
+      watchedRepositories(),
       directDependencySpecifiers(readFileSync('package.json', 'utf8')),
       createGithubAdvisoryIssues(),
     ),
   output: Pick<Console, 'log' | 'error'> = console,
 ): Promise<number> {
   try {
-    const raised = await check();
+    const { raised, unreadable } = await check();
     output.log(
       `Upstream advisories raised: ${raised.length > 0 ? raised.join(', ') : 'none'}`,
     );
-    return 0;
+    if (unreadable.length === 0) return 0;
+    output.error(`Could not read advisories for: ${unreadable.join(', ')}`);
+    return 1;
   } catch {
     output.error(
       'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',

@@ -120,14 +120,35 @@ The exception narrows the gate; every other check still applies:
 
 ### Advisories Dependabot cannot see
 
-Dependabot alerts come from GitHub's advisory database, and an upstream
-repository's own advisory can miss it. None of Next.js's 2026-09-30
-advisories reached it, so no alert fired (DEBT-509). Every six hours,
-`.github/workflows/upstream-advisory-watch.yml` reads the published
-advisories of the repositories listed in `scripts/upstream-advisory-watch.ts`
-and opens one issue per new advisory. Triage each issue with the rule above,
-record the outcome in it, and close it. Add a repository to the list when the
-app depends on it as directly as it depends on Next.js.
+Dependabot alerts come from GitHub's advisory database. A dependency
+repository's own published advisory can miss it, and nothing then raises an
+alert. A check on 2026-10-07 found 12 of the advisories published by this
+app's dependency repositories absent from the database:
+
+| Repository | Missing | Affected here |
+|---|---|---|
+| `vercel/next.js` | 7 of 69, all from 2026-09-30 | Development server only; see DEBT-509 |
+| `getsentry/sentry-javascript` | 1 of 6 (2026-09-24, tunnel-route middleware bypass) | No: no `tunnelRoute`, Turbopack builds, and 11.0.0 is fixed |
+| `vitejs/vite` | 3 of 22 (2026-10-06, development server) | Yes, development only; fixed in 8.3.3 |
+| `vitejs/vite-plugin-react` | 1 of 8 (2026-07-22, `@vitejs/plugin-rsc`) | No: the app does not use that package |
+
+The gap is not one project's formatting quirk: the Sentry advisory's ranges
+are well formed, yet it was still missing after 13 days. So the watch covers
+every direct dependency, not a hand-picked few.
+
+- `.github/workflows/upstream-advisory-watch.yml` runs
+  `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
+  advisories of each repository in its `DEPENDENCY_REPOSITORIES` map and opens
+  one issue per advisory published since 2026-10-01.
+- The map names the repository of every dependency and devDependency in
+  `package.json`, taken from the package's npm `repository` field. A test
+  requires its keys to equal `package.json`'s, so adding or removing a
+  dependency fails CI until the map is updated.
+- One unreadable repository does not stop the others: the run raises what it
+  can read, then fails and names the repositories it could not.
+
+Triage each issue with the rule above, record the outcome in it, and close it.
+Transitive dependencies are left to Dependabot and `pnpm audit`.
 
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 
