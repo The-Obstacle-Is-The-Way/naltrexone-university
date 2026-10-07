@@ -89,6 +89,17 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
   - One E2E run at a time stays the rule on this machine, and nobody pushes while `main`'s E2E runs after a promotion.
   - DEBT-503 item 1 is the structural fix for both production and CI, so it moves ahead of DEBT-505 in the register's Now stanza.
 
+## The rest of the CI chain, 2026-10-07
+
+Every CI failure class seen today now has its own record and a decided fix:
+
+| Failure | Cause | Record |
+| --- | --- | --- |
+| Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, next |
+| Lost subscription state when runs overlap | One Stripe customer per lane | This record |
+| Signed-in tests fail after the stored token expires | A failed Clerk session restore, undiagnosable | [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) |
+| `codecov/patch` missing after a good upload | Codecov drops the notification | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) |
+
 ## Verification
 
 - [ ] CI's E2E step tags its customer by run and attempt, and `tests/e2e-test-identity-workflows.test.ts` pins it. The local orchestrator sets the per-clone owner, and its test pins the precedence.
