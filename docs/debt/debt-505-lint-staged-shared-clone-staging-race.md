@@ -44,6 +44,16 @@ The 17.6.0 receipt included:
 
 This proves an unrelated-path regression. It does not establish that 17.5.1 makes concurrent edits to the same staged path safe.
 
+A follow-up reproduction on 2026-10-07 paused the same Biome task and appended a concurrent comment to the initially staged `a.ts`. It tested a fully staged file, a partially staged file with an earlier unstaged comment, and an unrelated-path control:
+
+| Case | 17.5.1 | 17.6.0 | Would a staged-path-set check abort? |
+|---|---|---|---|
+| Fully staged `a.ts` receives a concurrent edit | Concurrent edit staged; both edits preserved | Same | No, in either version |
+| Partially staged `a.ts` receives a concurrent edit | Concurrent edit staged; both edits and earlier unstaged comment preserved | Same | No, in either version |
+| Unrelated `notes.md` receives a concurrent edit | Edit stays unstaged and preserved | Edit staged and preserved | Only on 17.6.0 |
+
+All six runs exited 0. The two same-path cases produced identical staged and unstaged diffs across versions. These probes demonstrate a pre-existing same-path risk, not a guarantee that arbitrary concurrent writes are safe: preserving bytes does not mean the commit contains only its author's intended changes.
+
 ## Containment
 
 PR #1409 holds the generated lockfile at 17.5.1 without changing the manifest's existing range. The dev-targeted npm version-updates entry in `.github/dependabot.yml` ignores `lint-staged` versions `>=17.6.0` so the next weekly bundle does not reintroduce the race. The separate security-updates entry is unchanged.
@@ -54,7 +64,7 @@ The hold is temporary. No pre-commit safeguard or repository-wide worktree-isola
 
 Complete either path before removing the Dependabot ignore:
 
-1. **A tested pre-commit safeguard.** Capture the staged paths before lint-staged runs and abort the commit if lint-staged stages a path outside that set. Reproduce the concurrent edit above, prove the commit fails, and prove both sessions' working changes are preserved. Include paths outside the task globs and partially staged files in the tests.
+1. **A tested pre-commit safeguard.** Capture the staged paths before lint-staged runs and abort the commit if lint-staged stages a path outside that set. Reproduce the concurrent edit above, prove the commit fails, and prove both sessions' working changes are preserved. Include paths outside the task globs and partially staged files in the tests. This path addresses the unrelated-path regression only. A path-set check cannot protect concurrent writers to an initially staged file; do not accept it as the exit condition for workflows permitting those writers. Such workflows require a separately tested control that prevents same-path overlap and preserves both sessions' work, or the isolated-worktree path below.
 2. **Enforced isolated worktrees.** Every agent writes and commits in its own worktree; no concurrent sessions edit one worktree. Document and enforce that operating rule, including existing shared-clone workflows. An isolated worktree used for one upgrade is not sufficient evidence that all sessions are isolated.
 
 Once one path is verified, remove the `>=17.6.0` ignore in the reviewed upgrade PR, regenerate the lockfile with pnpm under the unchanged release-age and trust policies, and pass the full local gate including E2E. Obtain exact-head CodeRabbit approval. Archive this record only after the chosen protection and upgrade are shipped and promoted, following the archive convention.
