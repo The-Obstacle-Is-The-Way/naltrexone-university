@@ -152,34 +152,45 @@ function describeAdvisory(
   );
 }
 
+export type RaiseOutcome = { raised: string[]; failed: string[] };
+
 export async function raiseUpstreamAdvisories(
   advisories: readonly UpstreamAdvisory[],
   manifest: Readonly<Record<string, string>>,
   issues: AdvisoryIssues,
   start = WATCH_START,
-): Promise<string[]> {
+): Promise<RaiseOutcome> {
   const startAt = Date.parse(start);
   const fresh = advisories.filter(
     (advisory) => Date.parse(advisory.publishedAt) >= startAt,
   );
-  if (fresh.length === 0) return [];
+  const outcome: RaiseOutcome = { raised: [], failed: [] };
+  if (fresh.length === 0) return outcome;
   // An issue of any state settles its advisory: a closed one was triaged.
+  // Without this list nothing can be deduplicated, so its failure fails all.
   const known = (await issues.list()).map((issue) => issue.title);
-  const raised: string[] = [];
+  const handled = new Set<string>();
   for (const advisory of fresh) {
     if (
-      raised.includes(advisory.ghsaId) ||
+      handled.has(advisory.ghsaId) ||
       known.some((title) => title.includes(advisory.ghsaId))
     )
       continue;
-    await issues.create(
-      `Upstream security advisory ${advisory.ghsaId} (${advisory.severity}): ${packagesOf(advisory).join(', ')}`,
-      describeAdvisory(advisory, manifest),
-      URGENT_SEVERITIES.has(advisory.severity),
-    );
-    raised.push(advisory.ghsaId);
+    handled.add(advisory.ghsaId);
+    // One issue that cannot be opened must not stop the ones after it; the
+    // next run retries it, and the run reports it and fails.
+    try {
+      await issues.create(
+        `Upstream security advisory ${advisory.ghsaId} (${advisory.severity}): ${packagesOf(advisory).join(', ')}`,
+        describeAdvisory(advisory, manifest),
+        URGENT_SEVERITIES.has(advisory.severity),
+      );
+      outcome.raised.push(advisory.ghsaId);
+    } catch {
+      outcome.failed.push(advisory.ghsaId);
+    }
   }
-  return raised;
+  return outcome;
 }
 
 export function directDependencySpecifiers(
@@ -365,7 +376,7 @@ export function createGithubAdvisoryIssues(
   };
 }
 
-export type WatchOutcome = { raised: string[]; unreadable: string[] };
+export type WatchOutcome = RaiseOutcome & { unreadable: string[] };
 
 // One unreadable repository (renamed, archived or briefly failing) must not
 // stop alerts from the others; the run still fails afterwards, so it is seen.
@@ -386,7 +397,7 @@ export async function watchUpstreamAdvisories(
     }
   }
   return {
-    raised: await raiseUpstreamAdvisories(advisories, manifest, issues),
+    ...(await raiseUpstreamAdvisories(advisories, manifest, issues)),
     unreadable,
   };
 }
@@ -401,13 +412,15 @@ export async function runUpstreamAdvisoryWatch(
   output: Pick<Console, 'log' | 'error'> = console,
 ): Promise<number> {
   try {
-    const { raised, unreadable } = await check();
+    const { raised, failed, unreadable } = await check();
     output.log(
       `Upstream advisories raised: ${raised.length > 0 ? raised.join(', ') : 'none'}`,
     );
-    if (unreadable.length === 0) return 0;
-    output.error(`Could not read advisories for: ${unreadable.join(', ')}`);
-    return 1;
+    if (failed.length > 0)
+      output.error(`Could not open issues for: ${failed.join(', ')}`);
+    if (unreadable.length > 0)
+      output.error(`Could not read advisories for: ${unreadable.join(', ')}`);
+    return failed.length > 0 || unreadable.length > 0 ? 1 : 0;
   } catch {
     output.error(
       'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',

@@ -140,12 +140,15 @@ every direct dependency, not a hand-picked few.
   `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
   advisories of each repository in its `DEPENDENCY_REPOSITORIES` map and opens
   one issue per advisory published since 2026-10-01.
-- The map names the repository of every dependency and devDependency in
-  `package.json`, taken from the package's npm `repository` field. A test
+- The map gives every dependency and devDependency in `package.json` the
+  repository named in its npm `repository` field, or `null` when it names
+  none (today only `server-only`, a marker package). A test
   requires its keys to equal `package.json`'s, so adding or removing a
   dependency fails CI until the map is updated.
-- One unreadable repository does not stop the others: the run raises what it
-  can read, then fails and names the repositories it could not.
+- One unreadable repository, or one issue that cannot be opened, does not
+  stop the others: the run raises what it can, then fails and names what it
+  could not. Only a failure to list existing issues fails the run outright,
+  because without that list nothing can be deduplicated.
 - Critical and high advisories are assigned to the repository owner. GitHub
   notifies an assignee whatever their watch setting, and the same-day rule
   needs someone to see them. Medium and low advisories open unassigned. In the

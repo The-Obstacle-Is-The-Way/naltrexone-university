@@ -72,7 +72,7 @@ describe('raising upstream advisories', () => {
     const issues = new MemoryIssues();
     expect(
       await raiseUpstreamAdvisories([advisory()], manifest, issues),
-    ).toEqual(['GHSA-aaaa-bbbb-cccc']);
+    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [] });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
     ]);
@@ -86,7 +86,7 @@ describe('raising upstream advisories', () => {
         manifest,
         issues,
       ),
-    ).toEqual([]);
+    ).toEqual({ raised: [], failed: [] });
     expect(issues.issues).toEqual([]);
     expect(WATCH_START).toBe('2026-10-01T00:00:00Z');
   });
@@ -104,7 +104,7 @@ describe('raising upstream advisories', () => {
       });
       expect(
         await raiseUpstreamAdvisories([advisory()], manifest, issues),
-      ).toEqual([]);
+      ).toEqual({ raised: [], failed: [] });
       expect(issues.issues).toHaveLength(1);
     },
   );
@@ -160,7 +160,7 @@ describe('raising upstream advisories', () => {
     const issues = new MemoryIssues();
     expect(
       await raiseUpstreamAdvisories([advisory(), advisory()], manifest, issues),
-    ).toEqual(['GHSA-aaaa-bbbb-cccc']);
+    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [] });
     expect(issues.issues).toHaveLength(1);
   });
 
@@ -177,9 +177,34 @@ describe('raising upstream advisories', () => {
     expect(issues.issues.map((issue) => issue.urgent)).toEqual([urgent]);
   });
 
-  it('propagates an issue API failure instead of reporting a delivered alert', async () => {
+  // One issue that cannot be opened (a timeout, a rejected assignee) must not
+  // stop the advisories after it from being raised in the same run.
+  it('keeps raising after one issue cannot be opened, and names the one that failed', async () => {
     const issues = new MemoryIssues();
-    issues.create = async () => {
+    const create = issues.create.bind(issues);
+    issues.create = async (title, body, urgent) => {
+      if (title.includes('GHSA-aaaa-bbbb-cccc'))
+        throw new Error('GitHub unavailable');
+      await create(title, body, urgent);
+    };
+    expect(
+      await raiseUpstreamAdvisories(
+        [advisory(), advisory({ ghsaId: 'GHSA-dddd-eeee-ffff' })],
+        manifest,
+        issues,
+      ),
+    ).toEqual({
+      raised: ['GHSA-dddd-eeee-ffff'],
+      failed: ['GHSA-aaaa-bbbb-cccc'],
+    });
+    expect(issues.issues.map((issue) => issue.title)).toEqual([
+      'Upstream security advisory GHSA-dddd-eeee-ffff (critical): next',
+    ]);
+  });
+
+  it('fails outright when existing issues cannot be listed, since it could not deduplicate', async () => {
+    const issues = new MemoryIssues();
+    issues.list = async () => {
       throw new Error('GitHub unavailable');
     };
     await expect(
@@ -473,6 +498,7 @@ describe('watching several repositories', () => {
     );
     expect(outcome).toEqual({
       raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
       unreadable: ['broken/repo'],
     });
     expect(issues.issues).toHaveLength(1);
@@ -497,7 +523,11 @@ describe('watch command outcome', () => {
     const { messages, errors, sink } = output();
     expect(
       await runUpstreamAdvisoryWatch(
-        async () => ({ raised: ['GHSA-aaaa-bbbb-cccc'], unreadable: [] }),
+        async () => ({
+          raised: ['GHSA-aaaa-bbbb-cccc'],
+          failed: [],
+          unreadable: [],
+        }),
         sink,
       ),
     ).toBe(0);
@@ -513,6 +543,7 @@ describe('watch command outcome', () => {
       await runUpstreamAdvisoryWatch(
         async () => ({
           raised: ['GHSA-aaaa-bbbb-cccc'],
+          failed: [],
           unreadable: ['broken/repo', 'gone/repo'],
         }),
         sink,
@@ -524,6 +555,24 @@ describe('watch command outcome', () => {
     expect(errors).toEqual([
       'Could not read advisories for: broken/repo, gone/repo',
     ]);
+  });
+
+  it('fails the run, after reporting what it raised, when an issue could not be opened', async () => {
+    const { messages, errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({
+          raised: ['GHSA-dddd-eeee-ffff'],
+          failed: ['GHSA-aaaa-bbbb-cccc'],
+          unreadable: [],
+        }),
+        sink,
+      ),
+    ).toBe(1);
+    expect(messages).toEqual([
+      'Upstream advisories raised: GHSA-dddd-eeee-ffff',
+    ]);
+    expect(errors).toEqual(['Could not open issues for: GHSA-aaaa-bbbb-cccc']);
   });
 
   it('wires the default check: reads every watched repository, lists issues once, and opens one per new advisory', async () => {
@@ -572,7 +621,7 @@ describe('watch command outcome', () => {
     const { messages, sink } = output();
     expect(
       await runUpstreamAdvisoryWatch(
-        async () => ({ raised: [], unreadable: [] }),
+        async () => ({ raised: [], failed: [], unreadable: [] }),
         sink,
       ),
     ).toBe(0);
