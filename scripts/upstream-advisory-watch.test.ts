@@ -343,6 +343,33 @@ describe('watch command outcome', () => {
     expect(errors).toEqual([]);
   });
 
+  it('wires the default check: reads each watched repository, lists issues, and opens one per new advisory', async () => {
+    const run = vi
+      .mocked(execFileSync)
+      .mockReturnValueOnce(JSON.stringify([[apiAdvisory]]))
+      .mockReturnValueOnce(JSON.stringify([[]]))
+      .mockReturnValueOnce('');
+    const { messages, errors, sink } = output();
+    expect(await runUpstreamAdvisoryWatch(undefined, sink)).toBe(0);
+    expect(errors).toEqual([]);
+    expect(messages).toEqual([
+      'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
+    ]);
+    const calls = run.mock.calls.map(([, args]) => args ?? []);
+    expect(calls.slice(0, 2).map((args) => args[3])).toEqual([
+      'repos/vercel/next.js/security-advisories?state=published&per_page=100',
+      'repos/{owner}/{repo}/issues?state=all&per_page=100',
+    ]);
+    const createArgs = calls[2] ?? [];
+    expect(createArgs.slice(0, 4)).toEqual([
+      'issue',
+      'create',
+      '--title',
+      'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
+    ]);
+    expect(createArgs[5]).toMatch(/`package\.json` pins `next` at `[^`]+`/);
+  });
+
   it('reports a quiet run', async () => {
     const { messages, sink } = output();
     expect(await runUpstreamAdvisoryWatch(async () => [], sink)).toBe(0);
