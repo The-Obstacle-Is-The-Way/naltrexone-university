@@ -66,6 +66,8 @@ An item that does not count leaves both the numerator and the denominator. This 
 - dashboard accuracy, overall and over seven days;
 - the Review & Submit warning, which counts only scored unanswered items. Unavailable items are listed as "Won't be scored".
 
+*Extended 2026-10-07 (DEBT-498): an answer on a key corrected since is listed "Won't be scored" too, since this rule leaves it out, and so is an exam draft, graded at submission against the revision it was given.*
+
 **Activity counts are not scores.** "Total answered" and the streak count the work the learner did, so they keep counting every attempt.
 
 **Scores are derived at read time** from the immutable attempts and the current state of the content. No stored grade is rewritten, and no new column is needed. A later withdrawal, hold, lift or key correction is therefore reflected on every surface at once. When a hold lifts and the question is published again, its items count once more, except an attempt whose key was corrected.

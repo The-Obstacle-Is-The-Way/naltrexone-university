@@ -158,6 +158,62 @@ describe('GetPracticeSessionReviewUseCase: content changed since', () => {
     },
   );
 
+  // DEBT-498: an exam answer stays a draft until submission, when it is
+  // graded against the revision it was given. A draft on a key corrected since
+  // is marked, so Review & Submit can say it won't be scored.
+  it.each([
+    ['a draft', 'c1', true],
+    ['no answer', null, false],
+  ] as const)(
+    'marks %s on a corrected key while the exam is active: %s',
+    async (_name, draft, answerKeyChanged) => {
+      const current = createQuestion({ id: 'q1', slug: 'q-1' });
+      const bound = createQuestion({
+        id: 'q1',
+        revisionId: crypto.randomUUID(),
+        slug: 'q-1',
+        choices: [
+          createChoice({ id: 'c1', questionId: 'q1', isCorrect: true }),
+        ],
+      });
+      const session = createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt: null,
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            questionRevisionId: bound.revisionId,
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: draft,
+          },
+        ],
+      });
+      const useCase = new GetPracticeSessionReviewUseCase(
+        new FakePracticeSessionRepository([session]),
+        new FakeQuestionRepository([current, bound]),
+        new FakeLogger(),
+      );
+
+      const { rows } = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(rows).toEqual([
+        expect.objectContaining({
+          isAnswered: draft !== null,
+          answerKeyChanged,
+        }),
+      ]);
+    },
+  );
+
   // ADR-022 Decision 1: each row carries its question's availability.
   it("carries each question's availability, on answered and unanswered rows", async () => {
     const held = createQuestion({ id: 'q-held', status: 'archived' });
