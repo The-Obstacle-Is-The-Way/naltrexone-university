@@ -531,9 +531,12 @@ function resolveRequiredEnv(
   return resolved;
 }
 
+type VerifiedIdentity = { clerkUserId?: string };
+
 function buildValidators(
   env: ResolvedEnv,
   services: CredentialHealthCheckServices,
+  verified: VerifiedIdentity,
 ): CredentialValidator[] {
   const validators: CredentialValidator[] = [];
 
@@ -591,6 +594,7 @@ function buildValidators(
             'Reset password in Clerk and update E2E_CLERK_USER_PASSWORD to the same value.',
           );
         }
+        verified.clerkUserId = userId;
       },
     });
   }
@@ -636,9 +640,14 @@ function formatFailureReport(failures: CredentialValidationError[]): string {
   return lines.join('\n');
 }
 
+/**
+ * Validates every E2E credential before setup changes any provider state, and
+ * returns the Clerk user it verified, so the run looks that user up once
+ * (DEBT-508).
+ */
 export async function runE2ECredentialHealthCheck(
   input: RunCredentialHealthCheckInput = {},
-): Promise<void> {
+): Promise<{ clerkUserId: string }> {
   const env = input.env ?? process.env;
   const services: CredentialHealthCheckServices = {
     ...defaultServices,
@@ -647,7 +656,8 @@ export async function runE2ECredentialHealthCheck(
 
   const failures: CredentialValidationError[] = [];
   const resolvedEnv = resolveRequiredEnv(env, failures);
-  const validators = buildValidators(resolvedEnv, services);
+  const verified: VerifiedIdentity = {};
+  const validators = buildValidators(resolvedEnv, services, verified);
 
   for (const validator of validators) {
     try {
@@ -674,4 +684,20 @@ export async function runE2ECredentialHealthCheck(
       cause: failures,
     });
   }
+
+  // Every required credential resolved and every validator passed, so the
+  // Clerk validator ran and recorded its user.
+  const { clerkUserId } = verified;
+  if (!clerkUserId) {
+    throw new Error(
+      formatFailureReport([
+        new CredentialValidationError(
+          'E2E_PREFLIGHT:UNEXPECTED',
+          'Preflight passed without verifying the Clerk user.',
+          'Check that buildValidators() registers the Clerk validator whenever its credentials resolve.',
+        ),
+      ]),
+    );
+  }
+  return { clerkUserId };
 }

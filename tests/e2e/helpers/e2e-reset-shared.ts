@@ -1,14 +1,6 @@
 import postgres from 'postgres';
-import {
-  CLERK_API_BASE,
-  type ClerkUserListResponse,
-  fetchClerkWithRetry,
-} from './credential-health-check';
 
-type SharedRequiredEnvKey =
-  | 'DATABASE_URL'
-  | 'CLERK_SECRET_KEY'
-  | 'E2E_CLERK_USER_USERNAME';
+type SharedRequiredEnvKey = 'DATABASE_URL' | 'E2E_CLERK_USER_USERNAME';
 
 export type SharedRequiredEnvVar = {
   key: SharedRequiredEnvKey;
@@ -19,13 +11,11 @@ export type SharedRequiredEnvVar = {
 
 type SharedResolvedEnv = {
   databaseUrl?: string;
-  clerkSecretKey?: string;
   clerkEmail?: string;
 };
 
 type SharedRequiredResolvedEnv = {
   databaseUrl: string;
-  clerkSecretKey: string;
   clerkEmail: string;
 };
 
@@ -96,8 +86,6 @@ type CreateSharedE2EResetSupportInput<E extends SharedErrorLike> = {
     code: string;
     fix: string;
   };
-  clerkApiUnavailableError: SharedErrorDefinition;
-  clerkSecretKeyInvalidError: SharedErrorDefinition;
   appUserLookupFailedError: SharedErrorDefinition;
 };
 
@@ -106,8 +94,6 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
   requiredEnvVars,
   failureReportLabel,
   internalEnvMappingError,
-  clerkApiUnavailableError,
-  clerkSecretKeyInvalidError,
   appUserLookupFailedError,
 }: CreateSharedE2EResetSupportInput<E>) {
   function resolveRequiredEnv(
@@ -127,8 +113,6 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
 
       const trimmed = value.trim();
       if (required.key === 'DATABASE_URL') resolved.databaseUrl = trimmed;
-      if (required.key === 'CLERK_SECRET_KEY')
-        resolved.clerkSecretKey = trimmed;
       if (required.key === 'E2E_CLERK_USER_USERNAME') {
         resolved.clerkEmail = trimmed;
       }
@@ -151,20 +135,17 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
   function requireResolvedEnvOrThrow(
     resolvedEnv: SharedResolvedEnv,
   ): SharedRequiredResolvedEnv {
-    const { databaseUrl, clerkSecretKey, clerkEmail } = resolvedEnv;
+    const { databaseUrl, clerkEmail } = resolvedEnv;
     const missingMappedKeys: string[] = [];
 
     if (!databaseUrl) {
       missingMappedKeys.push('databaseUrl <- DATABASE_URL');
     }
-    if (!clerkSecretKey) {
-      missingMappedKeys.push('clerkSecretKey <- CLERK_SECRET_KEY');
-    }
     if (!clerkEmail) {
       missingMappedKeys.push('clerkEmail <- E2E_CLERK_USER_USERNAME');
     }
 
-    if (!databaseUrl || !clerkSecretKey || !clerkEmail) {
+    if (!databaseUrl || !clerkEmail) {
       throw new Error(
         formatFailureReport([
           createError(
@@ -176,60 +157,15 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
       );
     }
 
-    return {
-      databaseUrl,
-      clerkSecretKey,
-      clerkEmail,
-    };
+    return { databaseUrl, clerkEmail };
   }
 
-  async function resolveClerkUserIdByEmail(input: {
-    clerkSecretKey: string;
-    email: string;
-  }): Promise<string | null> {
-    const url = `${CLERK_API_BASE}/users?email_address=${encodeURIComponent(input.email)}&limit=1`;
-
-    let response: Response;
-    try {
-      response = await fetchClerkWithRetry(url, {
-        headers: { Authorization: `Bearer ${input.clerkSecretKey}` },
-      });
-    } catch (error) {
-      throw createError(
-        clerkApiUnavailableError.code,
-        appendNonSecretCause(clerkApiUnavailableError.message, error),
-        clerkApiUnavailableError.fix,
-        { cause: error },
-      );
-    }
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        throw createError(
-          clerkSecretKeyInvalidError.code,
-          clerkSecretKeyInvalidError.message,
-          clerkSecretKeyInvalidError.fix,
-        );
-      }
-
-      throw createError(
-        clerkApiUnavailableError.code,
-        `Clerk API request failed with status ${response.status}.`,
-        clerkApiUnavailableError.fix,
-      );
-    }
-
-    const payload = (await response.json()) as ClerkUserListResponse;
-    const users = Array.isArray(payload) ? payload : (payload.data ?? []);
-    const firstUser = users[0];
-    if (!firstUser?.id) return null;
-    return firstUser.id;
-  }
-
-  async function resolveAppUserIdByClerkUserId(input: {
+  // DEBT-508: global setup's seed writes the E2E user each run, so the reset
+  // finds it by email here instead of asking Clerk before every test.
+  async function resolveAppUserIdByEmail(input: {
     databaseUrl?: string;
     sql?: SharedResetSql;
-    clerkUserId: string;
+    email: string;
   }): Promise<string | null> {
     const shouldCloseSql = !input.sql;
     if (!input.sql && !input.databaseUrl) {
@@ -245,7 +181,7 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
       const rows = await sql<{ id: string }[]>`
         SELECT id
         FROM users
-        WHERE clerk_user_id = ${input.clerkUserId}
+        WHERE email = ${input.email}
         LIMIT 1
       `;
       return rows[0]?.id ?? null;
@@ -271,7 +207,6 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
     resolveRequiredEnv,
     formatFailureReport,
     requireResolvedEnvOrThrow,
-    resolveClerkUserIdByEmail,
-    resolveAppUserIdByClerkUserId,
+    resolveAppUserIdByEmail,
   };
 }

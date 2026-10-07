@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
 import type Stripe from 'stripe';
-import { seedTestSubscription } from './seed-test-user';
+import { reseedTestSubscription } from './seed-test-user';
 import { createStripeTestClient } from './stripe-test-client';
 
 type E2EBillingState = {
@@ -132,7 +132,7 @@ export async function resetE2EUserToFirstTimer(): Promise<void> {
 }
 
 export async function restoreE2EUserPaidSubscription(): Promise<void> {
-  await seedTestSubscription();
+  await reseedTestSubscription();
 }
 
 async function closeE2ESql(sql: ReturnType<typeof postgres>): Promise<void> {

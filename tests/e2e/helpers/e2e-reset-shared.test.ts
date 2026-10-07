@@ -39,12 +39,6 @@ const REQUIRED_ENV_VARS = [
     fix: 'Set DATABASE_URL',
   },
   {
-    key: 'CLERK_SECRET_KEY',
-    code: 'TEST:CLERK_SECRET_KEY_MISSING',
-    message: 'CLERK_SECRET_KEY missing',
-    fix: 'Set CLERK_SECRET_KEY',
-  },
-  {
     key: 'E2E_CLERK_USER_USERNAME',
     code: 'TEST:E2E_CLERK_USER_USERNAME_MISSING',
     message: 'E2E_CLERK_USER_USERNAME missing',
@@ -83,13 +77,6 @@ async function captureRejectedError(action: () => Promise<unknown>) {
   throw new Error('Expected action to reject.');
 }
 
-// What undici's fetch throws when the peer drops the connection.
-function connectionReset() {
-  return new TypeError('fetch failed', {
-    cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }),
-  });
-}
-
 function createSupport(factory: SharedSupportFactory) {
   return factory({
     createError,
@@ -98,16 +85,6 @@ function createSupport(factory: SharedSupportFactory) {
     internalEnvMappingError: {
       code: 'TEST:ENV_MAPPING_INCOMPLETE',
       fix: 'Fix env mapping',
-    },
-    clerkApiUnavailableError: {
-      code: 'TEST:CLERK_API_UNAVAILABLE',
-      message: 'Clerk unavailable',
-      fix: 'Retry later',
-    },
-    clerkSecretKeyInvalidError: {
-      code: 'TEST:CLERK_SECRET_KEY_INVALID',
-      message: 'Clerk rejected key',
-      fix: 'Fix key',
     },
     appUserLookupFailedError: {
       code: 'TEST:APP_USER_LOOKUP_FAILED',
@@ -119,7 +96,10 @@ function createSupport(factory: SharedSupportFactory) {
 
 function createSqlClient(results: unknown[] = []) {
   const queuedResults = [...results];
-  const sql = vi.fn(async () => queuedResults.shift() ?? []);
+  const sql = vi.fn(
+    async (_strings: TemplateStringsArray, ..._values: unknown[]) =>
+      queuedResults.shift() ?? [],
+  );
   return Object.assign(sql, {
     end: vi.fn(async () => {}),
   });
@@ -151,20 +131,16 @@ describe('createSharedE2EResetSupport', () => {
     const resolved = support.resolveRequiredEnv(
       {
         DATABASE_URL: '  postgres://db  ',
-        CLERK_SECRET_KEY: '',
-        E2E_CLERK_USER_USERNAME: '  e2e@example.com  ',
+        E2E_CLERK_USER_USERNAME: '',
       } as unknown as NodeJS.ProcessEnv,
       failures,
     );
 
-    expect(resolved).toEqual({
-      databaseUrl: 'postgres://db',
-      clerkEmail: 'e2e@example.com',
-    });
+    expect(resolved).toEqual({ databaseUrl: 'postgres://db' });
     expect(failures).toHaveLength(1);
     expect(failures[0]).toMatchObject({
-      code: 'TEST:CLERK_SECRET_KEY_MISSING',
-      fix: 'Set CLERK_SECRET_KEY',
+      code: 'TEST:E2E_CLERK_USER_USERNAME_MISSING',
+      fix: 'Set E2E_CLERK_USER_USERNAME',
     });
     expect(support.formatFailureReport(failures)).toContain(
       '[TEST_RESET] Failure report (1):',
@@ -186,174 +162,26 @@ describe('createSharedE2EResetSupport', () => {
 
     expect(() =>
       support.requireResolvedEnvOrThrow({
-        clerkSecretKey: 'sk_test',
         clerkEmail: 'e2e@example.com',
       }),
     ).toThrow('databaseUrl <- DATABASE_URL');
   });
 
-  it('maps Clerk transport and auth failures to deterministic errors', async () => {
+  // DEBT-508: the reset finds the seeded user by email in the run's own
+  // database, so a test's reset spends none of Clerk's shared rate budget.
+  it('looks the app user up by email, as the query parameter', async () => {
+    const sqlClient = createSqlClient([[{ id: fixtureAppUser123Id }]]);
+    postgresMock.mockReturnValue(sqlClient);
     const support = createSupport(createSharedE2EResetSupport);
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    fetchSpy.mockRejectedValueOnce(new Error('timeout'));
-    await expect(
-      support.resolveClerkUserIdByEmail({
-        clerkSecretKey: 'sk_test',
-        email: 'e2e@example.com',
-      }),
-    ).rejects.toMatchObject({
-      code: 'TEST:CLERK_API_UNAVAILABLE',
+    await support.resolveAppUserIdByEmail({
+      databaseUrl: 'postgres://db',
+      email: 'e2e@example.com',
     });
 
-    fetchSpy.mockResolvedValueOnce(new Response('denied', { status: 401 }));
-    await expect(
-      support.resolveClerkUserIdByEmail({
-        clerkSecretKey: 'sk_test',
-        email: 'e2e@example.com',
-      }),
-    ).rejects.toMatchObject({
-      code: 'TEST:CLERK_SECRET_KEY_INVALID',
-    });
-
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-    await expect(
-      support.resolveClerkUserIdByEmail({
-        clerkSecretKey: 'sk_test',
-        email: 'e2e@example.com',
-      }),
-    ).resolves.toBe('clerk_user_123');
-  });
-
-  it('maps a Clerk failure that persists through its retries to a deterministic error', async () => {
-    const support = createSupport(createSharedE2EResetSupport);
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(
-        async () => new Response('unavailable', { status: 503 }),
-      );
-
-    try {
-      await expect(
-        support.resolveClerkUserIdByEmail({
-          clerkSecretKey: 'sk_test',
-          email: 'e2e@example.com',
-        }),
-      ).rejects.toMatchObject({
-        code: 'TEST:CLERK_API_UNAVAILABLE',
-        message: 'Clerk API request failed with status 503.',
-      });
-      expect(fetchSpy).toHaveBeenCalledTimes(3);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  // BUG-312: one dropped connection to Clerk failed an E2E test in its reset.
-  it.each([
-    ['a connection reset', () => Promise.reject(connectionReset())],
-    [
-      'a 503',
-      () => Promise.resolve(new Response('unavailable', { status: 503 })),
-    ],
-    [
-      'a 429',
-      () => Promise.resolve(new Response('slow down', { status: 429 })),
-    ],
-  ])('retries %s and resolves the user', async (_failure, fail) => {
-    const support = createSupport(createSharedE2EResetSupport);
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementationOnce(fail)
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ data: [{ id: 'clerk_user_123' }] }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
-
-    try {
-      await expect(
-        support.resolveClerkUserIdByEmail({
-          clerkSecretKey: 'sk_test',
-          email: 'e2e@example.com',
-        }),
-      ).resolves.toBe('clerk_user_123');
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  it('gives up on a connection reset after three attempts', async () => {
-    const support = createSupport(createSharedE2EResetSupport);
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(() => Promise.reject(connectionReset()));
-
-    try {
-      await expect(
-        support.resolveClerkUserIdByEmail({
-          clerkSecretKey: 'sk_test',
-          email: 'e2e@example.com',
-        }),
-      ).rejects.toMatchObject({ code: 'TEST:CLERK_API_UNAVAILABLE' });
-      expect(fetchSpy).toHaveBeenCalledTimes(3);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  it.each([
-    [
-      'an auth rejection',
-      () => Promise.resolve(new Response('denied', { status: 401 })),
-    ],
-    [
-      'an error with no transient cause',
-      () => Promise.reject(new Error('timeout')),
-    ],
-  ])('does not retry %s', async (_failure, fail) => {
-    const support = createSupport(createSharedE2EResetSupport);
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(fail);
-
-    try {
-      await expect(
-        support.resolveClerkUserIdByEmail({
-          clerkSecretKey: 'sk_test',
-          email: 'e2e@example.com',
-        }),
-      ).rejects.toBeDefined();
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  it('accepts legacy bare-array Clerk list payloads', async () => {
-    const support = createSupport(createSharedE2EResetSupport);
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify([{ id: 'clerk_user_legacy' }]), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    try {
-      await expect(
-        support.resolveClerkUserIdByEmail({
-          clerkSecretKey: 'sk_test',
-          email: 'e2e@example.com',
-        }),
-      ).resolves.toBe('clerk_user_legacy');
-    } finally {
-      fetchSpy.mockRestore();
-    }
+    const [strings, ...values] = sqlClient.mock.calls[0] ?? [[]];
+    expect(strings.join('?')).toMatch(/FROM users\s+WHERE email = \?/);
+    expect(values).toEqual(['e2e@example.com']);
   });
 
   it('resolves the app user id and closes the SQL client', async () => {
@@ -362,9 +190,9 @@ describe('createSharedE2EResetSupport', () => {
     const support = createSupport(createSharedE2EResetSupport);
 
     await expect(
-      support.resolveAppUserIdByClerkUserId({
+      support.resolveAppUserIdByEmail({
         databaseUrl: 'postgres://db',
-        clerkUserId: 'clerk_user_123',
+        email: 'e2e@example.com',
       }),
     ).resolves.toBe(fixtureAppUser123Id);
 
@@ -379,9 +207,9 @@ describe('createSharedE2EResetSupport', () => {
     const support = createSupport(createSharedE2EResetSupport);
 
     await expect(
-      support.resolveAppUserIdByClerkUserId({
+      support.resolveAppUserIdByEmail({
         databaseUrl: 'postgres://db',
-        clerkUserId: 'clerk_user_123',
+        email: 'e2e@example.com',
       }),
     ).rejects.toMatchObject({
       code: 'TEST:APP_USER_LOOKUP_FAILED',
@@ -393,8 +221,8 @@ describe('createSharedE2EResetSupport', () => {
     const support = createSupport(createSharedE2EResetSupport);
 
     await expect(
-      support.resolveAppUserIdByClerkUserId({
-        clerkUserId: 'clerk_user_123',
+      support.resolveAppUserIdByEmail({
+        email: 'e2e@example.com',
       }),
     ).rejects.toMatchObject({
       code: 'TEST:APP_USER_LOOKUP_FAILED',
@@ -414,31 +242,6 @@ describe('createSharedE2EResetSupport', () => {
     expectNoSensitiveParts(formatted);
   });
 
-  it('propagates Clerk transport failures with sanitized diagnostic context', async () => {
-    const support = createSupport(createSharedE2EResetSupport);
-    const sourceError = createSensitiveError();
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    fetchSpy.mockRejectedValueOnce(sourceError);
-
-    try {
-      const error = await captureRejectedError(() =>
-        support.resolveClerkUserIdByEmail({
-          clerkSecretKey: 'sk_test',
-          email: 'e2e@example.com',
-        }),
-      );
-
-      expect(error).toMatchObject({
-        code: 'TEST:CLERK_API_UNAVAILABLE',
-      });
-      expect(error.cause).toBe(sourceError);
-      expect(error.message).toContain(NON_SECRET_ERROR);
-      expectNoSensitiveParts(error.message);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
   it('propagates app-user lookup failures with sanitized diagnostic context', async () => {
     const sourceError = createSensitiveError();
     const sqlClient = createSqlClient();
@@ -447,9 +250,9 @@ describe('createSharedE2EResetSupport', () => {
     const support = createSupport(createSharedE2EResetSupport);
 
     const error = await captureRejectedError(() =>
-      support.resolveAppUserIdByClerkUserId({
+      support.resolveAppUserIdByEmail({
         databaseUrl: 'postgres://db',
-        clerkUserId: 'clerk_user_123',
+        email: 'e2e@example.com',
       }),
     );
 

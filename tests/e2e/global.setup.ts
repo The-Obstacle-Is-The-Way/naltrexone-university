@@ -8,8 +8,10 @@ import { seedTestSubscription } from './helpers/seed-test-user';
 
 setup('global setup', async ({ page }, testInfo) => {
   const startedAt = Date.now();
-  await runE2ECredentialHealthCheck();
-  await seedTestSubscription();
+  // DEBT-508: preflight's Clerk lookup is the run's only one; the seed and
+  // every later reset reuse the user it verified.
+  const { clerkUserId } = await runE2ECredentialHealthCheck();
+  await seedTestSubscription({ clerkUserId });
   await runE2EUserStateReset();
   await clerkSetup();
   // BUG-328: sign-in and a failed attempt's sign-out get their full deadlines,
