@@ -141,7 +141,7 @@ Decided under the owner's 2026-10-03 delegation, after a review notice asked whe
 
 ## Amendment — 2026-10-05
 
-Decided under the owner's 2026-09-28 delegation, after DEBT-496's screenshots showed a key-corrected review that grades the attempt beneath its caution ([DEBT-498](../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md)).
+Decided under the owner's 2026-09-28 delegation, after DEBT-496's screenshots showed a key-corrected review that grades the attempt beneath its caution ([DEBT-498](../_archive/debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md)).
 
 **What changed.** Decisions 2 and 4 settled what a learner is told and what a score counts. They did not settle what the page beneath the notice shows. Every view kept the stored grade's signals:
 - a green or red verdict;
