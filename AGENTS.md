@@ -632,6 +632,8 @@ approval counts: in the week before this decision, the heaviest PRs drew 4 to
 push starts no review. CodeRabbit still reviews by itself when a PR opens or a
 draft is marked ready, and its docs also list force-pushes and rebases as
 review events; otherwise it reviews when asked with `@coderabbitai full review`.
+Dependabot's PRs, rebases included, spend nothing: CodeRabbit skips bot
+authors ("Bot user detected") and reviews one only when asked.
 Open PRs as drafts until the full gate passes, since a PR opened ready spends a
 review at once. Fix findings in one push, and sync with `dev` before requesting
 a review. After the first review, request `@coderabbitai full review` rather
