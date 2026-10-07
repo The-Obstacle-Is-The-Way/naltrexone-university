@@ -73,7 +73,7 @@ Option 4, under the owner's delegation of 2026-09-28. A score and a page then sa
 5. **History's result filters** match what each row shows: an item in doubt appears under neither Correct nor Incorrect. Re-practice of a key-corrected item stays with the Incorrect practice filter (Decision 4).
 6. **Order of work:** ADR-022 gains an amendment, and Pattern Registry F-11, F-12 and the outcome badge record the ungraded form, before the code changes ("never invent UI patterns"). History rows gain the key-correction flag, which the question repository already computes for the Incorrect practice filter.
 
-   *Corrected 2026-10-07: the flag comes from the question repository's practice filter, not the attempt repository.*
+   *Corrected 2026-10-07: the attempt repository did not compute it. The row's flag comes from the question repository's revision read, and History's filters use the attempt repository's key-corrected join, the twin of the question repository's practice filter.*
 
 ## Progress
 
@@ -152,7 +152,7 @@ The code:
   - Every case was red first.
   - A shared contract, `tests/shared/attempted-question-result-contract.ts`, runs three scenarios against the fake and real Postgres, on the score contract's seeds.
   - 19 targeted mutations each fail a test: 7 in the SQL (each filter, the doubt and key branches, the omission guard, each sort's rank), 8 in the fake, 2 in the use case's flag and 2 in the row.
-  - DEBT-496's spec asserts History's "Not scored" on the key-corrected and held rows. It also asserts that the key-corrected row is under neither filter while a scored row stays under Correct. Both History screenshots were viewed.
+  - DEBT-496's spec asserts History's "Not scored" on the key-corrected and held rows. It also asserts that a key-corrected correct answer and a held incorrect one are under neither filter, while scored correct and incorrect answers keep theirs. A real-Postgres test asserts the same through the use case. Both History screenshots were viewed.
 - **Cost.** On DEBT-493's dataset (one learner, 2,000 answers over 300 questions; 15 keys corrected and 15 stems reworded; 30 questions taken out of the bank, 10 of them withdrawn; 10 held), median of 40 warm `EXPLAIN (ANALYZE)` runs:
   - the default page is unchanged, at 1.18 ms, because the planner drops the unused join;
   - a result filter or sort takes about 3 ms, against 1.1 ms before;
@@ -173,7 +173,7 @@ The code:
 
 ## Verification
 
-Criteria to meet before closing. Increment 1 meets the key-corrected review's criterion; the others wait for the list surfaces (increment 2).
+Criteria to meet before closing. Increments 1 and 2a are in production; increment 2b's release is the remaining check.
 
 - [x] Each surface above shows "Not scored", and no success or destructive grading, for a key-corrected, withdrawn or under-review item.
 - [x] Every scored item still shows its grade as before.
@@ -182,6 +182,7 @@ Criteria to meet before closing. Increment 1 meets the key-corrected review's cr
 - [x] DEBT-496's spec asserts the ungraded review, and the History row's "Not scored".
 - [x] Removing the in-doubt check from each surface fails a test (increments 1, 2a and 2b each record theirs).
 - [x] Screenshots of each surface are viewed: the reviews and the Dashboard (increments 1 and 2a), and the rest in increment 2b.
+- [ ] Increment 2b is in production, through its promotion.
 
 ## Related
 

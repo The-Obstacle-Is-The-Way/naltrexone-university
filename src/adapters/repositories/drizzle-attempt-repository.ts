@@ -121,8 +121,8 @@ export class DrizzleAttemptRepository implements AttemptRepository {
   ): SQL[] {
     const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
 
-    // ADR-022 Amendment 2026-10-05 (DEBT-498): each filter lists only the
-    // results a score counts, as each row shows.
+    // ADR-022 Amendment 2026-10-05 (DEBT-498): as each row shows, a result
+    // whose content is in doubt or whose key was corrected is under neither.
     const resultFilter = filters?.result ?? null;
     if (resultFilter === 'correct') {
       conditions.push(

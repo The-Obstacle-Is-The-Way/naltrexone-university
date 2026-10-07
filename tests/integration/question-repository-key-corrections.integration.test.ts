@@ -79,16 +79,17 @@ describe('the Incorrect practice filter and corrected keys', () => {
   });
 });
 
-// ADR-022 Amendment 2026-10-05 (DEBT-498): History's result filters list only
-// what a score counts, while the practice filter above still offers a
-// key-corrected question again (Decision 4). The two filters differ on purpose.
+// ADR-022 Amendment 2026-10-05 (DEBT-498): History's result filters leave out
+// a result whose content is in doubt or whose key was corrected since, while
+// the practice filter above still offers a key-corrected question again
+// (Decision 4). The two filters differ on purpose.
 describe("History's result filters and corrected keys", () => {
   it('lists a result no score counts under neither History filter, while the practice Incorrect filter still offers a key-corrected question', async () => {
     const user = await createUser(db, cleanup);
     const attempts = new DrizzleAttemptRepository(db);
     const questionRepository = new DrizzleQuestionRepository(db);
-    const [corrected, held, scored] = await Promise.all(
-      ['corrected', 'held', 'scored'].map((label) =>
+    const [corrected, held, scored, missed] = await Promise.all(
+      ['corrected', 'held', 'scored', 'missed'].map((label) =>
         createQuestion(db, cleanup, {
           slug: `it-history-result-${label}-${randomUUID()}`,
           status: 'published',
@@ -96,15 +97,28 @@ describe("History's result filters and corrected keys", () => {
         }),
       ),
     );
-    if (!corrected || !held || !scored) throw new Error('questions');
-    for (const [index, question] of [corrected, held, scored].entries()) {
+    if (!corrected || !held || !scored || !missed) {
+      throw new Error('questions');
+    }
+    // The held answer is incorrect, so the Incorrect filter would list it if
+    // it graded what no score counts.
+    for (const [index, [question, right]] of (
+      [
+        [corrected, true],
+        [held, false],
+        [scored, true],
+        [missed, false],
+      ] as const
+    ).entries()) {
       await attempts.insert({
         userId: user.id,
         questionId: question.id,
         questionRevisionId: question.revisionId,
         practiceSessionId: null,
-        outcome: answeredOutcome(question.correctChoiceId),
-        isCorrect: true,
+        outcome: answeredOutcome(
+          right ? question.correctChoiceId : question.incorrectChoiceId,
+        ),
+        isCorrect: right,
         timeSpentSeconds: 10,
         answeredAt: new Date(Date.now() - (index + 1) * 60_000),
       });
@@ -142,11 +156,15 @@ describe("History's result filters and corrected keys", () => {
         questionId: scored.id,
         answerKeyChanged: false,
       }),
+      expect.objectContaining({
+        questionId: missed.id,
+        answerKeyChanged: false,
+      }),
     ]);
     expect(correct.rows.map((row) => row.questionId)).toEqual([scored.id]);
     expect(correct.totalCount).toBe(1);
-    expect(incorrect.rows).toEqual([]);
-    expect(incorrect.totalCount).toBe(0);
+    expect(incorrect.rows.map((row) => row.questionId)).toEqual([missed.id]);
+    expect(incorrect.totalCount).toBe(1);
     expect(practiceIncorrect).toContain(corrected.id);
   });
 });

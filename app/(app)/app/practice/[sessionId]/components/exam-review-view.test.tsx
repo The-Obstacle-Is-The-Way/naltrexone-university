@@ -456,7 +456,7 @@ describe('ExamReviewView', () => {
         ...review,
         rows: [
           { ...answered, isCorrect: null, answerKeyChanged: true },
-          { ...open, answerKeyChanged: false },
+          { ...open, answerKeyChanged: true },
         ],
       },
     });

@@ -49,8 +49,6 @@ describe('GetAttemptedQuestionsUseCase', () => {
     expect(hard.rows).toEqual([]);
   });
 
-  // ADR-022 Decision 2: an omitted attempt is not an answer, so the row for
-  // a question no longer published shows nothing of it.
   // DEBT-498: History shows a result no score counts as "Not scored", so each
   // answered row says whether its key was corrected since.
   it('marks a latest answer graded on a key corrected since, and no other', async () => {
@@ -123,6 +121,8 @@ describe('GetAttemptedQuestionsUseCase', () => {
     ).toEqual([true, false, false]);
   });
 
+  // ADR-022 Decision 2: an omitted attempt is not an answer, so the row for
+  // a question no longer published shows nothing of it.
   it('lists an omitted attempt on a question withdrawn since as unavailable', async () => {
     const withdrawn = createQuestion({
       id: 'q1',

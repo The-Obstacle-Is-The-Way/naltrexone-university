@@ -46,9 +46,10 @@ export type AttemptedQuestionSummary = {
 };
 
 /**
- * History's result filter. It lists only results a score counts: a latest
- * answer whose question's content is in doubt, or graded on a key corrected
- * since, is under neither (ADR-022 Amendment 2026-10-05, DEBT-498).
+ * History's result filter. A latest answer whose question's content is in
+ * doubt, or graded on a key corrected since, is under neither (ADR-022
+ * Amendment 2026-10-05, DEBT-498). An answer without a fair chance keeps its
+ * grade, since that is not doubt.
  */
 export type AttemptedQuestionsResultFilter = 'correct' | 'incorrect';
 export type AttemptedQuestionsSourceFilter = 'tutor' | 'exam' | 'adhoc';

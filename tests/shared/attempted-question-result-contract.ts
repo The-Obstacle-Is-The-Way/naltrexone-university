@@ -6,12 +6,13 @@ import type {
 } from './attempt-score-contract';
 
 // ADR-022 Amendment 2026-10-05 (DEBT-498): History's Correct and Incorrect
-// filters list neither a result no score counts nor one it does not, and its
-// result sorts place such a result after every graded one. A result no score
-// counts is a latest answer on a question withdrawn, under review or gone, or
-// one graded on a key corrected since. This contract runs the same scenarios
+// filters leave out a latest answer on a question withdrawn, under review or
+// gone, or graded on a key corrected since, and its result sorts place such an
+// answer after every graded one. An answer without a fair chance keeps its
+// grade, since that is not doubt. This contract runs the same scenarios
 // against FakeAttemptRepository and the Drizzle adapter on real Postgres, on
-// the score contract's seeds, so the list and the score cannot disagree.
+// the score contract's seeds, so the list and the score agree on what is in
+// doubt.
 
 type Expected = {
   correct: readonly string[];

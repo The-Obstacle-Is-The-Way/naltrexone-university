@@ -47,6 +47,8 @@ test.describe('content-change notices', () => {
     if (!changes) throw new Error('content changes not arranged');
     const { slug, attemptId } = await changes.keyCorrectedAttempt();
     const scored = await changes.scoredAttempt();
+    const scoredIncorrect = await changes.scoredAttempt('incorrect');
+    const heldIncorrect = await changes.heldAttempt('incorrect');
 
     await page.goto(
       toQuestionRoute(slug, { from: 'history', mode: 'review', attemptId }),
@@ -81,8 +83,9 @@ test.describe('content-change notices', () => {
     await expect(activity).not.toContainText('Correct');
     await attachScreenshot(page, testInfo, 'key-corrected-dashboard');
 
-    // DEBT-498 increment 2b: History names it too, and lists it under neither
-    // result filter, while an answer a score counts stays under Correct.
+    // DEBT-498 increment 2b: History names it too. A result no score counts,
+    // answered correctly (the key-corrected one) or not (the held one), is
+    // under neither result filter, while scored answers keep their filter.
     const historyRow = (rowSlug: string) =>
       page
         .getByRole('listitem')
@@ -101,6 +104,8 @@ test.describe('content-change notices', () => {
     await expect(page.getByRole('combobox', { name: 'Result' })).toHaveText(
       'Incorrect',
     );
+    await expect(historyRow(scoredIncorrect.slug)).toHaveCount(1);
+    await expect(historyRow(heldIncorrect.slug)).toHaveCount(0);
     await expect(historyRow(slug)).toHaveCount(0);
   });
 
