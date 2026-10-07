@@ -538,6 +538,8 @@ export function readMergeEvidence(number: string) {
 // truncated, so it cannot prove two diffs identical.
 const COMPARE_FILE_LIMIT = 300;
 
+// A compare that may be truncated proves nothing about the diff, so it yields
+// no carry evidence and the missing exact-head approval stands.
 function readCompare(base: string, head: string) {
   const compare = z
     .object({
@@ -547,9 +549,7 @@ function readCompare(base: string, head: string) {
     .parse(
       JSON.parse(gh(['api', `repos/${REPOSITORY}/compare/${base}...${head}`])),
     );
-  if (compare.files.length >= COMPARE_FILE_LIMIT) {
-    throw new Error('Compare response may be truncated; refusing to carry');
-  }
+  if (compare.files.length >= COMPARE_FILE_LIMIT) return undefined;
   return { mergeBase: compare.merge_base_commit.sha, files: compare.files };
 }
 
@@ -603,13 +603,14 @@ export function readCarryEvidence(
   if (!approvedHead || approvedHead === head) return undefined;
   const compareBase = base ?? parsed.data.baseRefName;
   const approved = readCompare(compareBase, approvedHead);
-  const current = readCompare(compareBase, head);
+  const current = approved && readCompare(compareBase, head);
+  if (!approved || !current) return undefined;
   let baseChanges: CarryEvidence['baseChanges'] = [];
   if (approved.mergeBase !== current.mergeBase) {
     // The base branch only moves forward, so the approved head's merge base
     // must be an ancestor of the current one.
     const moved = readCompare(approved.mergeBase, current.mergeBase);
-    if (moved.mergeBase !== approved.mergeBase) return undefined;
+    if (moved?.mergeBase !== approved.mergeBase) return undefined;
     baseChanges = moved.files;
   }
   return {

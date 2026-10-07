@@ -25,6 +25,11 @@ reviews:
     base_branches:
       - '.*'
     drafts: false
+    # Review only what can merge (AGENTS.md, owner, 2026-10-06): the included
+    # allowance is per developer identity, which every agent session shares,
+    # and only the final head's approval counts. A PR is reviewed when it opens
+    # or a draft is marked ready, and later on `@coderabbitai full review`.
+    auto_incremental_review: false
     # Promotions (dev → main) carry only source PRs already approved on their
     # exact heads, and need no review of their own (AGENTS.md, Reviewed-Source
     # Promotions; owner, 2026-09-22 and 2026-10-04). Every promotion title

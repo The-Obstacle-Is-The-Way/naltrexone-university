@@ -225,6 +225,27 @@ describe('CodeRabbit approval carried to a later head', () => {
       ).toThrow('predates the push of the head');
     });
 
+    it('refuses when dev renamed the file away between the merge bases', () => {
+      const renamedAway = {
+        filename: 'docs/AGENTS.md',
+        previous_filename: 'AGENTS.md',
+        status: 'renamed',
+        patch: '',
+      };
+
+      expect(() => check(moved(hunk(10), [renamedAway]))).toThrow(
+        'predates the push of the head',
+      );
+    });
+
+    it('refuses when dev’s change to the file is not a modification', () => {
+      const replaced = { filename: 'AGENTS.md', status: 'added', patch: '' };
+
+      expect(() => check(moved(hunk(10), [replaced]))).toThrow(
+        'predates the push of the head',
+      );
+    });
+
     it('refuses the same lines split into different hunks', () => {
       const split = (first: number, second: number) =>
         `@@ -${first},2 +${first},2 @@\n a\n-b\n+c\n@@ -${second},2 +${second},2 @@\n d\n-e\n+f`;
