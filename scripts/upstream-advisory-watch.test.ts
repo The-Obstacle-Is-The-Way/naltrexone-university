@@ -257,6 +257,51 @@ describe('GitHub advisory source', () => {
     ).rejects.toThrow('Invalid GitHub advisory response');
   });
 
+  it.each([
+    { vulnerabilities: null },
+    { vulnerabilities: [{ package: null }] },
+    { summary: null },
+  ])(
+    'skips a malformed advisory published before the watch start, so it cannot silence new alerts: %j',
+    async (overrides) => {
+      const advisories = await listUpstreamAdvisories('vercel/next.js', () =>
+        JSON.stringify([
+          [
+            {
+              ...apiAdvisory,
+              ...overrides,
+              ghsa_id: 'GHSA-oooo-oooo-oooo',
+              published_at: '2026-09-30T16:15:36Z',
+            },
+            apiAdvisory,
+          ],
+        ]),
+      );
+      expect(advisories.map((entry) => entry.ghsaId)).toEqual([
+        'GHSA-aaaa-bbbb-cccc',
+      ]);
+    },
+  );
+
+  it('validates every advisory published since a caller-supplied start', async () => {
+    await expect(
+      listUpstreamAdvisories(
+        'vercel/next.js',
+        () =>
+          JSON.stringify([
+            [
+              {
+                ...apiAdvisory,
+                vulnerabilities: null,
+                published_at: '2026-09-30T16:15:36Z',
+              },
+            ],
+          ]),
+        '2026-09-01T00:00:00Z',
+      ),
+    ).rejects.toThrow('Invalid GitHub advisory response');
+  });
+
   it.each([{}, [null], [{}]].map((data) => ({ data })))(
     'refuses malformed page data $data',
     async ({ data }) => {

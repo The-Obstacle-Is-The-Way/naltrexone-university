@@ -56,7 +56,7 @@ For the two pending Next.js fixes:
 
 ## Watcher — Added 2026-10-07
 
-[Advisories Dependabot cannot see](../dev/supply-chain-overrides.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every six hours. The script reads `vercel/next.js`'s published advisories and opens one issue for each advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.
+[Advisories Dependabot cannot see](../dev/supply-chain-overrides.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every six hours. The script reads `vercel/next.js`'s published advisories and opens one issue for each advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened. Only advisories published since the start are validated, so one malformed historical entry cannot fail every run and silence new alerts; an entry without a readable publication date is still validated and fails the run loudly.
 
 A local run on 2026-10-07 read 69 published advisories and would have opened none: the newest is from 2026-09-30. Under AGENTS.md's evidence rule, the watcher is proven only after its first hosted run on `main`.
 

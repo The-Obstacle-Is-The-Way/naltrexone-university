@@ -199,10 +199,22 @@ function parseAdvisory(entry: unknown): UpstreamAdvisory {
   };
 }
 
+// Only advisories this run could raise are validated: one malformed historical
+// entry must not fail every run and silence new alerts. An entry without a
+// readable publication date is still validated, so it fails loudly.
+function publishedBefore(entry: unknown, startAt: number): boolean {
+  const published = isRecord(entry) ? entry.published_at : undefined;
+  if (typeof published !== 'string') return false;
+  const publishedAt = Date.parse(published);
+  return Number.isFinite(publishedAt) && publishedAt < startAt;
+}
+
 export async function listUpstreamAdvisories(
   repository: string,
   run: typeof gh = gh,
+  start = WATCH_START,
 ): Promise<UpstreamAdvisory[]> {
+  const startAt = Date.parse(start);
   return slurpedPages(
     run([
       'api',
@@ -211,7 +223,9 @@ export async function listUpstreamAdvisories(
       `repos/${repository}/security-advisories?state=published&per_page=100`,
     ]),
     'Invalid GitHub advisory response',
-  ).map(parseAdvisory);
+  )
+    .filter((entry) => !publishedBefore(entry, startAt))
+    .map(parseAdvisory);
 }
 
 export function createGithubAdvisoryIssues(
