@@ -5,13 +5,12 @@
 
 **Now** — 2026-10-06.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
-- **In progress.** DEBT-498 increment 2b, History's rows and filters, follows the payment bugs (BUG-320 to BUG-322).
-- **Next.** DEBT-503 item 1 (identity from the session token), then DEBT-501's two P2 items (the reconcile cursor and legacy price IDs), then DEBT-502.
+- **In progress.** DEBT-498 increment 2b, History's rows and filters.
+- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-503 item 1 (identity from the session token), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
-  - Private consumers of the application request-ID field (DEBT-504).
-  - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); the notice-deadline notification path (F07), and the counsel review.
+  - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); and the counsel review.
   - The production content bootstrap (DEBT-483, Deferred below).
 
 **Next Debt ID:** DEBT-507 · **Next Frontend ID:** FE-056
@@ -23,11 +22,12 @@
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Active — engineering remediation, operational evidence and the focused licensed review remain open |
 | [DEBT-465](./debt-465-test-quality-practices-adoption.md) | Advanced test-quality practices adoption | P2 | Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, which is done (2026-10-04); Part 4 re-scoped by the 2026-10-03 decision below and remains |
 | [DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md) | Reviews grade items whose content is in doubt | P1 | In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, remains |
-| [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — filed 2026-10-05; resolution decided below |
-| [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — filed 2026-10-05; resolution decided per item below |
-| [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — filed 2026-10-05; resolution decided per item below |
-| [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | Open — filed 2026-10-05; resolution decided per item below |
-| [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the duplicate request ID and manual propagation; retain logger injection |
+| [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — resolution decided in the record |
+| [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — decided per item; items 1 and 2 first |
+| [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
+| [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | Open — decided per item; item 1 (identity from the session token) first |
+| [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
+| [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Open — resolution decided below; it must ship before paid acquisition |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
