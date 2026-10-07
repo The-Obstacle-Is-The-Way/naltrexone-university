@@ -6,7 +6,7 @@
 **Now** — 2026-10-06.
 - **Verifying.** BUG-319: its fix is in production since 2026-10-05; the Sentry checks and a real-SDK test that the stale-action event reaches Sentry, due 2026-10-19. BUG-323: the owner confirms the production limiter writes its rows, due 2026-10-19. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-325: no Sentry event from the fixed paths for two weeks, due 2026-10-20. BUG-327: #1404 has no deployment; merge through the tooling remains, due 2026-10-20.
 - **Next.** Fix BUG-329; write BUG-321's test-mode E2E; archive each Verifying record when its check passes.
-- **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan. BUG-323's production database check is the owner's, since engineering does not query production.
+- **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan.
 
 **Next Bug ID:** BUG-330
 

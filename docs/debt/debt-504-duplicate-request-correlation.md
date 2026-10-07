@@ -61,8 +61,8 @@ Option 3, in a separate code PR:
   `{ logger: requestLogger }` in `app/pricing/subscribe-to-plan.ts`. Without the
   request ID it only repeats `handleError`'s default logger, and it is the
   optional per-call channel that BUG-324's stopgap dropped in production, as an
-  accepted trade-off. Once `ActionOptions` has no `logger`, passing one fails
-  typecheck, so the type system keeps it from returning.
+  accepted trade-off. Once `ActionOptions` has no `logger`, an object literal
+  that passes one fails typecheck; a type test keeps the field from returning.
   `handleError` logs through the controller's resolved `Logger` when one exists.
 - Keep the `Logger` port and its injection through dependencies. Do not replace
   it with implicit global context, an environment switch, or a framework import
@@ -82,11 +82,13 @@ from the Drains API (#1410 review).*
 - [ ] Red first: each of the five entry points still emits its operational
   messages through the `Logger` in its dependencies, and a controller's
   unexpected error is logged through the controller's resolved `Logger`.
-- [ ] `lib/request-context.ts` and `ActionOptions.logger` are gone, and no
-  caller passes a logger per call.
-- [ ] Engineering, within an hour of the promotion: one production request's
-  server lines appear together under its Vercel request ID
-  (`vercel logs --request-id`). Record counts and statuses only.
+- [ ] `lib/request-context.ts` and `ActionOptions.logger` are gone, no caller
+  passes a logger per call, and a type test fails if `ActionOptions` gains a
+  `logger` key again.
+- [ ] Engineering, after the promotion: for one production request that logs at
+  least two lines, read them within the hour with
+  `vercel logs --environment production --request-id <id> --expand` and
+  confirm they appear together. Record counts and statuses only.
 
 ## Related
 
