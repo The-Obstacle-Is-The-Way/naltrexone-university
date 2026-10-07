@@ -1,7 +1,6 @@
 import { resolveCheckoutDisclosure } from '@/lib/checkout-disclosures';
 import {
   ClerkAuthGateway,
-  type ClerkUserLike,
   type ClerkUserLookup,
   createResendWebhookVerifier,
   DrizzleRateLimiter,
@@ -20,13 +19,13 @@ export function createGatewayFactories(input: {
   primitives: ContainerPrimitives;
   repositories: RepositoryFactories;
   stripePriceIds: StripePriceIds;
-  getClerkUser: () => Promise<ClerkUserLike | null>;
+  getSessionClerkUserId: () => Promise<string | null>;
   getClerkUserById: ClerkUserLookup;
 }): GatewayFactories {
   const {
     primitives,
     repositories,
-    getClerkUser,
+    getSessionClerkUserId,
     getClerkUserById,
     stripePriceIds,
   } = input;
@@ -35,7 +34,8 @@ export function createGatewayFactories(input: {
     createAuthGateway: () =>
       new ClerkAuthGateway({
         userRepository: repositories.createUserRepository(),
-        getClerkUser,
+        deletedClerkUsers: repositories.createDeletedClerkUserRepository(),
+        getSessionClerkUserId,
         getClerkUserById,
         logger: primitives.logger,
       }),
