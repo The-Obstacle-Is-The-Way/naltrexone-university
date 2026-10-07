@@ -21,6 +21,8 @@ Investigated on 2026-10-03, against `main` at `2c4113e1`, and rechecked against 
 - **Chain.** `braces@3.0.3` is required only by `micromatch@4.0.8`, which reaches the lockfile two ways:
   - `fast-glob@3.3.3`, a direct dependency;
   - Jest and Metro tooling inside `react-native@0.84.1`, from `@clerk/ui`'s Solana wallet stack. That is the same unused tree DEBT-476 §F analysed for `stream-json`.
+
+  *Corrected 2026-10-06: [DEBT-506](../../debt/debt-506-dependabot-alert-triage-2026-10.md) stopped installing `react-native`, so `fast-glob` is now the only chain and the Web3 recheck trigger no longer applies to `braces`.*
 - **Callers.** No production module in `app/`, `components/`, `lib/` or `src/` imports `fast-glob`, `micromatch` or `braces`, so neither the Next.js server nor the client bundle reaches them. The callers are:
   - operator scripts: `scripts/seed/file-reader.ts` (the seed's content patterns), `scripts/import-draft-questions.ts` (`**/recall.md`, `**/vignettes.md`) and `scripts/crap-report.ts`;
   - test-only source scans: four under `tests/`, and `components/theme-token-regression-source-scan.ts`, which only `components/theme-token-regression.test.tsx` imports.
