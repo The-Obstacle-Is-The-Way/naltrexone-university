@@ -1,19 +1,19 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-10-07
 
-**Now** — 2026-10-06.
+**Now** — 2026-10-07.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
-- **In progress.** DEBT-498 increment 2b, History's rows and filters.
-- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-503 item 1 (identity from the session token), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
+- **In progress.** DEBT-498 increment 2b, History's rows and filters; DEBT-508, isolating concurrent E2E runs.
+- **Next.** DEBT-503 item 1 (identity from the session token; it also ends DEBT-508's Clerk 429s when E2E runs overlap), then DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
   - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); and the counsel review.
   - The production content bootstrap (DEBT-483, Deferred below).
 
-**Next Debt ID:** DEBT-507 · **Next Frontend ID:** FE-056
+**Next Debt ID:** DEBT-510 · **Next Frontend ID:** FE-056
 
 ## Active
 
@@ -29,6 +29,7 @@
 | [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
 | [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Open — resolution decided below; it must ship before paid acquisition |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
+| [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Open — resolution decided below |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 
