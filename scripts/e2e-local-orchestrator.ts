@@ -91,10 +91,21 @@ export function createE2ECommandPlan({
       label: 'Run Playwright E2E against isolated local test target',
       command: 'pnpm',
       args: ['exec', 'playwright', 'test', ...playwrightArgs],
-      env: targetEnv,
+      env: {
+        ...targetEnv,
+        E2E_STRIPE_OWNER: localStripeOwner(env, target.instanceId),
+      },
       omitInheritedEnv: ['NO_COLOR'],
     },
   ];
+}
+
+// DEBT-508: each clone's runs own one Stripe test customer, named by the
+// instance that also picks the clone's database port, so concurrent clones
+// never change each other's subscriptions. An owner exported in the shell
+// wins; Playwright loads .env.local afterwards without overriding it.
+function localStripeOwner(env: E2ECommandEnv, instanceId: string): string {
+  return env.E2E_STRIPE_OWNER?.trim() || `local-clone-${instanceId}`;
 }
 
 function assertExistingE2EDatabaseTarget(env: E2ECommandEnv): void {

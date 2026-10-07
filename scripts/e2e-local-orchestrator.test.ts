@@ -7,6 +7,7 @@ import {
   runCommandPlan,
   shouldUseIsolatedLocalE2E,
 } from './e2e-local-orchestrator';
+import { resolveLocalTestTarget } from './resolve-local-test-target';
 import { runLocalE2E } from './run-local-e2e';
 
 describe('resolveLocalE2EDatabaseUrl', () => {
@@ -114,6 +115,57 @@ describe('createE2ECommandPlan', () => {
     });
     expect(JSON.stringify(plan)).not.toContain('kill -9');
     expect(JSON.stringify(plan)).not.toContain('lsof -ti:3000');
+  });
+
+  // DEBT-508: clones must not share a Stripe test customer, so each clone's
+  // run owns one, named by the instance that also picks its database port.
+  describe('Stripe test customer owner', () => {
+    function playwrightStepEnv(input: {
+      env: Record<string, string>;
+      cwd?: string;
+    }) {
+      const plan = createE2ECommandPlan({
+        cwd: input.cwd ?? '/repo/a',
+        env: input.env,
+      });
+      return plan.map((step) => step.env?.E2E_STRIPE_OWNER);
+    }
+
+    it('gives only the Playwright step the clone instance owner', () => {
+      expect(
+        playwrightStepEnv({ env: { LOCAL_TEST_INSTANCE: 'bug245' } }),
+      ).toEqual([undefined, undefined, undefined, 'local-clone-bug245']);
+    });
+
+    it('derives the owner from the worktree when no instance is set', () => {
+      const target = resolveLocalTestTarget({ env: {}, cwd: '/repo/clone-2' });
+
+      expect(playwrightStepEnv({ env: {}, cwd: '/repo/clone-2' })[3]).toBe(
+        `local-clone-${target.instanceId}`,
+      );
+    });
+
+    it('keeps an owner exported in the shell', () => {
+      expect(
+        playwrightStepEnv({
+          env: { LOCAL_TEST_INSTANCE: 'bug245', E2E_STRIPE_OWNER: ' mine ' },
+        })[3],
+      ).toBe('mine');
+    });
+
+    it('adds no owner to an existing-database run', () => {
+      const plan = createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL:
+            'postgresql://postgres:postgres@127.0.0.1:5432/addiction_boards_test',
+        },
+      });
+
+      expect(plan.map((step) => step.env?.E2E_STRIPE_OWNER)).toEqual([
+        undefined,
+      ]);
+    });
   });
 
   it('uses the isolated target when CI is set without the explicit passthrough flag', () => {

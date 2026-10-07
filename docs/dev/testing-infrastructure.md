@@ -197,7 +197,6 @@ CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 E2E_CLERK_USER_USERNAME=test@example.com
 E2E_CLERK_USER_PASSWORD=your-password
-E2E_STRIPE_OWNER=local-dev
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL=price_...
@@ -468,7 +467,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | ------ | ------- |
 | `E2E_CLERK_USER_USERNAME` | Test Clerk account username (email) |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
-| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace. CI sets one per run attempt (`github-ci-<run id>-<attempt>`, DEBT-508), so concurrent runs never share a customer; it is a workflow value, not a secret. Locally, `local-dev` or a developer-specific value |
+| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace. CI sets one per run attempt (`github-ci-<run id>-<attempt>`, DEBT-508), so concurrent runs never share a customer; it is a workflow value, not a secret. Locally, `pnpm test:e2e` sets `local-clone-<instance>`, from the instance that picks the clone's database port, so clones never share one either; a value exported in the shell wins |
 | `CLERK_SECRET_KEY` | Clerk API key (used to resolve Clerk user ID during seeding) |
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
 | `DATABASE_URL` | CI Postgres connection string for direct DB writes during seeding; local `pnpm test:e2e` supplies the Docker URL automatically |
