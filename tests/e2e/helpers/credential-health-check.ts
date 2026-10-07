@@ -5,6 +5,7 @@ import {
   MigrationLedgerVerificationError,
   verifyMigrationLedger as verifySharedMigrationLedger,
 } from '@/scripts/migration-ledger';
+import { delay } from '@/src/adapters/shared/delay';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { createStripeTestClient } from './stripe-test-client';
@@ -188,10 +189,34 @@ function isTransientClerkFailure(error: unknown): boolean {
   );
 }
 
+// DEBT-508: concurrent E2E runs share one Clerk development instance's rate
+// budget, and its 429 names how long to wait. A retry sooner meets the same
+// 429, so a transient answer's Retry-After (RFC 9110 §10.2.3, seconds or an
+// HTTP date) lengthens the wait, up to this bound; it never shortens it.
+export const CLERK_RETRY_AFTER_MAX_MS = 10_000;
+
+export function parseRetryAfterMs(
+  header: string | null,
+  nowMs: number,
+): number | null {
+  const value = header?.trim();
+  if (!value) return null;
+  if (/^\d+$/.test(value)) return Number(value) * 1000;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : Math.max(at - nowMs, 0);
+}
+
+type ClerkRetryClock = {
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
+};
+
 export async function fetchClerkWithRetry(
   input: string,
   init: RequestInit,
+  { sleep = delay, now = Date.now }: ClerkRetryClock = {},
 ): Promise<Response> {
+  let retryAfterMs: number | null = null;
   try {
     return await retry(
       async () => {
@@ -208,12 +233,24 @@ export async function fetchClerkWithRetry(
       {
         ...DEFAULT_RETRY_OPTIONS,
         shouldRetry: isTransientClerkFailure,
-        // A superseded response's unread body can hold undici's connection.
         onRetry: ({ error }) => {
+          retryAfterMs = null;
           if (error instanceof TransientClerkResponse) {
+            retryAfterMs = parseRetryAfterMs(
+              error.response.headers.get('retry-after'),
+              now(),
+            );
+            // A superseded response's unread body can hold undici's connection.
             void error.response.body?.cancel().catch(() => {});
           }
         },
+        sleep: (backoffMs) =>
+          sleep(
+            Math.min(
+              Math.max(backoffMs, retryAfterMs ?? 0),
+              Math.max(backoffMs, CLERK_RETRY_AFTER_MAX_MS),
+            ),
+          ),
       },
     );
   } catch (error) {

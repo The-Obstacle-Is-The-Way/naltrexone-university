@@ -129,3 +129,95 @@ describe('fetchClerkWithRetry', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+// DEBT-508: Clerk's 429 says how long to wait. Concurrent E2E runs share one
+// development instance's budget, so a retry 100 ms later meets the same 429.
+describe('fetchClerkWithRetry and Retry-After', () => {
+  const NOW = Date.parse('2026-10-07T12:00:00Z');
+
+  async function waitsFor(
+    first: Response,
+  ): Promise<{ waits: number[]; status: number }> {
+    const waits: number[] = [];
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+    const response = await fetchClerkWithRetry(
+      URL,
+      {},
+      {
+        sleep: async (ms) => {
+          waits.push(ms);
+        },
+        now: () => NOW,
+      },
+    );
+    return { waits, status: response.status };
+  }
+
+  function answer(status: number, retryAfter?: string) {
+    return new Response('slow down', {
+      status,
+      headers: retryAfter ? { 'retry-after': retryAfter } : {},
+    });
+  }
+
+  it('waits the seconds a 429 asks for, then returns the answer', async () => {
+    await expect(waitsFor(answer(429, '7'))).resolves.toEqual({
+      waits: [7_000],
+      status: 200,
+    });
+  });
+
+  it('waits until the date a 429 names', async () => {
+    const at = new Date(NOW + 4_000).toUTCString();
+
+    await expect(waitsFor(answer(429, at))).resolves.toMatchObject({
+      waits: [4_000],
+    });
+  });
+
+  it('honors Retry-After on a 503 too', async () => {
+    await expect(waitsFor(answer(503, '2'))).resolves.toMatchObject({
+      waits: [2_000],
+    });
+  });
+
+  it('waits at most ten seconds', async () => {
+    await expect(waitsFor(answer(429, '60'))).resolves.toMatchObject({
+      waits: [10_000],
+    });
+  });
+
+  it.each([
+    ['no header', undefined],
+    ['an unreadable header', 'soon'],
+    ['a date already past', new Date(NOW - 5_000).toUTCString()],
+  ])('keeps its own backoff with %s', async (_case, retryAfter) => {
+    await expect(waitsFor(answer(429, retryAfter))).resolves.toMatchObject({
+      waits: [100],
+    });
+  });
+
+  it('never waits less than its own backoff', async () => {
+    const waits: number[] = [];
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(answer(429))
+      .mockResolvedValueOnce(answer(429, '0'))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+    await fetchClerkWithRetry(
+      URL,
+      {},
+      {
+        sleep: async (ms) => {
+          waits.push(ms);
+        },
+        now: () => NOW,
+      },
+    );
+
+    expect(waits).toEqual([100, 200]);
+  });
+});
