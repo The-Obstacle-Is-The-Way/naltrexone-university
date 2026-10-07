@@ -100,7 +100,7 @@ Each row's referenced PRs, numeric approvals and CI conclusions were checked whe
 - DEBT-414's counsel conclusions, provider setup, notice delivery/escalation and live specimens; DEBT-501's live purchase/refund; DEBT-502's signup settings and repeat-trial policy; DEBT-504's private log consumers.
 - Historical deleted artifacts/events, uncommitted screenshots, missing old deployment details, exact old local counts and mutation runs. The current code and retained GitHub records cannot reconstruct them. Accept their explicitly attributed receipts or supply retained evidence; do not silently mark them independently verified.
 
-*Corrected 2026-10-07: most checks in the first two items were later reassigned: BUG-319's, BUG-320's and BUG-325's to engineering, BUG-324's settled by `main` CI's E2E, BUG-321's as a test-mode E2E, and DEBT-504's answered from the Drains API; see each record.*
+*Corrected 2026-10-07: later work changed several checks in the first two items. Engineering now owns BUG-319's, BUG-320's and BUG-325's. `main` CI's E2E settled BUG-324's. BUG-321's is now a test-mode E2E. Vercel's Drains API answered DEBT-504's; see each record.*
 
 ## Shipping
 
