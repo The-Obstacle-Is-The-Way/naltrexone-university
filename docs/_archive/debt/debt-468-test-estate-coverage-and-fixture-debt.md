@@ -1,6 +1,6 @@
 # DEBT-468: Test-Estate Coverage Gaps and Shared-Fixture Debt
 
-**Status:** Resolved — 2026-09-27; all four Parts and all five Resolution items complete, and every Verification bullet re-verified on `main` before archival. The `*-test-helpers` location tail, Deferred at archival, closed the same day (see the Deferred tail note).
+**Status:** Resolved — 2026-09-27; all four Parts and all five Resolution items complete, every Verification bullet re-verified on `main`; the `*-test-helpers` location tail closed the same day
 
 *Corrected 2026-10-07: the status said that tail was still Deferred; it closed on 2026-09-27.*
 **Priority:** P2
@@ -32,7 +32,7 @@ Each Verification bullet was re-checked on `main` at `59b96438`:
 
 The dated sections below keep their original "open" and "remains" wording as historical execution receipts, superseded by this section.
 
-**Deferred tail** (closed 2026-09-27 UTC, the same day): twelve `*-test-helpers.ts(x)` modules lived outside any `test-helpers/` directory (Part 3 consistency note: eleven on 2026-09-26, plus the #1139 lock-order harness, which follows `tests/integration/`'s sibling pattern). The three `src/` outliers moved into `test-helpers/` directories. The others are in their standard location under the convention now written in `.claude/rules/testing.md` and guarded by `tests/test-support-location-policy.test.ts`: `app/**` and `components/**` keep suffix-named helpers beside their suites, since every `app/` folder is a route segment, and `tests/integration/` keeps them beside its suites. No index row remains. DEBT-465 keeps the write guard's two equivalent mutants for its mutation pilot, and the index's DEBT-472 remainder row carries the ratcheted casts and doubles.
+**Deferred tail** (closed 2026-09-27 UTC, the same day): twelve `*-test-helpers.ts(x)` modules lived outside any `test-helpers/` directory (Part 3 consistency note: eleven on 2026-09-26, plus the #1139 lock-order harness, which follows `tests/integration/`'s sibling pattern). The three `src/` outliers moved into `test-helpers/` directories. The others are in their standard location under the convention now written in `.claude/rules/testing.md` (Test Support Locations): `app/**` and `components/**` keep suffix-named helpers beside their suites, since every `app/` folder is a route segment, and `tests/integration/` keeps them beside its suites. `tests/test-support-location-policy.test.ts` guards its `src/` half. No index row remains. DEBT-465 keeps the write guard's two equivalent mutants for its mutation pilot, and the index's DEBT-472 remainder row carries the ratcheted casts and doubles.
 
 ---
 

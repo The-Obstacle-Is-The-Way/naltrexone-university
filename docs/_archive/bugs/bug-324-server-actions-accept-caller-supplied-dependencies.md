@@ -91,7 +91,7 @@ Option 1 is shipped. Option 2 was the temporary stopgap and has been removed. Op
   - The manifest check skipped `'use cache'` functions, which a client can call by ID. It now applies the same rule to them; all nine pass.
   - Nothing pinned the check into `pnpm build`. A test now does.
 
-**2026-10-06, in production.** Promotion #1390 (`51c14544`) reached production at 06:17:47 UTC. Its Vercel build log shows "server actions: 38, all take only their input". The signed-in check of practice, bookmarks and checkout was later replaced by `main` CI's E2E on #1390's merge commit (run 37421764279) and a clean Sentry (see Verification).
+**2026-10-06, in production.** Promotion #1390 (`51c14544`) reached production at 06:17:47 UTC. Its Vercel build log shows "server actions: 38, all take only their input". The signed-in check of practice, bookmarks and checkout was later replaced by `main` CI's E2E on #1390's own merge commit and a clean Sentry (see Verification).
 
 ## Verification
 

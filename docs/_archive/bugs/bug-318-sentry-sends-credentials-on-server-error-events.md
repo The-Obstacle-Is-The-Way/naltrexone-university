@@ -83,7 +83,7 @@ The owner had the Sentry CLI logged in to the project (`novamindnyc` / `addictio
 ## Verification
 
 - [x] Production runs the fix, and the real-SDK test passes in the gate on that commit: #1373 merged `86c62eb9` after exact-head approval 5417478378 on `6102844d` (gate passed on that head), released through promotion #1374 (`2998928c`): main CI 37342621484 `test` passed 16:54:12Z, production assigned 16:54:15.082Z, trees `6496d9fe`, healthy production.
-- [x] With the shipped settings, the real-SDK test in the gate on the released head sends none of its ten values, the IP among them, and has request-body capture off. After the release, none of the 940 spans in Results (6) carries a cookie, `authorization`, body or Clerk request-data attribute. No server error event has occurred since, so none could be inspected. *Corrected 2026-10-07: each check is limited to what it covered.*
+- [x] With the shipped settings, the real-SDK test in the gate on the released head sends none of its ten values, the IP among them, and has request-body capture off. After the release, none of the 940 spans in Results (6) carries a cookie, `authorization`, body or Clerk request-data attribute. No server error event had arrived by the 2026-10-05 span check, so none could be inspected. *Corrected 2026-10-07: each check is limited to what it covered.*
 - [x] The owner's checks above are done and recorded here (Results).
 
 ## Related

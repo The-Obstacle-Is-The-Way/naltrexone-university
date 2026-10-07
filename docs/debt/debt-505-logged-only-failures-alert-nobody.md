@@ -37,7 +37,7 @@ The product is pre-revenue with no active users, so nothing has been missed yet.
 2. **An explicit alert port with bounded delivery** (recommended).
    - The application layer declares the conditions a person must see.
    - An outer-layer adapter sends each as a Sentry event with fixed tags and no personal data, and an issue alert rule routes it to the owner.
-   - One cooldown key per alert kind on the existing Postgres limiter bounds the volume.
+   - An in-process cooldown, then one cooldown key per alert kind on the existing Postgres limiter, bounds the volume.
 3. **Upgrade to Vercel Pro and drain logs to an alerting service.** It costs money, still needs alert rules, and is the owner's call.
 
 ## Resolution (decided)
@@ -47,8 +47,9 @@ Option 2.
 - **The adapter.** Implement it with `Sentry.captureMessage` in an outer-layer adapter, so no vendor import enters the application or domain layers.
 - **The volume bound.** Two cooldowns per alert kind, each six hours.
   - An in-process cooldown is checked first and is always on.
-  - Then one cooldown key on the existing Postgres limiter makes it at most one event per kind across all instances.
-  - If that key cannot be read, the event is still sent, tagged as sent without the shared cooldown, and the in-process cooldown bounds it to one per kind per server instance. Suppressing it instead would silence BUG-323's alert, since that alert reports this same database failing.
+  - Then one cooldown key on the existing Postgres limiter makes it at most one event per kind per fixed six-hour window across all instances.
+  - If the limiter call fails, the event is still sent, tagged as sent without the shared cooldown, and the in-process cooldown bounds it to one per kind per server instance per six hours. Suppressing it instead would silence BUG-323's alert, since that alert reports this same database failing.
+  - That fallback has no bound across instances: an outage under load can send one event per kind from each running instance. Sentry's spike protection is the backstop, and the flood response in [Logging](../dev/logging.md) applies.
 - **Keep the log line** beside each alert, for immediate diagnosis.
 - **Renewal notices are detected from state.** The renewal job already computes missed deadlines from the database each run, so a deadline missed while logs were lost is still found on the next run.
 - **Who uses it:**
@@ -61,7 +62,7 @@ Option 2.
 ## Verification
 
 - [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
-- [ ] Engineering: one test event per alert kind reaches the Sentry issue alert routed to the owner, recorded with counts only.
+- [ ] Engineering: on a deployment, one test event per alert kind, raised from its real call site (the proxy for BUG-323's kind), reaches the Sentry issue alert routed to the owner, recorded with counts only.
 - [ ] The alerts listed above no longer exist as log lines alone.
 
 ## Related

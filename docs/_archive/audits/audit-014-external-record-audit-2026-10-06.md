@@ -100,6 +100,8 @@ Each row's referenced PRs, numeric approvals and CI conclusions were checked whe
 - DEBT-414's counsel conclusions, provider setup, notice delivery/escalation and live specimens; DEBT-501's live purchase/refund; DEBT-502's signup settings and repeat-trial policy; DEBT-504's private log consumers.
 - Historical deleted artifacts/events, uncommitted screenshots, missing old deployment details, exact old local counts and mutation runs. The current code and retained GitHub records cannot reconstruct them. Accept their explicitly attributed receipts or supply retained evidence; do not silently mark them independently verified.
 
+*Corrected 2026-10-07: most checks in the first two items were later reassigned: BUG-319's, BUG-320's and BUG-325's to engineering, BUG-324's settled by `main` CI's E2E, BUG-321's as a test-mode E2E, and DEBT-504's answered from the Drains API; see each record.*
+
 ## Shipping
 
-One documentation PR to `dev`, with the exact head, local gate, CodeRabbit adjudication and guarded merge receipt on that PR. No promotion is part of this audit. The report was resolved on publication; each remaining check and evidence limit is tracked in the record it concerns. It does not claim 100% independent verification.
+One documentation PR to `dev`, with the exact head, local gate, CodeRabbit adjudication and guarded merge receipt on that PR. No promotion was part of the audit's own PR; it was published through promotion #1415 and resolved on publication. Each remaining owner check is tracked in the record it concerns, and the evidence limits above stay recorded here. It does not claim 100% independent verification.
