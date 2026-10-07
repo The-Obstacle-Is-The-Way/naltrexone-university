@@ -55,6 +55,7 @@ import {
   countsTowardScoreSql,
   keyCorrectedRevisionsOn,
   keyCorrectedRevisionsSql,
+  resultNotScoredSql,
 } from './shared/score-eligibility-sql';
 
 const SESSION_ATTEMPT_READ_LIMIT = 500;
@@ -97,6 +98,21 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .as('latest_attempt_rows');
   }
 
+  // A latest attempt no score counts. The list and count queries join
+  // `keyCorrectedRevisionsSql` on the revision it answered.
+  private resultNotScored(
+    latestAttemptRows: ReturnType<
+      DrizzleAttemptRepository['latestAttemptRowsSubquery']
+    >,
+  ): SQL {
+    return resultNotScoredSql({
+      question: questions,
+      keyCorrected: answerKeyCorrectedSql(
+        sql`not ${latestAttemptRows.isOmitted}`,
+      ),
+    });
+  }
+
   private buildAttemptedQuestionsConditions(
     latestAttemptRows: ReturnType<
       DrizzleAttemptRepository['latestAttemptRowsSubquery']
@@ -105,12 +121,18 @@ export class DrizzleAttemptRepository implements AttemptRepository {
   ): SQL[] {
     const conditions: SQL[] = [eq(latestAttemptRows.attemptRank, 1)];
 
+    // ADR-022 Amendment 2026-10-05 (DEBT-498): as each row shows, a result
+    // whose content is in doubt or whose key was corrected is under neither.
     const resultFilter = filters?.result ?? null;
     if (resultFilter === 'correct') {
-      conditions.push(eq(latestAttemptRows.isCorrect, true));
+      conditions.push(
+        sql`${latestAttemptRows.isCorrect} and not ${this.resultNotScored(latestAttemptRows)}`,
+      );
     }
     if (resultFilter === 'incorrect') {
-      conditions.push(eq(latestAttemptRows.isCorrect, false));
+      conditions.push(
+        sql`not ${latestAttemptRows.isCorrect} and not ${this.resultNotScored(latestAttemptRows)}`,
+      );
     }
 
     const sourceFilter = filters?.source ?? null;
@@ -153,10 +175,12 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       return [...byRecency];
     }
 
+    // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts sorts
+    // after every graded one, ranked with neither verdict.
     if (sort === 'incorrect-first') {
       return [
         asc(
-          sql<number>`CASE WHEN ${latestAttemptRows.isCorrect} THEN 1 ELSE 0 END`,
+          sql<number>`CASE WHEN ${this.resultNotScored(latestAttemptRows)} THEN 2 WHEN ${latestAttemptRows.isCorrect} THEN 1 ELSE 0 END`,
         ),
         ...byRecency,
       ];
@@ -165,7 +189,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     if (sort === 'correct-first') {
       return [
         asc(
-          sql<number>`CASE WHEN ${latestAttemptRows.isCorrect} THEN 0 ELSE 1 END`,
+          sql<number>`CASE WHEN ${this.resultNotScored(latestAttemptRows)} THEN 2 WHEN ${latestAttemptRows.isCorrect} THEN 0 ELSE 1 END`,
         ),
         ...byRecency,
       ];
@@ -498,6 +522,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .leftJoin(
         answeredRevision,
         eq(answeredRevision.id, latestAttemptRows.questionRevisionId),
+      )
+      .leftJoin(
+        keyCorrectedRevisionsSql(answeredRevisionsSql(userId)),
+        keyCorrectedRevisionsOn(latestAttemptRows.questionRevisionId),
       );
 
     const query = tagSlug
@@ -553,6 +581,10 @@ export class DrizzleAttemptRepository implements AttemptRepository {
       .leftJoin(
         answeredRevision,
         eq(answeredRevision.id, latestAttemptRows.questionRevisionId),
+      )
+      .leftJoin(
+        keyCorrectedRevisionsSql(answeredRevisionsSql(userId)),
+        keyCorrectedRevisionsOn(latestAttemptRows.questionRevisionId),
       );
 
     const query = tagSlug

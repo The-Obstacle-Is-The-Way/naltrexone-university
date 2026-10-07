@@ -696,7 +696,9 @@ describe('HistoryQuestionsTab', () => {
 
     expect(html).toContain('[Question no longer available]');
     expect(html).toContain('Unavailable');
-    expect(html).toContain('Correct');
+    // No score counts an answer on a question that no longer exists (DEBT-498).
+    expect(html).toContain('Not scored');
+    expect(html).not.toContain('Correct');
     expect(html).not.toContain('/app/questions/');
 
     const rowContainer = doc.querySelector('li > *');

@@ -48,6 +48,21 @@ export function countsTowardScoreSql(input: {
   return sql`(coalesce(${input.fairChanceAtEnd}, true) and not ${contentInDoubtSql(input.question)} and not ${input.keyCorrected})`;
 }
 
+/**
+ * ADR-022 Amendment 2026-10-05 (DEBT-498): the SQL twin of a result no score
+ * counts (`isResultNotScored`): its question's content is in doubt, or the
+ * answer was graded on a key corrected since. A query using it joins
+ * `keyCorrectedRevisionsSql`. A question that no longer exists, also in doubt
+ * in the domain, cannot occur here: an attempt's question cascades.
+ */
+export function resultNotScoredSql(input: {
+  question: QuestionColumns;
+  /** `answerKeyCorrectedSql` for the row. */
+  keyCorrected: SQL;
+}): SQL {
+  return sql`(${contentInDoubtSql(input.question)} or ${input.keyCorrected})`;
+}
+
 /** The revisions a learner's answers were graded against. */
 export function answeredRevisionsSql(userId: string): SQL {
   return sql`select answered.question_revision_id
