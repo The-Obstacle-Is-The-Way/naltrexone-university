@@ -61,6 +61,8 @@ Sentry exception/tracing capture, with no pino integration or log forwarding.
 A caught error that is only logged is not thereby a Sentry event. An alert on
 such an outcome needs explicit, bounded telemetry or a retained operational
 receipt; do not claim a Sentry search proves its absence.
+[DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) decides that
+path: an explicit alert port with bounded Sentry delivery.
 
 ## Practices
 

@@ -97,7 +97,7 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 - [x] The old test is kept as BUG-275's guard, because the new flow uses its own parameter, and new tests cover both outcomes.
 - [x] BUG-275's stale-link case still shows the database's state.
 - [ ] Engineering, by 2026-10-20: a Stripe test-mode E2E reproduces the case end to end. A test customer holds a live subscription with no local row; pressing Subscribe syncs it and the page shows the person as subscribed. A run whose sync fails shows the notice and the portal link. The tests above use the fake gateway, so only a real-provider run proves Stripe's list response and the sync together.
-- **Known limit.** A failed sync in production is visible for an hour at most: it goes only to pino, Vercel Hobby keeps runtime logs for one hour, and nothing forwards it to Sentry. Production outcomes of this path therefore cannot close this record.
+- **Known limit.** A failed sync in production is visible for an hour at most: it goes only to pino, Vercel Hobby keeps runtime logs for one hour, and nothing forwards it to Sentry. Production outcomes of this path therefore cannot close this record; [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) makes such failures visible.
 
 *Corrected 2026-10-06 (#1410 review): the one-hour production capture had no exit, because the case is rare; replaced by a reproducible test-mode run.*
 
