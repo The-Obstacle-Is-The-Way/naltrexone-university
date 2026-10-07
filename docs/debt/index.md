@@ -21,7 +21,7 @@
 |----|-------|----------|--------|
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Active — engineering remediation, operational evidence and the focused licensed review remain open |
 | [DEBT-465](./debt-465-test-quality-practices-adoption.md) | Advanced test-quality practices adoption | P2 | Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, which is done (2026-10-04); Part 4 re-scoped by the 2026-10-03 decision below and remains |
-| [DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md) | Reviews grade items whose content is in doubt | P1 | In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, remains |
+| [DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md) | Reviews grade items whose content is in doubt | P1 | In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, is built; screenshots of the session surfaces remain |
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — resolution decided in the record |
 | [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — decided per item; items 1 and 2 first |
 | [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
