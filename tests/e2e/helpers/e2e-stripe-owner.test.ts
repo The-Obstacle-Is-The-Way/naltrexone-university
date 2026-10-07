@@ -381,3 +381,64 @@ describe('createStripeCustomerStore', () => {
     });
   });
 });
+
+// #1423 review: racing the deadline does not stop the cleanup, so the loops
+// check a stop signal before each delete. A request already sent may finish;
+// none starts after the deadline.
+describe('cleanup after its deadline', () => {
+  const env = {
+    STRIPE_SECRET_KEY: 'sk_test_123',
+    E2E_CLERK_USER_USERNAME: 'e2e@example.com',
+    E2E_STRIPE_OWNER: 'github-ci-9-1',
+  };
+
+  function slowDeleteStore(customers: E2EStripeCustomer[]) {
+    const started: string[] = [];
+    const store: E2EStripeCustomerStore = {
+      async *listByEmail() {
+        for (const c of customers) yield c;
+      },
+      delete: (id) => {
+        started.push(id);
+        return new Promise((resolve) => setTimeout(resolve, 30));
+      },
+    };
+    return { store, started };
+  }
+
+  it('starts no sweep delete after the deadline', async () => {
+    const { store, started } = slowDeleteStore([
+      customer('old-a', 'github-ci-1-1', 30),
+      customer('old-b', 'github-ci-2-1', 30),
+      customer('old-c', 'github-ci-3-1', 30),
+    ]);
+
+    await sweepE2EStripeCustomers({
+      env,
+      store,
+      nowMs: NOW,
+      deadlineMs: 10,
+      warn: () => {},
+    });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    expect(started).toEqual(['old-a']);
+  });
+
+  it('starts no teardown delete after the deadline', async () => {
+    const { store, started } = slowDeleteStore([
+      customer('mine-a', 'github-ci-9-1', 0),
+      customer('mine-b', 'github-ci-9-1', 0),
+    ]);
+
+    await deleteE2ERunStripeCustomer({
+      env,
+      store,
+      deadlineMs: 10,
+      warn: () => {},
+    });
+    await new Promise((resolve) => setTimeout(resolve, 120));
+
+    expect(started).toEqual(['mine-a']);
+  });
+});

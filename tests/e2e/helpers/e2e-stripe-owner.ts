@@ -73,6 +73,8 @@ export async function sweepStaleCiCustomers(input: {
   email: string;
   currentOwner: string;
   nowMs: number;
+  /** Once aborted, no further delete starts. */
+  signal?: AbortSignal;
 }): Promise<{ deleted: number; failed: number }> {
   const stale = selectStaleCiCustomers(
     await collect(input.store.listByEmail(input.email)),
@@ -81,6 +83,7 @@ export async function sweepStaleCiCustomers(input: {
   let deleted = 0;
   let failed = 0;
   for (const id of stale) {
+    if (input.signal?.aborted) break;
     try {
       await input.store.delete(id);
       deleted += 1;
@@ -95,6 +98,8 @@ export async function deleteRunCustomer(input: {
   store: E2EStripeCustomerStore;
   email: string;
   owner: string;
+  /** Once aborted, no further delete starts. */
+  signal?: AbortSignal;
 }): Promise<{ deleted: number }> {
   if (!isDisposableCiOwner(input.owner)) return { deleted: 0 };
   // Collected first: deleting while paging would leave the next page's
@@ -102,8 +107,13 @@ export async function deleteRunCustomer(input: {
   const own = (await collect(input.store.listByEmail(input.email))).filter(
     (customer) => !customer.livemode && ownerOf(customer) === input.owner,
   );
-  for (const customer of own) await input.store.delete(customer.id);
-  return { deleted: own.length };
+  let deleted = 0;
+  for (const customer of own) {
+    if (input.signal?.aborted) break;
+    await input.store.delete(customer.id);
+    deleted += 1;
+  }
+  return { deleted };
 }
 
 /** The Stripe customer calls the store makes; the SDK client satisfies it. */
@@ -160,13 +170,23 @@ class E2EStripeOwnerDeadline extends Error {
   }
 }
 
-async function withinDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+// Racing alone would leave the work running, so the deadline also aborts the
+// signal the work checks before each delete: a request already sent may
+// finish, and none starts after the deadline.
+async function withinDeadline<T>(
+  work: (signal: AbortSignal) => Promise<T>,
+  ms: number,
+): Promise<T> {
+  const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new E2EStripeOwnerDeadline()), ms);
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new E2EStripeOwnerDeadline());
+    }, ms);
   });
   try {
-    return await Promise.race([work, deadline]);
+    return await Promise.race([work(controller.signal), deadline]);
   } finally {
     clearTimeout(timer);
   }
@@ -225,12 +245,14 @@ export async function sweepE2EStripeCustomers(
   if (!target) return;
   try {
     const { deleted, failed } = await withinDeadline(
-      sweepStaleCiCustomers({
-        store: target.store,
-        email: target.email,
-        currentOwner: target.owner,
-        nowMs: input.nowMs ?? Date.now(),
-      }),
+      (signal) =>
+        sweepStaleCiCustomers({
+          store: target.store,
+          email: target.email,
+          currentOwner: target.owner,
+          nowMs: input.nowMs ?? Date.now(),
+          signal,
+        }),
       input.deadlineMs ?? SWEEP_DEADLINE_MS,
     );
     if (deleted > 0) {
@@ -261,7 +283,7 @@ export async function deleteE2ERunStripeCustomer(
   if (!isDisposableCiOwner(target.owner)) return;
   try {
     const { deleted } = await withinDeadline(
-      deleteRunCustomer(target),
+      (signal) => deleteRunCustomer({ ...target, signal }),
       input.deadlineMs ?? TEARDOWN_DEADLINE_MS,
     );
     (input.info ?? console.log)(
