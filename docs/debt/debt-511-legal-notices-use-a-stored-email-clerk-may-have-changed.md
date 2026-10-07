@@ -12,7 +12,7 @@
 
 ## Summary
 
-The legally required renewal notices and the renewal acknowledgment go to our stored copy of the user's email. No send asks Clerk, the source of truth. A change only reaches the stored copy through Clerk's `user.updated` webhook, or through the user's next sign-in. Clerk documents that webhook deliveries are not guaranteed.
+The legally required renewal notices and the renewal acknowledgment go to our stored copy of the user's email. No send asks Clerk, the source of truth. A change reaches the stored copy only through Clerk's `user.updated` webhook, or through the user's next signed-in request. Clerk documents that webhook deliveries are not guaranteed.
 
 So an annual subscriber who changed their address and has not signed in since can be sent a legal notice at an old address. That address may now belong to someone else.
 
@@ -35,19 +35,23 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
   We have no replay of our own. Both email selectors take the primary address, or else the first, without checking verification. DEBT-502 item 3 decided "verified only".
 - **What Clerk and Svix guarantee.**
   - Clerk: webhooks are not for synchronous flows, may be duplicated or out of order, and "deliveries are not guaranteed". When order matters, read current state from the Backend API ([overview](https://clerk.com/docs/guides/development/webhooks/overview), [syncing](https://clerk.com/docs/guides/development/webhooks/syncing)).
-  - Svix retries for about 27 hours (immediately, then 5 s, 5 m, 30 m, 2 h, 5 h, 10 h, 10 h). It disables an endpoint that keeps failing for 5 days. It keeps payloads 90 days for a manual replay ([retries](https://docs.svix.com/retries)).
+  - Svix retries for about 27 hours (immediately, then 5 s, 5 m, 30 m, 2 h, 5 h, 10 h, 10 h), and disables an endpoint that keeps failing for 5 days ([retries](https://docs.svix.com/retries)). After that, only a manual replay from the Clerk Dashboard recovers an event.
 - **Stripe's copy.**
   - Set once, at `customers.create` (`stripe-customers.ts`), and never updated. There is no `customer.updated` handling.
   - The billing portal lets the customer edit it (`stripe-portal-configurations.ts`).
   - Stripe's upcoming-renewal email goes to this copy. DEBT-414 F19a lists it as a *candidate* for Massachusetts' 5–30-day notice, to be verified first.
-- **Cost.** Clerk's Backend API allows 1,000 requests per 10 seconds in production. A lookup per send is about 80 per daily run plus acknowledgments, off the request path.
+- **Queue mechanics.**
+  - **No second queuing.** The job's already-queued check ignores status, and the scheduled unique index includes the destination (`db/schema.ts`). So a notice superseded while the stored address is unchanged is never queued again.
+  - **Few runs.** The window from renewal minus 35 days to renewal minus 30 days gets 4–6 runs of the daily cron (Vercel Hobby fires it within about ±59 minutes). A notice superseded on the last run is never sent.
+  - **The email write can be refused.** The user upsert's `updated_at` guard can keep the old address.
+- **Cost.** Clerk's Backend API allows 1,000 requests per 10 seconds in production. One lookup per user per run, shared by that user's notices, is well under that, off the request path.
 
 ## Impact
 
 - **A stale address** can miss a legally required notice.
 - **A reassigned address** can disclose the subscription to another person.
 - **No one is told.** A misdirected notice is silent.
-- **Timing.** The product is pre-revenue, with no real subscribers yet, so this must be fixed before paid acquisition. It is not an incident today.
+- **Timing.** The owner states the product has no real subscribers yet. DEBT-501 item 7 records no live purchase. A new subscriber's first scheduled notice is about eleven months away, and their acknowledgment uses the address checkout refreshes from Clerk. So the exposure is only existing live subscriptions, which the owner can count read-only. This must ship before whichever comes first: paid acquisition, or 35 days before the earliest existing live renewal.
 
 ## Options
 
@@ -64,30 +68,50 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 
 **Decided:** options 3 and then 4, with the webhook kept as the everyday update path.
 
-1. **Look up the address at send time.**
-   - Before sending any legally required message, acknowledgments included, dispatch asks Clerk for the user's primary email whose verification status is `verified`. It calls a new port, outside any transaction.
+1. **One lookup, at queue time and again at send time.**
+   - A new port asks Clerk, outside any transaction, for the user's primary email whose `verification.status` is `verified`. A missing verification counts as unverified.
+   - The job checks before it snapshots a notice's payload, and dispatch checks again before sending. One lookup per user per run serves all that user's notices.
+   - Before calling Clerk, read the deletion tombstone.
+2. **Outcomes.** The deadline governs, not the lookup, so nothing is superseded for good while the user can still fix it.
    - **Address matches:** send.
-   - **Address differs:** write it through the BUG-284-safe provisioning path, with Clerk's `updatedAt` and the tombstone lock. Then supersede the queued notice as `destination_changed`. A scheduled notice re-queues on the next run, inside its retry window. An acknowledgment re-queues at once.
-   - **Clerk unavailable** (429, 5xx or timeout): do not send, keep the row queued, and alert through [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md). Never fall back to the stored address, which may now be someone else's.
-   - **User deleted (404), primary address unverified or missing, or the address owned by another row:** supersede with a named reason and alert. The repair paths are DEBT-502 items 1–3.
-2. **Verified addresses only, everywhere.** Both email selectors, provisioning and the webhook, take only verified addresses. This is DEBT-502 item 3's decision, made a prerequisite here.
-3. **Stripe's copy is the billing contact, never a legal channel.** A legal obligation is met only by a system we control and can audit: our own notice system, sending to the Clerk-verified address at send time.
-   - Stripe's reminder fails all three tests: the customer can edit its address, we do not control its content, and we get no per-delivery evidence.
-   - So no notice DEBT-414 requires may rely on Stripe's emails, and F19a's Stripe path closes. Its own fallback remains: our own Massachusetts reminder about 25 days before the cancellation deadline, with a send-by limit and a missed-deadline alert.
-   - Stripe's copy stays the customer's billing contact for receipts and invoices, editable in the portal as a normal feature. That needs no sync and no code.
-   - Whether Massachusetts' rule applies is still the owner's and counsel's decision under F19a.
-4. **Daily reconcile, later (P3).**
-   - A daily Backend API listing (500 per page, sorted by `updated_at`) compares stored emails with Clerk.
-   - It alerts on drift and on missed deletions first, and repairs once the alert path has run quietly.
-5. **Order.**
-   - DEBT-505's alert path first, because a send refused without an alert is a silent missed notice.
-   - Then this record.
-   - DEBT-503 item 1 may ship earlier, because no real subscriber exists yet. Both must be in production before paid acquisition.
+   - **Address differs:** write Clerk's address through the BUG-284-safe provisioning path, and read it back. Once the stored address equals Clerk's, re-queue to it and dispatch in the same run. If the write is refused, hold the row and alert.
+   - **Unverified, missing, or owned by another row:** hold the row queued, alert, and retry each run until the existing send-by cutoff (`notice_deadline_passed`). A user who verifies within the window still gets the notice. The repair paths are DEBT-502 items 1 and 3.
+   - **404:** terminal only when our tombstone exists, or when a lookup of a known user (a canary) shows the key and instance are working. Otherwise treat it as "unavailable". A 404 with no tombstone alerts "Clerk user missing with an active subscription", so the deletion runs before renewal and no one is charged without notice.
+   - **Unavailable** (401, 403, 429, 5xx, timeout or network): retry within the run, hold the row, and alert on the first held run, not only at the deadline.
+   - **Last eligible run** (cutoff minus now under 25 hours) **with Clerk still unavailable:** send to the stored address only if Clerk confirmed that address as verified within the past 7 days, and no `user.updated` or `user.deleted` for that user is failing. Otherwise the existing missed-deadline error fires, through DEBT-505. Record each confirmation's time, so this rule can be applied.
+   - **Logs and alerts** carry IDs and a reason only, never an address, with Clerk errors passed through `projectSafeErrorDiagnostics`.
+   - **An address that changes after a send** within the window gets a second notice at the new address. That is existing behaviour, and acceptable.
+3. **The acknowledgment.**
+   - It already sends after its transaction commits, and its errors cannot fail Stripe's webhook.
+   - Skip the lookup when checkout confirmed the address from Clerk within the Checkout session's lifetime. Otherwise leave the row queued for the cron rather than calling Clerk inline.
+   - Counsel confirms that the cron's delay, up to about a day, is still "prompt" under New York's rule.
+4. **Verified addresses only, everywhere.**
+   - Both email selectors, provisioning and the webhook, take only verified addresses (DEBT-502 item 3). Checkout and add-card refuse an unverified refreshed primary.
+   - The Billing page tells the user to verify their address. That is their recovery path, and under item 2 their notice then goes out.
+   - Prerequisite: the owner's Clerk setting "Verify at sign-up" in both instances.
+5. **Stripe's copy follows Clerk, and is never a legal channel.**
+   - **One writable source.** Clerk's verified address is the only one the user maintains. Every write of it, through provisioning, the webhook, the send-time lookup and the reconcile, pushes it to the Stripe customer. `email` leaves the portal's allowed updates, so receipts and invoices track the account address instead of the sign-up address.
+   - **No legal reliance.** No notice DEBT-414 requires relies on Stripe's emails. Their address was customer-editable until now, their content is not ours, and we get no per-delivery evidence. F19a's Stripe path closes, and its fallback is the recommendation: our own Massachusetts reminder about 25 days before the cancellation deadline, with a send-by limit and a missed-deadline alert. Whether the rule applies stays with the owner and counsel, as does F19c's per-charge notice.
+   - The owner may instead choose a separate billing contact; that is a product decision.
+6. **Daily reconcile, later (P3).**
+   - Compare stored emails with Clerk for users with live subscriptions, filtering the Backend API by up to 100 user IDs per call.
+   - Count a user as missing only after a canary confirms the instance.
+   - Alert on drift and missing users first, and repair once the alerts run quietly.
+7. **Order and prerequisites.**
+   - DEBT-505's alert path comes first, because a held notice without an alert is silent.
+   - DEBT-502 item 2's locked provisioning transaction comes before the write in item 2 above, and DEBT-502 item 3 before item 4.
+   - Then this record. DEBT-503 item 1 may ship earlier, under the timing in Impact.
 
 ## Verification
 
-- [ ] Dispatch tests cover every branch above, with a fake Clerk lookup: match, changed, unavailable, deleted, unverified and conflict. No branch sends to an unconfirmed address.
-- [ ] A real-Postgres test shows that a changed address supersedes the queued notice, and that the next run queues to the new address.
-- [ ] Both email selectors refuse unverified addresses.
-- [ ] DEBT-414 F19a no longer relies on Stripe's emails, and any Massachusetts reminder is sent by our own notice system.
+- [ ] Dispatch and job tests, using a fake Clerk lookup, cover:
+  - match, changed, unverified, conflict, a tombstoned 404 and a wrong-instance 404;
+  - unavailable, and the last-run rule with and without a recent confirmation;
+  - a write refused by the `updated_at` guard.
+  No branch sends to an unconfirmed address.
+- [ ] A real-Postgres test shows a changed address re-queued and sent in the same run, including on the last eligible run. A held notice goes out once the user verifies.
+- [ ] Both email selectors refuse unverified addresses, and checkout refuses an unverified refreshed primary.
+- [ ] Clerk's address reaches the Stripe customer on every write, and the portal no longer offers an email edit.
+- [ ] DEBT-414 F19a no longer relies on Stripe's emails.
+- [ ] The owner records a read-only count of live subscriptions, and the earliest renewal.
 - [ ] The reconcile ships with its alert, and runs clean for two weeks.
