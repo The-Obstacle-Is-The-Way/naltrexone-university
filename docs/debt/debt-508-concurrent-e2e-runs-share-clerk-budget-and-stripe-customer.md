@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below
+**Status:** In Progress — isolation implemented; CI's per-run evidence follows its merge, and the overlap check follows DEBT-503 item 1
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
