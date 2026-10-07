@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — decided per item; item 1 (identity from the session token) first
+**Status:** In Progress — item 1 (identity from the session token) implemented; its check follows release; items 2–4 follow
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -50,6 +50,11 @@ This record holds the structural fixes, so that the allowance stops being the on
 
   *Corrected 2026-10-07: the plan read every caller. "Backend API only to provision" also needs the billing refresh and BUG-284's resolver. The tombstone read is required, since Clerk's 404 was the only sign-in guard. Checkout's second call is removed. The token's trust comes from the middleware's HMAC-signed headers.*
 - **Care.** BUG-284's identity rules and BUG-320's provisioning race must hold. Test-first against the maintained fakes and real Postgres.
+- **Implemented 2026-10-07.**
+  - `ClerkAuthGateway` reads the Clerk user ID from `auth()`. `lib/auth.ts` and every `currentUser()` call are gone, and billing reads the ID from the session.
+  - Tests: `clerk-auth-gateway-session.test.ts`, `billing-controller-current-email.test.ts`, the skip-Clerk composition test (`lib/container.skip-clerk.test.ts`), and the source guard `tests/clerk-backend-api-boundary.test.ts`.
+  - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. BUG-320's six concurrent first requests provision one row on Postgres, and that test fails when the upsert's conflict clause is removed.
+  - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)
 
@@ -64,7 +69,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 
 ### 3. Alert when a cap trips or Clerk refuses a call (P3)
 
-- **Evidence.** Today a tripped cap is visible only as 429 responses, and a Clerk refusal only as errors from `currentUser()`.
+- **Evidence.** Today a tripped cap is visible only as 429 responses, and a Clerk refusal only as errors from the Backend API's user lookup.
 - **Options.** A pino summary alone cannot drive a Sentry alert: the current logger has no Sentry transport. Forwarding every log adds collection and quota costs. A bounded, explicit operational event is sufficient, but one error event per minute would allow 43,200 events in 30 days against this account’s 5,000-error monthly allowance. A per-window bound alone does not protect that quota.
 - **Decided.** Raise a cap trip or a Clerk 429 through [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md)'s bounded alert path, as its own alert kind: a Sentry event with fixed tags only, at most one per six hours or, if the limiter errors, one per six hours per server instance, and routed to the owner. Add a structured log line for each trip for diagnosis, since a 429 from `tooManyRequests` logs nothing today. Prove the bound with concurrent writers and sustained trips, and confirm one test event reaches the configured alert before claiming delivery. Document Attack Mode as the response.
 

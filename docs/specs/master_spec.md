@@ -38,7 +38,7 @@ Board-relevant questions with detailed explanations, fast practice workflows, an
           v                                          v
 +-------------------+                       +--------------------------+
 | Clerk (Auth)      |<-- session cookies -->| Next.js Server           |
-| @clerk/nextjs     |                       | - auth() / currentUser() |
+| @clerk/nextjs     |                       | - auth() session        |
 +-------------------+                       | - subscription checks    |
                                             | - server actions         |
                                             | - webhook handlers       |
