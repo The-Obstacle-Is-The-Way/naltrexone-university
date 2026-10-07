@@ -114,7 +114,7 @@ packageExtensions:
   '@stryker-mutator/core':
     dependencies:
       typescript: ^6.0.3
-  # DEBT-504: these three packages, reached through @clerk/ui's Solana wallet
+  # DEBT-506: these three packages, reached through @clerk/ui's Solana wallet
   # adapters, declare react-native as a required peer, but only their React
   # Native entry points (index.native.js, the `react-native` export condition)
   # import it; the browser and node entries Next.js resolves never do. pnpm

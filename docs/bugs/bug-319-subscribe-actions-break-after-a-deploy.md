@@ -55,7 +55,7 @@ A learner who decides to pay, or to add a card at the end of a trial, can meet a
 
 Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 stays open for the owner.
 1. **The key.** It is an operator secret: the owner approves creating it, then it is set through the Vercel API, with its name read back and never its value. The environment schema then requires it in production and preview builds, so a missing key fails the build rather than silently changing IDs.
-2. **`ErrorBoundaryPage`** takes `retry` and uses it for "Try again", keeping `reset` only where no server refresh exists.
+2. **`ErrorBoundaryPage`** takes `retry` and uses it for "Try again", with `retry` required by the component contract. There is no `reset` fallback in the shipped component.
 3. **A stale action reloads the page once**, guarded against reload loops. The error page renders first and starts the reload itself, so the person need not press anything.
 4. **The error pages report what they catch** (added 2026-10-05 after the Sentry finding above). This covers every route error page and the global error page. An error that arose in the browser is sent to Sentry. A server error carries a digest and was already reported on the server, so it is not sent again. Without this, a stale action on the payment forms could not show up in Sentry at all.
 
@@ -75,10 +75,10 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 - **Independent review.** An adversarial reviewer checked the fix against the Next 16.3.6 and Sentry 11 sources and found no P1 or P2 defect. It confirmed that Next passes `retry` to `global-error` inside the router context, and that a call to an unknown action is refused before anything runs: a 404 for the usual fetch call, and an error for a form posted without JavaScript. So a reload cannot charge twice. Its P3 and P4 findings are fixed above.
 - **Docs.** `.env.example`, master spec §10 and `docs/dev/deployment-environments.md` list the key.
 
-**Released 2026-10-05.** #1379 was merged and promoted through #1380 (`048ca43f`). Production deployed it at 22:10 UTC, and that build passed the new key requirement.
+**Released 2026-10-05.** #1379 was merged and promoted through #1380 (`048ca43f`). Production was assigned at 22:24:30.518 UTC, and that build passed the new key requirement. *Corrected 2026-10-06: Vercel created the deployment at 22:10:00.274 UTC; creation is not production assignment.*
 
 **2026-10-06, a first observation.**
-- **The event.** Sentry recorded one `UnrecognizedActionError` at 22:27 UTC on 2026-10-05, from a practice page. That was 17 minutes after this fix's own deploy, which changed every action ID when the key took effect.
+- **The event.** Sentry recorded one `UnrecognizedActionError` at 22:27 UTC on 2026-10-05, from a practice page. That was about 2½ minutes after this fix's production assignment, which changed every action ID when the key took effect.
 - **Its path.** It came from a hook's error report, not from an error page, which is this record's accepted scope.
 - **What it counts as.** A stale action after a deploy that changed the IDs, not a failure of the stable key. The error-page check below stays open.
 
@@ -90,7 +90,7 @@ Criteria to meet before closing.
 - [x] "Try again" calls `retry` on every route error page. A test pins it, red first.
 - [x] A stale action on a payment form reloads the page by itself, with a test of the guard.
 - [x] A missing key fails a production build.
-- [ ] Sentry shows whether ADDICTION-BOARDS-WEB-T's resume errors stop after the key ships. Record the result either way.
+- [ ] Owner, by 2026-10-19: search Sentry for the recorded resume-error message and affected route since the production assignment. The old issue was deleted under BUG-318, so searching only its issue key cannot detect a recurrence. Record query, time range, count and ingestion health, either way.
 - [ ] Sentry receives an `UnrecognizedActionError` from the error pages if a stale action ever happens; record the first one, or none, after two weeks. The event is sent just before the reload, so first confirm with one forced stale action that it arrives; otherwise "none" means nothing.
 
 ## Related

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-// DEBT-504: Clerk's Solana wallet adapters declare `react-native` as a peer,
+// DEBT-506: Clerk's Solana wallet adapters declare `react-native` as a peer,
 // but only their React Native entry points (`index.native.js`) import it. The
 // browser and Node entry points this web app resolves never do. pnpm installs
 // a missing non-optional peer by itself, which put react-native and its

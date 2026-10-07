@@ -351,7 +351,7 @@ Before adding one:
 
 The current entries are the three Solana mobile-wallet packages under
 `@clerk/ui` that declare `react-native`
-([DEBT-504](../debt/debt-504-dependabot-alert-triage-2026-10.md)). Remove an
+([DEBT-506](../debt/debt-506-dependabot-alert-triage-2026-10.md)). Remove an
 entry when upstream marks the peer optional itself.
 
 ## Audit hygiene under pnpm 11

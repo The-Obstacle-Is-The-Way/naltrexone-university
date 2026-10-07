@@ -1,4 +1,4 @@
-# DEBT-504: Dependabot Alerts of 2026-10-06 — Two Fixed, Four Gated, Two Without Published Fixes
+# DEBT-506: Dependabot Alerts of 2026-10-06 — Two Fixed, Four Gated, Two Without Published Fixes
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
