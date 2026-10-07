@@ -193,6 +193,14 @@ describe('CI workflow', () => {
     expect(fidelityIndex).toBeLessThan(unitIndex);
   });
 
+  // DEBT-508: concurrent runs must not share a Stripe test customer, and a
+  // re-run keeps its run_id, so the owner names the run and the attempt.
+  it('tags each E2E run attempt with its own Stripe test customer owner', () => {
+    expect(
+      findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').env?.E2E_STRIPE_OWNER,
+    ).toBe('github-ci-${{ github.run_id }}-${{ github.run_attempt }}');
+  });
+
   it('withholds shared E2E credentials from Dependabot PRs while retaining main-push E2E', () => {
     expect(findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').if).toBe(
       `github.event_name == 'push' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,

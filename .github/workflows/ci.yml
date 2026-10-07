@@ -149,7 +149,9 @@ jobs:
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL }}
           E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
           E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-          E2E_STRIPE_OWNER: github-ci
+          # DEBT-508: each run attempt gets its own Stripe test customer, so
+          # concurrent runs never change each other's subscriptions.
+          E2E_STRIPE_OWNER: github-ci-${{ github.run_id }}-${{ github.run_attempt }}
 
       # BUG-328: every HTML report carries Clerk development tokens from the
       # setup steps, so it is never uploaded. A failed run uploads its failure
