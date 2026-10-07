@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createStripeCustomerStore,
   deleteE2ERunStripeCustomer,
   deleteRunCustomer,
   type E2EStripeCustomer,
@@ -268,5 +269,115 @@ describe('the setup and teardown entry points', () => {
     });
 
     expect(store.deleted).toEqual([]);
+  });
+});
+
+// DEBT-508 review: a Playwright timeout cannot be caught, so cleanup stops at
+// its own deadline and warns, leaving the rest to the next run's sweep.
+describe('cleanup deadlines', () => {
+  const env = {
+    STRIPE_SECRET_KEY: 'sk_test_123',
+    E2E_CLERK_USER_USERNAME: 'e2e@example.com',
+    E2E_STRIPE_OWNER: 'github-ci-9-1',
+  };
+  const stalled: E2EStripeCustomerStore = {
+    listByEmail: () => ({
+      [Symbol.asyncIterator]: () => ({
+        next: () => new Promise<IteratorResult<E2EStripeCustomer>>(() => {}),
+      }),
+    }),
+    delete: async () => {},
+  };
+
+  it('stops the sweep at its deadline and warns', async () => {
+    const warnings: string[] = [];
+
+    await sweepE2EStripeCustomers({
+      env,
+      store: stalled,
+      nowMs: NOW,
+      deadlineMs: 5,
+      warn: (m) => warnings.push(m),
+    });
+
+    expect(warnings).toEqual([
+      '[E2E_STRIPE_OWNER] Sweep skipped: E2EStripeOwnerDeadline',
+    ]);
+  });
+
+  it('stops the teardown delete at its deadline and warns', async () => {
+    const warnings: string[] = [];
+
+    await deleteE2ERunStripeCustomer({
+      env,
+      store: stalled,
+      deadlineMs: 5,
+      warn: (m) => warnings.push(m),
+    });
+
+    expect(warnings).toEqual([
+      '[E2E_STRIPE_OWNER] Run customer kept for the next sweep: E2EStripeOwnerDeadline',
+    ]);
+  });
+});
+
+describe('createStripeCustomerStore', () => {
+  type CustomerApi = Parameters<typeof createStripeCustomerStore>[0];
+
+  function api(del: (id: string) => Promise<unknown>): CustomerApi {
+    return {
+      customers: {
+        async *list() {
+          yield {
+            id: 'c1',
+            created: 1,
+            livemode: false,
+            metadata: { e2e_owner: 'github-ci-1-1' },
+          };
+        },
+        del,
+      },
+    };
+  }
+
+  it('lists customers by email with only the fields the sweep reads', async () => {
+    const store = createStripeCustomerStore(api(async () => ({})));
+    const listed: E2EStripeCustomer[] = [];
+    for await (const c of store.listByEmail('e2e@example.com')) listed.push(c);
+
+    expect(listed).toEqual([
+      {
+        id: 'c1',
+        created: 1,
+        livemode: false,
+        metadata: { e2e_owner: 'github-ci-1-1' },
+      },
+    ]);
+  });
+
+  it('counts a customer already deleted as deleted', async () => {
+    const store = createStripeCustomerStore(
+      api(async () => {
+        throw Object.assign(new Error('No such customer'), {
+          code: 'resource_missing',
+        });
+      }),
+    );
+
+    await expect(store.delete('c1')).resolves.toBeUndefined();
+  });
+
+  it('passes any other deletion error on', async () => {
+    const store = createStripeCustomerStore(
+      api(async () => {
+        throw Object.assign(new Error('rate limited'), {
+          code: 'rate_limit',
+        });
+      }),
+    );
+
+    await expect(store.delete('c1')).rejects.toMatchObject({
+      code: 'rate_limit',
+    });
   });
 });

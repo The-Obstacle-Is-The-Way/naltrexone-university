@@ -221,3 +221,31 @@ describe('fetchClerkWithRetry and Retry-After', () => {
     expect(waits).toEqual([100, 200]);
   });
 });
+
+// DEBT-508 review: setup's budget holds two Clerk calls, so Retry-After may
+// stretch one call's waits by ten seconds in all, not ten per retry.
+it('waits at most ten seconds in all for one call', async () => {
+  const waits: number[] = [];
+  const slowDown = () =>
+    new Response('slow down', {
+      status: 429,
+      headers: { 'retry-after': '7' },
+    });
+  vi.spyOn(globalThis, 'fetch')
+    .mockResolvedValueOnce(slowDown())
+    .mockResolvedValueOnce(slowDown())
+    .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+
+  await fetchClerkWithRetry(
+    URL,
+    {},
+    {
+      sleep: async (ms) => {
+        waits.push(ms);
+      },
+      now: () => Date.parse('2026-10-07T12:00:00Z'),
+    },
+  );
+
+  expect(waits).toEqual([7_000, 3_000]);
+});

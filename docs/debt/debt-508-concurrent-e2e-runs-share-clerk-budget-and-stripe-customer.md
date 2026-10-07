@@ -37,7 +37,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
     - The reset looks it up again before each mutating test (`tests/e2e/helpers/e2e-reset-shared.ts`, `resolveClerkUserIdByEmail`).
     - The paid-subscription restore re-runs the seed, which looks it up once more (`tests/e2e/helpers/subscription.ts`, `restoreE2EUserPaidSubscription`; `tests/e2e/helpers/paid-checkout.ts`).
 - **Retries are too short for rate limiting.**
-  - `fetchClerkWithRetry` (`tests/e2e/helpers/credential-health-check.ts`) retries a 429 three times, 100 ms and then 200 ms apart (`src/adapters/shared/retry-defaults.ts`). That covers about 0.3 s, and it ignores `Retry-After`.
+  - `fetchClerkWithRetry` (`tests/e2e/helpers/credential-health-check.ts`) gives a 429 three attempts, waiting 100 ms and then 200 ms between them (`src/adapters/shared/retry-defaults.ts`). That covers about 0.3 s, and it ignores `Retry-After`.
   - The seed's lookup (`tests/e2e/helpers/seed-test-user.ts`) does not retry.
   - BUG-312 added these retries for brief network failures, not rate limiting.
 - **One Stripe customer per lane.**
@@ -73,15 +73,16 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 
 - **Stripe, per run.**
   - CI sets `E2E_STRIPE_OWNER: github-ci-${{ github.run_id }}-${{ github.run_attempt }}`. A re-run keeps its `run_id`, so the attempt keeps each attempt separate.
-  - The local orchestrator sets `local-clone-<instanceId>` for the Playwright step, from the resolver that gives each clone its database port. A value exported in the shell still wins, and `.env.local` no longer needs one.
-  - Global setup sweeps stale customers, and global teardown deletes the run's own CI customer. Both only warn on failure. A cancelled CI run never reaches teardown, so the sweep is the main cleanup, not a backstop.
-  - The sweep deletes at most 10 customers per run. It takes only test-mode customers whose owner matches `^github-ci-\d+-\d+$`, created more than a day ago, other than the current run's.
+  - The local orchestrator sets `local-clone-<instanceId>` for the Playwright step, from the resolver that gives each clone its database port, on isolated and existing-database runs alike. Only a value exported in the shell overrides it; one in `.env.local` is ignored.
+  - Global setup sweeps stale customers, and global teardown deletes the run's own CI customer. Both only warn on failure, and each stops at its own deadline (10 and 8 seconds), since a Playwright timeout cannot be caught. A cancelled CI run never reaches teardown, so the sweep is the main cleanup, not a backstop.
+  - The sweep deletes at most 10 customers per setup attempt. It takes only test-mode customers whose owner matches `^github-ci-\d+-\d+$`, created more than a day ago, other than the current run's.
   - The shared Clerk user and the existing `github-ci`, `local-dev` and `github-stripe-hosted-smoke` customers never match that pattern, so they are never deleted or replaced.
   - The daily hosted-checkout smoke keeps its owner, since it is already serialized by its own group.
 - **Clerk, once per run.**
   - Preflight returns the Clerk user ID, and the seed takes it instead of looking it up again.
-  - The reset and the restore helpers read it from the run's own database, where the seed wrote it.
-  - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, waiting up to 10 seconds. The seed's lookup, when one is still needed, uses it.
+  - The reset and the restore helpers find the user in the run's own database, where the seed wrote it: the reset by email, ignoring case, since Clerk stores emails lowercased and the app writes Clerk's back.
+  - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, until one call's waits total 10 seconds, which keeps preflight's two calls inside setup's 60-second budget. The seed's lookup, when one is still needed, uses it.
+  - Each `local-clone-*` customer keeps its active test subscription for as long as its clone exists; a deleted clone's customer is harmless test-mode clutter.
 - **Not serialized.** Serializing would make every run wait for a problem that isolation and fewer calls remove.
 - **Until DEBT-503 item 1 ships:**
   - The app's per-request lookups still share the budget, so two overlapping runs can still meet a 429.
@@ -90,10 +91,10 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 
 ## Verification
 
-- [ ] CI's E2E step tags its customer by run and attempt, and `tests/ci-workflow.test.ts` pins it. The local orchestrator sets the per-clone owner, and its test pins the precedence.
+- [ ] CI's E2E step tags its customer by run and attempt, and `tests/e2e-test-identity-workflows.test.ts` pins it. The local orchestrator sets the per-clone owner, and its test pins the precedence.
 - [ ] Helper tests prove that:
   - a 429 with `Retry-After` is retried after that delay, in both header forms;
-  - the reset makes no Clerk call;
+  - the reset needs no Clerk secret, since it no longer imports a Clerk call;
   - the seed calls Clerk only when no ID is passed in.
-- [ ] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per run. A CI run's log shows teardown deleting its own customer.
+- [ ] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per setup attempt, and that cleanup stops at its deadline. A CI run's log shows teardown deleting its own customer.
 - [ ] Two overlapping CI runs both pass. This depends on DEBT-503 item 1, so it is checked after that ships.

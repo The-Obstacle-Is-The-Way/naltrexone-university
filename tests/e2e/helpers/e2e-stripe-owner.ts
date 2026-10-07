@@ -1,4 +1,3 @@
-import type Stripe from 'stripe';
 import { isUsableStripeTestKey } from '@/tests/shared/stripe-provider-gate';
 import { createStripeTestClient } from './stripe-test-client';
 
@@ -12,6 +11,12 @@ import { createStripeTestClient } from './stripe-test-client';
 const DISPOSABLE_CI_OWNER = /^github-ci-\d+-\d+$/;
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 const MAX_SWEEP_DELETES = 10;
+// A Playwright timeout cannot be caught, so cleanup keeps inside its test's
+// timeout by stopping at its own deadline: the sweep within setup's 60-second
+// preparation budget, the delete within the teardown's 30 seconds after
+// sign-out's 20.
+const SWEEP_DEADLINE_MS = 10_000;
+const TEARDOWN_DEADLINE_MS = 8_000;
 
 export type E2EStripeCustomer = {
   id: string;
@@ -92,17 +97,30 @@ export async function deleteRunCustomer(input: {
   owner: string;
 }): Promise<{ deleted: number }> {
   if (!isDisposableCiOwner(input.owner)) return { deleted: 0 };
-  let deleted = 0;
-  for await (const customer of input.store.listByEmail(input.email)) {
-    if (customer.livemode || ownerOf(customer) !== input.owner) continue;
-    await input.store.delete(customer.id);
-    deleted += 1;
-  }
-  return { deleted };
+  // Collected first: deleting while paging would leave the next page's
+  // cursor on a deleted customer.
+  const own = (await collect(input.store.listByEmail(input.email))).filter(
+    (customer) => !customer.livemode && ownerOf(customer) === input.owner,
+  );
+  for (const customer of own) await input.store.delete(customer.id);
+  return { deleted: own.length };
 }
 
+/** The Stripe customer calls the store makes; the SDK client satisfies it. */
+type StripeCustomerApi = {
+  customers: {
+    list(params: { email: string; limit: number }): AsyncIterable<{
+      id: string;
+      created: number;
+      livemode: boolean;
+      metadata: Record<string, string> | null;
+    }>;
+    del(id: string): Promise<unknown>;
+  };
+};
+
 export function createStripeCustomerStore(
-  stripe: Stripe,
+  stripe: StripeCustomerApi,
 ): E2EStripeCustomerStore {
   return {
     async *listByEmail(email) {
@@ -135,6 +153,25 @@ export function createStripeCustomerStore(
   };
 }
 
+class E2EStripeOwnerDeadline extends Error {
+  constructor() {
+    super('Stripe cleanup ran past its deadline');
+    this.name = 'E2EStripeOwnerDeadline';
+  }
+}
+
+async function withinDeadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new E2EStripeOwnerDeadline()), ms);
+  });
+  try {
+    return await Promise.race([work, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 type E2EStripeOwnerEnv = Readonly<Record<string, string | undefined>>;
 
 type EntryPointInput = {
@@ -143,6 +180,7 @@ type EntryPointInput = {
   warn?: (message: string) => void;
   /** Count-only evidence for the run log; never an ID. */
   info?: (message: string) => void;
+  deadlineMs?: number;
 };
 
 function resolveEntryPoint({
@@ -186,12 +224,15 @@ export async function sweepE2EStripeCustomers(
   const target = resolveEntryPoint(input);
   if (!target) return;
   try {
-    const { deleted, failed } = await sweepStaleCiCustomers({
-      store: target.store,
-      email: target.email,
-      currentOwner: target.owner,
-      nowMs: input.nowMs ?? Date.now(),
-    });
+    const { deleted, failed } = await withinDeadline(
+      sweepStaleCiCustomers({
+        store: target.store,
+        email: target.email,
+        currentOwner: target.owner,
+        nowMs: input.nowMs ?? Date.now(),
+      }),
+      input.deadlineMs ?? SWEEP_DEADLINE_MS,
+    );
     if (deleted > 0) {
       (input.info ?? console.log)(
         `[E2E_STRIPE_OWNER] Swept ${deleted} stale per-run CI customer(s).`,
@@ -219,7 +260,10 @@ export async function deleteE2ERunStripeCustomer(
   if (!target) return;
   if (!isDisposableCiOwner(target.owner)) return;
   try {
-    const { deleted } = await deleteRunCustomer(target);
+    const { deleted } = await withinDeadline(
+      deleteRunCustomer(target),
+      input.deadlineMs ?? TEARDOWN_DEADLINE_MS,
+    );
     (input.info ?? console.log)(
       `[E2E_STRIPE_OWNER] Deleted ${deleted} customer(s) of this run attempt.`,
     );

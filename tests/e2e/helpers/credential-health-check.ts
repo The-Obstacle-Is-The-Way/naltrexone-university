@@ -192,7 +192,9 @@ function isTransientClerkFailure(error: unknown): boolean {
 // DEBT-508: concurrent E2E runs share one Clerk development instance's rate
 // budget, and its 429 names how long to wait. A retry sooner meets the same
 // 429, so a transient answer's Retry-After (RFC 9110 §10.2.3, seconds or an
-// HTTP date) lengthens the wait, up to this bound; it never shortens it.
+// HTTP date) lengthens the wait; it never shortens it. Setup's budget holds
+// preflight's two Clerk calls, so one call's waits stop following Retry-After
+// once they total this much.
 export const CLERK_RETRY_AFTER_MAX_MS = 10_000;
 
 export function parseRetryAfterMs(
@@ -217,6 +219,7 @@ export async function fetchClerkWithRetry(
   { sleep = delay, now = Date.now }: ClerkRetryClock = {},
 ): Promise<Response> {
   let retryAfterMs: number | null = null;
+  let waitedMs = 0;
   try {
     return await retry(
       async () => {
@@ -244,13 +247,14 @@ export async function fetchClerkWithRetry(
             void error.response.body?.cancel().catch(() => {});
           }
         },
-        sleep: (backoffMs) =>
-          sleep(
-            Math.min(
-              Math.max(backoffMs, retryAfterMs ?? 0),
-              Math.max(backoffMs, CLERK_RETRY_AFTER_MAX_MS),
-            ),
-          ),
+        sleep: (backoffMs) => {
+          const waitMs = Math.max(
+            backoffMs,
+            Math.min(retryAfterMs ?? 0, CLERK_RETRY_AFTER_MAX_MS - waitedMs),
+          );
+          waitedMs += waitMs;
+          return sleep(waitMs);
+        },
       },
     );
   } catch (error) {
