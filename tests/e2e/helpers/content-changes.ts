@@ -15,11 +15,15 @@ import {
 
 export type ReviewedAttempt = { slug: string; attemptId: string };
 
+export type AnswerOutcome = 'correct' | 'incorrect';
+
 export type ContentChanges = {
   /** The E2E user answered correctly; the key then moved (ADR-022 Decision 4). */
   keyCorrectedAttempt(): Promise<ReviewedAttempt>;
   /** The E2E user answered; the question was then placed under review. */
-  heldAttempt(): Promise<ReviewedAttempt>;
+  heldAttempt(outcome?: AnswerOutcome): Promise<ReviewedAttempt>;
+  /** The E2E user answered; nothing changed since. */
+  scoredAttempt(outcome?: AnswerOutcome): Promise<ReviewedAttempt>;
   /** The E2E user bookmarked the question; it was then withdrawn. */
   withdrawnBookmark(): Promise<void>;
   /** Deletes the dedicated questions and closes the connection. */
@@ -55,8 +59,9 @@ export async function openContentChanges(): Promise<ContentChanges> {
       questionIds.push(created.id);
       return created;
     };
-    const answerCorrectly = async (
+    const answer = async (
       created: Awaited<ReturnType<typeof question>>,
+      outcome: AnswerOutcome = 'correct',
     ) => {
       const [row] = await db
         .insert(schema.attempts)
@@ -64,8 +69,11 @@ export async function openContentChanges(): Promise<ContentChanges> {
           userId: user.id,
           questionId: created.id,
           questionRevisionId: created.revisionId,
-          selectedChoiceId: created.correctChoiceId,
-          isCorrect: true,
+          selectedChoiceId:
+            outcome === 'correct'
+              ? created.correctChoiceId
+              : created.incorrectChoiceId,
+          isCorrect: outcome === 'correct',
           timeSpentSeconds: 10,
         })
         .returning({ id: schema.attempts.id });
@@ -76,14 +84,19 @@ export async function openContentChanges(): Promise<ContentChanges> {
     return {
       async keyCorrectedAttempt() {
         const created = await question('key');
-        const attemptId = await answerCorrectly(created);
+        const attemptId = await answer(created);
         await reviseQuestion(db, created, 'key');
         return { slug: created.slug, attemptId };
       },
-      async heldAttempt() {
+      async heldAttempt(outcome) {
         const created = await question('held');
-        const attemptId = await answerCorrectly(created);
+        const attemptId = await answer(created, outcome);
         await setQuestionState(db, created, 'under_review');
+        return { slug: created.slug, attemptId };
+      },
+      async scoredAttempt(outcome) {
+        const created = await question('scored');
+        const attemptId = await answer(created, outcome);
         return { slug: created.slug, attemptId };
       },
       async withdrawnBookmark() {

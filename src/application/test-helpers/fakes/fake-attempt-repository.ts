@@ -14,7 +14,7 @@ import type {
 } from '@/src/application/ports/repositories';
 import type { Attempt, Question } from '@/src/domain/entities';
 import { createAttempt } from '@/src/domain/entities/attempt';
-import { countsTowardScore } from '@/src/domain/services';
+import { countsTowardScore, ungradedReason } from '@/src/domain/services';
 import { isOmittedOutcome } from '@/src/domain/value-objects';
 import { listedRevisions } from './fake-question-repository';
 
@@ -292,8 +292,12 @@ export class FakeAttemptRepository implements AttemptRepository {
     offset: number,
     filters?: AttemptedQuestionsFilters,
   ): Promise<readonly AttemptedQuestionSummary[]> {
+    const sort = filters?.sort ?? null;
+    if (sort === 'incorrect-first' || sort === 'correct-first') {
+      this.requireQuestionsToGrade();
+    }
     return this.getFilteredAttemptedCandidates(userId, filters)
-      .sort((a, b) => this.compareAttemptedCandidates(a, b, filters?.sort))
+      .sort((a, b) => this.compareAttemptedCandidates(a, b, sort))
       .slice(offset, offset + limit)
       .map((a) => ({
         questionId: a.questionId,
@@ -329,12 +333,15 @@ export class FakeAttemptRepository implements AttemptRepository {
 
     const candidates = [...mostRecentByQuestionId.values()];
 
+    // ADR-022 Amendment 2026-10-05 (DEBT-498): as each row shows, a result
+    // whose content is in doubt or whose key was corrected is under neither.
     const result = filters?.result ?? null;
+    if (result !== null) this.requireQuestionsToGrade();
     const filteredByResult =
       result === 'correct'
-        ? candidates.filter((a) => a.isCorrect)
+        ? candidates.filter((a) => a.isCorrect && !this.isResultNotScored(a))
         : result === 'incorrect'
-          ? candidates.filter((a) => !a.isCorrect)
+          ? candidates.filter((a) => !a.isCorrect && !this.isResultNotScored(a))
           : candidates;
 
     const source = filters?.source ?? null;
@@ -384,18 +391,10 @@ export class FakeAttemptRepository implements AttemptRepository {
       return byRecency;
     }
 
-    if (sort === 'incorrect-first') {
-      if (a.isCorrect !== b.isCorrect) {
-        return a.isCorrect ? 1 : -1;
-      }
-      return byRecency;
-    }
-
-    if (sort === 'correct-first') {
-      if (a.isCorrect !== b.isCorrect) {
-        return a.isCorrect ? -1 : 1;
-      }
-      return byRecency;
+    if (sort === 'incorrect-first' || sort === 'correct-first') {
+      const rankDiff =
+        this.getResultSortRank(a, sort) - this.getResultSortRank(b, sort);
+      return rankDiff !== 0 ? rankDiff : byRecency;
     }
 
     const difficultyRankDiff =
@@ -405,6 +404,40 @@ export class FakeAttemptRepository implements AttemptRepository {
     }
 
     return byRecency;
+  }
+
+  // ADR-022 Amendment 2026-10-05 (DEBT-498): a result no score counts sorts
+  // after every graded one, ranked with neither verdict.
+  private getResultSortRank(
+    attempt: InMemoryAttempt,
+    sort: 'incorrect-first' | 'correct-first',
+  ): number {
+    if (this.isResultNotScored(attempt)) return 2;
+    const correctRank = sort === 'correct-first' ? 0 : 1;
+    return attempt.isCorrect ? correctRank : 1 - correctRank;
+  }
+
+  // A latest attempt no score counts: its question's content is in doubt, the
+  // question is not listed (gone), or it was graded on a key corrected since.
+  private isResultNotScored(attempt: InMemoryAttempt): boolean {
+    const question = this.answeredQuestion(attempt);
+    if (!question) return true;
+    return (
+      ungradedReason({
+        availability: question.availability,
+        keyCorrected:
+          !isOmittedOutcome(attempt.outcome) && question.answerKeyChanged,
+      }) !== null
+    );
+  }
+
+  private requireQuestionsToGrade(): void {
+    if (!this.questions) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'FakeAttemptRepository requires questions metadata to filter or sort by result',
+      );
+    }
   }
 
   private getDifficultySortRank(attempt: InMemoryAttempt): number {

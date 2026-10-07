@@ -5,9 +5,11 @@ import {
 } from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
 import {
+  type AttemptScoreHarness,
   runAttemptScoreContract,
   type ScoredAttemptSeed,
 } from '@/tests/shared/attempt-score-contract';
+import { runAttemptedQuestionResultContract } from '@/tests/shared/attempted-question-result-contract';
 import { FakeAttemptRepository } from './fake-attempt-repository';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -30,7 +32,7 @@ function createQuestionNow(now: ScoredAttemptSeed['now']) {
   });
 }
 
-runAttemptScoreContract('FakeAttemptRepository', async () => ({
+const createHarness = async (): Promise<AttemptScoreHarness> => ({
   async seed(attempts) {
     const userId = crypto.randomUUID();
     const now = new Date('2026-10-03T12:00:00Z');
@@ -105,6 +107,12 @@ runAttemptScoreContract('FakeAttemptRepository', async () => ({
         itemsWithoutFairChance,
       },
     );
-    return { repository, userId, now };
+    const questionIds = new Map(
+      [...questionByKey].map(([key, question]) => [key, question.id]),
+    );
+    return { repository, userId, now, questionIds };
   },
-}));
+});
+
+runAttemptScoreContract('FakeAttemptRepository', createHarness);
+runAttemptedQuestionResultContract('FakeAttemptRepository', createHarness);

@@ -211,6 +211,7 @@ export function ExamReviewView({
               mode: review.mode,
               answered: row.isAnswered,
               availability: row.availability,
+              keyCorrected: row.isAnswered && row.answerKeyChanged,
             })
               ? []
               : ["Won't be scored"]),

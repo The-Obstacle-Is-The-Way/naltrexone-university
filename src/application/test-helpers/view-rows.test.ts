@@ -18,6 +18,7 @@ describe('view-row factories', () => {
       availability: 'available',
       questionId: expect.stringMatching(UUID_PATTERN),
       isCorrect: false,
+      answerKeyChanged: false,
       sessionId: null,
       sessionMode: null,
       slug: 'q-1',

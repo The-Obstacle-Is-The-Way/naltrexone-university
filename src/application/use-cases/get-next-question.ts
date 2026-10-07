@@ -268,6 +268,9 @@ export class GetNextQuestionUseCase {
           mode: session.mode,
           answered: targetState.latestSelectedChoiceId !== null,
           availability: question.availability,
+          keyCorrected:
+            targetState.latestSelectedChoiceId !== null &&
+            question.answerKeyChanged,
         }),
         questionId: question.id,
         session: {
