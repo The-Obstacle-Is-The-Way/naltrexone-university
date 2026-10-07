@@ -161,7 +161,9 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
   }
 
   // DEBT-508: global setup's seed writes the E2E user each run, so the reset
-  // finds it by email here instead of asking Clerk before every test.
+  // finds it by email here instead of asking Clerk before every test. Clerk
+  // stores emails lowercased and the app writes Clerk's back, so case is
+  // ignored.
   async function resolveAppUserIdByEmail(input: {
     databaseUrl?: string;
     sql?: SharedResetSql;
@@ -181,7 +183,7 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
       const rows = await sql<{ id: string }[]>`
         SELECT id
         FROM users
-        WHERE email = ${input.email}
+        WHERE lower(email) = lower(${input.email})
         LIMIT 1
       `;
       return rows[0]?.id ?? null;

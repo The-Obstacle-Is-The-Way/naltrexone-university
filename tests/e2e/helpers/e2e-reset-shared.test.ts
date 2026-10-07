@@ -179,8 +179,12 @@ describe('createSharedE2EResetSupport', () => {
       email: 'e2e@example.com',
     });
 
+    // Clerk stores emails lowercased, and the app writes Clerk's email back,
+    // so the lookup ignores case.
     const [strings, ...values] = sqlClient.mock.calls[0] ?? [[]];
-    expect(strings.join('?')).toMatch(/FROM users\s+WHERE email = \?/);
+    expect(strings.join('?')).toMatch(
+      /FROM users\s+WHERE lower\(email\) = lower\(\?\)/,
+    );
     expect(values).toEqual(['e2e@example.com']);
   });
 

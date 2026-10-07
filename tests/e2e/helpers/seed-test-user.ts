@@ -38,7 +38,7 @@ export async function seedTestSubscription(
   const databaseUrl = process.env.DATABASE_URL;
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-  const email = process.env.E2E_CLERK_USER_USERNAME;
+  const email = process.env.E2E_CLERK_USER_USERNAME?.trim();
   const e2eStripeOwner = resolveE2EStripeOwner(stripeSecretKey);
   const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
 
@@ -100,7 +100,7 @@ export async function seedTestSubscription(
  */
 export async function reseedTestSubscription(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
-  const email = process.env.E2E_CLERK_USER_USERNAME;
+  const email = process.env.E2E_CLERK_USER_USERNAME?.trim();
   if (!databaseUrl || !email) {
     throw new Error(
       'Missing required env vars for E2E subscription reseeding: DATABASE_URL, E2E_CLERK_USER_USERNAME',
@@ -111,7 +111,7 @@ export async function reseedTestSubscription(): Promise<void> {
   let clerkUserId: string | undefined;
   try {
     const [row] = await sql<{ clerk_user_id: string }[]>`
-      SELECT clerk_user_id FROM users WHERE email = ${email} LIMIT 1
+      SELECT clerk_user_id FROM users WHERE lower(email) = lower(${email}) LIMIT 1
     `;
     clerkUserId = row?.clerk_user_id;
   } finally {

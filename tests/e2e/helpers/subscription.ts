@@ -59,7 +59,7 @@ async function resolveE2EBillingState(
       sc.stripe_customer_id AS "stripeCustomerId"
     FROM users u
     INNER JOIN stripe_customers sc ON sc.user_id = u.id
-    WHERE u.email = ${email}
+    WHERE lower(u.email) = lower(${email})
     LIMIT 1
   `;
   const state = rows[0];

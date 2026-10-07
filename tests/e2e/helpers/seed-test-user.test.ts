@@ -284,10 +284,18 @@ describe('seedTestSubscription', () => {
     await reseedTestSubscription();
 
     expect(globalThis.fetch).not.toHaveBeenCalled();
-    expect(storedClient.mock.calls[0]).toContain(
-      'e2e-test@addictionboards.com',
-    );
+    const [strings, ...values] = storedClient.mock.calls[0] ?? [[]];
+    expect(strings.join('?')).toContain('WHERE lower(email) = lower(?)');
+    expect(values).toEqual(['e2e-test@addictionboards.com']);
     expect(storedClient.mock.calls[1]).toContain('clerk_user_stored');
+  });
+
+  it('writes the E2E email trimmed', async () => {
+    vi.stubEnv('E2E_CLERK_USER_USERNAME', '  e2e-test@addictionboards.com ');
+
+    await seedTestSubscription({ clerkUserId: 'clerk_user_given' });
+
+    expect(sqlClient.mock.calls[0]).toContain('e2e-test@addictionboards.com');
   });
 
   it('refuses to reseed before global setup has seeded the user', async () => {
