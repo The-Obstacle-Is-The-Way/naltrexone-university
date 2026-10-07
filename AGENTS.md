@@ -628,17 +628,21 @@ to one review an hour at 60 or more
 used to buy an automatic incremental review, though only the final head's
 approval counts: in the week before this decision, the heaviest PRs drew 4 to
 12 review runs each, counting only runs that posted a review.
-`.coderabbit.yaml` therefore sets `auto_incremental_review: false`, so a plain
-push starts no review. CodeRabbit still reviews by itself when a PR opens or a
-draft is marked ready, and its docs also list force-pushes and rebases as
-review events; otherwise it reviews when asked with `@coderabbitai full review`.
+`.coderabbit.yaml` therefore sets `auto_incremental_review: false`, so a push
+starts no review. CodeRabbit still reviews by itself when a PR opens or a draft
+is marked ready; otherwise it reviews only when asked with
+`@coderabbitai full review`, so request one after any push rather than wait.
+Its FAQ still lists force-pushes and rebases as review events, so they may
+spend one: avoid them.
 Dependabot's PRs, rebases included, spend nothing: CodeRabbit skips bot
 authors ("Bot user detected") and reviews one only when asked.
 Open PRs as drafts until the full gate passes, since a PR opened ready spends a
 review at once. Fix findings in one push, and sync with `dev` before requesting
 a review. After the first review, request `@coderabbitai full review` rather
 than moving the PR back to draft and marking it ready again. A later sync costs
-no review, because the merge command carries an unchanged approval (item 7).
+no review when it leaves the PR's reviewable diff unchanged, because the merge
+command then carries the approval (item 7); a sync that changes that diff needs
+a fresh review.
 
 ### The Rule
 
