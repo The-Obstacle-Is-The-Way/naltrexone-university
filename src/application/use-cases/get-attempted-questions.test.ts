@@ -7,6 +7,7 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import {
   createAttempt,
+  createChoice,
   createQuestion,
   createTag,
 } from '@/src/domain/test-helpers';
@@ -50,6 +51,78 @@ describe('GetAttemptedQuestionsUseCase', () => {
 
   // ADR-022 Decision 2: an omitted attempt is not an answer, so the row for
   // a question no longer published shows nothing of it.
+  // DEBT-498: History shows a result no score counts as "Not scored", so each
+  // answered row says whether its key was corrected since.
+  it('marks a latest answer graded on a key corrected since, and no other', async () => {
+    const keyed = (
+      questionId: string,
+      correctLabel: 'A' | 'B',
+      revisionId?: string,
+    ) =>
+      createQuestion({
+        id: questionId,
+        slug: questionId,
+        ...(revisionId ? { revisionId } : {}),
+        choices: (['A', 'B'] as const).map((label, index) =>
+          createChoice({
+            questionId,
+            label,
+            textMd: `Choice ${label}`,
+            isCorrect: label === correctLabel,
+            sortOrder: index + 1,
+          }),
+        ),
+      });
+    const revisionsOf = (questionId: string) => ({
+      current: keyed(questionId, 'A'),
+      older: keyed(questionId, 'B', crypto.randomUUID()),
+    });
+    const answeredOnOlder = revisionsOf('q1');
+    const omittedOnOlder = revisionsOf('q2');
+    const answeredOnCurrent = revisionsOf('q3');
+    const questions = [
+      answeredOnOlder,
+      omittedOnOlder,
+      answeredOnCurrent,
+    ].flatMap(({ current, older }) => [current, older]);
+    const attempts = [
+      createAttempt({
+        userId: 'user-1',
+        questionId: 'q1',
+        questionRevisionId: answeredOnOlder.older.revisionId,
+        answeredAt: new Date('2026-02-01T11:00:00Z'),
+      }),
+      createAttempt({
+        userId: 'user-1',
+        questionId: 'q2',
+        questionRevisionId: omittedOnOlder.older.revisionId,
+        outcome: omittedOutcome(),
+        answeredAt: new Date('2026-02-01T10:00:00Z'),
+      }),
+      createAttempt({
+        userId: 'user-1',
+        questionId: 'q3',
+        questionRevisionId: answeredOnCurrent.current.revisionId,
+        answeredAt: new Date('2026-02-01T09:00:00Z'),
+      }),
+    ];
+    const useCase = new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository(attempts, { questions }),
+      new FakeQuestionRepository(questions),
+      new FakeLogger(),
+    );
+
+    const result = await useCase.execute({
+      userId: 'user-1',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(
+      result.rows.map((row) => (row.isAvailable ? row.answerKeyChanged : null)),
+    ).toEqual([true, false, false]);
+  });
+
   it('lists an omitted attempt on a question withdrawn since as unavailable', async () => {
     const withdrawn = createQuestion({
       id: 'q1',
@@ -218,6 +291,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
           availability: 'available',
           questionId: 'q1',
           isCorrect: false,
+          answerKeyChanged: false,
           sessionId: null,
           sessionMode: null,
           slug: 'q-1',
@@ -231,6 +305,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
           availability: 'available',
           questionId: 'q2',
           isCorrect: true,
+          answerKeyChanged: false,
           sessionId: null,
           sessionMode: null,
           slug: 'q-2',
@@ -244,6 +319,7 @@ describe('GetAttemptedQuestionsUseCase', () => {
           availability: 'available',
           questionId: 'q3',
           isCorrect: true,
+          answerKeyChanged: false,
           sessionId: null,
           sessionMode: null,
           slug: 'q-3',

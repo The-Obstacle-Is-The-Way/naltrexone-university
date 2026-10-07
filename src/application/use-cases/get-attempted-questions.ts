@@ -39,6 +39,12 @@ export type AvailableAttemptedQuestionRow = {
   availability: QuestionAvailability;
   questionId: string;
   isCorrect: boolean;
+  /**
+   * Whether the latest attempt answered on a key corrected since (ADR-022
+   * Decision 4). False for an omitted attempt, which no key graded. A result
+   * so graded is shown as "Not scored" (Amendment 2026-10-05, DEBT-498).
+   */
+  answerKeyChanged: boolean;
   sessionId: string | null;
   sessionMode: 'tutor' | 'exam' | null;
   slug: string;
@@ -131,6 +137,8 @@ export class GetAttemptedQuestionsUseCase {
               availability: question.availability,
               questionId: question.id,
               isCorrect: attempted.isCorrect,
+              answerKeyChanged:
+                !attempted.isOmitted && question.answerKeyChanged,
               sessionId: attempted.sessionId,
               sessionMode: attempted.sessionMode,
               slug: question.slug,
