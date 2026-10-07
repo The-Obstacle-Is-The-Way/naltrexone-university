@@ -153,18 +153,25 @@ describe('createE2ECommandPlan', () => {
       ).toBe('mine');
     });
 
-    it('adds no owner to an existing-database run', () => {
+    // .env.local is loaded by Playwright after this plan, without overriding,
+    // so an existing-database run needs the owner here too, or a real key
+    // leaves the seed without one.
+    it.each([
+      [{}, 'local-clone-bug245'],
+      [{ E2E_STRIPE_OWNER: 'github-ci-1-1' }, 'github-ci-1-1'],
+    ])('gives an existing-database run the same owner: %o', (extra, owner) => {
       const plan = createE2ECommandPlan({
+        cwd: '/repo/a',
         env: {
           E2E_USE_EXISTING_DATABASE: 'true',
+          LOCAL_TEST_INSTANCE: 'bug245',
           DATABASE_URL:
             'postgresql://postgres:postgres@127.0.0.1:5432/addiction_boards_test',
+          ...extra,
         },
       });
 
-      expect(plan.map((step) => step.env?.E2E_STRIPE_OWNER)).toEqual([
-        undefined,
-      ]);
+      expect(plan.map((step) => step.env?.E2E_STRIPE_OWNER)).toEqual([owner]);
     });
   });
 
@@ -211,6 +218,7 @@ describe('createE2ECommandPlan', () => {
         E2E_USE_EXISTING_DATABASE: 'true',
         ALLOW_NON_LOCAL_DATABASE_URL: 'true',
         DATABASE_URL: 'postgresql://deploy-target.example/app',
+        LOCAL_TEST_INSTANCE: 'deploy-check',
       },
       playwrightArgs: [],
     });
@@ -220,6 +228,7 @@ describe('createE2ECommandPlan', () => {
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test'],
+        env: { E2E_STRIPE_OWNER: 'local-clone-deploy-check' },
         omitInheritedEnv: ['NO_COLOR'],
       },
     ]);
