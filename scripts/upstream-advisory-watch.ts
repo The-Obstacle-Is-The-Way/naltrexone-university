@@ -109,8 +109,13 @@ export type AdvisoryIssue = {
 
 export type AdvisoryIssues = {
   list(): Promise<AdvisoryIssue[]>;
-  create(title: string, body: string): Promise<void>;
+  // An urgent issue must reach a person directly, not only the issue list.
+  create(title: string, body: string, urgent: boolean): Promise<void>;
 };
+
+// The playbook ships a critical or high fix the same day when it affects the
+// app, so those advisories are urgent; medium and low wait in the issue list.
+const URGENT_SEVERITIES: ReadonlySet<string> = new Set(['critical', 'high']);
 
 function packagesOf(advisory: UpstreamAdvisory): string[] {
   return [...new Set(advisory.vulnerabilities.map((entry) => entry.package))];
@@ -170,6 +175,7 @@ export async function raiseUpstreamAdvisories(
     await issues.create(
       `Upstream security advisory ${advisory.ghsaId} (${advisory.severity}): ${packagesOf(advisory).join(', ')}`,
       describeAdvisory(advisory, manifest),
+      URGENT_SEVERITIES.has(advisory.severity),
     );
     raised.push(advisory.ghsaId);
   }
@@ -300,8 +306,12 @@ export async function listUpstreamAdvisories(
     .map(parseAdvisory);
 }
 
+// GitHub notifies an assignee whatever their watch setting, so urgent issues
+// are assigned to the repository owner (set by GitHub Actions). A local run
+// has no owner and opens the issue unassigned.
 export function createGithubAdvisoryIssues(
   run: typeof gh = gh,
+  urgentAssignee: string | null = process.env.GITHUB_REPOSITORY_OWNER ?? null,
 ): AdvisoryIssues {
   return {
     // A direct, paginated listing rather than the eventually consistent search
@@ -341,8 +351,16 @@ export function createGithubAdvisoryIssues(
       }
       return issues;
     },
-    async create(title, body) {
-      run(['issue', 'create', '--title', title, '--body', body]);
+    async create(title, body, urgent) {
+      run([
+        'issue',
+        'create',
+        '--title',
+        title,
+        '--body',
+        body,
+        ...(urgent && urgentAssignee ? ['--assignee', urgentAssignee] : []),
+      ]);
     },
   };
 }

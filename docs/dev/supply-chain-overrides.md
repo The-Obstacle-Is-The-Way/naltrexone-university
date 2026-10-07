@@ -146,6 +146,13 @@ every direct dependency, not a hand-picked few.
   dependency fails CI until the map is updated.
 - One unreadable repository does not stop the others: the run raises what it
   can read, then fails and names the repositories it could not.
+- Critical and high advisories are assigned to the repository owner. GitHub
+  notifies an assignee whatever their watch setting, and the same-day rule
+  needs someone to see them. Medium and low advisories open unassigned. In the
+  12 months to 2026-10-07 the watched repositories published 81 advisories:
+  12 critical, 33 high, 32 medium and 4 low. Most concern features or versions
+  this app does not use, so the issue body gives `package.json`'s pins for a
+  quick triage.
 
 Triage each issue with the rule above, record the outcome in it, and close it.
 Transitive dependencies are left to Dependabot and `pnpm audit`.

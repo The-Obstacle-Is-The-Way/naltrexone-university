@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '../tests/shared/process-env';
+import {
   type AdvisoryIssue,
   type AdvisoryIssues,
   createGithubAdvisoryIssues,
@@ -19,21 +23,25 @@ import {
 
 vi.mock('node:child_process', () => ({ execFileSync: vi.fn() }));
 
+const originalEnv = snapshotProcessEnv();
+
 afterEach(() => {
+  restoreProcessEnv(originalEnv);
   vi.resetAllMocks();
 });
 
 class MemoryIssues implements AdvisoryIssues {
-  issues: (AdvisoryIssue & { body: string })[] = [];
+  issues: (AdvisoryIssue & { body: string; urgent: boolean })[] = [];
   async list() {
     return this.issues;
   }
-  async create(title: string, body: string) {
+  async create(title: string, body: string, urgent: boolean) {
     this.issues.push({
       number: this.issues.length + 1,
       title,
       body,
       state: 'OPEN',
+      urgent,
     });
   }
 }
@@ -92,6 +100,7 @@ describe('raising upstream advisories', () => {
         title: 'Upstream security advisory GHSA-aaaa-bbbb-cccc (high): next',
         body: '',
         state,
+        urgent: true,
       });
       expect(
         await raiseUpstreamAdvisories([advisory()], manifest, issues),
@@ -153,6 +162,19 @@ describe('raising upstream advisories', () => {
       await raiseUpstreamAdvisories([advisory(), advisory()], manifest, issues),
     ).toEqual(['GHSA-aaaa-bbbb-cccc']);
     expect(issues.issues).toHaveLength(1);
+  });
+
+  // The playbook ships a critical or high fix the same day, so those issues
+  // must reach a person directly; medium and low stay in the issue list.
+  it.each([
+    ['critical', true],
+    ['high', true],
+    ['medium', false],
+    ['low', false],
+  ] as const)('marks a %s advisory urgent: %s', async (severity, urgent) => {
+    const issues = new MemoryIssues();
+    await raiseUpstreamAdvisories([advisory({ severity })], manifest, issues);
+    expect(issues.issues.map((issue) => issue.urgent)).toEqual([urgent]);
   });
 
   it('propagates an issue API failure instead of reporting a delivered alert', async () => {
@@ -352,12 +374,47 @@ describe('GitHub issue adapter', () => {
 
   it('creates an issue through the default runner with a bounded argument list', async () => {
     const run = vi.mocked(execFileSync).mockReturnValue('');
-    await createGithubAdvisoryIssues().create('Alert', 'Details');
+    await createGithubAdvisoryIssues(undefined, 'repo-owner').create(
+      'Alert',
+      'Details',
+      false,
+    );
     expect(run).toHaveBeenCalledWith(
       'gh',
       ['issue', 'create', '--title', 'Alert', '--body', 'Details'],
       { encoding: 'utf8', timeout: 30_000, maxBuffer: 32 * 1024 * 1024 },
     );
+  });
+
+  it('assigns an urgent issue, so its assignee is notified whatever their watch setting', async () => {
+    const commands: string[][] = [];
+    await createGithubAdvisoryIssues((args) => {
+      commands.push(args);
+      return '';
+    }, 'repo-owner').create('Alert', 'Details', true);
+    expect(commands).toEqual([
+      [
+        'issue',
+        'create',
+        '--title',
+        'Alert',
+        '--body',
+        'Details',
+        '--assignee',
+        'repo-owner',
+      ],
+    ]);
+  });
+
+  it('still opens an urgent issue when no assignee is configured, as in a local run', async () => {
+    const commands: string[][] = [];
+    await createGithubAdvisoryIssues((args) => {
+      commands.push(args);
+      return '';
+    }, null).create('Alert', 'Details', true);
+    expect(commands).toEqual([
+      ['issue', 'create', '--title', 'Alert', '--body', 'Details'],
+    ]);
   });
 });
 
@@ -481,6 +538,7 @@ describe('watch command outcome', () => {
         return JSON.stringify([[]]);
       return '';
     });
+    process.env.GITHUB_REPOSITORY_OWNER = 'repo-owner';
     const { messages, errors, sink } = output();
     expect(await runUpstreamAdvisoryWatch(undefined, sink)).toBe(0);
     expect(errors).toEqual([]);
@@ -507,6 +565,7 @@ describe('watch command outcome', () => {
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
     ]);
     expect(creates[0]?.[5]).toMatch(/`package\.json` pins `next` at `[^`]+`/);
+    expect(creates[0]?.slice(6)).toEqual(['--assignee', 'repo-owner']);
   });
 
   it('reports a quiet run', async () => {

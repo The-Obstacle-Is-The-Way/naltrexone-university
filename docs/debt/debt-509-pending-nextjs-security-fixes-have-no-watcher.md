@@ -61,6 +61,7 @@ For the two pending Next.js fixes:
 - **What it watches.** The repository of every direct dependency, listed in the script's `DEPENDENCY_REPOSITORIES` map from each package's npm `repository` field: 41 repositories for 54 dependencies. Only `server-only`, a marker package, names none. A test fails CI when `package.json` and the map disagree, so a new dependency cannot go unwatched.
 - **What it opens.** One issue per advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.
 - **Failure handling.** Only advisories published since the start are validated, so one malformed historical entry cannot fail every run. One unreadable repository does not block the others: the run raises what it can, then fails and names it.
+- **Who it notifies.** An issue alone notifies only people watching the repository, which a repository owner can turn off. Critical and high advisories are therefore assigned to the repository owner, because GitHub notifies an assignee whatever their watch setting. Medium and low advisories open unassigned. The volume makes this split matter: in the 12 months to 2026-10-07 the watched repositories published 81 advisories, 45 of them critical or high, about one a week. 45 of the 81 were Next.js's.
 
 **Why every dependency, not a list.** The first version watched only Next.js. On 2026-10-07 a reviewer asked whether Clerk should be added. Measuring every dependency repository answered it: Clerk's 5 published advisories had all reached GitHub's database, but Sentry and Vite each had advisories that had not. That makes a hand-picked list the wrong shape, and the map plus its test the right one. The measurement is in the playbook's table.
 
@@ -77,7 +78,7 @@ Close when the watcher has a successful hosted run, the Vite fix has landed, and
 - [x] Primary sources read, and the seven published advisories assessed against this app (2026-10-07).
 - [x] Response decided under the owner's delegation, and recorded in the supply-chain playbook (2026-10-07).
 - [x] Watcher implemented test-first, covering every direct dependency's repository, with a local dry run against all 41 (2026-10-07).
-- [ ] The watcher's first hosted run on `main` succeeds and opens the three Vite issues (dispatch it after promotion).
+- [ ] The watcher's first hosted run on `main` succeeds and opens the three Vite issues, unassigned because they are medium and low (dispatch it after promotion). The first critical or high issue confirms the owner receives the assignment notification.
 - [ ] The three Vite advisories are triaged, and `vite` 8.3.3 or later lands after 2026-10-13T04:10:19Z.
 - [ ] Both pending advisories are published and assessed.
 - [ ] The fix is in production, or this record says why it does not apply.
