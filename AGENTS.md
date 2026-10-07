@@ -620,28 +620,56 @@ review of the same content.
 
 This is a **blocking requirement**. Violating this rule wastes human time fixing preventable issues.
 
+**Owner decision, 2026-10-06:** CodeRabbit reviews only what can merge.
+Its included allowance is metered per developer identity, and every agent
+session shares one. The hourly rate steps down with the past seven days' use,
+to one review an hour at 60 or more
+([rate limits](https://docs.coderabbit.ai/management/rate-limits)). Each push
+used to buy an automatic incremental review, though only the final head's
+approval counts: in the week before this decision, the heaviest PRs drew 4 to
+12 review runs each, counting only runs that posted a review.
+`.coderabbit.yaml` therefore sets `auto_incremental_review: false`, so a push
+starts no review. CodeRabbit still reviews by itself when a PR opens or a draft
+is marked ready; otherwise it reviews only when asked with
+`@coderabbitai full review`, so request one after any push rather than wait.
+Its FAQ still lists force-pushes and rebases as review events, so they may
+spend one: avoid them.
+Dependabot's PRs, rebases included, spend nothing: CodeRabbit skips bot
+authors ("Bot user detected") and reviews one only when asked.
+Open PRs as drafts until the full gate passes, since a PR opened ready spends a
+review at once. Fix findings in one push, and sync with `dev` before requesting
+a review. After the first review, request `@coderabbitai full review` rather
+than moving the PR back to draft and marking it ready again. A later sync costs
+no review when it leaves the PR's reviewable diff unchanged, because the merge
+command then carries the approval (item 7); a sync that changes that diff needs
+a fresh review.
+
 ### The Rule
 
 For feature PRs into `dev`:
 
-1. **Create the PR** via `gh pr create`
-2. **WAIT** for CodeRabbit to comment (1-2 minutes)
+1. **Create the PR as a draft** via `gh pr create --draft`, and pass the full
+   gate on a branch synced with `dev`. CodeRabbit skips drafts.
+2. **Mark it ready** with `gh pr ready`, which starts CodeRabbit's review, and
+   **WAIT** for CodeRabbit to comment (1-2 minutes, or until the next review
+   its allowance admits)
 3. **Read ALL CodeRabbit feedback** — do not skim or skip
 4. **Adjudicate every finding** before merging. A reviewer finding is a claim,
    not an order:
-   - Valid, in-scope issue that weakens a required property → fix it, push, and
-     wait for re-review.
+   - Valid, in-scope issue that weakens a required property → fix it, push the
+     fixes together, and request re-review with `@coderabbitai full review`;
+     CodeRabbit does not review a push by itself.
    - Technically possible but outside the documented threat model or invariant
      → reject it with a concrete receipt showing why no property is weakened.
    - False positive → reply with the disproving receipt for the record.
 5. **If CodeRabbit reports a rate limit, STOP.** Do not merge based on a prior partial review, a green CodeRabbit status context, or inline acknowledgements. Wait for the full cooldown shown in the rate-limit message, then explicitly request or wait for a fresh CodeRabbit review on the latest PR head commit.
-6. **Only merge after** CodeRabbit has completed a non-rate-limited review of the latest PR head AND all feedback is addressed
+6. **Only merge after** CodeRabbit has completed a non-rate-limited review of the latest PR head, or of an earlier head whose approval the merge command carries to it (item 7), AND all feedback is addressed
 7. **If a later push leaves the approval on an earlier head, refresh it rather
-   than merge on it.** CodeRabbit reviews incrementally and does not re-approve
-   while its earlier approval still stands, so a follow-up commit with no
-   findings can leave the only APPROVED review on the previous head, which the
-   merge command rejects. Dismiss that stale approval with a comment citing this
-   rule (never dismiss an unaddressed finding), then post
+   than merge on it**, unless the merge command carries it (below). CodeRabbit
+   does not review the push by itself and does not re-approve while its
+   earlier approval still stands, so the only APPROVED review stays on the
+   previous head, which the merge command rejects. Dismiss that stale approval
+   with a comment citing this rule (never dismiss an unaddressed finding), then post
    `@coderabbitai full review`; the fresh approval lands on the exact head
    (PR #1038, 2026-09-23). `@coderabbitai review` refuses with "Already reviewed
    the last commit" in this state.
@@ -657,9 +685,9 @@ For feature PRs into `dev`:
    to Check below), which needs the PR's reviewable diff unchanged since the
    approved head. A sync changes that diff when `dev` edited lines near the
    PR's own changes, within a hunk's context or close enough to join two hunks.
-   A force-push that drops the approved head from the PR cannot carry either.
-   The refusal then asks for this refresh. Sync with `dev` before requesting a
-   review when you can.
+   A force-push after which GitHub repointed the approval carries only if a
+   commit still in the PR, pushed before the approval, has the same reviewable
+   diff; after a rebase none does. The refusal then asks for this refresh. Sync with `dev` before requesting a review when you can.
 
 ### Guard and Scanner Review Discipline
 
@@ -687,7 +715,7 @@ These review-status checks apply to feature PRs. Promotions follow
 - PR was just created seconds ago → **WAIT**
 - No `coderabbitai[bot]` comment visible → **WAIT**
 - CodeRabbit posted `Rate limit exceeded` at any point on the PR after the latest review cycle began → **WAIT THE FULL COOLDOWN, REQUEST/WAIT FOR FRESH REVIEW, THEN RECHECK**
-- CodeRabbit status is green but the latest visible review was rate-limited or predates the newest commit → **DO NOT MERGE**
+- CodeRabbit status is green but the latest visible review was rate-limited, or predates the newest commit and the merge command does not carry it → **DO NOT MERGE**
 - Thinking "I'll merge now and fix later" → **STOP, that's wrong**
 - Thinking "This is just docs, doesn't need review" → **WRONG, everything needs review**
 
