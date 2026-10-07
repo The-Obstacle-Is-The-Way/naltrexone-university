@@ -169,7 +169,7 @@ If CodeRabbit posts a rate-limit warning, stop.
 
 - Do not merge on green status checks alone.
 - Wait for the refill window.
-- Request a fresh `@coderabbitai review` on the latest head.
+- Request a fresh `@coderabbitai full review` on the latest head; `@coderabbitai review` refuses once the last commit was reviewed (AGENTS.md, The Rule, item 7).
 - Require a substantive non-rate-limited review on that exact head before merging.
 
 An empty state flip or a stale prior review does not satisfy the repo rule.

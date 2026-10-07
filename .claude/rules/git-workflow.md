@@ -24,8 +24,8 @@ not a second CodeRabbit review of already-approved content.
 
 For feature PRs:
 
-1. Create PR via `gh pr create`
-2. WAIT for `coderabbitai[bot]` comment (1-2 minutes)
+1. Create PR via `gh pr create --draft`; pass the full gate on a branch synced with `dev`
+2. Mark it ready (`gh pr ready`), then WAIT for `coderabbitai[bot]` comment (1-2 minutes, or until the next review its allowance admits). CodeRabbit does not review later pushes by itself: push fixes together, then request `@coderabbitai full review` rather than moving the PR back to draft (AGENTS.md, owner decision 2026-10-06)
 3. Read ALL feedback — do not skim
 4. Adjudicate every finding under `AGENTS.md` → **“Guard and Scanner Review Discipline”**; a finding is a claim, not an order
 5. Only merge after CodeRabbit has reviewed AND feedback is addressed
