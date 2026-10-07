@@ -16,7 +16,7 @@ The legally required renewal notices and the renewal acknowledgment go to our st
 
 So an annual subscriber who changed their address and has not signed in since can be sent a legal notice at an old address. That address may now belong to someone else.
 
-Stripe's own renewal emails go to a third copy of the address that is never synced at all.
+Stripe's own renewal emails go to a third copy of the address, which is never synced and which the customer can edit in Stripe's portal.
 
 [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 widens the gap slightly. It stops refreshing the email on every signed-in page, so active users also depend on the webhook between checkouts. The gap itself exists today.
 
@@ -39,7 +39,7 @@ Stripe's own renewal emails go to a third copy of the address that is never sync
 - **Stripe's copy.**
   - Set once, at `customers.create` (`stripe-customers.ts`), and never updated. There is no `customer.updated` handling.
   - The billing portal lets the customer edit it (`stripe-portal-configurations.ts`).
-  - Stripe's upcoming-renewal email, which DEBT-414 counts as Massachusetts' second notice, goes to this copy.
+  - Stripe's upcoming-renewal email goes to this copy. DEBT-414 F19a lists it as a *candidate* for Massachusetts' 5–30-day notice, to be verified first.
 - **Cost.** Clerk's Backend API allows 1,000 requests per 10 seconds in production. A lookup per send is about 80 per daily run plus acknowledgments, off the request path.
 
 ## Impact
@@ -71,10 +71,11 @@ Stripe's own renewal emails go to a third copy of the address that is never sync
    - **Clerk unavailable** (429, 5xx or timeout): do not send, keep the row queued, and alert through [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md). Never fall back to the stored address, which may now be someone else's.
    - **User deleted (404), primary address unverified or missing, or the address owned by another row:** supersede with a named reason and alert. The repair paths are DEBT-502 items 1–3.
 2. **Verified addresses only, everywhere.** Both email selectors, provisioning and the webhook, take only verified addresses. This is DEBT-502 item 3's decision, made a prerequisite here.
-3. **Stripe's copy.** An owner decision, either:
-   - (a) sync Clerk's address to Stripe on change and remove `email` from the portal's allowed updates; or
-   - (b) treat the portal address as the customer's chosen billing address, and say so in DEBT-414's notice analysis.
-   Until decided, DEBT-414 must not rely on Stripe's upcoming-renewal email as a notice to the current address.
+3. **Stripe's copy is the billing contact, never a legal channel.** A legal obligation is met only by a system we control and can audit: our own notice system, sending to the Clerk-verified address at send time.
+   - Stripe's reminder fails all three tests: the customer can edit its address, we do not control its content, and we get no per-delivery evidence.
+   - So no notice DEBT-414 requires may rely on Stripe's emails, and F19a's Stripe path closes. Its own fallback remains: our own Massachusetts reminder about 25 days before the cancellation deadline, with a send-by limit and a missed-deadline alert.
+   - Stripe's copy stays the customer's billing contact for receipts and invoices, editable in the portal as a normal feature. That needs no sync and no code.
+   - Whether Massachusetts' rule applies is still the owner's and counsel's decision under F19a.
 4. **Daily reconcile, later (P3).**
    - A daily Backend API listing (500 per page, sorted by `updated_at`) compares stored emails with Clerk.
    - It alerts on drift and on missed deletions first, and repairs once the alert path has run quietly.
@@ -88,5 +89,5 @@ Stripe's own renewal emails go to a third copy of the address that is never sync
 - [ ] Dispatch tests cover every branch above, with a fake Clerk lookup: match, changed, unavailable, deleted, unverified and conflict. No branch sends to an unconfirmed address.
 - [ ] A real-Postgres test shows that a changed address supersedes the queued notice, and that the next run queues to the new address.
 - [ ] Both email selectors refuse unverified addresses.
-- [ ] The owner decides item 3, and DEBT-414 records it.
+- [ ] DEBT-414 F19a no longer relies on Stripe's emails, and any Massachusetts reminder is sent by our own notice system.
 - [ ] The reconcile ships with its alert, and runs clean for two weeks.
