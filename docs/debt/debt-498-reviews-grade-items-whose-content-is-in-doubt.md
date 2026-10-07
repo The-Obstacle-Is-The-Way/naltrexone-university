@@ -2,8 +2,8 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, is built; screenshots of the session surfaces remain
-**Status detail** (moved from the status line 2026-10-05, when status lines became one line): In Progress — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows, result filters and sorts, is built ([Progress](#progress))
+**Status:** Verifying — increment 2b, History's rows, result filters and sorts, awaits its release to production; due 2026-10-14
+**Status detail** (moved from the status line 2026-10-05, when status lines became one line): Verifying — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows, result filters and sorts, and Review & Submit's corrected-key label, awaits its release ([Progress](#progress))
 **Priority:** P1
 **Date:** 2026-10-05
 **Resolved:** —
@@ -13,7 +13,7 @@
 
 ## Summary
 
-**Current position:** the answer views, navigators, session breakdown and Dashboard are fixed in production (increments 1 and 2a below). Increment 2b fixes History's rows, result filters and sorts. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
+**Current position:** the answer views, navigators, session breakdown and Dashboard are fixed in production (increments 1 and 2a below). Increment 2b fixes History's rows, result filters and sorts, and Review & Submit's label for an answer on a corrected key; it awaits release. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
 
 [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) leaves an item out of every score when its content is in doubt: its answer key was corrected after the learner answered, it was withdrawn, or it is under review. The reason given is that such an item "should neither penalize nor credit the learner". The pages that show the attempt still grade it.
 
@@ -158,6 +158,18 @@ The code:
   - a result filter or sort takes about 3 ms, against 1.1 ms before;
   - no plan uses JIT.
 - **Contrast.** In the dark theme, muted "Not scored" on History's row measures 5.13:1 at rest and 4.61:1 on hover. It is the pair the row already uses for its date.
+- **Found by the screenshots: Review & Submit's label.**
+  - Review & Submit did not list an exam answer on a key corrected mid-exam as "Won't be scored", though submission grades it against the old key and the score leaves it out.
+  - The cause had two parts. `countsIfEndedNow` ignored corrected keys. The review rows set `answerKeyChanged` only from a submitted answer, while an exam answer stays a draft until submission.
+  - Now `countsIfEndedNow` requires `keyCorrected`, so no caller can omit it. The rows count a draft as the answer, and the active notice for a tutor answer on a retired question passes it too.
+  - Red first: the domain rule, the active-exam row, the label, and the tutor notice. Removing either call site's flag fails a test. ADR-022's Decision 3 gains a one-line note.
+- **Screenshots viewed** locally, on dedicated questions, with the session surfaces built through the app's own session repository:
+  - Review & Submit, before and after the fix;
+  - post-exam review and its navigator;
+  - the session breakdown;
+  - an active tutor session's feedback and navigator after a mid-session correction;
+  - the question page's session navigator ("Question 1: Not scored, Current");
+  - History's two rows.
 
 ## Verification
 
@@ -169,7 +181,7 @@ Criteria to meet before closing. Increment 1 meets the key-corrected review's cr
 - [x] A key-corrected review shows neither the superseded explanation nor a green key: component tests, DEBT-496's spec on the real page, and its screenshot (increment 1).
 - [x] DEBT-496's spec asserts the ungraded review, and the History row's "Not scored".
 - [x] Removing the in-doubt check from each surface fails a test (increments 1, 2a and 2b each record theirs).
-- [ ] Screenshots of each surface are viewed.
+- [x] Screenshots of each surface are viewed: the reviews and the Dashboard (increments 1 and 2a), and the rest in increment 2b.
 
 ## Related
 
