@@ -190,7 +190,28 @@ describe('countsIfEndedNow', () => {
   ] as const)(
     'in %s mode, answered: %s, question %s: counts %s',
     (mode, answered, availability, counts) => {
-      expect(countsIfEndedNow({ mode, answered, availability })).toBe(counts);
+      expect(
+        countsIfEndedNow({ mode, answered, availability, keyCorrected: false }),
+      ).toBe(counts);
+    },
+  );
+
+  // DEBT-498: an answer graded against a key corrected since counts toward
+  // no score (ADR-022 Decision 4), so it would not count if the session ended.
+  it.each([
+    ['exam', 'available'],
+    ['tutor', 'retired'],
+  ] as const)(
+    'in %s mode, an answer on a corrected key, question %s, does not count',
+    (mode, availability) => {
+      expect(
+        countsIfEndedNow({
+          mode,
+          answered: true,
+          availability,
+          keyCorrected: true,
+        }),
+      ).toBe(false);
     },
   );
 });

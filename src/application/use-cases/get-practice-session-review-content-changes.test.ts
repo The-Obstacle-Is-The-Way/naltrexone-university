@@ -11,6 +11,28 @@ import {
   createQuestion,
 } from '@/src/domain/test-helpers';
 
+// The same two choices in each revision, with `correct` marked: a corrected
+// key moves the correct mark between two valid keys (ADR-022 Decision 4).
+function choicesKeyedTo(correct: 'A' | 'B') {
+  return [
+    createChoice({
+      id: 'c1',
+      questionId: 'q1',
+      label: 'A',
+      textMd: 'Choice A',
+      isCorrect: correct === 'A',
+    }),
+    createChoice({
+      id: 'c2',
+      questionId: 'q1',
+      label: 'B',
+      textMd: 'Choice B',
+      isCorrect: correct === 'B',
+      sortOrder: 2,
+    }),
+  ];
+}
+
 // A question that changed after the session: withdrawn, held or retired since
 // (ADR-021 §3, ADR-022).
 describe('GetPracticeSessionReviewUseCase: content changed since', () => {
@@ -116,15 +138,18 @@ describe('GetPracticeSessionReviewUseCase: content changed since', () => {
   ] as const)(
     'marks an answer graded on a corrected key, on a %s question (answer %s): %s',
     async (status, answer, answerKeyChanged) => {
-      const current = createQuestion({ id: 'q1', slug: 'q-1', status });
+      const current = createQuestion({
+        id: 'q1',
+        slug: 'q-1',
+        status,
+        choices: choicesKeyedTo('B'),
+      });
       const bound = createQuestion({
         id: 'q1',
         revisionId: crypto.randomUUID(),
         slug: 'q-1',
         status,
-        choices: [
-          createChoice({ id: 'c1', questionId: 'q1', isCorrect: true }),
-        ],
+        choices: choicesKeyedTo('A'),
       });
       const session = createPracticeSession({
         id: 'session-1',
@@ -155,6 +180,64 @@ describe('GetPracticeSessionReviewUseCase: content changed since', () => {
       });
 
       expect(rows).toEqual([expect.objectContaining({ answerKeyChanged })]);
+    },
+  );
+
+  // DEBT-498: an exam answer stays a draft until submission, when it is
+  // graded against the revision it was given. A draft on a key corrected since
+  // is marked, so Review & Submit can say it won't be scored.
+  it.each([
+    ['a draft', 'c1', true],
+    ['no answer', null, false],
+  ] as const)(
+    'marks %s on a corrected key while the exam is active: %s',
+    async (_name, draft, answerKeyChanged) => {
+      const current = createQuestion({
+        id: 'q1',
+        slug: 'q-1',
+        choices: choicesKeyedTo('B'),
+      });
+      const bound = createQuestion({
+        id: 'q1',
+        revisionId: crypto.randomUUID(),
+        slug: 'q-1',
+        choices: choicesKeyedTo('A'),
+      });
+      const session = createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt: null,
+        questionIds: ['q1'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            questionRevisionId: bound.revisionId,
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: draft,
+          },
+        ],
+      });
+      const useCase = new GetPracticeSessionReviewUseCase(
+        new FakePracticeSessionRepository([session]),
+        new FakeQuestionRepository([current, bound]),
+        new FakeLogger(),
+      );
+
+      const { rows } = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(rows).toEqual([
+        expect.objectContaining({
+          isAnswered: draft !== null,
+          answerKeyChanged,
+        }),
+      ]);
     },
   );
 

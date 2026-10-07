@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AttemptStatsReader } from '@/src/application/ports/attempt-repository';
+import type {
+  AttemptAllQuestionsReader,
+  AttemptStatsReader,
+} from '@/src/application/ports/attempt-repository';
 
 // DEBT-493 / ADR-022 Amendment (DEBT-494): dashboard accuracy counts an
 // attempt when the learner had a fair chance at it and its question's content
@@ -31,11 +34,21 @@ export type ScoredAttemptSeed = {
   revisedAfter?: 'key' | 'key text' | 'stem' | 'distractor';
 };
 
+/**
+ * Seeds the scenarios for this contract and for History's result contract
+ * (`attempted-question-result-contract.ts`), which reads the same seeds.
+ */
 export type AttemptScoreHarness = {
   seed(attempts: readonly ScoredAttemptSeed[]): Promise<{
-    repository: Pick<AttemptStatsReader, 'scoreByUserId'>;
+    repository: Pick<AttemptStatsReader, 'scoreByUserId'> &
+      Pick<
+        AttemptAllQuestionsReader,
+        'listAttemptedQuestionsByUserId' | 'countAttemptedQuestionsByUserId'
+      >;
     userId: string;
     now: Date;
+    /** Each seed's question key, to its question's id. */
+    questionIds: ReadonlyMap<string, string>;
   }>;
 };
 

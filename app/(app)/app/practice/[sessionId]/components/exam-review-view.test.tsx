@@ -446,6 +446,28 @@ describe('ExamReviewView', () => {
     ).toEqual([false, true, true]);
   });
 
+  // DEBT-498: an answer on a key corrected since is graded against the old
+  // key at submission and left out of the score, so it is listed as Won't be
+  // scored too. An unanswered item on a corrected key still counts.
+  it("lists an answer on a key corrected since as Won't be scored", () => {
+    const [answered, , open] = review.rows;
+    const doc = renderExamReviewMarkup({
+      review: {
+        ...review,
+        rows: [
+          { ...answered, isCorrect: null, answerKeyChanged: true },
+          { ...open, answerKeyChanged: true },
+        ],
+      },
+    });
+
+    expect(
+      getReviewRows(doc).map((row) =>
+        row.textContent?.includes("Won't be scored"),
+      ),
+    ).toEqual([true, false]);
+  });
+
   function getReviewRowButtons(root: ParentNode) {
     return Array.from(
       root.querySelectorAll<HTMLButtonElement>('button'),

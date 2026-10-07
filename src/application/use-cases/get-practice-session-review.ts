@@ -184,7 +184,9 @@ export class GetPracticeSessionReviewUseCase {
       questionsById: questionById,
       available: (row, question): PracticeSessionReviewRow => {
         const unavailable = question.availability !== 'available';
-        const answerKeyChanged = row.answered && question.answerKeyChanged;
+        // An exam answer is a draft until submission, then graded against
+        // the revision it was given, so a draft counts as the answer (DEBT-498).
+        const answerKeyChanged = row.isAnswered && question.answerKeyChanged;
         if (unavailable && !(session.endedAt !== null && row.answered)) {
           return unavailableRow(row, question.availability, answerKeyChanged);
         }
@@ -221,6 +223,8 @@ export class GetPracticeSessionReviewUseCase {
             mode: session.mode,
             answered: false,
             availability: row.availability,
+            // An unanswered item's key never matters.
+            keyCorrected: false,
           }),
       ).length,
       markedCount: rows.filter((row) => row.markedForReview).length,

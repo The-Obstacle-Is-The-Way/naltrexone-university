@@ -3,7 +3,11 @@ import { afterAll, afterEach } from 'vitest';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
-import { runAttemptScoreContract } from '@/tests/shared/attempt-score-contract';
+import {
+  type AttemptScoreHarness,
+  runAttemptScoreContract,
+} from '@/tests/shared/attempt-score-contract';
+import { runAttemptedQuestionResultContract } from '@/tests/shared/attempted-question-result-contract';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -29,7 +33,7 @@ afterAll(async () => {
   await closeConnection(sql);
 });
 
-runAttemptScoreContract('DrizzleAttemptRepository', async () => ({
+const createHarness = async (): Promise<AttemptScoreHarness> => ({
   async seed(attempts) {
     const repository = new DrizzleAttemptRepository(db);
     const sessions = new DrizzlePracticeSessionRepository(db);
@@ -118,6 +122,12 @@ runAttemptScoreContract('DrizzleAttemptRepository', async () => ({
       const seed = attempts.find((attempt) => attempt.question === key);
       await setQuestionState(db, question, seed?.now ?? 'available');
     }
-    return { repository, userId: user.id, now };
+    const questionIds = new Map(
+      [...questionByKey].map(([key, question]) => [key, question.id]),
+    );
+    return { repository, userId: user.id, now, questionIds };
   },
-}));
+});
+
+runAttemptScoreContract('DrizzleAttemptRepository', createHarness);
+runAttemptedQuestionResultContract('DrizzleAttemptRepository', createHarness);

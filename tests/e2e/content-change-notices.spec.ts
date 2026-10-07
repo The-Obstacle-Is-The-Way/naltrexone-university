@@ -46,6 +46,9 @@ test.describe('content-change notices', () => {
   }, testInfo) => {
     if (!changes) throw new Error('content changes not arranged');
     const { slug, attemptId } = await changes.keyCorrectedAttempt();
+    const scored = await changes.scoredAttempt();
+    const scoredIncorrect = await changes.scoredAttempt('incorrect');
+    const heldIncorrect = await changes.heldAttempt('incorrect');
 
     await page.goto(
       toQuestionRoute(slug, { from: 'history', mode: 'review', attemptId }),
@@ -79,6 +82,31 @@ test.describe('content-change notices', () => {
     await expect(activity).toContainText('Not scored');
     await expect(activity).not.toContainText('Correct');
     await attachScreenshot(page, testInfo, 'key-corrected-dashboard');
+
+    // DEBT-498 increment 2b: History names it too. A result no score counts,
+    // answered correctly (the key-corrected one) or not (the held one), is
+    // under neither result filter, while scored answers keep their filter.
+    const historyRow = (rowSlug: string) =>
+      page
+        .getByRole('listitem')
+        .filter({ has: page.locator(`a[href*="${rowSlug}"]`) });
+    await page.goto(`${ROUTES.APP_HISTORY}?tab=questions`);
+    await expect(historyRow(slug)).toHaveCount(1);
+    await expect(historyRow(slug)).toContainText('Not scored');
+    await expect(historyRow(slug)).not.toContainText('Correct');
+    await attachScreenshot(page, testInfo, 'key-corrected-history');
+
+    await page.goto(`${ROUTES.APP_HISTORY}?tab=questions&result=correct`);
+    await expect(historyRow(scored.slug)).toHaveCount(1);
+    await expect(historyRow(slug)).toHaveCount(0);
+
+    await page.goto(`${ROUTES.APP_HISTORY}?tab=questions&result=incorrect`);
+    await expect(page.getByRole('combobox', { name: 'Result' })).toHaveText(
+      'Incorrect',
+    );
+    await expect(historyRow(scoredIncorrect.slug)).toHaveCount(1);
+    await expect(historyRow(heldIncorrect.slug)).toHaveCount(0);
+    await expect(historyRow(slug)).toHaveCount(0);
   });
 
   test('a question placed under review after the answer is named in History and on its review', async ({
@@ -94,6 +122,9 @@ test.describe('content-change notices', () => {
       .filter({ has: page.locator(`a[href*="${slug}"]`) });
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Under review');
+    // DEBT-498 increment 2b: no score counts it, so it is not graded.
+    await expect(row).toContainText('Not scored');
+    await expect(row).not.toContainText('Correct');
     await attachScreenshot(page, testInfo, 'under-review-history');
 
     await page.goto(

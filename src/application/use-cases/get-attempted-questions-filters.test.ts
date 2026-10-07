@@ -12,28 +12,33 @@ import {
 import { GetAttemptedQuestionsUseCase } from './get-attempted-questions';
 
 describe('GetAttemptedQuestionsUseCase: filters', () => {
-  const createUseCaseWithResultAttempts = () =>
-    new GetAttemptedQuestionsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          isCorrect: true,
-          answeredAt: new Date('2026-02-01T12:00:00Z'),
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q2',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T10:00:00Z'),
-        }),
-      ]),
-      new FakeQuestionRepository([
-        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
-        createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
-      ]),
+  const createUseCaseWithResultAttempts = () => {
+    const questions = [
+      createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+      createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
+    ];
+    return new GetAttemptedQuestionsUseCase(
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q2',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T10:00:00Z'),
+          }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
       new FakeLogger(),
     );
+  };
 
   it('supports result filter (correct)', async () => {
     const useCase = createUseCaseWithResultAttempts();
@@ -277,38 +282,42 @@ describe('GetAttemptedQuestionsUseCase: filters', () => {
   });
 
   it('supports combined result and source filters', async () => {
+    const questions = [
+      createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
+      createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
+      createQuestion({ id: 'q3', slug: 'q-3', stemMd: 'Stem for q3' }),
+    ];
     const useCase = new GetAttemptedQuestionsUseCase(
-      new FakeAttemptRepository([
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q1',
-          practiceSessionId: 'session-tutor',
-          isCorrect: true,
-          answeredAt: new Date('2026-02-01T12:00:00Z'),
-          sessionMode: 'tutor',
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q2',
-          practiceSessionId: 'session-tutor-2',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T11:00:00Z'),
-          sessionMode: 'tutor',
-        }),
-        createAttempt({
-          userId: 'user-1',
-          questionId: 'q3',
-          practiceSessionId: 'session-exam',
-          isCorrect: false,
-          answeredAt: new Date('2026-02-01T10:00:00Z'),
-          sessionMode: 'exam',
-        }),
-      ]),
-      new FakeQuestionRepository([
-        createQuestion({ id: 'q1', slug: 'q-1', stemMd: 'Stem for q1' }),
-        createQuestion({ id: 'q2', slug: 'q-2', stemMd: 'Stem for q2' }),
-        createQuestion({ id: 'q3', slug: 'q-3', stemMd: 'Stem for q3' }),
-      ]),
+      new FakeAttemptRepository(
+        [
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q1',
+            practiceSessionId: 'session-tutor',
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T12:00:00Z'),
+            sessionMode: 'tutor',
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q2',
+            practiceSessionId: 'session-tutor-2',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T11:00:00Z'),
+            sessionMode: 'tutor',
+          }),
+          createAttempt({
+            userId: 'user-1',
+            questionId: 'q3',
+            practiceSessionId: 'session-exam',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T10:00:00Z'),
+            sessionMode: 'exam',
+          }),
+        ],
+        { questions },
+      ),
+      new FakeQuestionRepository(questions),
       new FakeLogger(),
     );
 
