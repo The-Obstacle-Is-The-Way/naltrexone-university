@@ -216,6 +216,7 @@ export function createUseCaseFactories(input: {
         repositories.createSubscriptionRepository(),
         gateways.createPaymentGateway(),
         primitives.logger,
+        gateways.createOperationalAlerts(),
         primitives.now,
         createCheckoutRenewalTerms,
       ),

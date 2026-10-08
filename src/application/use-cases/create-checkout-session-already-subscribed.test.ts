@@ -3,6 +3,7 @@ import { createSubscription } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakePaymentGateway,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
@@ -72,19 +73,22 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
     await stripeCustomers.insert('user-1', 'cus_existing');
     const subscriptions = seeded ?? new FakeSubscriptionRepository();
     const logger = new FakeLogger();
+    const alerts = new FakeOperationalAlerts();
     const useCase = new CreateCheckoutSessionUseCase(
       stripeCustomers,
       subscriptions,
       payments,
       logger,
+      alerts,
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );
-    return { payments, subscriptions, logger, useCase };
+    return { payments, subscriptions, logger, alerts, useCase };
   }
 
   it("records the customer's subscription from Stripe and still refuses", async () => {
-    const { payments, subscriptions, useCase } = await refusedCheckout();
+    const { payments, subscriptions, alerts, useCase } =
+      await refusedCheckout();
 
     await expect(useCase.execute(defaultCheckoutInput)).rejects.toBe(
       stripeRefusal,
@@ -97,10 +101,11 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
       status: 'active',
       currentPeriodEnd: held.currentPeriodEnd,
     });
+    expect(alerts.raised).toEqual([]);
   });
 
-  it('logs a sync that fails and still refuses', async () => {
-    const { subscriptions, logger, useCase } = await refusedCheckout({
+  it('logs and alerts on a sync that fails, and still refuses', async () => {
+    const { subscriptions, logger, alerts, useCase } = await refusedCheckout({
       blockingCustomerSubscriptionsError: new Error('stripe down'),
     });
 
@@ -119,6 +124,9 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
           errorName: 'Error',
         },
       },
+    ]);
+    expect(alerts.raised).toEqual([
+      { kind: 'checkout_stripe_holds_unrecorded', count: 1 },
     ]);
   });
 
@@ -141,8 +149,8 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
     });
   });
 
-  it('still refuses when even the failure cannot be logged', async () => {
-    const { logger, useCase } = await refusedCheckout({
+  it('still refuses, and still alerts, when the failure cannot be logged', async () => {
+    const { logger, alerts, useCase } = await refusedCheckout({
       blockingCustomerSubscriptionsError: new Error('stripe down'),
     });
     logger.error = () => {
@@ -152,6 +160,7 @@ describe('CreateCheckoutSessionUseCase when Stripe refuses an already-subscribed
     await expect(useCase.execute(defaultCheckoutInput)).rejects.toBe(
       stripeRefusal,
     );
+    expect(alerts.raised).toHaveLength(1);
   });
 
   it('syncs a refused checkout that carries an idempotency key', async () => {
