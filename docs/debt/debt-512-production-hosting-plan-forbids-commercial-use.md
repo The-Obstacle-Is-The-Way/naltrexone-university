@@ -1,0 +1,44 @@
+# DEBT-512: Production Runs on a Hosting Plan Whose Terms Forbid Commercial Use
+
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
+**Status:** Open — owner moves production to Vercel Pro before the first live sale
+**Priority:** P1
+**Date:** 2026-10-08
+**Resolved:** —
+**Verification receipts:** —
+
+---
+
+## Summary
+
+Production runs on Vercel's Hobby plan. [Vercel's terms](https://vercel.com/legal/terms) limit Hobby to personal or non-commercial use, and its plan guidance says a project becomes commercial once it charges, or intends to charge, its users. This app has a live pricing page and checkout, so production needs the Pro plan before the first live sale, and arguably now.
+
+The plan also sets several limits the records work around:
+- runtime logs kept for one hour (DEBT-505);
+- cron runs that may fire up to about an hour late (DEBT-511's notice window);
+- no Skew Protection (BUG-319).
+
+## Evidence
+
+- **The plan.** Vercel's API reported the team's billing plan as `hobby`, active, on 2026-10-08.
+- **The terms.** Vercel's [Terms of Service](https://vercel.com/legal/terms) and [plan documentation](https://vercel.com/docs/plans) restrict Hobby to personal, non-commercial use, and direct a commercial project to Pro.
+- **Earlier notice.** [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) recorded the same terms on 2026-08-10 for analytics. No live record tracked the plan.
+
+## Impact
+
+- **Terms.** Taking payments on Hobby breaches Vercel's terms, which can lead to the project being limited or suspended.
+- **Operations.** Moving to Pro relaxes the log, cron and Skew Protection limits above. Each record keeps its own mitigation until it is re-checked on Pro.
+
+## Resolution
+
+**Decided:** the owner moves the production team to Pro before the first live sale. Engineering then re-checks DEBT-505's log assumption, DEBT-511's cron timing and BUG-319's Skew Protection decision, and corrects each record.
+
+## Verification
+
+- [ ] Owner: the team's plan reads Pro.
+- [ ] Engineering: DEBT-505, DEBT-511 and BUG-319 are re-checked against Pro's limits and corrected.
+
+## Related
+
+- [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md): the audit that found it.

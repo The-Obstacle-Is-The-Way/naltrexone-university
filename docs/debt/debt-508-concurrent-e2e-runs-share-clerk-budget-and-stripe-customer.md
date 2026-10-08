@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — isolation implemented; CI's per-run evidence follows its merge, and the overlap check follows DEBT-503 item 1
+**Status:** Verifying — two overlapping CI runs both pass, now that DEBT-503 item 1 is released; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -102,10 +102,10 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
 
 ## Verification
 
-- [ ] CI's E2E step tags its customer by run and attempt, and `tests/e2e-test-identity-workflows.test.ts` pins it. The local orchestrator sets the per-clone owner, and its test pins the precedence.
-- [ ] Helper tests prove that:
+- [x] CI's E2E step tags its customer by run and attempt, and `tests/e2e-test-identity-workflows.test.ts` pins it. The local orchestrator sets the per-clone owner, and its test pins the precedence.
+- [x] Helper tests prove that:
   - a 429 with `Retry-After` is retried after that delay, in both header forms;
   - the reset needs no Clerk secret, since it no longer imports a Clerk call;
   - the seed calls Clerk only when no ID is passed in.
-- [ ] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per setup attempt, and that cleanup stops at its deadline. A CI run's log shows teardown deleting its own customer.
-- [ ] Two overlapping CI runs both pass. This depends on DEBT-503 item 1, so it is checked after that ships.
+- [x] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per setup attempt, and that cleanup stops at its deadline. A CI run's log shows teardown deleting its own customer.
+- [ ] Two overlapping CI runs both pass. DEBT-503 item 1, which this depends on, was released on 2026-10-08.

@@ -39,6 +39,8 @@ This record is deliberately general. The repository is public, and the behaviour
 
 For as long as an attacker kept sending these requests, every signed-in page would fail. That includes the pricing page for a signed-in learner and the add-card flow. Nothing is lost permanently; the damage is the outage.
 
+*Corrected 2026-10-08: since DEBT-503 item 1, a returning user's pages no longer call Clerk's Backend API, so an exhausted allowance now fails a new user's first visit, checkout and trial card setup, not every signed-in page (AUDIT-015).*
+
 ## Options
 
 1. **A per-address limit in our middleware,** before Clerk runs.

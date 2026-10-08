@@ -1,9 +1,9 @@
 # DEBT-465: Advanced Test-Quality Practices Adoption (CRAP Report, Mutation Testing, Acceptance Tests, UI QA Procedures)
 
-**Status:** Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, which is done (2026-10-04); Part 4 re-scoped by the 2026-10-03 decision below and remains
+**Status:** Resolved — 2026-10-08: Parts 1–3 shipped; Part 4's two QA runs are Deferred to the production bootstrap and the first live purchase (AUDIT-015)
 **Priority:** P2
 **Date:** 2026-08-13
-**Source:** [ADR-019](../adr/adr-019-test-quality-practices.md) (Accepted, amended 2026-10-03) + the 2026-08-13 audit of the test estate
+**Source:** [ADR-019](../../adr/adr-019-test-quality-practices.md) (Accepted, amended 2026-10-03) + the 2026-08-13 audit of the test estate
 **Scope:** Execution of the four practices ADR-019 proposes to adopt. The runbooks are written and canonical; this item tracks the *work* — script, pilot, harness, and register activation. Owner-initiated waves; nothing here is a shortcut in shipped code.
 
 ---
@@ -12,7 +12,7 @@
 
 **Current position.** Parts 1 and 2 are complete, and Part 3's replacement, the rule-to-test register, is done; Part 4 remains. The dated September audit and October 3 design assessment are historical. The October 4 mapping found five missing or misplaced proofs, so the October 3 claim that all candidate rules were already proven was too broad. The register closes those gaps; its title check proves test discovery, not the sufficiency of an assertion.
 
-**2026-09-21 audit forward pointer.** Part 1 is shipped: `package.json` exposes `quality:crap`, and the reporter requires all three Istanbul inputs. The top-25 table below is the **2026-08-22 baseline**, not a fresh measurement of today's tree. The opening 556-file census and “no ranked report” observation are likewise filing history. Part 2's pilot and second wave shipped on 2026-09-27 (below); widening to `src/domain/**` and the application layer remains. Parts 3–4 remain unimplemented: no acceptance directory exists, and QA-001/QA-002 both remain Draft without their required two complete evidenced runs. ADR-019 still requires a new ADR before a metric gates CI. The existing entitlement-loss E2E means that particular item in the older QA-gap inventory is no longer absent. [Current-tree audit and limits](./assets/active-audit-2026-09-21/verification.md).
+**2026-09-21 audit forward pointer.** Part 1 is shipped: `package.json` exposes `quality:crap`, and the reporter requires all three Istanbul inputs. The top-25 table below is the **2026-08-22 baseline**, not a fresh measurement of today's tree. The opening 556-file census and “no ranked report” observation are likewise filing history. Part 2's pilot and second wave shipped on 2026-09-27 (below); widening to `src/domain/**` and the application layer remains. Parts 3–4 remain unimplemented: no acceptance directory exists, and QA-001/QA-002 both remain Draft without their required two complete evidenced runs. ADR-019 still requires a new ADR before a metric gates CI. The existing entitlement-loss E2E means that particular item in the older QA-gap inventory is no longer absent. [Current-tree audit and limits](../../debt/assets/active-audit-2026-09-21/verification.md).
 
 The suite ADR-003 built is broad (556 test files, ~151k lines, four lanes) but nothing audits or specifies it from the outside. The audit made the gap concrete:
 
@@ -47,7 +47,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 **Not adopted (decision, 2026-10-03).** See [Decision — 2026-10-03](#decision--2026-10-03). It is replaced by a rule-to-test register; no harness and no new dependency.
 
-**The register is done (2026-10-04).** [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md) is now the register: 23 rules, each stated in plain language with the tests that prove it.
+**The register is done (2026-10-04).** [`docs/dev/acceptance-testing.md`](../../dev/acceptance-testing.md) is now the register: 23 rules, each stated in plain language with the tests that prove it.
 - **The rules.** R1–R17 are the earlier backlog, restated where the code has moved on:
   - R6 now records omitted items, and the accuracy rule moved to R20 under DEBT-494's amendment;
   - R8 states the discard rule as enforced;
@@ -117,8 +117,8 @@ Decided under the owner's 2026-10-03 delegation ("deciding all that we need to d
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
 - [x] Part 2 widening: every production file under `src/domain/**`, `src/application/shared/**` and `src/application/use-cases/**`, by glob, with every survivor triaged (third wave 2026-09-30; waves 4a–4f by 2026-10-01, below)
 - [x] Part 3 (replaced 2026-10-03): the rule-to-test register lists 23 business rules (the 17 candidates and six added since) with the tests that prove each, and a renamed or deleted test fails its check. Done 2026-10-04 (above)
-- [ ] Part 4 (re-scoped 2026-10-03): QA-001 and QA-002 Active, each with two evidenced runs; the gap list is updated (the cadence was updated with the decision); operator-checklist item 8 references the register
-- [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
+- [ ] Part 4 (re-scoped 2026-10-03): QA-001 and QA-002 Active, each with two evidenced runs; the gap list is updated (the cadence was updated with the decision); operator-checklist item 8 references the register. *Deferred 2026-10-08 (AUDIT-015): QA-001 runs before the production content bootstrap (DEBT-483), and QA-002 with the first live purchase (DEBT-501 item 7); the debt index's Deferred table holds the trigger.*
+- [x] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance). *Moved 2026-10-08: this is ADR-019's standing rule, not a task; it stays in ADR-019 (AUDIT-015).*
 
 ### Baselines (fill on first runs — no invented numbers)
 
@@ -308,7 +308,7 @@ Input receipts from the same working tree: unit coverage passed 450 files / 4,01
 
 ## Related
 
-- [ADR-019](../adr/adr-019-test-quality-practices.md) (decision + observational posture), [ADR-003](../adr/adr-003-testing-strategy.md) (base strategy)
-- Runbooks: [`docs/dev/code-quality-metrics.md`](../dev/code-quality-metrics.md), [`docs/dev/mutation-testing.md`](../dev/mutation-testing.md), [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md), [`docs/dev/qa-procedures.md`](../dev/qa-procedures.md)
-- Register: [`docs/qa/index.md`](../qa/index.md) (QA-001, QA-002)
+- [ADR-019](../../adr/adr-019-test-quality-practices.md) (decision + observational posture), [ADR-003](../../adr/adr-003-testing-strategy.md) (base strategy)
+- Runbooks: [`docs/dev/code-quality-metrics.md`](../../dev/code-quality-metrics.md), [`docs/dev/mutation-testing.md`](../../dev/mutation-testing.md), [`docs/dev/acceptance-testing.md`](../../dev/acceptance-testing.md), [`docs/dev/qa-procedures.md`](../../dev/qa-procedures.md)
+- Register: [`docs/qa/index.md`](../../qa/index.md) (QA-001, QA-002)
 - Constraints honored: coverage-as-observational (`docs/dev/react-vitest-testing.md`), DEBT-460 dual-compiler seam, DEBT-323 toggle-interaction limits, `docs/dev/stabilization-checklist.md` (absorbed by QA-001 once Active)

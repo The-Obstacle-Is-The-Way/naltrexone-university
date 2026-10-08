@@ -60,5 +60,5 @@ Codecov's `*.codecov.io` certificate expired at 2026-10-04 23:59:59 UTC while it
 
 - [ADR-019](./adr-019-test-quality-practices.md), the binding observational posture this refines
 - [DEBT-468](../_archive/debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, closed by this record
-- [DEBT-465](../debt/debt-465-test-quality-practices-adoption.md), mutation testing as the measure of assertion strength
+- [DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md), mutation testing as the measure of assertion strength
 - `scripts/merge-reviewed-pr.ts`, `scripts/verify-promotion.ts` (`test` and `codecov/patch` required green by name)
