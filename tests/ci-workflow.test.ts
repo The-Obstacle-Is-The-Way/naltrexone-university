@@ -9,8 +9,6 @@ const STRIPE_HOSTED_WORKFLOW_PATH =
 const STRIPE_PROVIDER_WORKFLOW_PATH =
   '.github/workflows/stripe-trial-clock-smoke.yml';
 const MUTATION_WORKFLOW_PATH = '.github/workflows/mutation.yml';
-const OPERATIONAL_ALERT_WATCHER_WORKFLOW_PATH =
-  '.github/workflows/operational-alert-watcher.yml';
 const HUMAN_SAME_REPO_PR_CONDITION =
   "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository";
 const DEPENDABOT_ACTOR_GUARD = "github.actor != 'dependabot[bot]'";
@@ -20,13 +18,8 @@ const PINNED_UPLOAD_ARTIFACT =
   'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
 const PINNED_POSTGRES_16 =
   'postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
-const WORKFLOW_PATHS = [
-  CI_WORKFLOW_PATH,
-  STRIPE_HOSTED_WORKFLOW_PATH,
-  STRIPE_PROVIDER_WORKFLOW_PATH,
-  MUTATION_WORKFLOW_PATH,
-  OPERATIONAL_ALERT_WATCHER_WORKFLOW_PATH,
-] as const;
+// Every workflow, so a new one cannot miss the action-pin check.
+const WORKFLOW_PATHS = globSync('.github/workflows/*.yml').sort();
 
 type WorkflowStep = {
   'continue-on-error'?: boolean;
@@ -556,10 +549,9 @@ jobs:
         'Run fail-closed Stripe provider contracts:STRIPE_SECRET_KEY',
       ].sort(),
     );
-    // DEBT-505: the watcher's read-only Sentry token reaches its own step only.
-    expect(secretConsumers(OPERATIONAL_ALERT_WATCHER_WORKFLOW_PATH)).toEqual([
-      'Check the operational alert path:SENTRY_WATCHER_TOKEN',
-    ]);
+    expect(
+      secretConsumers('.github/workflows/operational-alert-watcher.yml'),
+    ).toEqual(['Check the operational alert path:SENTRY_WATCHER_TOKEN']);
   });
 
   it('uses placeholders for server-only Build credentials', () => {
