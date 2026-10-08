@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before 35 days ahead of the earliest live renewal
+**Status:** Open — resolution decided below; built on DEBT-502's identity resolver, and due before 35 days ahead of the earliest live renewal
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —

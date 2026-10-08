@@ -6,12 +6,11 @@ import {
   syncAlertIssue,
 } from './github-alert-issues';
 
-// DEBT-505: operational alerts reach the owner as Sentry email, and the drill
-// proves that path once a month. Neither notices its own absence: a stopped
-// cron raises no alert and no drill. This daily job reads Sentry with a
-// read-only token and raises one GitHub issue, outside Sentry's email, when
-// the renewal job stops checking in, the alerts' workflow is disabled or
-// changed, no drill has arrived, or the error quota is nearly spent.
+// DEBT-505: operational alerts reach the owner as Sentry email, and a monthly
+// drill proves that path, but neither notices its own absence. This daily job
+// reads Sentry with a read-only token and keeps one GitHub issue open, outside
+// Sentry's email, while a check fails. The checks and what to do about each:
+// docs/dev/logging.md, "Operational alerts", Watcher.
 export const WATCHER_ISSUE_TITLE =
   'Operational alerts may not be reaching the owner';
 
@@ -29,12 +28,14 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 // A daily job, plus the hour within which Vercel's Hobby plan may start it.
 const CHECK_IN_STALE_MS = DAY_MS + HOUR_MS;
-// A drill goes out each 30-day cycle; two more days allow a late cron and a
-// next-day retry.
-const DRILL_WINDOW_DAYS = 32;
+// A drill makes the workflow send at least once per 30-day cycle; two more
+// days allow a late cron and a next-day retry. The workflow's last send is
+// read, not the drill's event, which the plan keeps for only 30 days.
+export const DRILL_WINDOW_DAYS = 32;
 const QUOTA_WARNING_RATIO = 0.8;
 const DROP_WINDOW_DAYS = 2;
 const REQUEST_TIMEOUT_MS = 20_000;
+const RETRY_DELAY_MS = 5_000;
 
 export type SentryResponse = { status: number; body: unknown };
 export type SentryApi = (
@@ -101,19 +102,28 @@ async function monitorProblems(api: SentryApi, now: Date): Promise<string[]> {
 
 // What decides who the workflow emails and when; ids and order do not.
 function projectWorkflow(workflow: Record<string, unknown>) {
+  // Only the fields read here are compared, so a field Sentry adds later does
+  // not read as a change.
   const conditions = (group: unknown) =>
     list(record(group).conditions)
       .map(record)
       .map(({ type, comparison, conditionResult }) => ({
         type,
-        comparison,
+        comparison:
+          comparison && typeof comparison === 'object'
+            ? {
+                key: record(comparison).key,
+                match: record(comparison).match,
+                value: record(comparison).value,
+              }
+            : comparison,
         conditionResult,
       }))
       .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
   return {
     environment: workflow.environment,
     detectorIds: list(workflow.detectorIds).map(String).sort(),
-    config: workflow.config,
+    config: { frequency: record(workflow.config).frequency },
     triggers: {
       logicType: record(workflow.triggers).logicType,
       conditions: conditions(workflow.triggers),
@@ -127,8 +137,9 @@ function projectWorkflow(workflow: Record<string, unknown>) {
           .map(record)
           .map(({ type, data, config, status }) => ({
             type,
-            data,
-            config,
+            fallthroughType: record(data).fallthroughType,
+            targetType: record(config).targetType,
+            targetIdentifier: record(config).targetIdentifier,
             status,
           })),
       })),
@@ -165,12 +176,9 @@ const EXPECTED_WORKFLOW = {
       actions: [
         {
           type: 'email',
-          data: { fallthroughType: 'ActiveMembers' },
-          config: {
-            targetType: 'issue_owners',
-            targetDisplay: null,
-            targetIdentifier: null,
-          },
+          fallthroughType: 'ActiveMembers',
+          targetType: 'issue_owners',
+          targetIdentifier: null,
           status: 'active',
         },
       ],
@@ -210,59 +218,53 @@ async function workflowProblems(api: SentryApi, now: Date): Promise<string[]> {
     now.getTime() - Date.parse(lastTriggered) > DRILL_WINDOW_DAYS * DAY_MS
   )
     problems.push(
-      `The alerts' Sentry workflow has sent nothing in ${DRILL_WINDOW_DAYS} days, though a drill should go out every 30.`,
+      `The alerts' Sentry workflow has sent nothing in ${DRILL_WINDOW_DAYS} days, though the drill should make it send every 30: check the renewal job's \`alertDrill\` result and the server project's issues for \`alert.kind:operational_alert_drill\`.`,
     );
   return problems;
 }
 
-async function drillProblems(api: SentryApi): Promise<string[]> {
-  const response = await api('events/', {
-    dataset: 'errors',
-    field: 'count()',
-    query: 'alert.kind:operational_alert_drill',
-    project: WATCHED.serverProjectId,
-    environment: 'production',
-    statsPeriod: `${DRILL_WINDOW_DAYS}d`,
-  });
+function outcomes(response: SentryResponse) {
   if (response.status !== 200) throw new FailedRead(response.status);
-  const [row] = list(record(response.body).data);
-  if (count(record(row)['count()']) > 0) return [];
+  const groups = list(record(response.body).groups).map(record);
+  return (name: string) =>
+    groups.find((group) => record(group.by).outcome === name);
+}
+
+// The quota is the organization's, so every project's errors count.
+async function usageProblems(api: SentryApi): Promise<string[]> {
+  const accepted = outcomes(
+    await api('stats_v2/', {
+      field: 'sum(quantity)',
+      category: 'error',
+      groupBy: 'outcome',
+      statsPeriod: '30d',
+    }),
+  )('accepted');
+  const used = accepted ? count(record(accepted.totals)['sum(quantity)']) : 0;
+  // Counts stay out of the text, so the issue changes only when its findings do.
+  if (used < QUOTA_WARNING_RATIO * WATCHED.monthlyErrorQuota) return [];
   return [
-    `No alert drill reached Sentry from production in ${DRILL_WINDOW_DAYS} days: the renewal job may not be running, or cannot reach Sentry.`,
+    `Sentry accepted more than 80% of the plan's ${WATCHED.monthlyErrorQuota.toLocaleString('en-US')} monthly errors in the last 30 days. Once the quota runs out, Sentry drops alerts too.`,
   ];
 }
 
-async function usageProblems(api: SentryApi): Promise<string[]> {
-  const response = await api('stats_v2/', {
-    field: 'sum(quantity)',
-    category: 'error',
-    groupBy: 'outcome',
-    statsPeriod: '30d',
-    interval: '1d',
-  });
-  if (response.status !== 200) throw new FailedRead(response.status);
-  const groups = list(record(response.body).groups).map(record);
-  const outcome = (name: string) =>
-    groups.find((group) => record(group.by).outcome === name);
-  const problems: string[] = [];
-  const accepted = outcome('accepted');
-  const used = accepted ? count(record(accepted.totals)['sum(quantity)']) : 0;
-  // Counts stay out of the text, so the issue changes only when its findings do.
-  if (used >= QUOTA_WARNING_RATIO * WATCHED.monthlyErrorQuota)
-    problems.push(
-      `Sentry accepted more than 80% of the plan's ${WATCHED.monthlyErrorQuota.toLocaleString('en-US')} monthly errors in the last 30 days. Once the quota runs out, Sentry drops alerts too.`,
-    );
-  const limited = outcome('rate_limited');
-  const recentDrops = limited
-    ? list(record(limited.series)['sum(quantity)'])
-        .slice(-DROP_WINDOW_DAYS)
-        .reduce((total: number, value) => total + count(value), 0)
-    : 0;
-  if (recentDrops > 0)
-    problems.push(
-      'Sentry dropped error events in the last two days for quota or rate limits; an operational alert may have been among them.',
-    );
-  return problems;
+// Only the server project's drops matter here: the browser's errors and CSP
+// reports go to the web project and never carry an alert.
+async function dropProblems(api: SentryApi): Promise<string[]> {
+  const limited = outcomes(
+    await api('stats_v2/', {
+      field: 'sum(quantity)',
+      category: 'error',
+      groupBy: 'outcome',
+      project: WATCHED.serverProjectId,
+      statsPeriod: `${DROP_WINDOW_DAYS}d`,
+    }),
+  )('rate_limited');
+  if (!limited || count(record(limited.totals)['sum(quantity)']) === 0)
+    return [];
+  return [
+    'Sentry dropped server error events in the last two days for quota or rate limits; an operational alert may have been among them.',
+  ];
 }
 
 class FailedRead extends Error {
@@ -271,30 +273,52 @@ class FailedRead extends Error {
   }
 }
 
+// A server error, a rate limit or no answer at all may pass, so it is tried
+// once more; a refusal or an unexpected shape will not.
+function isTransient(error: unknown): boolean {
+  if (error instanceof FailedRead)
+    return error.status === 429 || error.status >= 500;
+  return !(error instanceof UnreadableResponse);
+}
+
+function describeFailedRead(what: string, error: unknown): string {
+  // The cause stays out of the issue: it may quote a response or a header,
+  // and a changing status would rewrite the issue each day.
+  if (isTransient(error))
+    return `Sentry did not answer the watcher's read of the ${what}, twice. If this persists, check Sentry's status page.`;
+  if (error instanceof FailedRead)
+    return `The watcher could not read the ${what} from Sentry (HTTP ${error.status}). If the token was revoked or lacks a scope, replace it (docs/dev/logging.md).`;
+  return `The watcher could not read the ${what} from Sentry: the answer was not in the shape it expects. Sentry's API may have changed.`;
+}
+
 async function read(
   what: string,
   check: () => Promise<string[]>,
+  retryDelayMs: number,
 ): Promise<string[]> {
   try {
     return await check();
   } catch (error) {
-    // The cause stays out of the issue: it may quote a response or a header.
-    const detail = error instanceof FailedRead ? ` (HTTP ${error.status})` : '';
-    return [
-      `The watcher could not read the ${what} from Sentry${detail}. If the token was revoked or lacks a scope, replace it (docs/dev/logging.md).`,
-    ];
+    if (!isTransient(error)) return [describeFailedRead(what, error)];
+  }
+  await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+  try {
+    return await check();
+  } catch (error) {
+    return [describeFailedRead(what, error)];
   }
 }
 
 export async function findAlertPathProblems(
   api: SentryApi,
   now: Date,
+  retryDelayMs = RETRY_DELAY_MS,
 ): Promise<string[]> {
   const found = await Promise.all([
-    read('cron monitor', () => monitorProblems(api, now)),
-    read('alerts workflow', () => workflowProblems(api, now)),
-    read('alert drills', () => drillProblems(api)),
-    read('error usage', () => usageProblems(api)),
+    read('cron monitor', () => monitorProblems(api, now), retryDelayMs),
+    read('alerts workflow', () => workflowProblems(api, now), retryDelayMs),
+    read('error usage', () => usageProblems(api), retryDelayMs),
+    read('dropped errors', () => dropProblems(api), retryDelayMs),
   ]);
   return found.flat();
 }

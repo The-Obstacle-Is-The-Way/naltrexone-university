@@ -16,7 +16,7 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
-| AUDIT-015 | [Bug and Debt Registers, Audited by Root Cause](./audit-015-register-audit-by-root-cause-2026-10-08.md) | 2026-10-08 | Every Active, Parked and Deferred bug and debt record | Active: corrections applied; seven root causes and a decided order; DEBT-512 filed. |
+| AUDIT-015 | [Bug and Debt Registers, Audited by Root Cause](./audit-015-register-audit-by-root-cause-2026-10-08.md) | 2026-10-08 | Every Active bug and debt record, and four Deferred rows | Active: corrections applied; seven root causes and a decided order; DEBT-512 filed. |
 
 ## Archived Audits
 

@@ -119,18 +119,33 @@ which would copy the scope's user past `scrubEvent`.
   stopped cron raises nothing. The renewal job checks in with the Sentry cron
   monitor `send-renewal-notices` on each run it admits, and a daily GitHub
   Actions job, "Operational alert watcher"
-  (`scripts/operational-alert-watcher.ts`), reads Sentry at 11:37 UTC. It keeps
-  one GitHub issue, "Operational alerts may not be reaching the owner", open
-  while the job has not checked in for a day or its last run failed, the
-  alerts' workflow is disabled or no longer as set up, the workflow has sent
-  nothing in 32 days, no drill reached Sentry in 32 days, more than 80% of the
-  monthly errors are used, or Sentry dropped errors in the last two days. It
-  closes the issue once every check passes. It reads Sentry with the
+  (`scripts/operational-alert-watcher.ts`), reads Sentry at 11:37 UTC. This is
+  the one list of its checks. It keeps one GitHub issue, "Operational alerts
+  may not be reaching the owner", open while:
+  - the job has not checked in for 25 hours, or its last run's status is not
+    `ok`;
+  - the monitor is disabled or muted;
+  - the alerts' workflow is disabled or differs from its recorded setup;
+  - the workflow has sent nothing in 32 days, though the drill makes it send
+    every 30 (Sentry keeps the drill's own event for 30 days only, so the
+    workflow's last send is read);
+  - more than 80% of the organization's 5,000 monthly errors were used in the
+    last 30 days;
+  - Sentry dropped server-project errors in the last two days;
+  - or a read fails: a server error or no answer is tried once more, and a
+    refusal names its HTTP status.
+
+  It closes the issue once every check passes. It reads Sentry with the
   repository secret `SENTRY_WATCHER_TOKEN`: in Sentry, Settings → Custom
   Integrations → Create New Integration → Internal Integration, with Read on
-  Project, Issue & Event, Organization and Alerts and nothing else. Without the
-  token the issue says the watcher is not configured; a read the token cannot
-  make is named in the issue with its HTTP status.
+  Project, Organization and Alerts and nothing else. Without the token the
+  issue says the watcher is not configured. Two limits remain. GitHub disables
+  a public repository's scheduled workflows after 60 days without activity,
+  and a watcher that stops running looks like one with nothing to report; the
+  monthly drill email is then the only check, so re-enable the workflow if
+  GitHub warns that it is disabled. And a drill whose send Sentry did not
+  confirm gives its cycle back even if Sentry received it, so while flushes
+  fail the owner may get a drill email each day.
 
 | Kind | Meaning | First steps |
 | --- | --- | --- |

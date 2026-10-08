@@ -2,10 +2,9 @@ name: Operational alert watcher
 
 # DEBT-505: operational alerts, the legal-deadline renewal alerts among them,
 # reach the owner as Sentry email, and nothing in that path notices its own
-# absence. This daily job reads Sentry with a read-only token, after the
-# renewal job's 09:00 UTC run, and opens one issue when the job stops checking
-# in, the alerts' workflow is disabled or changed, no monthly drill has
-# arrived, or the error quota is nearly spent. See docs/dev/logging.md.
+# absence. This daily job reads Sentry after the renewal job's 09:00 UTC run
+# and keeps one issue open while a check fails. The checks:
+# docs/dev/logging.md, "Operational alerts", Watcher.
 on:
   schedule:
     - cron: '37 11 * * *'

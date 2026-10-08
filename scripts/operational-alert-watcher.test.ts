@@ -6,6 +6,7 @@ import { SEND_RENEWAL_NOTICES_MONITOR } from '@/src/adapters/jobs/send-due-renew
 import { MemoryIssues } from './github-alert-issues-test-helpers';
 import {
   createSentryApi,
+  DRILL_WINDOW_DAYS,
   findAlertPathProblems,
   runOperationalAlertWatcher,
   type SentryApi,
@@ -103,39 +104,24 @@ function monitor(environment: Record<string, unknown> = {}, overrides = {}) {
   };
 }
 
-function stats(accepted: number, rateLimited = [0, 0]) {
-  const days = 30;
-  const flat = (total: number) => [
-    ...Array.from({ length: days - 1 }, () => 0),
-    total,
-  ];
-  return {
-    intervals: Array.from({ length: days }, (_, index) =>
-      ago((days - index) * DAY_MS),
-    ),
-    groups: [
-      {
-        by: { outcome: 'accepted' },
-        totals: { 'sum(quantity)': accepted },
-        series: { 'sum(quantity)': flat(accepted) },
-      },
-      {
-        by: { outcome: 'rate_limited' },
-        totals: { 'sum(quantity)': rateLimited.reduce((a, b) => a + b, 0) },
-        series: {
-          'sum(quantity)': [
-            ...Array.from({ length: days - 2 }, () => 0),
-            ...rateLimited,
-          ],
-        },
-      },
-    ],
-  };
-}
+const outcome = (name: string, total: number) => ({
+  by: { outcome: name },
+  totals: { 'sum(quantity)': total },
+});
+
+// The organization's accepted errors over 30 days.
+const usage = (accepted: number) => ({
+  groups: [outcome('accepted', accepted), outcome('filtered', 4_000)],
+});
+
+// The server project's dropped errors over two days.
+const drops = (rateLimited: number) => ({
+  groups: [outcome('accepted', 12), outcome('rate_limited', rateLimited)],
+});
 
 type Responses = Partial<
   Record<
-    'monitor' | 'workflow' | 'drills' | 'stats',
+    'monitor' | 'workflow' | 'usage' | 'drops',
     { status: number; body: unknown }
   >
 >;
@@ -146,23 +132,23 @@ function sentry(overrides: Responses = {}) {
   const responses = {
     monitor: { status: 200, body: monitor() },
     workflow: { status: 200, body: workflow() },
-    drills: { status: 200, body: { data: [{ 'count()': 1 }] } },
-    stats: { status: 200, body: stats(1_200) },
+    usage: { status: 200, body: usage(1_200) },
+    drops: { status: 200, body: drops(0) },
     ...overrides,
   };
   const api: SentryApi = async (path, query = {}) => {
     reads.push({ path, query });
     if (path === `monitors/${WATCHED.monitorSlug}/`) return responses.monitor;
     if (path === `workflows/${WATCHED.workflowId}/`) return responses.workflow;
-    if (path === 'events/') return responses.drills;
-    if (path === 'stats_v2/') return responses.stats;
+    if (path === 'stats_v2/')
+      return query.project ? responses.drops : responses.usage;
     return { status: 404, body: null };
   };
   return { api, reads };
 }
 
 describe('alert path problems', () => {
-  it('finds none when the job checks in, the workflow is as set up, a drill arrived and quota remains', async () => {
+  it('finds none when the job checks in, the workflow is as set up and has sent lately, and quota remains', async () => {
     expect(await findAlertPathProblems(sentry().api, NOW)).toEqual([]);
   });
 
@@ -274,58 +260,68 @@ describe('alert path problems', () => {
     }
   });
 
-  it('reports no drill from production in 32 days, asking Sentry for exactly that', async () => {
-    const { api, reads } = sentry({
-      drills: { status: 200, body: { data: [{ 'count()': 0 }] } },
+  // The drill's own event is kept for 30 days only, so the workflow's last
+  // send carries the 32-day check, and the issue says where to look.
+  it('points a silent workflow at the drill', async () => {
+    const { api } = sentry({
+      workflow: { status: 200, body: workflow({ lastTriggered: null }) },
     });
 
     expect(await findAlertPathProblems(api, NOW)).toEqual([
-      expect.stringContaining('No alert drill reached Sentry'),
+      expect.stringContaining('alert.kind:operational_alert_drill'),
     ]);
-    expect(reads.find((read) => read.path === 'events/')?.query).toEqual({
-      dataset: 'errors',
-      field: 'count()',
-      query: 'alert.kind:operational_alert_drill',
-      project: WATCHED.serverProjectId,
-      environment: 'production',
-      statsPeriod: '32d',
-    });
+  });
+
+  it('allows a drill cycle, a late cron and a retry before calling the workflow silent', () => {
+    expect(DRILL_WINDOW_DAYS * DAY_MS).toBeGreaterThan(
+      OPERATIONAL_ALERT_DRILL_INTERVAL_MS + DAY_MS,
+    );
+  });
+
+  it('ignores a field Sentry adds to the workflow later', async () => {
+    const extended = workflow();
+    const action = extended.actionFilters[0]?.actions[0];
+    if (action)
+      Object.assign(action.config, { targetDisplay: 'Owner', newField: 1 });
+    const { api } = sentry({ workflow: { status: 200, body: extended } });
+
+    expect(await findAlertPathProblems(api, NOW)).toEqual([]);
   });
 
   it('reports errors past 80% of the monthly quota, without a count that would change daily', async () => {
-    const { api } = sentry({ stats: { status: 200, body: stats(4_000) } });
+    const { api, reads } = sentry({
+      usage: { status: 200, body: usage(4_000) },
+    });
 
     const problems = await findAlertPathProblems(api, NOW);
 
     expect(problems).toEqual([expect.stringContaining('80%')]);
     expect(problems[0]).not.toContain('4000');
     expect(problems[0]).not.toContain('4,000');
+    // The quota is the organization's, so no project is named.
+    expect(
+      reads.find((read) => read.path === 'stats_v2/' && !read.query.project)
+        ?.query.statsPeriod,
+    ).toBe('30d');
   });
 
-  it('reports error events Sentry dropped in the last two days', async () => {
-    const { api } = sentry({
-      stats: { status: 200, body: stats(1_200, [0, 3]) },
-    });
+  it("reports the server project's errors Sentry dropped in the last two days", async () => {
+    const { api, reads } = sentry({ drops: { status: 200, body: drops(3) } });
 
     expect(await findAlertPathProblems(api, NOW)).toEqual([
-      expect.stringContaining('dropped error events'),
+      expect.stringContaining('dropped server error events'),
     ]);
-  });
-
-  it('ignores drops older than two days', async () => {
-    const old = stats(1_200);
-    const limited = old.groups[1]?.series['sum(quantity)'];
-    if (limited) limited[0] = 5;
-    const { api } = sentry({ stats: { status: 200, body: old } });
-
-    expect(await findAlertPathProblems(api, NOW)).toEqual([]);
+    expect(reads.find((read) => read.query.project)?.query).toMatchObject({
+      project: WATCHED.serverProjectId,
+      statsPeriod: '2d',
+    });
   });
 
   // A revoked token or an API change must surface, never read as healthy.
   it('reports each read that fails, and still makes the others', async () => {
     const { api, reads } = sentry({
       monitor: { status: 401, body: null },
-      stats: { status: 200, body: { unexpected: true } },
+      usage: { status: 200, body: { unexpected: true } },
     });
 
     expect(await findAlertPathProblems(api, NOW)).toEqual([
@@ -334,18 +330,43 @@ describe('alert path problems', () => {
       ),
       expect.stringContaining('could not read the error usage'),
     ]);
+    // A refusal or a malformed answer is not retried.
     expect(reads).toHaveLength(4);
   });
 
-  it('reports a read that throws', async () => {
-    const api: SentryApi = async () => {
+  it('tries a read once more after a server error, so a passing outage opens no issue', async () => {
+    let monitorReads = 0;
+    const { api: healthy } = sentry();
+    const api: SentryApi = async (path, query) => {
+      if (path.startsWith('monitors/') && monitorReads++ === 0)
+        return { status: 502, body: null };
+      return healthy(path, query);
+    };
+
+    expect(await findAlertPathProblems(api, NOW, 0)).toEqual([]);
+    expect(monitorReads).toBe(2);
+  });
+
+  it('reports a read that fails twice in words that stay the same whatever the cause', async () => {
+    const { api: healthy } = sentry();
+    let monitorReads = 0;
+    const api: SentryApi = async (path, query) =>
+      path.startsWith('monitors/')
+        ? { status: monitorReads++ === 0 ? 502 : 503, body: null }
+        : healthy(path, query);
+    const thrown: SentryApi = async () => {
       throw new Error('network down');
     };
 
-    const problems = await findAlertPathProblems(api, NOW);
+    const [fromStatus] = await findAlertPathProblems(api, NOW, 0);
+    const fromThrow = await findAlertPathProblems(thrown, NOW, 0);
 
-    expect(problems).toHaveLength(4);
-    expect(problems.join('\n')).not.toContain('network down');
+    expect(fromStatus).toBe(
+      "Sentry did not answer the watcher's read of the cron monitor, twice. If this persists, check Sentry's status page.",
+    );
+    expect(fromThrow).toHaveLength(4);
+    expect(fromThrow[0]).toBe(fromStatus);
+    expect(fromThrow.join('\n')).not.toContain('network down');
   });
 });
 
@@ -367,9 +388,9 @@ describe('the watcher issue', () => {
 
   it('keeps the same description while the findings stay the same, whatever the counts', async () => {
     const issues = new MemoryIssues();
-    const { api } = sentry({ stats: { status: 200, body: stats(4_100) } });
+    const { api } = sentry({ usage: { status: 200, body: usage(4_100) } });
     await watchOperationalAlerts({ token: 'token', api, issues, now: NOW });
-    const next = sentry({ stats: { status: 200, body: stats(4_300) } });
+    const next = sentry({ usage: { status: 200, body: usage(4_300) } });
 
     expect(
       await watchOperationalAlerts({
@@ -466,11 +487,8 @@ describe('running the watcher', () => {
     expect(lines.join('\n')).not.toContain('secret-token');
   });
 
-  it('watches the renewal job and drill this repository runs', () => {
+  it('watches the cron monitor the renewal job checks in with', () => {
     expect(WATCHED.monitorSlug).toBe(SEND_RENEWAL_NOTICES_MONITOR.slug);
-    // A drill goes out each 30-day cycle; 32 days allows a late cron and a
-    // retry.
-    expect(OPERATIONAL_ALERT_DRILL_INTERVAL_MS).toBe(30 * DAY_MS);
   });
 
   it('runs daily after the renewal job, with the token only in its own step', () => {

@@ -44,7 +44,6 @@ function createDeps(): {
   >;
   logger: FakeLogger;
   alerts: FakeOperationalAlerts;
-  alertDrillClaims: number[];
 } {
   const listDue = vi.fn<AnnualRenewals['listDue']>(async () => [
     {
@@ -83,10 +82,8 @@ function createDeps(): {
   const alerts = new FakeOperationalAlerts();
   // DEBT-505: this cycle's drill is already claimed by default, so each test
   // sees only the alerts it is about.
-  const alertDrillClaims: number[] = [];
   return {
     alerts,
-    alertDrillClaims,
     listDue,
     listPastNoticeDeadline,
     listActiveMonthly,
@@ -108,10 +105,7 @@ function createDeps(): {
       logger,
       alerts,
       alertDrillCycles: {
-        claim: async (cycle) => {
-          alertDrillClaims.push(cycle);
-          return false;
-        },
+        claim: async () => false,
         release: async () => {},
       },
       annualPlan: {

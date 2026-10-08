@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — decided per item; items 1 and 2 first
+**Status:** Open — decided per item; AUDIT-015 orders them: quick wins, alerts for its silent conditions, then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —

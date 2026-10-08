@@ -57,7 +57,7 @@ describe('operationalAlertDrillCycle', () => {
 
 describe('raiseOperationalAlertDrillIfDue', () => {
   it('raises one drill when it claims the current cycle', async () => {
-    const { deps, alerts, claims } = setup(async () => true);
+    const { deps, alerts, claims, releases } = setup(async () => true);
 
     await expect(raiseOperationalAlertDrillIfDue(deps)).resolves.toBe('raised');
 
@@ -65,6 +65,8 @@ describe('raiseOperationalAlertDrillIfDue', () => {
     expect(alerts.raised).toEqual([
       { kind: 'operational_alert_drill', count: 1 },
     ]);
+    // A sent drill keeps its cycle, or every daily run would send another.
+    expect(releases).toEqual([]);
   });
 
   // A drill that did not go out gives its cycle back, so the next daily run
