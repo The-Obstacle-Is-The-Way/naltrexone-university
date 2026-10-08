@@ -8,6 +8,7 @@ import type {
   TransactionalEmailSendResult,
 } from '@/src/application/ports';
 import type { Logger } from '@/src/application/ports/logger';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import type { RenewalNoticeFailureClass } from '@/src/application/ports/renewal-notice-delivery-repository';
 import type { UserRepository } from '@/src/application/ports/user-repository';
 import { renewalNoticeSendByCutoff } from '@/src/application/shared/renewal-notice-schedule';
@@ -41,6 +42,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     private readonly noticeTargets: RenewalNoticeTargets,
     private readonly hasher: Sha256Hasher,
     private readonly logger: Pick<Logger, 'error'>,
+    private readonly alerts: OperationalAlerts,
     private readonly now: () => Date = () => new Date(),
     private readonly createAttemptId: () => string = () => crypto.randomUUID(),
   ) {}
@@ -157,8 +159,14 @@ export class DispatchRenewalNoticeDeliveryUseCase {
           'Renewal notice send-by cutoff passed',
         );
       } catch {
-        // Alerting failure must not undo the refusal.
+        // Logging failure must not undo the refusal.
       }
+      // DEBT-505: a missed legal deadline needs a person; the log alone
+      // reaches nobody. The port never rejects.
+      await this.alerts.raise({
+        kind: 'renewal_notice_send_by_cutoff_passed',
+        count: 1,
+      });
       return {
         failureClass: 'notice_deadline_passed',
         failureCode: 'send_by_cutoff_passed',
@@ -293,8 +301,12 @@ export class DispatchRenewalNoticeDeliveryUseCase {
         'Renewal notice delivery outcome is unknown',
       );
     } catch {
-      // Alerting failure must not undo the durable at-most-once quarantine.
+      // Logging failure must not undo the durable at-most-once quarantine.
     }
+    await this.alerts.raise({
+      kind: 'renewal_notice_outcome_unknown',
+      count: 1,
+    });
     return delivery;
   }
 }

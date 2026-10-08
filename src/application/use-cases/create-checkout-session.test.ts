@@ -5,6 +5,7 @@ import type { SubscriptionStatus } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakePaymentGateway,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
@@ -146,6 +147,7 @@ async function createUseCaseWithExistingCustomer(input: {
       subscriptions,
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     ),
@@ -166,6 +168,7 @@ function createUseCase(
     deps.subscriptions ?? new FakeSubscriptionRepository(),
     paymentGateway,
     new FakeLogger(),
+    new FakeOperationalAlerts(),
     () => new Date('2026-02-01T00:00:00Z'),
     deps.renewalTerms ?? getRenewalTerms,
   );
@@ -188,6 +191,7 @@ describe('CreateCheckoutSessionUseCase', () => {
         ),
         payments,
         new FakeLogger(),
+        new FakeOperationalAlerts(),
         () => new Date('2026-02-01T00:00:00Z'),
         getRenewalTerms,
       );
@@ -359,6 +363,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       new FakeSubscriptionRepository(),
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );
@@ -397,6 +402,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       subscriptions,
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );
@@ -466,6 +472,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       subscriptions,
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );
@@ -494,6 +501,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       new FakeSubscriptionRepository(),
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );
@@ -571,6 +579,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       new FakeSubscriptionRepository(),
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );
@@ -636,6 +645,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       new FakeSubscriptionRepository(),
       paymentGateway,
       logger,
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00Z'),
       getRenewalTerms,
     );

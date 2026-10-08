@@ -2,6 +2,7 @@ import { isBlockingCheckoutSubscriptionStatus } from '@/src/domain/value-objects
 import { ApplicationError, isApplicationError } from '../errors';
 import type { PaymentGateway, RenewalTermsSnapshot } from '../ports/gateways';
 import type { Logger } from '../ports/logger';
+import type { OperationalAlerts } from '../ports/operational-alerts';
 import type {
   StripeCustomerRepository,
   SubscriptionRepository,
@@ -34,6 +35,7 @@ export class CreateCheckoutSessionUseCase {
     private readonly subscriptions: SubscriptionRepository,
     private readonly payments: PaymentGateway,
     private readonly logger: Logger,
+    private readonly alerts: OperationalAlerts,
     private readonly now: () => Date,
     private readonly getRenewalTerms: (
       plan: 'monthly' | 'annual',
@@ -217,6 +219,12 @@ export class CreateCheckoutSessionUseCase {
       } catch {
         // Logging must not change the checkout's answer.
       }
+      // DEBT-505: the subscription Stripe holds is still unrecorded here, so
+      // a person must reconcile it. The port never rejects.
+      await this.alerts.raise({
+        kind: 'checkout_stripe_holds_unrecorded',
+        count: 1,
+      });
     }
   }
 }

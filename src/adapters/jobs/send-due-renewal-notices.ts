@@ -16,7 +16,7 @@ import {
 } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
-import type { Logger } from '@/src/application/ports';
+import type { Logger, OperationalAlerts } from '@/src/application/ports';
 import { RENEWAL_NOTICE_MINIMUM_DAYS } from '@/src/application/shared/renewal-notice-schedule';
 import type {
   ScheduledRenewalNotice,
@@ -311,6 +311,7 @@ export type SendDueRenewalNoticesJobDeps = {
     limit: number;
   }) => Promise<number>;
   logger: Pick<Logger, 'warn' | 'error'>;
+  alerts: OperationalAlerts;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -458,6 +459,10 @@ async function alertOnMissedNoticeDeadlines(
     },
     'Annual renewal notice deadline missed',
   );
+  await deps.alerts.raise({
+    kind: 'renewal_notice_deadline_missed',
+    count: missed.length,
+  });
 }
 
 type KnownAnniversary = {
@@ -683,4 +688,8 @@ async function alertOnMissedAnniversaryReminders(
     },
     'Monthly anniversary reminder deadline missed',
   );
+  await deps.alerts.raise({
+    kind: 'anniversary_reminder_deadline_missed',
+    count: missed.length,
+  });
 }

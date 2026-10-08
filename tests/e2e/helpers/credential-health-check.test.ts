@@ -181,7 +181,9 @@ describe('fetchWithTimeout', () => {
 });
 
 describe('runE2ECredentialHealthCheck', () => {
-  it('runs all validators when credentials are valid', async () => {
+  // DEBT-508: preflight already finds the Clerk user to verify its password,
+  // so it hands that ID to the seed and the run spends one lookup, not three.
+  it('runs all validators when credentials are valid and returns the Clerk user it verified', async () => {
     const services = createServices();
     const env = createEnv();
 
@@ -190,7 +192,7 @@ describe('runE2ECredentialHealthCheck', () => {
         env,
         services,
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ clerkUserId: 'user_123' });
 
     const databaseCallArg = vi.mocked(services.checkDatabaseConnectivity).mock
       .calls[0]?.[0];
@@ -418,7 +420,7 @@ describe('runE2ECredentialHealthCheck', () => {
           env,
           services,
         }),
-      ).resolves.toBeUndefined();
+      ).resolves.toEqual({ clerkUserId: 'user_123' });
 
       expect(verifyClerkPassword).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'user_123' }),
@@ -458,7 +460,7 @@ describe('runE2ECredentialHealthCheck', () => {
           env,
           services,
         }),
-      ).resolves.toBeUndefined();
+      ).resolves.toEqual({ clerkUserId: 'user_123' });
 
       const verifyPasswordCall = fetchSpy.mock.calls[1];
       const verifyPasswordInit = verifyPasswordCall?.[1];

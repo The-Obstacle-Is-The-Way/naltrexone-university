@@ -37,12 +37,6 @@ const REQUIRED_ENV_VARS: readonly SharedRequiredEnvVar[] = [
     fix: 'Set DATABASE_URL in .env.local (dev) or repository secrets (CI).',
   },
   {
-    key: 'CLERK_SECRET_KEY',
-    code: 'E2E_RESET:CLERK_SECRET_KEY_MISSING',
-    message: 'CLERK_SECRET_KEY is missing.',
-    fix: 'Set CLERK_SECRET_KEY in .env.local or CI secrets.',
-  },
-  {
     key: 'E2E_CLERK_USER_USERNAME',
     code: 'E2E_RESET:E2E_CLERK_USER_USERNAME_MISSING',
     message: 'E2E_CLERK_USER_USERNAME is missing.',
@@ -79,14 +73,10 @@ export type E2EUserStateResetServices = {
     databaseUrl: string;
     sql: E2EResetSql;
   }) => Promise<void>;
-  resolveClerkUserIdByEmail: (input: {
-    clerkSecretKey: string;
-    email: string;
-  }) => Promise<string | null>;
-  resolveAppUserIdByClerkUserId: (input: {
+  resolveAppUserIdByEmail: (input: {
     databaseUrl: string;
     sql: E2EResetSql;
-    clerkUserId: string;
+    email: string;
   }) => Promise<string | null>;
   clearUserState: (input: {
     databaseUrl: string;
@@ -148,21 +138,11 @@ const sharedResetSupport = createSharedE2EResetSupport({
   failureReportLabel: '[E2E_RESET] E2E user-state reset failed',
   internalEnvMappingError: {
     code: 'E2E_RESET:ENV_MAPPING_INCOMPLETE',
-    fix: 'Check resolveRequiredEnv() mappings for DATABASE_URL, CLERK_SECRET_KEY, and E2E_CLERK_USER_USERNAME.',
-  },
-  clerkApiUnavailableError: {
-    code: 'E2E_RESET:CLERK_API_UNAVAILABLE',
-    message: 'Clerk API request failed while resolving E2E user.',
-    fix: 'Retry after Clerk/API network recovery; do not change secrets until availability is restored.',
-  },
-  clerkSecretKeyInvalidError: {
-    code: 'E2E_RESET:CLERK_SECRET_KEY_INVALID',
-    message: 'Clerk rejected CLERK_SECRET_KEY while resolving E2E user.',
-    fix: 'Set CLERK_SECRET_KEY in .env.local or CI secrets.',
+    fix: 'Check resolveRequiredEnv() mappings for DATABASE_URL and E2E_CLERK_USER_USERNAME.',
   },
   appUserLookupFailedError: {
     code: 'E2E_RESET:DATABASE_QUERY_FAILED',
-    message: 'Failed to resolve E2E app user row by Clerk user id.',
+    message: 'Failed to resolve the E2E app user row by email.',
     fix: 'Verify DATABASE_URL connectivity and run pnpm db:migrate.',
   },
 });
@@ -248,9 +228,7 @@ const defaultServices: E2EUserStateResetServices = {
     }
   },
 
-  resolveClerkUserIdByEmail: sharedResetSupport.resolveClerkUserIdByEmail,
-  resolveAppUserIdByClerkUserId:
-    sharedResetSupport.resolveAppUserIdByClerkUserId,
+  resolveAppUserIdByEmail: sharedResetSupport.resolveAppUserIdByEmail,
 
   clearUserState: async ({ sql, userId }) => {
     try {
@@ -660,36 +638,23 @@ export async function runE2EUserStateReset(
     throw new Error(sharedResetSupport.formatFailureReport(failures));
   }
 
-  const { databaseUrl, clerkSecretKey, clerkEmail } =
+  const { databaseUrl, clerkEmail } =
     sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
   const sql = postgres(databaseUrl, { max: 1 });
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl, sql });
 
-    const clerkUserId = await services.resolveClerkUserIdByEmail({
-      clerkSecretKey,
-      email: clerkEmail,
-    });
-
-    if (!clerkUserId) {
-      throw new E2EUserStateResetError(
-        'E2E_RESET:CLERK_USER_NOT_FOUND',
-        `Clerk user "${clerkEmail}" was not found.`,
-        'Create that user in Clerk Dashboard or update E2E_CLERK_USER_USERNAME.',
-      );
-    }
-
-    const appUserId = await services.resolveAppUserIdByClerkUserId({
+    const appUserId = await services.resolveAppUserIdByEmail({
       databaseUrl,
       sql,
-      clerkUserId,
+      email: clerkEmail,
     });
 
     if (!appUserId) {
       throw new E2EUserStateResetError(
         'E2E_RESET:APP_USER_NOT_FOUND',
-        `No app user row exists for Clerk user "${clerkUserId}".`,
+        `No app user row exists for "${clerkEmail}".`,
         'Run seedTestSubscription() before runE2EUserStateReset() in global setup so the user row exists.',
       );
     }

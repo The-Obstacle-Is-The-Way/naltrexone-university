@@ -4,17 +4,27 @@ import type {
   SubscriptionStatus,
 } from '@/src/domain/value-objects';
 
+export type RequireUserOptions = {
+  /**
+   * Read the email from the identity provider first, instead of the stored
+   * copy. For a use that sends the email outside the app, such as a Stripe
+   * customer; it spends the provider's rate-limited allowance (DEBT-503).
+   */
+  currentEmail?: boolean;
+};
+
 export interface AuthGateway {
   /**
    * Returns the current authenticated user (internal UUID + email), or null.
-   * Implementation lives in adapters and may upsert the DB user row.
+   * Implementation lives in adapters and may create the DB user row on a
+   * first visit.
    */
   getCurrentUser(): Promise<User | null>;
 
   /**
    * Returns the current authenticated user or throws ApplicationError('UNAUTHENTICATED').
    */
-  requireUser(): Promise<User>;
+  requireUser(options?: RequireUserOptions): Promise<User>;
 }
 
 export type PaymentGatewayRequestOptions = {

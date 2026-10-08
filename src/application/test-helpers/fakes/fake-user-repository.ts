@@ -11,6 +11,12 @@ export class FakeUserRepository implements UserRepository {
   private readonly byClerkId = new Map<string, StoredUser>();
   private readonly byEmail = new Map<string, string>();
   private lastObservedAtMs: number | null = null;
+  private readonly upsertFailures: unknown[] = [];
+
+  /** Makes the next upserts reject with these errors, in order, writing nothing. */
+  failNextUpserts(...errors: unknown[]): void {
+    this.upsertFailures.push(...errors);
+  }
 
   async findByClerkId(clerkId: string): Promise<User | null> {
     const stored = this.byClerkId.get(clerkId);
@@ -35,6 +41,8 @@ export class FakeUserRepository implements UserRepository {
     email: string,
     options?: UpsertUserByClerkIdOptions,
   ): Promise<User> {
+    if (this.upsertFailures.length > 0) throw this.upsertFailures.shift();
+
     const observedAt =
       options?.observedAt ??
       (() => {

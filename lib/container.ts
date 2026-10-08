@@ -58,10 +58,13 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     annual: primitives.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
   };
 
-  const getClerkUser = async () => {
+  // DEBT-503 item 1: the Clerk user ID of the session the middleware verified.
+  // auth() reads it from the request, with no Backend API call; Clerk's
+  // Backend API is reached only through getClerkUserById.
+  const getSessionClerkUserId = async () => {
     if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') return null;
-    const { currentUser } = await import('@clerk/nextjs/server');
-    return currentUser();
+    const { auth } = await import('@clerk/nextjs/server');
+    return (await auth()).userId ?? null;
   };
 
   const getClerkUserById = async (clerkUserId: string) => {
@@ -84,7 +87,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     primitives,
     repositories,
     stripePriceIds,
-    getClerkUser,
+    getSessionClerkUserId,
     getClerkUserById,
   });
   const gateways = {
@@ -107,7 +110,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     repositories,
     gateways,
     useCases,
-    getClerkUser,
+    getSessionClerkUserId,
   });
   const controllers = {
     ...controllerFactories,

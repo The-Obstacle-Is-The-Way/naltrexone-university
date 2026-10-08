@@ -15,6 +15,7 @@ import {
   FakeAuthGateway,
   FakeCreateTrialPaymentMethodSetupSessionUseCase,
   FakeLogger,
+  FakeOperationalAlerts,
   FakePaymentGateway,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -114,6 +115,7 @@ describe('billing controllers (integration)', () => {
       new FakeSubscriptionRepository(),
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00.000Z'),
       getRenewalTerms,
     );
@@ -199,6 +201,7 @@ describe('billing controllers (integration)', () => {
       new FakeSubscriptionRepository(),
       paymentGateway,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => new Date('2026-02-01T00:00:00.000Z'),
       getRenewalTerms,
     );

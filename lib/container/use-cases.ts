@@ -216,6 +216,7 @@ export function createUseCaseFactories(input: {
         repositories.createSubscriptionRepository(),
         gateways.createPaymentGateway(),
         primitives.logger,
+        gateways.createOperationalAlerts(),
         primitives.now,
         createCheckoutRenewalTerms,
       ),
@@ -254,6 +255,7 @@ export function createUseCaseFactories(input: {
         },
         gateways.createSha256Hasher(),
         primitives.logger,
+        gateways.createOperationalAlerts(),
         primitives.now,
       ),
     createRecordRenewalNoticeProviderOutcomeUseCase: () =>
@@ -281,6 +283,7 @@ export function createUseCaseFactories(input: {
           },
           hasher,
           primitives.logger,
+          gateways.createOperationalAlerts(),
           primitives.now,
         ),
         primitives.logger,

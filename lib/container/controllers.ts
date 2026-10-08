@@ -1,4 +1,3 @@
-import type { ClerkUserLike } from '@/src/adapters/gateways';
 import type {
   ContainerPrimitives,
   ControllerFactories,
@@ -12,9 +11,15 @@ export function createControllerFactories(input: {
   repositories: RepositoryFactories;
   gateways: GatewayFactories;
   useCases: UseCaseFactories;
-  getClerkUser: () => Promise<ClerkUserLike | null>;
+  getSessionClerkUserId: () => Promise<string | null>;
 }): ControllerFactories {
-  const { primitives, repositories, gateways, useCases, getClerkUser } = input;
+  const {
+    primitives,
+    repositories,
+    gateways,
+    useCases,
+    getSessionClerkUserId,
+  } = input;
 
   return {
     createStripeWebhookDeps: () => ({
@@ -68,7 +73,7 @@ export function createControllerFactories(input: {
         useCases.createTrialPaymentMethodSetupSessionUseCase(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       rateLimiter: gateways.createRateLimiter(),
-      getClerkUserId: async () => (await getClerkUser())?.id ?? null,
+      getClerkUserId: getSessionClerkUserId,
       appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
       now: primitives.now,
     }),

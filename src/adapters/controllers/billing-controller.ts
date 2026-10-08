@@ -151,6 +151,24 @@ function toTrialPaymentMethodReturnUrl(
   return url.toString();
 }
 
+// DEBT-503 item 1: pages read the stored email, but a Stripe session sends it
+// outside the app, so the email comes from Clerk here. This runs inside the
+// session factory, after the rate limit and the idempotency replay, so a
+// refused or replayed request spends none of Clerk's allowance.
+async function requireCurrentEmailFor(
+  d: BillingControllerDeps,
+  userId: string,
+): Promise<string> {
+  const current = await d.authGateway.requireUser({ currentEmail: true });
+  if (current.id !== userId) {
+    throw new ApplicationError(
+      'CONFLICT',
+      'The signed-in account changed during this request',
+    );
+  }
+  return current.email;
+}
+
 export const createTrialPaymentMethodSetupSession = createAction({
   schema: CreateTrialPaymentMethodSetupSessionInputSchema,
   getDeps,
@@ -165,7 +183,7 @@ export const createTrialPaymentMethodSetupSession = createAction({
     async function createNewSession(): Promise<CreateTrialPaymentMethodSetupSessionOutput> {
       const setupInput = {
         userId: user.id,
-        email: user.email,
+        email: await requireCurrentEmailFor(d, user.id),
         expectedDisclosureVersion: input.expectedDisclosureVersion,
         successUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'success'),
         cancelUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'cancel'),
@@ -214,7 +232,7 @@ export const createCheckoutSession = createAction({
       const checkoutSessionInput = {
         userId: user.id,
         clerkUserId: await d.getClerkUserId(),
-        email: user.email,
+        email: await requireCurrentEmailFor(d, user.id),
         plan,
         expectedOffer,
         successUrl: toSuccessUrl(d.appUrl),
