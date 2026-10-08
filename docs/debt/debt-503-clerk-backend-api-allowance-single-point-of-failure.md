@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 (identity from the session token) implemented; its check follows release; items 2–4 follow
+**Status:** In Progress — item 1 (identity from the session token) released 2026-10-08; DEBT-508's overlap check follows; items 2–4 follow
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -56,7 +56,7 @@ This record holds the structural fixes, so that the allowance stops being the on
   - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. Clerk's 404 in them is the real SDK's error, the one the Backend API throws; its other answers are built by hand.
   - BUG-320: six concurrent first requests, each on its own connection, provision one row in each of 100 rounds. With BUG-320's retry removed, the test failed in each of five runs.
   - [BUG-332](../bugs/bug-332-concurrent-first-requests-can-deadlock-provisioning.md): that test then found a deadlock among the same inserts, in about one run in three. The gateway now retries provisioning after a `40P01`.
-  - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429.
+  - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429. Released through promotion #1427, aliased 2026-10-08T12:15:56Z; `main`'s CI run 37774035682, E2E included, passed. The overlap check remains.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)
 
