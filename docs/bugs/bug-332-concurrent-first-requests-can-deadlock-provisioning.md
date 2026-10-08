@@ -19,7 +19,7 @@ A new user's first page load can send several requests at once. Each finds no `u
 ## Evidence
 
 - **Found by DEBT-503 item 1's contract test** (`tests/integration/session-identity-contract.integration.test.ts`): six first requests for one new user, each on its own connection, released together, in 100 rounds per run.
-- **Rate.** CI found it first: #1426's run 37746214211, on `274772b1` (2026-10-08 07:53Z), failed on this test. The local full gate failed on it once later that day, after passing four times. Rerun alone, the test then failed in 7 of 20 runs, each time in one round of the 100.
+- **Rate.** On 2026-10-08, #1426's CI failed on this test once, and so did the local full gate, after passing four times. Rerun alone, the test then failed in 7 of 20 runs, each time in one round of the 100.
 - **Cause, from the driver error.** SQLSTATE `40P01`, "deadlock detected": one process waits for a `ShareLock` on another's transaction while that one waits on a third. Each session's `INSERT … ON CONFLICT (clerk_user_id) DO UPDATE` inserts speculatively and then waits on the other sessions' unique-index entries, for `clerk_user_id` and for `users_email_uq`, so the waits can form a cycle.
 - **Mapping.** `DrizzleUserRepository.mapDbError` keeps the driver error as the cause and reports `INTERNAL_ERROR`, "Failed to ensure user row" (`src/adapters/repositories/drizzle-user-repository.ts`). Nothing above it retries.
 - **Before DEBT-503 item 1, too.** Every signed-in request ran the same upsert through `currentUser()`, so concurrent first requests raced it then as well. This is not a regression.
@@ -46,7 +46,7 @@ A new user's first page load can send several requests at once. Each finds no `u
 ## Verification
 
 - [x] The unit tests above fail before the fix and pass after it (2026-10-08: the retry test failed without the retry; the other-failure test passes either way, so a broad retry would fail it).
-- [x] The six-request contract test passes 30 consecutive runs locally (2026-10-08, on `87f54f7a`; before the fix it failed in 7 of 20).
+- [x] The six-request contract test passes 30 consecutive runs locally (2026-10-08, with the fix in #1426; before it, the test failed in 7 of 20).
 - [ ] No "Failed to ensure user row" event in Sentry for two weeks after the deploy.
 
 ## Related
