@@ -51,6 +51,7 @@ describe('sendOperationalAlertEvent', () => {
       kind: 'renewal_notice_deadline_missed',
       count: 3,
       sharedCooldown: 'held',
+      window: '2026-10-08T00:00:00.000Z',
     });
 
     const events = sentEvents();
@@ -58,10 +59,15 @@ describe('sendOperationalAlertEvent', () => {
     expect(events[0]).toMatchObject({
       level: 'error',
       message: 'Operational alert: renewal_notice_deadline_missed',
-      fingerprint: ['operational-alert', 'renewal_notice_deadline_missed'],
+      fingerprint: [
+        'operational-alert',
+        'renewal_notice_deadline_missed',
+        '2026-10-08T00:00:00.000Z',
+      ],
       tags: {
         'alert.kind': 'renewal_notice_deadline_missed',
         'alert.shared_cooldown': 'held',
+        'alert.window': '2026-10-08T00:00:00.000Z',
       },
       contexts: expect.objectContaining({ alert: { count: 3 } }),
     });
@@ -69,17 +75,37 @@ describe('sendOperationalAlertEvent', () => {
     expect(events[0]).not.toHaveProperty('extra');
   });
 
-  it('groups each kind as its own issue, whatever the cooldown tag', async () => {
+  // Sentry emails on a new issue, not on a later event in one still open. A
+  // new issue per kind and cooldown window makes every episode notify.
+  it('opens a new issue for each kind and cooldown window, whatever the cooldown tag', async () => {
     sent = [];
 
     await sendOperationalAlertEvent({
       kind: 'clerk_backend_call_limiter_failed',
       count: 1,
       sharedCooldown: 'unavailable',
+      window: '2026-10-08T00:00:00.000Z',
+    });
+    await sendOperationalAlertEvent({
+      kind: 'clerk_backend_call_limiter_failed',
+      count: 1,
+      sharedCooldown: 'unavailable',
+      window: '2026-10-08T06:00:00.000Z',
     });
 
+    expect(sentEvents().map((event) => event.fingerprint)).toEqual([
+      [
+        'operational-alert',
+        'clerk_backend_call_limiter_failed',
+        '2026-10-08T00:00:00.000Z',
+      ],
+      [
+        'operational-alert',
+        'clerk_backend_call_limiter_failed',
+        '2026-10-08T06:00:00.000Z',
+      ],
+    ]);
     expect(sentEvents()[0]).toMatchObject({
-      fingerprint: ['operational-alert', 'clerk_backend_call_limiter_failed'],
       tags: { 'alert.shared_cooldown': 'unavailable' },
     });
   });

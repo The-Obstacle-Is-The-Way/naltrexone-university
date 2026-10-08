@@ -72,6 +72,7 @@ describe('CooldownOperationalAlerts', () => {
         kind: 'renewal_notice_deadline_missed',
         count: 3,
         sharedCooldown: 'held',
+        window: '2026-10-08T00:00:00.000Z',
       },
     ]);
   });
@@ -128,6 +129,7 @@ describe('CooldownOperationalAlerts', () => {
         kind: 'clerk_backend_call_limiter_failed',
         count: 1,
         sharedCooldown: 'unavailable',
+        window: '2026-10-08T00:00:00.000Z',
       },
     ]);
     expect(rateLimiter.inputs).toHaveLength(1);

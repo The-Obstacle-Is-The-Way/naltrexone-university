@@ -28,6 +28,14 @@ export class LocalAlertCooldown {
   }
 }
 
+// The limiter's fixed windows start at multiples of their length since the
+// epoch; the event names the same window the shared cooldown counted it in.
+function cooldownWindowStart(nowMs: number): string {
+  return new Date(
+    nowMs - (nowMs % OPERATIONAL_ALERT_COOLDOWN_MS),
+  ).toISOString();
+}
+
 export type CooldownOperationalAlertsDeps = {
   rateLimiter: Pick<RateLimiter, 'limit'>;
   send: (event: OperationalAlertEvent) => Promise<void>;
@@ -48,17 +56,15 @@ export class CooldownOperationalAlerts implements OperationalAlerts {
 
   async raise(alert: OperationalAlert): Promise<void> {
     try {
-      if (
-        !this.deps.localCooldown.admit(alert.kind, this.deps.now().getTime())
-      ) {
-        return;
-      }
+      const nowMs = this.deps.now().getTime();
+      if (!this.deps.localCooldown.admit(alert.kind, nowMs)) return;
       const sharedCooldown = await this.takeSharedCooldown(alert.kind);
       if (sharedCooldown === 'taken') return;
       await this.deps.send({
         kind: alert.kind,
         count: alert.count,
         sharedCooldown,
+        window: cooldownWindowStart(nowMs),
       });
     } catch (error) {
       try {

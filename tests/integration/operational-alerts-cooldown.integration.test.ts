@@ -74,6 +74,7 @@ describe('operational alert cooldown on Postgres', () => {
         kind: 'renewal_notice_outcome_unknown',
         count: 1,
         sharedCooldown: 'held',
+        window: new Date(insideOneWindow.getTime() - 60_000).toISOString(),
       },
     ]);
   });
