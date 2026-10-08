@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; the fix follows DEBT-505, which changes the same files
+**Status:** Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-08
 **Resolved:** —
@@ -64,9 +64,17 @@ Tests:
 - Next.js's request span and an outgoing call's span, opened through Next's own tracer, carry no `__clerk_handshake`, `nonce` or `code`;
 - `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field and an array attribute.
 
+**Implemented 2026-10-08,** as decided, in `lib/sentry-data-collection.ts` and `instrumentation.ts`. DEBT-505's real-SDK alert test also runs on `SENTRY_SERVER_SETTINGS` now. Each change was checked against a mutant:
+- without `maxBreadcrumbs: 0`, only the settings test fails, since `scrubServerEvent` still drops the breadcrumbs;
+- without the breadcrumb drop, the breadcrumb tests fail;
+- without `beforeSendSpan`, the span test and the settings tests fail;
+- without array handling, its unit case fails; without `nonce`, its unit and SDK cases fail.
+
+An independent adversarial review found the span gap that `scrubSpan` closes. Of its other findings, the scope path, the alert test's settings, the untyped settings object and this record's inaccuracies are fixed. The BUG-318 case it called vacuous on the server stays: the server still must not send that token, which is what the case states.
+
 ## Verification
 
-- [ ] The real-SDK tests above fail before the fix and pass after it.
+- [x] The real-SDK tests above fail before the fix and pass after it (2026-10-08; see Implemented).
 - [ ] A production server error, raised on a deployment, shows no breadcrumbs in Sentry.
 - [ ] A sampled production request span with a query shows its credential parameters as `[Filtered]`.
 
