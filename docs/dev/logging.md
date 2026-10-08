@@ -99,6 +99,11 @@ which would copy the scope's user past `scrubEvent`.
   month's quota also silences the alerts (see the flood section below).
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
+- **Being noticed.** An alert protects nothing if it sits unread. Its email
+  comes from `noreply@md.getsentry.com` with a subject containing
+  "Operational alert". Keep a Gmail filter on those that stars them, marks them
+  important, labels them and never sends them to spam, and keep the Sentry
+  mobile app's push notifications on for issue alerts.
 - **Drill.** The renewal job sends one `operational_alert_drill` per fixed
   30-day cycle, from the first run that claims the cycle's row in
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
