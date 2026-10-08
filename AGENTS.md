@@ -377,7 +377,7 @@ See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-022; 
 | `proxy.ts` | Clerk middleware (route protection) |
 | `lib/env.ts` | Zod-validated environment variables |
 | `lib/db.ts` | Drizzle client singleton |
-| `lib/auth.ts` | Clerk auth helpers |
+| `lib/container.ts` | Composition root; `createAuthGateway()` reads the signed-in user |
 | `lib/stripe.ts` | Stripe SDK initialization |
 | `biome.json` | Linter/formatter config |
 | `.env.example` | Required environment variables |

@@ -130,10 +130,10 @@ const [user] = await res.json();
 
 | Event | Handler | Purpose |
 |-------|---------|---------|
-| `user.updated` | `/api/webhooks/clerk` | Sync user data (email changes) |
+| `user.updated` | `/api/webhooks/clerk` | Sync user data (email changes). Since DEBT-503 item 1, this is how a signed-in user's stored email stays current; checkout and trial card setup also refresh it. To recover a missed update, replay the event from the Clerk Dashboard. |
 | `user.deleted` | `/api/webhooks/clerk` | Cancel Stripe subscriptions, delete user data |
 
-**Note:** We do NOT handle `user.created`. Users are created lazily on first authenticated request.
+**Note:** We do NOT handle `user.created`. Users are created lazily on first authenticated request. After that, a request reads the row by Clerk ID with no Backend API call, unless it needs the current email: checkout and trial card setup still refresh it from Clerk (DEBT-503 item 1).
 
 **Webhook endpoint:** `/api/webhooks/clerk`
 

@@ -18,14 +18,14 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ### 1. An email change to an address a stale row holds locks the person out (P3)
 
-- **Evidence.** `ensureClerkUser` validates before it resolves (`src/adapters/gateways/clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:305-311`). `clerk-auth-gateway.test.ts:356-405` locks this in.
-- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:49`). The person cannot change their email back in the app.
+- **Evidence.** `ensureClerkUser` validates before it resolves (`src/adapters/gateways/clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:305-311`). `clerk-auth-gateway-session.test.ts`'s "keeps both rows when the refreshed email is held by another identity" locks this in for the billing refresh.
+- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:50`). The person cannot change their email back in the app. Once [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 ships, signed-in pages read the person's own row by Clerk ID, so the lockout narrows to the billing refresh (checkout and trial card setup) and the webhook.
 - **Decided.** When Clerk confirms the stale owner's current email differs, move that owner's row first, as the new-user path already does, then continue. The refusal stays for an owner that Clerk cannot confirm.
 
 ### 2. A row whose Clerk user no longer exists blocks its email permanently, and nothing repairs it (P3)
 
 - **Evidence.** Re-signing up with the same email hits Clerk's 404 for the old ID and is refused on every request (`clerk-user-provisioner.ts:155-165`, BUG-284's fail-closed design). Such a row arises in three ways:
-  1. a sign-in render whose upsert commits after the deletion. The sign-in path never reads the `deleted_clerk_users` tombstones; only the webhook does.
+  1. a sign-in render whose upsert commits after the deletion. Since DEBT-503 item 1, the sign-in path reads the `deleted_clerk_users` tombstone before provisioning, but in a separate read without the tombstone lock, so this interleaving remains.
   2. a `user.deleted` webhook whose retries ran out;
   3. a Clerk instance switch, which is what happened in BUG-078.
 - **Impact.** The deleted person's email also stays in our database, a privacy residue.
@@ -37,12 +37,12 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ### 3. A Clerk user with no email can never get an app row (P3, depends on Clerk settings)
 
-- **Evidence.** The sign-in path throws `INTERNAL_ERROR` (`clerk-auth-gateway.ts:36-39`), and the webhook skips the user (`clerk-webhook-controller.ts:264-272`). The fallback to `emailAddresses[0]` can pick an unverified address (`clerk-user-provisioner.ts:54-64`).
+- **Evidence.** The sign-in path throws `INTERNAL_ERROR` (`ClerkAuthGateway.provisionFromClerk`, "User has no email address"), and the webhook skips the user (`clerk-webhook-controller.ts:264-272`). The fallback to `emailAddresses[0]` can pick an unverified address (`clerk-user-provisioner.ts:54-64`).
 - **Decided.** The owner confirms in the Clerk dashboard that a verified email is required for every sign-up method. Record the setting, and use only verified addresses.
 
 ### 4. Clerk's rate limit is a single point of failure for signed-in traffic (moved to DEBT-503 on 2026-10-05)
 
-- **Evidence.** Every signed-in render and action calls `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65`), and Checkout makes two. Clerk documents 1,000 requests per 10 seconds in production.
+- **Evidence.** Every signed-in render and action called `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65` at the time), and Checkout made two. Clerk documents 1,000 requests per 10 seconds in production.
 - **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. *Moved 2026-10-05 to [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md), at P2 and without waiting for the traffic trigger: BUG-323 showed the allowance can be spent from outside.*
 
 ### 5. Exported payment server actions accept caller-supplied dependencies (moved to BUG-324 on 2026-10-05)

@@ -286,6 +286,27 @@ describe('FakeUserRepository', () => {
     });
   });
 
+  // BUG-332: callers' handling of a failed write is tested through the fake.
+  describe('failNextUpserts', () => {
+    it('rejects the next upserts with the given errors, in order, writing nothing', async () => {
+      const repo = new FakeUserRepository();
+      const first = new Error('first');
+      const second = new Error('second');
+      repo.failNextUpserts(first, second);
+
+      await expect(
+        repo.upsertByClerkId('clerk-1', 'user@example.com'),
+      ).rejects.toBe(first);
+      await expect(
+        repo.upsertByClerkId('clerk-1', 'user@example.com'),
+      ).rejects.toBe(second);
+      await expect(repo.findByClerkId('clerk-1')).resolves.toBeNull();
+      await expect(
+        repo.upsertByClerkId('clerk-1', 'user@example.com'),
+      ).resolves.toMatchObject({ email: 'user@example.com' });
+    });
+  });
+
   describe('deleteByClerkId', () => {
     it('returns true when a user existed and was deleted', async () => {
       const repo = new FakeUserRepository();
