@@ -196,33 +196,45 @@ describe('sendOperationalAlertEvent', () => {
   // new issue per kind and cooldown window makes every episode notify.
   it('opens a new issue for each kind and cooldown window, whatever the cooldown tag', async () => {
     sent = [];
+    const first = '2026-10-08T00:00:00.000Z';
+    const second = '2026-10-08T06:00:00.000Z';
 
-    await sendOperationalAlertEvent({
-      kind: 'clerk_backend_call_limiter_failed',
-      count: 1,
-      sharedCooldown: 'unavailable',
-      window: '2026-10-08T00:00:00.000Z',
-    });
-    await sendOperationalAlertEvent({
-      kind: 'clerk_backend_call_limiter_failed',
-      count: 1,
-      sharedCooldown: 'unavailable',
-      window: '2026-10-08T06:00:00.000Z',
-    });
+    for (const [kind, sharedCooldown, window] of [
+      ['clerk_backend_call_limiter_failed', 'held', first],
+      ['clerk_backend_call_limiter_failed', 'unavailable', first],
+      ['clerk_backend_call_limiter_failed', 'held', second],
+      ['renewal_notice_outcome_unknown', 'held', first],
+    ] as const) {
+      await sendOperationalAlertEvent({
+        kind,
+        count: 1,
+        sharedCooldown,
+        window,
+      });
+    }
 
-    expect(sentEvents().map((event) => event.fingerprint)).toEqual([
-      [
-        'operational-alert',
-        'clerk_backend_call_limiter_failed',
-        '2026-10-08T00:00:00.000Z',
-      ],
-      [
-        'operational-alert',
-        'clerk_backend_call_limiter_failed',
-        '2026-10-08T06:00:00.000Z',
-      ],
+    const [held, unavailable, later, otherKind] = sentEvents().map(
+      (event) => event.fingerprint,
+    );
+    expect(held).toEqual([
+      'operational-alert',
+      'clerk_backend_call_limiter_failed',
+      first,
     ]);
-    expect(sentEvents()[0]).toMatchObject({
+    // The cooldown tag does not split an issue.
+    expect(unavailable).toEqual(held);
+    // A later window, or another kind, opens its own.
+    expect(later).toEqual([
+      'operational-alert',
+      'clerk_backend_call_limiter_failed',
+      second,
+    ]);
+    expect(otherKind).toEqual([
+      'operational-alert',
+      'renewal_notice_outcome_unknown',
+      first,
+    ]);
+    expect(sentEvents()[1]).toMatchObject({
       tags: { 'alert.shared_cooldown': 'unavailable' },
     });
   });

@@ -66,8 +66,8 @@ path for the conditions a person must act on: see Operational alerts below.
 
 ## Operational alerts
 
-Use cases and jobs raise a condition a person must act on through the
-`OperationalAlerts` port, beside the log line they already write. The adapter
+Use cases, jobs and the proxy raise a condition a person must act on through
+the `OperationalAlerts` port, beside the log line they already write. The adapter
 sends a Sentry event that carries the kind, a count, the cooldown window and
 whether the shared cooldown held. `scrubEvent` keeps an alert event to those
 fields, so it carries no request, user, breadcrumb, ID or address, whatever the
@@ -89,15 +89,19 @@ scope it was raised in held.
   `alert.shared_cooldown: unavailable`, at most once per kind per server
   instance per six hours. A slow database can therefore send one such event
   while healthy.
-- **Loss.** A send Sentry does not confirm is logged as
+- **Loss.** A send the SDK cannot finish is logged as
   `operational_alert_send_failed`; its cooldowns stay taken, so check Sentry's
-  status and the DSN.
+  status and the DSN. `operational_alert_unavailable` means the proxy could not
+  build the alerts at all, and `operational_alert_shared_cooldown_unavailable`
+  that the Postgres cooldown failed or was slow. An event Sentry refuses, for
+  quota or rate limit, is dropped without a log line: a flood that uses up the
+  month's quota also silences the alerts (see the flood section below).
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
 
 | Kind | Meaning | First steps |
 | --- | --- | --- |
-| `renewal_notice_deadline_missed` | An annual subscription renews within 30 days and its renewal notice was never delivered. | Find its `renewal_notice_deliveries` rows; the 09:00 UTC job re-checks each run, so the alert recurs while the gap stands. Decide the remedy with counsel (DEBT-414 F07). |
+| `renewal_notice_deadline_missed` | An annual subscription renews within 30 days, and one of its two notices, the annual reminder or the renewal notice, was never accepted by the email provider. | Find its `renewal_notice_deliveries` rows; the 09:00 UTC job re-checks each run, so the alert recurs while the gap stands. Decide the remedy with counsel (DEBT-414 F07). |
 | `anniversary_reminder_deadline_missed` | A monthly subscription's yearly anniversary falls within 30 days with no reminder sent. | As above, for the anniversary reminder. |
 | `renewal_notice_send_by_cutoff_passed` | Dispatch refused a notice because its send-by cutoff had passed. | The row is `terminal_failure` with `send_by_cutoff_passed`. Find why it was not sent in time. |
 | `renewal_notice_outcome_unknown` | The email provider's answer was ambiguous, so the notice is quarantined and never resent automatically. | The row is `outcome_unknown`. Check the provider's dashboard before any manual resend. |
@@ -115,7 +119,7 @@ scope it was raised in held.
 
 ## Sentry flood or quota exhaustion
 
-The browser needs its Sentry project's client key (DSN), so that key is public, as Sentry intends. Anyone can therefore post events to the browser project, without our server. Server events go to a separate server project, `addiction-boards-server`, whose key (`SENTRY_DSN`) no browser receives (DEBT-505). The plan is Sentry's Developer plan, with 5,000 errors a month and no per-key rate limit. Spike protection is on, and limits the damage while you respond (BUG-325 item 5).
+The browser needs its Sentry project's client key (DSN), so that key is public, as Sentry intends. Anyone can therefore post events to the browser project, without our server. Server events go to a separate server project, `addiction-boards-server`, whose key (`SENTRY_DSN`) no browser receives (DEBT-505). The plan is Sentry's Developer plan, with 5,000 errors a month and no per-key rate limit. Spike protection is on, and limits the damage while you respond (BUG-325 item 5). The month's errors are shared by both projects, so a browser flood that uses them up also stops the [operational alerts](#operational-alerts) until the month resets: treat it as an alerting outage too.
 
 If Sentry shows a sudden flood of garbage events, or the month's usage jumps:
 

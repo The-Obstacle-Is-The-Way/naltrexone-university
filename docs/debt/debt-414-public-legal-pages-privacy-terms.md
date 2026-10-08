@@ -828,7 +828,7 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
 
 ## Open operational limits
 
-The dated legal matrix and owner attestations are historical evidence, not a new legal certification. Counsel's Q1–Q7 and the owner's provider configuration and live-purchase checks remain open. The engineering source calls a pino error line an “alert” in several notice-deadline paths; `lib/logger.ts` does not forward it to Sentry. F07 is not operationally verified until [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md)'s bounded alert path is built and a test event is shown to reach the operator. Hobby runtime logs retain one hour, so do not close this requirement on the presence of `logger.error` alone.
+The dated legal matrix and owner attestations are historical evidence, not a new legal certification. Counsel's Q1–Q7 and the owner's provider configuration and live-purchase checks remain open. The engineering source calls a pino error line an “alert” in several notice-deadline paths; `lib/logger.ts` does not forward it to Sentry. [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) built the bounded alert path for those paths. F07 is not operationally verified until a test event from a deployment is shown to reach the operator. Hobby runtime logs retain one hour, so do not close this requirement on the presence of `logger.error` alone.
 
 ## Findings from AUDIT-013 (2026-10-05)
 

@@ -156,9 +156,11 @@ describe('CooldownOperationalAlerts', () => {
     const { alerts, sent } = setup([new Promise(() => {})]);
 
     const raised = alerts.raise(missedDeadline);
-    await vi.advanceTimersByTimeAsync(SHARED_COOLDOWN_TIMEOUT_MS);
-    await raised;
+    await vi.advanceTimersByTimeAsync(SHARED_COOLDOWN_TIMEOUT_MS - 1);
+    expect(sent).toEqual([]);
 
+    await vi.advanceTimersByTimeAsync(1);
+    await raised;
     expect(sent).toEqual([
       expect.objectContaining({ sharedCooldown: 'unavailable' }),
     ]);

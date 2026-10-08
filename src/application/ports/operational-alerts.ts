@@ -20,8 +20,9 @@ export type OperationalAlert = {
 
 export interface OperationalAlerts {
   /**
-   * Resolves once the alert is sent or held back by a cooldown. It never
-   * rejects: an alert that cannot be sent must not change the caller's outcome.
+   * Resolves once the alert is sent, held back by a cooldown, or failed and
+   * logged. It never rejects: an alert that cannot be sent must not change the
+   * caller's outcome.
    */
   raise(alert: OperationalAlert): Promise<void>;
 }
