@@ -28,6 +28,7 @@
 | [DEBT-512](./debt-512-production-hosting-plan-forbids-commercial-use.md) | Production runs on a hosting plan whose terms forbid commercial use | P2 | Open — owner moves production to Vercel Pro before the first live sale |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — the peer and sharp fixes shipped (#1411, promoted in #1419); source-map-js 1.2.2 and the supported Clerk UI 1.38.0 are eligible since 2026-10-07 |
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Verifying — two overlapping CI runs both pass, now that DEBT-503 item 1 is released; due 2026-10-22 |
+| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; watcher covers every direct dependency (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes |
 | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22 |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.

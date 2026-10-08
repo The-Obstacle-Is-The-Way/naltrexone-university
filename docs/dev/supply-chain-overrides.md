@@ -90,6 +90,83 @@ window. Do not use package-wide bootstrap exceptions.
 PR #382 removed the dated DEBT-394 bootstrap exceptions after they aged
 out. There are no current package-wide bootstrap exceptions.
 
+### When a fix is urgent
+
+Decided on 2026-10-07 (DEBT-509). The 7-day gate defends against a
+malicious publish, such as a hijacked maintainer account. Those are usually
+found and pulled within hours to days; the September 2025 `chalk` and
+`debug` hijack was unpublished the same day. A disclosed critical flaw in
+the framework the app runs on can be exploited faster than that:
+React2Shell (CVE-2025-55182, December 2025) was attacked within hours. So
+the gate yields only when the vulnerability is the larger risk.
+
+- **Urgent:** a critical or high advisory whose affected configuration
+  matches this app, or whose exposure the advisory text cannot rule out.
+  Take the fix the same day, through the workflow above.
+- **Not urgent:** everything else, including a critical advisory for a
+  feature the app does not use. An advisory's statement that
+  Vercel-hosted deployments are protected settles production, but not
+  `next dev`. Wait for the gate.
+
+The exception narrows the gate; every other check still applies:
+
+- Name only the exact versions that the official advisory or release notes
+  give as fixed, plus the same-version companions pnpm refuses. For `next`,
+  those are `@next/env` and the `@next/swc-*` platform binaries, published
+  with it.
+- `trustPolicy: no-downgrade` still runs, so a version published with weaker
+  provenance than its predecessors is still refused.
+- The full gate, exact-head review and promotion still apply.
+
+### Advisories Dependabot cannot see
+
+Dependabot alerts come from GitHub's advisory database. A dependency
+repository's own published advisory can miss it, and nothing then raises an
+alert. A check on 2026-10-07 found 12 of the advisories published by this
+app's dependency repositories absent from the database:
+
+| Repository | Missing | Affected here |
+|---|---|---|
+| `vercel/next.js` | 7 of 69, all from 2026-09-30 | Development server only; see DEBT-509 |
+| `getsentry/sentry-javascript` | 1 of 6 (2026-09-24, tunnel-route middleware bypass) | No: no `tunnelRoute`, Turbopack builds, and 11.0.0 is fixed |
+| `vitejs/vite` | 3 of 22 (2026-10-06, development server) | Yes, development only; fixed in 8.3.3 |
+| `vitejs/vite-plugin-react` | 1 of 8 (2026-07-22, `@vitejs/plugin-rsc`) | No: the app does not use that package |
+
+The gap is not one project's formatting quirk: the Sentry advisory's ranges
+are well formed, yet it was still missing after 13 days. So the watch covers
+every direct dependency, not a hand-picked few.
+
+An advisory that does arrive can arrive late. Six of the seven Next.js
+advisories reached the database at 2026-10-07T20:30Z, seven days after
+publication, and Dependabot alerted on them at 2026-10-08T05:50Z. The other
+six of the 12 were still missing that day. A week is as long as the
+release-age gate, so waiting for Dependabot would forfeit the same-day rule
+above.
+
+- `.github/workflows/upstream-advisory-watch.yml` runs
+  `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
+  advisories of each repository in its `DEPENDENCY_REPOSITORIES` map and opens
+  one issue per advisory published since 2026-10-01.
+- The map gives every dependency and devDependency in `package.json` the
+  repository named in its npm `repository` field, or `null` when it names
+  none (today only `server-only`, a marker package). A test
+  requires its keys to equal `package.json`'s, so adding or removing a
+  dependency fails CI until the map is updated.
+- One unreadable repository, or one issue that cannot be opened, does not
+  stop the others: the run raises what it can, then fails and names what it
+  could not. Only a failure to list existing issues fails the run outright,
+  because without that list nothing can be deduplicated.
+- Critical and high advisories are assigned to the repository owner. GitHub
+  notifies an assignee whatever their watch setting, and the same-day rule
+  needs someone to see them. Medium and low advisories open unassigned. In the
+  12 months to 2026-10-07 the watched repositories published 81 advisories:
+  12 critical, 33 high, 32 medium and 4 low. Most concern features or versions
+  this app does not use, so the issue body gives `package.json`'s pins for a
+  quick triage.
+
+Triage each issue with the rule above, record the outcome in it, and close it.
+Transitive dependencies are left to Dependabot and `pnpm audit`.
+
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 
 > Historical snapshot: alert #46 later retargeted the patched v3 floor to
