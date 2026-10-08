@@ -25,6 +25,7 @@ const successResult = {
   dispatchFailures: 0,
   durationMs: 250,
   alertDrill: 'not_due',
+  scheduledChecks: 'running',
 } as const;
 
 function createHarness(input?: {

@@ -103,7 +103,9 @@ which would copy the scope's user past `scrubEvent`.
   comes from `noreply@md.getsentry.com` with a subject containing
   "Operational alert". Keep a Gmail filter on those that stars them, marks them
   important, labels them and never sends them to spam, and keep the Sentry
-  mobile app's push notifications on for issue alerts.
+  mobile app's push notifications on for issue alerts. The watcher below
+  reports through a GitHub issue; give its notification email, subject
+  "Operational alerts may not be reaching the owner", the same filter.
 - **Drill.** The renewal job sends one `operational_alert_drill` per fixed
   30-day cycle, from the first run that claims the cycle's row in
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
@@ -139,13 +141,24 @@ which would copy the scope's user past `scrubEvent`.
   repository secret `SENTRY_WATCHER_TOKEN`: in Sentry, Settings → Custom
   Integrations → Create New Integration → Internal Integration, with Read on
   Project, Organization and Alerts and nothing else. Without the token the
-  issue says the watcher is not configured. Two limits remain. GitHub disables
-  a public repository's scheduled workflows after 60 days without activity,
-  and a watcher that stops running looks like one with nothing to report; the
-  monthly drill email is then the only check, so re-enable the workflow if
-  GitHub warns that it is disabled. And a drill whose send Sentry did not
-  confirm gives its cycle back even if Sentry received it, so while flushes
-  fail the owner may get a drill email each day.
+  issue says the watcher is not configured.
+- **Watching the watcher.** GitHub disables a public repository's scheduled
+  workflows after 60 days without activity, without notice, and a watcher that
+  stops looks like one with nothing to report. So the renewal job checks the
+  GitHub side each day, as the watcher checks the job: it reads the
+  repository's workflows from GitHub's API and raises
+  `scheduled_checks_stopped` when any workflow is disabled for inactivity, or
+  the watcher is not active or has not succeeded for three days. Either system
+  stopping is reported through the other. A keep-alive commit or API call is
+  not used: it works around GitHub's rule, and GitHub disabled the best-known
+  keep-alive action's repository for a terms violation. The job reports the
+  check as `scheduledChecks`: `running`, `stopped`, or `unavailable` when
+  GitHub gave no definite answer (logged, not alerted). With
+  `GITHUB_READ_TOKEN` set, GitHub's anonymous per-address limit cannot cause
+  that.
+- **A known repeat.** A drill whose send Sentry did not confirm gives its
+  cycle back even if Sentry received it, so while flushes fail the owner may
+  get a drill email each day.
 
 | Kind | Meaning | First steps |
 | --- | --- | --- |
@@ -155,6 +168,7 @@ which would copy the scope's user past `scrubEvent`.
 | `renewal_notice_outcome_unknown` | The email provider's answer was ambiguous, so the notice is quarantined and never resent automatically. | The row is `outcome_unknown`. Check the provider's dashboard before any manual resend. |
 | `checkout_stripe_holds_unrecorded` | A refused checkout could not record the subscription Stripe already holds (BUG-321). | Compare the user's subscription row with Stripe. The reconcile cron updates only rows that exist, so a missing row waits for the subscription's next webhook; resend its latest event from the Stripe Dashboard to record it now. |
 | `clerk_backend_call_limiter_failed` | The sign-in limiter's database call failed, so it is letting requests through (BUG-323). | Check the database. While it fails, only the firewall rule bounds Clerk's Backend API calls. |
+| `scheduled_checks_stopped` | A scheduled GitHub workflow is disabled for inactivity, or the operational alert watcher is not active or has not succeeded for three days. | In GitHub's Actions tab, re-enable each disabled workflow (`gh workflow enable <file>`), and open the watcher's latest run to see why it failed. The next daily check confirms. |
 | `operational_alert_drill` | A drill: the renewal job sends one per fixed 30-day cycle, through the same path as the deadline alerts. | None; its email proves the path works. If none arrives for 32 days, the watcher's issue says so; treat the alert path as broken: check the server project's recent issues for `alert.kind:operational_alert_drill`, its "Operational alerts — email the owner (DEBT-505)" workflow, and `SENTRY_DSN`. |
 
 ## Practices

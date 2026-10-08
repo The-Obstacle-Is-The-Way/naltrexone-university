@@ -7,6 +7,7 @@ import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
 import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
 import { operationalAlertDrillCycle } from './operational-alert-drill';
+import { OPERATIONAL_ALERT_WATCHER_WORKFLOW } from './scheduled-checks';
 import {
   SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
@@ -104,6 +105,19 @@ function createDeps(): {
       pruneExpiredTrialPaymentMethodSetups,
       logger,
       alerts,
+      // DEBT-505: GitHub's scheduled checks all run, by default.
+      scheduledWorkflows: {
+        read: async () => ({
+          workflows: [
+            {
+              path: OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+              state: 'active',
+              createdAt: new Date(now.getTime() - 30 * 86_400_000),
+            },
+          ],
+          watcherLastSuccessAt: new Date(now.getTime() - 86_400_000),
+        }),
+      },
       alertDrillCycles: {
         claim: async () => false,
         release: async () => {},
@@ -281,6 +295,7 @@ describe('sendDueRenewalNotices job', () => {
       expiredSetupOperationsPruned: 3,
       durationMs: 250,
       alertDrill: 'not_due',
+      scheduledChecks: 'running',
     });
   });
 
@@ -680,5 +695,43 @@ describe('the operational alert drill', () => {
       expect.objectContaining({ kind: 'operational_alert_drill' }),
     );
     expect(execute).toHaveBeenCalled();
+  });
+});
+
+// DEBT-505: the job also checks that GitHub's scheduled checks still run, as
+// the GitHub watcher checks this job, so either one stopping is reported.
+describe('the scheduled checks', () => {
+  it('reports a stopped watcher and raises its alert', async () => {
+    const { deps, alerts } = createDeps();
+    deps.scheduledWorkflows = {
+      read: async () => ({ workflows: [], watcherLastSuccessAt: null }),
+    };
+
+    const result = await sendDueRenewalNotices(
+      { subscriptionLimit: 10, dispatchLimit: 10 },
+      deps,
+    );
+
+    expect(result.scheduledChecks).toBe('stopped');
+    expect(alerts.raised).toContainEqual({
+      kind: 'scheduled_checks_stopped',
+      count: 1,
+    });
+  });
+
+  it('checks before the notices, so a failing notice query does not skip it', async () => {
+    const { deps, alerts, listDue } = createDeps();
+    deps.scheduledWorkflows = {
+      read: async () => ({ workflows: [], watcherLastSuccessAt: null }),
+    };
+    listDue.mockRejectedValueOnce(new Error('query failed'));
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 10, dispatchLimit: 10 }, deps),
+    ).rejects.toThrow('query failed');
+    expect(alerts.raised).toContainEqual({
+      kind: 'scheduled_checks_stopped',
+      count: 1,
+    });
   });
 });

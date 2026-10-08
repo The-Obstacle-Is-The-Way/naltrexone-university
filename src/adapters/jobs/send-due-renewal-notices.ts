@@ -31,6 +31,11 @@ import {
   type OperationalAlertDrillOutcome,
   raiseOperationalAlertDrillIfDue,
 } from './operational-alert-drill';
+import {
+  checkScheduledChecksRunning,
+  type ScheduledChecksOutcome,
+  type ScheduledWorkflows,
+} from './scheduled-checks';
 
 export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 80;
@@ -330,6 +335,8 @@ export type SendDueRenewalNoticesJobDeps = {
   alerts: OperationalAlerts;
   /** The alert drill's once-per-cycle claims. */
   alertDrillCycles: OperationalAlertDrillCycles;
+  /** The repository's GitHub workflows, the alert watcher among them. */
+  scheduledWorkflows: ScheduledWorkflows;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -350,6 +357,7 @@ export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   expiredSetupOperationsPruned: number;
   durationMs: number;
   alertDrill: OperationalAlertDrillOutcome;
+  scheduledChecks: ScheduledChecksOutcome;
 };
 
 function safeLimit(value: number, fallback: number, maximum: number): number {
@@ -362,10 +370,17 @@ export async function sendDueRenewalNotices(
   deps: SendDueRenewalNoticesJobDeps,
 ): Promise<SendDueRenewalNoticesJobResult> {
   const startedAt = deps.monotonicNow();
-  // DEBT-505: first, so the drill goes out whatever the notices do.
+  // DEBT-505: first, so the drill and the scheduled-checks check run whatever
+  // the notices do.
   const alertDrill = await raiseOperationalAlertDrillIfDue({
     now: deps.now,
     cycles: deps.alertDrillCycles,
+    alerts: deps.alerts,
+    logger: deps.logger,
+  });
+  const scheduledChecks = await checkScheduledChecksRunning({
+    now: deps.now,
+    workflows: deps.scheduledWorkflows,
     alerts: deps.alerts,
     logger: deps.logger,
   });
@@ -454,6 +469,7 @@ export async function sendDueRenewalNotices(
     ...result,
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
     alertDrill,
+    scheduledChecks,
   };
 }
 

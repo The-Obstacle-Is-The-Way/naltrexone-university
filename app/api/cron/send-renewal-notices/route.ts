@@ -46,6 +46,7 @@ export function createSendRenewalNoticesCronHandler(
             logger: container.logger,
             alerts: container.createOperationalAlerts(),
             alertDrillCycles: operationalAlertDrillCycles({ db: container.db }),
+            scheduledWorkflows: container.createScheduledWorkflows(),
             annualPlan: {
               planName: PRICING_DATA.annual.name,
               amountCents: PRICING_DATA.annual.amountCents,

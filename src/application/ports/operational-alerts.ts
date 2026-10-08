@@ -10,6 +10,8 @@ export const OPERATIONAL_ALERT_KINDS = [
   'renewal_notice_outcome_unknown',
   'checkout_stripe_holds_unrecorded',
   'clerk_backend_call_limiter_failed',
+  // A scheduled GitHub check, the alert watcher among them, has stopped.
+  'scheduled_checks_stopped',
   // A periodic drill that proves the alert path works; no action needed.
   'operational_alert_drill',
 ] as const;

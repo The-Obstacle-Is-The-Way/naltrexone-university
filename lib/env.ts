@@ -91,6 +91,11 @@ const envSchema = z.object({
 
   // Cron / Jobs
   CRON_SECRET: z.string().min(1).optional(),
+  // DEBT-505: a read-only GitHub token for the renewal job's check that the
+  // repository's scheduled workflows still run. Optional: the repository is
+  // public, and without a token the check reads GitHub anonymously, at
+  // GitHub's per-address limit.
+  GITHUB_READ_TOKEN: z.string().min(1).optional(),
 
   // BUG-319: Next.js derives server-action IDs from this key. Without it Next
   // generates one, which changes when its cached copy expires (14 days) or the

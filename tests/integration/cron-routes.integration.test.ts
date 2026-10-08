@@ -13,6 +13,10 @@ import { createContainer } from '@/lib/container';
 import { env } from '@/lib/env';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 import { operationalAlertDrillCycle } from '@/src/adapters/jobs/operational-alert-drill';
+import {
+  OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  type ScheduledWorkflows,
+} from '@/src/adapters/jobs/scheduled-checks';
 import { FakeTransactionalEmailGateway } from '@/src/application/test-helpers/fakes';
 import { DAY_MS } from '@/src/domain/services';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
@@ -35,6 +39,19 @@ const CRON_SECRET = 'debt468-cron-integration-only';
 const MONTHLY_PRICE_ID = 'price_debt468_monthly';
 const ANNUAL_PRICE_ID = 'price_debt468_annual';
 const NOW = new Date('2026-08-16T12:00:00.000Z');
+// DEBT-505: tests never call GitHub; here its scheduled checks all run.
+const runningScheduledWorkflows: ScheduledWorkflows = {
+  read: async () => ({
+    workflows: [
+      {
+        path: OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+        state: 'active',
+        createdAt: NOW,
+      },
+    ],
+    watcherLastSuccessAt: NOW,
+  }),
+};
 
 type StripeSubscriptionFixture = {
   id: string;
@@ -450,6 +467,7 @@ describe('send renewal notices cron route', () => {
         },
         gateways: {
           createTransactionalEmailGateway: () => email,
+          createScheduledWorkflows: () => runningScheduledWorkflows,
         },
       }),
     );
@@ -466,6 +484,7 @@ describe('send renewal notices cron route', () => {
       // DEBT-505: Sentry is off here, so the drill cannot be sent; the job
       // gives its cycle back for the next run.
       alertDrill: 'not_sent',
+      scheduledChecks: 'running',
     });
     await expect(
       db.query.operationalAlertDrills.findFirst({
@@ -533,6 +552,7 @@ describe('send renewal notices cron route: monthly anniversary', () => {
         },
         gateways: {
           createTransactionalEmailGateway: () => email,
+          createScheduledWorkflows: () => runningScheduledWorkflows,
         },
       }),
     );
