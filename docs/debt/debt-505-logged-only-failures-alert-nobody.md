@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — a test alert of each kind, raised on a deployment, reaches the owner, and a later window emails again; due 2026-10-15
+**Status:** Verifying — the first production drill reaches the owner's inbox, and the next window's, from 2026-11-03, emails again; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -80,6 +80,7 @@ Option 2.
   - **Environment.** Sentry's environment is Vercel's name for the deployment, or `local` off Vercel. It used to fall back to the build mode, so a local `next start` labelled its events production and would have paged the owner.
   - Callers: the renewal job's two deadline checks, dispatch's cutoff refusal and outcome-unknown quarantine, the refused checkout's failed sync, and the proxy's limiter failure, which raises after the response through `waitUntil`.
   - Tests: the cooldowns on fakes and on real Postgres (eight concurrent instances send one event, and a restart keeps the window); the sent event through the real Sentry SDK, raised inside a scope holding a request, a user, extra data and breadcrumbs, of which none leaves; both lost-send cases; one in-process cooldown across the containers of a process; and each caller, each shown to fail with its alert removed.
+  - **A drill keeps proving the path.** About every 30 days, from the first run of each fixed window, the renewal job raises an `operational_alert_drill` through the same port, cooldowns, Sentry project and workflow as every other kind. Its gate is the shared Postgres limiter, so cron runs and instances share one window. It runs before the notices and never fails the job. A drill that stops arriving shows the path broke (added 2026-10-08).
   - The runbook is [Operational alerts](../dev/logging.md#operational-alerts).
 
 *Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*
@@ -87,11 +88,12 @@ Option 2.
 ## Verification
 
 - [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
-- [ ] Engineering: on a deployment, one test event per alert kind, raised from its real call site (the proxy for BUG-323's kind), reaches the Sentry issue alert routed to the owner, recorded with counts only.
-- [ ] Engineering: a second alert of one kind, in a later window while the first issue is still open, opens a new issue and emails again.
+- [ ] Engineering: the first production drill (`operational_alert_drill`), raised by the renewal job on a deployment, reaches the owner's inbox.
+
+  *Corrected 2026-10-08: this asked for one test alert of each kind from its real call site. In production that means causing a missed legal deadline or a database failure. Every kind shares one delivery path, which the drill exercises from the job that raises the deadline alerts, and each call site is proven by its tests. It also covers the separate "test alert from a deployment" item, now removed.*
+- [ ] Engineering: the next window's drill, from 2026-11-03 while the first drill's issue is still open, opens a new issue and emails again.
 - [x] Engineering: the alerts' workflow lives on the server project, whose key no browser receives, and is read back from Sentry's API as enabled (2026-10-08).
 - [x] Engineering: after the first deployment with the new `SENTRY_DSN`, a server span arrives in the server project and none in the web project. Promotion #1424 deployed at 06:03Z on 2026-10-08. By 07:43Z the server project held spans from production and Preview, and the web project held no event or span from any environment (Sentry API counts only).
-- [ ] Engineering: a test alert from a deployment reaches the owner through it.
 - [ ] The alerts listed above no longer exist as log lines alone.
 
 ## Related
