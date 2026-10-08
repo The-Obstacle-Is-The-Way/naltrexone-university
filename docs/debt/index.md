@@ -6,8 +6,8 @@
 **Now** — 2026-10-08.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
 - **Security.** DEBT-506: take `source-map-js` 1.2.2 and Clerk UI 1.38.0. Next.js alerts #84–#95 stay open until 16.3.8 lands (#1425); DEBT-509 is in review (#1420).
-- **In progress.** DEBT-505: the alert drill, a watcher and the inbox filter. DEBT-503: item 3 next.
-- **Verifying.** DEBT-508: two overlapping CI runs both pass; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
+- **In progress.** DEBT-503: item 3 next.
+- **Verifying.** DEBT-505: the first drill reaches the inbox and the cron monitor checks in; due 2026-11-05. DEBT-508: two overlapping CI runs both pass; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
 - **Next.** One pull request of quick wins, then alerts for silent conditions (DEBT-501, DEBT-503 item 3), then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
 - **Owner decisions pending.** Vercel Pro before the first live sale (DEBT-512); the live purchase and refund (DEBT-501 item 7); Clerk's verified-email setting and a re-created account's trial (DEBT-502); DEBT-414's Resend webhook secret, F19a, Q7 and counsel review; DEBT-505's inbox filter, Sentry push and watcher token; the 5% server trace sample (AUDIT-015); the production content bootstrap (DEBT-483).
 
@@ -23,7 +23,7 @@
 | [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
 | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | In Progress — item 1 released 2026-10-08; item 3, an alert for a cap trip, is next; items 2 and 4 wait for their triggers |
 | [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
-| [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | In Progress — shipped; the alert drill, an independent watcher and the owner's inbox filter remain (AUDIT-015) |
+| [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Verifying — the first drill reaches the owner's inbox, the cron monitor checks in, and the next cycle's drill, from 2026-11-03, emails again; due 2026-11-05 |
 | [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before 35 days ahead of the earliest live renewal |
 | [DEBT-512](./debt-512-production-hosting-plan-forbids-commercial-use.md) | Production runs on a hosting plan whose terms forbid commercial use | P2 | Open — owner moves production to Vercel Pro before the first live sale |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — the peer and sharp fixes shipped (#1411, promoted in #1419); source-map-js 1.2.2 and the supported Clerk UI 1.38.0 are eligible since 2026-10-07 |

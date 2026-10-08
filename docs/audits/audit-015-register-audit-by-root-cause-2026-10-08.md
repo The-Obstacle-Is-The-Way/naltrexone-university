@@ -48,7 +48,7 @@ Three independent read-only reviews checked each record against the code at the 
 | DEBT-502 | True. Item 3 duplicates DEBT-511 item 4. | Kept in DEBT-502; DEBT-511 points to it. |
 | DEBT-503 | Item 1 released. Its overlap check duplicates DEBT-508's. Item 2's design is heavy for now; item 3 is cheap. | Overlap check left to DEBT-508. Item 3 queued; item 2 waits for Clerk's reply or a cap trip. |
 | DEBT-504 | True and proportionate. | Low priority. |
-| DEBT-505 | Shipped; verified only in parts. | The drill, the watcher and the owner's inbox filter complete it (below). |
+| DEBT-505 | Shipped; verified only in parts. | The drill and the watcher ship with this audit; the owner's inbox filter and the watcher's token complete it (below). |
 | DEBT-506 | Status stale: the peer and sharp fixes shipped (#1411, promoted in #1419). `source-map-js` 1.2.2 and Clerk UI 1.38.0 are now eligible. Next.js alerts #84–#95, two of them high, stay open until 16.3.8 lands (Dependabot's #1425); DEBT-509, which assesses them, is in review (#1420). | Corrected here. |
 | DEBT-508 | Shipped (#1423, #1424); boxes 1–3 have tests; its blocker shipped. | Moved to Verifying here. |
 | DEBT-510 | Shipped (#1423, #1424). | Moved to Verifying here. |
