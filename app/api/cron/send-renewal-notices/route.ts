@@ -41,6 +41,7 @@ export function createSendRenewalNoticesCronHandler(
             monotonicNow: () => performance.now(),
             logger: container.logger,
             alerts: container.createOperationalAlerts(),
+            alertDrillGate: container.createRateLimiter(),
             annualPlan: {
               planName: PRICING_DATA.annual.name,
               amountCents: PRICING_DATA.annual.amountCents,

@@ -21,7 +21,8 @@ const successResult = {
   staleUnknown: 0,
   dispatchFailures: 0,
   durationMs: 250,
-};
+  alertDrill: 'not_due',
+} as const;
 
 function createHarness(input?: {
   omitCronSecret?: boolean;

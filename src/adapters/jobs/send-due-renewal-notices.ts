@@ -16,7 +16,11 @@ import {
 } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
-import type { Logger, OperationalAlerts } from '@/src/application/ports';
+import type {
+  Logger,
+  OperationalAlerts,
+  RateLimiter,
+} from '@/src/application/ports';
 import { RENEWAL_NOTICE_MINIMUM_DAYS } from '@/src/application/shared/renewal-notice-schedule';
 import type {
   ScheduledRenewalNotice,
@@ -25,6 +29,10 @@ import type {
 } from '@/src/application/use-cases';
 import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { DAY_MS, nextAnniversaryRenewalAt } from '@/src/domain/services';
+import {
+  type OperationalAlertDrillOutcome,
+  raiseOperationalAlertDrillIfDue,
+} from './operational-alert-drill';
 
 export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 80;
@@ -312,6 +320,8 @@ export type SendDueRenewalNoticesJobDeps = {
   }) => Promise<number>;
   logger: Pick<Logger, 'warn' | 'error'>;
   alerts: OperationalAlerts;
+  /** The shared limiter that gates the alert drill to one per window. */
+  alertDrillGate: Pick<RateLimiter, 'limit'>;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -331,6 +341,7 @@ export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   anniversaries: number;
   expiredSetupOperationsPruned: number;
   durationMs: number;
+  alertDrill: OperationalAlertDrillOutcome;
 };
 
 function safeLimit(value: number, fallback: number, maximum: number): number {
@@ -343,6 +354,12 @@ export async function sendDueRenewalNotices(
   deps: SendDueRenewalNoticesJobDeps,
 ): Promise<SendDueRenewalNoticesJobResult> {
   const startedAt = deps.monotonicNow();
+  // DEBT-505: first, so the drill goes out whatever the notices do.
+  const alertDrill = await raiseOperationalAlertDrillIfDue({
+    rateLimiter: deps.alertDrillGate,
+    alerts: deps.alerts,
+    logger: deps.logger,
+  });
   const observedAt = deps.now();
   const subscriptionLimit = safeLimit(
     input.subscriptionLimit,
@@ -427,6 +444,7 @@ export async function sendDueRenewalNotices(
     expiredSetupOperationsPruned,
     ...result,
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
+    alertDrill,
   };
 }
 

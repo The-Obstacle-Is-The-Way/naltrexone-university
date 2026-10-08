@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   FakeLogger,
   FakeOperationalAlerts,
+  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
@@ -16,6 +17,15 @@ import {
 } from './send-due-renewal-notices';
 
 const now = new Date('2026-08-07T12:00:00.000Z');
+
+// DEBT-505: the alert drill's gate. Held by default, so each test sees only
+// the alerts it is about.
+const DRILL_HELD = {
+  success: false,
+  limit: 1,
+  remaining: 0,
+  retryAfterSeconds: 60,
+};
 
 type AnnualRenewals = SendDueRenewalNoticesJobDeps['renewalQueries'];
 
@@ -43,6 +53,7 @@ function createDeps(): {
   >;
   logger: FakeLogger;
   alerts: FakeOperationalAlerts;
+  alertDrillGate: FakeRateLimiter;
 } {
   const listDue = vi.fn<AnnualRenewals['listDue']>(async () => [
     {
@@ -79,8 +90,12 @@ function createDeps(): {
   const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
   const logger = new FakeLogger();
   const alerts = new FakeOperationalAlerts();
+  const alertDrillGate = new FakeRateLimiter(
+    Array.from({ length: 10 }, () => DRILL_HELD),
+  );
   return {
     alerts,
+    alertDrillGate,
     listDue,
     listPastNoticeDeadline,
     listActiveMonthly,
@@ -101,6 +116,7 @@ function createDeps(): {
       pruneExpiredTrialPaymentMethodSetups,
       logger,
       alerts,
+      alertDrillGate,
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -273,6 +289,7 @@ describe('sendDueRenewalNotices job', () => {
       dispatchFailures: 0,
       expiredSetupOperationsPruned: 3,
       durationMs: 250,
+      alertDrill: 'not_due',
     });
   });
 
@@ -607,5 +624,43 @@ describe('sendDueRenewalNotices job', () => {
         { kind: 'anniversary_reminder_deadline_missed', count: 1 },
       ]);
     });
+  });
+});
+
+// DEBT-505: the drill runs in this job, the one that raises the legal
+// deadline alerts, so its email also shows the job runs and can raise them.
+describe('the operational alert drill', () => {
+  it('raises the drill first when its window is open, and reports it', async () => {
+    const { deps, alerts } = createDeps();
+    deps.alertDrillGate = new FakeRateLimiter();
+
+    const result = await sendDueRenewalNotices(
+      { subscriptionLimit: 10, dispatchLimit: 10 },
+      deps,
+    );
+
+    expect(result.alertDrill).toBe('raised');
+    expect(alerts.raised[0]).toEqual({
+      kind: 'operational_alert_drill',
+      count: 1,
+    });
+  });
+
+  it('still runs the notices when the drill gate fails', async () => {
+    const { deps, alerts, execute } = createDeps();
+    deps.alertDrillGate = new FakeRateLimiter(
+      new Error('database unavailable'),
+    );
+
+    const result = await sendDueRenewalNotices(
+      { subscriptionLimit: 10, dispatchLimit: 10 },
+      deps,
+    );
+
+    expect(result.alertDrill).toBe('gate_unavailable');
+    expect(alerts.raised).not.toContainEqual(
+      expect.objectContaining({ kind: 'operational_alert_drill' }),
+    );
+    expect(execute).toHaveBeenCalled();
   });
 });
