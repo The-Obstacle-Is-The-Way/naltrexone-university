@@ -17,7 +17,8 @@ vi.mock('server-only', () => ({}));
 // DEBT-503 item 1: the Clerk user ID comes from the session the middleware
 // verified. A signed-in request reads our own row and the deletion tombstone,
 // and spends Clerk's Backend API allowance only to provision a missing row or
-// to refresh the email billing sends to Stripe.
+// to refresh the email billing sends to Stripe; either can also check a stale
+// email owner under BUG-284's rules.
 
 const clerkUpdatedAt = new Date('2026-02-02T00:00:00Z');
 

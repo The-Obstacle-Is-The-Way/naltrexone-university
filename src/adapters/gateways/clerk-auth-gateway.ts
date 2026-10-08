@@ -42,8 +42,8 @@ export type ClerkAuthGatewayDeps = {
 // verified session, then our own row and the deletion tombstone. Clerk's
 // Backend API, a shared and rate-limited allowance, is asked only to
 // provision a missing row or to refresh the email billing sends to Stripe.
-// Provisioning goes through ensureClerkUser unchanged, so BUG-284's identity
-// rules and BUG-320's retry hold.
+// Both go through ensureClerkUser unchanged, so BUG-284's identity rules, and
+// its stale-owner lookup, and BUG-320's retry hold.
 export class ClerkAuthGateway implements AuthGateway {
   constructor(private readonly deps: ClerkAuthGatewayDeps) {}
 
