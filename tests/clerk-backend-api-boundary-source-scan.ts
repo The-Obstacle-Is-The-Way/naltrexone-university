@@ -17,8 +17,9 @@ const ALLOWED_AT_COMPOSITION_ROOT = new Set(['clerkClient']);
 const BACKEND_PACKAGE =
   /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*)['"]@clerk\/backend(?:\/[^'"]*)?['"]/;
 const CLERK_STAR_EXPORT = /\bexport\s*\*\s*(?:as\s+\w+\s*)?from\s*['"]@clerk\//;
-// A template or a custom lifetime makes getToken() a Backend API call.
-const GET_TOKEN_WITH_OPTIONS = /\bgetToken\s*\(\s*[^)\s]/;
+// A template or a custom lifetime makes getToken() a Backend API call,
+// called plainly or optionally (`getToken?.(…)`).
+const GET_TOKEN_WITH_OPTIONS = /\bgetToken\s*(?:\?\.\s*)?\(\s*[^)\s]/;
 
 export const PRODUCTION_SOURCE = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 export const NOT_PRODUCTION =

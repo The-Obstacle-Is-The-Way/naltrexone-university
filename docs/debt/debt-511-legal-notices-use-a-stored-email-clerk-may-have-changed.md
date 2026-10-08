@@ -70,7 +70,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 
 1. **One lookup, at queue time and again at send time.**
    - A new port asks Clerk, outside any transaction, for the user's primary email whose `verification.status` is `verified`. A missing verification counts as unverified.
-   - The job checks before it snapshots a notice's payload, and dispatch checks again before sending. One lookup per user per run serves all that user's notices.
+   - The job checks before it snapshots a notice's payload, and dispatch checks again before sending. Within one run, both checks share one lookup per user, which serves all that user's notices. A notice queued in an earlier run gets a fresh lookup in the run that dispatches it.
    - Before calling Clerk, read the deletion tombstone.
 2. **Outcomes.** The deadline governs, not the lookup, so nothing is superseded for good while the user can still fix it.
    - **Address matches:** send.

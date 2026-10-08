@@ -65,6 +65,18 @@ describe("Clerk's Backend API boundary", () => {
     ).toEqual([{ path: 'app/page.tsx', use: 'getToken with options' }]);
   });
 
+  it('flags an optional getToken call with options, but not without', () => {
+    expect(
+      findClerkBackendApiUses([
+        {
+          path: 'app/page.tsx',
+          text: "const token = await session?.getToken?.({ template: 'x' });",
+        },
+        { path: 'app/other.tsx', text: 'const token = await getToken?.();' },
+      ]),
+    ).toEqual([{ path: 'app/page.tsx', use: 'getToken with options' }]);
+  });
+
   it('treats JavaScript and JSX files as production source', () => {
     expect(
       ['components/x.jsx', 'lib/x.mjs', 'app/x.tsx'].every((path) =>
