@@ -73,11 +73,12 @@ whether the shared cooldown held. `scrubEvent` keeps an alert event to those
 fields, so it carries no request, user, breadcrumb, ID or address, whatever the
 scope it was raised in held.
 
-- **Delivery.** Each kind and fixed six-hour window opens its own Sentry issue.
-  The event is error level, so the issue opens as High priority, and the
-  project's "Send a notification for high priority issues" workflow emails it.
-  Keep that workflow enabled for production. An earlier issue need not be
-  resolved for the next alert to arrive. Off Vercel, events are labelled
+- **Delivery.** Each kind and fixed six-hour window opens its own Sentry issue,
+  and the workflow "Operational alerts — email the owner (DEBT-505)" emails each
+  new one: production only, events tagged `alert.kind`, no throttling. It does
+  not depend on the default "high priority issues" workflow, so that one can be
+  changed to tune ordinary error email. Keep the alerts' own workflow enabled.
+  An earlier issue need not be resolved for the next alert to arrive. Off Vercel, events are labelled
   `local`, so a local run never pages as production.
 - **Volume.** At most one event per kind per six-hour window across all
   instances, through the Postgres limiter. If that limiter fails, or takes over
