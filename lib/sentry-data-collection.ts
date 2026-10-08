@@ -206,3 +206,23 @@ export function scrubBreadcrumb(
   }
   return breadcrumb;
 }
+
+type Integration = Extract<
+  NonNullable<NonNullable<Parameters<typeof Sentry.init>[0]>['integrations']>,
+  unknown[]
+>[number];
+
+/**
+ * The server's integrations: Sentry's defaults without `ProcessSession`. Once
+ * Sentry has a release, as on CI and Vercel, that integration sends a
+ * release-health session envelope that copies the scope's user, and
+ * `beforeSend` never sees it (DEBT-505). The server does not use release
+ * health.
+ */
+export function withoutProcessSession(
+  integrations: Integration[],
+): Integration[] {
+  return integrations.filter(
+    (integration) => integration.name !== 'ProcessSession',
+  );
+}

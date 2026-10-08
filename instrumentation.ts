@@ -4,6 +4,7 @@ import {
   scrubBreadcrumb,
   scrubEvent,
   sentryEnvironmentFor,
+  withoutProcessSession,
 } from '@/lib/sentry-data-collection';
 
 export const SENTRY_DISABLED_IN_PRODUCTION_WARNING =
@@ -28,6 +29,7 @@ export async function register() {
     dsn,
     tracesSampleRate: 0.05,
     environment,
+    integrations: withoutProcessSession,
     dataCollection: SENTRY_DATA_COLLECTION,
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,

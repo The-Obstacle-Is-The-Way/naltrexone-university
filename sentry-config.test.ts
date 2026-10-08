@@ -179,6 +179,10 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
+        // DEBT-505: no release-health session, which would copy the scope's
+        // user past beforeSend.
+        integrations: (await import('@/lib/sentry-data-collection'))
+          .withoutProcessSession,
         ...(await sentryPrivacyOptions()),
       });
     });
@@ -210,6 +214,10 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: 'preview',
+        // DEBT-505: no release-health session, which would copy the scope's
+        // user past beforeSend.
+        integrations: (await import('@/lib/sentry-data-collection'))
+          .withoutProcessSession,
         ...(await sentryPrivacyOptions()),
       });
     });

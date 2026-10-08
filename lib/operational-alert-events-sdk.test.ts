@@ -5,6 +5,7 @@ import {
   SENTRY_DATA_COLLECTION,
   scrubBreadcrumb,
   scrubEvent,
+  withoutProcessSession,
 } from './sentry-data-collection';
 
 // DEBT-505: what leaves the process is proven through the real SDK and our
@@ -15,6 +16,10 @@ let transportFlushes = true;
 beforeAll(() => {
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
+    // CI and Vercel give Sentry a release, which turns on release-health
+    // sessions; set one here so a run without it proves the same thing.
+    release: 'operational-alert-test',
+    integrations: withoutProcessSession,
     dataCollection: SENTRY_DATA_COLLECTION,
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
