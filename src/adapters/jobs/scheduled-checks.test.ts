@@ -7,6 +7,7 @@ import {
   checkScheduledChecksRunning,
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
   type ScheduledWorkflowsStatus,
+  ScheduledWorkflowsUnavailable,
   ScheduledWorkflowsUnreadable,
 } from './scheduled-checks';
 
@@ -157,18 +158,54 @@ describe('checkScheduledChecksRunning', () => {
   // revoked token, or a changed API, would otherwise stop the check silently.
   it('raises an alert when GitHub refuses the check or answers in an unexpected shape', async () => {
     const { deps, alerts, logger } = setup(async () => {
-      throw new ScheduledWorkflowsUnreadable('GitHub answered 401');
+      throw new ScheduledWorkflowsUnreadable('refused', 401);
     });
 
     await expect(checkScheduledChecksRunning(deps)).resolves.toBe('unreadable');
     expect(alerts.raised).toEqual([
       { kind: 'scheduled_checks_unreadable', count: 1 },
     ]);
+    // The reason and status tell an expired token from a lost permission.
     expect(logger.errorCalls).toEqual([
       {
-        context: { error: { name: 'ScheduledWorkflowsUnreadable' } },
+        context: { reason: 'refused', status: 401 },
         msg: 'Scheduled checks unreadable',
       },
+    ]);
+  });
+
+  it("logs an unavailable read's status, so a passing outage can be told from one that lasts", async () => {
+    const { deps, alerts, logger } = setup(async () => {
+      throw new ScheduledWorkflowsUnavailable(503);
+    });
+
+    await expect(checkScheduledChecksRunning(deps)).resolves.toBe(
+      'unavailable',
+    );
+    expect(alerts.raised).toEqual([]);
+    expect(logger.warnCalls).toEqual([
+      { context: { status: 503 }, msg: 'scheduled_checks_unavailable' },
+    ]);
+  });
+
+  it('raises nothing for a watcher that succeeded just under three days ago', async () => {
+    const { deps, alerts } = setup(async () =>
+      status({ watcherLastSuccessAt: ago(3 * DAY_MS - 60_000) }),
+    );
+
+    await expect(checkScheduledChecksRunning(deps)).resolves.toBe('running');
+    expect(alerts.raised).toEqual([]);
+  });
+
+  it('counts the watcher once when it is itself disabled for inactivity', async () => {
+    const workflows = status().workflows;
+    const watcher = workflows[0];
+    if (watcher) watcher.state = 'disabled_inactivity';
+    const { deps, alerts } = setup(async () => status({ workflows }));
+
+    await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
+    expect(alerts.raised).toEqual([
+      { kind: 'scheduled_checks_stopped', count: 1 },
     ]);
   });
 });

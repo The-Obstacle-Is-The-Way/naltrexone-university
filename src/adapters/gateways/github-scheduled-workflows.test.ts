@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  ScheduledWorkflowsUnavailable,
   ScheduledWorkflowsUnreadable,
 } from '@/src/adapters/jobs/scheduled-checks';
 import { createGithubScheduledWorkflows } from './github-scheduled-workflows';
@@ -102,6 +103,9 @@ describe('createGithubScheduledWorkflows', () => {
     expect(headers(withToken.requests[0]).get('authorization')).toBe(
       'Bearer read-token',
     );
+    expect(headers(withToken.requests[1]).get('authorization')).toBe(
+      'Bearer read-token',
+    );
     expect(anonymous.requests[0]?.init?.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -125,58 +129,99 @@ describe('createGithubScheduledWorkflows', () => {
     }
   });
 
-  // A refusal or an unexpected shape needs a person: a token expired or was
-  // revoked, or GitHub's API changed. A rate limit or an outage passes.
-  it.each([
-    ['a refused token', new Response(null, { status: 401 })],
-    ['a forbidden read', new Response(null, { status: 403 })],
-    ['an unexpected shape', json({ workflows: [{ path: 1 }] })],
-  ])(
-    'rejects as unreadable on %s, naming only the status',
-    async (_case, answer) => {
-      const { fetchImpl } = github({
-        [`${BASE}?per_page=100`]: answer,
-        [WATCHER_RUNS]: json({ workflow_runs: [] }),
-      });
-
-      const read = createGithubScheduledWorkflows({
+  const reading = (answer: Response, token: string | undefined) => {
+    const { fetchImpl, requests } = github({
+      [`${BASE}?per_page=100`]: answer,
+      [WATCHER_RUNS]: json({ workflow_runs: [] }),
+    });
+    return {
+      requests,
+      read: createGithubScheduledWorkflows({
         repository: REPOSITORY,
-        token: 'read-token',
+        token,
         fetchImpl,
-      }).read();
+      }).read(),
+    };
+  };
+
+  // A refusal, an unexpected shape or a missing token needs a person; the
+  // reason and status say which.
+  it.each([
+    ['a refused token', new Response(null, { status: 401 }), 'refused', 401],
+    ['a forbidden read', new Response(null, { status: 403 }), 'refused', 403],
+    [
+      'an unexpected shape',
+      json({ workflows: [{ path: 1 }] }),
+      'unexpected_shape',
+      undefined,
+    ],
+    [
+      'a list cut off at its page size',
+      json({ ...workflowsBody, total_count: 101 }),
+      'unexpected_shape',
+      undefined,
+    ],
+  ] as const)(
+    'rejects as unreadable on %s',
+    async (_case, answer, reason, status) => {
+      const { read } = reading(answer, 'read-token');
 
       await expect(read).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);
-      await expect(read).rejects.toThrow(
-        /^GitHub (answered \d+|returned an unexpected shape)$/,
-      );
+      await expect(read).rejects.toMatchObject({ reason, status });
     },
   );
 
+  // Without a token, a rate limit is the missing token itself, not a
+  // passing condition: GitHub's anonymous limit is per address, and Vercel's
+  // addresses are shared.
   it.each([
     [
-      'a rate limit',
+      'a primary rate limit',
       new Response(null, {
         status: 403,
         headers: { 'x-ratelimit-remaining': '0' },
       }),
     ],
     ['a secondary rate limit', new Response(null, { status: 429 })],
-    ['a server error', new Response(null, { status: 502 })],
-  ])('rejects as passing on %s with a token', async (_case, answer) => {
-    const { fetchImpl } = github({
-      [`${BASE}?per_page=100`]: answer,
-      [WATCHER_RUNS]: json({ workflow_runs: [] }),
-    });
+  ])(
+    'rejects as unreadable on %s without a token, naming the missing token',
+    async (_case, answer) => {
+      const { read } = reading(answer, undefined);
 
-    const read = createGithubScheduledWorkflows({
-      repository: REPOSITORY,
-      token: 'read-token',
-      fetchImpl,
-    }).read();
+      await expect(read).rejects.toMatchObject({
+        reason: 'rate_limited_without_token',
+      });
+    },
+  );
 
-    await expect(read).rejects.toThrow(/^GitHub answered \d+$/);
-    await expect(read).rejects.not.toBeInstanceOf(ScheduledWorkflowsUnreadable);
-  });
+  it.each([
+    [
+      'a primary rate limit',
+      new Response(null, {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' },
+      }),
+      403,
+    ],
+    [
+      'a secondary rate limit marked by retry-after',
+      new Response(null, {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '12', 'retry-after': '60' },
+      }),
+      403,
+    ],
+    ['a 429', new Response(null, { status: 429 }), 429],
+    ['a server error', new Response(null, { status: 502 }), 502],
+  ])(
+    'rejects as unavailable on %s with a token, keeping the status',
+    async (_case, answer, status) => {
+      const { read } = reading(answer, 'read-token');
+
+      await expect(read).rejects.toBeInstanceOf(ScheduledWorkflowsUnavailable);
+      await expect(read).rejects.toMatchObject({ status });
+    },
+  );
 
   it("rejects as unreadable when the watcher's runs are refused", async () => {
     const { fetchImpl } = github({
@@ -190,27 +235,61 @@ describe('createGithubScheduledWorkflows', () => {
         token: 'read-token',
         fetchImpl,
       }).read(),
-    ).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);
+    ).rejects.toMatchObject({ reason: 'refused', status: 401 });
   });
 
-  // Without a token, a rate limit is the missing token itself, not a
-  // passing condition: GitHub's anonymous limit is per address, and Vercel's
-  // addresses are shared.
-  it('rejects as unreadable on a rate limit without a token, so the missing token is reported', async () => {
-    const { fetchImpl } = github({
-      [`${BASE}?per_page=100`]: new Response(null, {
-        status: 403,
-        headers: { 'x-ratelimit-remaining': '0' },
-      }),
-      [WATCHER_RUNS]: json({ workflow_runs: [] }),
+  // A value the header would refuse fails every read; it is reported as the
+  // token's fault, before any request.
+  it('rejects as unreadable, without a request, when the token cannot be sent as a header', async () => {
+    const { read, requests } = reading(json(workflowsBody), 'read-token\n');
+
+    await expect(read).rejects.toMatchObject({
+      reason: 'token_not_header_safe',
     });
+    expect(requests).toEqual([]);
+  });
+
+  it('gives up after its time limit, as unavailable', async () => {
+    const fetchImpl: typeof fetch = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(init.signal?.reason),
+        );
+      });
 
     await expect(
       createGithubScheduledWorkflows({
         repository: REPOSITORY,
-        token: undefined,
+        token: 'read-token',
         fetchImpl,
+        timeoutMs: 20,
       }).read(),
-    ).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);
+    ).rejects.toBeInstanceOf(ScheduledWorkflowsUnavailable);
+  });
+
+  // A re-run keeps its run's creation time; the start time is when the try
+  // that succeeded began.
+  it("dates the watcher's last success by when its successful try started", async () => {
+    const { fetchImpl } = github({
+      [`${BASE}?per_page=100`]: json(workflowsBody),
+      [WATCHER_RUNS]: json({
+        workflow_runs: [
+          {
+            created_at: '2026-10-17T11:37:00Z',
+            run_started_at: '2026-10-19T08:00:00Z',
+          },
+        ],
+      }),
+    });
+
+    const status = await createGithubScheduledWorkflows({
+      repository: REPOSITORY,
+      token: 'read-token',
+      fetchImpl,
+    }).read();
+
+    expect(status.watcherLastSuccessAt).toEqual(
+      new Date('2026-10-19T08:00:00Z'),
+    );
   });
 });

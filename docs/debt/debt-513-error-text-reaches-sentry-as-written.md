@@ -18,14 +18,24 @@ No leak has been seen. This is hardening, found while reviewing BUG-331 (#1430).
 
 ## Evidence
 
-- **Our own errors.** All 247 `new ApplicationError(…)` messages in `src`, `app` and `lib` are fixed strings, with no interpolation. Six other `new Error(\`…\`)` messages interpolate an enum value, a content heading or a question ID; none carries a person's data or a credential (checked 2026-10-08).
+- **Our own errors.** Counted with the TypeScript parser over `src`, `app` and `lib`, tests excluded (2026-10-08):
+  - **`ApplicationError`:** of 247 calls, 215 pass a fixed message, 25 interpolate a value, and 7 pass a computed one. The values are:
+    - retry seconds;
+    - internal IDs of questions, revisions, choices, attempts, practice sessions and subscriptions;
+    - a Stripe price ID and a webhook event type;
+    - a validation message;
+    - the Stripe SDK's signature-verification message.
+  - **`Error`:** of 28 calls, 8 interpolate an enum value, a content heading or an internal ID.
+  - **Result:** none carries a credential. The IDs are pseudonymous.
+
+  *Corrected 2026-10-08 (pre-review): a first, line-based count missed calls split across lines and reported every `ApplicationError` message as fixed.*
 - **Other libraries' errors.** An error from Clerk, Stripe, `fetch` or Postgres that escapes uncaught carries that library's text. Stripe's messages name object IDs (for example "No such customer"); none of these libraries is known to put a credential in a message, but nothing here stops one.
 - **Production.** On 2026-10-08, Sentry's server project held no issue yet (it began that day), and the web project's 7 issues of the last 14 days showed no credential parameter, Stripe or Clerk ID, email address or URL query in their titles, culprits or metadata (counts only).
 
 ## Options
 
 1. **Redact the event's text.** Run `redactCredentialParams` over each exception value and the event message in `scrubEvent`. Since BUG-331, a pair ends at whitespace, so free text is matched safely. It keeps the text needed for diagnosis.
-2. **Also mask provider IDs.** IDs are pseudonymous, but diagnosis needs them, and Sentry receives no user to join them to.
+2. **Also mask IDs.** Internal and Stripe IDs do appear in messages (above). They are pseudonymous, diagnosis needs them, and Sentry receives no user to join them to, so they stay.
 3. **Send error codes only.** It loses the text a diagnosis starts from.
 
 ## Resolution
