@@ -162,7 +162,7 @@ describe('createGithubScheduledWorkflows', () => {
     ],
     ['a secondary rate limit', new Response(null, { status: 429 })],
     ['a server error', new Response(null, { status: 502 })],
-  ])('rejects as passing on %s', async (_case, answer) => {
+  ])('rejects as passing on %s with a token', async (_case, answer) => {
     const { fetchImpl } = github({
       [`${BASE}?per_page=100`]: answer,
       [WATCHER_RUNS]: json({ workflow_runs: [] }),
@@ -170,7 +170,7 @@ describe('createGithubScheduledWorkflows', () => {
 
     const read = createGithubScheduledWorkflows({
       repository: REPOSITORY,
-      token: undefined,
+      token: 'read-token',
       fetchImpl,
     }).read();
 
@@ -188,6 +188,27 @@ describe('createGithubScheduledWorkflows', () => {
       createGithubScheduledWorkflows({
         repository: REPOSITORY,
         token: 'read-token',
+        fetchImpl,
+      }).read(),
+    ).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);
+  });
+
+  // Without a token, a rate limit is the missing token itself, not a
+  // passing condition: GitHub's anonymous limit is per address, and Vercel's
+  // addresses are shared.
+  it('rejects as unreadable on a rate limit without a token, so the missing token is reported', async () => {
+    const { fetchImpl } = github({
+      [`${BASE}?per_page=100`]: new Response(null, {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' },
+      }),
+      [WATCHER_RUNS]: json({ workflow_runs: [] }),
+    });
+
+    await expect(
+      createGithubScheduledWorkflows({
+        repository: REPOSITORY,
+        token: undefined,
         fetchImpl,
       }).read(),
     ).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);

@@ -14,15 +14,17 @@ class UnexpectedShape extends ScheduledWorkflowsUnreadable {
   }
 }
 
-// A rate limit (403 with none left, or 429) or a server error passes; any
-// other refusal needs a person.
-function failedRead(response: Response): Error {
+// A server error, or a rate limit on a read made with a token, passes. Any
+// other refusal needs a person, and so does a rate limit without a token:
+// GitHub's anonymous limit is per address, and Vercel's addresses are shared,
+// so the fix is the missing token.
+function failedRead(response: Response, hasToken: boolean): Error {
   const message = `GitHub answered ${response.status}`;
   const rateLimited =
     response.status === 429 ||
     (response.status === 403 &&
       response.headers.get('x-ratelimit-remaining') === '0');
-  return rateLimited || response.status >= 500
+  return (rateLimited && hasToken) || response.status >= 500
     ? new Error(message)
     : new ScheduledWorkflowsUnreadable(message);
 }
@@ -51,8 +53,9 @@ function date(value: unknown): Date {
 
 /**
  * DEBT-505: the repository's GitHub Actions workflows, read from GitHub's
- * REST API. The repository is public, so a token is optional; one with
- * read-only Actions access avoids the per-address limit on anonymous calls.
+ * REST API, with a token holding read-only Actions access. The repository
+ * is public, so a read without one works until GitHub's per-address limit
+ * refuses it, which is reported as the missing token.
  * A refusal or an unexpected shape rejects as `ScheduledWorkflowsUnreadable`,
  * and a rate limit or a server error as a plain error, naming the status
  * only.
@@ -79,7 +82,7 @@ export function createGithubScheduledWorkflows(deps: {
   const answer = async (response: Response): Promise<unknown> => {
     if (response.status !== 200) {
       await response.body?.cancel();
-      throw failedRead(response);
+      throw failedRead(response, Boolean(deps.token));
     }
     try {
       return await response.json();
