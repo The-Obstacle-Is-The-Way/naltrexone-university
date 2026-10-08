@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is in production; a Stripe test-mode E2E of the refused checkout remains
+**Status:** In Progress — the fix is in production; a provider-contract test of the refused checkout's Stripe list and sync remains (AUDIT-015)
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —

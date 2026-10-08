@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the first production drill reaches the owner's inbox, and the next cycle's, from 2026-11-03, emails again; due 2026-11-05
+**Status:** In Progress — shipped; the alert drill, an independent watcher and the owner's inbox filter remain (AUDIT-015)
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -85,6 +85,11 @@ Option 2.
   - The runbook is [Operational alerts](../dev/logging.md#operational-alerts).
 
 *Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*
+
+- **Decided 2026-10-08 (AUDIT-015): proving the path.** The alerts protect a legal deadline, so their path must be watched, not assumed.
+  - **A drill.** Once per fixed 30-day cycle, the renewal job raises a drill alert through the real path, and a drill that is not sent retries the next day.
+  - **A watcher outside Sentry email.** A Sentry Crons monitor on the renewal job, and a daily GitHub Actions check with a read-only Sentry token. The check opens a GitHub issue when the job's last check-in is stale, the alerts' workflow is disabled or changed, no drill has arrived in 32 days, or the month's errors pass 80% of the quota. The owner creates the token.
+  - **Being noticed.** The owner's Gmail filter and Sentry's mobile push make an alert stand out.
 
 ## Verification
 

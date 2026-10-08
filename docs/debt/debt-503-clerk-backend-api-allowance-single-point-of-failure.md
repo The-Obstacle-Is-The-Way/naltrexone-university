@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 (identity from the session token) released 2026-10-08; DEBT-508's overlap check follows; items 2–4 follow
+**Status:** In Progress — item 1 released 2026-10-08; item 3, an alert for a cap trip, is next; items 2 and 4 wait for their triggers
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -82,6 +82,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 ### 4. Measure the real volume of these requests (P3)
 
 - **Decided.** Record the per-minute count of requests that would make Clerk call its Backend API. Retune BUG-323's caps from that number instead of from the allowance alone.
+- **Trigger** (AUDIT-015, 2026-10-08): item 3's alert first fires, or Clerk answers item 2's report.
 
 ## Verification
 

@@ -291,5 +291,5 @@ Tracked suppressions fall **1 → 0**, which completes Resolution step 5. Under 
 
 - [DEBT-468](debt-468-test-estate-coverage-and-fixture-debt.md) — fixture extraction shrinks the same oversized files this item splits; coverage-threshold ratchet lives there
 - [DEBT-466](debt-466-checkout-idempotency-replay-chain-exhaustion.md) / [DEBT-470](debt-470-checkout-replay-tail-jump.md) — Part A resolved historical depth-3 W6; DEBT-470 resolves the later depth-10 recurrence and retires the count-bearing local exception, so every `pricing?checkout=error&plan=monthly` remains a defect signal
-- [DEBT-465](../../debt/debt-465-test-quality-practices-adoption.md) — the practices campaign this investigation extends
+- [DEBT-465](debt-465-test-quality-practices-adoption.md) — the practices campaign this investigation extends
 - `c6d94e80`, `d3d3e558`, `a4464f2f` — the W1 timeline receipts
