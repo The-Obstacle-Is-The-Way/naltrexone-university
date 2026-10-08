@@ -21,7 +21,7 @@ Update stanzas moved out of the [Technical Debt Register](../../debt/index.md), 
 - **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md).
 
 **Earlier** — 2026-10-05 UTC: DEBT-498 increment 2a, and the Sentry fix released.
-- **DEBT-498 increment 2a: lists name a result no score counts "Not scored"** ([DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
+- **DEBT-498 increment 2a: lists name a result no score counts "Not scored"** ([DEBT-498](debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
   - The covered surfaces: the question navigator (post-exam and tutor), the Review & Submit list, the session breakdown, the question page's session navigator and the Dashboard's recent activity.
   - Session review and recent-activity rows carry a required `answerKeyChanged`, in any question state.
   - Ten targeted mutations each fail a test. DEBT-496's spec asserts the Dashboard row, and its screenshot was viewed.
@@ -63,7 +63,7 @@ Update stanzas moved out of the [Technical Debt Register](../../debt/index.md), 
 - **Open decisions for the owner.** Unchanged from the [previous entries](./register-history-2026-10.md).
 
 **Earlier** — 2026-10-05 UTC: DEBT-498's first increment, and DEBT-497 closed.
-- **DEBT-498 increment 1: an answer no score counts is shown ungraded on reviews and in tutor feedback** ([DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
+- **DEBT-498 increment 1: an answer no score counts is shown ungraded on reviews and in tutor feedback** ([DEBT-498](debt-498-reviews-grade-items-whose-content-is-in-doubt.md#progress)).
   - **Design first.** ADR-022 gains its 2026-10-05 Amendment: what the score leaves out, the page does not grade. Pattern Registry F-1, I-3, F-5, F-8, F-11 and F-12 record the ungraded forms.
   - **The ungraded form.**
     - The verdict reads "Not scored" in place of Correct or Incorrect, with no verdict color.
@@ -93,7 +93,7 @@ Update stanzas moved out of the [Technical Debt Register](../../debt/index.md), 
   - CI reports a failed upload as a job warning and summary, without failing the job.
   - AGENTS.md records the outage procedure.
   - Five targeted mutations of the path set each fail a case.
-- **DEBT-498 filed (P1): reviews grade items whose content is in doubt** ([DEBT-498](../../debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md)).
+- **DEBT-498 filed (P1): reviews grade items whose content is in doubt** ([DEBT-498](debt-498-reviews-grade-items-whose-content-is-in-doubt.md)).
   - DEBT-496's screenshots showed a key-corrected review that puts the caution above the superseded key in green, a green "Correct" and the superseded explanation. Withdrawn and under-review reviews, the post-exam navigator, History rows and tutor feedback grade such items the same way, though no score counts them.
   - Decided: what the score leaves out, the page does not grade. Each of those surfaces reads "Not scored", without success or destructive styling. A key-corrected review hides the superseded explanation and labels the old key "Answer before the correction".
 - **Released since the last entry.** #1364 (DEBT-496's spec) went out through promotion #1365 (`25c4748b`), which CodeRabbit skipped:
