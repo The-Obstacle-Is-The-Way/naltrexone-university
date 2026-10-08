@@ -1,20 +1,21 @@
 # Bug Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-07
+**Last Updated:** 2026-10-08
 
-**Now** — 2026-10-07.
+**Now** — 2026-10-08.
 - **Verifying.** BUG-319: its fix is in production since 2026-10-05; the Sentry checks and a real-SDK test that the stale-action event reaches Sentry, due 2026-10-19. BUG-323: the owner confirms the production limiter writes its rows, due 2026-10-19. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-325: no Sentry event from the fixed paths for two weeks, due 2026-10-20. BUG-327: #1404 has no deployment; merge through the tooling remains, due 2026-10-20.
-- **Next.** Fix BUG-329; write BUG-321's test-mode E2E; fix BUG-330 after DEBT-503 item 1; archive each Verifying record when its check passes.
+- **Next.** Fix BUG-331 after DEBT-505, which changes the same files; fix BUG-329; write BUG-321's test-mode E2E; fix BUG-330 after DEBT-503 item 1; archive each Verifying record when its check passes.
 - **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan.
 
-**Next Bug ID:** BUG-331
+**Next Bug ID:** BUG-332
 
 ## Active
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
 | [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P3 | Open — canonicalize generated instance names before passing them to child commands |
+| [BUG-331](./bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) | Server breadcrumbs and request spans carry credentials the scrubbers miss | P2 | Open — resolution decided below; the fix follows DEBT-505, which changes the same files |
 | [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) | Signed-in E2E fails en masse when the stored Clerk session cannot be restored after its token expires | P3 | Open — resolution decided below; fix after DEBT-503 item 1 |
 | [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Verifying — the Sentry checks, and a real-SDK test that the stale-action event reaches Sentry; due 2026-10-19 |
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — owner confirms the production limiter writes its rows; due 2026-10-19 |
