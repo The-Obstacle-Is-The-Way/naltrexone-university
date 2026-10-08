@@ -7,11 +7,9 @@ overrides:
   # sourceMappingURL paths could disclose arbitrary .map files, including when
   # PostCSS has no `from` value. Build-only via Next/Tailwind/Vite over trusted
   # repo CSS, so defense-in-depth. 8.5.23 satisfies Tailwind's ^8.5.16 and
-  # Vite's ^8.5.23; Next pins 8.4.31 exactly, so this existing override remains
-  # intentionally out-of-range but within PostCSS 8. Aged past the 7-day gate
-  # as of 2026-08-07 (published 2026-07-24).
+  # Vite's ^8.5.23, and Next 16.3.8 pins 8.5.23 exactly. Aged past the 7-day
+  # gate as of 2026-08-07 (published 2026-07-24).
   postcss: 8.5.23
-  uuid: 14.0.0
   # Security: GHSA-q8mj-m7cp-5q26 (CVE-2026-8723; alert #64) — qs.stringify
   # throws on null/undefined entries in comma-format arrays with
   # encodeValuesOnly; GHSA-4mjr-xmp4-gh2g — stringify calls an attacker-set,
@@ -37,11 +35,10 @@ overrides:
   # Security: GHSA-2883-xcg3-v3hh (CVE-2026-84375) — maxTotalMergeKeys did not
   # bound CPU for empty merge sources; the earlier GHSA-h67p-54hq-rp68 +
   # GHSA-5p4m-2wfm-xmqj alias/!!omap quadratic-CPU fixes remain covered.
-  # Transitive via gray-matter and Clerk's react-native/istanbul test tooling
-  # over first-party YAML/Markdown only, so defense-in-depth. Alert #63
-  # retargeted the v3-legacy line from 3.15.1 to 3.15.2, which satisfies both
-  # consumers' ^3.13.1 (DEBT-476). Aged past the 7-day gate as of 2026-09-02
-  # (published 2026-08-26).
+  # Transitive via gray-matter over first-party YAML/Markdown only, so
+  # defense-in-depth. Alert #63 retargeted the v3-legacy line from 3.15.1 to
+  # 3.15.2, which satisfies gray-matter's ^3.13.1 (DEBT-476). Aged past the
+  # 7-day gate as of 2026-09-02 (published 2026-08-26).
   js-yaml: 3.15.2
   # Security: GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895 — unbounded brace
   # expansion could allocate oversized intermediate arrays and exhaust memory;
@@ -51,13 +48,6 @@ overrides:
   # minimatch@10's 5.x line; 5.0.12 satisfies ^5.0.8. Aged past the 7-day gate
   # (published 2026-09-14).
   'brace-expansion@5': 5.0.12
-  # Security: GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895, GHSA-6j4f-fj2g-mc7p +
-  # GHSA-qhr7-859c-m2p7 and GHSA-q2hr-2g5m-vwhr — the same flaws affect
-  # minimatch@3's independent 1.x dependency line, fixed together in 1.1.21.
-  # Build/test globs are repository-controlled. 1.1.21 satisfies ^1.1.7 and is
-  # deliberately scoped away from the 5.x override. Aged past the 7-day gate
-  # (published 2026-09-14).
-  'brace-expansion@1': 1.1.21
   # Security: GHSA-5jgf-p345-68v8 + GHSA-fph4-wmhf-6fwf + GHSA-f65p-4m7j-42xc +
   # GHSA-jqff-g426-hqxp — host confusion / SSRF via IDN, percent-decoding, IPv6,
   # and percent-encoded scheme (fixed in 3.1.6), plus GHSA-qw65-cvwx-89v3 +
@@ -90,11 +80,11 @@ overrides:
   # (VIPS dimension overflow), CVE-2026-33328 (GIF integer overflow, 32-bit),
   # CVE-2026-35591 (TIFF tile-channel handling), CVE-2026-35590 (EXIF range
   # validation). Patched in sharp 0.35.0 (libvips 8.18.3); the exact pin is
-  # now 0.35.5 (below). Next 16.3.4 itself declares ^0.35.4: it re-enabled AVIF
-  # optimization only once sharp 0.35.4 shipped the libheif 1.23.2 fix for
-  # GHSA-2xp9-vwfh-vxw4 (unauthenticated AVIF RCE in Image Optimization). The
-  # exact pin stays as defense-in-depth so no transitive range can resolve
-  # below that patched floor.
+  # now 0.35.5 (below). Next declares ^0.35.4, as 16.3.8 still does: 16.3.4
+  # re-enabled AVIF optimization only once sharp 0.35.4 shipped the libheif
+  # 1.23.2 fix for GHSA-2xp9-vwfh-vxw4 (unauthenticated AVIF RCE in Image
+  # Optimization). The exact pin stays as defense-in-depth so no transitive
+  # range can resolve below that patched floor.
   # No reachable attacker path here today: no next/image usage, no
   # images.remotePatterns in next.config.ts, no direct sharp import, no image
   # upload — so this is defense-in-depth for the installed binary and any future
@@ -122,28 +112,6 @@ packageExtensions:
   '@stryker-mutator/core':
     dependencies:
       typescript: ^6.0.3
-  # DEBT-506: these three packages, reached through @clerk/ui's Solana wallet
-  # adapters, declare react-native as a required peer, but only their React
-  # Native entry points (index.native.js, the `react-native` export condition)
-  # import it; the browser and node entries Next.js resolves never do. pnpm
-  # installs a missing required peer by itself, which put react-native and its
-  # Metro, Jest and Babel tooling into this web app's install graph, shell-quote
-  # (alert #82) among them. Marking the peer optional stops that install and
-  # removes or stubs no Clerk or Solana package. A React Native host would
-  # still supply the peer. tests/dependency-graph-policy.test.ts fails if
-  # react-native returns.
-  '@react-native-async-storage/async-storage':
-    peerDependenciesMeta:
-      react-native:
-        optional: true
-  '@solana-mobile/mobile-wallet-adapter-protocol':
-    peerDependenciesMeta:
-      react-native:
-        optional: true
-  '@solana-mobile/wallet-adapter-mobile':
-    peerDependenciesMeta:
-      react-native:
-        optional: true
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1 # legacy Babel dependency published in 2023; exact exception for no-downgrade provenance gap.
@@ -152,8 +120,6 @@ strictDepBuilds: true
 allowBuilds:
   '@clerk/shared': false # postinstall prints telemetry notice and persists telemetryNoticeVersion to local Clerk config.
   '@stripe/cli': true # installs the pinned official Stripe CLI binary used by the required provider-backed Checkout contract.
-  bufferutil: false # optional ws peer/native performance addon built by node-gyp-build; ws can fall back.
   core-js: false # postinstall prints support/funding banner with temp-file dedupe; no build artifact.
   esbuild: true # validates/prepares platform esbuild binaries used by Vite, tsx, and Drizzle tooling.
   sharp: true # verifies/builds the native image-processing addon used by Next's image pipeline.
-  utf-8-validate: false # optional ws peer/legacy UTF-8 native addon built by node-gyp-build; Node 24/ws can fall back.
