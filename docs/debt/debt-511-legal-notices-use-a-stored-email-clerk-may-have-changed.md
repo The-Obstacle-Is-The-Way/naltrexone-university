@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before paid acquisition or 35 days before the earliest live renewal
+**Status:** Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before 35 days ahead of the earliest live renewal
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -103,6 +103,8 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
    - DEBT-502 item 2's locked provisioning transaction comes before the write in item 2 above, and DEBT-502 item 3 before item 4.
    - Ownership conflicts need no prerequisite: until DEBT-502 item 1 automates the repair, the owner replays the stale owner's `user.updated` from the Clerk Dashboard ([runbook](../dev/deployment-environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row)), which moves that owner's address, and the held notice goes out on the next run.
    - Then this record. DEBT-503 item 1 may ship earlier, under the timing in Impact.
+
+**Decided 2026-10-08 (AUDIT-015):** the send-time lookup is built on [DEBT-502](./debt-502-account-identity-and-action-hardening.md)'s identity resolver, not beside it.
 
 ## Verification
 

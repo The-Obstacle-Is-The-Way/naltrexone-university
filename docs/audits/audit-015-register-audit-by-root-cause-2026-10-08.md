@@ -3,10 +3,10 @@
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Project:** Naltrexone University
-**Status:** Active — corrections applied with this record; the decided order below is worked through in later pull requests
+**Status:** Active — published by its pull request and closed on promotion; each decided item is tracked in the record it concerns
 **Date:** 2026-10-08
 **Baseline:** `origin/main` and `origin/dev` at the same tree, after promotion #1429
-**Scope:** every Active, Parked and Deferred record in the [bug](../bugs/index.md) and [debt](../debt/index.md) registers: BUG-319–321, 323, 325, 327, 329–332; DEBT-337, 349, 414, 460, 464, 465, 500–506, 508, 510, 511.
+**Scope:** every Active record in the [bug](../bugs/index.md) and [debt](../debt/index.md) registers, and the Deferred rows DEBT-337, 349, 460 and 464: BUG-319–321, 323, 325, 327, 329–332; DEBT-414, 465, 500–506, 508, 510, 511.
 
 ## Why
 
@@ -32,13 +32,13 @@ Three independent read-only reviews checked each record against the code at the 
 
 | Record | Verdict | Action |
 | --- | --- | --- |
-| BUG-319 | Fixed in code. Its remaining real-SDK test is engineering work, not a production check. | Keep Verifying for the Sentry check; the test is queued below. |
+| BUG-319 | Fixed in code. Its remaining real-SDK test is engineering work, not a production check. | Keep Verifying for the Sentry check; the test joins the quick wins below. |
 | BUG-320, BUG-332 | Fixed. Their Sentry checks are weak on a site with almost no traffic. | One combined Sentry query near 2026-10-22, recorded with counts, then archive. DEBT-502 item 2 removes the cause. |
-| BUG-321 | Fixed in code; only Stripe's list response is unproven. | Re-scope its E2E to a provider-contract test of the adapter and sync. |
+| BUG-321 | Fixed in code; only Stripe's list response is unproven. | Re-scoped here to a provider-contract test of the adapter and sync. |
 | BUG-323 | Fixed. Its impact line predates DEBT-503 item 1. | Corrected here. |
 | BUG-325 | Fixed. | Sentry check near 2026-10-20, then archive. |
 | BUG-327 | Fixed. #1404, which the record cited as open, was closed unmerged on 2026-10-07. | Corrected here. |
-| BUG-329 | Real, but only for clone names of 40 or more characters; no current clone has one. | Priority P4. |
+| BUG-329 | Real, but only for clone names of 40 or more characters; no current clone has one. | Priority P4, set here. |
 | BUG-330 | Real. Its blocker, DEBT-503 item 1, was released on 2026-10-08. | Corrected here; fix next in its lane, testing token first. |
 | BUG-331 | Real; the fix is in review (#1430). | — |
 | DEBT-414 | Engineering mostly shipped. F21 and F22 remain, and the rest waits on the owner, counsel or a tax adviser. Several claims are stale. | Stale claims corrected here. Split later: F21 into DEBT-511, F22 into DEBT-501 item 4, the owner, counsel and tax items into one record. |
@@ -49,12 +49,12 @@ Three independent read-only reviews checked each record against the code at the 
 | DEBT-503 | Item 1 released. Its overlap check duplicates DEBT-508's. Item 2's design is heavy for now; item 3 is cheap. | Overlap check left to DEBT-508. Item 3 queued; item 2 waits for Clerk's reply or a cap trip. |
 | DEBT-504 | True and proportionate. | Low priority. |
 | DEBT-505 | Shipped; verified only in parts. | The drill, the watcher and the owner's inbox filter complete it (below). |
-| DEBT-506 | Status stale: the peer and sharp fixes shipped (#1411, #1419). `source-map-js` 1.2.2 and Clerk UI 1.38.0 are now eligible. Next.js alerts #84–#95 are assessed in DEBT-509 (#1420) and fixed by 16.3.8 (#1409). | Corrected here. |
+| DEBT-506 | Status stale: the peer and sharp fixes shipped (#1411, promoted in #1419). `source-map-js` 1.2.2 and Clerk UI 1.38.0 are now eligible. Next.js alerts #84–#95, two of them high, stay open until 16.3.8 lands (Dependabot's #1425); DEBT-509, which assesses them, is in review (#1420). | Corrected here. |
 | DEBT-508 | Shipped (#1423, #1424); boxes 1–3 have tests; its blocker shipped. | Moved to Verifying here. |
 | DEBT-510 | Shipped (#1423, #1424). | Moved to Verifying here. |
 | DEBT-511 | True, and far off: the first scheduled notice is about eleven months after the first annual sale. | Decided as the identity resolver's first user (cause 1). Its portal-email item can ship early. |
-| DEBT-337, DEBT-349 | Triggers not fired. | Stay parked. |
-| DEBT-460 | Part 3 is obsolete: `biome.json` reads its schema from `node_modules` since 2026-09-29. | Part 3 removed here. |
+| DEBT-337, DEBT-349 | Triggers not fired. | Stay deferred. |
+| DEBT-460 | Part 3 is obsolete: `biome.json` reads its schema from `node_modules` since 2026-09-29. | Retired here, in its Deferred row and with a note in the record. |
 | DEBT-464 | Trigger not fired; its own evidence shows the Hobby plan's terms. | The plan question moves to DEBT-512. |
 
 ## Decided order
@@ -62,8 +62,8 @@ Three independent read-only reviews checked each record against the code at the 
 The gates are re-keyed. "Before paid acquisition" was too late for some duties, which apply at the first live sale, and too early for others, which cannot apply until 35 days before the earliest live renewal.
 
 1. **Now.** BUG-331 (#1430). Then the alert drill and the watcher (DEBT-505). Then BUG-330.
-2. **Quick wins, one pull request.** `CONSENT_STATE_SECRET` required (DEBT-502 item 6). The circuit breaker counts only transient errors (DEBT-501 item 6). The payer's success-page message (DEBT-501 item 5). A Stripe timeout within the reconcile job's limit (DEBT-501 item 1). The price-ID runbook line (DEBT-501 item 2). The Dependabot Vitest group (DEBT-500).
-3. **Alert kinds for silent conditions.** A Clerk cap trip or 429 (DEBT-503 item 3), a reconcile run that stops early, and an unknown price ID.
+2. **Quick wins, one pull request.** `CONSENT_STATE_SECRET` required (DEBT-502 item 6). The circuit breaker counts only transient errors (DEBT-501 item 6). The payer's success-page message (DEBT-501 item 5). A Stripe timeout within the reconcile job's limit (DEBT-501 item 1). The price-ID runbook line (DEBT-501 item 2). The Dependabot Vitest group (DEBT-500). BUG-319's real-SDK test.
+3. **Alert kinds for silent conditions.** A Clerk cap trip or 429 (DEBT-503 item 3), and a reconcile run that stops early and an unknown price ID (DEBT-501 items 1 and 2). Once a reconcile run that stops early alerts, the oldest-first reconcile (DEBT-501 item 1) waits for that alert.
 4. **Before the first live sale.** Vercel Pro (DEBT-512, owner). The live purchase and refund (DEBT-501 item 7, owner). The tax decision (DEBT-414 Q7, owner). The legacy price-ID list (DEBT-501 item 2). The add-card completion recheck (DEBT-501 item 4 with DEBT-414 F22).
 5. **Before paid acquisition.** Counsel's Q1–Q6 (DEBT-414).
 6. **Before the earliest live renewal minus 35 days.** The identity resolver (DEBT-502 items 3, 1 and 2) and DEBT-511 on top of it, with DEBT-414 F21.
@@ -72,7 +72,7 @@ The gates are re-keyed. "Before paid acquisition" was too late for some duties, 
 
 - **The drill keeps a durable once-per-cycle claim.** A stateless rule (drill on the 1st of each month) needs no table. But it delays the first end-to-end proof of the legal-deadline alerts to the next 1st, and it cannot retry a drill that Sentry refused. The claim lets the first drill go out right after release, and lets a failed drill retry the next day. It is one small table.
 - **The watcher runs outside Sentry email.** A Sentry Crons monitor on the renewal job, plus a daily GitHub Actions check using a read-only Sentry token. The check opens a GitHub issue when the job's last check-in is stale, the alerts' workflow is disabled or changed, no drill has arrived in 32 days, or the month's errors pass 80% of the quota. The owner creates the token. Until then, the drill and the owner's inbox filter are the only checks.
-- **Server tracing.** The owner decides whether to keep the 5% server trace sample. Without it the remaining span surface goes away, and the privacy policy's tracing sentence changes.
+- **Server tracing.** The owner decides whether to keep the 5% server trace sample. Without it the remaining span surface goes away, and the privacy policy's tracing sentence changes. BUG-331 records this once #1430 merges.
 
 ## Owner-only
 

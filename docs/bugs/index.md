@@ -5,7 +5,7 @@
 
 **Now** — 2026-10-08.
 - **Verifying.** BUG-319: its fix is in production since 2026-10-05; the Sentry checks and a real-SDK test that the stale-action event reaches Sentry, due 2026-10-19. BUG-323: the owner confirms the production limiter writes its rows, due 2026-10-19. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-325: no Sentry event from the fixed paths for two weeks, due 2026-10-20. BUG-327: no Dependabot head deploys; merge through the tooling remains, due 2026-10-20. BUG-332: no "Failed to ensure user row" event in Sentry for two weeks after the deploy (2026-10-08), due 2026-10-22.
-- **Next.** Fix BUG-331 after DEBT-505, which changes the same files; fix BUG-329; write BUG-321's test-mode E2E; fix BUG-330, whose blocker DEBT-503 item 1 was released 2026-10-08; archive each Verifying record when its check passes.
+- **Next.** Ship BUG-331 (#1430); fix BUG-330; write BUG-321's provider-contract test; fix BUG-329; archive each Verifying record when its check passes.
 - **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan.
 
 **Next Bug ID:** BUG-333
@@ -14,14 +14,14 @@
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P3 | Open — canonicalize generated instance names before passing them to child commands |
+| [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P4 | Open — canonicalize generated instance names before passing them to child commands |
 | [BUG-332](./bug-332-concurrent-first-requests-can-deadlock-provisioning.md) | A new user's concurrent first requests can deadlock provisioning | P2 | Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22 |
 | [BUG-331](./bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) | Server breadcrumbs and request spans carry credentials the scrubbers miss | P2 | Open — resolution decided below; the fix follows DEBT-505, which changes the same files |
 | [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) | Signed-in E2E fails en masse when the stored Clerk session cannot be restored after its token expires | P3 | Open — resolution decided below; its blocker, DEBT-503 item 1, was released 2026-10-08 |
 | [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Verifying — the Sentry checks, and a real-SDK test that the stale-action event reaches Sentry; due 2026-10-19 |
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — owner confirms the production limiter writes its rows; due 2026-10-19 |
 | [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) | A new user's first visit can fail when two requests create their row at once | P2 | Verifying — no `User could not be upserted` error in Sentry for two weeks after the deploy; due 2026-10-20 |
-| [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | In Progress — the fix is in production; a Stripe test-mode E2E of the refused checkout remains |
+| [BUG-321](./bug-321-already-subscribed-answer-discarded.md) | Stripe's "already subscribed" answer is discarded for signed-in users | P2 | In Progress — the fix is in production; a provider-contract test of the refused checkout's Stripe list and sync remains (AUDIT-015) |
 | [BUG-325](./bug-325-malformed-requests-throw-and-write-oversized-logs.md) | Malformed anonymous requests make our code throw and write oversized error logs | P3 | Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20 |
 | [BUG-327](./bug-327-dependabot-branches-build-with-preview-secrets.md) | Dependabot branches are built on Vercel with Preview secrets | P3 | Verifying — no Dependabot head deploys; a Dependabot merge through the tooling remains; due 2026-10-20 |
 

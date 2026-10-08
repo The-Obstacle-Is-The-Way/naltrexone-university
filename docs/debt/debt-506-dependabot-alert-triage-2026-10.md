@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — the peer and sharp fixes shipped (#1411); source-map-js 1.2.2 and the supported Clerk UI 1.38.0 are eligible since 2026-10-07
+**Status:** Open — the peer and sharp fixes shipped (#1411, promoted in #1419); source-map-js 1.2.2 and the supported Clerk UI 1.38.0 are eligible since 2026-10-07
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —

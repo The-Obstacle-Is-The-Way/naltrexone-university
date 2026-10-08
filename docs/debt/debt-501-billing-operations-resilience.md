@@ -16,6 +16,8 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 ## Items
 
+**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then operational alerts (DEBT-505) for a reconcile run that stops early and for an unknown price ID, so items 1 and 2 announce their own triggers; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's legacy price-ID list, item 4's add-card recheck (with DEBT-414 F22), and the owner's item 7.
+
 ### 1. The daily reconcile never reaches the tail once the table grows (P2)
 
 - **Evidence.**

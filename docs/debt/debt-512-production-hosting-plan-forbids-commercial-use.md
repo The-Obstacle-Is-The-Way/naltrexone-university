@@ -3,7 +3,7 @@
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — owner moves production to Vercel Pro before the first live sale
-**Priority:** P1
+**Priority:** P2
 **Date:** 2026-10-08
 **Resolved:** —
 **Verification receipts:** —
@@ -12,7 +12,7 @@
 
 ## Summary
 
-Production runs on Vercel's Hobby plan. [Vercel's terms](https://vercel.com/legal/terms) limit Hobby to personal or non-commercial use, and its plan guidance says a project becomes commercial once it charges, or intends to charge, its users. This app has a live pricing page and checkout, so production needs the Pro plan before the first live sale, and arguably now.
+Production runs on Vercel's Hobby plan, which [Vercel's terms](https://vercel.com/legal/terms) limit to personal or non-commercial use. Under Vercel's [fair-use definition](https://vercel.com/docs/limits/fair-use-guidelines#commercial-usage), any method of requesting or processing payment from visitors is commercial, so the live pricing page and checkout already count. The owner accepted that risk on 2026-08-11 until the first real users ([DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md)). This record sets the deadline at the first live sale.
 
 The plan also sets several limits the records work around:
 - runtime logs kept for one hour (DEBT-505);
@@ -22,8 +22,8 @@ The plan also sets several limits the records work around:
 ## Evidence
 
 - **The plan.** Vercel's API reported the team's billing plan as `hobby`, active, on 2026-10-08.
-- **The terms.** Vercel's [Terms of Service](https://vercel.com/legal/terms) and [plan documentation](https://vercel.com/docs/plans) restrict Hobby to personal, non-commercial use, and direct a commercial project to Pro.
-- **Earlier notice.** [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) recorded the same terms on 2026-08-10 for analytics. No live record tracked the plan.
+- **The terms.** Vercel's [Terms of Service](https://vercel.com/legal/terms) restrict Hobby to personal or non-commercial use. Its [fair-use guidelines](https://vercel.com/docs/limits/fair-use-guidelines#commercial-usage) count requesting or processing payment, and advertising the sale of a product or service, as commercial.
+- **Earlier ruling.** [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) recorded the same terms on 2026-08-10, and the owner's 2026-08-11 ruling accepted the Hobby risk until the first real users. No live record tracked the plan.
 
 ## Impact
 
