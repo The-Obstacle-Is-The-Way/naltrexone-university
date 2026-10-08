@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — rule decided; watcher covers every direct dependency (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes
+**Status:** Open — rule decided; watcher ran on `main` (2026-10-08) and now covers every repository behind `pnpm-lock.yaml`; waiting for its first scheduled run, `vite` 8.3.3 and the two pending Next.js fixes
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -59,7 +59,7 @@ For the two pending Next.js fixes:
 
 [Advisories Dependabot cannot see](../dev/supply-chain-overrides.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every six hours.
 
-- **What it watches.** The repository of every direct dependency, listed in the script's `DEPENDENCY_REPOSITORIES` map from each package's npm `repository` field: 41 repositories for 54 dependencies. Only `server-only`, a marker package, names none. A test fails CI when `package.json` and the map disagree, so a new dependency cannot go unwatched.
+- **What it watches.** The repository of every direct dependency, listed in the script's `DEPENDENCY_REPOSITORIES` map from each package's npm `repository` field: 41 repositories for 54 dependencies. Only `server-only`, a marker package, names none. A test fails CI when `package.json` and the map disagree, so a new dependency cannot go unwatched. Since 2026-10-08 it also watches the repositories behind every other package in `pnpm-lock.yaml`, resolved when it runs; see below.
 - **What it opens.** One issue per advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.
 - **Failure handling.** Only advisories published since the start are validated, so one malformed historical entry cannot fail every run. One unreadable repository, or one issue that cannot be opened, does not block the others: the run raises what it can, then fails and names what it could not. Only a failure to list existing issues fails the run outright, because without that list nothing can be deduplicated.
 - **Who it notifies.** An issue alone notifies only people watching the repository, which a repository owner can turn off. Critical and high advisories are therefore assigned to the repository owner, because GitHub notifies an assignee whatever their watch setting. Medium and low advisories open unassigned. The volume makes this split matter: in the 12 months to 2026-10-07 the watched repositories published 81 advisories, 45 of them critical or high, about one a week. 45 of the 81 were Next.js's.
@@ -68,18 +68,28 @@ For the two pending Next.js fixes:
 
 **Vite, found by the measurement.** Three Vite advisories from 2026-10-06 (GHSA-rq7h-c2jc-7f22 and GHSA-vfpm-58rq-9qcg, medium; GHSA-9jrq-w75r-8gcw, low) affect `vite` 8.3.0 to 8.3.2. This repository runs 8.3.0, and #1409 moves it to 8.3.1. They concern Vite's development server, which runs only on developer machines and in CI test runs, so under the playbook rule they are not urgent. The fix, 8.3.3, was published at 2026-10-06T04:10:19Z and clears the release-age gate at 2026-10-13T04:10:19Z; take it in the next dependency update.
 
+**Indirect dependencies, added 2026-10-08.** The first version left indirect packages to Dependabot, so a reviewer asked whether that was enough. Measured, it was not. 55 of this repository's 90 Dependabot alerts were in indirect packages, such as `undici`, `fast-uri`, `braces` and `shell-quote`. In the year to 2026-10-08, the repositories reached only through indirect dependencies published 109 advisories, 48 critical or high. 106 reached GitHub's database, a median of 5 days after publication, and 41 took more than a week, against a median of 1.8 days for direct dependencies. `pnpm audit` and OSV read the same database, so neither closes the gap. The watcher now reads all 465 repositories behind `pnpm-lock.yaml`. From the 424 reached only indirectly it raises critical and high advisories, plus any of unknown severity. Medium and low ones are left to Dependabot: 106 of the 109 arrived, and none of the other three affected this app. Each issue shows every version the lockfile resolves beside the advisory's range, because ranges are free text: of the year's 340 ranges for packages in this lockfile, 28 could not be read as semver ranges, and `7.0.0 < 7.28.0` parses as valid but with the wrong meaning. The playbook has the details.
+
 **Local dry run (2026-10-07).** The real advisory and issue reads, with issue creation replaced by a recorder, read all 41 repositories without error and would open exactly the three Vite issues. The first hosted run on `main` should therefore open those three; triage them as above. Under AGENTS.md's evidence rule, the watcher is proven only after that hosted run.
+
+**First hosted run (2026-10-08).** Run 37817779642, dispatched on `main` at 17:35:43Z, succeeded in 31 seconds and opened exactly the three Vite issues, #1432–#1434, unassigned. Each was triaged as not urgent: `vite` is a devDependency used only by tests, and `vite-plus` is not installed. All three were closed at 17:36Z. The scheduled run due at 18:23Z did not start, so the first scheduled run is still to be confirmed.
+
+**Local dry run with indirect dependencies (2026-10-08).** Real registry, advisory and issue reads, with issue creation replaced by a recorder, resolved all 976 locked packages in 12 seconds. The run read 464 of the 465 repositories in 170 seconds and would open no issue: the Vite issues already exist, and no indirect repository has published a critical or high advisory since 2026-10-01. Not watched: `client-only` and `eyes`, which name no repository, and `commondir`'s deleted `substack/node-commondir`.
 
 ## Exit
 
-Close when the watcher has a successful hosted run, the Vite fix has landed, and both pending Next.js advisories are published, assessed, and either fixed in production or recorded here as not applying.
+Close when the watcher has a successful scheduled run that reads the indirect dependencies' repositories, the Vite fix has landed, and both pending Next.js advisories are published, assessed, and either fixed in production or recorded here as not applying.
 
 ## Verification
 
 - [x] Primary sources read, and the seven published advisories assessed against this app (2026-10-07).
 - [x] Response decided under the owner's delegation, and recorded in the supply-chain playbook (2026-10-07).
 - [x] Watcher implemented test-first, covering every direct dependency's repository, with a local dry run against all 41 (2026-10-07).
-- [ ] The watcher's first hosted run on `main` succeeds and opens the three Vite issues, unassigned because they are medium and low (dispatch it after promotion). The first critical or high issue confirms the owner receives the assignment notification.
-- [ ] The three Vite advisories are triaged, and `vite` 8.3.3 or later lands after 2026-10-13T04:10:19Z.
+- [x] The watcher's first hosted run on `main` succeeded and opened the three Vite issues, unassigned because they are medium and low: run 37817779642, issues #1432–#1434 (2026-10-08).
+- [x] The three Vite advisories triaged as not urgent, and their issues closed (2026-10-08).
+- [x] Indirect dependencies watched, implemented test-first, with a local dry run that read 464 of 465 repositories (2026-10-08).
+- [ ] A scheduled run on `main` succeeds after the indirect change, within the 15-minute timeout and the token's 1,000 requests an hour.
+- [ ] The first critical or high issue confirms the owner receives the assignment notification.
+- [ ] `vite` 8.3.3 or later lands after 2026-10-13T04:10:19Z.
 - [ ] Both pending advisories are published and assessed.
 - [ ] The fix is in production, or this record says why it does not apply.

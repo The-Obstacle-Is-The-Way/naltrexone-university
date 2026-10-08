@@ -143,29 +143,59 @@ six of the 12 were still missing that day. A week is as long as the
 release-age gate, so waiting for Dependabot would forfeit the same-day rule
 above.
 
+Indirect dependencies have the same gap, and a longer one. 55 of this
+repository's 90 Dependabot alerts were in indirect packages. In the year to
+2026-10-08, 26 of the 424 repositories reached only through indirect
+dependencies published 109 advisories, 48 of them critical or high. 106
+reached the database, a median of 5 days after publication, and 41 took more
+than a week: `undici`'s eleven 2026-09-04 advisories, three of them high,
+took 24 to 25 days. `shell-quote`'s critical GHSA-pqg4-j6r4-53mv, alerted
+here on 2026-10-06, took 7. Direct dependencies'
+advisories took a median of 1.8 days. `pnpm audit` and OSV read the same
+database; on 2026-10-08 neither had GHSA-h694-7cp9-m8p3 or the three Vite
+advisories.
+
 - `.github/workflows/upstream-advisory-watch.yml` runs
   `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
-  advisories of each repository in its `DEPENDENCY_REPOSITORIES` map and opens
-  one issue per advisory published since 2026-10-01.
-- The map gives every dependency and devDependency in `package.json` the
-  repository named in its npm `repository` field, or `null` when it names
-  none (today only `server-only`, a marker package). A test
-  requires its keys to equal `package.json`'s, so adding or removing a
-  dependency fails CI until the map is updated.
+  advisories of every repository behind `pnpm-lock.yaml`, 465 on 2026-10-08,
+  and opens one issue per advisory published since 2026-10-01.
+- Direct dependencies use the `DEPENDENCY_REPOSITORIES` map, which gives every
+  dependency and devDependency in `package.json` the repository named in its
+  npm `repository` field, or `null` when it names none (today only
+  `server-only`, a marker package). A test requires its keys to equal
+  `package.json`'s, so adding or removing a dependency fails CI until the map
+  is updated.
+- Every other package in `pnpm-lock.yaml` is resolved when the job runs, from
+  the npm `repository` field of its locked version, so a lockfile change
+  needs no edit. From a repository reached only this way, critical and high
+  advisories are raised, as is any of unknown severity. Medium and low ones
+  are left to Dependabot: 106 of the 109 arrived, and none of the other three
+  affected this app.
+- A package that names no GitHub repository, or whose repository was deleted,
+  is listed as not watched in the run's log without failing it. On 2026-10-08
+  those were `client-only` and `eyes`, and `commondir`'s
+  `substack/node-commondir`. A manifest or repository that cannot be read
+  fails the run, as does an indirect dependency's.
 - One unreadable repository, or one issue that cannot be opened, does not
   stop the others: the run raises what it can, then fails and names what it
   could not. Only a failure to list existing issues fails the run outright,
   because without that list nothing can be deduplicated.
+- A run takes about three minutes and makes about 480 API requests, half of
+  the workflow token's 1,000 an hour. Nothing else in this repository calls
+  the API.
 - Critical and high advisories are assigned to the repository owner. GitHub
   notifies an assignee whatever their watch setting, and the same-day rule
   needs someone to see them. Medium and low advisories open unassigned. In the
-  12 months to 2026-10-07 the watched repositories published 81 advisories:
-  12 critical, 33 high, 32 medium and 4 low. Most concern features or versions
-  this app does not use, so the issue body gives `package.json`'s pins for a
-  quick triage.
+  12 months to 2026-10-07 the direct dependencies' repositories published 81
+  advisories: 12 critical, 33 high, 32 medium and 4 low. Most concern features
+  or versions this app does not use, so the issue body gives `package.json`'s
+  pins and every version `pnpm-lock.yaml` resolves. Ranges are free text
+  (`7.0.0 < 7.28.0` means from 7.0.0), so they are shown, not evaluated.
 
 Triage each issue with the rule above, record the outcome in it, and close it.
-Transitive dependencies are left to Dependabot and `pnpm audit`.
+Neither the job nor Dependabot sees code that a package compiles in rather
+than depends on, as Next.js does with dozens of packages; that maintainer's
+own advisory is the signal.
 
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 

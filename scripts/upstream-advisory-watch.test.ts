@@ -11,8 +11,10 @@ import {
   type AdvisoryIssues,
   createGithubAdvisoryIssues,
   DEPENDENCY_REPOSITORIES,
-  directDependencySpecifiers,
+  type DependencyVersions,
   listUpstreamAdvisories,
+  lockfilePackages,
+  RepositoryNotFound,
   raiseUpstreamAdvisories,
   runUpstreamAdvisoryWatch,
   type UpstreamAdvisory,
@@ -27,6 +29,7 @@ const originalEnv = snapshotProcessEnv();
 
 afterEach(() => {
   restoreProcessEnv(originalEnv);
+  vi.unstubAllGlobals();
   vi.resetAllMocks();
 });
 
@@ -65,7 +68,13 @@ const advisory = (
   ...overrides,
 });
 
-const manifest = { next: '16.3.6' };
+const manifest: DependencyVersions = {
+  direct: { next: '16.3.6' },
+  locked: new Map([
+    ['next', ['16.3.6']],
+    ['undici', ['6.21.0', '7.29.1']],
+  ]),
+};
 
 describe('raising upstream advisories', () => {
   it('opens one issue for an advisory published after the watch start', async () => {
@@ -119,13 +128,15 @@ describe('raising upstream advisories', () => {
     );
     expect(body).toContain('CVE-2026-00001');
     expect(body).toContain('`next` `>= 16.0.0 < 16.3.?`, patched in `16.3.?`');
-    expect(body).toContain('`package.json` pins `next` at `16.3.6`');
+    expect(body).toContain(
+      '`package.json` pins `next` at `16.3.6`, and `pnpm-lock.yaml` resolves `16.3.6`',
+    );
     expect(body).toContain(
       'docs/dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown',
     );
   });
 
-  it('says so when an affected package is not a direct dependency', async () => {
+  it('says so when an affected package is not in the lockfile', async () => {
     const issues = new MemoryIssues();
     await raiseUpstreamAdvisories(
       [
@@ -151,8 +162,52 @@ describe('raising upstream advisories', () => {
     expect(issue?.body).toContain(
       '`@next/env` `unknown range`, patched in `no patched version listed`',
     );
-    expect(issue?.body).toContain(
-      '`@next/env` is not a direct dependency in `package.json`',
+    expect(issue?.body).toContain('`@next/env` is not in `pnpm-lock.yaml`');
+  });
+
+  // Upstream ranges are free text ("7.0.0 < 7.28.0" means from 7.0.0), so the
+  // locked versions are shown beside them rather than compared by a parser.
+  it('gives every locked version of an indirect dependency for triage', async () => {
+    const issues = new MemoryIssues();
+    await raiseUpstreamAdvisories(
+      [
+        advisory({
+          vulnerabilities: [
+            {
+              package: 'undici',
+              vulnerableRange: '< 6.28.1; 7.0.0 < 7.29.1',
+              patchedVersions: '6.28.1, 7.29.1',
+            },
+          ],
+        }),
+      ],
+      manifest,
+      issues,
+    );
+    expect(issues.issues[0]?.body).toContain(
+      '`undici` is an indirect dependency; `pnpm-lock.yaml` resolves `6.21.0`, `7.29.1`',
+    );
+  });
+
+  it('does not read a package named after an Object property as a pin', async () => {
+    const issues = new MemoryIssues();
+    await raiseUpstreamAdvisories(
+      [
+        advisory({
+          vulnerabilities: [
+            {
+              package: 'constructor',
+              vulnerableRange: null,
+              patchedVersions: null,
+            },
+          ],
+        }),
+      ],
+      manifest,
+      issues,
+    );
+    expect(issues.issues[0]?.body).toContain(
+      '`constructor` is not in `pnpm-lock.yaml`',
     );
   });
 
@@ -211,28 +266,6 @@ describe('raising upstream advisories', () => {
       raiseUpstreamAdvisories([advisory()], manifest, issues),
     ).rejects.toThrow('GitHub unavailable');
   });
-});
-
-describe('package.json specifiers', () => {
-  it('reads runtime and development dependencies', () => {
-    expect(
-      directDependencySpecifiers(
-        JSON.stringify({
-          dependencies: { next: '16.3.6' },
-          devDependencies: { vitest: '^4.1.11' },
-        }),
-      ),
-    ).toEqual({ next: '16.3.6', vitest: '^4.1.11' });
-  });
-
-  it.each(['[]', '{"dependencies": []}', '{"dependencies": {"next": 16}}'])(
-    'refuses a malformed manifest %s',
-    (text) => {
-      expect(() => directDependencySpecifiers(text)).toThrow(
-        'Invalid package.json dependencies',
-      );
-    },
-  );
 });
 
 const apiAdvisory = {
@@ -347,6 +380,24 @@ describe('GitHub advisory source', () => {
     ).rejects.toThrow('Invalid GitHub advisory response');
   });
 
+  it('reports a repository that no longer exists apart from other failures', async () => {
+    const failure = (stderr: string) => () => {
+      throw Object.assign(new Error('Command failed'), { stderr });
+    };
+    await expect(
+      listUpstreamAdvisories(
+        'substack/node-commondir',
+        failure('gh: Not Found (HTTP 404)\n'),
+      ),
+    ).rejects.toBeInstanceOf(RepositoryNotFound);
+    await expect(
+      listUpstreamAdvisories(
+        'nodejs/undici',
+        failure('gh: API rate limit exceeded (HTTP 403)\n'),
+      ),
+    ).rejects.not.toBeInstanceOf(RepositoryNotFound);
+  });
+
   it.each([{}, [null], [{}]].map((data) => ({ data })))(
     'refuses malformed page data $data',
     async ({ data }) => {
@@ -443,65 +494,87 @@ describe('GitHub issue adapter', () => {
   });
 });
 
-describe('watched repositories', () => {
-  // A dependency added without a watch decision fails here, not silently.
-  it('maps every direct dependency in package.json, and nothing else', () => {
-    const manifest = directDependencySpecifiers(
-      readFileSync('package.json', 'utf8'),
-    );
-    expect(Object.keys(DEPENDENCY_REPOSITORIES).sort()).toEqual(
-      Object.keys(manifest).sort(),
-    );
-  });
-
-  it('names a GitHub owner and repository for each mapped dependency', () => {
-    for (const repository of Object.values(DEPENDENCY_REPOSITORIES)) {
-      if (repository !== null)
-        expect(repository).toMatch(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
-    }
-  });
-
-  it('leaves unwatched only the dependencies that publish no repository', () => {
-    expect(
-      Object.entries(DEPENDENCY_REPOSITORIES)
-        .filter(([, repository]) => repository === null)
-        .map(([name]) => name),
-    ).toEqual(['server-only']);
-  });
-
-  it('watches each repository once, including the ones whose advisories Dependabot missed', () => {
-    const repositories = watchedRepositories();
-    expect(new Set(repositories).size).toBe(repositories.length);
-    expect(repositories).toEqual([...repositories].sort());
-    expect(repositories).toEqual(
-      expect.arrayContaining([
-        'vercel/next.js',
-        'getsentry/sentry-javascript',
-        'vitejs/vite',
-        'clerk/javascript',
-      ]),
-    );
-  });
-});
-
 describe('watching several repositories', () => {
   it('raises what it can read and names the repositories it could not', async () => {
     const issues = new MemoryIssues();
     const outcome = await watchUpstreamAdvisories(
-      ['broken/repo', 'vercel/next.js'],
+      { direct: ['broken/repo', 'vercel/next.js'], indirect: [] },
       manifest,
       issues,
       async (repository) => {
-        if (repository === 'broken/repo') throw new Error('HTTP 404');
+        if (repository === 'broken/repo') throw new Error('HTTP 500');
         return [advisory()];
       },
     );
     expect(outcome).toEqual({
       raised: ['GHSA-aaaa-bbbb-cccc'],
       failed: [],
+      read: 1,
       unreadable: ['broken/repo'],
+      unwatched: [],
     });
     expect(issues.issues).toHaveLength(1);
+  });
+
+  // Medium and low advisories from those repositories reach Dependabot in
+  // time (106 of 109 in the year to 2026-10-08), so only the ones the
+  // same-day rule acts on are raised early. An unknown severity is raised.
+  it.each([
+    ['critical', true],
+    ['high', true],
+    ['unknown', true],
+    ['medium', false],
+    ['low', false],
+  ] as const)(
+    'raises a %s advisory from a repository reached only indirectly: %s',
+    async (severity, raised) => {
+      const issues = new MemoryIssues();
+      await watchUpstreamAdvisories(
+        { direct: [], indirect: ['nodejs/undici'] },
+        manifest,
+        issues,
+        async () => [advisory({ severity })],
+      );
+      expect(issues.issues).toHaveLength(raised ? 1 : 0);
+    },
+  );
+
+  it.each(['medium', 'low'])(
+    'still raises a %s advisory from a direct dependency’s repository',
+    async (severity) => {
+      const issues = new MemoryIssues();
+      await watchUpstreamAdvisories(
+        { direct: ['vercel/next.js'], indirect: [] },
+        manifest,
+        issues,
+        async () => [advisory({ severity })],
+      );
+      expect(issues.issues).toHaveLength(1);
+    },
+  );
+
+  // A deleted upstream repository can publish nothing, so it narrows the
+  // watch without failing every run; a direct dependency's must be fixed.
+  it('lists a missing indirect repository as unwatched, but a missing direct one as unreadable', async () => {
+    const outcome = await watchUpstreamAdvisories(
+      {
+        direct: ['gone/direct'],
+        indirect: ['substack/node-commondir', 'nodejs/undici'],
+      },
+      manifest,
+      new MemoryIssues(),
+      async (repository) => {
+        if (repository === 'nodejs/undici') throw new Error('HTTP 403');
+        throw new RepositoryNotFound(repository);
+      },
+    );
+    expect(outcome).toEqual({
+      raised: [],
+      failed: [],
+      read: 0,
+      unreadable: ['gone/direct', 'nodejs/undici'],
+      unwatched: ['substack/node-commondir'],
+    });
   });
 });
 
@@ -519,20 +592,44 @@ describe('watch command outcome', () => {
     };
   };
 
-  it('reports the advisories raised and returns zero', async () => {
+  const quiet = {
+    raised: [],
+    failed: [],
+    read: 3,
+    unreadable: [],
+    unwatched: [],
+  };
+
+  it('reports the advisories raised and the repositories read, and returns zero', async () => {
     const { messages, errors, sink } = output();
     expect(
       await runUpstreamAdvisoryWatch(
-        async () => ({
-          raised: ['GHSA-aaaa-bbbb-cccc'],
-          failed: [],
-          unreadable: [],
-        }),
+        async () => ({ ...quiet, raised: ['GHSA-aaaa-bbbb-cccc'] }),
         sink,
       ),
     ).toBe(0);
     expect(messages).toEqual([
       'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
+      'Repositories read: 3',
+    ]);
+    expect(errors).toEqual([]);
+  });
+
+  it('names what it cannot watch without failing the run', async () => {
+    const { messages, errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({
+          ...quiet,
+          unwatched: ['eyes@0.1.8', 'substack/node-commondir'],
+        }),
+        sink,
+      ),
+    ).toBe(0);
+    expect(messages).toEqual([
+      'Upstream advisories raised: none',
+      'Repositories read: 3',
+      'Not watched, no GitHub repository to read: eyes@0.1.8, substack/node-commondir',
     ]);
     expect(errors).toEqual([]);
   });
@@ -542,18 +639,19 @@ describe('watch command outcome', () => {
     expect(
       await runUpstreamAdvisoryWatch(
         async () => ({
+          ...quiet,
           raised: ['GHSA-aaaa-bbbb-cccc'],
-          failed: [],
-          unreadable: ['broken/repo', 'gone/repo'],
+          unreadable: ['broken/repo', 'fast-uri@3.1.8'],
         }),
         sink,
       ),
     ).toBe(1);
     expect(messages).toEqual([
       'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
+      'Repositories read: 3',
     ]);
     expect(errors).toEqual([
-      'Could not read advisories for: broken/repo, gone/repo',
+      'Could not read advisories for: broken/repo, fast-uri@3.1.8',
     ]);
   });
 
@@ -562,20 +660,31 @@ describe('watch command outcome', () => {
     expect(
       await runUpstreamAdvisoryWatch(
         async () => ({
+          ...quiet,
           raised: ['GHSA-dddd-eeee-ffff'],
           failed: ['GHSA-aaaa-bbbb-cccc'],
-          unreadable: [],
         }),
         sink,
       ),
     ).toBe(1);
     expect(messages).toEqual([
       'Upstream advisories raised: GHSA-dddd-eeee-ffff',
+      'Repositories read: 3',
     ]);
     expect(errors).toEqual(['Could not open issues for: GHSA-aaaa-bbbb-cccc']);
   });
 
-  it('wires the default check: reads every watched repository, lists issues once, and opens one per new advisory', async () => {
+  it('wires the default check: reads every direct and indirect repository, lists issues once, and opens one per new advisory', async () => {
+    // Every package in the lockfile resolves to a watched repository except
+    // @next/env, which `next` always locks; it stands in for an indirect one.
+    const registry = vi.fn(async (url: string | URL | Request) =>
+      Response.json({
+        repository: String(url).includes('/@next%2Fenv/')
+          ? 'git+https://github.com/example/indirect.git'
+          : 'https://github.com/vercel/next.js',
+      }),
+    );
+    vi.stubGlobal('fetch', registry);
     const run = vi.mocked(execFileSync).mockImplementation((_file, args) => {
       const path = args?.[3] ?? '';
       if (
@@ -583,6 +692,24 @@ describe('watch command outcome', () => {
         'repos/vercel/next.js/security-advisories?state=published&per_page=100'
       )
         return JSON.stringify([[apiAdvisory]]);
+      if (
+        path ===
+        'repos/example/indirect/security-advisories?state=published&per_page=100'
+      )
+        return JSON.stringify([
+          [
+            {
+              ...apiAdvisory,
+              ghsa_id: 'GHSA-hhhh-hhhh-hhhh',
+              severity: 'high',
+            },
+            {
+              ...apiAdvisory,
+              ghsa_id: 'GHSA-mmmm-mmmm-mmmm',
+              severity: 'medium',
+            },
+          ],
+        ]);
       if (path.includes('/security-advisories?') || path.includes('/issues?'))
         return JSON.stringify([[]]);
       return '';
@@ -592,40 +719,34 @@ describe('watch command outcome', () => {
     expect(await runUpstreamAdvisoryWatch(undefined, sink)).toBe(0);
     expect(errors).toEqual([]);
     expect(messages).toEqual([
-      'Upstream advisories raised: GHSA-aaaa-bbbb-cccc',
+      'Upstream advisories raised: GHSA-aaaa-bbbb-cccc, GHSA-hhhh-hhhh-hhhh',
+      `Repositories read: ${watchedRepositories().length + 1}`,
     ]);
+    const locked = lockfilePackages(readFileSync('pnpm-lock.yaml', 'utf8'));
+    expect(registry).toHaveBeenCalledTimes(
+      locked.filter(({ name }) => !Object.hasOwn(DEPENDENCY_REPOSITORIES, name))
+        .length,
+    );
     const calls = run.mock.calls.map(([, args]) => args ?? []);
     expect(
       calls
         .map((args) => args[3] ?? '')
         .filter((path) => path.includes('/security-advisories?')),
     ).toEqual(
-      watchedRepositories().map(
+      [...watchedRepositories(), 'example/indirect'].map(
         (repository) =>
           `repos/${repository}/security-advisories?state=published&per_page=100`,
       ),
     );
     const creates = calls.filter((args) => args[1] === 'create');
-    expect(creates).toHaveLength(1);
-    expect(creates[0]?.slice(0, 4)).toEqual([
-      'issue',
-      'create',
-      '--title',
+    expect(creates.map((args) => args[3])).toEqual([
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
+      'Upstream security advisory GHSA-hhhh-hhhh-hhhh (high): next',
     ]);
-    expect(creates[0]?.[5]).toMatch(/`package\.json` pins `next` at `[^`]+`/);
+    expect(creates[0]?.[5]).toMatch(
+      /`package\.json` pins `next` at `[^`]+`, and `pnpm-lock\.yaml` resolves `[^`]+`/,
+    );
     expect(creates[0]?.slice(6)).toEqual(['--assignee', 'repo-owner']);
-  });
-
-  it('reports a quiet run', async () => {
-    const { messages, sink } = output();
-    expect(
-      await runUpstreamAdvisoryWatch(
-        async () => ({ raised: [], failed: [], unreadable: [] }),
-        sink,
-      ),
-    ).toBe(0);
-    expect(messages).toEqual(['Upstream advisories raised: none']);
   });
 
   it('returns nonzero with value-free diagnostics when the check fails', async () => {
@@ -659,7 +780,7 @@ describe('upstream advisory workflow', () => {
       contents: 'read',
       issues: 'write',
     });
-    expect(workflow.jobs.watch['timeout-minutes']).toBe(5);
+    expect(workflow.jobs.watch['timeout-minutes']).toBe(15);
     for (const step of workflow.jobs.watch.steps) {
       if (step.uses) expect(step.uses).toMatch(/@[a-f0-9]{40}$/);
     }
