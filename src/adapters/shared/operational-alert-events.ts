@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import type { OperationalAlertKind } from '@/src/application/ports/operational-alerts';
+import { OPERATIONAL_ALERT_FINGERPRINT } from './operational-alert-fingerprint';
 
 export type OperationalAlertEvent = {
   kind: OperationalAlertKind;
@@ -11,9 +12,6 @@ export type OperationalAlertEvent = {
 };
 
 const FLUSH_TIMEOUT_MS = 2_000;
-
-/** Marks an operational alert's event, so `scrubEvent` keeps fixed fields only. */
-export const OPERATIONAL_ALERT_FINGERPRINT = 'operational-alert';
 
 // DEBT-505: the one place an operational alert reaches Sentry. The event
 // carries fixed tags and the count only. Sentry emails on a new issue, not on

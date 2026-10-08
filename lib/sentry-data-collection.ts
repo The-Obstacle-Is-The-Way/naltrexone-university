@@ -1,5 +1,5 @@
 import type * as Sentry from '@sentry/nextjs';
-import { OPERATIONAL_ALERT_FINGERPRINT } from '@/src/adapters/shared/operational-alert-events';
+import { OPERATIONAL_ALERT_FINGERPRINT } from '@/src/adapters/shared/operational-alert-fingerprint';
 
 type DataCollection = NonNullable<
   NonNullable<Parameters<typeof Sentry.init>[0]>['dataCollection']
@@ -135,7 +135,14 @@ const ALERT_EVENT_FIELDS = [
   'sdk',
 ] as const;
 
-function keepAlertFields(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+// The alert's own fingerprint is the marker, the kind and the window; a
+// fingerprint set on the scope goes ahead of it and is dropped.
+const ALERT_FINGERPRINT_LENGTH = 3;
+
+function keepAlertFields(
+  event: Sentry.ErrorEvent,
+  at: number,
+): Sentry.ErrorEvent {
   const kept: Sentry.ErrorEvent = { type: undefined };
   for (const field of ALERT_EVENT_FIELDS) {
     if (event[field] !== undefined)
@@ -147,6 +154,11 @@ function keepAlertFields(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
     ),
   );
   if (event.contexts?.alert) kept.contexts = { alert: event.contexts.alert };
+  const fingerprint = event.fingerprint?.slice(
+    at,
+    at + ALERT_FINGERPRINT_LENGTH,
+  );
+  if (fingerprint) kept.fingerprint = fingerprint;
   return kept;
 }
 
@@ -154,9 +166,15 @@ function keepAlertFields(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
  * `beforeSend`: keeps an operational alert to its fixed fields, and redacts
  * credentials in the URLs any other event carries.
  */
-export function scrubEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
-  if (event.fingerprint?.[0] === OPERATIONAL_ALERT_FINGERPRINT) {
-    return keepAlertFields(event);
+export function scrubEvent(
+  event: Sentry.ErrorEvent,
+  hint?: Sentry.EventHint,
+): Sentry.ErrorEvent {
+  const at = event.fingerprint?.indexOf(OPERATIONAL_ALERT_FINGERPRINT) ?? -1;
+  if (at >= 0) {
+    // Sentry builds the envelope's attachments from this hint.
+    if (hint) hint.attachments = [];
+    return keepAlertFields(event, at);
   }
   const request = event.request;
   if (request && typeof request.url === 'string') {

@@ -80,9 +80,11 @@ scope it was raised in held.
   resolved for the next alert to arrive. Off Vercel, events are labelled
   `local`, so a local run never pages as production.
 - **Volume.** At most one event per kind per six-hour window across all
-  instances, through the Postgres limiter. If that limiter fails, the event is
-  still sent, tagged `alert.shared_cooldown: unavailable`, at most once per kind
-  per server instance per six hours.
+  instances, through the Postgres limiter. If that limiter fails, or takes over
+  a second to answer, the event is still sent, tagged
+  `alert.shared_cooldown: unavailable`, at most once per kind per server
+  instance per six hours. A slow database can therefore send one such event
+  while healthy.
 - **Loss.** A send Sentry does not confirm is logged as
   `operational_alert_send_failed`; its cooldowns stay taken, so check Sentry's
   status and the DSN.

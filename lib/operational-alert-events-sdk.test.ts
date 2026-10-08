@@ -114,6 +114,37 @@ describe('sendOperationalAlertEvent', () => {
     }
   });
 
+  // A fingerprint set on the scope goes ahead of the alert's own, and a
+  // scope's attachments travel beside the event.
+  it('keeps an alert to its fixed fields when the scope sets a fingerprint or an attachment', async () => {
+    sent = [];
+
+    await Sentry.withIsolationScope(async (scope) => {
+      fillRequestScope(scope);
+      scope.setFingerprint(['{{ default }}']);
+      scope.addAttachment({ filename: 'notes.txt', data: inherited.appUser });
+      await sendOperationalAlertEvent({
+        kind: 'checkout_stripe_holds_unrecorded',
+        count: 1,
+        sharedCooldown: 'held',
+        window: '2026-10-08T00:00:00.000Z',
+      });
+    });
+
+    const [event] = sentEvents();
+    expect(event?.fingerprint).toEqual([
+      'operational-alert',
+      'checkout_stripe_holds_unrecorded',
+      '2026-10-08T00:00:00.000Z',
+    ]);
+    expect(event).not.toHaveProperty('user');
+    const envelope = sent.join('\n');
+    expect(envelope).not.toContain('"type":"attachment"');
+    for (const marker of Object.values(inherited)) {
+      expect(envelope).not.toContain(marker);
+    }
+  });
+
   it('rejects when Sentry does not confirm the event, so the loss is logged', async () => {
     transportFlushes = false;
     try {
