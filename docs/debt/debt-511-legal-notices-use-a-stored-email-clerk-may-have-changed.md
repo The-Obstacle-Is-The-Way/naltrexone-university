@@ -78,7 +78,8 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
    - **Unverified, missing, or owned by another row:** hold the row queued, alert, and retry each run until the existing send-by cutoff (`notice_deadline_passed`). A user who verifies within the window still gets the notice. The repair paths are DEBT-502 items 1 and 3.
    - **404:** terminal only when our tombstone exists, or when a lookup of a known user (a canary) shows the key and instance are working. Otherwise treat it as "unavailable". A 404 with no tombstone alerts "Clerk user missing with an active subscription", so the deletion runs before renewal and no one is charged without notice.
    - **Unavailable** (401, 403, 429, 5xx, timeout or network): retry within the run, hold the row, and alert on the first held run, not only at the deadline.
-   - **Last eligible run** (cutoff minus now under 25 hours) **with Clerk still unavailable:** send to the stored address only if Clerk confirmed that address as verified within the past 7 days, and no `user.updated` or `user.deleted` for that user is failing. Otherwise the existing missed-deadline error fires, through DEBT-505. Record each confirmation's time, so this rule can be applied.
+   - **Last eligible run** (cutoff minus now under 25 hours) **with Clerk still unavailable:** send to the stored address only if Clerk confirmed that address as verified within the past 7 days, and no `user.updated` or `user.deleted` for that user is failing. Otherwise the existing missed-deadline error fires, through DEBT-505. Record each confirmation's time, so this rule can be applied, and alert whenever a notice goes out under this rule.
+     - **The residual risk, accepted.** Our failure records cannot see a `user.updated` that Svix has not delivered yet. So if the user changed their address within those 7 days, and that event is still undelivered, the notice goes to the address they verified before the change. Holding it instead would make Clerk's availability decide whether a required notice goes out at all, and the missed-deadline path relies on the owner seeing an alert in time. A week-old verified address is the user's own recent mailbox, and reassignment within a week is implausible. The alert lets the owner resend if the address has changed. *Adjudicated 2026-10-08: CodeRabbit asked that this case hold the notice instead (#1426 review).*
    - **Logs and alerts** carry IDs and a reason only, never an address, with Clerk errors passed through `projectSafeErrorDiagnostics`.
    - **An address that changes after a send** within the window gets a second notice at the new address. That is existing behaviour, and acceptable.
 3. **The acknowledgment.**
@@ -106,9 +107,9 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 
 - [ ] Dispatch and job tests, using a fake Clerk lookup, cover:
   - match, changed, unverified, conflict, a tombstoned 404 and a wrong-instance 404;
-  - unavailable, and the last-run rule with and without a recent confirmation;
+  - unavailable, and the last-run rule with and without a recent confirmation, and its alert;
   - a write refused by the `updated_at` guard.
-  No branch sends to an unconfirmed address.
+  No branch sends to an address Clerk has not confirmed as verified within the past 7 days, and a send under the last-run rule alerts.
 - [ ] A real-Postgres test shows a changed address re-queued and sent in the same run, including on the last eligible run. A held notice goes out once the user verifies.
 - [ ] Both email selectors refuse unverified addresses, and checkout refuses an unverified refreshed primary.
 - [ ] Clerk's address reaches the Stripe customer on every write, and the portal no longer offers an email edit.
