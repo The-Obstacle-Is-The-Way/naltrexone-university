@@ -21,12 +21,29 @@ export type ScheduledWorkflowsStatus = {
   watcherLastSuccessAt: Date | null;
 };
 
-/** The repository's GitHub Actions workflows, as GitHub reports them. */
+/**
+ * GitHub refused the read, or answered in a shape it cannot read. Unlike a
+ * rate limit or an outage, this does not pass by itself.
+ */
+export class ScheduledWorkflowsUnreadable extends Error {
+  override readonly name = 'ScheduledWorkflowsUnreadable';
+}
+
+/**
+ * The repository's GitHub Actions workflows, as GitHub reports them. `read`
+ * rejects with `ScheduledWorkflowsUnreadable` when GitHub refuses it or
+ * answers in an unexpected shape, and with any other error when GitHub
+ * cannot answer now.
+ */
 export type ScheduledWorkflows = {
   read: () => Promise<ScheduledWorkflowsStatus>;
 };
 
-export type ScheduledChecksOutcome = 'running' | 'stopped' | 'unavailable';
+export type ScheduledChecksOutcome =
+  | 'running'
+  | 'stopped'
+  | 'unreadable'
+  | 'unavailable';
 
 /**
  * DEBT-505: GitHub disables a public repository's scheduled workflows after
@@ -35,9 +52,10 @@ export type ScheduledChecksOutcome = 'running' | 'stopped' | 'unavailable';
  * the GitHub watcher checks the job through Sentry, so either one stopping is
  * reported by the other. It alerts when any workflow is disabled for
  * inactivity, or when the watcher is not active or has not succeeded for
- * three days. Only a definite answer alerts; one GitHub would not give is
- * logged. It never throws: the renewal job it runs in must not fail because
- * of it.
+ * three days. A refused or unreadable answer alerts too, since an expired
+ * token would otherwise stop the check silently; a rate limit or an outage
+ * passes, so it is only logged. It never throws: the renewal job it runs in
+ * must not fail because of it.
  */
 export async function checkScheduledChecksRunning(deps: {
   now: () => Date;
@@ -49,6 +67,17 @@ export async function checkScheduledChecksRunning(deps: {
   try {
     status = await deps.workflows.read();
   } catch (error) {
+    if (error instanceof ScheduledWorkflowsUnreadable) {
+      deps.logger.error(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Scheduled checks unreadable',
+      );
+      await deps.alerts.raise({
+        kind: 'scheduled_checks_unreadable',
+        count: 1,
+      });
+      return 'unreadable';
+    }
     deps.logger.warn(
       { error: projectSafeErrorDiagnostics(error) },
       'scheduled_checks_unavailable',

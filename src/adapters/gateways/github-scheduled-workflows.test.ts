@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { OPERATIONAL_ALERT_WATCHER_WORKFLOW } from '@/src/adapters/jobs/scheduled-checks';
+import {
+  OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  ScheduledWorkflowsUnreadable,
+} from '@/src/adapters/jobs/scheduled-checks';
 import { createGithubScheduledWorkflows } from './github-scheduled-workflows';
 
 // DEBT-505: the renewal job reads the repository's workflows from GitHub's
@@ -122,16 +125,63 @@ describe('createGithubScheduledWorkflows', () => {
     }
   });
 
-  // A refusal, a rate limit or an unexpected shape is not a definite answer,
-  // so it rejects and the caller logs it instead of alerting.
+  // A refusal or an unexpected shape needs a person: a token expired or was
+  // revoked, or GitHub's API changed. A rate limit or an outage passes.
   it.each([
-    ['a refusal', new Response(null, { status: 403 })],
-    ['a server error', new Response(null, { status: 502 })],
+    ['a refused token', new Response(null, { status: 401 })],
+    ['a forbidden read', new Response(null, { status: 403 })],
     ['an unexpected shape', json({ workflows: [{ path: 1 }] })],
-  ])('rejects on %s, naming only the status', async (_case, answer) => {
+  ])(
+    'rejects as unreadable on %s, naming only the status',
+    async (_case, answer) => {
+      const { fetchImpl } = github({
+        [`${BASE}?per_page=100`]: answer,
+        [WATCHER_RUNS]: json({ workflow_runs: [] }),
+      });
+
+      const read = createGithubScheduledWorkflows({
+        repository: REPOSITORY,
+        token: 'read-token',
+        fetchImpl,
+      }).read();
+
+      await expect(read).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);
+      await expect(read).rejects.toThrow(
+        /^GitHub (answered \d+|returned an unexpected shape)$/,
+      );
+    },
+  );
+
+  it.each([
+    [
+      'a rate limit',
+      new Response(null, {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' },
+      }),
+    ],
+    ['a secondary rate limit', new Response(null, { status: 429 })],
+    ['a server error', new Response(null, { status: 502 })],
+  ])('rejects as passing on %s', async (_case, answer) => {
     const { fetchImpl } = github({
       [`${BASE}?per_page=100`]: answer,
       [WATCHER_RUNS]: json({ workflow_runs: [] }),
+    });
+
+    const read = createGithubScheduledWorkflows({
+      repository: REPOSITORY,
+      token: undefined,
+      fetchImpl,
+    }).read();
+
+    await expect(read).rejects.toThrow(/^GitHub answered \d+$/);
+    await expect(read).rejects.not.toBeInstanceOf(ScheduledWorkflowsUnreadable);
+  });
+
+  it("rejects as unreadable when the watcher's runs are refused", async () => {
+    const { fetchImpl } = github({
+      [`${BASE}?per_page=100`]: json(workflowsBody),
+      [WATCHER_RUNS]: new Response(null, { status: 401 }),
     });
 
     await expect(
@@ -140,6 +190,6 @@ describe('createGithubScheduledWorkflows', () => {
         token: 'read-token',
         fetchImpl,
       }).read(),
-    ).rejects.toThrow(/^GitHub (answered \d+|returned an unexpected shape)$/);
+    ).rejects.toBeInstanceOf(ScheduledWorkflowsUnreadable);
   });
 });

@@ -152,10 +152,12 @@ which would copy the scope's user past `scrubEvent`.
   stopping is reported through the other. A keep-alive commit or API call is
   not used: it works around GitHub's rule, and GitHub disabled the best-known
   keep-alive action's repository for a terms violation. The job reports the
-  check as `scheduledChecks`: `running`, `stopped`, or `unavailable` when
-  GitHub gave no definite answer (logged, not alerted). With
-  `GITHUB_READ_TOKEN` set, GitHub's anonymous per-address limit cannot cause
-  that.
+  check as `scheduledChecks`: `running`; `stopped`; `unreadable`, alerted as
+  `scheduled_checks_unreadable`, when GitHub refused the read or answered in
+  an unexpected shape, since an expired or revoked token would otherwise stop
+  the check silently; or `unavailable` for a rate limit or a GitHub outage,
+  which passes and is only logged. The check reads GitHub with
+  `GITHUB_READ_TOKEN`, so the anonymous per-address limit cannot cause that.
 - **A known repeat.** A drill whose send Sentry did not confirm gives its
   cycle back even if Sentry received it, so while flushes fail the owner may
   get a drill email each day.
@@ -168,6 +170,7 @@ which would copy the scope's user past `scrubEvent`.
 | `renewal_notice_outcome_unknown` | The email provider's answer was ambiguous, so the notice is quarantined and never resent automatically. | The row is `outcome_unknown`. Check the provider's dashboard before any manual resend. |
 | `checkout_stripe_holds_unrecorded` | A refused checkout could not record the subscription Stripe already holds (BUG-321). | Compare the user's subscription row with Stripe. The reconcile cron updates only rows that exist, so a missing row waits for the subscription's next webhook; resend its latest event from the Stripe Dashboard to record it now. |
 | `clerk_backend_call_limiter_failed` | The sign-in limiter's database call failed, so it is letting requests through (BUG-323). | Check the database. While it fails, only the firewall rule bounds Clerk's Backend API calls. |
+| `scheduled_checks_unreadable` | GitHub refused the renewal job's read of the repository's workflows, or answered in a shape it cannot read. | Check `GITHUB_READ_TOKEN` in Vercel Production: it may have expired or been revoked. Replace it with a fine-grained token, read-only Actions access to this repository only, and redeploy. If the token is fine, GitHub's API may have changed. |
 | `scheduled_checks_stopped` | A scheduled GitHub workflow is disabled for inactivity, or the operational alert watcher is not active or has not succeeded for three days. | In GitHub's Actions tab, re-enable each disabled workflow (`gh workflow enable <file>`), and open the watcher's latest run to see why it failed. The next daily check confirms. |
 | `operational_alert_drill` | A drill: the renewal job sends one per fixed 30-day cycle, through the same path as the deadline alerts. | None; its email proves the path works. If none arrives for 32 days, the watcher's issue says so; treat the alert path as broken: check the server project's recent issues for `alert.kind:operational_alert_drill`, its "Operational alerts — email the owner (DEBT-505)" workflow, and `SENTRY_DSN`. |
 

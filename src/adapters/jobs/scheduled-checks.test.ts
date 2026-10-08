@@ -7,6 +7,7 @@ import {
   checkScheduledChecksRunning,
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
   type ScheduledWorkflowsStatus,
+  ScheduledWorkflowsUnreadable,
 } from './scheduled-checks';
 
 // DEBT-505: GitHub disables a public repository's scheduled workflows after
@@ -134,9 +135,8 @@ describe('checkScheduledChecksRunning', () => {
     expect(alerts.raised).toHaveLength(1);
   });
 
-  // GitHub's answer can be refused or rate-limited; only a definite answer
-  // alerts, so a passing failure raises no false alarm.
-  it('reports unavailable, logs it and raises nothing when GitHub cannot be read', async () => {
+  // A rate limit or an outage passes, so it raises no false alarm.
+  it('reports unavailable, logs it and raises nothing when GitHub cannot answer now', async () => {
     const { deps, alerts, logger } = setup(async () => {
       throw new Error('GitHub answered 403');
     });
@@ -149,6 +149,25 @@ describe('checkScheduledChecksRunning', () => {
       {
         context: { error: { name: 'Error' } },
         msg: 'scheduled_checks_unavailable',
+      },
+    ]);
+  });
+
+  // A refused or unreadable answer does not pass by itself: an expired or
+  // revoked token, or a changed API, would otherwise stop the check silently.
+  it('raises an alert when GitHub refuses the check or answers in an unexpected shape', async () => {
+    const { deps, alerts, logger } = setup(async () => {
+      throw new ScheduledWorkflowsUnreadable('GitHub answered 401');
+    });
+
+    await expect(checkScheduledChecksRunning(deps)).resolves.toBe('unreadable');
+    expect(alerts.raised).toEqual([
+      { kind: 'scheduled_checks_unreadable', count: 1 },
+    ]);
+    expect(logger.errorCalls).toEqual([
+      {
+        context: { error: { name: 'ScheduledWorkflowsUnreadable' } },
+        msg: 'Scheduled checks unreadable',
       },
     ]);
   });

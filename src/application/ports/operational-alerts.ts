@@ -12,6 +12,10 @@ export const OPERATIONAL_ALERT_KINDS = [
   'clerk_backend_call_limiter_failed',
   // A scheduled GitHub check, the alert watcher among them, has stopped.
   'scheduled_checks_stopped',
+  // GitHub refused the check that the scheduled checks run, or answered it
+  // in a shape it cannot read: a token expired or was revoked, or the API
+  // changed.
+  'scheduled_checks_unreadable',
   // A periodic drill that proves the alert path works; no action needed.
   'operational_alert_drill',
 ] as const;

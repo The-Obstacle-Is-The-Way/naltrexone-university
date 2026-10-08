@@ -2,15 +2,29 @@ import {
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
   type ScheduledWorkflow,
   type ScheduledWorkflows,
+  ScheduledWorkflowsUnreadable,
 } from '@/src/adapters/jobs/scheduled-checks';
 
 const API = 'https://api.github.com';
 const TIMEOUT_MS = 5_000;
 
-class UnexpectedShape extends Error {
+class UnexpectedShape extends ScheduledWorkflowsUnreadable {
   constructor() {
     super('GitHub returned an unexpected shape');
   }
+}
+
+// A rate limit (403 with none left, or 429) or a server error passes; any
+// other refusal needs a person.
+function failedRead(response: Response): Error {
+  const message = `GitHub answered ${response.status}`;
+  const rateLimited =
+    response.status === 429 ||
+    (response.status === 403 &&
+      response.headers.get('x-ratelimit-remaining') === '0');
+  return rateLimited || response.status >= 500
+    ? new Error(message)
+    : new ScheduledWorkflowsUnreadable(message);
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -39,8 +53,9 @@ function date(value: unknown): Date {
  * DEBT-505: the repository's GitHub Actions workflows, read from GitHub's
  * REST API. The repository is public, so a token is optional; one with
  * read-only Actions access avoids the per-address limit on anonymous calls.
- * A refusal, a rate limit or an unexpected shape rejects, naming the status
- * only, so the caller treats it as no answer rather than a stopped check.
+ * A refusal or an unexpected shape rejects as `ScheduledWorkflowsUnreadable`,
+ * and a rate limit or a server error as a plain error, naming the status
+ * only.
  */
 export function createGithubScheduledWorkflows(deps: {
   /** `owner/name` */
@@ -64,7 +79,7 @@ export function createGithubScheduledWorkflows(deps: {
   const answer = async (response: Response): Promise<unknown> => {
     if (response.status !== 200) {
       await response.body?.cancel();
-      throw new Error(`GitHub answered ${response.status}`);
+      throw failedRead(response);
     }
     try {
       return await response.json();
