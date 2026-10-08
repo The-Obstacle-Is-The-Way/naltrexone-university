@@ -14,7 +14,7 @@
 
 Global setup signs in once and stores the Clerk session, and every signed-in test restores it in a fresh browser context. Once the stored 60-second session token has expired, restoring the session needs Clerk's Frontend API (FAPI). In one CI run, the restored browser reported no session: `window.Clerk.session` was null once `clerk.loaded()` resolved. From then on every signed-in test failed, while the session stayed active on Clerk's side.
 
-Our side has three defects that turn one bad answer into a red run nobody can diagnose:
+Our side has three defects that turn one failed restore into a red run nobody can diagnose:
 - **No testing token in test contexts.** Test contexts never install Clerk's testing token.
 - **No evidence.** A failed restore leaves nothing to diagnose it with.
 - **Teardown fails open.** It skips the sign-out when no session is visible, and leaks the session.

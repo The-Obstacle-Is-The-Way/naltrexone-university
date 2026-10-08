@@ -91,12 +91,12 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 
 ## The rest of the CI chain, 2026-10-07
 
-Every CI failure class seen today now has its own record and a decided fix:
+Every CI failure class seen today, and the Stripe hazard found with them, now has its own record and a decided fix:
 
 | Failure | Cause | Record |
 | --- | --- | --- |
 | Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, next |
-| Lost subscription state when runs overlap | One Stripe customer per lane | This record |
+| Runs can change each other's Stripe state (a hazard; it caused none of today's failures) | One Stripe customer per lane | This record |
 | Signed-in tests fail after the stored token expires | A failed Clerk session restore, undiagnosable | [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) |
 | `codecov/patch` missing after a good upload | Codecov drops the notification | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) |
 
