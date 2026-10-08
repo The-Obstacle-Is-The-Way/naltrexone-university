@@ -88,7 +88,36 @@ describe('redactCredentialParams', () => {
       'https://api.clerk.com/v1/clients/handshake_payload?nonce=[Filtered]',
     ],
     ['/app/history?tab=questions', '/app/history?tab=questions'],
-    ['https://x.test/path#token=abc', 'https://x.test/path#token=abc'],
+    // A browser event's URL keeps its fragment, where an OAuth redirect can
+    // put a token.
+    [
+      'https://x.test/path#access_token=abc',
+      'https://x.test/path#access_token=[Filtered]',
+    ],
+    // BUG-331: in free text, a value ends at whitespace, so an earlier
+    // harmless pair cannot hide a later credential.
+    [
+      'retry=2 handshake at /v1/client?__clerk_handshake=n',
+      'retry=2 handshake at /v1/client?__clerk_handshake=[Filtered]',
+    ],
+    [
+      'Error: Request failed status=401 at https://x.test/cb?nonce=s',
+      'Error: Request failed status=401 at https://x.test/cb?nonce=[Filtered]',
+    ],
+    ['/cb?code=abc then more', '/cb?code=[Filtered] then more'],
+    // A URL nested in a value, raw or encoded, is checked too.
+    [
+      'https://x.test/cb?redirect=/y?code=s',
+      'https://x.test/cb?redirect=/y?code=[Filtered]',
+    ],
+    [
+      'https://x.test/cb?redirect_url=https%3A%2F%2Fa.test%2Fb%3Fcode%3Ds&tab=1',
+      'https://x.test/cb?redirect_url=[Filtered]&tab=1',
+    ],
+    [
+      'https://x.test/cb?redirect_url=https%3A%2F%2Fa.test%2Fb%3Ftab%3D1',
+      'https://x.test/cb?redirect_url=https%3A%2F%2Fa.test%2Fb%3Ftab%3D1',
+    ],
   ])('redacts %s as %s', (input, expected) => {
     expect(redactCredentialParams(input)).toBe(expected);
   });
@@ -137,8 +166,8 @@ describe('scrubEvent', () => {
 
 describe('scrubBreadcrumb', () => {
   it('leaves a breadcrumb without data unchanged', () => {
-    expect(scrubBreadcrumb({ category: 'console', message: 'hi' })).toEqual({
-      category: 'console',
+    expect(scrubBreadcrumb({ category: 'ui.click', message: 'hi' })).toEqual({
+      category: 'ui.click',
       message: 'hi',
     });
   });
@@ -165,36 +194,22 @@ describe('scrubBreadcrumb', () => {
     });
   });
 
-  // A console breadcrumb holds the line twice: as text in its message, and as
-  // the logged values in `data.arguments`. Those values are the app's own, of
-  // any type, and the SDK serialises them after this hook: an error by its
-  // message and stack, a URL by its address, any object by its fields. So
-  // only the text is kept. In free text a value runs to the end, so more than
-  // the value can be filtered; that errs toward sending less.
-  it('keeps a console line as its redacted text and drops the logged values, whatever they are', () => {
-    class Checkout {
-      returnUrl = '/cb?code=abc';
-    }
-    const logged = [
-      new Error('redirect to /cb?code=abc'),
-      new URL('https://example.com/cb?code=abc'),
-      new Checkout(),
-      { token: 'abc' },
-    ];
-
+  // BUG-331: a console line is free text from any script on the page, and
+  // its logged values are serialised by the SDK after this hook, so no
+  // scrubber can find every secret in it. The browser sends none, as the
+  // server sends no breadcrumbs at all.
+  it('drops a console line, whatever it holds', () => {
     expect(
       scrubBreadcrumb({
         category: 'console',
         level: 'error',
-        message: 'redirect to /cb?code=abc 3',
-        data: { arguments: logged, logger: 'console' },
+        message: 'retry=2 at /v1/client?__clerk_handshake=n',
+        data: {
+          arguments: [new Error('x'), { token: 'abc' }],
+          logger: 'console',
+        },
       }),
-    ).toEqual({
-      category: 'console',
-      level: 'error',
-      message: 'redirect to /cb?code=[Filtered]',
-      data: { logger: 'console' },
-    });
+    ).toBeNull();
   });
 
   // Other data is copied with every string redacted, through arrays, plain
@@ -216,14 +231,13 @@ describe('scrubBreadcrumb', () => {
       nested: { next: '/x?token=[Filtered]', plain: 'kept' },
       self: '[Circular]',
     };
-    expect(scrubbed.data).toEqual({ value: copy, list: [copy, 'plain'] });
+    expect(scrubbed?.data).toEqual({ value: copy, list: [copy, 'plain'] });
     expect(value.url).toBe('/cb?code=abc');
     expect((value.nested as { next: string }).next).toBe('/x?token=t');
   });
 
-  // An error is copied as Sentry would serialise it after this hook: its
-  // name, message, stack and own properties.
-  it("redacts credentials in an error's copy, as Sentry would serialise it, leaving the error unchanged", () => {
+  // An error is copied by its name, message, stack and own properties.
+  it("redacts credentials in an error's copy, leaving the error unchanged", () => {
     const error: Error & { url?: string; self?: unknown } = new Error(
       'redirect to /cb?code=abc',
     );
@@ -231,7 +245,7 @@ describe('scrubBreadcrumb', () => {
     error.self = error;
 
     const scrubbed = scrubBreadcrumb({ category: 'app', data: { error } });
-    const copy = scrubbed.data?.error as Record<string, unknown> | undefined;
+    const copy = scrubbed?.data?.error as Record<string, unknown> | undefined;
 
     expect(copy).toMatchObject({
       name: 'Error',

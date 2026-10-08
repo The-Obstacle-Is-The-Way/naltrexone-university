@@ -93,31 +93,45 @@ const CREDENTIAL_PARAM_TERMS = [
   'nonce',
 ];
 
-const QUERY_PAIR = /([?&;]|^)([^=&#?;]+)=([^&#;]*)/g;
+// A pair starts the text, or follows a query or fragment separator or
+// whitespace, and its value ends at the next of these. So in free text an
+// earlier harmless pair cannot run on and hide a later credential (BUG-331).
+const QUERY_PAIR = /([?&;#\s]|^)([^=&#?;\s]+)=([^&#?;\s]*)/g;
 
-// A name that is not valid URL encoding is matched as written: this runs in
-// beforeSend, and a throw there would lose the event.
-function decodeName(name: string): string {
+// A component that is not valid URL encoding is matched as written: this
+// runs in beforeSend, and a throw there would lose the event.
+function decodeComponent(component: string): string {
   try {
-    return decodeURIComponent(name);
+    return decodeURIComponent(component);
   } catch {
-    return name;
+    return component;
   }
+}
+
+function isCredentialName(name: string): boolean {
+  const lowerName = decodeComponent(name).toLowerCase();
+  return CREDENTIAL_PARAM_TERMS.some((term) => lowerName.includes(term));
 }
 
 /**
  * A URL, path or query string with the value of each credential-bearing
- * query parameter replaced by `[Filtered]`. Sentry's `urlQueryParams`
- * filter does not reach URLs held in other fields: a request path in the
- * Next.js context, a browser event's URL, or a breadcrumb's URL.
+ * query or fragment parameter replaced by `[Filtered]`. A value holding an
+ * encoded URL with such a parameter is filtered whole. Sentry's
+ * `urlQueryParams` filter does not reach URLs held in other fields: a request
+ * path in the Next.js context, a browser event's URL, or a breadcrumb's URL.
  */
 export function redactCredentialParams(value: string): string {
-  return value.replace(QUERY_PAIR, (pair, separator: string, name: string) => {
-    const lowerName = decodeName(name).toLowerCase();
-    return CREDENTIAL_PARAM_TERMS.some((term) => lowerName.includes(term))
-      ? `${separator}${name}=[Filtered]`
-      : pair;
-  });
+  return value.replace(
+    QUERY_PAIR,
+    (pair, separator: string, name: string, paramValue: string) => {
+      if (isCredentialName(name)) return `${separator}${name}=[Filtered]`;
+      const decoded = decodeComponent(paramValue);
+      return decoded !== paramValue &&
+        redactCredentialParams(decoded) !== decoded
+        ? `${separator}${name}=[Filtered]`
+        : pair;
+    },
+  );
 }
 
 // DEBT-505: an operational alert carries fixed fields only. Sentry fills an
@@ -198,21 +212,21 @@ export function scrubEvent(
  * `url`, `from` and `to`. No field is named, because an SDK can add one: the
  * server SDK already writes the query to `url.query` (BUG-331).
  *
- * A console breadcrumb keeps its line as text in the message, and drops the
- * logged values in `data.arguments`: they are the app's own, of any type, and
- * the SDK serialises them after this hook (an error by its message and stack,
- * a URL by its address, any object by its fields), so no scrubber here could
- * see all they hold.
+ * A console breadcrumb is dropped, as the server sends no breadcrumbs at all.
+ * Its line is free text from any script on the page, and its logged values
+ * are serialised by the SDK after this hook (an error by its message and
+ * stack, a URL by its address, any object by its fields), so no scrubber
+ * could find every secret in it.
  */
 export function scrubBreadcrumb(
   breadcrumb: Sentry.Breadcrumb,
-): Sentry.Breadcrumb {
+): Sentry.Breadcrumb | null {
+  if (breadcrumb.category === 'console') return null;
   if (typeof breadcrumb.message === 'string') {
     breadcrumb.message = redactCredentialParams(breadcrumb.message);
   }
   const data = breadcrumb.data;
   if (data) {
-    if (breadcrumb.category === 'console') delete data.arguments;
     for (const [field, value] of Object.entries(data)) {
       data[field] = redactStrings(value);
     }
@@ -237,6 +251,11 @@ type StreamedSpan = Parameters<
   NonNullable<Sentry.NodeOptions['beforeSendSpan']>
 >[0];
 
+// Matched by tag, as Sentry does, so an error from another frame counts.
+function isErrorValue(value: unknown): value is Error {
+  return Object.prototype.toString.call(value) === '[object Error]';
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== 'object') return false;
   const prototype = Object.getPrototypeOf(value);
@@ -246,17 +265,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 /**
  * A copy of `value` with credentials redacted in every string, through arrays,
  * plain objects and errors; other objects are kept, since Sentry serialises
- * them itself. An error is copied as Sentry would serialise it after this
- * hook: its name, message, stack and own enumerable properties. A logged value
- * is the app's own, so it is copied, never changed, and a reference back to
- * an enclosing value becomes `[Circular]`.
+ * them itself. An error is copied by its name, message, stack and own
+ * enumerable properties. The values found are copied, never changed, and a
+ * reference back to an enclosing value becomes `[Circular]`.
  */
 function redactStrings(
   value: unknown,
   enclosing: WeakSet<object> = new WeakSet(),
 ): unknown {
   if (typeof value === 'string') return redactCredentialParams(value);
-  const isError = value instanceof Error;
+  const isError = isErrorValue(value);
   if (!isError && !Array.isArray(value) && !isPlainObject(value)) return value;
   if (enclosing.has(value)) return '[Circular]';
   enclosing.add(value);
