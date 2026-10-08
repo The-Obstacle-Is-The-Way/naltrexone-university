@@ -224,7 +224,7 @@ describe('proxy content security policy', () => {
       strict: true,
       reportOnly: true,
       reportTo:
-        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=test',
+        'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=local',
       directives: expect.objectContaining({
         'connect-src': expect.arrayContaining([
           'ws:',
@@ -232,7 +232,7 @@ describe('proxy content security policy', () => {
           'https://o456.ingest.us.sentry.io',
         ]),
         'report-uri': [
-          'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=test',
+          'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=local',
         ],
       }),
     });

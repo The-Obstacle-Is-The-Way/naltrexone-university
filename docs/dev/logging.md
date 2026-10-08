@@ -69,17 +69,23 @@ path for the conditions a person must act on: see Operational alerts below.
 Use cases and jobs raise a condition a person must act on through the
 `OperationalAlerts` port, beside the log line they already write. The adapter
 sends a Sentry event that carries the kind, a count, the cooldown window and
-whether the shared cooldown held, never an ID, address or message text.
+whether the shared cooldown held. `scrubEvent` keeps an alert event to those
+fields, so it carries no request, user, breadcrumb, ID or address, whatever the
+scope it was raised in held.
 
 - **Delivery.** Each kind and fixed six-hour window opens its own Sentry issue.
   The event is error level, so the issue opens as High priority, and the
   project's "Send a notification for high priority issues" workflow emails it.
   Keep that workflow enabled for production. An earlier issue need not be
-  resolved for the next alert to arrive.
+  resolved for the next alert to arrive. Off Vercel, events are labelled
+  `local`, so a local run never pages as production.
 - **Volume.** At most one event per kind per six-hour window across all
   instances, through the Postgres limiter. If that limiter fails, the event is
   still sent, tagged `alert.shared_cooldown: unavailable`, at most once per kind
   per server instance per six hours.
+- **Loss.** A send Sentry does not confirm is logged as
+  `operational_alert_send_failed`; its cooldowns stay taken, so check Sentry's
+  status and the DSN.
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
 

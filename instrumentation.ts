@@ -3,6 +3,7 @@ import {
   SENTRY_DATA_COLLECTION,
   scrubBreadcrumb,
   scrubEvent,
+  sentryEnvironmentFor,
 } from '@/lib/sentry-data-collection';
 
 export const SENTRY_DISABLED_IN_PRODUCTION_WARNING =
@@ -18,8 +19,7 @@ export async function register() {
     return;
   }
 
-  const environment =
-    process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+  const environment = sentryEnvironmentFor(process.env.VERCEL_ENV);
 
   Sentry.init({
     dsn,

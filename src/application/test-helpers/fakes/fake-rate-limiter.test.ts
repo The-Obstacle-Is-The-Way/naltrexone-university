@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { RateLimitResult } from '@/src/application/ports/gateways';
 import { FakeRateLimiter } from './fake-gateways';
 
 describe('FakeRateLimiter', () => {
@@ -118,5 +119,26 @@ describe('FakeRateLimiter', () => {
       expect(limiter.pruneCallCount).toBe(3);
       expect(limiter.windows.size).toBe(1);
     });
+  });
+
+  it('answers a scripted pending result only when it settles', async () => {
+    let settle: (result: RateLimitResult) => void = () => {};
+    const pending = new Promise<RateLimitResult>((resolve) => {
+      settle = resolve;
+    });
+    const limiter = new FakeRateLimiter([pending]);
+    let answered = false;
+
+    const answer = limiter
+      .limit({ key: 'k', limit: 1, windowMs: 1000 })
+      .then((result) => {
+        answered = true;
+        return result;
+      });
+    await Promise.resolve();
+    expect(answered).toBe(false);
+
+    settle({ success: false, limit: 1, remaining: 0, retryAfterSeconds: 1 });
+    await expect(answer).resolves.toMatchObject({ success: false });
   });
 });

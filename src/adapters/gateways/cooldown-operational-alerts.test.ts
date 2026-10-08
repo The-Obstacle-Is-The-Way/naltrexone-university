@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { OperationalAlert } from '@/src/application/ports/operational-alerts';
 import {
   FakeLogger,
@@ -9,6 +9,7 @@ import {
   CooldownOperationalAlerts,
   LocalAlertCooldown,
   OPERATIONAL_ALERT_COOLDOWN_MS,
+  SHARED_COOLDOWN_TIMEOUT_MS,
 } from './cooldown-operational-alerts';
 
 // DEBT-505: at most one event per kind per six-hour window across instances,
@@ -53,6 +54,10 @@ function setup(
   };
   return { alerts, sent, rateLimiter, logger, advance };
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('CooldownOperationalAlerts', () => {
   it('sends the first alert of a kind once it holds the shared cooldown', async () => {
@@ -141,6 +146,21 @@ describe('CooldownOperationalAlerts', () => {
         },
         msg: 'operational_alert_shared_cooldown_unavailable',
       },
+    ]);
+  });
+
+  // The caller may be answering a user, and the limiter's database may be
+  // the thing that is failing.
+  it('treats a shared cooldown that has not answered within its timeout as unavailable', async () => {
+    vi.useFakeTimers();
+    const { alerts, sent } = setup([new Promise(() => {})]);
+
+    const raised = alerts.raise(missedDeadline);
+    await vi.advanceTimersByTimeAsync(SHARED_COOLDOWN_TIMEOUT_MS);
+    await raised;
+
+    expect(sent).toEqual([
+      expect.objectContaining({ sharedCooldown: 'unavailable' }),
     ]);
   });
 

@@ -25,10 +25,9 @@ describe('Sentry configuration', () => {
   const originalEnv = { ...process.env };
 
   const getClientEnvironment = () =>
-    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() || 'local';
 
-  const getServerEnvironment = () =>
-    process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+  const getServerEnvironment = () => process.env.VERCEL_ENV?.trim() || 'local';
 
   beforeEach(() => {
     initMock.mockClear();
@@ -89,6 +88,21 @@ describe('Sentry configuration', () => {
         environment: 'preview',
         ...(await sentryPrivacyOptions()),
       });
+    });
+
+    it('labels a production build off Vercel as local', async () => {
+      // Arrange
+      process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
+      delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+      Object.assign(process.env, { NODE_ENV: 'production' });
+
+      // Act
+      await import('./sentry.client.config');
+
+      // Assert
+      expect(initMock).toHaveBeenCalledWith(
+        expect.objectContaining({ environment: 'local' }),
+      );
     });
   });
 
@@ -201,6 +215,23 @@ describe('Sentry configuration', () => {
         environment: 'preview',
         ...(await sentryPrivacyOptions()),
       });
+    });
+
+    // DEBT-505: `next start` is a production build, but off Vercel it is not
+    // production; an event labelled so would page the owner.
+    it('labels a production build off Vercel as local', async () => {
+      // Arrange
+      process.env.SENTRY_DSN = 'https://exampleServerDsn';
+      delete process.env.VERCEL_ENV;
+      Object.assign(process.env, { NODE_ENV: 'production' });
+
+      // Act
+      await instrumentation.register();
+
+      // Assert
+      expect(initMock).toHaveBeenCalledWith(
+        expect.objectContaining({ environment: 'local' }),
+      );
     });
 
     it('returns onRequestError as captureRequestError', async () => {

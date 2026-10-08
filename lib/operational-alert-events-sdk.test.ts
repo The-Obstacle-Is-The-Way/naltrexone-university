@@ -10,6 +10,7 @@ import {
 // DEBT-505: what leaves the process is proven through the real SDK and our
 // production settings. The transport keeps each envelope and sends nothing.
 let sent: string[] = [];
+let transportFlushes = true;
 
 beforeAll(() => {
   Sentry.init({
@@ -22,7 +23,7 @@ beforeAll(() => {
         sent.push(JSON.stringify(envelope));
         return {};
       },
-      flush: async () => true,
+      flush: async () => transportFlushes,
     }),
   });
 });
@@ -43,7 +44,92 @@ function sentEvents(): Array<Record<string, unknown>> {
   });
 }
 
+// Everything a request scope can hold, as an alert raised inside a request
+// would inherit it: the request itself, a user, extra data, tags, a Next.js
+// context, and console and HTTP breadcrumbs. Each value is a marker.
+const inherited = {
+  nonce: 'NONCE-MARKER',
+  sessionCookie: 'SESSION-MARKER',
+  clerkUser: 'user_MARKER',
+  stripeCustomer: 'cus_MARKER',
+  appUser: 'APP-USER-MARKER',
+};
+
+function fillRequestScope(scope: Sentry.Scope) {
+  scope.setSDKProcessingMetadata({
+    normalizedRequest: {
+      url: `https://example.com/pricing?__clerk_handshake_nonce=${inherited.nonce}`,
+      method: 'GET',
+      headers: {
+        cookie: `__session=${inherited.sessionCookie}`,
+        'user-agent': 'test-agent',
+      },
+    },
+  });
+  scope.setUser({ id: inherited.clerkUser });
+  scope.setExtra('userId', inherited.appUser);
+  scope.setTag('route', `/pricing?nonce=${inherited.nonce}`);
+  scope.setContext('nextjs', { request_path: `/pricing/${inherited.appUser}` });
+  scope.addBreadcrumb({
+    category: 'console',
+    level: 'error',
+    message: `Checkout sync failed for ${inherited.appUser}`,
+  });
+  scope.addBreadcrumb({
+    category: 'http',
+    type: 'http',
+    data: {
+      url: `https://api.stripe.com/v1/subscriptions?customer=${inherited.stripeCustomer}`,
+      'url.query': `nonce=${inherited.nonce}`,
+    },
+  });
+}
+
 describe('sendOperationalAlertEvent', () => {
+  it('sends the fixed fields only, whatever the surrounding request scope holds', async () => {
+    sent = [];
+
+    await Sentry.withIsolationScope(async (scope) => {
+      fillRequestScope(scope);
+      await sendOperationalAlertEvent({
+        kind: 'checkout_stripe_holds_unrecorded',
+        count: 1,
+        sharedCooldown: 'held',
+        window: '2026-10-08T00:00:00.000Z',
+      });
+    });
+
+    const [event] = sentEvents();
+    expect(event).toBeDefined();
+    for (const field of ['breadcrumbs', 'request', 'user', 'extra']) {
+      expect(event).not.toHaveProperty(field);
+    }
+    expect(Object.keys(event?.contexts ?? {})).toEqual(['alert']);
+    expect(
+      Object.keys(event?.tags ?? {}).every((tag) => tag.startsWith('alert.')),
+    ).toBe(true);
+    const envelope = sent.join('\n');
+    for (const marker of Object.values(inherited)) {
+      expect(envelope).not.toContain(marker);
+    }
+  });
+
+  it('rejects when Sentry does not confirm the event, so the loss is logged', async () => {
+    transportFlushes = false;
+    try {
+      await expect(
+        sendOperationalAlertEvent({
+          kind: 'renewal_notice_outcome_unknown',
+          count: 1,
+          sharedCooldown: 'held',
+          window: '2026-10-08T00:00:00.000Z',
+        }),
+      ).rejects.toThrow('Sentry did not confirm the operational alert');
+    } finally {
+      transportFlushes = true;
+    }
+  });
+
   it('sends one error-level event with fixed tags and the count, and flushes it before resolving', async () => {
     sent = [];
 
@@ -108,5 +194,21 @@ describe('sendOperationalAlertEvent', () => {
     expect(sentEvents()[0]).toMatchObject({
       tags: { 'alert.shared_cooldown': 'unavailable' },
     });
+  });
+});
+
+// Last, since it closes the client: with Sentry off nothing can be sent.
+describe('sendOperationalAlertEvent without Sentry', () => {
+  it('rejects, so the loss is logged', async () => {
+    await Sentry.close();
+
+    await expect(
+      sendOperationalAlertEvent({
+        kind: 'renewal_notice_outcome_unknown',
+        count: 1,
+        sharedCooldown: 'held',
+        window: '2026-10-08T00:00:00.000Z',
+      }),
+    ).rejects.toThrow('Sentry is not enabled');
   });
 });

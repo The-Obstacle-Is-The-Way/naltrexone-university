@@ -10,6 +10,28 @@ import { projectSafeErrorDiagnostics } from '../shared/safe-error-diagnostics';
 
 export const OPERATIONAL_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 export const OPERATIONAL_ALERT_COOLDOWN_KEY_PREFIX = 'operational-alert:';
+// The caller may be answering a user, and the limiter's database may be what
+// is failing: past this, the shared cooldown counts as unavailable.
+export const SHARED_COOLDOWN_TIMEOUT_MS = 1_000;
+
+class SharedCooldownTimeout extends Error {
+  constructor() {
+    super('The shared cooldown did not answer in time');
+    this.name = 'SharedCooldownTimeout';
+  }
+}
+
+async function withinTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new SharedCooldownTimeout()), ms);
+  });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * The in-process cooldown. Containers are built per request, so production
@@ -82,11 +104,14 @@ export class CooldownOperationalAlerts implements OperationalAlerts {
     kind: OperationalAlertKind,
   ): Promise<'held' | 'taken' | 'unavailable'> {
     try {
-      const result = await this.deps.rateLimiter.limit({
-        key: `${this.deps.keyPrefix}${kind}`,
-        limit: 1,
-        windowMs: OPERATIONAL_ALERT_COOLDOWN_MS,
-      });
+      const result = await withinTimeout(
+        this.deps.rateLimiter.limit({
+          key: `${this.deps.keyPrefix}${kind}`,
+          limit: 1,
+          windowMs: OPERATIONAL_ALERT_COOLDOWN_MS,
+        }),
+        SHARED_COOLDOWN_TIMEOUT_MS,
+      );
       return result.success ? 'held' : 'taken';
     } catch (error) {
       this.deps.logger.warn(

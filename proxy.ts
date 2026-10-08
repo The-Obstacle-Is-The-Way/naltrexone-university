@@ -16,6 +16,7 @@ import {
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
+import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 
@@ -89,8 +90,7 @@ function mergeCspDirectives(
 const sentryIngestOrigin = parseSentryIngestOrigin(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
 );
-const sentryEnvironment =
-  process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+const sentryEnvironment = sentryEnvironmentFor(process.env.VERCEL_ENV);
 const sentrySecurityHeaderEndpoint = parseSentrySecurityHeaderEndpoint(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
   sentryEnvironment,

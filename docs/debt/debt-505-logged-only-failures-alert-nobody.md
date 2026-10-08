@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — alerts implemented for every listed condition; delivery is checked on a deployment after release
+**Status:** In Progress — the four logged-only conditions now alert; DEBT-503 item 3 adds its own kind later; delivery is checked on a deployment after release
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -63,8 +63,12 @@ Option 2.
 - **Implemented 2026-10-08.**
   - The port is `OperationalAlerts`, with a closed list of kinds and only a count, so no free text can reach Sentry. One `raise` method covers every kind: the closed list keeps the fields fixed, and a new kind needs no new method.
   - `CooldownOperationalAlerts` applies both cooldowns; `sendOperationalAlertEvent` is the one file that calls Sentry. The container keeps one in-process cooldown per server process.
+  - **Fixed fields only.** Sentry fills an event from the scope it is raised in, so an alert raised inside a request would also carry that request, its user and its breadcrumbs, including outgoing Stripe and Clerk URLs. `scrubEvent` keeps an alert event to its own fields, tags and context.
+  - **No silent loss.** Sentry's capture never throws, so the boundary rejects when no client is enabled or the flush is not confirmed, and the adapter logs `operational_alert_send_failed`.
+  - **Bounded.** The shared cooldown counts as unavailable after one second, and the flush waits at most two, so a caller answering a user waits at most about three seconds, and only on a send.
+  - **Environment.** Sentry's environment is Vercel's name for the deployment, or `local` off Vercel. It used to fall back to the build mode, so a local `next start` labelled its events production and would have paged the owner.
   - Callers: the renewal job's two deadline checks, dispatch's cutoff refusal and outcome-unknown quarantine, the refused checkout's failed sync, and the proxy's limiter failure, which raises after the response through `waitUntil`.
-  - Tests: the cooldowns on fakes and on real Postgres (eight concurrent instances send one event, and a restart keeps the window), the sent event through the real Sentry SDK, the container's shared cooldown on Postgres, and each caller. Each was shown to fail with its alert removed.
+  - Tests: the cooldowns on fakes and on real Postgres (eight concurrent instances send one event, and a restart keeps the window); the sent event through the real Sentry SDK, raised inside a scope holding a request, a user, extra data and breadcrumbs, of which none leaves; both lost-send cases; the container's shared cooldown on Postgres; and each caller, each shown to fail with its alert removed.
   - The runbook is [Operational alerts](../dev/logging.md#operational-alerts).
 
 *Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*

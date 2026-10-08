@@ -1,8 +1,18 @@
 import type * as Sentry from '@sentry/nextjs';
+import { OPERATIONAL_ALERT_FINGERPRINT } from '@/src/adapters/shared/operational-alert-events';
 
 type DataCollection = NonNullable<
   NonNullable<Parameters<typeof Sentry.init>[0]>['dataCollection']
 >;
+
+/**
+ * The Sentry environment for a deployment: Vercel's own name for it, or
+ * `local` off Vercel. A build mode cannot stand in: `next start` is a
+ * production build, and an event labelled production pages the owner.
+ */
+export function sentryEnvironmentFor(vercelEnv: string | undefined): string {
+  return vercelEnv?.trim() || 'local';
+}
 
 // Sentry's v10-equivalent deny terms for forwarding and IP headers, matched as
 // case-insensitive substrings (Sentry MIGRATION.md, v10 to v11).
@@ -108,8 +118,46 @@ export function redactCredentialParams(value: string): string {
   });
 }
 
-/** `beforeSend`: redacts credentials in the URLs an event carries. */
+// DEBT-505: an operational alert carries fixed fields only. Sentry fills an
+// event from the scope it is raised in, so an alert raised inside a request
+// would also carry that request, its user, extra data and breadcrumbs. Only
+// these fields, the alert's own tags and its own context are kept.
+const ALERT_EVENT_FIELDS = [
+  'event_id',
+  'timestamp',
+  'platform',
+  'level',
+  'message',
+  'fingerprint',
+  'environment',
+  'release',
+  'dist',
+  'sdk',
+] as const;
+
+function keepAlertFields(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+  const kept: Sentry.ErrorEvent = { type: undefined };
+  for (const field of ALERT_EVENT_FIELDS) {
+    if (event[field] !== undefined)
+      Object.assign(kept, { [field]: event[field] });
+  }
+  kept.tags = Object.fromEntries(
+    Object.entries(event.tags ?? {}).filter(([tag]) =>
+      tag.startsWith('alert.'),
+    ),
+  );
+  if (event.contexts?.alert) kept.contexts = { alert: event.contexts.alert };
+  return kept;
+}
+
+/**
+ * `beforeSend`: keeps an operational alert to its fixed fields, and redacts
+ * credentials in the URLs any other event carries.
+ */
 export function scrubEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+  if (event.fingerprint?.[0] === OPERATIONAL_ALERT_FINGERPRINT) {
+    return keepAlertFields(event);
+  }
   const request = event.request;
   if (request && typeof request.url === 'string') {
     request.url = redactCredentialParams(request.url);
