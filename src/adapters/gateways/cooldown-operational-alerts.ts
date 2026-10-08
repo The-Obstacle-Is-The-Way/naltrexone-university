@@ -31,7 +31,7 @@ export class LocalAlertCooldown {
 export type CooldownOperationalAlertsDeps = {
   rateLimiter: Pick<RateLimiter, 'limit'>;
   send: (event: OperationalAlertEvent) => Promise<void>;
-  logger: Pick<Logger, 'error'>;
+  logger: Pick<Logger, 'error' | 'warn'>;
   now: () => Date;
   localCooldown: LocalAlertCooldown;
   keyPrefix: string;
@@ -82,7 +82,11 @@ export class CooldownOperationalAlerts implements OperationalAlerts {
         windowMs: OPERATIONAL_ALERT_COOLDOWN_MS,
       });
       return result.success ? 'held' : 'taken';
-    } catch {
+    } catch (error) {
+      this.deps.logger.warn(
+        { alertKind: kind, error: projectSafeErrorDiagnostics(error) },
+        'operational_alert_shared_cooldown_unavailable',
+      );
       return 'unavailable';
     }
   }

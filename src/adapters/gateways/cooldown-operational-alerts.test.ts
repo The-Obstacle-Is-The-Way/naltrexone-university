@@ -116,7 +116,7 @@ describe('CooldownOperationalAlerts', () => {
   // BUG-323's alert reports the same database failing, so suppressing the
   // event when the limiter fails would silence it.
   it('still sends, tagged, when the shared cooldown is unavailable, and only once per instance in six hours', async () => {
-    const { alerts, sent, rateLimiter } = setup([
+    const { alerts, sent, rateLimiter, logger } = setup([
       new Error('connection refused'),
     ]);
 
@@ -131,6 +131,15 @@ describe('CooldownOperationalAlerts', () => {
       },
     ]);
     expect(rateLimiter.inputs).toHaveLength(1);
+    expect(logger.warnCalls).toEqual([
+      {
+        context: {
+          alertKind: 'clerk_backend_call_limiter_failed',
+          error: expect.objectContaining({ name: 'Error' }),
+        },
+        msg: 'operational_alert_shared_cooldown_unavailable',
+      },
+    ]);
   });
 
   it('resolves, and logs the kind only, when the event cannot be sent', async () => {
