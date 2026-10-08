@@ -147,7 +147,7 @@ Verify only value-free metadata after the update (present, length, header-safe).
 
 ### A Missed Clerk Webhook Leaves a Stale Email or a Deleted User's Row
 
-Since DEBT-503 item 1, a signed-in page serves the stored `users` row and does not ask Clerk. So a `user.updated` event that never arrives leaves the stored email stale until the user starts a checkout or trial card setup. A `user.deleted` that never arrives leaves the row and the Stripe customer in place, and the subscription keeps renewing.
+Since DEBT-503 item 1, a signed-in page serves the stored `users` row and does not ask Clerk. So a `user.updated` event that never arrives leaves the stored email stale until the user starts a checkout or trial card setup, or until another user's sign-up finds the address held and BUG-284's stale-owner check moves it. A `user.deleted` that never arrives leaves the row and the Stripe customer in place, and the subscription keeps renewing.
 
 - **Delivery.** Clerk sends webhooks through Svix, which retries a failed delivery for about 27 hours and disables an endpoint that keeps failing for 5 days. Deliveries are not guaranteed.
 - **Detect.** In the Clerk Dashboard, open Webhooks and the production endpoint, and look for failed messages or a disabled endpoint.

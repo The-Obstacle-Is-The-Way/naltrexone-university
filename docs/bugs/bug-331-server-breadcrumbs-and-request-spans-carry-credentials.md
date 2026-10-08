@@ -12,7 +12,7 @@
 
 ## Summary
 
-[BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md) narrowed what Sentry receives, and its scrubbers clean the URLs an event carries. They do not clean what an event's breadcrumbs carry. A breadcrumb is a step the server took before the error: an outgoing request, or a console line.
+[BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md) narrowed what Sentry receives, and its scrubbers clean the URLs an event carries. For breadcrumbs, `scrubBreadcrumb` redacts the credential parameters on its own list only in `data.url`, `data.from` and `data.to`. Other breadcrumb fields and content, and parameters not on the list, go through. A breadcrumb is a step the server took before the error: an outgoing request, or a console line.
 
 So a server error event can carry, in clear:
 - a Clerk handshake nonce, from Clerk's own exchange request;
