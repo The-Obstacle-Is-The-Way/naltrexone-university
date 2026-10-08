@@ -78,7 +78,10 @@ scope it was raised in held.
   new one: production only, events tagged `alert.kind`, no throttling. It does
   not depend on the default "high priority issues" workflow, so that one can be
   changed to tune ordinary error email. Keep the alerts' own workflow enabled.
-  An earlier issue need not be resolved for the next alert to arrive. Off Vercel, events are labelled
+  An earlier issue need not be resolved for the next alert to arrive. Until
+  server events have a backend project whose key no browser receives, the
+  workflow stays disabled, since the browser's public key could fake alerts
+  (DEBT-505). Off Vercel, events are labelled
   `local`, so a local run never pages as production.
 - **Volume.** At most one event per kind per six-hour window across all
   instances, through the Postgres limiter. If that limiter fails, or takes over
