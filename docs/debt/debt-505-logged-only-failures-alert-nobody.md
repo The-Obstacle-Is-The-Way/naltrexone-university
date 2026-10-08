@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; it must ship before paid acquisition
+**Status:** In Progress — alerts implemented for every listed condition; delivery is checked on a deployment after release
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -59,6 +59,13 @@ Option 2.
   - BUG-321's failed sync;
   - BUG-323's limiter failure;
   - [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 3's Clerk cap trips.
+
+- **Implemented 2026-10-08.**
+  - The port is `OperationalAlerts`, with a closed list of kinds and only a count, so no free text can reach Sentry. One `raise` method covers every kind: the closed list keeps the fields fixed, and a new kind needs no new method.
+  - `CooldownOperationalAlerts` applies both cooldowns; `sendOperationalAlertEvent` is the one file that calls Sentry. The container keeps one in-process cooldown per server process.
+  - Callers: the renewal job's two deadline checks, dispatch's cutoff refusal and outcome-unknown quarantine, the refused checkout's failed sync, and the proxy's limiter failure, which raises after the response through `waitUntil`.
+  - Tests: the cooldowns on fakes and on real Postgres (eight concurrent instances send one event, and a restart keeps the window), the sent event through the real Sentry SDK, the container's shared cooldown on Postgres, and each caller. Each was shown to fail with its alert removed.
+  - The runbook is [Operational alerts](../dev/logging.md#operational-alerts).
 
 *Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*
 

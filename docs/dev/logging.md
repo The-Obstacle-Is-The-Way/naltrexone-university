@@ -61,8 +61,36 @@ Sentry exception/tracing capture, with no pino integration or log forwarding.
 A caught error that is only logged is not thereby a Sentry event. An alert on
 such an outcome needs explicit, bounded telemetry or a retained operational
 receipt; do not claim a Sentry search proves its absence.
-[DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) decides that
-path: an explicit alert port with bounded Sentry delivery.
+[DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) added that
+path for the conditions a person must act on: see Operational alerts below.
+
+## Operational alerts
+
+Use cases and jobs raise a condition a person must act on through the
+`OperationalAlerts` port, beside the log line they already write. The adapter
+sends a Sentry event that carries the kind, a count, the cooldown window and
+whether the shared cooldown held, never an ID, address or message text.
+
+- **Delivery.** Each kind and fixed six-hour window opens its own Sentry issue.
+  The event is error level, so the issue opens as High priority, and the
+  project's "Send a notification for high priority issues" workflow emails it.
+  Keep that workflow enabled for production. An earlier issue need not be
+  resolved for the next alert to arrive.
+- **Volume.** At most one event per kind per six-hour window across all
+  instances, through the Postgres limiter. If that limiter fails, the event is
+  still sent, tagged `alert.shared_cooldown: unavailable`, at most once per kind
+  per server instance per six hours.
+- **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
+  it for an hour. Start from the database.
+
+| Kind | Meaning | First steps |
+| --- | --- | --- |
+| `renewal_notice_deadline_missed` | An annual subscription renews within 30 days and its renewal notice was never delivered. | Find its `renewal_notice_deliveries` rows; the 09:00 UTC job re-checks each run, so the alert recurs while the gap stands. Decide the remedy with counsel (DEBT-414 F07). |
+| `anniversary_reminder_deadline_missed` | A monthly subscription's yearly anniversary falls within 30 days with no reminder sent. | As above, for the anniversary reminder. |
+| `renewal_notice_send_by_cutoff_passed` | Dispatch refused a notice because its send-by cutoff had passed. | The row is `terminal_failure` with `send_by_cutoff_passed`. Find why it was not sent in time. |
+| `renewal_notice_outcome_unknown` | The email provider's answer was ambiguous, so the notice is quarantined and never resent automatically. | The row is `outcome_unknown`. Check the provider's dashboard before any manual resend. |
+| `checkout_stripe_holds_unrecorded` | A refused checkout could not record the subscription Stripe already holds (BUG-321). | Compare the user's subscription row with Stripe. The reconcile cron updates only rows that exist, so a missing row waits for the subscription's next webhook; resend its latest event from the Stripe Dashboard to record it now. |
+| `clerk_backend_call_limiter_failed` | The sign-in limiter's database call failed, so it is letting requests through (BUG-323). | Check the database. While it fails, only the firewall rule bounds Clerk's Backend API calls. |
 
 ## Practices
 
