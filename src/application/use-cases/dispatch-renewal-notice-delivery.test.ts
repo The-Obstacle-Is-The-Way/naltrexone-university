@@ -7,6 +7,7 @@ import {
 } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
   FakeSubscriptionRepository,
@@ -60,6 +61,7 @@ function createUseCase(input: {
   gateway: FakeTransactionalEmailGateway;
   currentTime?: () => Date;
   logger?: FakeLogger;
+  alerts?: FakeOperationalAlerts;
 }) {
   return new DispatchRenewalNoticeDeliveryUseCase(
     input.repository,
@@ -67,6 +69,7 @@ function createUseCase(input: {
     noticeTargets,
     hasher,
     input.logger ?? new FakeLogger(),
+    input.alerts ?? new FakeOperationalAlerts(),
     input.currentTime ?? (() => now),
     () => 'attempt-1',
   );
@@ -279,6 +282,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       noticeTargets,
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => currentTime,
       () => `attempt-${++attempt}`,
     );
@@ -336,7 +340,8 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       ],
     });
     const logger = new FakeLogger();
-    const useCase = createUseCase({ repository, gateway, logger });
+    const alerts = new FakeOperationalAlerts();
+    const useCase = createUseCase({ repository, gateway, logger, alerts });
 
     await useCase.execute({ deliveryId });
 
@@ -348,6 +353,9 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
         },
         msg: 'Renewal notice delivery outcome is unknown',
       },
+    ]);
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_outcome_unknown', count: 1 },
     ]);
     expect(JSON.stringify(logger.errorCalls)).not.toContain(payload.to);
   });
@@ -363,6 +371,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       noticeTargets,
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
     );
 
     const result = await useCase.execute({ deliveryId });
@@ -392,6 +401,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       noticeTargets,
       new UnavailableHasher(),
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => now,
       () => 'attempt-1',
     );
