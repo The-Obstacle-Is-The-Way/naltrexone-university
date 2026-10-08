@@ -52,11 +52,12 @@ Option 2.
   - That fallback has no bound across instances: an outage under load can send one event per kind from each running instance. Sentry's spike protection is the backstop, and the flood response in [Logging](../dev/logging.md) applies.
 - **Every episode notifies.** Sentry emails on a new issue, or one that escalates or regresses, but not on a later event in an issue still open. So each kind and fixed six-hour window, the window the shared cooldown counts in, opens its own issue. An error-level event opens as a High-priority issue, and the project's enabled workflow "Send a notification for high priority issues" emails on a new one in production (read from Sentry's API on 2026-10-08). No one has to resolve an earlier issue for the next alert to arrive.
 - **A rule of their own.** That default workflow also emails ordinary errors, so narrowing or disabling it to cut error noise would silence these alerts without warning. So the alerts have a workflow of their own, "Operational alerts — email the owner (DEBT-505)", created through Sentry's API on 2026-10-08 and read back: production only; a new, regressed or reappearing issue; events tagged `alert.kind`; email to issue owners, falling back to active members, as the default workflow does; no throttling, since the cooldowns bound the volume.
-- **Only our server can raise them.** Sentry's browser key is public by design, and anyone holding it can send an event with any tags ([Sentry's DSN guide](https://docs.sentry.io/concepts/key-terms/dsn-explainer/)). So anyone could trigger, or flood, this workflow with fake alerts, and the default workflow is exposed the same way. It was disabled on 2026-10-08, minutes after creation, and is re-enabled only once:
-  - server events go to a backend Sentry project of their own, as Sentry recommends, whose key is never sent to a browser;
-  - `SENTRY_DSN` holds that key for Production and Preview in Vercel (the owner approves the Vercel change), and `instrumentation.ts` no longer falls back to the browser key;
-  - the alerts' workflow is recreated on the backend project's issue stream and read back.
-  That key is still not a secret in Sentry's sense, so it stays server-only and is rotated if it is ever exposed.
+- **Only our server can raise them.** Sentry's browser key is public by design, and anyone holding it can send an event with any tags ([Sentry's DSN guide](https://docs.sentry.io/concepts/key-terms/dsn-explainer/)). So anyone could trigger, or flood, this workflow with fake alerts, and the default workflow is exposed the same way. So server events moved to a project of their own, as Sentry recommends, on 2026-10-08 with the owner's approval:
+  - Sentry project `addiction-boards-server`, with the web project's privacy settings (server-side scrubbing, its default rules, IP scrubbing, the same sensitive fields), read back;
+  - its default high-priority workflow, made production-only and throttled to 30 minutes like the web project's, and the alerts' workflow, both read back. The first copy, on the web project, was disabled minutes after creation and then deleted;
+  - `SENTRY_DSN` for Production and Preview in Vercel holds that project's key, as a sensitive variable; the browser keeps `NEXT_PUBLIC_SENTRY_DSN`;
+  - `instrumentation.ts` uses `SENTRY_DSN` only, never the browser's key.
+  The server key is still not a secret in Sentry's sense, so it stays server-only and is rotated if it is ever exposed.
 - **Keep the log line** beside each alert, for immediate diagnosis.
 - **Renewal notices are detected from state.** The renewal job already computes missed deadlines from the database each run, so a deadline missed while logs were lost is still found on the next run.
 - **Who uses it:**
@@ -84,7 +85,8 @@ Option 2.
 - [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
 - [ ] Engineering: on a deployment, one test event per alert kind, raised from its real call site (the proxy for BUG-323's kind), reaches the Sentry issue alert routed to the owner, recorded with counts only.
 - [ ] Engineering: a second alert of one kind, in a later window while the first issue is still open, opens a new issue and emails again.
-- [ ] Engineering: the alerts' workflow lives on the backend project, whose key no browser receives, and is read back from Sentry's API as enabled. On 2026-10-08 it was created on the shared project, read back, and disabled.
+- [x] Engineering: the alerts' workflow lives on the server project, whose key no browser receives, and is read back from Sentry's API as enabled (2026-10-08).
+- [ ] Engineering: after the first deployment with the new `SENTRY_DSN`, a server event arrives in the server project and none in the web project.
 - [ ] Engineering: a test alert from a deployment reaches the owner through it.
 - [ ] The alerts listed above no longer exist as log lines alone.
 

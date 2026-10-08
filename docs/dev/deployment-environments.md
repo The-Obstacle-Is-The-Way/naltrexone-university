@@ -83,7 +83,7 @@ These rules are enforced by the repo today:
 | Stripe secret + publishable keys | Live mode | Test mode | Test mode |
 | Stripe price IDs | Live price IDs | Test price IDs | Test price IDs |
 | `NEXT_PUBLIC_APP_URL` | Canonical production domain | Actual preview deployment URL | Local origin you are serving (`127.0.0.1` or `localhost`) |
-| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Optional, set intentionally | Optional | Optional |
+| `SENTRY_DSN` (server project's key, sensitive, never `NEXT_PUBLIC`) / `NEXT_PUBLIC_SENTRY_DSN` (browser project's key) | Set both: server events and operational alerts need `SENTRY_DSN` | Optional | Optional |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Required; generate with `openssl rand -base64 32` | Required | Optional |
 | `CRON_SECRET` | Required anywhere cron route is exercised | Required if you hit cron route | Required if you hit cron route |
 

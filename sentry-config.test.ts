@@ -183,7 +183,9 @@ describe('Sentry configuration', () => {
       });
     });
 
-    it('returns initialized client using NEXT_PUBLIC_SENTRY_DSN when SENTRY_DSN is unset', async () => {
+    // DEBT-505: the browser's key is public, so server events, operational
+    // alerts among them, go only to the server project's key.
+    it('never sends server events with the browser key', async () => {
       // Arrange
       delete process.env.SENTRY_DSN;
       process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
@@ -192,12 +194,7 @@ describe('Sentry configuration', () => {
       await instrumentation.register();
 
       // Assert
-      expect(initMock).toHaveBeenCalledWith({
-        dsn: 'https://examplePublicDsn',
-        tracesSampleRate: 0.05,
-        environment: getServerEnvironment(),
-        ...(await sentryPrivacyOptions()),
-      });
+      expect(initMock).not.toHaveBeenCalled();
     });
 
     it('uses VERCEL_ENV when provided', async () => {

@@ -78,11 +78,11 @@ scope it was raised in held.
   new one: production only, events tagged `alert.kind`, no throttling. It does
   not depend on the default "high priority issues" workflow, so that one can be
   changed to tune ordinary error email. Keep the alerts' own workflow enabled.
-  An earlier issue need not be resolved for the next alert to arrive. Until
-  server events have a backend project whose key no browser receives, the
-  workflow stays disabled, since the browser's public key could fake alerts
-  (DEBT-505). Off Vercel, events are labelled
-  `local`, so a local run never pages as production.
+  An earlier issue need not be resolved for the next alert to arrive. Both
+  workflows live on the server project, `addiction-boards-server`, whose key
+  no browser receives, so the browser's public key cannot fake an alert.
+  Off Vercel, events are labelled `local`, so a local run never pages as
+  production.
 - **Volume.** At most one event per kind per six-hour window across all
   instances, through the Postgres limiter. If that limiter fails, or takes over
   a second to answer, the event is still sent, tagged
@@ -115,12 +115,12 @@ scope it was raised in held.
 
 ## Sentry flood or quota exhaustion
 
-The browser needs Sentry's client key (DSN), so the key is public, as Sentry intends. Anyone can therefore post events straight to Sentry, without our server. The project is on Sentry's Developer plan, with 5,000 errors a month and no per-key rate limit. Spike protection is on, and limits the damage while you respond (BUG-325 item 5).
+The browser needs its Sentry project's client key (DSN), so that key is public, as Sentry intends. Anyone can therefore post events to the browser project, without our server. Server events go to a separate server project, `addiction-boards-server`, whose key (`SENTRY_DSN`) no browser receives (DEBT-505). The plan is Sentry's Developer plan, with 5,000 errors a month and no per-key rate limit. Spike protection is on, and limits the damage while you respond (BUG-325 item 5).
 
 If Sentry shows a sudden flood of garbage events, or the month's usage jumps:
 
 1. In the project's inbound filters, block the source IP addresses.
-2. Create a new client key, set it as `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN` in Vercel, redeploy, then revoke the old key.
+2. In the flooded project, create a new client key: for the browser project set it as `NEXT_PUBLIC_SENTRY_DSN`, for the server project as `SENTRY_DSN` (sensitive), in Vercel. Redeploy, then revoke the old key. A flood in the server project means its key leaked.
 
 This is a monitoring outage, not a data breach. Escalate to the [incident response procedure](../security/incident-response-and-breach-notification.md) only if the events carry personal data.
 
