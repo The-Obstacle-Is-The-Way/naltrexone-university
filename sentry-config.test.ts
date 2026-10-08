@@ -25,10 +25,12 @@ async function sentryPrivacyOptions() {
 async function sentryServerPrivacyOptions() {
   const privacy = await import('@/lib/sentry-data-collection');
   return {
+    traceLifecycle: 'stream',
+    tracePropagationTargets: [],
     maxBreadcrumbs: 0,
     // DEBT-505: no release-health session, which would copy the scope's user
     // past beforeSend.
-    integrations: privacy.withoutProcessSession,
+    integrations: privacy.serverIntegrations,
     dataCollection: privacy.SENTRY_DATA_COLLECTION,
     beforeSend: privacy.scrubServerEvent,
     beforeSendSpan: privacy.scrubSpan,

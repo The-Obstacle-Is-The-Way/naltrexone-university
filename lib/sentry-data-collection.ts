@@ -204,8 +204,7 @@ export function scrubBreadcrumb(
   const data = breadcrumb.data;
   if (data) {
     for (const [field, value] of Object.entries(data)) {
-      if (typeof value === 'string')
-        data[field] = redactCredentialParams(value);
+      data[field] = redactStrings(value);
     }
   }
   return breadcrumb;
@@ -242,11 +241,17 @@ function redactStrings(value: unknown): unknown {
  */
 export function scrubSpan(span: StreamedSpan): StreamedSpan {
   span.name = redactCredentialParams(span.name);
-  const attributes: Record<string, unknown> = span.attributes;
+  redactAttributes(span.attributes);
+  for (const link of span.links ?? []) {
+    if (link.attributes) redactAttributes(link.attributes);
+  }
+  return span;
+}
+
+function redactAttributes(attributes: Record<string, unknown>): void {
   for (const [name, value] of Object.entries(attributes)) {
     attributes[name] = redactStrings(value);
   }
-  return span;
 }
 
 type Integration = Extract<
@@ -254,19 +259,42 @@ type Integration = Extract<
   unknown[]
 >[number];
 
+function scrubTraceHeader(header: Record<string, unknown>): void {
+  const trace = header.trace;
+  if (
+    trace &&
+    typeof trace === 'object' &&
+    'transaction' in trace &&
+    typeof trace.transaction === 'string'
+  ) {
+    trace.transaction = redactCredentialParams(trace.transaction);
+  }
+}
+
+// BUG-331: an envelope's trace header carries the request span's name. When
+// Next.js falls back to its error page, @sentry/nextjs names that span after
+// the raw request URL, and no beforeSend hook sees envelope headers.
+const SCRUB_ENVELOPE_TRACE: Integration = {
+  name: 'ScrubEnvelopeTrace',
+  setup(client) {
+    client.on('beforeEnvelope', (envelope) => scrubTraceHeader(envelope[0]));
+  },
+};
+
 /**
- * The server's integrations: Sentry's defaults without `ProcessSession`. Once
- * Sentry has a release, as on CI and Vercel, that integration sends a
- * release-health session envelope that copies the scope's user, and
- * `beforeSend` never sees it (DEBT-505). The server does not use release
- * health.
+ * The server's integrations: Sentry's defaults without `ProcessSession`, plus
+ * the envelope trace scrubber. Once Sentry has a release, as on CI and Vercel,
+ * `ProcessSession` sends a release-health session envelope that copies the
+ * scope's user, and `beforeSend` never sees it (DEBT-505). The server does not
+ * use release health.
  */
-export function withoutProcessSession(
-  integrations: Integration[],
-): Integration[] {
-  return integrations.filter(
-    (integration) => integration.name !== 'ProcessSession',
-  );
+export function serverIntegrations(integrations: Integration[]): Integration[] {
+  return [
+    ...integrations.filter(
+      (integration) => integration.name !== 'ProcessSession',
+    ),
+    SCRUB_ENVELOPE_TRACE,
+  ];
 }
 
 /**
@@ -280,8 +308,15 @@ export function withoutProcessSession(
  */
 export const SENTRY_SERVER_SETTINGS = {
   tracesSampleRate: 0.05,
+  // The SDK would otherwise read SENTRY_TRACE_LIFECYCLE, and in 'static' mode
+  // it ignores beforeSendSpan.
+  traceLifecycle: 'stream',
+  // Stripe, Clerk and every other outgoing call get no trace headers: they
+  // would carry this project's key and the request's name. The server calls
+  // no service of ours to continue a trace in.
+  tracePropagationTargets: [],
   maxBreadcrumbs: 0,
-  integrations: withoutProcessSession,
+  integrations: serverIntegrations,
   dataCollection: SENTRY_DATA_COLLECTION,
   beforeSend: scrubServerEvent,
   beforeSendSpan: scrubSpan,

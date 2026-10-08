@@ -5,6 +5,10 @@ import * as Sentry from '@sentry/nextjs';
 import { BaseServerSpan } from 'next/dist/server/lib/trace/constants';
 import { getTracer, SpanKind } from 'next/dist/server/lib/trace/tracer';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 import { SENTRY_SERVER_SETTINGS } from './sentry-data-collection';
 
 // DEBT-499 / BUG-318 / BUG-331: what leaves the process is proven through the
@@ -28,7 +32,12 @@ const secret = {
   clientIp: '203.0.113.7',
 };
 
+const ORIGINAL_ENV = snapshotProcessEnv();
+
 beforeAll(() => {
+  // The SDK reads its trace lifecycle from the environment; in 'static' mode
+  // it would ignore beforeSendSpan. The settings pin 'stream'.
+  process.env.SENTRY_TRACE_LIFECYCLE = 'static';
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
     environment: 'production',
@@ -48,6 +57,7 @@ beforeAll(() => {
 
 afterAll(async () => {
   await Sentry.close();
+  restoreProcessEnv(ORIGINAL_ENV);
 });
 
 // Our onRequestError is Sentry.captureRequestError (instrumentation.ts).
@@ -173,7 +183,11 @@ describe('a sampled request', () => {
   // Next.js opens each request's server span and keeps the raw URL in
   // `http.target`; Sentry's own incoming-request span is off in @sentry/nextjs.
   it('sends its spans, Next.js request span and outgoing call alike, without a credential parameter', async () => {
-    const upstream = await listen((_, response) => response.end('{}'));
+    const upstreamHeaders: http.IncomingHttpHeaders[] = [];
+    const upstream = await listen((request, response) => {
+      upstreamHeaders.push(request.headers);
+      response.end('{}');
+    });
     sent = [];
     await getTracer().trace(
       BaseServerSpan.handleRequest,
@@ -193,12 +207,15 @@ describe('a sampled request', () => {
     );
 
     // Both spans arrive, so the filtering below is not vacuous.
-    await vi.waitFor(async () => {
-      await Sentry.flush(500);
-      const spans = JSON.stringify(sentItems('span'));
-      expect(spans).toContain('plan=annual');
-      expect(spans).toContain('limit=1');
-    });
+    await vi.waitFor(
+      async () => {
+        await Sentry.flush(500);
+        const spans = JSON.stringify(sentItems('span'));
+        expect(spans).toContain('plan=annual');
+        expect(spans).toContain('limit=1');
+      },
+      { timeout: 5_000 },
+    );
     const spans = JSON.stringify(sentItems('span'));
     for (const value of [
       recorded.handshake,
@@ -208,5 +225,41 @@ describe('a sampled request', () => {
     ]) {
       expect(spans).not.toContain(value);
     }
+    // Stripe and Clerk get no trace headers: they carried this project's key
+    // and the request's name.
+    expect(upstreamHeaders).toHaveLength(1);
+    expect(upstreamHeaders[0]).not.toHaveProperty('sentry-trace');
+    expect(upstreamHeaders[0]).not.toHaveProperty('baggage');
+  });
+
+  // Next.js answers a malformed request with its error page, and
+  // @sentry/nextjs then names the request span after the raw URL. The
+  // envelope's trace header copies that name, out of beforeSendSpan's reach.
+  it("sends a request that fell back to Next's error page with no credential in any header", async () => {
+    sent = [];
+    await getTracer().trace(
+      BaseServerSpan.handleRequest,
+      {
+        spanName: 'GET /_error',
+        kind: SpanKind.SERVER,
+        attributes: {
+          'http.method': 'GET',
+          'http.target': `/pricing?__clerk_handshake=${recorded.handshake}&nonce=${recorded.requestNonce}&plan=annual`,
+          'next.route': '/_error',
+        },
+      },
+      async () => {},
+    );
+
+    await vi.waitFor(
+      async () => {
+        await Sentry.flush(500);
+        expect(JSON.stringify(sentItems('span'))).toContain('plan=annual');
+      },
+      { timeout: 5_000 },
+    );
+    const everything = sent.join('\n');
+    expect(everything).not.toContain(recorded.handshake);
+    expect(everything).not.toContain(recorded.requestNonce);
   });
 });

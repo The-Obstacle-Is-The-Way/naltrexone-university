@@ -167,6 +167,21 @@ describe('scrubBreadcrumb', () => {
 
   // BUG-331: the server SDK also keeps the query in `url.query`. Every string
   // is redacted, so a field the SDK adds later is covered too.
+  it("redacts credentials in the strings of a breadcrumb's array data, such as a console line's arguments", () => {
+    expect(
+      scrubBreadcrumb({
+        category: 'console',
+        data: { arguments: ['redirect to /cb?code=abc', 3], logger: 'console' },
+      }),
+    ).toEqual({
+      category: 'console',
+      data: {
+        arguments: ['redirect to /cb?code=[Filtered]', 3],
+        logger: 'console',
+      },
+    });
+  });
+
   it("redacts credentials in every string of a breadcrumb's data", () => {
     expect(
       scrubBreadcrumb({
@@ -227,6 +242,13 @@ describe('scrubSpan', () => {
         'http.request.header.x-test': ['/a?token=t'],
         'http.status_code': 200,
       },
+      links: [
+        {
+          trace_id: 't',
+          span_id: 'l',
+          attributes: { 'link.url': '/cb?code=c' },
+        },
+      ],
     };
 
     expect(scrubSpan(span)).toMatchObject({
@@ -237,6 +259,7 @@ describe('scrubSpan', () => {
         'http.request.header.x-test': ['/a?token=[Filtered]'],
         'http.status_code': 200,
       },
+      links: [{ attributes: { 'link.url': '/cb?code=[Filtered]' } }],
     });
   });
 });
