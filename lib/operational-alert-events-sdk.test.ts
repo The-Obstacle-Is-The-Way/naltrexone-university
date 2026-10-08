@@ -11,6 +11,9 @@ let transportFlushes = true;
 beforeAll(() => {
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
+    // CI and Vercel give Sentry a release, which turns on release-health
+    // sessions; set one here so a run without it proves the same thing.
+    release: 'operational-alert-test',
     ...SENTRY_SERVER_SETTINGS,
     transport: () => ({
       send: async (envelope: unknown) => {

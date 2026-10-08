@@ -71,7 +71,8 @@ the `OperationalAlerts` port, beside the log line they already write. The adapte
 sends a Sentry event that carries the kind, a count, the cooldown window and
 whether the shared cooldown held. `scrubEvent` keeps an alert event to those
 fields, so it carries no request, user, breadcrumb, ID or address, whatever the
-scope it was raised in held.
+scope it was raised in held. The server sends no release-health sessions,
+which would copy the scope's user past `scrubEvent`.
 
 - **Delivery.** Each kind and fixed six-hour window opens its own Sentry issue,
   and the workflow "Operational alerts — email the owner (DEBT-505)" emails each

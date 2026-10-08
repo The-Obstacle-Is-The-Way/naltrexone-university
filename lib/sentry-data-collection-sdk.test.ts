@@ -32,6 +32,8 @@ beforeAll(() => {
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
     environment: 'production',
+    // As on CI and Vercel, where a release turns on release-health sessions.
+    release: 'sentry-data-collection-test',
     ...SENTRY_SERVER_SETTINGS,
     tracesSampleRate: 1,
     transport: () => ({

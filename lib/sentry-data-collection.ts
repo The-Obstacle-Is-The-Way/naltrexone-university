@@ -249,6 +249,26 @@ export function scrubSpan(span: StreamedSpan): StreamedSpan {
   return span;
 }
 
+type Integration = Extract<
+  NonNullable<NonNullable<Parameters<typeof Sentry.init>[0]>['integrations']>,
+  unknown[]
+>[number];
+
+/**
+ * The server's integrations: Sentry's defaults without `ProcessSession`. Once
+ * Sentry has a release, as on CI and Vercel, that integration sends a
+ * release-health session envelope that copies the scope's user, and
+ * `beforeSend` never sees it (DEBT-505). The server does not use release
+ * health.
+ */
+export function withoutProcessSession(
+  integrations: Integration[],
+): Integration[] {
+  return integrations.filter(
+    (integration) => integration.name !== 'ProcessSession',
+  );
+}
+
 /**
  * The server SDK's settings apart from its key and environment, kept here so
  * the real-SDK tests initialise Sentry with what `instrumentation.ts` uses.
@@ -261,6 +281,7 @@ export function scrubSpan(span: StreamedSpan): StreamedSpan {
 export const SENTRY_SERVER_SETTINGS = {
   tracesSampleRate: 0.05,
   maxBreadcrumbs: 0,
+  integrations: withoutProcessSession,
   dataCollection: SENTRY_DATA_COLLECTION,
   beforeSend: scrubServerEvent,
   beforeSendSpan: scrubSpan,
