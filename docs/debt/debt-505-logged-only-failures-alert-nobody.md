@@ -86,7 +86,7 @@ Option 2.
 - [ ] Engineering: on a deployment, one test event per alert kind, raised from its real call site (the proxy for BUG-323's kind), reaches the Sentry issue alert routed to the owner, recorded with counts only.
 - [ ] Engineering: a second alert of one kind, in a later window while the first issue is still open, opens a new issue and emails again.
 - [x] Engineering: the alerts' workflow lives on the server project, whose key no browser receives, and is read back from Sentry's API as enabled (2026-10-08).
-- [ ] Engineering: after the first deployment with the new `SENTRY_DSN`, a server event arrives in the server project and none in the web project.
+- [x] Engineering: after the first deployment with the new `SENTRY_DSN`, a server event arrives in the server project and none in the web project. Promotion #1424 deployed at 06:03Z on 2026-10-08. By 07:43Z the server project held spans from production and Preview, and the web project held no event or span from any environment (Sentry API counts only).
 - [ ] Engineering: a test alert from a deployment reaches the owner through it.
 - [ ] The alerts listed above no longer exist as log lines alone.
 
