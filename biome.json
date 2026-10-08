@@ -221,12 +221,14 @@
       "includes": [
         "src/adapters/shared/server-tracing.ts",
         "src/adapters/shared/operational-alert-events.ts",
+        "src/adapters/shared/cron-monitor.ts",
         "instrumentation.ts",
         "sentry.client.config.ts",
         "lib/report-client-error.ts",
         "lib/sentry-data-collection.ts",
         "lib/sentry-data-collection-sdk.test.ts",
         "lib/operational-alert-events-sdk.test.ts",
+        "lib/cron-monitor-sdk.test.ts",
         "vitest.browser.setup.ts"
       ],
       "linter": {

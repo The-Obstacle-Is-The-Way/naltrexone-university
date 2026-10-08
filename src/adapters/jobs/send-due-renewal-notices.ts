@@ -25,6 +25,7 @@ import type {
 } from '@/src/application/use-cases';
 import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { DAY_MS, nextAnniversaryRenewalAt } from '@/src/domain/services';
+import type { CronMonitor } from '../shared/cron-monitor';
 import {
   type OperationalAlertDrillCycles,
   type OperationalAlertDrillOutcome,
@@ -37,6 +38,16 @@ export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT = 80;
 export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
 export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
+// DEBT-505: the job's Sentry cron monitor. Vercel's Hobby plan starts a daily
+// cron at any time within its hour, so a run counts as missed only after 90
+// minutes; one still running after six counts as timed out, since the
+// function stops at five.
+export const SEND_RENEWAL_NOTICES_MONITOR: CronMonitor = {
+  slug: 'send-renewal-notices',
+  schedule: '0 9 * * *',
+  checkinMarginMinutes: 90,
+  maxRuntimeMinutes: 6,
+};
 // DEBT-414 F01: renewals are first selected at 35 days and retried daily down
 // to the shared 30-day minimum (RENEWAL_NOTICE_MINIMUM_DAYS); one inside that
 // minimum without a sent notice is alerted, and dispatch refuses it (F07).

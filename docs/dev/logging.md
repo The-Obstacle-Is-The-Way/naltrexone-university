@@ -115,6 +115,22 @@ which would copy the scope's user past `scrubEvent`.
   back, so the next daily run retries. A manual run (`vercel crons run
   /api/cron/send-renewal-notices`) sends one only if the current cycle's has
   not gone out.
+- **Watcher.** Neither the alerts nor the drill notice their own absence: a
+  stopped cron raises nothing. The renewal job checks in with the Sentry cron
+  monitor `send-renewal-notices` on each run it admits, and a daily GitHub
+  Actions job, "Operational alert watcher"
+  (`scripts/operational-alert-watcher.ts`), reads Sentry at 11:37 UTC. It keeps
+  one GitHub issue, "Operational alerts may not be reaching the owner", open
+  while the job has not checked in for a day or its last run failed, the
+  alerts' workflow is disabled or no longer as set up, the workflow has sent
+  nothing in 32 days, no drill reached Sentry in 32 days, more than 80% of the
+  monthly errors are used, or Sentry dropped errors in the last two days. It
+  closes the issue once every check passes. It reads Sentry with the
+  repository secret `SENTRY_WATCHER_TOKEN`: in Sentry, Settings → Custom
+  Integrations → Create New Integration → Internal Integration, with Read on
+  Project, Issue & Event, Organization and Alerts and nothing else. Without the
+  token the issue says the watcher is not configured; a read the token cannot
+  make is named in the issue with its HTTP status.
 
 | Kind | Meaning | First steps |
 | --- | --- | --- |
@@ -124,7 +140,7 @@ which would copy the scope's user past `scrubEvent`.
 | `renewal_notice_outcome_unknown` | The email provider's answer was ambiguous, so the notice is quarantined and never resent automatically. | The row is `outcome_unknown`. Check the provider's dashboard before any manual resend. |
 | `checkout_stripe_holds_unrecorded` | A refused checkout could not record the subscription Stripe already holds (BUG-321). | Compare the user's subscription row with Stripe. The reconcile cron updates only rows that exist, so a missing row waits for the subscription's next webhook; resend its latest event from the Stripe Dashboard to record it now. |
 | `clerk_backend_call_limiter_failed` | The sign-in limiter's database call failed, so it is letting requests through (BUG-323). | Check the database. While it fails, only the firewall rule bounds Clerk's Backend API calls. |
-| `operational_alert_drill` | A drill: the renewal job sends one per fixed 30-day cycle, through the same path as the deadline alerts. | None; its email proves the path works. If none arrives for 35 days, treat the alert path as broken: check the server project's recent issues for `alert.kind:operational_alert_drill`, its "Operational alerts — email the owner (DEBT-505)" workflow, and `SENTRY_DSN`. |
+| `operational_alert_drill` | A drill: the renewal job sends one per fixed 30-day cycle, through the same path as the deadline alerts. | None; its email proves the path works. If none arrives for 32 days, the watcher's issue says so; treat the alert path as broken: check the server project's recent issues for `alert.kind:operational_alert_drill`, its "Operational alerts — email the owner (DEBT-505)" workflow, and `SENTRY_DSN`. |
 
 ## Practices
 

@@ -13,8 +13,10 @@ import {
   listAnnualSubscriptionsDue,
   SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
+  SEND_RENEWAL_NOTICES_MONITOR,
   sendDueRenewalNotices,
 } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { withCronMonitor } from '@/src/adapters/shared/cron-monitor';
 import { createRenewalNoticeCronHandler } from './route-handler';
 
 // Next.js requires route-segment configuration to be a statically analyzable literal.
@@ -31,6 +33,7 @@ export function createSendRenewalNoticesCronHandler(
       cronSecret: container.env.CRON_SECRET,
       logger: container.logger,
       createRateLimiter: container.createRateLimiter,
+      monitor: (run) => withCronMonitor(SEND_RENEWAL_NOTICES_MONITOR, run),
       run: () =>
         sendDueRenewalNotices(
           {
