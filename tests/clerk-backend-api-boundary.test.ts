@@ -125,7 +125,13 @@ describe("Clerk's Backend API boundary", () => {
         'instrumentation.ts',
       ]),
     );
-    expect(paths.some((path) => NOT_PRODUCTION.test(path))).toBe(false);
+    // Test code may use the SDK's errors and Clerk's real answers.
+    expect(paths).not.toContain(
+      'src/adapters/gateways/test-helpers/clerk-sdk-errors.ts',
+    );
+    expect(paths).not.toContain(
+      'src/adapters/gateways/clerk-auth-gateway-session.test.ts',
+    );
   });
 
   it('finds no Backend API use outside the composition root', () => {

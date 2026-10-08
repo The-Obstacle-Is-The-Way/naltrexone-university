@@ -14,7 +14,7 @@
 
 Some request shapes make Clerk's SDK, inside our middleware, call Clerk's Backend API with our secret key before the request is answered. Anyone can send them, without an account.
 
-Clerk limits each production instance's Backend API calls, and every signed-in page shares that allowance: `currentUser()` is one such call. So enough of these requests would use the allowance up, and every signed-in page, practice and subscribe would fail until they stopped. People could still sign in, but nothing behind sign-in would work.
+Clerk limits each production instance's Backend API calls, and every signed-in page shares that allowance: until DEBT-503 item 1, each signed-in page made one through `currentUser()`, and since then a first visit, a checkout and a trial card setup do. So enough of these requests would use the allowance up, and every signed-in page, practice and subscribe would fail until they stopped. People could still sign in, but nothing behind sign-in would work.
 
 This record is deliberately general. The repository is public, and the behaviour is in Clerk's SDK, which other Clerk customers also run.
 

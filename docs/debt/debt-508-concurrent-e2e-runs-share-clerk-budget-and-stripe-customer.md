@@ -31,7 +31,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 - **One Clerk rate budget for every lane.**
   - Clerk limits a development instance's Backend API to 100 requests per 10 seconds per instance ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)).
   - CI, the daily hosted-checkout smoke and every local clone use one Clerk user on one instance.
-  - The app makes one `currentUser()` call per signed-in request (`lib/container.ts`), which is [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1.
+  - Until [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 (implemented 2026-10-07, awaiting release), the app made one `currentUser()` call per signed-in request (`lib/container.ts`).
   - The test helpers add more lookups:
     - Global setup looks the user up three times: preflight, the seed and the reset.
     - The reset looks it up again before each mutating test (`tests/e2e/helpers/e2e-reset-shared.ts`, `resolveClerkUserIdByEmail`).
@@ -95,7 +95,7 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
 
 | Failure | Cause | Record |
 | --- | --- | --- |
-| Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, next |
+| Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, implemented; awaiting release |
 | Runs can change each other's Stripe state (a hazard; it caused none of today's failures) | One Stripe customer per lane | This record |
 | Signed-in tests fail after the stored token expires | A failed Clerk session restore, undiagnosable | [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) |
 | `codecov/patch` missing after a good upload | Codecov drops the notification | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) |

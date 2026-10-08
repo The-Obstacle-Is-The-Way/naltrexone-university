@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; it must ship before paid acquisition, after DEBT-505
+**Status:** Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before paid acquisition or 35 days before the earliest live renewal
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -12,7 +12,7 @@
 
 ## Summary
 
-The legally required renewal notices and the renewal acknowledgment go to our stored copy of the user's email. No send asks Clerk, the source of truth. A change reaches the stored copy only through Clerk's `user.updated` webhook, or when the user next starts a checkout or trial card setup, which refresh it from Clerk. Clerk documents that webhook deliveries are not guaranteed.
+The legally required renewal notices and the renewal acknowledgment go to our stored copy of the user's email. No send asks Clerk, the source of truth. A change reaches the stored copy only through Clerk's `user.updated` webhook, when the user next starts a checkout or trial card setup, which refresh it from Clerk, or through BUG-284's stale-owner resolver. Clerk documents that webhook deliveries are not guaranteed.
 
 So an annual subscriber who changed their address, and has not started a checkout or trial card setup since, can be sent a legal notice at an old address. That address may now belong to someone else.
 
@@ -28,10 +28,10 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
   - At send time, dispatch re-reads `users.email` and supersedes a notice whose address changed (`dispatch-renewal-notice-delivery.ts`). That is still our copy, not Clerk's.
 - **The acknowledgment** is queued from `users.email` inside the Stripe webhook's transaction, and dispatched without a recheck (`stripe-webhook-controller.ts`).
 - **Which address the law wants.** DEBT-414 F07 decided that notices go to the account's *current* email, and nothing requires the address given at consent ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)). Counsel still holds F19d, whether email is "reasonably calculated to be seen".
-- **How the stored copy changes today.**
-  - Each signed-in request's `currentUser()` upsert (removed by DEBT-503 item 1).
+- **How the stored copy changes,** since DEBT-503 item 1. Before it, every signed-in request's `currentUser()` upsert also wrote it.
   - The `user.updated` webhook: Svix-verified, recorded on failure and reprocessed on redelivery (`clerk-webhook-controller.ts`).
-  - Provisioning.
+  - The refresh when the user starts a checkout or trial card setup.
+  - Provisioning, and BUG-284's stale-owner resolver.
   We have no replay of our own. Both email selectors take the primary address, or else the first, without checking verification. DEBT-502 item 3 decided "verified only".
 - **What Clerk and Svix guarantee.**
   - Clerk: webhooks are not for synchronous flows, may be duplicated or out of order, and "deliveries are not guaranteed". When order matters, read current state from the Backend API ([overview](https://clerk.com/docs/guides/development/webhooks/overview), [syncing](https://clerk.com/docs/guides/development/webhooks/syncing)).
@@ -39,7 +39,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 - **Stripe's copy.**
   - Set once, at `customers.create` (`stripe-customers.ts`), and never updated. There is no `customer.updated` handling.
   - The billing portal lets the customer edit it (`stripe-portal-configurations.ts`).
-  - Stripe's upcoming-renewal email goes to this copy. DEBT-414 F19a lists it as a *candidate* for Massachusetts' 5–30-day notice, to be verified first.
+  - Stripe's upcoming-renewal email goes to this copy. DEBT-414 F19a listed it as a candidate for Massachusetts' 5–30-day notice; that path closed on 2026-10-07 (item 5 below).
 - **Queue mechanics.**
   - **No second queuing.** The job's already-queued check ignores status, and the scheduled unique index includes the destination (`db/schema.ts`). So a notice superseded while the stored address is unchanged is never queued again.
   - **Few runs.** The window from renewal minus 35 days to renewal minus 30 days gets 4–6 runs of the daily cron (Vercel Hobby fires it within about ±59 minutes). A notice superseded on the last run is never sent.
@@ -92,7 +92,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
    - Prerequisite: the owner's Clerk setting "Verify at sign-up" in both instances.
 5. **Stripe's copy follows Clerk, and is never a legal channel.**
    - **One writable source.** Clerk's verified address is the only one the user maintains. Every write of it, through provisioning, the webhook, the send-time lookup and the reconcile, pushes it to the Stripe customer. `email` leaves the portal's allowed updates, so receipts and invoices track the account address instead of the sign-up address.
-   - **No legal reliance.** No notice DEBT-414 requires relies on Stripe's emails. Their address was customer-editable until now, their content is not ours, and we get no per-delivery evidence. F19a's Stripe path closes, and its fallback is the recommendation: our own Massachusetts reminder about 25 days before the cancellation deadline, with a send-by limit and a missed-deadline alert. Whether the rule applies stays with the owner and counsel, as does F19c's per-charge notice.
+   - **No legal reliance.** No notice DEBT-414 requires relies on Stripe's emails. Their address is customer-editable until this item removes it from the portal, their content is not ours, and we get no per-delivery evidence. F19a's Stripe path closes, and its fallback is the recommendation: our own Massachusetts reminder about 25 days before the cancellation deadline, with a send-by limit and a missed-deadline alert. Whether the rule applies stays with the owner and counsel, as does F19c's per-charge notice.
    - The owner may instead choose a separate billing contact; that is a product decision.
 6. **Daily reconcile, later (P3).**
    - Compare stored emails with Clerk for users with live subscriptions, filtering the Backend API by up to 100 user IDs per call.
@@ -113,6 +113,6 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 - [ ] A real-Postgres test shows a changed address re-queued and sent in the same run, including on the last eligible run. A held notice goes out once the user verifies.
 - [ ] Both email selectors refuse unverified addresses, and checkout refuses an unverified refreshed primary.
 - [ ] Clerk's address reaches the Stripe customer on every write, and the portal no longer offers an email edit.
-- [ ] DEBT-414 F19a no longer relies on Stripe's emails.
+- [x] DEBT-414 F19a no longer relies on Stripe's emails (2026-10-07: its Stripe path is recorded as closed).
 - [ ] The owner records a read-only count of live subscriptions, and the earliest renewal.
 - [ ] The reconcile ships with its alert, and runs clean for two weeks.

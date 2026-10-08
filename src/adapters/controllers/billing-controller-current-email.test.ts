@@ -58,7 +58,7 @@ describe('billing reads the current email before Stripe', () => {
     ).toMatchObject([{ userId: stored.id, email: 'fresh@example.com' }]);
   });
 
-  it('asks Clerk nothing when the rate limit refuses', async () => {
+  it('requests no current-email refresh when checkout is rate limited', async () => {
     const deps = createBillingControllerDeps({
       rateLimiter: new FakeRateLimiter({
         success: false,
@@ -76,7 +76,7 @@ describe('billing reads the current email before Stripe', () => {
     expect(deps.authGateway.requireUserCalls).toEqual([{}]);
   });
 
-  it('asks Clerk nothing for a replayed checkout', async () => {
+  it('requests no current-email refresh for a replayed checkout', async () => {
     const deps = createBillingControllerDeps();
     const input = {
       plan: 'monthly',
@@ -87,6 +87,42 @@ describe('billing reads the current email before Stripe', () => {
 
     await createCheckoutSession(input, deps);
     await createCheckoutSession(input, deps);
+
+    expect(deps.authGateway.requireUserCalls).toEqual([
+      {},
+      { currentEmail: true },
+      {},
+    ]);
+  });
+
+  it('requests no current-email refresh when card setup is rate limited', async () => {
+    const deps = createBillingControllerDeps({
+      rateLimiter: new FakeRateLimiter({
+        success: false,
+        limit: 10,
+        remaining: 0,
+        retryAfterSeconds: 60,
+      }),
+    });
+
+    await createTrialPaymentMethodSetupSession(
+      { expectedDisclosureVersion: '2026-09-28.2', renewalOptIn: true },
+      deps,
+    );
+
+    expect(deps.authGateway.requireUserCalls).toEqual([{}]);
+  });
+
+  it('requests no current-email refresh for a replayed card setup', async () => {
+    const deps = createBillingControllerDeps();
+    const input = {
+      expectedDisclosureVersion: '2026-09-28.2',
+      renewalOptIn: true,
+      idempotencyKey: '22222222-2222-2222-2222-222222222222',
+    } as const;
+
+    await createTrialPaymentMethodSetupSession(input, deps);
+    await createTrialPaymentMethodSetupSession(input, deps);
 
     expect(deps.authGateway.requireUserCalls).toEqual([
       {},

@@ -6,7 +6,7 @@
 **Now** — 2026-10-08.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
 - **In progress.** DEBT-503: item 1, identity from the session token, awaits its release; items 2–4 follow. DEBT-508, isolating concurrent E2E runs: its overlap check follows DEBT-503 item 1's release.
-- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-511 (legal notices read the address from Clerk at send time, with a bounded last-run fallback; it needs DEBT-505's alerts and must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
+- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-502 items 2 and 3 (DEBT-511's prerequisites), then DEBT-511 (legal notices read the address from Clerk at send time, with a bounded last-run fallback; it needs DEBT-505's alerts, and must ship before paid acquisition, or 35 days before the earliest live renewal if that is sooner), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then the rest of DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
@@ -27,7 +27,7 @@
 | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | In Progress — item 1 (identity from the session token) implemented; its check follows release; items 2–4 follow |
 | [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
 | [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Open — resolution decided below; it must ship before paid acquisition |
-| [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; it must ship before paid acquisition, after DEBT-505 |
+| [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before paid acquisition or 35 days before the earliest live renewal |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | In Progress — isolation implemented; CI's per-run evidence follows its merge, and the overlap check follows DEBT-503 item 1 |
 | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Open — resolution decided below |

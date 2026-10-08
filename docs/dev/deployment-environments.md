@@ -152,7 +152,7 @@ Since DEBT-503 item 1, a signed-in page serves the stored `users` row and does n
 - **Delivery.** Clerk sends webhooks through Svix, which retries a failed delivery for about 27 hours and disables an endpoint that keeps failing for 5 days. Deliveries are not guaranteed.
 - **Detect.** In the Clerk Dashboard, open Webhooks and the production endpoint, and look for failed messages or a disabled endpoint.
 - **Recover.** Fix the cause, re-enable the endpoint if it was disabled, then replay the failed messages from the same page, which can recover every failure since a chosen time. The webhook controller records each event by ID: a replay of an event it already processed is skipped, and one that failed is processed again.
-- **Replay promptly.** Until DEBT-511 ships, legal notices go to the stored email, so a missed `user.updated` can misdirect one.
+- **Replay promptly.** Until DEBT-511 ships, legal notices go to the stored email, so a missed `user.updated` can misdirect one; after it ships, a send under its last-run rule still can.
 
 ### `NEXT_PUBLIC_*` Vars Require Fresh Builds
 

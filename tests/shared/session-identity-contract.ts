@@ -14,10 +14,10 @@ import type {
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 // DEBT-503 item 1: a signed-in request reads our own row and the deletion
-// tombstone, and asks Clerk only to provision a missing row. These scenarios
+// tombstone; of these scenarios, it asks Clerk only to provision a missing row. They
 // run the real gateway over the maintained fakes and over Postgres, so both
-// agree on what a session resolves to and on when Clerk is asked. Clerk's
-// answers are the real SDK's, so each caller's file mocks `server-only`.
+// agree on what a session resolves to and on when Clerk is asked. Clerk's 404
+// is the real SDK's error, so each caller's file mocks `server-only`.
 
 export type SessionIdentityHarness = {
   userRepository: UserRepository;
