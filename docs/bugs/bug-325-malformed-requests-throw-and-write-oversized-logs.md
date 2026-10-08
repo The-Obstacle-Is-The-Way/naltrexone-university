@@ -72,7 +72,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   - **A plan upgrade,** to defend a risk the vendor rates rare. Not proportionate.
 - **Decided: accept, with a response plan.** If Sentry shows a sudden flood of garbage events, or the month's usage jumps:
   1. add the source IPs in the project's inbound filters;
-  2. create a new client key, deploy it to `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`, and revoke the old one.
+  2. create a new client key in the flooded project, deploy it (the browser project's to `NEXT_PUBLIC_SENTRY_DSN`, the server project's to `SENTRY_DSN`, since DEBT-505 split them), and revoke the old one.
 
   Spike protection limits the damage meanwhile. (First drafted as the primary P2 fix, and corrected after the owner challenged it on 2026-10-05.)
 

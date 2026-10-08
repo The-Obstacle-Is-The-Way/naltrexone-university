@@ -26,8 +26,7 @@ function createServices(
 
   return {
     ensurePlaceholderQuestionsPublished: vi.fn(async () => {}),
-    resolveClerkUserIdByEmail: vi.fn(async () => 'user_123'),
-    resolveAppUserIdByClerkUserId: vi.fn(async () => fixtureDbUser123Id),
+    resolveAppUserIdByEmail: vi.fn(async () => fixtureDbUser123Id),
     clearUserState: vi.fn(async () => {}),
     resolveRequiredQuestionFixtures: vi.fn(async () => questionFixtures),
     resolveRequiredChoiceFixtures: vi.fn(async () => choiceFixtures),
@@ -55,15 +54,11 @@ describe('runE2EUserStateReset', () => {
         sql: expect.any(Function),
       }),
     );
-    expect(services.resolveClerkUserIdByEmail).toHaveBeenCalledWith({
-      clerkSecretKey: env.CLERK_SECRET_KEY,
-      email: env.E2E_CLERK_USER_USERNAME,
-    });
-    expect(services.resolveAppUserIdByClerkUserId).toHaveBeenCalledWith(
+    expect(services.resolveAppUserIdByEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         databaseUrl: env.DATABASE_URL,
         sql: expect.any(Function),
-        clerkUserId: 'user_123',
+        email: env.E2E_CLERK_USER_USERNAME,
       }),
     );
     expect(services.clearUserState).toHaveBeenCalledWith(
@@ -136,8 +131,7 @@ describe('runE2EUserStateReset', () => {
 
     const services: E2EUserStateResetServices = {
       ensurePlaceholderQuestionsPublished: async () => {},
-      resolveClerkUserIdByEmail: async () => 'user_123',
-      resolveAppUserIdByClerkUserId: async () => fixtureDbUser123Id,
+      resolveAppUserIdByEmail: async () => fixtureDbUser123Id,
       clearUserState: async () => {
         callOrder.push('clear');
         state.completedSessions = 0;
@@ -197,82 +191,25 @@ describe('runE2EUserStateReset', () => {
     expect(state).toEqual(expectedBaseline);
   });
 
-  it('accepts Clerk paginated user-list response shape in the default resolver', async () => {
-    const env = createEnv();
-    const resolveAppUserIdByClerkUserId = vi.fn(async () => fixtureDbUser123Id);
-    const services: Partial<E2EUserStateResetServices> = {
-      ensurePlaceholderQuestionsPublished: vi.fn(async () => {}),
-      resolveAppUserIdByClerkUserId,
-      clearUserState: vi.fn(async () => {}),
-      resolveRequiredQuestionFixtures: vi.fn(async () => ({
-        placeholder01Id: fixtureQuestion01Id,
-        placeholder02Id: fixtureQuestion02Id,
-      })),
-      resolveRequiredChoiceFixtures: vi.fn(async () => ({
-        placeholder01CorrectChoiceId: fixtureChoice01CorrectId,
-        placeholder02IncorrectChoiceId: fixtureChoice02IncorrectId,
-      })),
-      seedDeterministicBaseline: vi.fn(async () => {}),
-      verifyDeterministicBaseline: vi.fn(async () => {}),
-    };
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ id: 'user_123' }] }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
-    );
-
-    try {
-      await expect(
-        runE2EUserStateReset({
-          env,
-          services,
-        }),
-      ).resolves.toBeUndefined();
-
-      expect(resolveAppUserIdByClerkUserId).toHaveBeenCalledWith(
-        expect.objectContaining({
-          databaseUrl: env.DATABASE_URL,
-          sql: expect.any(Function),
-          clerkUserId: 'user_123',
-        }),
-      );
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  it('fails fast when clerk user does not exist', async () => {
-    const env = createEnv();
-    const services = createServices({
-      resolveClerkUserIdByEmail: vi.fn(async () => null),
-    });
+  // DEBT-508: each test's reset ran a Clerk lookup, and concurrent runs share
+  // one Clerk instance's rate budget. The seed wrote the user this run, so the
+  // reset finds it by email and needs no Clerk secret at all.
+  it('needs no Clerk secret, since it finds the user in the database', async () => {
+    const services = createServices();
 
     await expect(
       runE2EUserStateReset({
-        env,
+        env: createEnv({ CLERK_SECRET_KEY: undefined }),
         services,
       }),
-    ).rejects.toThrow('[E2E_RESET:CLERK_USER_NOT_FOUND]');
-
-    expect(services.ensurePlaceholderQuestionsPublished).toHaveBeenCalledWith(
-      expect.objectContaining({
-        databaseUrl: env.DATABASE_URL,
-        sql: expect.any(Function),
-      }),
-    );
-    expect(services.resolveAppUserIdByClerkUserId).not.toHaveBeenCalled();
-    expect(services.clearUserState).not.toHaveBeenCalled();
-    expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
-    expect(services.resolveRequiredChoiceFixtures).not.toHaveBeenCalled();
-    expect(services.seedDeterministicBaseline).not.toHaveBeenCalled();
-    expect(services.verifyDeterministicBaseline).not.toHaveBeenCalled();
+    ).resolves.toBeUndefined();
+    expect(services.clearUserState).toHaveBeenCalled();
   });
 
   it('fails fast when app user row does not exist yet', async () => {
     const env = createEnv();
     const services = createServices({
-      resolveAppUserIdByClerkUserId: vi.fn(async () => null),
+      resolveAppUserIdByEmail: vi.fn(async () => null),
     });
 
     await expect(
@@ -298,7 +235,6 @@ describe('runE2EUserStateReset', () => {
   it('fails fast with actionable missing env errors', async () => {
     const env = createEnv({
       DATABASE_URL: undefined,
-      CLERK_SECRET_KEY: undefined,
       E2E_CLERK_USER_USERNAME: undefined,
     });
 
@@ -317,12 +253,10 @@ describe('runE2EUserStateReset', () => {
     const message = caughtError?.message ?? '';
     expect(message).toContain('[E2E_RESET] E2E user-state reset failed');
     expect(message).toContain('[E2E_RESET:DATABASE_URL_MISSING]');
-    expect(message).toContain('[E2E_RESET:CLERK_SECRET_KEY_MISSING]');
     expect(message).toContain('[E2E_RESET:E2E_CLERK_USER_USERNAME_MISSING]');
 
     expect(services.ensurePlaceholderQuestionsPublished).not.toHaveBeenCalled();
-    expect(services.resolveClerkUserIdByEmail).not.toHaveBeenCalled();
-    expect(services.resolveAppUserIdByClerkUserId).not.toHaveBeenCalled();
+    expect(services.resolveAppUserIdByEmail).not.toHaveBeenCalled();
     expect(services.clearUserState).not.toHaveBeenCalled();
     expect(services.resolveRequiredQuestionFixtures).not.toHaveBeenCalled();
     expect(services.resolveRequiredChoiceFixtures).not.toHaveBeenCalled();

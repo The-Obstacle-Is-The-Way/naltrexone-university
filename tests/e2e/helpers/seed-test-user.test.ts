@@ -7,6 +7,8 @@ const { fixtureOtherUserId, fixtureUser123Id } = vi.hoisted(() => ({
 
 type SeedTestSubscription =
   typeof import('./seed-test-user').seedTestSubscription;
+type ReseedTestSubscription =
+  typeof import('./seed-test-user').reseedTestSubscription;
 
 function createEnv(): Record<string, string> {
   return {
@@ -22,7 +24,10 @@ function createEnv(): Record<string, string> {
 
 function createSqlClient(results: unknown[]) {
   const queuedResults = [...results];
-  const sql = vi.fn(async () => queuedResults.shift() ?? []);
+  const sql = vi.fn(
+    async (_strings: TemplateStringsArray, ..._values: unknown[]) =>
+      queuedResults.shift() ?? [],
+  );
 
   return Object.assign(sql, {
     end: vi.fn(async () => {}),
@@ -42,6 +47,7 @@ function createStripeList<T>(firstPage: T[], allPages = firstPage) {
 
 describe('seedTestSubscription', () => {
   let seedTestSubscription: SeedTestSubscription;
+  let reseedTestSubscription: ReseedTestSubscription;
   let postgresMock: ReturnType<typeof vi.fn>;
   let sqlClient: ReturnType<typeof createSqlClient>;
   let customersList: ReturnType<typeof vi.fn>;
@@ -117,7 +123,9 @@ describe('seedTestSubscription', () => {
       }),
     );
 
-    ({ seedTestSubscription } = await import('./seed-test-user'));
+    ({ seedTestSubscription, reseedTestSubscription } = await import(
+      './seed-test-user'
+    ));
   });
 
   afterEach(() => {
@@ -235,6 +243,68 @@ describe('seedTestSubscription', () => {
 
     expect(customersCreate).not.toHaveBeenCalled();
     expect(subscriptionsCreate).not.toHaveBeenCalled();
+  });
+
+  // DEBT-508: concurrent E2E runs share one Clerk instance's rate budget, so
+  // the run looks its user up once, in preflight, and the seed takes that ID.
+  it('seeds the Clerk user it is given without asking Clerk', async () => {
+    vi.stubEnv('CLERK_SECRET_KEY', '');
+
+    await seedTestSubscription({ clerkUserId: 'clerk_user_given' });
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(sqlClient.mock.calls[0]).toContain('clerk_user_given');
+  });
+
+  it('retries a rate-limited Clerk lookup when no Clerk user is given', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response('slow down', { status: 429 }),
+    );
+
+    await seedTestSubscription();
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    expect(sqlClient.mock.calls[0]).toContain('clerk_user_123');
+  });
+
+  // DEBT-508: a test that restores the paid subscription mid-run reuses the
+  // Clerk user global setup stored this run, instead of asking Clerk again.
+  it('reseeds with the Clerk user global setup stored, without asking Clerk', async () => {
+    const storedClient = createSqlClient([
+      [{ clerk_user_id: 'clerk_user_stored' }],
+      [{ id: fixtureUser123Id }],
+      [],
+      [],
+      [],
+      [],
+    ]);
+    postgresMock.mockReturnValue(storedClient);
+    vi.stubEnv('CLERK_SECRET_KEY', '');
+
+    await reseedTestSubscription();
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    const [strings, ...values] = storedClient.mock.calls[0] ?? [[]];
+    expect(strings.join('?')).toContain('WHERE lower(email) = lower(?)');
+    expect(values).toEqual(['e2e-test@addictionboards.com']);
+    expect(storedClient.mock.calls[1]).toContain('clerk_user_stored');
+  });
+
+  it('writes the E2E email trimmed', async () => {
+    vi.stubEnv('E2E_CLERK_USER_USERNAME', '  e2e-test@addictionboards.com ');
+
+    await seedTestSubscription({ clerkUserId: 'clerk_user_given' });
+
+    expect(sqlClient.mock.calls[0]).toContain('e2e-test@addictionboards.com');
+  });
+
+  it('refuses to reseed before global setup has seeded the user', async () => {
+    postgresMock.mockReturnValue(createSqlClient([[]]));
+
+    await expect(reseedTestSubscription()).rejects.toThrow(
+      'global setup must seed the E2E user first',
+    );
+    expect(customersCreate).not.toHaveBeenCalled();
   });
 
   it('throws when the local E2E user upsert returns no row', async () => {

@@ -5,6 +5,7 @@ import {
   E2E_CLERK_AUTH_STATE_PATH,
   withClerkE2EAuthStateIfPresent,
 } from './helpers/clerk-auth-state';
+import { deleteE2ERunStripeCustomer } from './helpers/e2e-stripe-owner';
 
 teardown('global teardown', async ({ baseURL, browser }) => {
   try {
@@ -22,5 +23,7 @@ teardown('global teardown', async ({ baseURL, browser }) => {
     });
   } finally {
     await rm(E2E_CLERK_AUTH_STATE_PATH, { force: true });
+    // DEBT-508: a CI run attempt's own Stripe customer goes with it.
+    await deleteE2ERunStripeCustomer();
   }
 });

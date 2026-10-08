@@ -21,6 +21,7 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 const NOW_SECONDS = 1_800_000_000;
@@ -411,6 +412,7 @@ describe('proxy with the Clerk Backend API limit', () => {
   async function proxyWith(
     limiter: FakeRateLimiter,
     publishableKey = 'pk_live_x',
+    alertsLoaded: Promise<void> = Promise.resolve(),
   ) {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = publishableKey;
@@ -428,7 +430,10 @@ describe('proxy with the Clerk Backend API limit', () => {
     return {
       proxy: createProxy({
         loadBackendCallLimiter,
-        loadOperationalAlerts: async () => alerts,
+        loadOperationalAlerts: async () => {
+          await alertsLoaded;
+          return alerts;
+        },
       }),
       clerkRuns,
       loadBackendCallLimiter,
@@ -503,16 +508,29 @@ describe('proxy with the Clerk Backend API limit', () => {
   // After the response, so a request never waits on the failing database.
   it('raises the limiter-failure alert through waitUntil', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    const alertsLoaded = createDeferred<void>();
     const { proxy, alerts } = await proxyWith(
       new FakeRateLimiter(new Error('database unavailable')),
+      'pk_live_x',
+      alertsLoaded.promise,
     );
     const [request, event] = proxyInvocation(
       'https://example.com/pricing?__clerk_handshake_nonce=x',
     );
 
+    // The response does not wait for the alert.
     await proxy(request, event);
-    await getWaitUntilPromiseFromEvent(event);
+    let settled = false;
+    const afterResponse = getWaitUntilPromiseFromEvent(event)?.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+    expect(alerts.raised).toEqual([]);
 
+    // waitUntil holds the function open until the alert is raised.
+    alertsLoaded.resolve();
+    await afterResponse;
     expect(alerts.raised).toEqual([
       { kind: 'clerk_backend_call_limiter_failed', count: 1 },
     ]);

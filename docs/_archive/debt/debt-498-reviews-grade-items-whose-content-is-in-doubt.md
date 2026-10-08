@@ -1,21 +1,21 @@
 # DEBT-498: Reviews Grade Items Whose Content Is in Doubt
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — increment 2b, History's rows, result filters and sorts, awaits its release to production; due 2026-10-14
-**Status detail** (moved from the status line 2026-10-05, when status lines became one line): Verifying — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows, result filters and sorts, and Review & Submit's corrected-key label, awaits its release ([Progress](#progress))
+**Status:** Resolved — 2026-10-07; increments 1, 2a and 2b are in production through promotions #1372, #1377 and #1422
+**Status detail** (moved from the status line 2026-10-05, when status lines became one line): Resolved. Increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) reached production through promotions #1372 and #1377 on 2026-10-05. Increment 2b (History's rows, result filters and sorts, and Review & Submit's corrected-key label) reached production through promotion #1422 on 2026-10-07 ([Progress](#progress)).
 **Priority:** P1
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-07
+**Verification receipts:** promotions #1372 and #1377 (2026-10-05). #1418, through promotion #1422: merge `1e2a5498`, production alias 2026-10-07T18:53:48Z, `main` CI run 37668412704.
 
 ---
 
 ## Summary
 
-**Current position:** the answer views, navigators, session breakdown and Dashboard are fixed in production (increments 1 and 2a below). Increment 2b fixes History's rows, result filters and sorts, and Review & Submit's label for an answer on a corrected key; it awaits release. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
+**Current position:** every surface is fixed in production. Increments 1 and 2a cover the answer views, navigators, session breakdown and Dashboard. Increment 2b covers History's rows, result filters and sorts, and Review & Submit's label for an answer on a corrected key. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
 
-[ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) leaves an item out of every score when its content is in doubt: its answer key was corrected after the learner answered, it was withdrawn, or it is under review. The reason given is that such an item "should neither penalize nor credit the learner". The pages that show the attempt still grade it.
+[ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) leaves an item out of every score when its content is in doubt: its answer key was corrected after the learner answered, it was withdrawn, or it is under review. The reason given is that such an item "should neither penalize nor credit the learner". The pages that show the attempt still grade it.
 
 The review of a key-corrected attempt shows the caution first: "The answer to this question was corrected after you answered. This attempt isn't scored." Below it, the page grades the attempt against the superseded key:
 - the old keyed choice is highlighted green;
@@ -173,7 +173,7 @@ The code:
 
 ## Verification
 
-Criteria to meet before closing. Increments 1 and 2a are in production; increment 2b's release is the remaining check.
+Criteria to meet before closing, all met: increments 1, 2a and 2b are in production.
 
 - [x] Each surface above shows "Not scored", and no success or destructive grading, for a key-corrected, withdrawn or under-review item.
 - [x] Every scored item still shows its grade as before.
@@ -182,11 +182,11 @@ Criteria to meet before closing. Increments 1 and 2a are in production; incremen
 - [x] DEBT-496's spec asserts the ungraded review, and the History row's "Not scored".
 - [x] Removing the in-doubt check from each surface fails a test (increments 1, 2a and 2b each record theirs).
 - [x] Screenshots of each surface are viewed: the reviews and the Dashboard (increments 1 and 2a), and the rest in increment 2b.
-- [ ] Increment 2b is in production, through its promotion.
+- [x] Increment 2b is in production, through its promotion: #1422 (`1e2a5498`), aliased at 2026-10-07T18:53:48Z. The promotion's first CI run lost its stored Clerk session to a failed token refresh; Clerk listed the session still active. The cause was recorded on #1422, and the one re-run passed.
 
 ## Related
 
-- [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decisions 2 and 4: what a learner sees, and key corrections.
-- [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md): the notices and scores.
-- [DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md): the end-to-end screenshots that showed this.
+- [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decisions 2 and 4: what a learner sees, and key corrections.
+- [DEBT-493](debt-493-learner-scores-and-labels-when-content-changes.md): the notices and scores.
+- [DEBT-496](debt-496-content-change-notices-route-level-proof.md): the end-to-end screenshots that showed this.
 - `docs/frontend/pattern-registry.md`: F-11, F-12 and F-13.

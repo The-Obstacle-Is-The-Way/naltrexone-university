@@ -149,11 +149,27 @@ jobs:
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL }}
           E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
           E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-          E2E_STRIPE_OWNER: github-ci
+          # DEBT-508: each run attempt gets its own Stripe test customer, so
+          # concurrent runs never change each other's subscriptions.
+          E2E_STRIPE_OWNER: github-ci-${{ github.run_id }}-${{ github.run_attempt }}
 
       # BUG-328: every HTML report carries Clerk development tokens from the
       # setup steps, so it is never uploaded. A failed run uploads its failure
       # output only after this scan finds no token in it.
+      # DEBT-510: Codecov sometimes processes the upload and never posts
+      # codecov/patch, which the merge guard requires. Sending the
+      # notification again here, minutes after the upload, gives it a second
+      # trigger; Codecov still computes the result from the uploads, so this
+      # cannot create a pass. A failure here is visible but never fails CI.
+      - name: Send Codecov notifications
+        if: ${{ !cancelled() && steps.codecov.outcome == 'success' }}
+        continue-on-error: true
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          run_command: send-notifications
+          fail_ci_if_error: true
+
       - name: Scan Playwright output
         id: playwright_output_scan
         if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' }}

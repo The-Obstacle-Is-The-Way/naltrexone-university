@@ -17,6 +17,7 @@ import { createUser } from '@/src/domain/test-helpers';
 import type { BillingControllerDeps } from '../billing-controller';
 
 export type BillingControllerTestDeps = BillingControllerDeps & {
+  authGateway: FakeAuthGateway;
   createCheckoutSessionUseCase: FakeCreateCheckoutSessionUseCase;
   createPortalSessionUseCase: FakeCreatePortalSessionUseCase;
   createTrialPaymentMethodSetupSessionUseCase: FakeCreateTrialPaymentMethodSetupSessionUseCase;
@@ -30,6 +31,8 @@ export type BillingControllerTestDeps = BillingControllerDeps & {
 
 export function createBillingControllerDeps(overrides?: {
   user?: User | null;
+  /** What a `currentEmail` refresh returns; defaults to `user`. */
+  currentEmailUser?: User | null;
   appUrl?: string;
   clerkUserId?: string | null;
   checkoutOutput?: CreateCheckoutSessionOutput;
@@ -56,7 +59,12 @@ export function createBillingControllerDeps(overrides?: {
 
   const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
 
-  const authGateway = new FakeAuthGateway(user);
+  const authGateway = new FakeAuthGateway(
+    user,
+    overrides?.currentEmailUser === undefined
+      ? {}
+      : { currentEmailUser: overrides.currentEmailUser },
+  );
 
   const createCheckoutSessionUseCase = new FakeCreateCheckoutSessionUseCase(
     overrides?.checkoutOutput ?? { url: 'https://stripe/checkout' },
