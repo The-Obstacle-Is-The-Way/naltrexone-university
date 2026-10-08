@@ -6,7 +6,7 @@
 **Now** — 2026-10-07.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
 - **In progress.** DEBT-508, isolating concurrent E2E runs.
-- **Next.** DEBT-503 item 1 (identity from the session token; it also ends DEBT-508's Clerk 429s when E2E runs overlap), then DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
+- **Next.** DEBT-503 item 1 (identity from the session token; it removes the app's per-request Clerk lookup, the cause of DEBT-508's Clerk 429s when E2E runs overlap, which are checked after it ships), then DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
