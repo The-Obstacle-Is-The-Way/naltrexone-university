@@ -77,6 +77,14 @@ overrides:
   # to the 3.x line; 3.3.18 satisfies postcss's ^3.3.16. Aged past the 7-day
   # gate 2026-08-14T16:41:05Z (published 2026-08-07T16:41:05Z).
   'nanoid@3': 3.3.18
+  # Security: GHSA-68fv-2mgg-jv7q (alert #80) — unvalidated indexed-map
+  # section offsets let a crafted source map block the event loop. Build- and
+  # test-only: postcss and @tailwindcss/node read repository CSS at build time,
+  # and css-tree (jsdom) and magicast (coverage) run only in tests; no
+  # attacker-supplied source map is parsed, so defense-in-depth. 1.2.2 satisfies
+  # every consumer's ^1.x range (DEBT-506). Aged past the 7-day gate (published
+  # 2026-09-30T14:08:09Z).
+  source-map-js: 1.2.2
   # Security: GHSA-f88m-g3jw-g9cj — sharp < 0.35.0 bundles a libvips affected by
   # four inherited CVEs (memory-safety on untrusted image input): CVE-2026-33327
   # (VIPS dimension overflow), CVE-2026-33328 (GIF integer overflow, 32-bit),
