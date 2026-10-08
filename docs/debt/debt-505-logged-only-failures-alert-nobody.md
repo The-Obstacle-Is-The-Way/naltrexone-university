@@ -50,6 +50,7 @@ Option 2.
   - Then one cooldown key on the existing Postgres limiter makes it at most one event per kind per fixed six-hour window across all instances.
   - If the limiter call fails, the event is still sent, tagged as sent without the shared cooldown, and the in-process cooldown bounds it to one per kind per server instance per six hours. Suppressing it instead would silence BUG-323's alert, since that alert reports this same database failing.
   - That fallback has no bound across instances: an outage under load can send one event per kind from each running instance. Sentry's spike protection is the backstop, and the flood response in [Logging](../dev/logging.md) applies.
+- **Every episode notifies.** Sentry emails on a new issue, or one that escalates or regresses, but not on a later event in an issue still open. So each kind and fixed six-hour window, the window the shared cooldown counts in, opens its own issue. An error-level event opens as a High-priority issue, and the project's enabled workflow "Send a notification for high priority issues" emails on a new one in production (read from Sentry's API on 2026-10-08). No one has to resolve an earlier issue for the next alert to arrive.
 - **Keep the log line** beside each alert, for immediate diagnosis.
 - **Renewal notices are detected from state.** The renewal job already computes missed deadlines from the database each run, so a deadline missed while logs were lost is still found on the next run.
 - **Who uses it:**
@@ -59,10 +60,13 @@ Option 2.
   - BUG-323's limiter failure;
   - [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 3's Clerk cap trips.
 
+*Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*
+
 ## Verification
 
 - [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
 - [ ] Engineering: on a deployment, one test event per alert kind, raised from its real call site (the proxy for BUG-323's kind), reaches the Sentry issue alert routed to the owner, recorded with counts only.
+- [ ] Engineering: a second alert of one kind, in a later window while the first issue is still open, opens a new issue and emails again; and the workflow that emails on new High-priority production issues is read back from Sentry's API as enabled.
 - [ ] The alerts listed above no longer exist as log lines alone.
 
 ## Related
