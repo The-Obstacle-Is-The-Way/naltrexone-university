@@ -61,9 +61,9 @@ This affected every server error event until the fix. Operational alerts ([DEBT-
 - **`nonce`** joins the credential parameters `redactCredentialParams` matches.
 - **Stricter parameter matching.** `redactCredentialParams` finds a pair after a query or fragment separator or whitespace, and ends its value at the next of these. It also filters a value holding an encoded URL with a credential parameter. Before, a value ran to the end of free text, so an earlier harmless pair such as `retry=2` hid a later `?__clerk_handshake=…`; a fragment (`#access_token=…`) and an encoded nested URL were not checked at all.
 - **No console breadcrumbs in the browser.** `scrubBreadcrumb` drops them, as the server sends no breadcrumbs at all. A console line is free text from any script on the page, and its logged values are serialised by the SDK after the hook: an error by its message and stack, a URL by its address, any object by its fields. No scrubber could find every secret in it.
-- **Every other breadcrumb field in the browser.** `scrubBreadcrumb` redacts a breadcrumb's message and every string in its data, through arrays, plain objects and errors, rather than three named fields. An error is copied by its name, message, stack and own properties. The browser SDK writes a URL only to `url`, `from` and `to` today, but an SDK can add a field: the server SDK already writes `url.query`.
+- **Every other breadcrumb field in the browser.** `scrubBreadcrumb` redacts a breadcrumb's message and every string in its data, through arrays, plain objects and errors, rather than three named fields. An error is copied by its name, message, stack and own properties. Any other object becomes its type, such as `[object URL]`, because Sentry would serialise its fields or `toJSON` after the hook, so the hook fails closed. The browser SDK writes a URL only to `url`, `from` and `to` today, but an SDK can add a field: the server SDK already writes `url.query`.
 
-  *Corrected 2026-10-08 (#1430 review): the first fix kept console breadcrumbs and redacted their strings. A logged `Error`, `URL` or class instance passed the hook and Sentry then sent its text, and a credential after an earlier pair in the line was never checked.*
+  *Corrected 2026-10-08 (#1430 reviews): the first fix kept console breadcrumbs and redacted their strings. A logged `Error`, `URL` or class instance passed the hook and Sentry then sent its text, and a credential after an earlier pair in the line was never checked. The hook also kept any other object for Sentry to serialise; no code puts one in breadcrumb data today, but the hook now keeps only its type.*
 
 Sentry's own query filter keeps its list. Our hooks run last on every event, span, envelope header and breadcrumb, so a second copy of the list there would add nothing a test could see.
 
@@ -72,7 +72,7 @@ Tests:
 - Next.js's request span, opened through Next's own tracer, carries no `__clerk_handshake`, `nonce` or `code`, and an outgoing call's span no `nonce`, with `SENTRY_TRACE_LIFECYCLE=static` set;
 - the outgoing call receives no `sentry-trace` or `baggage` header;
 - a request that fell back to Next's error page sends no credential in any envelope, headers included;
-- `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field, an array attribute, a span link, free text where a harmless pair comes first, a fragment, an encoded nested URL, a dropped console line, a nested object with a cycle, and an error; and, through the real SDK's console integration with the browser's hooks, a console line logging text, an error, a URL and a class instance, of which nothing leaves, beside a navigation sent with its credential filtered.
+- `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field, an array attribute, a span link, free text where a harmless pair comes first, a fragment, an encoded nested URL, a dropped console line, a nested object with a cycle, an error, and objects reduced to their type; and, through the real SDK's console integration with the browser's hooks, a console line logging text, an error, a URL and a class instance, of which nothing leaves, beside a navigation sent with its credential filtered.
 
 **Implemented 2026-10-08,** as decided, in `lib/sentry-data-collection.ts` and `instrumentation.ts`. DEBT-505's real-SDK alert test also runs on `SENTRY_SERVER_SETTINGS` now. Each change was checked against a mutant:
 - without `maxBreadcrumbs: 0`, only the settings tests (`sentry-config.test.ts`) fail, since `scrubServerEvent` still drops the breadcrumbs;
@@ -82,7 +82,7 @@ Tests:
 - without `tracePropagationTargets: []`, the span test fails on the outgoing headers;
 - without the envelope header integration, the error-page test fails;
 - without array handling, or without link handling, its unit case fails; without `nonce`, its unit and SDK cases fail;
-- without dropping console breadcrumbs, the real-SDK breadcrumb test and its unit case fail; with the old pair pattern, six unit cases fail; without the nested-URL check, its unit case fails.
+- without dropping console breadcrumbs, the real-SDK breadcrumb test and its unit case fail; with the old pair pattern, six unit cases fail; without the nested-URL check, or without reducing other objects to their type, its unit case fails.
 
 Two independent reviews found the gaps closed after the first fix: the span gap that `scrubSpan` closes, then the lifecycle, the envelope header and the span links. Of their other findings, the scope path, the alert test's settings, the untyped settings object and this record's inaccuracies are fixed. The BUG-318 case the first called vacuous on the server stays: the server still must not send that token, which is what the case states.
 

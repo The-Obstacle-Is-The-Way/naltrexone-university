@@ -236,6 +236,35 @@ describe('scrubBreadcrumb', () => {
     expect((value.nested as { next: string }).next).toBe('/x?token=t');
   });
 
+  // Any other object Sentry would serialise after this hook, by its fields or
+  // its toJSON, so only its type is kept: the hook fails closed.
+  it('keeps only the type of an object it cannot redact', () => {
+    class Checkout {
+      returnUrl = '/cb?code=abc';
+    }
+
+    expect(
+      scrubBreadcrumb({
+        category: 'app',
+        data: {
+          link: new URL('https://x.test/cb?code=abc'),
+          checkout: new Checkout(),
+          when: new Date(0),
+          count: 3,
+          ok: true,
+          none: null,
+        },
+      })?.data,
+    ).toEqual({
+      link: '[object URL]',
+      checkout: '[object Object]',
+      when: '[object Date]',
+      count: 3,
+      ok: true,
+      none: null,
+    });
+  });
+
   // An error is copied by its name, message, stack and own properties.
   it("redacts credentials in an error's copy, leaving the error unchanged", () => {
     const error: Error & { url?: string; self?: unknown } = new Error(

@@ -264,8 +264,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 /**
  * A copy of `value` with credentials redacted in every string, through arrays,
- * plain objects and errors; other objects are kept, since Sentry serialises
- * them itself. An error is copied by its name, message, stack and own
+ * plain objects and errors; any other object becomes its type, such as
+ * `[object URL]`. An error is copied by its name, message, stack and own
  * enumerable properties. The values found are copied, never changed, and a
  * reference back to an enclosing value becomes `[Circular]`.
  */
@@ -275,7 +275,13 @@ function redactStrings(
 ): unknown {
   if (typeof value === 'string') return redactCredentialParams(value);
   const isError = isErrorValue(value);
-  if (!isError && !Array.isArray(value) && !isPlainObject(value)) return value;
+  if (!isError && !Array.isArray(value) && !isPlainObject(value)) {
+    // Sentry would serialise any other object after this hook, by its fields
+    // or its toJSON, past any redaction here; only its type is kept.
+    return value !== null && typeof value === 'object'
+      ? Object.prototype.toString.call(value)
+      : value;
+  }
   if (enclosing.has(value)) return '[Circular]';
   enclosing.add(value);
   const redactEntries = (entries: Array<[string, unknown]>) =>
