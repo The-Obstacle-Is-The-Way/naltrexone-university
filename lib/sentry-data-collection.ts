@@ -193,14 +193,18 @@ export function scrubEvent(
 }
 
 /**
- * `beforeBreadcrumb` in the browser: redacts credentials in every string of a
- * breadcrumb's data. The browser SDK writes a fetch, XHR or navigation URL to
+ * `beforeBreadcrumb` in the browser: redacts credentials in a breadcrumb's
+ * message and every string of its data. The browser SDK writes a fetch, XHR or navigation URL to
  * `url`, `from` and `to`. No field is named, because an SDK can add one: the
  * server SDK already writes the query to `url.query` (BUG-331).
  */
 export function scrubBreadcrumb(
   breadcrumb: Sentry.Breadcrumb,
 ): Sentry.Breadcrumb {
+  // A console breadcrumb also joins its arguments into the message.
+  if (typeof breadcrumb.message === 'string') {
+    breadcrumb.message = redactCredentialParams(breadcrumb.message);
+  }
   const data = breadcrumb.data;
   if (data) {
     for (const [field, value] of Object.entries(data)) {

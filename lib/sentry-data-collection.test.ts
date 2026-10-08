@@ -167,14 +167,19 @@ describe('scrubBreadcrumb', () => {
 
   // BUG-331: the server SDK also keeps the query in `url.query`. Every string
   // is redacted, so a field the SDK adds later is covered too.
-  it("redacts credentials in the strings of a breadcrumb's array data, such as a console line's arguments", () => {
+  // A console breadcrumb holds the line twice: its arguments, and joined as
+  // its message. In free text a value runs to the end, so more than the
+  // value can be filtered; that errs toward sending less.
+  it("redacts credentials in a console line's message and its arguments alike", () => {
     expect(
       scrubBreadcrumb({
         category: 'console',
+        message: 'redirect to /cb?code=abc 3',
         data: { arguments: ['redirect to /cb?code=abc', 3], logger: 'console' },
       }),
     ).toEqual({
       category: 'console',
+      message: 'redirect to /cb?code=[Filtered]',
       data: {
         arguments: ['redirect to /cb?code=[Filtered]', 3],
         logger: 'console',
