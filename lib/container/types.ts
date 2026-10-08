@@ -14,6 +14,7 @@ import type {
   PaymentGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import type {
   AttemptRepository,
   BookmarkRepository,
@@ -135,6 +136,7 @@ export type RepositoryFactories = {
 
 export type GatewayFactories = {
   createAuthGateway: () => AuthGateway;
+  createOperationalAlerts: () => OperationalAlerts;
   createPaymentGateway: () => PaymentGateway;
   createRateLimiter: () => RateLimiter;
   createSha256Hasher: () => Sha256Hasher;

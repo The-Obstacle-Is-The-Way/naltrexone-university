@@ -12,6 +12,7 @@ import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizz
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import {
@@ -146,6 +147,7 @@ export async function runCheckoutSuccessProviderContract(
       subscriptions,
       gateway,
       logger,
+      new FakeOperationalAlerts(),
       () => new Date(),
       createCheckoutRenewalTerms,
     );

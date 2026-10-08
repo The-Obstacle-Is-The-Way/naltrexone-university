@@ -21,6 +21,7 @@ import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-
 import { getRenewalNoticeProviderIdempotencyKey } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakePaymentGateway,
   FakeTransactionalEmailGateway,
 } from '@/src/application/test-helpers/fakes';
@@ -141,6 +142,7 @@ function createDeps(input: {
       },
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => now,
     ),
     transaction: (fn) =>

@@ -6,6 +6,7 @@ import {
 } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
   FakeSubscriptionRepository,
@@ -94,16 +95,18 @@ async function arrange(input: {
     configured: input.providerConfigured ?? true,
   });
   const logger = new FakeLogger();
+  const alerts = new FakeOperationalAlerts();
   const useCase = new DispatchRenewalNoticeDeliveryUseCase(
     repository,
     gateway,
     { subscriptions, users },
     hasher,
     logger,
+    alerts,
     () => input.currentTime ?? now,
     () => 'attempt-1',
   );
-  return { useCase, gateway, logger, repository };
+  return { useCase, gateway, logger, alerts, repository };
 }
 
 describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
@@ -161,7 +164,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
   ])(
     'supersedes the notice without a provider call when $label',
     async ({ arrangement, failureCode }) => {
-      const { useCase, gateway, logger } = await arrange(arrangement);
+      const { useCase, gateway, logger, alerts } = await arrange(arrangement);
 
       await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
         outcome: 'attempted',
@@ -173,11 +176,12 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
       });
       expect(gateway.sendInputs).toEqual([]);
       expect(logger.errorCalls).toEqual([]);
+      expect(alerts.raised).toEqual([]);
     },
   );
 
   it('refuses and alerts once the send-by cutoff, 30 days before renewal, has passed', async () => {
-    const { useCase, gateway, logger } = await arrange({
+    const { useCase, gateway, logger, alerts } = await arrange({
       currentTime: new Date(renewal.getTime() - 30 * DAY_MS + 1),
     });
 
@@ -195,6 +199,9 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
         msg: 'Renewal notice send-by cutoff passed',
         context: { deliveryId, noticeKind: 'renewal_notice' },
       },
+    ]);
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_send_by_cutoff_passed', count: 1 },
     ]);
   });
 
@@ -218,7 +225,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
   });
 
   it('refuses and alerts on a missed cutoff even when no email provider is configured', async () => {
-    const { useCase, gateway, logger } = await arrange({
+    const { useCase, gateway, logger, alerts } = await arrange({
       currentTime: new Date(renewal.getTime() - 30 * DAY_MS + 1),
       providerConfigured: false,
     });
@@ -232,6 +239,9 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
     });
     expect(gateway.sendInputs).toEqual([]);
     expect(logger.errorCalls).toHaveLength(1);
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_send_by_cutoff_passed', count: 1 },
+    ]);
   });
 
   it('leaves a still-valid notice queued when no email provider is configured', async () => {
@@ -345,7 +355,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
     );
 
     it('refuses and alerts once the send-by cutoff has passed', async () => {
-      const { useCase, gateway, logger } = await arrange({
+      const { useCase, gateway, logger, alerts } = await arrange({
         delivery: anniversaryNotice(),
         subscription: monthly,
         currentTime: new Date(renewal.getTime() - 30 * DAY_MS + 1),
@@ -359,6 +369,9 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
       });
       expect(gateway.sendInputs).toEqual([]);
       expect(logger.errorCalls).toHaveLength(1);
+      expect(alerts.raised).toEqual([
+        { kind: 'renewal_notice_send_by_cutoff_passed', count: 1 },
+      ]);
     });
   });
 

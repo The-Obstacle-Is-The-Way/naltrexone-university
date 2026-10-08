@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseTransactionalEmailPayloadSnapshot } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
   FakeTransactionalEmailGateway,
@@ -56,6 +57,7 @@ async function queuedPayloads(notices: readonly ScheduledRenewalNotice[]) {
     }),
     hasher,
     new FakeLogger(),
+    new FakeOperationalAlerts(),
     () => now,
     () => 'attempt-1',
   );

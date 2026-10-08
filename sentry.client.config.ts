@@ -3,13 +3,13 @@ import {
   SENTRY_DATA_COLLECTION,
   scrubBreadcrumb,
   scrubEvent,
+  sentryEnvironmentFor,
 } from '@/lib/sentry-data-collection';
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 if (dsn) {
-  const environment =
-    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+  const environment = sentryEnvironmentFor(process.env.NEXT_PUBLIC_VERCEL_ENV);
 
   Sentry.init({
     dsn,

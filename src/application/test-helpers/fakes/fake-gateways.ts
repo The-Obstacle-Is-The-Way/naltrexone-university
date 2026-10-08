@@ -54,14 +54,21 @@ export class FakeAuthGateway implements AuthGateway {
   }
 }
 
+// A scripted result may be a pending promise, for a limiter that has not
+// answered yet.
+type ScriptedRateLimitResult =
+  | RateLimitResult
+  | Error
+  | Promise<RateLimitResult>;
+
 export class FakeRateLimiter implements RateLimiter {
   readonly inputs: RateLimitInput[] = [];
-  private readonly results: Array<RateLimitResult | Error>;
+  private readonly results: ScriptedRateLimitResult[];
   readonly windows: Map<string, Date> = new Map();
   pruneCallCount = 0;
 
   constructor(
-    result?: RateLimitResult | Error | readonly (RateLimitResult | Error)[],
+    result?: ScriptedRateLimitResult | readonly ScriptedRateLimitResult[],
   ) {
     this.results = result
       ? Array.isArray(result)

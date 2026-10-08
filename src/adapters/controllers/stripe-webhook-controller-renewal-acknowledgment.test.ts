@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { WebhookEventResult } from '@/src/application/ports';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakePaymentGateway,
   FakeRenewalConsentRecordRepository,
   FakeRenewalNoticeDeliveryRepository,
@@ -116,6 +117,7 @@ function createHarness(input?: {
     },
     hasher,
     new FakeLogger(),
+    new FakeOperationalAlerts(),
     () => now,
     () => 'attempt-1',
   );

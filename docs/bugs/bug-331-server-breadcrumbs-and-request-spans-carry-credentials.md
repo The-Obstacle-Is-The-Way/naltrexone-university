@@ -21,7 +21,7 @@ So a server error event can carry, in clear:
 
 Request spans are worse: Next.js's own request span keeps the raw request URL, so any credential in a page's query reaches Sentry in clear. Production's sampled spans held none in the last 14 days (see Evidence).
 
-This affects every server error event today. Operational alerts, which [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) adds and has not yet released, will not be: its `scrubEvent` keeps an alert event to fixed fields, breadcrumbs dropped.
+This affects every server error event today. Operational alerts ([DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md)) are not affected: `scrubEvent` keeps an alert event to fixed fields, breadcrumbs dropped.
 
 ## Evidence
 
@@ -73,4 +73,4 @@ Tests:
 ## Related
 
 - [BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md): the scrubbers this extends.
-- [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md): whose review found this, and whose alert events, once released, carry fixed fields only.
+- [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md): whose review found this, and whose alert events carry fixed fields only.
