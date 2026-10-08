@@ -1,5 +1,5 @@
 import { inArray } from 'drizzle-orm';
-import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
 import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
@@ -13,8 +13,6 @@ import {
   createCleanupState,
   createIntegrationDb,
 } from './helpers';
-
-vi.mock('server-only', () => ({}));
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();

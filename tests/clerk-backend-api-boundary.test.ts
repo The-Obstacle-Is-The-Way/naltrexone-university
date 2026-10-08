@@ -51,6 +51,28 @@ describe("Clerk's Backend API boundary", () => {
     ]);
   });
 
+  // A session token minted from a template, or with a custom lifetime, is a
+  // Backend API call on every request that asks for it.
+  it('flags getToken() called with options, but not without', () => {
+    expect(
+      findClerkBackendApiUses([
+        {
+          path: 'app/page.tsx',
+          text: "const token = await (await auth()).getToken({ template: 'x' });",
+        },
+        { path: 'app/other.tsx', text: 'const token = await getToken();' },
+      ]),
+    ).toEqual([{ path: 'app/page.tsx', use: 'getToken with options' }]);
+  });
+
+  it('treats JavaScript and JSX files as production source', () => {
+    expect(
+      ['components/x.jsx', 'lib/x.mjs', 'app/x.tsx'].every((path) =>
+        PRODUCTION_SOURCE.test(path),
+      ),
+    ).toBe(true);
+  });
+
   it('flags a barrel that re-exports a Clerk package', () => {
     expect(
       findClerkBackendApiUses([
