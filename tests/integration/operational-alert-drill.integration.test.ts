@@ -1,70 +1,55 @@
-import { randomUUID } from 'node:crypto';
+import { inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { DrizzleRateLimiter } from '@/src/adapters/gateways/drizzle-rate-limiter';
-import {
-  OPERATIONAL_ALERT_DRILL_INTERVAL_MS,
-  raiseOperationalAlertDrillIfDue,
-} from '@/src/adapters/jobs/operational-alert-drill';
-import {
-  FakeLogger,
-  FakeOperationalAlerts,
-} from '@/src/application/test-helpers/fakes';
-import {
-  cleanupAfterEach,
-  closeConnection,
-  createCleanupState,
-  createIntegrationDb,
-} from './helpers';
+import * as schema from '@/db/schema';
+import { claimOperationalAlertDrillCycle } from '@/src/adapters/jobs/operational-alert-drill';
+import { closeConnection, createIntegrationDb } from './helpers';
 
 const { db, sql } = createIntegrationDb();
-const cleanup = createCleanupState();
+// Cycle numbers far beyond any real one, so no run of this test meets a row
+// the app wrote.
+const testCycles: number[] = [];
+function testCycle(): number {
+  const cycle = 1_000_000 + Math.floor(Math.random() * 1_000_000_000);
+  testCycles.push(cycle);
+  return cycle;
+}
 
 afterEach(async () => {
-  await cleanupAfterEach(db, cleanup);
+  if (testCycles.length === 0) return;
+  await db
+    .delete(schema.operationalAlertDrills)
+    .where(inArray(schema.operationalAlertDrills.cycle, testCycles.splice(0)));
 });
 
 afterAll(async () => {
   await closeConnection(sql);
 });
 
-// DEBT-505: the drill's 30-day gate on real Postgres, as the renewal job uses
-// it across cron runs and server instances.
-describe('the operational alert drill on Postgres', () => {
-  it('raises one drill per 30-day window, however many runs ask', async () => {
-    const key = `operational-alert-drill-test-${randomUUID()}`;
-    cleanup.rateLimitKeys.push(key);
-    const windowStart =
-      Math.floor(Date.now() / OPERATIONAL_ALERT_DRILL_INTERVAL_MS) *
-      OPERATIONAL_ALERT_DRILL_INTERVAL_MS;
-    const at = (offsetMs: number) => () => new Date(windowStart + offsetMs);
-    const alerts = new FakeOperationalAlerts();
-    const run = (now: () => Date) =>
-      raiseOperationalAlertDrillIfDue(
-        {
-          rateLimiter: new DrizzleRateLimiter(db, now),
-          alerts,
-          logger: new FakeLogger(),
-        },
-        { key },
-      );
+// DEBT-505: the drill's once-per-cycle claim on real Postgres, as the renewal
+// job makes it across cron runs, days and server instances.
+describe('the operational alert drill cycle claim on Postgres', () => {
+  it('lets exactly one of several concurrent claims of a cycle win', async () => {
+    const cycle = testCycle();
 
-    const outcomes = [
-      await run(at(60_000)),
-      await run(at(24 * 60 * 60 * 1000)),
-      ...(await Promise.all([
-        run(at(2 * 60 * 60 * 1000)),
-        run(at(3 * 60 * 60 * 1000)),
-      ])),
-      await run(at(OPERATIONAL_ALERT_DRILL_INTERVAL_MS + 60_000)),
-    ];
+    const claims = await Promise.all(
+      Array.from({ length: 6 }, () =>
+        claimOperationalAlertDrillCycle(cycle, { db }),
+      ),
+    );
 
-    expect(outcomes).toEqual([
-      'raised',
-      'not_due',
-      'not_due',
-      'not_due',
-      'raised',
-    ]);
-    expect(alerts.raised).toHaveLength(2);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+  });
+
+  it('lets the next cycle be claimed', async () => {
+    const cycle = testCycle();
+    const next = cycle + 1;
+    testCycles.push(next);
+
+    await expect(claimOperationalAlertDrillCycle(cycle, { db })).resolves.toBe(
+      true,
+    );
+    await expect(claimOperationalAlertDrillCycle(next, { db })).resolves.toBe(
+      true,
+    );
   });
 });

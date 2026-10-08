@@ -16,11 +16,7 @@ import {
 } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
-import type {
-  Logger,
-  OperationalAlerts,
-  RateLimiter,
-} from '@/src/application/ports';
+import type { Logger, OperationalAlerts } from '@/src/application/ports';
 import { RENEWAL_NOTICE_MINIMUM_DAYS } from '@/src/application/shared/renewal-notice-schedule';
 import type {
   ScheduledRenewalNotice,
@@ -320,8 +316,8 @@ export type SendDueRenewalNoticesJobDeps = {
   }) => Promise<number>;
   logger: Pick<Logger, 'warn' | 'error'>;
   alerts: OperationalAlerts;
-  /** The shared limiter that gates the alert drill to one per window. */
-  alertDrillGate: Pick<RateLimiter, 'limit'>;
+  /** Claims a 30-day alert drill cycle; true for its one winning claim. */
+  claimAlertDrillCycle: (cycle: number) => Promise<boolean>;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -356,7 +352,8 @@ export async function sendDueRenewalNotices(
   const startedAt = deps.monotonicNow();
   // DEBT-505: first, so the drill goes out whatever the notices do.
   const alertDrill = await raiseOperationalAlertDrillIfDue({
-    rateLimiter: deps.alertDrillGate,
+    now: deps.now,
+    claimCycle: deps.claimAlertDrillCycle,
     alerts: deps.alerts,
     logger: deps.logger,
   });

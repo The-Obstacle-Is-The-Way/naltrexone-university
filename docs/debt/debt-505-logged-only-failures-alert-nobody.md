@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the first production drill reaches the owner's inbox, and the next window's, from 2026-11-03, emails again; due 2026-11-05
+**Status:** Verifying — the first production drill reaches the owner's inbox, and the next cycle's, from 2026-11-03, emails again; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -80,7 +80,7 @@ Option 2.
   - **Environment.** Sentry's environment is Vercel's name for the deployment, or `local` off Vercel. It used to fall back to the build mode, so a local `next start` labelled its events production and would have paged the owner.
   - Callers: the renewal job's two deadline checks, dispatch's cutoff refusal and outcome-unknown quarantine, the refused checkout's failed sync, and the proxy's limiter failure, which raises after the response through `waitUntil`.
   - Tests: the cooldowns on fakes and on real Postgres (eight concurrent instances send one event, and a restart keeps the window); the sent event through the real Sentry SDK, raised inside a scope holding a request, a user, extra data and breadcrumbs, of which none leaves; both lost-send cases; one in-process cooldown across the containers of a process; and each caller, each shown to fail with its alert removed.
-  - **A drill keeps proving the path.** About every 30 days, from the first run of each fixed window, the renewal job raises an `operational_alert_drill` through the same port, cooldowns, Sentry project and workflow as every other kind. Its gate is the shared Postgres limiter, so cron runs and instances share one window. It runs before the notices and never fails the job. A drill that stops arriving shows the path broke (added 2026-10-08).
+  - **A drill keeps proving the path** (added 2026-10-08). Once per fixed 30-day cycle, the renewal job, which raises the deadline alerts, first raises an `operational_alert_drill` through the same port, cooldowns, Sentry project and workflow. The cycle is claimed with one row per cycle in `operational_alert_drills`: the rate limiter keeps its counters for a day only, so a 30-day gate there would have sent a drill every day. The limiter now refuses any window longer than a day. The drill never fails the job, and its email reads "Operational alert drill: no action needed". A drill that stops arriving shows the path broke.
   - The runbook is [Operational alerts](../dev/logging.md#operational-alerts).
 
 *Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*
@@ -88,10 +88,10 @@ Option 2.
 ## Verification
 
 - [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
-- [ ] Engineering: the first production drill (`operational_alert_drill`), raised by the renewal job on a deployment, reaches the owner's inbox.
+- [ ] Engineering: the first production drill (`operational_alert_drill`), raised by the renewal job on a deployment, reaches the owner's inbox through the alerts' own workflow, as its email or the workflow's history in Sentry shows. The default high-priority workflow also matches, so its email alone does not prove the alerts' workflow.
 
-  *Corrected 2026-10-08: this asked for one test alert of each kind from its real call site. In production that means causing a missed legal deadline or a database failure. Every kind shares one delivery path, which the drill exercises from the job that raises the deadline alerts, and each call site is proven by its tests. It also covers the separate "test alert from a deployment" item, now removed.*
-- [ ] Engineering: the next window's drill, from 2026-11-03 while the first drill's issue is still open, opens a new issue and emails again.
+  *Corrected 2026-10-08: this asked for one test alert of each kind from its real call site. In production that means causing a missed legal deadline or a database failure. Every kind shares one delivery path from the port onward, which the drill exercises from the job that raises the deadline alerts, and each call site is proven by its tests. The proxy's limiter-failure kind starts from another bundle, through `waitUntil`; its own tests cover that start. It also covers the separate "test alert from a deployment" item, now removed.*
+- [ ] Engineering: the next cycle's drill, from 2026-11-03 while the first drill's issue is still open, opens a new issue and emails again.
 - [x] Engineering: the alerts' workflow lives on the server project, whose key no browser receives, and is read back from Sentry's API as enabled (2026-10-08).
 - [x] Engineering: after the first deployment with the new `SENTRY_DSN`, a server span arrives in the server project and none in the web project. Promotion #1424 deployed at 06:03Z on 2026-10-08. By 07:43Z the server project held spans from production and Preview, and the web project held no event or span from any environment (Sentry API counts only).
 - [ ] The alerts listed above no longer exist as log lines alone.

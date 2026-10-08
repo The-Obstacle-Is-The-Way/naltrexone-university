@@ -99,11 +99,16 @@ which would copy the scope's user past `scrubEvent`.
   month's quota also silences the alerts (see the flood section below).
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
-- **Drill.** The renewal job sends an `operational_alert_drill` about every 30
-  days, so the inbox keeps proving the path. To send one at once after a
-  change to the path, run the job (`vercel crons run /api/cron/send-renewal-notices`);
-  its response reports `alertDrill`, and only the first run in a window sends
-  one.
+- **Drill.** The renewal job sends one `operational_alert_drill` per fixed
+  30-day cycle, from the first run that claims the cycle's row in
+  `operational_alert_drills`, so the inbox keeps proving the path. Its email
+  reads "Operational alert drill: no action needed". Both the alerts' workflow
+  and the default high-priority workflow match it, so expect two emails; the
+  alerts' workflow must be one of them. The job's response reports
+  `alertDrill`, where `raised` means handed to the alert path and only the
+  inbox proves delivery. A manual run (`vercel crons run
+  /api/cron/send-renewal-notices`) sends one only if the current cycle's has
+  not gone out.
 
 | Kind | Meaning | First steps |
 | --- | --- | --- |
@@ -113,7 +118,7 @@ which would copy the scope's user past `scrubEvent`.
 | `renewal_notice_outcome_unknown` | The email provider's answer was ambiguous, so the notice is quarantined and never resent automatically. | The row is `outcome_unknown`. Check the provider's dashboard before any manual resend. |
 | `checkout_stripe_holds_unrecorded` | A refused checkout could not record the subscription Stripe already holds (BUG-321). | Compare the user's subscription row with Stripe. The reconcile cron updates only rows that exist, so a missing row waits for the subscription's next webhook; resend its latest event from the Stripe Dashboard to record it now. |
 | `clerk_backend_call_limiter_failed` | The sign-in limiter's database call failed, so it is letting requests through (BUG-323). | Check the database. While it fails, only the firewall rule bounds Clerk's Backend API calls. |
-| `operational_alert_drill` | A drill: the renewal job sends one about every 30 days, from the first run of each fixed 30-day window, through the same path as every other kind. | None. Its email proves the path works. If none arrives for 35 days, treat the alert path as broken: check Sentry's server project, its "Operational alerts — email the owner (DEBT-505)" workflow, `SENTRY_DSN` and the job's logs. |
+| `operational_alert_drill` | A drill: the renewal job sends one per fixed 30-day cycle, through the same path as the deadline alerts. | None; its email proves the path works. If none arrives for 35 days, treat the alert path as broken: check the server project's recent issues for `alert.kind:operational_alert_drill`, its "Operational alerts — email the owner (DEBT-505)" workflow, and `SENTRY_DSN`. |
 
 ## Practices
 

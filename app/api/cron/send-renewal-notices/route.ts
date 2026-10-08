@@ -5,6 +5,7 @@ import {
   MONTHLY_ANNIVERSARY_NOTICE_VERSION,
   PRICING_DATA,
 } from '@/lib/pricing-data';
+import { claimOperationalAlertDrillCycle } from '@/src/adapters/jobs/operational-alert-drill';
 import {
   listActiveMonthlySubscriptions,
   listAnniversaryReminders,
@@ -41,7 +42,8 @@ export function createSendRenewalNoticesCronHandler(
             monotonicNow: () => performance.now(),
             logger: container.logger,
             alerts: container.createOperationalAlerts(),
-            alertDrillGate: container.createRateLimiter(),
+            claimAlertDrillCycle: (cycle) =>
+              claimOperationalAlertDrillCycle(cycle, { db: container.db }),
             annualPlan: {
               planName: PRICING_DATA.annual.name,
               amountCents: PRICING_DATA.annual.amountCents,

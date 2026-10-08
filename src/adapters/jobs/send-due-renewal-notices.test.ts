@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   FakeLogger,
   FakeOperationalAlerts,
-  FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
 import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
+import { operationalAlertDrillCycle } from './operational-alert-drill';
 import {
   SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
@@ -17,15 +17,6 @@ import {
 } from './send-due-renewal-notices';
 
 const now = new Date('2026-08-07T12:00:00.000Z');
-
-// DEBT-505: the alert drill's gate. Held by default, so each test sees only
-// the alerts it is about.
-const DRILL_HELD = {
-  success: false,
-  limit: 1,
-  remaining: 0,
-  retryAfterSeconds: 60,
-};
 
 type AnnualRenewals = SendDueRenewalNoticesJobDeps['renewalQueries'];
 
@@ -53,7 +44,7 @@ function createDeps(): {
   >;
   logger: FakeLogger;
   alerts: FakeOperationalAlerts;
-  alertDrillGate: FakeRateLimiter;
+  alertDrillClaims: number[];
 } {
   const listDue = vi.fn<AnnualRenewals['listDue']>(async () => [
     {
@@ -90,12 +81,12 @@ function createDeps(): {
   const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
   const logger = new FakeLogger();
   const alerts = new FakeOperationalAlerts();
-  const alertDrillGate = new FakeRateLimiter(
-    Array.from({ length: 10 }, () => DRILL_HELD),
-  );
+  // DEBT-505: this cycle's drill is already claimed by default, so each test
+  // sees only the alerts it is about.
+  const alertDrillClaims: number[] = [];
   return {
     alerts,
-    alertDrillGate,
+    alertDrillClaims,
     listDue,
     listPastNoticeDeadline,
     listActiveMonthly,
@@ -116,7 +107,10 @@ function createDeps(): {
       pruneExpiredTrialPaymentMethodSetups,
       logger,
       alerts,
-      alertDrillGate,
+      claimAlertDrillCycle: async (cycle) => {
+        alertDrillClaims.push(cycle);
+        return false;
+      },
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -630,34 +624,52 @@ describe('sendDueRenewalNotices job', () => {
 // DEBT-505: the drill runs in this job, the one that raises the legal
 // deadline alerts, so its email also shows the job runs and can raise them.
 describe('the operational alert drill', () => {
-  it('raises the drill first when its window is open, and reports it', async () => {
+  it("claims the current cycle's drill, raises it, and reports it", async () => {
     const { deps, alerts } = createDeps();
-    deps.alertDrillGate = new FakeRateLimiter();
+    const claims: number[] = [];
+    deps.claimAlertDrillCycle = async (cycle) => {
+      claims.push(cycle);
+      return true;
+    };
 
     const result = await sendDueRenewalNotices(
       { subscriptionLimit: 10, dispatchLimit: 10 },
       deps,
     );
 
+    expect(claims).toEqual([operationalAlertDrillCycle(now)]);
     expect(result.alertDrill).toBe('raised');
-    expect(alerts.raised[0]).toEqual({
+    expect(alerts.raised).toContainEqual({
       kind: 'operational_alert_drill',
       count: 1,
     });
   });
 
-  it('still runs the notices when the drill gate fails', async () => {
+  it('raises the drill before the notices, so it goes out when they fail', async () => {
+    const { deps, alerts, listDue } = createDeps();
+    deps.claimAlertDrillCycle = async () => true;
+    listDue.mockRejectedValueOnce(new Error('query failed'));
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 10, dispatchLimit: 10 }, deps),
+    ).rejects.toThrow('query failed');
+    expect(alerts.raised).toEqual([
+      { kind: 'operational_alert_drill', count: 1 },
+    ]);
+  });
+
+  it('still runs the notices when the drill cannot be claimed', async () => {
     const { deps, alerts, execute } = createDeps();
-    deps.alertDrillGate = new FakeRateLimiter(
-      new Error('database unavailable'),
-    );
+    deps.claimAlertDrillCycle = async () => {
+      throw new Error('database unavailable');
+    };
 
     const result = await sendDueRenewalNotices(
       { subscriptionLimit: 10, dispatchLimit: 10 },
       deps,
     );
 
-    expect(result.alertDrill).toBe('gate_unavailable');
+    expect(result.alertDrill).toBe('claim_unavailable');
     expect(alerts.raised).not.toContainEqual(
       expect.objectContaining({ kind: 'operational_alert_drill' }),
     );
