@@ -1,5 +1,5 @@
 import { inArray } from 'drizzle-orm';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
 import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
 import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
@@ -13,6 +13,8 @@ import {
   createCleanupState,
   createIntegrationDb,
 } from './helpers';
+
+vi.mock('server-only', () => ({}));
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
@@ -47,44 +49,67 @@ runSessionIdentityContract('Postgres repositories', async () => ({
   track: (userId) => cleanup.userIds.push(userId),
 }));
 
-// BUG-320: a new user's first page can arrive as several requests at once.
-// The Clerk lookup holds every request until all six have arrived, so none
-// can write before all six have found no row; the six then provision at once.
-// Provisioning must still end with exactly one row, and no request may fail.
+// BUG-320: a new user's first page can arrive as several requests at once,
+// each on its own database connection. The Clerk lookup holds every request
+// until all six have arrived, so none can write before all six have found no
+// row; the six then provision at once. Provisioning must still end with
+// exactly one row, and no request may fail. One round misses the race most
+// of the time, so the test runs a hundred: with BUG-320's retry removed, it
+// failed in each of five runs.
 describe('session identity on Postgres', () => {
-  it('provisions one row for six concurrent first requests', async () => {
+  it('provisions one row for six concurrent first requests on separate connections', async () => {
     const requests = 6;
-    const clerkUserId = newClerkUserId();
-    const email = `${clerkUserId}@example.com`;
-    const allArrived = createDeferred<void>();
-    let arrived = 0;
-    const gateway = new ClerkAuthGateway({
-      userRepository: new DrizzleUserRepository(db),
-      deletedClerkUsers: new DrizzleDeletedClerkUserRepository(db),
-      getSessionClerkUserId: async () => clerkUserId,
-      getClerkUserById: async (id) => {
-        arrived += 1;
-        if (arrived === requests) allArrived.resolve();
-        await allArrived.promise;
-        return {
-          id,
-          updatedAt: Date.parse('2026-02-02T00:00:00Z'),
-          emailAddresses: [{ emailAddress: email }],
-        };
-      },
-      logger: new FakeLogger(),
-    });
-
-    const users = await Promise.all(
-      Array.from({ length: requests }, () => gateway.requireUser()),
+    const sessions = Array.from({ length: requests }, () =>
+      createIntegrationDb(),
     );
-    for (const user of users) cleanup.userIds.push(user.id);
+    try {
+      await Promise.all(sessions.map((session) => session.sql`select 1`));
+      for (let round = 0; round < 100; round += 1) {
+        const clerkUserId = newClerkUserId();
+        const email = `${clerkUserId}@example.com`;
+        const allArrived = createDeferred<void>();
+        let arrived = 0;
+        const lookup = async (id: string) => {
+          arrived += 1;
+          if (arrived === requests) allArrived.resolve();
+          await allArrived.promise;
+          return {
+            id,
+            updatedAt: Date.parse('2026-02-02T00:00:00Z'),
+            emailAddresses: [{ emailAddress: email }],
+          };
+        };
 
-    expect(new Set(users.map((user) => user.id)).size).toBe(1);
-    const rows = await db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(inArray(schema.users.clerkUserId, [clerkUserId]));
-    expect(rows).toHaveLength(1);
+        const results = await Promise.allSettled(
+          sessions.map((session) =>
+            new ClerkAuthGateway({
+              userRepository: new DrizzleUserRepository(session.db),
+              deletedClerkUsers: new DrizzleDeletedClerkUserRepository(
+                session.db,
+              ),
+              getSessionClerkUserId: async () => clerkUserId,
+              getClerkUserById: lookup,
+              logger: new FakeLogger(),
+            }).requireUser(),
+          ),
+        );
+        const rows = await db
+          .select({ id: schema.users.id })
+          .from(schema.users)
+          .where(inArray(schema.users.clerkUserId, [clerkUserId]));
+        cleanup.userIds.push(...rows.map(({ id }) => id));
+
+        expect(
+          results.flatMap((result) =>
+            result.status === 'rejected' ? [String(result.reason)] : [],
+          ),
+        ).toEqual([]);
+        expect(rows).toHaveLength(1);
+      }
+    } finally {
+      await Promise.all(
+        sessions.map((session) => closeConnection(session.sql)),
+      );
+    }
   });
 });

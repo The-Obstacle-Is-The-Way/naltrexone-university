@@ -12,7 +12,7 @@
 
 ## Summary
 
-The legally required renewal notices and the renewal acknowledgment go to our stored copy of the user's email. No send asks Clerk, the source of truth. A change reaches the stored copy only through Clerk's `user.updated` webhook, or through the user's next signed-in request. Clerk documents that webhook deliveries are not guaranteed.
+The legally required renewal notices and the renewal acknowledgment go to our stored copy of the user's email. No send asks Clerk, the source of truth. A change reaches the stored copy only through Clerk's `user.updated` webhook, or when the user next starts a checkout or trial card setup, which refresh it from Clerk. Clerk documents that webhook deliveries are not guaranteed.
 
 So an annual subscriber who changed their address and has not signed in since can be sent a legal notice at an old address. That address may now belong to someone else.
 

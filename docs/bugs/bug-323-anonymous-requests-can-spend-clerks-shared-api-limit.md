@@ -94,7 +94,7 @@ What a limited person sees:
 - **Under attack:**
   - Vercel's Attack Mode is available on every plan.
   - The limiter's failures show in the logs as `clerk_backend_call_limiter_failed`.
-  - Clerk refusals show in Sentry as 429s from the Backend API's user lookup, which since DEBT-503 item 1 runs only to provision a user or refresh billing's email.
+  - Clerk refusals are 429s from the Backend API's user lookup, which since DEBT-503 item 1 runs only to provision a user or refresh billing's email. They reach Sentry only when a page render throws; a refused checkout is only logged, until DEBT-503 item 3 alerts on it.
 - **Unknown.** Vercel's Hobby plan includes a fixed number of rate-limited requests. Vercel has not documented what happens beyond it.
 
 ## Verification

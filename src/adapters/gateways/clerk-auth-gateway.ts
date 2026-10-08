@@ -17,6 +17,7 @@ import {
   ensureClerkUser,
   getClerkUserEmailOrNull,
   getClerkUserUpdatedAtOrNull,
+  isClerkUserNotFoundError,
 } from './clerk-user-provisioner';
 
 export type { ClerkUserLike, ClerkUserLookup } from './clerk-user-provisioner';
@@ -79,10 +80,7 @@ export class ClerkAuthGateway implements AuthGateway {
   }
 
   private async provisionFromClerk(clerkUserId: string): Promise<User | null> {
-    const clerkUser = await retry(
-      () => this.deps.getClerkUserById(clerkUserId),
-      { ...DEFAULT_RETRY_OPTIONS, shouldRetry: isTransientClerkError },
-    );
+    const clerkUser = await this.lookUpSessionUser(clerkUserId);
     if (!clerkUser) {
       this.deps.logger.warn({ clerkUserId }, 'clerk_session_user_not_found');
       return null;
@@ -112,5 +110,19 @@ export class ClerkAuthGateway implements AuthGateway {
       email,
       observedAt,
     });
+  }
+
+  // The Backend API answers 404 for a user Clerk no longer has, whose token
+  // can stay valid for about a minute after the deletion.
+  private async lookUpSessionUser(clerkUserId: string) {
+    try {
+      return await retry(() => this.deps.getClerkUserById(clerkUserId), {
+        ...DEFAULT_RETRY_OPTIONS,
+        shouldRetry: isTransientClerkError,
+      });
+    } catch (error) {
+      if (isClerkUserNotFoundError(error)) return null;
+      throw error;
+    }
   }
 }

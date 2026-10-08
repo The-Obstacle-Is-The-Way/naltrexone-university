@@ -42,7 +42,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ### 4. Clerk's rate limit is a single point of failure for signed-in traffic (moved to DEBT-503 on 2026-10-05)
 
-- **Evidence.** Every signed-in render and action calls `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65`), and Checkout makes two. Clerk documents 1,000 requests per 10 seconds in production.
+- **Evidence.** Every signed-in render and action called `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65` at the time), and Checkout made two. Clerk documents 1,000 requests per 10 seconds in production.
 - **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. *Moved 2026-10-05 to [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md), at P2 and without waiting for the traffic trigger: BUG-323 showed the allowance can be spent from outside.*
 
 ### 5. Exported payment server actions accept caller-supplied dependencies (moved to BUG-324 on 2026-10-05)

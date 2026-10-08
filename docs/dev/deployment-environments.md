@@ -145,6 +145,15 @@ After resetting, redeploy the affected Preview and Production targets. Env chang
 
 Verify only value-free metadata after the update (present, length, header-safe). The current schedules in `vercel.json` are **08:00 UTC** for reconciliation and **09:00 UTC** for renewal notices, not two 08:00 runs. Confirm each next scheduled production invocation returns `200` in Vercel logs; a deployment becoming Ready or a manual unauthorized probe does not supply that receipt. On the Hobby plan, allow the scheduled hour per [Vercel's cron accuracy contract](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
 
+### A Missed Clerk Webhook Leaves a Stale Email or a Deleted User's Row
+
+Since DEBT-503 item 1, a signed-in page serves the stored `users` row and does not ask Clerk. So a `user.updated` event that never arrives leaves the stored email stale until the user starts a checkout or trial card setup, and a `user.deleted` that never arrives leaves the row and the Stripe customer in place.
+
+- **Delivery.** Clerk sends webhooks through Svix, which retries a failed delivery for about 27 hours and disables an endpoint that keeps failing for 5 days. Deliveries are not guaranteed.
+- **Detect.** In the Clerk Dashboard, open Webhooks and the production endpoint, and look for failed messages or a disabled endpoint.
+- **Recover.** Fix the cause, re-enable the endpoint if it was disabled, then replay the failed messages from the same page, which can recover every failure since a chosen time. The webhook controller records each event by ID: a replay of an event it already processed is skipped, and one that failed is processed again.
+- Legal notices do not depend on this: DEBT-511 reads the address from Clerk when it sends them.
+
 ### `NEXT_PUBLIC_*` Vars Require Fresh Builds
 
 `NEXT_PUBLIC_*` values are inlined at build time. Updating the environment variable alone is not enough.

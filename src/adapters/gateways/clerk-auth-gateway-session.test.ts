@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   FakeDeletedClerkUserRepository,
   FakeLogger,
@@ -9,6 +9,9 @@ import {
   type ClerkUserLike,
   type ClerkUserLookup,
 } from './clerk-auth-gateway';
+import { clerkAnswer, clerkSdkErrorFor } from './test-helpers/clerk-sdk-errors';
+
+vi.mock('server-only', () => ({}));
 
 // DEBT-503 item 1: the Clerk user ID comes from the session the middleware
 // verified. A signed-in request reads our own row and the deletion tombstone,
@@ -73,6 +76,7 @@ describe('ClerkAuthGateway session identity', () => {
     const row = await userRepository.upsertByClerkId(
       'clerk_1',
       'stored@example.com',
+      { observedAt: new Date('2026-01-01T00:00:00Z') },
     );
 
     await expect(gateway.getCurrentUser()).resolves.toEqual(row);
@@ -123,10 +127,13 @@ describe('ClerkAuthGateway session identity', () => {
     ).resolves.toMatchObject({ email: 'new@example.com' });
   });
 
-  it('returns no user, and creates no row, when Clerk no longer has the session user', async () => {
+  it('returns no user, and creates no row, when Clerk answers 404 for the session user', async () => {
+    const notFound = await clerkSdkErrorFor(clerkAnswer(404));
     const { gateway, userRepository, logger } = setup({
       sessionClerkUserId: 'clerk_missing',
-      answer: async () => null,
+      answer: async () => {
+        throw notFound;
+      },
     });
 
     await expect(gateway.getCurrentUser()).resolves.toBeNull();
@@ -163,7 +170,9 @@ describe('ClerkAuthGateway session identity', () => {
       },
     });
 
-    await expect(gateway.getCurrentUser()).rejects.toBeDefined();
+    await expect(gateway.getCurrentUser()).rejects.toMatchObject({
+      status: 429,
+    });
     expect(calls).toEqual(['clerk_new', 'clerk_new', 'clerk_new']);
     await expect(userRepository.findByClerkId('clerk_new')).resolves.toBeNull();
   });
@@ -204,10 +213,13 @@ describe('ClerkAuthGateway session identity', () => {
       expect(calls).toEqual([]);
     });
 
-    it('refuses when Clerk no longer has the session user', async () => {
+    it('refuses when Clerk answers 404 for the session user', async () => {
+      const notFound = await clerkSdkErrorFor(clerkAnswer(404));
       const { gateway, userRepository } = setup({
         sessionClerkUserId: 'clerk_1',
-        answer: async () => null,
+        answer: async () => {
+          throw notFound;
+        },
       });
       await userRepository.upsertByClerkId('clerk_1', 'stored@example.com');
 

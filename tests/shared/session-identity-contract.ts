@@ -3,6 +3,10 @@ import {
   ClerkAuthGateway,
   type ClerkUserLike,
 } from '@/src/adapters/gateways/clerk-auth-gateway';
+import {
+  clerkAnswer,
+  clerkSdkErrorFor,
+} from '@/src/adapters/gateways/test-helpers/clerk-sdk-errors';
 import type {
   DeletedClerkUserRepository,
   UserRepository,
@@ -12,7 +16,8 @@ import { FakeLogger } from '@/src/application/test-helpers/fakes';
 // DEBT-503 item 1: a signed-in request reads our own row and the deletion
 // tombstone, and asks Clerk only to provision a missing row. These scenarios
 // run the real gateway over the maintained fakes and over Postgres, so both
-// agree on what a session resolves to and on when Clerk is asked.
+// agree on what a session resolves to and on when Clerk is asked. Clerk's
+// answers are the real SDK's, so each caller's file mocks `server-only`.
 
 export type SessionIdentityHarness = {
   userRepository: UserRepository;
@@ -113,9 +118,12 @@ export function runSessionIdentityContract(
       ).resolves.toMatchObject({ email });
     });
 
-    it('creates no row when Clerk no longer has the session user', async () => {
+    it('returns no user, and creates no row, when Clerk answers 404', async () => {
       const harness = await createHarness();
-      const { lookup } = lookupAnswering(null);
+      const notFound = await clerkSdkErrorFor(clerkAnswer(404));
+      const lookup = async () => {
+        throw notFound;
+      };
 
       await expect(
         gatewayFor(harness, lookup).getCurrentUser(),

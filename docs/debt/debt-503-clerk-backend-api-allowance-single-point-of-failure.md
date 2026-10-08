@@ -12,7 +12,7 @@
 
 ## Summary
 
-Every signed-in request spends one call of Clerk's Backend API allowance: `currentUser()` (`lib/container.ts:61-65`). Clerk limits that allowance per production instance. When it runs out, every signed-in page fails.
+Until item 1, every signed-in request spent one call of Clerk's Backend API allowance through `currentUser()`. Clerk limits that allowance per production instance, and when it ran out every signed-in page failed. Item 1 now spends it only to provision a new user's row and to refresh the email billing sends to Stripe.
 
 [BUG-323](../bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) showed the allowance can also be spent from outside, and fixed that with request limits in our middleware. Those limits trade a full outage for a smaller, cheaper one: once the site-wide cap fills, returning visitors whose session token has expired wait a minute.
 
@@ -35,7 +35,7 @@ This record holds the structural fixes, so that the allowance stops being the on
     - A missing row is provisioned with one Backend API lookup by ID, through today's `ensureClerkUser`, so BUG-284's identity rules and BUG-320's retry hold unchanged. A Clerk 404 there returns no user.
     - Users are never provisioned from token claims. A first visit while Clerk is down fails closed.
   - **Fresh email where it matters.** `requireUser({ currentEmail: true })` refreshes the email from Clerk through the same provisioning path, after the tombstone check. Only Stripe checkout and trial card setup ask for it, after their rate limiter and idempotency replay. A refreshed row whose ID differs is a conflict. Billing reads the Clerk ID from the session, so checkout spends one call instead of two, and a refused or replayed one spends none.
-  - **Email freshness.** Email changes otherwise arrive through Clerk's `user.updated` webhook, retried by Clerk's delivery and recorded by the webhook controller. Provisioning, the billing refresh and BUG-284's stale-owner resolver also correct it. Operator recovery is a replay from the Clerk Dashboard, documented in the runbook. Clerk does not guarantee webhook delivery, so a stored address is never the authority for a legal notice: [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) reads it from Clerk at send time. That gap exists today for anyone who has not signed in since changing their address; this item only widens it to active users between checkouts. Both ship before paid acquisition.
+  - **Email freshness.** Email changes otherwise arrive through Clerk's `user.updated` webhook, retried by Clerk's delivery and recorded by the webhook controller. Provisioning, the billing refresh and BUG-284's stale-owner resolver also correct it. Operator recovery is a replay from the Clerk Dashboard, documented in [Deployment Environments](../dev/deployment-environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row). Clerk does not guarantee webhook delivery, so a stored address is never the authority for a legal notice: [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) reads it from Clerk at send time. That gap exists today for anyone who has not signed in since changing their address; this item only widens it to active users between checkouts. Both ship before paid acquisition.
   - **Deletion races.**
     - A tombstone committed before the read returns no user.
     - One committed after the read serves that one response, as today.
@@ -53,7 +53,8 @@ This record holds the structural fixes, so that the allowance stops being the on
 - **Implemented 2026-10-07.**
   - `ClerkAuthGateway` reads the Clerk user ID from `auth()`. `lib/auth.ts` and every `currentUser()` call are gone, and billing reads the ID from the session.
   - Tests: `clerk-auth-gateway-session.test.ts`, `billing-controller-current-email.test.ts`, the skip-Clerk composition test (`lib/container.skip-clerk.test.ts`), and the source guard `tests/clerk-backend-api-boundary.test.ts`.
-  - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. BUG-320's six concurrent first requests provision one row on Postgres, and that test fails when the upsert's conflict clause is removed.
+  - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. Clerk's answers in them are the real SDK's, so the 404 scenario uses the error the Backend API throws.
+  - BUG-320: six concurrent first requests, each on its own connection, provision one row in each of 100 rounds. With BUG-320's retry removed, the test failed in each of five runs.
   - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)
