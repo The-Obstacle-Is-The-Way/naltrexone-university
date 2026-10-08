@@ -83,7 +83,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
   - The reset and the restore helpers find the user in the run's own database, where the seed wrote it: the reset by email, ignoring case, since Clerk stores emails lowercased and the app writes Clerk's back.
   - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, until one call's waits total 10 seconds. The cap bounds waits only: each call can also spend three 15-second attempts, so preflight's two calls can take about 110 seconds, beyond setup's 60-second budget. [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) gives them one deadline inside it. The seed's lookup, when one is still needed, uses it.
   - Each `local-clone-*` customer keeps its active test subscription for as long as its clone exists; a deleted clone's customer is harmless test-mode clutter.
-- **Not serialized.** Serializing would make every run wait for a problem that isolation and fewer calls remove.
+- **Not serialized.** Serializing would make every run wait. Per-run Stripe ownership already stops one run from changing another's billing state, and fewer Clerk calls lower the rate-limit pressure. Overlapping runs can still meet Clerk 429s until DEBT-503 item 1 removes the app's per-request lookup, so the overlap check follows it.
 - **Until DEBT-503 item 1 ships:**
   - The app's per-request lookups still share the budget, so two overlapping runs can still meet a 429.
   - One E2E run at a time stays the rule on this machine, and nobody pushes while `main`'s E2E runs after a promotion.
