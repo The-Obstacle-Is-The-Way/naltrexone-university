@@ -136,6 +136,13 @@ The gap is not one project's formatting quirk: the Sentry advisory's ranges
 are well formed, yet it was still missing after 13 days. So the watch covers
 every direct dependency, not a hand-picked few.
 
+An advisory that does arrive can arrive late. Six of the seven Next.js
+advisories reached the database at 2026-10-07T20:30Z, seven days after
+publication, and Dependabot alerted on them at 2026-10-08T05:50Z. The other
+six of the 12 were still missing that day. A week is as long as the
+release-age gate, so waiting for Dependabot would forfeit the same-day rule
+above.
+
 - `.github/workflows/upstream-advisory-watch.yml` runs
   `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
   advisories of each repository in its `DEPENDENCY_REPOSITORIES` map and opens

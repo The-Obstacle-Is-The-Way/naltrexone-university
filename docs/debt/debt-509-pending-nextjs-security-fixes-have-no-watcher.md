@@ -14,7 +14,7 @@
 
 Next.js's September 30 security release fixed seven advisories in 16.3.8. Two more, one critical and one high, were held back and will ship in a later release. When they ship, the 7-day release-age gate (`minimumReleaseAge: 10080`) keeps them out of this repository for a week unless an exception is taken.
 
-Nothing here would have noticed that release. The seven September 30 advisories are not in GitHub's advisory database, so Dependabot raised no alert for any of them. This repository learned of the release only because CodeRabbit searched the web while reviewing #1409. On 2026-10-07 the owner delegated both decisions below: when a fix may skip the gate, and how to watch for advisories.
+Nothing here would have noticed that release. The seven September 30 advisories stayed out of GitHub's advisory database for a week, so Dependabot raised no alert for any of them until 2026-10-08, and one is still missing. This repository learned of the release only because CodeRabbit searched the web while reviewing #1409. On 2026-10-07 the owner delegated both decisions below: when a fix may skip the gate, and how to watch for advisories.
 
 ## Evidence
 
@@ -25,6 +25,7 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 - **Versions.** `dev` and `main` run `next` 16.3.6. #1409 moves it to 16.3.7, and to 16.3.8 once that version clears the release-age gate at 2026-10-07T16:07:21Z.
 - **A separate critical, already fixed.** GHSA-vcvr-r3jv-pc5j (remote code execution in `next/og`'s Node `ImageResponse`) was published by Next.js on 2026-09-22, alongside 16.3.6, which `dev` and `main` already run. It reached GitHub's advisory database only on 2026-09-30, eight days later. The September 30 note still calls the critical fix pending, so it is not this one. `app/opengraph-image.tsx` renders constant content and reads no request input, so it was not exposed either.
 - **No alerts.** `gh api 'advisories?ghsa_id=<id>'` returns nothing for any of the seven IDs, reviewed or unreviewed. They exist only as repository advisories on `vercel/next.js`, and several give their ranges as `16.3.?`, which may be why they were not imported. The repository has no Dependabot alert for any of them. Earlier `next` advisories did reach the database, including alerts #28–#31, #41–#42 and #59–#62, and GHSA-vcvr-r3jv-pc5j was reviewed on publication, so coverage is inconsistent rather than absent.
+- **Update, 2026-10-08.** Six of the seven reached the database as reviewed advisories at 2026-10-07T20:30–20:32Z, seven days after Next.js published them. Dependabot raised alerts #84–#95 at 2026-10-08T05:50Z, one per advisory for each of `package.json` and `pnpm-lock.yaml`, and opened security PR #1425 into `main` for 16.3.8. GHSA-h694-7cp9-m8p3 is still missing. As with #1404, the fix reaches `main` through `dev`, here in #1409, and Dependabot then closes its PR.
 
 ## Exposure to the Seven Published Advisories
 
