@@ -5,7 +5,7 @@
 
 **Now** — 2026-10-08.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
-- **Security.** DEBT-506: take `source-map-js` 1.2.2 and Clerk UI 1.38.0. Next.js alerts #84–#95 stay open until 16.3.8 lands (#1425); DEBT-509 is in review (#1420).
+- **Security.** DEBT-506: take `source-map-js` 1.2.2 and Clerk UI 1.38.0. Next.js alerts #84–#95 stay open until 16.3.8 lands (#1425); DEBT-509's advisory watch shipped (#1420, promoted in #1431).
 - **In progress.** DEBT-503: item 3 next.
 - **Verifying.** DEBT-505: the first drill reaches the inbox and the cron monitor checks in; due 2026-11-05. DEBT-508: two overlapping CI runs both pass; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
 - **Next.** One pull request of quick wins, then alerts for silent conditions (DEBT-501, DEBT-503 item 3), then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
