@@ -4,6 +4,8 @@ import {
   SENTRY_DATA_COLLECTION,
   scrubBreadcrumb,
   scrubEvent,
+  scrubServerEvent,
+  scrubSpan,
 } from './sentry-data-collection';
 
 // DEBT-499: Sentry v11 collects cookies, user info, request and response
@@ -80,6 +82,11 @@ describe('redactCredentialParams', () => {
       'https://x.test/cb?code=[Filtered]&state=s&session_id=[Filtered]',
     ],
     ['__dev_session=abc&plan=annual', '__dev_session=[Filtered]&plan=annual'],
+    // BUG-331: Clerk's handshake exchange carries the nonce in clear.
+    [
+      'https://api.clerk.com/v1/clients/handshake_payload?nonce=n1',
+      'https://api.clerk.com/v1/clients/handshake_payload?nonce=[Filtered]',
+    ],
     ['/app/history?tab=questions', '/app/history?tab=questions'],
     ['https://x.test/path#token=abc', 'https://x.test/path#token=abc'],
   ])('redacts %s as %s', (input, expected) => {
@@ -154,6 +161,81 @@ describe('scrubBreadcrumb', () => {
         from: '/sign-in?__clerk_handshake=[Filtered]',
         to: '/app?__dev_session=[Filtered]&tab=1',
         status_code: 200,
+      },
+    });
+  });
+
+  // BUG-331: the server SDK also keeps the query in `url.query`. Every string
+  // is redacted, so a field the SDK adds later is covered too.
+  it("redacts credentials in every string of a breadcrumb's data", () => {
+    expect(
+      scrubBreadcrumb({
+        category: 'http',
+        data: {
+          url: 'https://api.clerk.com/v1/clients/handshake_payload?nonce=a',
+          'url.query': 'nonce=a&tab=1',
+          'http.request.method': 'GET',
+          status_code: 200,
+        },
+      }),
+    ).toEqual({
+      category: 'http',
+      data: {
+        url: 'https://api.clerk.com/v1/clients/handshake_payload?nonce=[Filtered]',
+        'url.query': 'nonce=[Filtered]&tab=1',
+        'http.request.method': 'GET',
+        status_code: 200,
+      },
+    });
+  });
+});
+
+// BUG-331: the server records no breadcrumbs, and drops any a scope added
+// directly, before its usual scrubbing.
+describe('scrubServerEvent', () => {
+  type ErrorEvent = Parameters<typeof scrubServerEvent>[0];
+
+  it('drops breadcrumbs and redacts the URL as scrubEvent does', () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      breadcrumbs: [{ category: 'checkout', message: 'user_1' }],
+      request: { url: 'https://addictionboards.com/app?nonce=n1' },
+    };
+
+    expect(scrubServerEvent(event)).toEqual({
+      type: undefined,
+      request: { url: 'https://addictionboards.com/app?nonce=[Filtered]' },
+    });
+  });
+});
+
+// BUG-331: Next.js's request span keeps the raw URL in `http.target`, which
+// Sentry's query filter does not reach.
+describe('scrubSpan', () => {
+  type Span = Parameters<typeof scrubSpan>[0];
+
+  it("redacts credentials in a span's name and every string attribute", () => {
+    const span: Span = {
+      trace_id: 't',
+      span_id: 's',
+      name: 'GET /pricing?nonce=n1',
+      start_timestamp: 1,
+      status: 'ok',
+      is_segment: true,
+      attributes: {
+        'http.target': '/pricing?__clerk_handshake=h&code=c&plan=annual',
+        'http.request.header.x-test': ['/a?token=t'],
+        'http.status_code': 200,
+      },
+    };
+
+    expect(scrubSpan(span)).toMatchObject({
+      name: 'GET /pricing?nonce=[Filtered]',
+      attributes: {
+        'http.target':
+          '/pricing?__clerk_handshake=[Filtered]&code=[Filtered]&plan=annual',
+        'http.request.header.x-test': ['/a?token=[Filtered]'],
+        'http.status_code': 200,
       },
     });
   });

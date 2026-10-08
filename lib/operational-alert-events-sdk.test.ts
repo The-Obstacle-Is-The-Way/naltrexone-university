@@ -1,11 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sendOperationalAlertEvent } from '@/src/adapters/shared/operational-alert-events';
-import {
-  SENTRY_DATA_COLLECTION,
-  scrubBreadcrumb,
-  scrubEvent,
-} from './sentry-data-collection';
+import { SENTRY_SERVER_SETTINGS } from './sentry-data-collection';
 
 // DEBT-505: what leaves the process is proven through the real SDK and our
 // production settings. The transport keeps each envelope and sends nothing.
@@ -15,9 +11,7 @@ let transportFlushes = true;
 beforeAll(() => {
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
-    dataCollection: SENTRY_DATA_COLLECTION,
-    beforeSend: scrubEvent,
-    beforeBreadcrumb: scrubBreadcrumb,
+    ...SENTRY_SERVER_SETTINGS,
     transport: () => ({
       send: async (envelope: unknown) => {
         sent.push(JSON.stringify(envelope));

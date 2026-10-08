@@ -76,7 +76,8 @@ export const EVERY_CATEGORY_IS_SET: [UnsetCategory] extends [never]
 
 // Query parameters that carry credentials, matched as case-insensitive
 // substrings of the name: Clerk's handshake and development-session
-// parameters, and the names Sentry treats as sensitive keys.
+// parameters, Clerk's handshake nonce (BUG-331), and the names Sentry treats
+// as sensitive keys.
 const CREDENTIAL_PARAM_TERMS = [
   '__clerk',
   '__dev_session',
@@ -89,6 +90,7 @@ const CREDENTIAL_PARAM_TERMS = [
   'password',
   'key',
   'code',
+  'nonce',
 ];
 
 const QUERY_PAIR = /([?&;]|^)([^=&#?;]+)=([^&#;]*)/g;
@@ -190,19 +192,76 @@ export function scrubEvent(
   return event;
 }
 
-const BREADCRUMB_URL_FIELDS = ['url', 'from', 'to'] as const;
-
-/** `beforeBreadcrumb`: redacts credentials in a fetch, XHR or navigation URL. */
+/**
+ * `beforeBreadcrumb` in the browser: redacts credentials in every string of a
+ * breadcrumb's data. The browser SDK writes a fetch, XHR or navigation URL to
+ * `url`, `from` and `to`. No field is named, because an SDK can add one: the
+ * server SDK already writes the query to `url.query` (BUG-331).
+ */
 export function scrubBreadcrumb(
   breadcrumb: Sentry.Breadcrumb,
 ): Sentry.Breadcrumb {
   const data = breadcrumb.data;
   if (data) {
-    for (const field of BREADCRUMB_URL_FIELDS) {
-      const value = data[field];
+    for (const [field, value] of Object.entries(data)) {
       if (typeof value === 'string')
         data[field] = redactCredentialParams(value);
     }
   }
   return breadcrumb;
 }
+
+/**
+ * `beforeSend` on the server: `scrubEvent`, after dropping any breadcrumbs.
+ * `maxBreadcrumbs: 0` stops the SDK recording them, but a scope's own
+ * `addBreadcrumb` ignores that limit (BUG-331).
+ */
+export function scrubServerEvent(
+  event: Sentry.ErrorEvent,
+  hint?: Sentry.EventHint,
+): Sentry.ErrorEvent {
+  delete event.breadcrumbs;
+  return scrubEvent(event, hint);
+}
+
+type StreamedSpan = Parameters<
+  NonNullable<Sentry.NodeOptions['beforeSendSpan']>
+>[0];
+
+function redactStrings(value: unknown): unknown {
+  if (typeof value === 'string') return redactCredentialParams(value);
+  if (Array.isArray(value)) return value.map(redactStrings);
+  return value;
+}
+
+/**
+ * `beforeSendSpan` on the server: redacts credentials in a span's name and
+ * every string attribute. Next.js opens each request's server span and keeps
+ * the raw request URL in `http.target`, which Sentry's query filter does not
+ * reach (BUG-331).
+ */
+export function scrubSpan(span: StreamedSpan): StreamedSpan {
+  span.name = redactCredentialParams(span.name);
+  const attributes: Record<string, unknown> = span.attributes;
+  for (const [name, value] of Object.entries(attributes)) {
+    attributes[name] = redactStrings(value);
+  }
+  return span;
+}
+
+/**
+ * The server SDK's settings apart from its key and environment, kept here so
+ * the real-SDK tests initialise Sentry with what `instrumentation.ts` uses.
+ *
+ * BUG-331: the server sends no breadcrumbs. Its outgoing calls and console
+ * lines held Clerk's handshake nonce and logged values, and a breadcrumb
+ * recorded outside a request's scope reaches later visitors' events. Server
+ * errors are diagnosed from stack traces and our own logs.
+ */
+export const SENTRY_SERVER_SETTINGS = {
+  tracesSampleRate: 0.05,
+  maxBreadcrumbs: 0,
+  dataCollection: SENTRY_DATA_COLLECTION,
+  beforeSend: scrubServerEvent,
+  beforeSendSpan: scrubSpan,
+} satisfies Sentry.NodeOptions;

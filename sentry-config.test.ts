@@ -21,6 +21,17 @@ async function sentryPrivacyOptions() {
   };
 }
 
+// BUG-331: the server sends no breadcrumbs, and scrubs span URLs.
+async function sentryServerPrivacyOptions() {
+  const privacy = await import('@/lib/sentry-data-collection');
+  return {
+    maxBreadcrumbs: 0,
+    dataCollection: privacy.SENTRY_DATA_COLLECTION,
+    beforeSend: privacy.scrubServerEvent,
+    beforeSendSpan: privacy.scrubSpan,
+  };
+}
+
 describe('Sentry configuration', () => {
   const originalEnv = { ...process.env };
 
@@ -179,7 +190,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
-        ...(await sentryPrivacyOptions()),
+        ...(await sentryServerPrivacyOptions()),
       });
     });
 
@@ -210,7 +221,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: 'preview',
-        ...(await sentryPrivacyOptions()),
+        ...(await sentryServerPrivacyOptions()),
       });
     });
 

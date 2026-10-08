@@ -1,8 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import {
-  SENTRY_DATA_COLLECTION,
-  scrubBreadcrumb,
-  scrubEvent,
+  SENTRY_SERVER_SETTINGS,
   sentryEnvironmentFor,
 } from '@/lib/sentry-data-collection';
 
@@ -24,14 +22,7 @@ export async function register() {
 
   const environment = sentryEnvironmentFor(process.env.VERCEL_ENV);
 
-  Sentry.init({
-    dsn,
-    tracesSampleRate: 0.05,
-    environment,
-    dataCollection: SENTRY_DATA_COLLECTION,
-    beforeSend: scrubEvent,
-    beforeBreadcrumb: scrubBreadcrumb,
-  });
+  Sentry.init({ dsn, environment, ...SENTRY_SERVER_SETTINGS });
 }
 
 export const onRequestError = Sentry.captureRequestError;
