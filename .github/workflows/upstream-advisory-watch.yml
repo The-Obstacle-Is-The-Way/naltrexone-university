@@ -1,0 +1,40 @@
+name: Upstream advisory watch
+
+# Dependabot alerts come from GitHub's advisory database, and an upstream
+# advisory can miss it (DEBT-509: Next.js's 2026-09-30 advisories never
+# arrived). Every six hours this job reads the watched repositories' own
+# published advisories and opens one issue per new advisory, so a critical
+# framework fix is seen the day it ships. See docs/dev/supply-chain-overrides.md.
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upstream-advisory-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Raise new upstream advisories
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: node scripts/upstream-advisory-watch.ts
