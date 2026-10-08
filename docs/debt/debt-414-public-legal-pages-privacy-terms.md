@@ -625,7 +625,7 @@ The owner authorized the proposed code and configuration work (F01-F07, F15) on 
 - it is no longer on the annual plan, whose amount and yearly frequency every scheduled notice states (`subscription_plan_changed`, from the #1156 review; F02 turns this into "the plan the notice was built for");
 - the account email no longer matches the notice's destination.
 
-  *Corrected 2026-10-07: "the account email" is our stored copy, which only Clerk's webhook or a sign-in updates, and Clerk does not guarantee webhook delivery. [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) decides that dispatch reads the verified address from Clerk before sending. It also records that Stripe's upcoming-renewal email goes to a copy that is never synced.*
+  *Corrected 2026-10-07: "the account email" is our stored copy, which only Clerk's webhook, or the user's next checkout or trial card setup, updates (since DEBT-503 item 1, an ordinary sign-in no longer does), and Clerk does not guarantee webhook delivery. [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) decides that dispatch reads the verified address from Clerk before sending. It also records that Stripe's upcoming-renewal email goes to a copy that is never synced.*
 
 A renewal reminder is refused once its send-by cutoff, 30 days before renewal, has passed (failure class `notice_deadline_passed`), and the refusal is logged as an error. The job and dispatch share that minimum (`RENEWAL_NOTICE_MINIMUM_DAYS`), so they cannot drift apart. Acknowledgments record consent already given and are not revalidated.
 
