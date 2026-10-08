@@ -1,6 +1,11 @@
 import postgres from 'postgres';
 import type Stripe from 'stripe';
 import { isUsableStripeTestKey } from '@/tests/shared/stripe-provider-gate';
+import {
+  CLERK_API_BASE,
+  type ClerkUserListResponse,
+  fetchClerkWithRetry,
+} from './credential-health-check';
 import { createStripeTestClient } from './stripe-test-client';
 
 const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
@@ -20,25 +25,34 @@ type StripeCustomerSeedResult = {
  * Uses the Stripe API with `pm_card_visa` — never touches Stripe's hosted UI.
  * Must NOT import from `lib/db.ts` or `lib/stripe.ts` (they use `server-only`).
  */
-export async function seedTestSubscription(): Promise<void> {
+export async function seedTestSubscription(
+  input: {
+    /**
+     * The Clerk user preflight verified. Concurrent E2E runs share one Clerk
+     * instance's rate budget, so the run looks its user up once (DEBT-508);
+     * without it, the seed looks the user up itself.
+     */
+    clerkUserId?: string;
+  } = {},
+): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-  const email = process.env.E2E_CLERK_USER_USERNAME;
+  const email = process.env.E2E_CLERK_USER_USERNAME?.trim();
   const e2eStripeOwner = resolveE2EStripeOwner(stripeSecretKey);
   const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
 
   if (
     !databaseUrl ||
     !stripeSecretKey ||
-    !clerkSecretKey ||
     !email ||
-    !priceId
+    !priceId ||
+    (!input.clerkUserId && !clerkSecretKey)
   ) {
     throw new Error(
       'Missing required env vars for E2E subscription seeding: ' +
-        'DATABASE_URL, STRIPE_SECRET_KEY, CLERK_SECRET_KEY, ' +
-        'E2E_CLERK_USER_USERNAME, NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',
+        'DATABASE_URL, STRIPE_SECRET_KEY, E2E_CLERK_USER_USERNAME, ' +
+        'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY, and CLERK_SECRET_KEY unless a Clerk user is given',
     );
   }
 
@@ -47,7 +61,9 @@ export async function seedTestSubscription(): Promise<void> {
 
   try {
     // ── 1. Resolve Clerk user ID ──────────────────────────────────────
-    const clerkUserId = await resolveClerkUserId(email, clerkSecretKey);
+    const clerkUserId =
+      input.clerkUserId ??
+      (await resolveClerkUserId(email, clerkSecretKey ?? ''));
 
     // ── 2. Ensure DB user row ─────────────────────────────────────────
     const userId = await ensureDbUser(sql, clerkUserId, email);
@@ -75,6 +91,39 @@ export async function seedTestSubscription(): Promise<void> {
   } finally {
     await sql.end();
   }
+}
+
+/**
+ * Restores the seeded subscription mid-run with the Clerk user global setup
+ * stored this run, so a test's restore spends none of the Clerk instance's
+ * shared rate budget (DEBT-508).
+ */
+export async function reseedTestSubscription(): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL;
+  const email = process.env.E2E_CLERK_USER_USERNAME?.trim();
+  if (!databaseUrl || !email) {
+    throw new Error(
+      'Missing required env vars for E2E subscription reseeding: DATABASE_URL, E2E_CLERK_USER_USERNAME',
+    );
+  }
+
+  const sql = postgres(databaseUrl, { max: 1 });
+  let clerkUserId: string | undefined;
+  try {
+    const [row] = await sql<{ clerk_user_id: string }[]>`
+      SELECT clerk_user_id FROM users WHERE lower(email) = lower(${email}) LIMIT 1
+    `;
+    clerkUserId = row?.clerk_user_id;
+  } finally {
+    await sql.end();
+  }
+  if (!clerkUserId) {
+    throw new Error(
+      'No E2E user row exists yet; global setup must seed the E2E user first.',
+    );
+  }
+
+  await seedTestSubscription({ clerkUserId });
 }
 
 function resolveE2EStripeOwner(stripeSecretKey: string | undefined): string {
@@ -138,19 +187,20 @@ async function resolveClerkUserId(
   email: string,
   clerkSecretKey: string,
 ): Promise<string> {
-  const url = `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}&limit=1`;
-  const res = await fetch(url, {
+  const url = `${CLERK_API_BASE}/users?email_address=${encodeURIComponent(email)}&limit=1`;
+  const res = await fetchClerkWithRetry(url, {
     headers: { Authorization: `Bearer ${clerkSecretKey}` },
   });
   if (!res.ok) {
     throw new Error(`Clerk API error ${res.status}: ${await res.text()}`);
   }
-  const users = (await res.json()) as Array<{ id: string }>;
-  const [user] = users;
-  if (user === undefined) {
+  const payload = (await res.json()) as ClerkUserListResponse;
+  const users = Array.isArray(payload) ? payload : (payload.data ?? []);
+  const userId = users[0]?.id;
+  if (!userId) {
     throw new Error(`No Clerk user found for email ${email}`);
   }
-  return user.id;
+  return userId;
 }
 
 // ── DB: users ────────────────────────────────────────────────────────────

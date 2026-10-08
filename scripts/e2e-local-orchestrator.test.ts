@@ -7,6 +7,7 @@ import {
   runCommandPlan,
   shouldUseIsolatedLocalE2E,
 } from './e2e-local-orchestrator';
+import { resolveLocalTestTarget } from './resolve-local-test-target';
 import { runLocalE2E } from './run-local-e2e';
 
 describe('resolveLocalE2EDatabaseUrl', () => {
@@ -116,6 +117,64 @@ describe('createE2ECommandPlan', () => {
     expect(JSON.stringify(plan)).not.toContain('lsof -ti:3000');
   });
 
+  // DEBT-508: clones must not share a Stripe test customer, so each clone's
+  // run owns one, named by the instance that also picks its database port.
+  describe('Stripe test customer owner', () => {
+    function playwrightStepEnv(input: {
+      env: Record<string, string>;
+      cwd?: string;
+    }) {
+      const plan = createE2ECommandPlan({
+        cwd: input.cwd ?? '/repo/a',
+        env: input.env,
+      });
+      return plan.map((step) => step.env?.E2E_STRIPE_OWNER);
+    }
+
+    it('gives only the Playwright step the clone instance owner', () => {
+      expect(
+        playwrightStepEnv({ env: { LOCAL_TEST_INSTANCE: 'bug245' } }),
+      ).toEqual([undefined, undefined, undefined, 'local-clone-bug245']);
+    });
+
+    it('derives the owner from the worktree when no instance is set', () => {
+      const target = resolveLocalTestTarget({ env: {}, cwd: '/repo/clone-2' });
+
+      expect(playwrightStepEnv({ env: {}, cwd: '/repo/clone-2' })[3]).toBe(
+        `local-clone-${target.instanceId}`,
+      );
+    });
+
+    it('keeps an owner exported in the shell', () => {
+      expect(
+        playwrightStepEnv({
+          env: { LOCAL_TEST_INSTANCE: 'bug245', E2E_STRIPE_OWNER: ' mine ' },
+        })[3],
+      ).toBe('mine');
+    });
+
+    // .env.local is loaded by Playwright after this plan, without overriding,
+    // so an existing-database run needs the owner here too, or a real key
+    // leaves the seed without one.
+    it.each([
+      [{}, 'local-clone-bug245'],
+      [{ E2E_STRIPE_OWNER: 'github-ci-1-1' }, 'github-ci-1-1'],
+    ])('gives an existing-database run the same owner: %o', (extra, owner) => {
+      const plan = createE2ECommandPlan({
+        cwd: '/repo/a',
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          LOCAL_TEST_INSTANCE: 'bug245',
+          DATABASE_URL:
+            'postgresql://postgres:postgres@127.0.0.1:5432/addiction_boards_test',
+          ...extra,
+        },
+      });
+
+      expect(plan.map((step) => step.env?.E2E_STRIPE_OWNER)).toEqual([owner]);
+    });
+  });
+
   it('uses the isolated target when CI is set without the explicit passthrough flag', () => {
     const plan = createE2ECommandPlan({
       cwd: '/repo/a',
@@ -159,6 +218,7 @@ describe('createE2ECommandPlan', () => {
         E2E_USE_EXISTING_DATABASE: 'true',
         ALLOW_NON_LOCAL_DATABASE_URL: 'true',
         DATABASE_URL: 'postgresql://deploy-target.example/app',
+        LOCAL_TEST_INSTANCE: 'deploy-check',
       },
       playwrightArgs: [],
     });
@@ -168,6 +228,7 @@ describe('createE2ECommandPlan', () => {
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test'],
+        env: { E2E_STRIPE_OWNER: 'local-clone-deploy-check' },
         omitInheritedEnv: ['NO_COLOR'],
       },
     ]);
