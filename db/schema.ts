@@ -568,6 +568,16 @@ export const deletedClerkUsers = pgTable(
   }),
 );
 
+// operational_alert_drills (DEBT-505): one row per fixed 30-day drill cycle,
+// claimed by the renewal job's first run in that cycle. Rows are never pruned:
+// the rate limiter keeps its counters for a day only.
+export const operationalAlertDrills = pgTable('operational_alert_drills', {
+  cycle: integer('cycle').primaryKey(),
+  raisedAt: timestamp('raised_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // pending_stripe_cancellations (legacy physical name for customer-cleanup obligations)
 export const pendingStripeCancellations = pgTable(
   'pending_stripe_cancellations',
