@@ -34,6 +34,11 @@ We expose authentication to the application layer via an `AuthGateway` interface
 
 `AuthGateway` returns a domain `User` with internal UUID + email only.
 
+**Amendment 2026-10-07 (DEBT-503 item 1): where identity and email come from.**
+- **Identity.** The Clerk user ID comes from the session the middleware verified (`auth()`). The app reads its own `users` row by that ID, and the deletion tombstone, on every request. Outside Clerk's middleware, which still calls it to refresh an expired session token (BUG-323), our code calls Clerk's Backend API only to provision a missing row, to refresh the email billing sends to Stripe, and to check a stale email owner under BUG-284's rules, all through the unchanged provisioning rules. A 404 for the session user means no user; for a stale email owner it still refuses.
+- **Email.** The `users` row's email is kept current by Clerk's `user.updated` webhook, whose delivery Clerk does not guarantee ([DEBT-511](../debt/debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md)). Stripe checkout and trial card setup, which send it to Stripe, refresh it from Clerk first (`requireUser({ currentEmail: true })`).
+- **Claims.** Token claims never provision a user.
+
 ### Route Protection
 
 Route protection is enforced at the request layer:

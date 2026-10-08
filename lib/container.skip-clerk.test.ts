@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeDeletedClerkUserRepository,
+  FakeLogger,
+  FakeUserRepository,
+} from '@/src/application/test-helpers/fakes';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -78,6 +82,7 @@ describe('container (skip clerk)', () => {
 
   describe('when NEXT_PUBLIC_SKIP_CLERK is not true', () => {
     let createContainer: typeof import('./container').createContainer;
+    let auth: ReturnType<typeof vi.fn>;
     let clerkClient: ReturnType<typeof vi.fn>;
     let getUser: ReturnType<typeof vi.fn>;
     let currentUser: ReturnType<typeof vi.fn>;
@@ -93,10 +98,12 @@ describe('container (skip clerk)', () => {
         default: class StripeMock {},
       }));
 
+      auth = vi.fn(async () => ({ userId: 'clerk_1' }));
       currentUser = vi.fn(async () => null);
       getUser = vi.fn(async (clerkUserId: string) => ({ id: clerkUserId }));
       clerkClient = vi.fn(async () => ({ users: { getUser } }));
       vi.doMock('@clerk/nextjs/server', () => ({
+        auth,
         clerkClient,
         currentUser,
       }));
@@ -104,8 +111,20 @@ describe('container (skip clerk)', () => {
       ({ createContainer } = await import('./container'));
     });
 
-    it('loads Clerk currentUser when NEXT_PUBLIC_SKIP_CLERK is not true', async () => {
+    // DEBT-503 item 1: a signed-in request with a stored row reads the session
+    // from auth() and spends none of Clerk's Backend API allowance.
+    it('serves a signed-in request with a stored row from auth() alone, never the Backend API', async () => {
+      const userRepository = new FakeUserRepository();
+      const row = await userRepository.upsertByClerkId(
+        'clerk_1',
+        'user@example.com',
+      );
       const container = createContainer({
+        repositories: {
+          createUserRepository: () => userRepository,
+          createDeletedClerkUserRepository: () =>
+            new FakeDeletedClerkUserRepository(),
+        },
         primitives: {
           db: {} as unknown as DrizzleDb,
           env: {
@@ -124,11 +143,13 @@ describe('container (skip clerk)', () => {
 
       await expect(
         container.createAuthGateway().getCurrentUser(),
-      ).resolves.toBeNull();
+      ).resolves.toEqual(row);
       await expect(
         container.createBillingControllerDeps().getClerkUserId(),
-      ).resolves.toBeNull();
-      expect(currentUser).toHaveBeenCalledTimes(2);
+      ).resolves.toBe('clerk_1');
+      expect(auth).toHaveBeenCalledTimes(2);
+      expect(currentUser).not.toHaveBeenCalled();
+      expect(clerkClient).not.toHaveBeenCalled();
     });
 
     it('loads a Clerk user by ID through the SDK client', async () => {

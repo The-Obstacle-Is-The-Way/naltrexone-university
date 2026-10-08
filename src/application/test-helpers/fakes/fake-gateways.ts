@@ -14,6 +14,7 @@ import type {
   RateLimiter,
   RateLimitInput,
   RateLimitResult,
+  RequireUserOptions,
   SetTrialSubscriptionDefaultPaymentMethodInput,
   SubscriptionObservation,
   TrialPaymentMethodSetupSessionInput,
@@ -23,17 +24,33 @@ import type {
 import type { User } from '@/src/domain/entities';
 
 export class FakeAuthGateway implements AuthGateway {
-  constructor(private user: User | null) {}
+  /** Every requireUser call's options, in order (DEBT-503 item 1). */
+  readonly requireUserCalls: RequireUserOptions[] = [];
+  private readonly currentEmailUser: User | null;
+
+  /**
+   * `currentEmailUser` is what a `currentEmail` refresh returns, as the
+   * identity provider would answer it; it defaults to `user`.
+   */
+  constructor(
+    private user: User | null,
+    options: { currentEmailUser?: User | null } = {},
+  ) {
+    this.currentEmailUser =
+      options.currentEmailUser === undefined ? user : options.currentEmailUser;
+  }
 
   async getCurrentUser(): Promise<User | null> {
     return this.user;
   }
 
-  async requireUser(): Promise<User> {
-    if (!this.user) {
+  async requireUser(options: RequireUserOptions = {}): Promise<User> {
+    this.requireUserCalls.push(options);
+    const user = options.currentEmail ? this.currentEmailUser : this.user;
+    if (!user) {
       throw new ApplicationError('UNAUTHENTICATED', 'User not authenticated');
     }
-    return this.user;
+    return user;
   }
 }
 

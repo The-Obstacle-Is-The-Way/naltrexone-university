@@ -97,4 +97,5 @@ Shipped in #1391 and promoted in #1392, in production since 2026-10-06 07:00Z. T
 ## Related
 
 - [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md): the error page's "Try again".
+- [BUG-332](./bug-332-concurrent-first-requests-can-deadlock-provisioning.md): with three or more concurrent first requests, the same upsert can deadlock, which this record's retry does not cover. Its failure reads "Failed to ensure user row", which this record's Sentry check does not search for.
 - BUG-147 and BUG-284 (archived): earlier identity and upsert decisions.

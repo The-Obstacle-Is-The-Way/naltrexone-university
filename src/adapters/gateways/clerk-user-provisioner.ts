@@ -63,7 +63,7 @@ export function getClerkUserEmailOrNull(user: ClerkUserLike): string | null {
   return user.emailAddresses[0]?.emailAddress ?? null;
 }
 
-function isClerkUserNotFoundError(error: unknown): boolean {
+export function isClerkUserNotFoundError(error: unknown): boolean {
   return (
     typeof error === 'object' &&
     error !== null &&

@@ -14,7 +14,7 @@
 
 Some request shapes make Clerk's SDK, inside our middleware, call Clerk's Backend API with our secret key before the request is answered. Anyone can send them, without an account.
 
-Clerk limits each production instance's Backend API calls, and every signed-in page shares that allowance: `currentUser()` is one such call. So enough of these requests would use the allowance up, and every signed-in page, practice and subscribe would fail until they stopped. People could still sign in, but nothing behind sign-in would work.
+Clerk limits each production instance's Backend API calls, and every signed-in page shares that allowance: until DEBT-503 item 1, each signed-in page made one through `currentUser()`. Since then only provisioning a missing row, a checkout or trial card setup refreshing the email, and BUG-284's stale-owner check do. So enough of these requests would use the allowance up, and every signed-in page, practice and subscribe would fail until they stopped. People could still sign in, but nothing behind sign-in would work.
 
 This record is deliberately general. The repository is public, and the behaviour is in Clerk's SDK, which other Clerk customers also run.
 
@@ -94,7 +94,7 @@ What a limited person sees:
 - **Under attack:**
   - Vercel's Attack Mode is available on every plan.
   - The limiter's failures show in the logs as `clerk_backend_call_limiter_failed`.
-  - Clerk refusals show as 429s from `currentUser()` in Sentry.
+  - Clerk refusals are 429s from the Backend API's user lookup, which since DEBT-503 item 1 runs only to provision a missing row, refresh billing's email or check a stale email owner (BUG-284). They reach Sentry only when a page render throws; a refused checkout is only logged, until DEBT-503 item 3 alerts on it.
 - **Unknown.** Vercel's Hobby plan includes a fixed number of rate-limited requests. Vercel has not documented what happens beyond it.
 
 ## Verification
