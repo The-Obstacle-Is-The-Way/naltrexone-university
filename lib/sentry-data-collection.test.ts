@@ -213,6 +213,35 @@ describe('scrubBreadcrumb', () => {
     expect((logged.nested as { next: string }).next).toBe('/x?token=t');
   });
 
+  // A logged error stays an Error in the breadcrumb, and Sentry serialises it
+  // later, as its name, message, stack and own properties, past this hook.
+  it("redacts credentials in a logged error's copy, as Sentry would serialise it, leaving the error unchanged", () => {
+    const error: Error & { url?: string; self?: unknown } = new Error(
+      'redirect to /cb?code=abc',
+    );
+    error.url = '/x?token=t';
+    error.self = error;
+
+    const scrubbed = scrubBreadcrumb({
+      category: 'console',
+      data: { arguments: [error] },
+    });
+    const copy = (scrubbed.data?.arguments as unknown[] | undefined)?.[0] as
+      | Record<string, unknown>
+      | undefined;
+
+    expect(copy).toMatchObject({
+      name: 'Error',
+      message: 'redirect to /cb?code=[Filtered]',
+      url: '/x?token=[Filtered]',
+      self: '[Circular]',
+    });
+    expect(copy?.stack).toEqual(expect.stringContaining('code=[Filtered]'));
+    expect(JSON.stringify(copy)).not.toMatch(/code=abc|token=t\b/);
+    expect(error.message).toBe('redirect to /cb?code=abc');
+    expect(error.url).toBe('/x?token=t');
+  });
+
   it('redacts an object logged twice in both places, not as a cycle', () => {
     const shared = { url: '/a?token=t' };
 

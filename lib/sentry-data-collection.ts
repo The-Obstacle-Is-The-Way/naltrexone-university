@@ -238,27 +238,36 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * A copy of `value` with credentials redacted in every string, through arrays
- * and plain objects; other objects are kept, since Sentry serialises them
- * itself. A logged object is the app's own, so it is copied, never changed,
- * and a reference back to an enclosing value becomes `[Circular]`.
+ * A copy of `value` with credentials redacted in every string, through arrays,
+ * plain objects and errors; other objects are kept, since Sentry serialises
+ * them itself. An error is copied as Sentry would serialise it after this
+ * hook: its name, message, stack and own enumerable properties. A logged value
+ * is the app's own, so it is copied, never changed, and a reference back to
+ * an enclosing value becomes `[Circular]`.
  */
 function redactStrings(
   value: unknown,
   enclosing: WeakSet<object> = new WeakSet(),
 ): unknown {
   if (typeof value === 'string') return redactCredentialParams(value);
-  if (!Array.isArray(value) && !isPlainObject(value)) return value;
+  const isError = value instanceof Error;
+  if (!isError && !Array.isArray(value) && !isPlainObject(value)) return value;
   if (enclosing.has(value)) return '[Circular]';
   enclosing.add(value);
+  const redactEntries = (entries: Array<[string, unknown]>) =>
+    Object.fromEntries(
+      entries.map(([name, item]) => [name, redactStrings(item, enclosing)]),
+    );
   const copy = Array.isArray(value)
     ? value.map((item) => redactStrings(item, enclosing))
-    : Object.fromEntries(
-        Object.entries(value).map(([name, item]) => [
-          name,
-          redactStrings(item, enclosing),
-        ]),
-      );
+    : isError
+      ? redactEntries([
+          ['name', value.name],
+          ['message', value.message],
+          ['stack', value.stack],
+          ...Object.entries(value),
+        ])
+      : redactEntries(Object.entries(value));
   enclosing.delete(value);
   return copy;
 }
