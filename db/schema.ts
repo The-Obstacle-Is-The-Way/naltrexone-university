@@ -573,7 +573,7 @@ export const deletedClerkUsers = pgTable(
 // the rate limiter keeps its counters for a day only.
 export const operationalAlertDrills = pgTable('operational_alert_drills', {
   cycle: integer('cycle').primaryKey(),
-  raisedAt: timestamp('raised_at', { withTimezone: true })
+  claimedAt: timestamp('claimed_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

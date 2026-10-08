@@ -102,11 +102,12 @@ which would copy the scope's user past `scrubEvent`.
 - **Drill.** The renewal job sends one `operational_alert_drill` per fixed
   30-day cycle, from the first run that claims the cycle's row in
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
-  reads "Operational alert drill: no action needed". Both the alerts' workflow
-  and the default high-priority workflow match it, so expect two emails; the
-  alerts' workflow must be one of them. The job's response reports
-  `alertDrill`, where `raised` means handed to the alert path and only the
-  inbox proves delivery. A manual run (`vercel crons run
+  reads "Operational alert drill: no action needed". The default high-priority
+  workflow may also match it, so expect one or two emails; one must come from
+  the alerts' workflow. The job's response reports
+  `alertDrill`: `raised` means Sentry accepted it, and only the inbox proves
+  delivery; `not_sent` means it failed or met a cooldown and gave its cycle
+  back, so the next daily run retries. A manual run (`vercel crons run
   /api/cron/send-renewal-notices`) sends one only if the current cycle's has
   not gone out.
 

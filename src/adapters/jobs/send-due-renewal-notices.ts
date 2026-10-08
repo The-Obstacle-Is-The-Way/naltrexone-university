@@ -26,6 +26,7 @@ import type {
 import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { DAY_MS, nextAnniversaryRenewalAt } from '@/src/domain/services';
 import {
+  type OperationalAlertDrillCycles,
   type OperationalAlertDrillOutcome,
   raiseOperationalAlertDrillIfDue,
 } from './operational-alert-drill';
@@ -316,8 +317,8 @@ export type SendDueRenewalNoticesJobDeps = {
   }) => Promise<number>;
   logger: Pick<Logger, 'warn' | 'error'>;
   alerts: OperationalAlerts;
-  /** Claims a 30-day alert drill cycle; true for its one winning claim. */
-  claimAlertDrillCycle: (cycle: number) => Promise<boolean>;
+  /** The alert drill's once-per-cycle claims. */
+  alertDrillCycles: OperationalAlertDrillCycles;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -353,7 +354,7 @@ export async function sendDueRenewalNotices(
   // DEBT-505: first, so the drill goes out whatever the notices do.
   const alertDrill = await raiseOperationalAlertDrillIfDue({
     now: deps.now,
-    claimCycle: deps.claimAlertDrillCycle,
+    cycles: deps.alertDrillCycles,
     alerts: deps.alerts,
     logger: deps.logger,
   });

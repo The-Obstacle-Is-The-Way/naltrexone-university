@@ -107,9 +107,12 @@ function createDeps(): {
       pruneExpiredTrialPaymentMethodSetups,
       logger,
       alerts,
-      claimAlertDrillCycle: async (cycle) => {
-        alertDrillClaims.push(cycle);
-        return false;
+      alertDrillCycles: {
+        claim: async (cycle) => {
+          alertDrillClaims.push(cycle);
+          return false;
+        },
+        release: async () => {},
       },
       annualPlan: {
         planName: 'Pro Annual',
@@ -627,9 +630,12 @@ describe('the operational alert drill', () => {
   it("claims the current cycle's drill, raises it, and reports it", async () => {
     const { deps, alerts } = createDeps();
     const claims: number[] = [];
-    deps.claimAlertDrillCycle = async (cycle) => {
-      claims.push(cycle);
-      return true;
+    deps.alertDrillCycles = {
+      claim: async (cycle) => {
+        claims.push(cycle);
+        return true;
+      },
+      release: async () => {},
     };
 
     const result = await sendDueRenewalNotices(
@@ -647,7 +653,10 @@ describe('the operational alert drill', () => {
 
   it('raises the drill before the notices, so it goes out when they fail', async () => {
     const { deps, alerts, listDue } = createDeps();
-    deps.claimAlertDrillCycle = async () => true;
+    deps.alertDrillCycles = {
+      claim: async () => true,
+      release: async () => {},
+    };
     listDue.mockRejectedValueOnce(new Error('query failed'));
 
     await expect(
@@ -660,8 +669,11 @@ describe('the operational alert drill', () => {
 
   it('still runs the notices when the drill cannot be claimed', async () => {
     const { deps, alerts, execute } = createDeps();
-    deps.claimAlertDrillCycle = async () => {
-      throw new Error('database unavailable');
+    deps.alertDrillCycles = {
+      claim: async () => {
+        throw new Error('database unavailable');
+      },
+      release: async () => {},
     };
 
     const result = await sendDueRenewalNotices(

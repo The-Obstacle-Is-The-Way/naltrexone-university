@@ -1,4 +1,5 @@
-// DEBT-505: conditions a person must act on. An alert carries fixed fields
+// DEBT-505: conditions a person must act on, and a drill that proves the
+// alert path. An alert carries fixed fields
 // only, a kind from this closed list and a count, so neither personal data nor
 // free text can reach the alert channel. Callers keep their log line beside
 // each alert, for diagnosis.
@@ -20,11 +21,17 @@ export type OperationalAlert = {
   count: number;
 };
 
+/**
+ * What became of a raised alert: handed to the alert channel, suppressed by a
+ * cooldown because one went out recently, or failed and logged.
+ */
+export type OperationalAlertOutcome = 'sent' | 'suppressed' | 'failed';
+
 export interface OperationalAlerts {
   /**
-   * Resolves once the alert is sent, held back by a cooldown, or failed and
-   * logged. It never rejects: an alert that cannot be sent must not change the
-   * caller's outcome.
+   * Resolves once the alert is sent, suppressed by a cooldown, or failed and
+   * logged, saying which. It never rejects: an alert that cannot be sent must
+   * not change the caller's outcome.
    */
-  raise(alert: OperationalAlert): Promise<void>;
+  raise(alert: OperationalAlert): Promise<OperationalAlertOutcome>;
 }

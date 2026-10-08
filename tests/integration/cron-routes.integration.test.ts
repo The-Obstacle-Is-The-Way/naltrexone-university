@@ -12,6 +12,7 @@ import * as schema from '@/db/schema';
 import { createContainer } from '@/lib/container';
 import { env } from '@/lib/env';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
+import { operationalAlertDrillCycle } from '@/src/adapters/jobs/operational-alert-drill';
 import { FakeTransactionalEmailGateway } from '@/src/application/test-helpers/fakes';
 import { DAY_MS } from '@/src/domain/services';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
@@ -436,7 +437,10 @@ describe('send renewal notices cron route', () => {
       cancelAtPeriodEnd: false,
     });
     const email = new FakeTransactionalEmailGateway({ configured: true });
-    cleanup.rateLimitKeys.push('cron:send-renewal-notices');
+    cleanup.rateLimitKeys.push(
+      'cron:send-renewal-notices',
+      'operational-alert:operational_alert_drill',
+    );
     const handler = createSendRenewalNoticesCronHandler(() =>
       createContainer({
         primitives: {
@@ -459,7 +463,18 @@ describe('send renewal notices cron route', () => {
       subscriptions: 1,
       queued: 2,
       dispatchFailures: 0,
+      // DEBT-505: Sentry is off here, so the drill cannot be sent; the job
+      // gives its cycle back for the next run.
+      alertDrill: 'not_sent',
     });
+    await expect(
+      db.query.operationalAlertDrills.findFirst({
+        where: eq(
+          schema.operationalAlertDrills.cycle,
+          operationalAlertDrillCycle(NOW),
+        ),
+      }),
+    ).resolves.toBeUndefined();
     const deliveries = await db
       .select()
       .from(schema.renewalNoticeDeliveries)
@@ -505,7 +520,10 @@ describe('send renewal notices cron route: monthly anniversary', () => {
       billingCycleAnchor: anchor,
     });
     const email = new FakeTransactionalEmailGateway({ configured: true });
-    cleanup.rateLimitKeys.push('cron:send-renewal-notices');
+    cleanup.rateLimitKeys.push(
+      'cron:send-renewal-notices',
+      'operational-alert:operational_alert_drill',
+    );
     const handler = createSendRenewalNoticesCronHandler(() =>
       createContainer({
         primitives: {

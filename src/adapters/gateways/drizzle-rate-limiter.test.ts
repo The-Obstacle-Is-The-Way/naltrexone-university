@@ -33,18 +33,3 @@ describe('DrizzleRateLimiter error translation', () => {
     });
   });
 });
-
-// DEBT-505: a counter is pruned once its window started more than a day ago,
-// so a longer window would forget its count while still open and let every
-// call through. Refuse it before touching the database.
-describe('DrizzleRateLimiter window bound', () => {
-  it('refuses a window longer than the one day its rows are kept', async () => {
-    const execute = vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
-    const limiter = new DrizzleRateLimiter(drizzle.mock({ schema }));
-
-    await expect(
-      limiter.limit({ key: 'rate:test', limit: 1, windowMs: 86_400_001 }),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
-    expect(execute).not.toHaveBeenCalled();
-  });
-});

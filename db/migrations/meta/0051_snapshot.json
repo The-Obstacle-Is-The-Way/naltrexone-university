@@ -1,5 +1,5 @@
 {
-  "id": "cc1c0250-cbc7-4bef-8361-67f8c1d8da03",
+  "id": "f3a9d6f8-e224-429c-8048-7d75098ba40b",
   "prevId": "d228241d-e24c-48ce-8716-8dabe68bd2ed",
   "version": "7",
   "dialect": "postgresql",
@@ -1279,8 +1279,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "raised_at": {
-          "name": "raised_at",
+        "claimed_at": {
+          "name": "claimed_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
