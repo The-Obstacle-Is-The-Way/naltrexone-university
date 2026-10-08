@@ -51,7 +51,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 - **A stale address** can miss a legally required notice.
 - **A reassigned address** can disclose the subscription to another person.
 - **No one is told.** A misdirected notice is silent.
-- **Timing.** The owner states the product has no real subscribers yet. DEBT-501 item 7 records no live purchase. A new subscriber's first scheduled notice is about eleven months away, and their acknowledgment uses the address checkout refreshes from Clerk. So the exposure is only existing live subscriptions, which the owner can count read-only. This must ship before whichever comes first: paid acquisition, or 35 days before the earliest existing live renewal.
+- **Timing.** The owner states the product has no real subscribers yet. DEBT-501 item 7 records no live purchase. A new subscriber's first scheduled notice is about eleven months away, and their acknowledgment uses the address checkout refreshes from Clerk. So the exposure is only existing live subscriptions, which the owner can count read-only. The notice work must ship 35 days before the earliest live renewal, as the status says. The portal-email item can ship earlier, but no deadline makes it due before paid acquisition, since a new subscriber's notices are about eleven months away (AUDIT-015).
 
 ## Options
 

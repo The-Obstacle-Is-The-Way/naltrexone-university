@@ -24,7 +24,7 @@ Three independent read-only reviews checked each record against the code at the 
 | **Concurrent provisioning without one lock.** | BUG-320, BUG-332 | DEBT-502 item 2: provisioning in one short transaction under the tombstone lock. The two retries stay as defence. |
 | **Silent conditions, and an unwatched alert path.** | DEBT-505; DEBT-501 items 1–3; DEBT-503 items 2–4 | Alert kinds for the silent conditions, so their triggers announce themselves. A drill that proves the path end to end, and a watcher outside Sentry email that notices a missing drill or a stopped cron. |
 | **Telemetry by subtraction.** Sentry sends what it collects unless each field is scrubbed. | BUG-318 (archived), BUG-331, DEBT-504 | Send only what diagnosis needs: no server breadcrumbs, no trace headers to other services, redaction on every span and envelope header (BUG-331), and server tracing only if it is used. |
-| **Hosting plan.** Production runs on Vercel Hobby, which [Vercel's terms](https://vercel.com/legal/terms) limit to personal, non-commercial use. | New DEBT-512; it also explains DEBT-505's one-hour logs, DEBT-511's cron, which may start up to 59 minutes late and BUG-319's lack of Skew Protection | The owner moves production to Pro before the first live sale. |
+| **Hosting plan.** Production runs on Vercel Hobby, which [Vercel's terms](https://vercel.com/legal/terms) limit to personal, non-commercial use. | New DEBT-512; it also explains DEBT-505's one-hour logs, DEBT-511's cron, which may start up to 59 minutes late and BUG-319's lack of Skew Protection | The owner moves production to Pro no later than the first live sale; moving now is recommended. |
 | **Statuses lag releases.** Records shipped and promoted still read Open or blocked. | DEBT-506, DEBT-508, DEBT-510, BUG-330 | A promotion updates the records it ships. When a blocker ships, records that wait on it ("after DEBT-…") are updated in the same pull request. |
 | **Facts restated in many places.** One decision is summarised in three to six records and index lines, and each copy drifts. | Most review findings on #1426 and #1428 | State a fact once and link to it. The index row repeats only the status line. |
 
@@ -64,7 +64,7 @@ The gates are re-keyed. "Before paid acquisition" was too late for some duties, 
 1. **Now.** BUG-331 (#1430). Then the alert drill and the watcher (DEBT-505). Then BUG-330.
 2. **Quick wins, one pull request.** Error text redacted before it reaches Sentry (DEBT-513, filed during review). `CONSENT_STATE_SECRET` required (DEBT-502 item 6). The circuit breaker counts only transient errors (DEBT-501 item 6). The payer's success-page message (DEBT-501 item 5). A Stripe timeout within the reconcile job's limit (DEBT-501 item 1). The price-ID runbook line (DEBT-501 item 2). The Dependabot Vitest group (DEBT-500). BUG-319's real-SDK test.
 3. **Alert kinds for silent conditions.** A Clerk cap trip or 429 (DEBT-503 item 3), and a reconcile run that stops early and an unknown price ID (DEBT-501 items 1 and 2). Once a reconcile run that stops early alerts, the oldest-first reconcile (DEBT-501 item 1) waits for that alert.
-4. **Before the first live sale.** Vercel Pro (DEBT-512, owner). The live purchase and refund (DEBT-501 item 7, owner). The tax decision (DEBT-414 Q7, owner). The legacy price-ID list (DEBT-501 item 2). The add-card completion recheck (DEBT-501 item 4 with DEBT-414 F22).
+4. **Before the first live sale.** Vercel Pro (DEBT-512, owner; moving now is recommended, since the live pricing page and checkout already count as commercial use). The live purchase and refund (DEBT-501 item 7, owner). The tax decision (DEBT-414 Q7, owner). The legacy price-ID list (DEBT-501 item 2). The add-card completion recheck (DEBT-501 item 4 with DEBT-414 F22).
 5. **Before paid acquisition.** Counsel's Q1–Q6 (DEBT-414).
 6. **Before the earliest live renewal minus 35 days.** The identity resolver (DEBT-502 items 3, 1 and 2) and DEBT-511 on top of it, with DEBT-414 F21.
 
@@ -76,7 +76,7 @@ The gates are re-keyed. "Before paid acquisition" was too late for some duties, 
 
 ## Owner-only
 
-- Move production to Vercel Pro before the first live sale (DEBT-512).
+- Move production to Vercel Pro no later than the first live sale; now is recommended (DEBT-512).
 - Create the watcher's read-only Sentry token.
 - Add the Gmail filter and the Sentry app's push for operational alerts (DEBT-505).
 - The live purchase and refund, the tax decision, Clerk's "Verify at sign-up", the Resend webhook secret, and counsel's questions (DEBT-414, DEBT-501, DEBT-502).
