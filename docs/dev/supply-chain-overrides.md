@@ -180,17 +180,38 @@ advisories.
   stop the others: the run raises what it can, then fails and names what it
   could not. Only a failure to list existing issues fails the run outright,
   because without that list nothing can be deduplicated.
-- A run takes about three minutes and makes about 480 API requests, half of
+- A run takes about four minutes and makes about 480 API requests, half of
   the workflow token's 1,000 an hour. Nothing else in this repository calls
   the API.
+- Only issues opened by the job or by the repository owner count. This is a
+  public repository, and a stranger's issue titled with a GHSA ID would
+  otherwise settle that advisory, so its alert would never open.
 - Critical and high advisories are assigned to the repository owner. GitHub
   notifies an assignee whatever their watch setting, and the same-day rule
   needs someone to see them. Medium and low advisories open unassigned. In the
   12 months to 2026-10-07 the direct dependencies' repositories published 81
   advisories: 12 critical, 33 high, 32 medium and 4 low. Most concern features
   or versions this app does not use, so the issue body gives `package.json`'s
-  pins and every version `pnpm-lock.yaml` resolves. Ranges are free text
-  (`7.0.0 < 7.28.0` means from 7.0.0), so they are shown, not evaluated.
+  pins and every version `pnpm-lock.yaml` resolves.
+- An issue opens on the upstream advisory's own ranges, which are free text
+  and can be wrong, so the job does not evaluate them. Checked against the 95
+  advisories published from 2026-06-14 to 2026-10-08, reading them as
+  GitHub's syntax would have wrongly ruled out two that did affect this app.
+  `brace-expansion`'s high GHSA-rgw5-rvv9-x895 used commas to mean "or", and
+  `next`'s GHSA-3w37-wq28-93x7 gave a bare `16.3.0` for a range that covered
+  16.3.5.
+- GitHub's review settles the versions later. Once GitHub has reviewed an
+  advisory and its ranges include no version `pnpm-lock.yaml` resolves, the
+  job closes the issue with that evidence; Dependabot reads the same review.
+  An issue a person reopens is not closed again. An advisory already reviewed
+  and ruled out when the job first sees it opens no issue, and each run
+  checks it again in case the lockfile changes. Anything uncertain stays
+  open: no review yet, another ecosystem, an unreadable range or version, or
+  a package the lockfile lacks, which another package may compile in.
+- Over those 16 weeks the indirect dependencies would have raised 33
+  critical or high issues, about two a week; 13 never affected this app. The
+  review would have closed 10 of the 13, and not one of the advisories
+  Dependabot alerted on.
 
 Triage each issue with the rule above, record the outcome in it, and close it.
 Neither the job nor Dependabot sees code that a package compiles in rather

@@ -119,7 +119,82 @@ export type AdvisoryIssues = {
   list(): Promise<AdvisoryIssue[]>;
   // An urgent issue must reach a person directly, not only the issue list.
   create(title: string, body: string, urgent: boolean): Promise<void>;
+  comments(number: number): Promise<string[]>;
+  close(number: number, comment: string): Promise<void>;
 };
+
+// GitHub's reviewed copy of an advisory: the ranges Dependabot evaluates.
+export type ReviewedAdvisory = {
+  reviewed: boolean;
+  vulnerabilities: {
+    ecosystem: string;
+    package: string;
+    range: string | null;
+  }[];
+};
+
+export type AdvisoryDatabase = {
+  // null while GitHub's database does not have the advisory.
+  find(ghsaId: string): Promise<ReviewedAdvisory | null>;
+};
+
+type Version = readonly [number, number, number];
+
+function plainVersion(text: string): Version | null {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(text);
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+}
+
+const COMPARISONS: Readonly<Record<string, (order: number) => boolean>> = {
+  '<': (order) => order < 0,
+  '<=': (order) => order <= 0,
+  '>': (order) => order > 0,
+  '>=': (order) => order >= 0,
+  '=': (order) => order === 0,
+};
+
+// A reviewed range is comparators joined by ", ", all of which must hold,
+// such as ">= 4.0.0, < 5.0.9". GitHub's review fixes that syntax; upstream
+// text has none (GHSA-rgw5-rvv9-x895 used commas to mean "or"). null when the
+// range is not in that syntax, including any prerelease bound.
+function inReviewedRange(version: Version, range: string): boolean | null {
+  let holds = true;
+  for (const comparator of range.split(', ')) {
+    const match = /^(<=|>=|<|>|=) (\S+)$/.exec(comparator);
+    const compare = match?.[1] ? COMPARISONS[match[1]] : undefined;
+    const bound = match?.[2] ? plainVersion(match[2]) : null;
+    if (!compare || !bound) return null;
+    const order =
+      version[0] - bound[0] || version[1] - bound[1] || version[2] - bound[2];
+    holds &&= compare(order);
+  }
+  return holds;
+}
+
+// The evidence, one line per reviewed range, when GitHub's review rules out
+// every version the lockfile resolves; otherwise null. Anything uncertain
+// keeps the advisory open: no review yet, another ecosystem, an unreadable
+// range or locked version, or a package the lockfile lacks, since a package
+// can compile another in, as Next.js does React's server packages.
+export function ruledOutByReview(
+  advisory: ReviewedAdvisory | null,
+  locked: ReadonlyMap<string, readonly string[]>,
+): string[] | null {
+  if (!advisory?.reviewed || advisory.vulnerabilities.length === 0) return null;
+  const evidence: string[] = [];
+  for (const { ecosystem, package: name, range } of advisory.vulnerabilities) {
+    const versions = locked.get(name);
+    if (ecosystem !== 'npm' || range === null || !versions) return null;
+    for (const version of versions) {
+      const parsed = plainVersion(version);
+      if (!parsed || inReviewedRange(parsed, range) !== false) return null;
+    }
+    evidence.push(
+      `\`${name}\` \`${range}\`: \`pnpm-lock.yaml\` resolves ${versions.map((version) => `\`${version}\``).join(', ')}`,
+    );
+  }
+  return evidence;
+}
 
 // The playbook ships a critical or high fix the same day when it affects the
 // app, so those advisories are urgent; medium and low wait in the issue list.
@@ -172,19 +247,26 @@ function describeAdvisory(
   );
 }
 
-export type RaiseOutcome = { raised: string[]; failed: string[] };
+export type RaiseOutcome = {
+  raised: string[];
+  failed: string[];
+  // Already reviewed by GitHub, with no locked version affected. Dependabot
+  // reads the same review, so no issue opens; each run checks again.
+  ruledOut: string[];
+};
 
 export async function raiseUpstreamAdvisories(
   advisories: readonly UpstreamAdvisory[],
   dependencies: DependencyVersions,
   issues: AdvisoryIssues,
+  database: AdvisoryDatabase = githubAdvisoryDatabase(),
   start = WATCH_START,
 ): Promise<RaiseOutcome> {
   const startAt = Date.parse(start);
   const fresh = advisories.filter(
     (advisory) => Date.parse(advisory.publishedAt) >= startAt,
   );
-  const outcome: RaiseOutcome = { raised: [], failed: [] };
+  const outcome: RaiseOutcome = { raised: [], failed: [], ruledOut: [] };
   if (fresh.length === 0) return outcome;
   // An issue of any state settles its advisory: a closed one was triaged.
   // Without this list nothing can be deduplicated, so its failure fails all.
@@ -197,6 +279,12 @@ export async function raiseUpstreamAdvisories(
     )
       continue;
     handled.add(advisory.ghsaId);
+    // A database that cannot be read rules nothing out, so the issue opens.
+    const review = await database.find(advisory.ghsaId).catch(() => null);
+    if (ruledOutByReview(review, dependencies.locked)) {
+      outcome.ruledOut.push(advisory.ghsaId);
+      continue;
+    }
     // One issue that cannot be opened must not stop the ones after it; the
     // next run retries it, and the run reports it and fails.
     try {
@@ -505,6 +593,9 @@ export async function listUpstreamAdvisories(
     .map(parseAdvisory);
 }
 
+// The account GitHub Actions opens issues as.
+const WATCHER_LOGIN = 'github-actions[bot]';
+
 // GitHub notifies an assignee whatever their watch setting, so urgent issues
 // are assigned to the repository owner (set by GitHub Actions). A local run
 // has no owner and opens the issue unassigned.
@@ -512,6 +603,13 @@ export function createGithubAdvisoryIssues(
   run: typeof gh = gh,
   urgentAssignee: string | null = process.env.GITHUB_REPOSITORY_OWNER ?? null,
 ): AdvisoryIssues {
+  // Anyone can open an issue in this public repository. Only the watcher's and
+  // the owner's issues are listed, so a stranger's issue titled with a GHSA ID
+  // can neither silence that advisory nor be closed by the watcher.
+  const trusted = new Set([
+    WATCHER_LOGIN,
+    ...(urgentAssignee ? [urgentAssignee] : []),
+  ]);
   return {
     // A direct, paginated listing rather than the eventually consistent search
     // index, so an issue opened by the previous run is always seen.
@@ -533,15 +631,18 @@ export function createGithubAdvisoryIssues(
             throw new Error('Invalid GitHub issue response');
           continue;
         }
-        const { number, title, state } = issue;
+        const { number, title, state, user } = issue;
         if (
           typeof number !== 'number' ||
           !Number.isSafeInteger(number) ||
           number <= 0 ||
           typeof title !== 'string' ||
-          (state !== 'open' && state !== 'closed')
+          (state !== 'open' && state !== 'closed') ||
+          !isRecord(user) ||
+          typeof user.login !== 'string'
         )
           throw new Error('Invalid GitHub issue response');
+        if (!trusted.has(user.login)) continue;
         issues.push({
           number,
           title,
@@ -561,7 +662,132 @@ export function createGithubAdvisoryIssues(
         ...(urgent && urgentAssignee ? ['--assignee', urgentAssignee] : []),
       ]);
     },
+    async comments(number) {
+      return slurpedPages(
+        run([
+          'api',
+          '--paginate',
+          '--slurp',
+          `repos/{owner}/{repo}/issues/${number}/comments?per_page=100`,
+        ]),
+        'Invalid GitHub comment response',
+      ).map((comment) => {
+        if (!isRecord(comment) || typeof comment.body !== 'string')
+          throw new Error('Invalid GitHub comment response');
+        return comment.body;
+      });
+    },
+    async close(number, comment) {
+      run([
+        'issue',
+        'close',
+        String(number),
+        '--reason',
+        'not planned',
+        '--comment',
+        comment,
+      ]);
+    },
   };
+}
+
+const GHSA_ID = /^GHSA(-[0-9a-z]{4}){3}$/;
+
+export function githubAdvisoryDatabase(run: typeof gh = gh): AdvisoryDatabase {
+  return {
+    async find(ghsaId) {
+      // The identifier becomes an API path.
+      if (!GHSA_ID.test(ghsaId)) throw new Error('Invalid GHSA ID');
+      let response: string;
+      try {
+        response = run(['api', `advisories/${ghsaId}`]);
+      } catch (error) {
+        if (
+          isRecord(error) &&
+          typeof error.stderr === 'string' &&
+          error.stderr.includes('(HTTP 404)')
+        )
+          return null;
+        throw error;
+      }
+      const invalid = () =>
+        new Error('Invalid GitHub advisory database response');
+      const advisory: unknown = JSON.parse(response);
+      if (
+        !isRecord(advisory) ||
+        !isOptionalString(advisory.github_reviewed_at ?? null) ||
+        !Array.isArray(advisory.vulnerabilities)
+      )
+        throw invalid();
+      return {
+        reviewed: typeof advisory.github_reviewed_at === 'string',
+        vulnerabilities: advisory.vulnerabilities.map((entry: unknown) => {
+          const range = isRecord(entry)
+            ? (entry.vulnerable_version_range ?? null)
+            : undefined;
+          if (
+            !isRecord(entry) ||
+            !isRecord(entry.package) ||
+            typeof entry.package.ecosystem !== 'string' ||
+            typeof entry.package.name !== 'string' ||
+            !isOptionalString(range)
+          )
+            throw invalid();
+          return {
+            ecosystem: entry.package.ecosystem,
+            package: entry.package.name,
+            range,
+          };
+        }),
+      };
+    },
+  };
+}
+
+const ADVISORY_ISSUE = /^Upstream security advisory (GHSA(?:-[0-9a-z]{4}){3}) /;
+
+// Marks the watcher's own closing comment, so an issue a person reopens is
+// not closed again.
+const REVIEW_CLOSE_MARKER =
+  '<!-- upstream-advisory-watch: closed after GitHub review -->';
+
+export type CloseOutcome = { closed: string[]; failed: string[] };
+
+// An issue opens on the upstream advisory's own word. Once GitHub's review,
+// the data Dependabot reads, rules out every locked version, the issue is
+// closed with that evidence. Checked against the 95 advisories published
+// from 2026-06-14 to 2026-10-08, this would have closed none that
+// Dependabot alerted on.
+export async function closeReviewedIssues(
+  issues: AdvisoryIssues,
+  locked: ReadonlyMap<string, readonly string[]>,
+  database: AdvisoryDatabase,
+): Promise<CloseOutcome> {
+  const outcome: CloseOutcome = { closed: [], failed: [] };
+  for (const issue of await issues.list()) {
+    const ghsaId =
+      issue.state === 'OPEN' ? ADVISORY_ISSUE.exec(issue.title)?.[1] : null;
+    if (!ghsaId) continue;
+    try {
+      const evidence = ruledOutByReview(await database.find(ghsaId), locked);
+      if (!evidence) continue;
+      const comments = await issues.comments(issue.number);
+      if (comments.some((body) => body.includes(REVIEW_CLOSE_MARKER))) continue;
+      await issues.close(
+        issue.number,
+        'GitHub has reviewed this advisory, and its ranges include no version `pnpm-lock.yaml` resolves:\n\n' +
+          evidence.map((line) => `- ${line}\n`).join('') +
+          '\nClosed automatically, since Dependabot reads the same review. ' +
+          'Reopen this issue if the app is affected anyway, for example ' +
+          'through code a package compiles in; the watcher will not close it ' +
+          `again.\n\n${REVIEW_CLOSE_MARKER}\n`,
+      );
+      outcome.closed.push(ghsaId);
+    } catch {
+      outcome.failed.push(ghsaId);
+    }
+  }
+  return outcome;
 }
 
 export type WatchedRepositories = {
@@ -579,6 +805,7 @@ export type WatchedRepositories = {
 const LEFT_TO_DEPENDABOT: ReadonlySet<string> = new Set(['medium', 'low']);
 
 export type WatchOutcome = RaiseOutcome & {
+  closed: string[];
   read: number;
   unreadable: string[];
   unwatched: string[];
@@ -592,6 +819,7 @@ export async function watchUpstreamAdvisories(
   issues: AdvisoryIssues,
   list: (repository: string) => Promise<UpstreamAdvisory[]> = (repository) =>
     listUpstreamAdvisories(repository),
+  database: AdvisoryDatabase = githubAdvisoryDatabase(),
 ): Promise<WatchOutcome> {
   const advisories: UpstreamAdvisory[] = [];
   const unreadable: string[] = [];
@@ -623,8 +851,21 @@ export async function watchUpstreamAdvisories(
       else unreadable.push(repository);
     }
   }
+  const raised = await raiseUpstreamAdvisories(
+    advisories,
+    dependencies,
+    issues,
+    database,
+  );
+  const reviewed = await closeReviewedIssues(
+    issues,
+    dependencies.locked,
+    database,
+  );
   return {
-    ...(await raiseUpstreamAdvisories(advisories, dependencies, issues)),
+    ...raised,
+    failed: [...raised.failed, ...reviewed.failed],
+    closed: reviewed.closed,
     read,
     unreadable,
     unwatched,
@@ -661,17 +902,24 @@ export async function runUpstreamAdvisoryWatch(
   output: Pick<Console, 'log' | 'error'> = console,
 ): Promise<number> {
   try {
-    const { raised, failed, read, unreadable, unwatched } = await check();
+    const { raised, failed, ruledOut, closed, read, unreadable, unwatched } =
+      await check();
     output.log(
       `Upstream advisories raised: ${raised.length > 0 ? raised.join(', ') : 'none'}`,
     );
+    if (ruledOut.length > 0)
+      output.log(
+        `Not raised, ruled out by GitHub’s review: ${ruledOut.join(', ')}`,
+      );
+    if (closed.length > 0)
+      output.log(`Closed after GitHub’s review: ${closed.join(', ')}`);
     output.log(`Repositories read: ${read}`);
     if (unwatched.length > 0)
       output.log(
         `Not watched, no GitHub repository to read: ${unwatched.join(', ')}`,
       );
     if (failed.length > 0)
-      output.error(`Could not open issues for: ${failed.join(', ')}`);
+      output.error(`Could not open or close issues for: ${failed.join(', ')}`);
     if (unreadable.length > 0)
       output.error(`Could not read advisories for: ${unreadable.join(', ')}`);
     return failed.length > 0 || unreadable.length > 0 ? 1 : 0;

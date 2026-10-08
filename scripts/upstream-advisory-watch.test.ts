@@ -7,21 +7,22 @@ import {
   snapshotProcessEnv,
 } from '../tests/shared/process-env';
 import {
-  type AdvisoryIssue,
-  type AdvisoryIssues,
-  createGithubAdvisoryIssues,
   DEPENDENCY_REPOSITORIES,
-  type DependencyVersions,
-  listUpstreamAdvisories,
   lockfilePackages,
   RepositoryNotFound,
   raiseUpstreamAdvisories,
   runUpstreamAdvisoryWatch,
-  type UpstreamAdvisory,
   WATCH_START,
   watchedRepositories,
   watchUpstreamAdvisories,
 } from './upstream-advisory-watch';
+import {
+  advisory,
+  apiAdvisory,
+  MemoryIssues,
+  manifest,
+  unreviewed,
+} from './upstream-advisory-watch-test-helpers';
 
 vi.mock('node:child_process', () => ({ execFileSync: vi.fn() }));
 
@@ -33,55 +34,12 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-class MemoryIssues implements AdvisoryIssues {
-  issues: (AdvisoryIssue & { body: string; urgent: boolean })[] = [];
-  async list() {
-    return this.issues;
-  }
-  async create(title: string, body: string, urgent: boolean) {
-    this.issues.push({
-      number: this.issues.length + 1,
-      title,
-      body,
-      state: 'OPEN',
-      urgent,
-    });
-  }
-}
-
-const advisory = (
-  overrides: Partial<UpstreamAdvisory> = {},
-): UpstreamAdvisory => ({
-  ghsaId: 'GHSA-aaaa-bbbb-cccc',
-  cveId: 'CVE-2026-00001',
-  severity: 'critical',
-  summary: 'Remote code execution in a fixture',
-  url: 'https://github.com/vercel/next.js/security/advisories/GHSA-aaaa-bbbb-cccc',
-  publishedAt: '2026-10-08T16:00:00Z',
-  vulnerabilities: [
-    {
-      package: 'next',
-      vulnerableRange: '>= 16.0.0 < 16.3.?',
-      patchedVersions: '16.3.?',
-    },
-  ],
-  ...overrides,
-});
-
-const manifest: DependencyVersions = {
-  direct: { next: '16.3.6' },
-  locked: new Map([
-    ['next', ['16.3.6']],
-    ['undici', ['6.21.0', '7.29.1']],
-  ]),
-};
-
 describe('raising upstream advisories', () => {
   it('opens one issue for an advisory published after the watch start', async () => {
     const issues = new MemoryIssues();
     expect(
       await raiseUpstreamAdvisories([advisory()], manifest, issues),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [] });
+    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
     ]);
@@ -95,7 +53,7 @@ describe('raising upstream advisories', () => {
         manifest,
         issues,
       ),
-    ).toEqual({ raised: [], failed: [] });
+    ).toEqual({ raised: [], failed: [], ruledOut: [] });
     expect(issues.issues).toEqual([]);
     expect(WATCH_START).toBe('2026-10-01T00:00:00Z');
   });
@@ -110,10 +68,11 @@ describe('raising upstream advisories', () => {
         body: '',
         state,
         urgent: true,
+        comments: [],
       });
       expect(
         await raiseUpstreamAdvisories([advisory()], manifest, issues),
-      ).toEqual({ raised: [], failed: [] });
+      ).toEqual({ raised: [], failed: [], ruledOut: [] });
       expect(issues.issues).toHaveLength(1);
     },
   );
@@ -215,7 +174,7 @@ describe('raising upstream advisories', () => {
     const issues = new MemoryIssues();
     expect(
       await raiseUpstreamAdvisories([advisory(), advisory()], manifest, issues),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [] });
+    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
     expect(issues.issues).toHaveLength(1);
   });
 
@@ -251,6 +210,7 @@ describe('raising upstream advisories', () => {
     ).toEqual({
       raised: ['GHSA-dddd-eeee-ffff'],
       failed: ['GHSA-aaaa-bbbb-cccc'],
+      ruledOut: [],
     });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-dddd-eeee-ffff (critical): next',
@@ -268,232 +228,6 @@ describe('raising upstream advisories', () => {
   });
 });
 
-const apiAdvisory = {
-  ghsa_id: 'GHSA-aaaa-bbbb-cccc',
-  cve_id: 'CVE-2026-00001',
-  severity: 'critical',
-  summary: '  Remote code\nexecution  ',
-  html_url:
-    'https://github.com/vercel/next.js/security/advisories/GHSA-aaaa-bbbb-cccc',
-  published_at: '2026-10-08T16:00:00Z',
-  state: 'published',
-  vulnerabilities: [
-    {
-      package: { ecosystem: 'npm', name: 'next' },
-      vulnerable_version_range: '>= 16.0.0 < 16.3.?',
-      patched_versions: '16.3.?',
-    },
-  ],
-};
-
-describe('GitHub advisory source', () => {
-  it('reads every page of a watched repository’s published advisories', async () => {
-    const commands: string[][] = [];
-    const advisories = await listUpstreamAdvisories(
-      'vercel/next.js',
-      (args) => {
-        commands.push(args);
-        return JSON.stringify([
-          [apiAdvisory],
-          [{ ...apiAdvisory, ghsa_id: 'GHSA-dddd-eeee-ffff' }],
-        ]);
-      },
-    );
-    expect(commands).toEqual([
-      [
-        'api',
-        '--paginate',
-        '--slurp',
-        'repos/vercel/next.js/security-advisories?state=published&per_page=100',
-      ],
-    ]);
-    expect(advisories.map((entry) => entry.ghsaId)).toEqual([
-      'GHSA-aaaa-bbbb-cccc',
-      'GHSA-dddd-eeee-ffff',
-    ]);
-    expect(advisories[0]).toEqual(
-      advisory({ summary: 'Remote code execution' }),
-    );
-  });
-
-  it.each([
-    { ghsa_id: 'not-an-id' },
-    { cve_id: 42 },
-    { severity: null },
-    { summary: null },
-    { html_url: 'https://example.com/advisory' },
-    { published_at: 'yesterday' },
-    { published_at: null },
-    { vulnerabilities: null },
-    { vulnerabilities: [{ package: null }] },
-    { vulnerabilities: [{ package: { name: 'next' }, patched_versions: 3 }] },
-  ])('refuses a malformed advisory %j', async (overrides) => {
-    await expect(
-      listUpstreamAdvisories('vercel/next.js', () =>
-        JSON.stringify([[{ ...apiAdvisory, ...overrides }]]),
-      ),
-    ).rejects.toThrow('Invalid GitHub advisory response');
-  });
-
-  it.each([
-    { vulnerabilities: null },
-    { vulnerabilities: [{ package: null }] },
-    { summary: null },
-  ])(
-    'skips a malformed advisory published before the watch start, so it cannot silence new alerts: %j',
-    async (overrides) => {
-      const advisories = await listUpstreamAdvisories('vercel/next.js', () =>
-        JSON.stringify([
-          [
-            {
-              ...apiAdvisory,
-              ...overrides,
-              ghsa_id: 'GHSA-oooo-oooo-oooo',
-              published_at: '2026-09-30T16:15:36Z',
-            },
-            apiAdvisory,
-          ],
-        ]),
-      );
-      expect(advisories.map((entry) => entry.ghsaId)).toEqual([
-        'GHSA-aaaa-bbbb-cccc',
-      ]);
-    },
-  );
-
-  it('validates every advisory published since a caller-supplied start', async () => {
-    await expect(
-      listUpstreamAdvisories(
-        'vercel/next.js',
-        () =>
-          JSON.stringify([
-            [
-              {
-                ...apiAdvisory,
-                vulnerabilities: null,
-                published_at: '2026-09-30T16:15:36Z',
-              },
-            ],
-          ]),
-        '2026-09-01T00:00:00Z',
-      ),
-    ).rejects.toThrow('Invalid GitHub advisory response');
-  });
-
-  it('reports a repository that no longer exists apart from other failures', async () => {
-    const failure = (stderr: string) => () => {
-      throw Object.assign(new Error('Command failed'), { stderr });
-    };
-    await expect(
-      listUpstreamAdvisories(
-        'substack/node-commondir',
-        failure('gh: Not Found (HTTP 404)\n'),
-      ),
-    ).rejects.toBeInstanceOf(RepositoryNotFound);
-    await expect(
-      listUpstreamAdvisories(
-        'nodejs/undici',
-        failure('gh: API rate limit exceeded (HTTP 403)\n'),
-      ),
-    ).rejects.not.toBeInstanceOf(RepositoryNotFound);
-  });
-
-  it.each([{}, [null], [{}]].map((data) => ({ data })))(
-    'refuses malformed page data $data',
-    async ({ data }) => {
-      await expect(
-        listUpstreamAdvisories('vercel/next.js', () => JSON.stringify(data)),
-      ).rejects.toThrow('Invalid GitHub advisory response');
-    },
-  );
-});
-
-describe('GitHub issue adapter', () => {
-  it('lists issues directly with pagination, skipping pull requests', async () => {
-    const commands: string[][] = [];
-    const issues = createGithubAdvisoryIssues((args) => {
-      commands.push(args);
-      return JSON.stringify([
-        [{ number: 42, title: 'Alert', state: 'closed' }],
-        [{ number: 43, title: 'PR', state: 'open', pull_request: {} }],
-      ]);
-    });
-    expect(await issues.list()).toEqual([
-      { number: 42, title: 'Alert', state: 'CLOSED' },
-    ]);
-    expect(commands).toEqual([
-      [
-        'api',
-        '--paginate',
-        '--slurp',
-        'repos/{owner}/{repo}/issues?state=all&per_page=100',
-      ],
-    ]);
-  });
-
-  it.each([
-    { number: -1 },
-    { number: 1.5 },
-    { title: null },
-    { state: 'unknown' },
-    { pull_request: true },
-  ])('refuses malformed issue fields %j', async (overrides) => {
-    const issues = createGithubAdvisoryIssues(() =>
-      JSON.stringify([
-        [{ number: 42, title: 'Alert', state: 'open', ...overrides }],
-      ]),
-    );
-    await expect(issues.list()).rejects.toThrow(
-      'Invalid GitHub issue response',
-    );
-  });
-
-  it('creates an issue through the default runner with a bounded argument list', async () => {
-    const run = vi.mocked(execFileSync).mockReturnValue('');
-    await createGithubAdvisoryIssues(undefined, 'repo-owner').create(
-      'Alert',
-      'Details',
-      false,
-    );
-    expect(run).toHaveBeenCalledWith(
-      'gh',
-      ['issue', 'create', '--title', 'Alert', '--body', 'Details'],
-      { encoding: 'utf8', timeout: 30_000, maxBuffer: 32 * 1024 * 1024 },
-    );
-  });
-
-  it('assigns an urgent issue, so its assignee is notified whatever their watch setting', async () => {
-    const commands: string[][] = [];
-    await createGithubAdvisoryIssues((args) => {
-      commands.push(args);
-      return '';
-    }, 'repo-owner').create('Alert', 'Details', true);
-    expect(commands).toEqual([
-      [
-        'issue',
-        'create',
-        '--title',
-        'Alert',
-        '--body',
-        'Details',
-        '--assignee',
-        'repo-owner',
-      ],
-    ]);
-  });
-
-  it('still opens an urgent issue when no assignee is configured, as in a local run', async () => {
-    const commands: string[][] = [];
-    await createGithubAdvisoryIssues((args) => {
-      commands.push(args);
-      return '';
-    }, null).create('Alert', 'Details', true);
-    expect(commands).toEqual([
-      ['issue', 'create', '--title', 'Alert', '--body', 'Details'],
-    ]);
-  });
-});
-
 describe('watching several repositories', () => {
   it('raises what it can read and names the repositories it could not', async () => {
     const issues = new MemoryIssues();
@@ -505,10 +239,13 @@ describe('watching several repositories', () => {
         if (repository === 'broken/repo') throw new Error('HTTP 500');
         return [advisory()];
       },
+      unreviewed,
     );
     expect(outcome).toEqual({
       raised: ['GHSA-aaaa-bbbb-cccc'],
       failed: [],
+      ruledOut: [],
+      closed: [],
       read: 1,
       unreadable: ['broken/repo'],
       unwatched: [],
@@ -534,6 +271,7 @@ describe('watching several repositories', () => {
         manifest,
         issues,
         async () => [advisory({ severity })],
+        unreviewed,
       );
       expect(issues.issues).toHaveLength(raised ? 1 : 0);
     },
@@ -548,6 +286,7 @@ describe('watching several repositories', () => {
         manifest,
         issues,
         async () => [advisory({ severity })],
+        unreviewed,
       );
       expect(issues.issues).toHaveLength(1);
     },
@@ -567,10 +306,13 @@ describe('watching several repositories', () => {
         if (repository === 'nodejs/undici') throw new Error('HTTP 403');
         throw new RepositoryNotFound(repository);
       },
+      unreviewed,
     );
     expect(outcome).toEqual({
       raised: [],
       failed: [],
+      ruledOut: [],
+      closed: [],
       read: 0,
       unreadable: ['gone/direct', 'nodejs/undici'],
       unwatched: ['substack/node-commondir'],
@@ -595,6 +337,8 @@ describe('watch command outcome', () => {
   const quiet = {
     raised: [],
     failed: [],
+    ruledOut: [],
+    closed: [],
     read: 3,
     unreadable: [],
     unwatched: [],
@@ -671,7 +415,30 @@ describe('watch command outcome', () => {
       'Upstream advisories raised: GHSA-dddd-eeee-ffff',
       'Repositories read: 3',
     ]);
-    expect(errors).toEqual(['Could not open issues for: GHSA-aaaa-bbbb-cccc']);
+    expect(errors).toEqual([
+      'Could not open or close issues for: GHSA-aaaa-bbbb-cccc',
+    ]);
+  });
+
+  it('reports the advisories GitHub’s review ruled out and the issues it closed', async () => {
+    const { messages, errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({
+          ...quiet,
+          ruledOut: ['GHSA-dddd-eeee-ffff'],
+          closed: ['GHSA-aaaa-bbbb-cccc'],
+        }),
+        sink,
+      ),
+    ).toBe(0);
+    expect(messages).toEqual([
+      'Upstream advisories raised: none',
+      'Not raised, ruled out by GitHub’s review: GHSA-dddd-eeee-ffff',
+      'Closed after GitHub’s review: GHSA-aaaa-bbbb-cccc',
+      'Repositories read: 3',
+    ]);
+    expect(errors).toEqual([]);
   });
 
   it('wires the default check: reads every direct and indirect repository, lists issues once, and opens one per new advisory', async () => {
@@ -686,6 +453,11 @@ describe('watch command outcome', () => {
     );
     vi.stubGlobal('fetch', registry);
     const run = vi.mocked(execFileSync).mockImplementation((_file, args) => {
+      // GitHub's database has neither advisory yet.
+      if (args?.[0] === 'api' && args[1]?.startsWith('advisories/'))
+        throw Object.assign(new Error('Command failed'), {
+          stderr: 'gh: Not Found (HTTP 404)\n',
+        });
       const path = args?.[3] ?? '';
       if (
         path ===
@@ -747,6 +519,10 @@ describe('watch command outcome', () => {
       /`package\.json` pins `next` at `[^`]+`, and `pnpm-lock\.yaml` resolves `[^`]+`/,
     );
     expect(creates[0]?.slice(6)).toEqual(['--assignee', 'repo-owner']);
+    expect(calls.filter((args) => args[1]?.startsWith('advisories/'))).toEqual([
+      ['api', 'advisories/GHSA-aaaa-bbbb-cccc'],
+      ['api', 'advisories/GHSA-hhhh-hhhh-hhhh'],
+    ]);
   });
 
   it('returns nonzero with value-free diagnostics when the check fails', async () => {
