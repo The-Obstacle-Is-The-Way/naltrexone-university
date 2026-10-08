@@ -526,6 +526,7 @@ jobs:
         'E2E smoke:NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
         'E2E smoke:STRIPE_SECRET_KEY',
         'E2E smoke:STRIPE_WEBHOOK_SECRET',
+        'Send Codecov notifications:CODECOV_TOKEN',
         'Upload coverage to Codecov:CODECOV_TOKEN',
       ].sort(),
     );

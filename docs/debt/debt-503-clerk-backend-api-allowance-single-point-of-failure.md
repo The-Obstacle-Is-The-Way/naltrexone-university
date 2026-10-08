@@ -27,7 +27,7 @@ This record holds the structural fixes, so that the allowance stops being the on
   - **The ID is already verified locally.** `currentUser()` is `auth()` followed by `users.getUser(userId)` (`@clerk/nextjs` 7.9.4). So the call fetches a profile for an ID `auth()` already trusts. `auth()` accepts only the token the middleware verified, under an HMAC header signature, and throws if the middleware did not run.
   - **Checkout spends a second call.** Billing's `getClerkUserId` makes another `currentUser()` just for the ID.
   - **Today the only deletion guard is Clerk's 404.** The tombstones `user.deleted` writes are read only by the webhook. On sign-in, Clerk's 404 is what stops a deleted user's leftover row from being served.
-  - **CI meets the limit too.** On 2026-10-07, two overlapping CI runs met this lookup's 429s, and signed-in pages rendered as signed out ([DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)).
+  - **CI meets the limit too.** On 2026-10-07, two overlapping E2E runs on one development instance met this lookup's 429s, so signed-in pages rendered as signed out and `main`'s production deploy waited for a re-run ([DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)).
 - **Decided.**
   - **Session identity.** `getCurrentUser()` reads the Clerk user ID from `auth()`, then reads our `users` row and the deletion tombstone together.
     - A tombstoned ID returns no user, even if a leftover row exists, and makes no Clerk call.

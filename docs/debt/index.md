@@ -1,12 +1,12 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-07
+**Last Updated:** 2026-10-08
 
-**Now** — 2026-10-07.
+**Now** — 2026-10-08.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
-- **Verifying.** DEBT-498: increment 2b, History's rows, result filters and sorts, awaits its release, due 2026-10-14.
-- **Next.** DEBT-503 item 1 (identity from the session token; it also ends DEBT-508's Clerk 429s when E2E runs overlap), then DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-511 (legal notices read the address from Clerk at send time; it needs DEBT-505's alerts and must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
+- **In progress.** DEBT-503: item 1, identity from the session token, awaits its release; items 2–4 follow. DEBT-508, isolating concurrent E2E runs: its overlap check follows DEBT-503 item 1's release.
+- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-511 (legal notices read the address from Clerk at send time; it needs DEBT-505's alerts and must ship before paid acquisition), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
@@ -21,7 +21,6 @@
 |----|-------|----------|--------|
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Active — engineering remediation, operational evidence and the focused licensed review remain open |
 | [DEBT-465](./debt-465-test-quality-practices-adoption.md) | Advanced test-quality practices adoption | P2 | Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, which is done (2026-10-04); Part 4 re-scoped by the 2026-10-03 decision below and remains |
-| [DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md) | Reviews grade items whose content is in doubt | P1 | Verifying — increment 2b, History's rows, result filters and sorts, awaits its release to production; due 2026-10-14 |
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — resolution decided in the record |
 | [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — decided per item; items 1 and 2 first |
 | [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
@@ -30,6 +29,8 @@
 | [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Open — resolution decided below; it must ship before paid acquisition |
 | [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; it must ship before paid acquisition, after DEBT-505 |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
+| [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | In Progress — isolation implemented; CI's per-run evidence follows its merge, and the overlap check follows DEBT-503 item 1 |
+| [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Open — resolution decided below |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 

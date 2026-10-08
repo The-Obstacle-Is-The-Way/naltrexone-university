@@ -197,7 +197,6 @@ CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 E2E_CLERK_USER_USERNAME=test@example.com
 E2E_CLERK_USER_PASSWORD=your-password
-E2E_STRIPE_OWNER=local-dev
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL=price_...
@@ -227,29 +226,30 @@ The E2E credential preflight includes DEBT-391's migration-ledger check: it comp
 
 Required subscription setup is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation participates in merge eligibility**. The separately selected `stripe-hosted` project still drives Checkout markup as an unsupported observational probe.
 
-The setup project currently runs three steps, in this order:
+The setup project currently runs these steps, in this order:
 
 1. `runE2ECredentialHealthCheck()` validates the required env vars and checks:
    - database connectivity
    - `idempotency_keys.completed_at` schema presence
-   - Clerk user existence + password validity
+   - Clerk user existence + password validity, returning that user's ID: the run's only Clerk lookup, since concurrent runs share one Clerk instance's rate budget (DEBT-508)
    - Stripe secret-key validity (TEST-mode `sk_test_` shape enforced fail-closed before any Stripe call — global setup mutates provider state, so live-mode keys are rejected at env resolution)
    - Stripe monthly and annual price-ID validity, including plan shape: active, recurring, and billed every 1 month / 1 year (`interval_count` enforced)
-2. `seedTestSubscription()` idempotently ensures:
+2. `sweepE2EStripeCustomers()` deletes per-run CI Stripe customers (`github-ci-<run id>-<attempt>`) more than a day old that no teardown removed, at most 10 per run. It only warns on failure. Global teardown deletes the run attempt's own customer the same way (DEBT-508).
+3. `seedTestSubscription({ clerkUserId })` idempotently ensures:
    - the E2E user exists in `users`
    - a Stripe customer exists for the current `E2E_STRIPE_OWNER` and is mirrored in `stripe_customers`
    - an active owner-scoped subscription exists and is mirrored in `stripe_subscriptions`
-3. `runE2EUserStateReset()` clears mutable user state and reseeds a deterministic baseline
+4. `runE2EUserStateReset()` clears mutable user state and reseeds a deterministic baseline. It finds the seeded user by email in the run's own database, with no Clerk call, so each test's reset spends none of Clerk's budget.
 
 `seedTestSubscription()` ensures:
 
-1. The test user exists in the `users` table (matched by email, Clerk user ID resolved via Clerk API)
+1. The test user exists in the `users` table (matched by email, with the Clerk user ID preflight verified; called without one, the seed looks it up through `fetchClerkWithRetry`). A mid-run `restoreE2EUserPaidSubscription()` reseeds with the Clerk ID global setup stored this run.
 2. A Stripe customer exists for `metadata.e2e_owner === E2E_STRIPE_OWNER` (checked in DB, then Stripe API, created if needed) and is mirrored in `stripe_customers`
 3. An active owner-scoped subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
 
 `global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
 
-`checkout-redirect.spec.ts` uses the same reset/reseed lifecycle to prove both required application-owned transitions: an eligible first-timer's monthly trial CTA and a returning user's paid annual CTA each resolve a real Checkout Session and cross onto the `checkout.stripe.com` origin. Required CI performs no selector action or assertion after that boundary. The two `stripe-hosted-*.spec.ts` files reuse the lifecycle only in the scheduled/manual compatibility project. Individual test-mode subscription objects are disposable fixture state; the shared user and customer identities are not.
+`checkout-redirect.spec.ts` uses the same reset/reseed lifecycle to prove both required application-owned transitions: an eligible first-timer's monthly trial CTA and a returning user's paid annual CTA each resolve a real Checkout Session and cross onto the `checkout.stripe.com` origin. Required CI performs no selector action or assertion after that boundary. The two `stripe-hosted-*.spec.ts` files reuse the lifecycle only in the scheduled/manual compatibility project. Individual test-mode subscription objects are disposable fixture state. The shared Clerk user is not, and neither are the long-lived `local-dev`, `local-clone-*`, `github-ci` and `github-stripe-hosted-smoke` customers; only per-run `github-ci-<run id>-<attempt>` customers are deleted.
 
 `checkout-success-provider.spec.ts` restores a blocking post-boundary contract without scraping Checkout. Stripe's public [Checkout Sessions API](https://docs.stripe.com/api/checkout/sessions) has no operation that completes an arbitrary existing Session. Stripe's supported [`stripe trigger checkout.session.completed`](https://docs.stripe.com/cli/trigger) command does create the necessary real test-mode API objects and side-effect events. The required contract therefore proves two adjacent seams: it retrieves the Session created by the production use case and asserts its parameters plus rejection while `open`, then creates a separate completed Session through the supported trigger and passes that Session through the production `/checkout/success` synchronization, real Drizzle repositories, and entitlement use case. It covers a paid annual subscription and a cardless monthly trial. Do not replace the supported trigger with the CLI fixture's private payment-page endpoint or claim that the CLI can complete the application-created Session.
 
@@ -459,7 +459,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
     E2E_USE_EXISTING_DATABASE: 'true'
     E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
     E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-    E2E_STRIPE_OWNER: github-ci
+    E2E_STRIPE_OWNER: github-ci-${{ github.run_id }}-${{ github.run_attempt }}
 ```
 
 ### Required Secrets
@@ -468,8 +468,8 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | ------ | ------- |
 | `E2E_CLERK_USER_USERNAME` | Test Clerk account username (email) |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
-| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace (`github-ci` in CI; `local-dev` or a developer-specific value locally) |
-| `CLERK_SECRET_KEY` | Clerk API key (used to resolve Clerk user ID during seeding) |
+| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace. CI sets one per run attempt (`github-ci-<run id>-<attempt>`, DEBT-508), so concurrent runs never share a customer; it is a workflow value, not a secret. Locally, `pnpm test:e2e` sets `local-clone-<instance>`, from the instance that picks the clone's database port, so clones never share one either. Only a value exported in the shell overrides it; one in `.env.local` is ignored |
+| `CLERK_SECRET_KEY` | Clerk API key (preflight uses it to find and verify the E2E user once per run) |
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
 | `DATABASE_URL` | CI Postgres connection string for direct DB writes during seeding; local `pnpm test:e2e` supplies the Docker URL automatically |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Stripe monthly price ID (used during subscription seeding) |
