@@ -187,6 +187,43 @@ describe('scrubBreadcrumb', () => {
     });
   });
 
+  // A console line can log an object; its breadcrumb keeps that object. The
+  // copy is redacted, never the app's own object.
+  it("redacts credentials nested in a logged object's copy, leaving the object itself unchanged", () => {
+    const logged: Record<string, unknown> = {
+      url: '/cb?code=abc',
+      nested: { next: '/x?token=t', plain: 'kept' },
+    };
+    logged.self = logged;
+
+    const scrubbed = scrubBreadcrumb({
+      category: 'console',
+      data: { arguments: [logged, 'plain'], logger: 'console' },
+    });
+
+    expect(scrubbed.data?.arguments).toEqual([
+      {
+        url: '/cb?code=[Filtered]',
+        nested: { next: '/x?token=[Filtered]', plain: 'kept' },
+        self: '[Circular]',
+      },
+      'plain',
+    ]);
+    expect(logged.url).toBe('/cb?code=abc');
+    expect((logged.nested as { next: string }).next).toBe('/x?token=t');
+  });
+
+  it('redacts an object logged twice in both places, not as a cycle', () => {
+    const shared = { url: '/a?token=t' };
+
+    expect(
+      scrubBreadcrumb({
+        category: 'console',
+        data: { arguments: [shared, shared] },
+      }).data?.arguments,
+    ).toEqual([{ url: '/a?token=[Filtered]' }, { url: '/a?token=[Filtered]' }]);
+  });
+
   it("redacts credentials in every string of a breadcrumb's data", () => {
     expect(
       scrubBreadcrumb({

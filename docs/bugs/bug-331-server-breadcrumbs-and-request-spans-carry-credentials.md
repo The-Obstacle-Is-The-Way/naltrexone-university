@@ -59,7 +59,7 @@ This affected every server error event until the fix. Operational alerts ([DEBT-
 - **Envelope trace headers redacted.** A server integration redacts the `trace` header's `transaction` before each envelope is sent.
 - **No trace headers to other services.** `tracePropagationTargets: []`: the server calls no service of ours that could continue a trace.
 - **`nonce`** joins the credential parameters `redactCredentialParams` matches.
-- **Every breadcrumb field in the browser.** `scrubBreadcrumb` redacts a breadcrumb's message and every string in its data, arrays such as a console line's arguments included, rather than three named fields. A console breadcrumb holds its line twice, as arguments and joined as the message. The browser SDK writes a URL only to `url`, `from` and `to` today, but an SDK can add a field: the server SDK already writes `url.query`.
+- **Every breadcrumb field in the browser.** `scrubBreadcrumb` redacts a breadcrumb's message and every string in its data, through arrays and plain objects such as a console line's arguments, rather than three named fields. A logged object is copied, never changed, and a cycle in it is cut. A console breadcrumb holds its line twice, as arguments and joined as the message. The browser SDK writes a URL only to `url`, `from` and `to` today, but an SDK can add a field: the server SDK already writes `url.query`.
 
 Sentry's own query filter keeps its list. Our hooks run last on every event, span, envelope header and breadcrumb, so a second copy of the list there would add nothing a test could see.
 
@@ -68,7 +68,7 @@ Tests:
 - Next.js's request span, opened through Next's own tracer, carries no `__clerk_handshake`, `nonce` or `code`, and an outgoing call's span no `nonce`, with `SENTRY_TRACE_LIFECYCLE=static` set;
 - the outgoing call receives no `sentry-trace` or `baggage` header;
 - a request that fell back to Next's error page sends no credential in any envelope, headers included;
-- `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field, an array attribute, a span link, and a console line's message and arguments.
+- `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field, an array attribute, a span link, a console line's message and arguments, and a logged object with a cycle.
 
 **Implemented 2026-10-08,** as decided, in `lib/sentry-data-collection.ts` and `instrumentation.ts`. DEBT-505's real-SDK alert test also runs on `SENTRY_SERVER_SETTINGS` now. Each change was checked against a mutant:
 - without `maxBreadcrumbs: 0`, only the settings tests (`sentry-config.test.ts`) fail, since `scrubServerEvent` still drops the breadcrumbs;

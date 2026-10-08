@@ -231,10 +231,36 @@ type StreamedSpan = Parameters<
   NonNullable<Sentry.NodeOptions['beforeSendSpan']>
 >[0];
 
-function redactStrings(value: unknown): unknown {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * A copy of `value` with credentials redacted in every string, through arrays
+ * and plain objects; other objects are kept, since Sentry serialises them
+ * itself. A logged object is the app's own, so it is copied, never changed,
+ * and a reference back to an enclosing value becomes `[Circular]`.
+ */
+function redactStrings(
+  value: unknown,
+  enclosing: WeakSet<object> = new WeakSet(),
+): unknown {
   if (typeof value === 'string') return redactCredentialParams(value);
-  if (Array.isArray(value)) return value.map(redactStrings);
-  return value;
+  if (!Array.isArray(value) && !isPlainObject(value)) return value;
+  if (enclosing.has(value)) return '[Circular]';
+  enclosing.add(value);
+  const copy = Array.isArray(value)
+    ? value.map((item) => redactStrings(item, enclosing))
+    : Object.fromEntries(
+        Object.entries(value).map(([name, item]) => [
+          name,
+          redactStrings(item, enclosing),
+        ]),
+      );
+  enclosing.delete(value);
+  return copy;
 }
 
 /**
