@@ -456,6 +456,24 @@ describe('the Sentry API', () => {
 
     expect(await api('monitors/x/')).toEqual({ status: 403, body: null });
   });
+
+  // A 200 whose body is not JSON is a shape the watcher cannot read, not an
+  // outage: it is not retried, and the issue says the shape changed.
+  it('reports a 200 that is not JSON as an unexpected shape, without a retry', async () => {
+    let requests = 0;
+    const api = createSentryApi('secret-token', async () => {
+      requests += 1;
+      return new Response('<html>maintenance</html>', { status: 200 });
+    });
+
+    const problems = await findAlertPathProblems(api, NOW, 0);
+
+    expect(problems).toHaveLength(4);
+    for (const problem of problems) {
+      expect(problem).toContain('not in the shape it expects');
+    }
+    expect(requests).toBe(4);
+  });
 });
 
 describe('running the watcher', () => {

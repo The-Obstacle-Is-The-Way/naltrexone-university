@@ -376,7 +376,12 @@ export function createSentryApi(
       await response.body?.cancel();
       return { status: response.status, body: null };
     }
-    return { status: response.status, body: await response.json() };
+    // A 200 that is not JSON is a changed shape, not an outage.
+    try {
+      return { status: response.status, body: await response.json() };
+    } catch {
+      throw new UnreadableResponse();
+    }
   };
 }
 
