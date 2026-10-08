@@ -5,6 +5,7 @@ import {
   SENTRY_DATA_COLLECTION,
   scrubBreadcrumb,
   scrubEvent,
+  withoutProcessSession,
 } from './sentry-data-collection';
 
 // DEBT-499 / BUG-318: what leaves the process is proven through the real
@@ -30,6 +31,9 @@ const secret = {
 beforeAll(() => {
   Sentry.init({
     dsn: 'https://public@sentry.invalid/1',
+    // As on CI and Vercel, where a release turns on release-health sessions.
+    release: 'sentry-data-collection-test',
+    integrations: withoutProcessSession,
     dataCollection: SENTRY_DATA_COLLECTION,
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,

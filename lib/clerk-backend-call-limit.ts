@@ -7,6 +7,7 @@ import {
 } from '@/src/adapters/shared/rate-limits';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 
 // BUG-323: the request shapes for which Clerk's SDK calls Clerk's Backend API
 // before answering: a handshake value, or a GET whose session has expired and
@@ -140,6 +141,29 @@ export async function limitClerkBackendCalls(
     });
     return null;
   }
+}
+
+// DEBT-505: the limiter failing is BUG-323's alert; the log line alone
+// reaches nobody. It never rejects, since it runs after the response.
+export async function raiseLimiterFailureAlert(
+  loadAlerts: () => Promise<OperationalAlerts>,
+): Promise<void> {
+  try {
+    const alerts = await loadAlerts();
+    await alerts.raise({ kind: 'clerk_backend_call_limiter_failed', count: 1 });
+  } catch (error) {
+    console.error({
+      event: 'operational_alert_unavailable',
+      error: projectSafeErrorDiagnostics(error),
+    });
+  }
+}
+
+// The production alerts: the container's, which share one in-process
+// cooldown per server process.
+export async function loadContainerOperationalAlerts(): Promise<OperationalAlerts> {
+  const { createContainer } = await import('@/lib/container');
+  return createContainer().createOperationalAlerts();
 }
 
 // The production limiter: the container's database-backed rate limiter.

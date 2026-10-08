@@ -40,6 +40,7 @@ export function createSendRenewalNoticesCronHandler(
             now: container.now,
             monotonicNow: () => performance.now(),
             logger: container.logger,
+            alerts: container.createOperationalAlerts(),
             annualPlan: {
               planName: PRICING_DATA.annual.name,
               amountCents: PRICING_DATA.annual.amountCents,

@@ -3,6 +3,7 @@ import { ApplicationError } from '@/src/application/errors';
 import { parseTransactionalEmailPayloadSnapshot } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
   FakeTransactionalEmailGateway,
@@ -70,6 +71,7 @@ async function createHarness(input?: {
     await matchingNoticeTargets(input?.externalSubscriptionIds),
     hasher,
     new FakeLogger(),
+    new FakeOperationalAlerts(),
     () => now,
     () => `attempt-${++attemptSequence}`,
   );
@@ -276,6 +278,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       await matchingNoticeTargets(['sub_poisoned', 'sub_healthy']),
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => now,
       () => `attempt-${++attemptSequence}`,
     );
@@ -394,6 +397,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       await matchingNoticeTargets(['sub_conflict', 'sub_healthy']),
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => now,
       () => 'attempt-healthy',
     );
@@ -513,6 +517,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       await matchingNoticeTargets(),
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => now,
       () => 'attempt-1',
     );
@@ -558,6 +563,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       await matchingNoticeTargets(),
       hasher,
       new FakeLogger(),
+      new FakeOperationalAlerts(),
       () => now,
       () => 'attempt-1',
     );

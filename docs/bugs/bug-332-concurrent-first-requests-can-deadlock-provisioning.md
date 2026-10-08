@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; fixed with DEBT-503 item 1, whose contract test found it
+**Status:** Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-08
 **Resolved:** —
