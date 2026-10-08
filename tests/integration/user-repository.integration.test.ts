@@ -3,6 +3,7 @@ import { sql as drizzleSql, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
+import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
@@ -540,22 +541,27 @@ describe('DrizzleUserRepository', () => {
       selectedChoiceId: question.correctChoiceId,
       isCorrect: true,
     });
+    // DEBT-503 item 1: the session names the incoming Clerk user, which has
+    // no row yet, so the gateway provisions it through BUG-284's rules.
     const deps = {
       userRepository: repo,
+      deletedClerkUsers: new DrizzleDeletedClerkUserRepository(db),
       logger,
-      getClerkUser: async () => ({
-        id: incomingClerkId,
-        updatedAt: t3.getTime(),
-        emailAddresses: [{ emailAddress: reusedEmail }],
-      }),
+      getSessionClerkUserId: async () => incomingClerkId,
       getClerkUserById: async (clerkUserId: string) =>
-        clerkUserId === existingClerkId
+        clerkUserId === incomingClerkId
           ? {
-              id: existingClerkId,
-              updatedAt: t2.getTime(),
-              emailAddresses: [{ emailAddress: movedEmail }],
+              id: incomingClerkId,
+              updatedAt: t3.getTime(),
+              emailAddresses: [{ emailAddress: reusedEmail }],
             }
-          : null,
+          : clerkUserId === existingClerkId
+            ? {
+                id: existingClerkId,
+                updatedAt: t2.getTime(),
+                emailAddresses: [{ emailAddress: movedEmail }],
+              }
+            : null,
     };
     const gateway = new ClerkAuthGateway(deps);
 

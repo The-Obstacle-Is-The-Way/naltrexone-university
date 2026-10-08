@@ -147,7 +147,7 @@ See BUG-097 for the systemic hard-coded route problem being addressed.
 | `proxy.ts` | Clerk middleware (route protection) |
 | `lib/env.ts` | Zod-validated environment variables |
 | `lib/routes.ts` | Route constants (ROUTES object) |
-| `lib/auth.ts` | Clerk auth helpers |
+| `lib/container.ts` | Composition root; `createAuthGateway()` reads the signed-in user |
 | `components/ui/` | shadcn/ui primitives |
 
 ## Error handling in UI
