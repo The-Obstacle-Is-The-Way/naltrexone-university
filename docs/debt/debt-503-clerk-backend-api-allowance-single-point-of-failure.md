@@ -12,7 +12,7 @@
 
 ## Summary
 
-Until item 1, every signed-in request spent one call of Clerk's Backend API allowance through `currentUser()`. Clerk limits that allowance per production instance, and when it ran out every signed-in page failed. Item 1 now spends it only to provision a new user's row and to refresh the email billing sends to Stripe.
+Until item 1, every signed-in request spent one call of Clerk's Backend API allowance through `currentUser()`. Clerk limits that allowance per production instance, and when it ran out every signed-in page failed. Since item 1, our code spends it only to provision a new user's row, to refresh the email billing sends to Stripe, and to check a stale email owner under BUG-284's rules. Clerk's middleware still spends it to refresh an expired session token (BUG-323).
 
 [BUG-323](../bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) showed the allowance can also be spent from outside, and fixed that with request limits in our middleware. Those limits trade a full outage for a smaller, cheaper one: once the site-wide cap fills, returning visitors whose session token has expired wait a minute.
 
@@ -23,10 +23,10 @@ This record holds the structural fixes, so that the allowance stops being the on
 ### 1. Read identity from the session token, not the Backend API (P2)
 
 - **Evidence.**
-  - **Every signed-in request spends a Backend API call.** `ClerkAuthGateway.getCurrentUser` calls `currentUser()` on every signed-in render and action (`src/adapters/gateways/clerk-auth-gateway.ts`, through `lib/container.ts`), and retries a 429 up to three times.
+  - **Before item 1** (as found 2026-10-05), **every signed-in request spent a Backend API call.** `ClerkAuthGateway.getCurrentUser` called `currentUser()` on every signed-in render and action (`src/adapters/gateways/clerk-auth-gateway.ts`, through `lib/container.ts`), with up to three attempts on a 429.
   - **The ID is already verified locally.** `currentUser()` is `auth()` followed by `users.getUser(userId)` (`@clerk/nextjs` 7.9.4). So the call fetches a profile for an ID `auth()` already trusts. `auth()` accepts only the token the middleware verified, under an HMAC header signature, and throws if the middleware did not run.
-  - **Checkout spends a second call.** Billing's `getClerkUserId` makes another `currentUser()` just for the ID.
-  - **Today the only deletion guard is Clerk's 404.** The tombstones `user.deleted` writes are read only by the webhook. On sign-in, Clerk's 404 is what stops a deleted user's leftover row from being served.
+  - **Checkout spent a second call.** Billing's `getClerkUserId` made another `currentUser()` call just for the ID.
+  - **Clerk's 404 was the only deletion guard.** Only the webhook read the tombstones `user.deleted` writes. On sign-in, Clerk's 404 was what stopped a deleted user's leftover row from being served.
   - **CI meets the limit too.** On 2026-10-07, two overlapping E2E runs on one development instance met this lookup's 429s, so signed-in pages rendered as signed out and `main`'s production deploy waited for a re-run ([DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)).
 - **Decided.**
   - **Session identity.** `getCurrentUser()` reads the Clerk user ID from `auth()`, then reads our `users` row and the deletion tombstone together.
@@ -35,7 +35,7 @@ This record holds the structural fixes, so that the allowance stops being the on
     - A missing row is provisioned with one Backend API lookup by ID, through today's `ensureClerkUser`, so BUG-284's identity rules and BUG-320's retry hold unchanged. A Clerk 404 there returns no user.
     - Users are never provisioned from token claims. A first visit while Clerk is down fails closed.
   - **Fresh email where it matters.** `requireUser({ currentEmail: true })` refreshes the email from Clerk through the same provisioning path, after the tombstone check. Only Stripe checkout and trial card setup ask for it, after their rate limiter and idempotency replay. A refreshed row whose ID differs is a conflict. Billing reads the Clerk ID from the session, so checkout spends one call instead of two, and a refused or replayed one spends none.
-  - **Email freshness.** Email changes otherwise arrive through Clerk's `user.updated` webhook, retried by Clerk's delivery and recorded by the webhook controller. Provisioning, the billing refresh and BUG-284's stale-owner resolver also correct it. Operator recovery is a replay from the Clerk Dashboard, documented in [Deployment Environments](../dev/deployment-environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row). Clerk does not guarantee webhook delivery, so a stored address must not be the authority for a legal notice: [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) will read it from Clerk at send time, falling back to the stored address only on a notice's last eligible run, when Clerk is unavailable and verified that address within the past 7 days. Until DEBT-511 ships, notices still go to the stored address. Before this item, that gap affected anyone who had not signed in since changing their address; this item widens it to active users between checkouts. Both ship before paid acquisition.
+  - **Email freshness.** Email changes otherwise arrive through Clerk's `user.updated` webhook, retried by Clerk's delivery and recorded by the webhook controller. Provisioning, the billing refresh and BUG-284's stale-owner resolver also correct it. Operator recovery is a replay from the Clerk Dashboard, documented in [Deployment Environments](../dev/deployment-environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row). Clerk does not guarantee webhook delivery, so a stored address must not be the authority for a legal notice: [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) will read it from Clerk at send time, falling back to the stored address only on a notice's last eligible run, when Clerk is unavailable, verified that address within the past 7 days, and no `user.updated` or `user.deleted` for that user is failing. Until DEBT-511 ships, notices still go to the stored address. Before this item, that gap affected anyone who had not signed in since changing their address; this item widens it to active users between checkouts. DEBT-511 ships before paid acquisition, or 35 days before the earliest live renewal if that is sooner.
   - **Deletion races.**
     - A tombstone committed before the read returns no user.
     - One committed after the read serves that one response, as today.
@@ -53,8 +53,9 @@ This record holds the structural fixes, so that the allowance stops being the on
 - **Implemented 2026-10-07.**
   - `ClerkAuthGateway` reads the Clerk user ID from `auth()`. `lib/auth.ts` and every `currentUser()` call are gone, and billing reads the ID from the session.
   - Tests: `clerk-auth-gateway-session.test.ts`, `billing-controller-current-email.test.ts`, the skip-Clerk composition test (`lib/container.skip-clerk.test.ts`), and the source guard `tests/clerk-backend-api-boundary.test.ts`.
-  - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. Clerk's answers in them are the real SDK's, so the 404 scenario uses the error the Backend API throws.
+  - `tests/shared/session-identity-contract.ts` runs the five scenarios over the fakes and over real Postgres. Clerk's 404 in them is the real SDK's error, the one the Backend API throws; its other answers are built by hand.
   - BUG-320: six concurrent first requests, each on its own connection, provision one row in each of 100 rounds. With BUG-320's retry removed, the test failed in each of five runs.
+  - [BUG-332](../bugs/bug-332-concurrent-first-requests-can-deadlock-provisioning.md): that test then found a deadlock among the same inserts, in about one run in three. The gateway now retries provisioning after a `40P01`.
   - After release: `main`'s E2E passes, and DEBT-508's overlap check shows overlapping runs meet no Clerk 429.
 
 ### 2. Let only forged requests fill the site-wide cap (P3)
