@@ -21,6 +21,22 @@ async function sentryPrivacyOptions() {
   };
 }
 
+// BUG-331: the server sends no breadcrumbs, and scrubs span URLs.
+async function sentryServerPrivacyOptions() {
+  const privacy = await import('@/lib/sentry-data-collection');
+  return {
+    traceLifecycle: 'stream',
+    tracePropagationTargets: [],
+    maxBreadcrumbs: 0,
+    // DEBT-505: no release-health session, which would copy the scope's user
+    // past beforeSend.
+    integrations: privacy.serverIntegrations,
+    dataCollection: privacy.SENTRY_DATA_COLLECTION,
+    beforeSend: privacy.scrubServerEvent,
+    beforeSendSpan: privacy.scrubSpan,
+  };
+}
+
 describe('Sentry configuration', () => {
   const originalEnv = { ...process.env };
 
@@ -179,11 +195,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
-        // DEBT-505: no release-health session, which would copy the scope's
-        // user past beforeSend.
-        integrations: (await import('@/lib/sentry-data-collection'))
-          .withoutProcessSession,
-        ...(await sentryPrivacyOptions()),
+        ...(await sentryServerPrivacyOptions()),
       });
     });
 
@@ -214,11 +226,7 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: 'preview',
-        // DEBT-505: no release-health session, which would copy the scope's
-        // user past beforeSend.
-        integrations: (await import('@/lib/sentry-data-collection'))
-          .withoutProcessSession,
-        ...(await sentryPrivacyOptions()),
+        ...(await sentryServerPrivacyOptions()),
       });
     });
 
