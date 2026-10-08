@@ -2,17 +2,18 @@ import * as Sentry from '@sentry/nextjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { withCronMonitor } from '@/src/adapters/shared/cron-monitor';
 import {
-  SENTRY_DATA_COLLECTION,
-  scrubBreadcrumb,
-  scrubEvent,
-  withoutProcessSession,
-} from './sentry-data-collection';
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
+import { SENTRY_SERVER_SETTINGS } from './sentry-data-collection';
 
 // DEBT-505: a scheduled job's check-ins are proven through the real SDK and
 // the server's settings. The transport keeps each envelope, a moment after
 // the SDK hands it over as a network send would, and sends nothing.
 let sent: string[] = [];
 const sending = new Set<Promise<unknown>>();
+// The server SDK's init sets process variables of its own.
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 beforeAll(() => {
   Sentry.init({
@@ -20,10 +21,7 @@ beforeAll(() => {
     // CI and Vercel give Sentry a release; set one so every run sees the same.
     release: 'cron-monitor-test',
     environment: 'production',
-    integrations: withoutProcessSession,
-    dataCollection: SENTRY_DATA_COLLECTION,
-    beforeSend: scrubEvent,
-    beforeBreadcrumb: scrubBreadcrumb,
+    ...SENTRY_SERVER_SETTINGS,
     transport: () => ({
       send: (envelope: unknown) => {
         const delivery = new Promise<object>((resolve) => {
@@ -46,6 +44,7 @@ beforeAll(() => {
 
 afterAll(async () => {
   await Sentry.close();
+  restoreProcessEnv(ORIGINAL_ENV);
 });
 
 function sentCheckIns(): Array<Record<string, unknown>> {
