@@ -15,6 +15,7 @@ export function createAvailableAttemptedQuestionRow(
     availability: 'available',
     questionId: crypto.randomUUID(),
     isCorrect: false,
+    answerKeyChanged: false,
     sessionId: null,
     sessionMode: null,
     slug: 'q-1',

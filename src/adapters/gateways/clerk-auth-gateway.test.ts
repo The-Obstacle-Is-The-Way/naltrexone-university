@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {
+  FakeDeletedClerkUserRepository,
   FakeLogger,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 import {
   ClerkAuthGateway,
   type ClerkAuthGatewayDeps,
+  type ClerkUserLike,
 } from './clerk-auth-gateway';
 import {
   clerkSdkErrorFor,
@@ -15,14 +17,27 @@ import {
 
 vi.mock('server-only', () => ({}));
 
+// These cases provision a user with no row yet (DEBT-503 item 1): the session
+// names the Clerk user, and `getClerkUser` answers Clerk's lookup of it.
+// clerk-auth-gateway-session.test.ts covers the session paths themselves.
 function createGateway(
-  deps: Pick<ClerkAuthGatewayDeps, 'getClerkUser' | 'userRepository'> &
-    Partial<Pick<ClerkAuthGatewayDeps, 'getClerkUserById' | 'logger'>>,
+  deps: Pick<ClerkAuthGatewayDeps, 'userRepository'> &
+    Partial<Pick<ClerkAuthGatewayDeps, 'getClerkUserById' | 'logger'>> & {
+      getClerkUser: () => Promise<ClerkUserLike | null>;
+      sessionClerkUserId?: string | null;
+    },
 ): ClerkAuthGateway {
+  const sessionClerkUserId =
+    deps.sessionClerkUserId === undefined ? 'clerk_1' : deps.sessionClerkUserId;
   return new ClerkAuthGateway({
-    getClerkUserById: async () => null,
-    logger: new FakeLogger(),
-    ...deps,
+    userRepository: deps.userRepository,
+    deletedClerkUsers: new FakeDeletedClerkUserRepository(),
+    logger: deps.logger ?? new FakeLogger(),
+    getSessionClerkUserId: async () => sessionClerkUserId,
+    getClerkUserById: (clerkUserId) =>
+      clerkUserId === sessionClerkUserId
+        ? deps.getClerkUser()
+        : (deps.getClerkUserById?.(clerkUserId) ?? Promise.resolve(null)),
   });
 }
 
@@ -34,6 +49,7 @@ describe('ClerkAuthGateway', () => {
 
     const gateway = createGateway({
       userRepository,
+      sessionClerkUserId: null,
       getClerkUser: async () => null,
     });
 
@@ -46,6 +62,7 @@ describe('ClerkAuthGateway', () => {
 
     const gateway = createGateway({
       userRepository,
+      sessionClerkUserId: null,
       getClerkUser: async () => null,
     });
 
@@ -207,7 +224,7 @@ describe('ClerkAuthGateway', () => {
     });
   });
 
-  it('retries transient errors from getClerkUser', async () => {
+  it('retries transient errors from the Clerk lookup', async () => {
     const userRepository = new FakeUserRepository();
 
     const getClerkUser = vi
@@ -264,6 +281,7 @@ describe('ClerkAuthGateway', () => {
     const deps = {
       userRepository,
       logger,
+      sessionClerkUserId: 'clerk_incoming',
       getClerkUser: async () => ({
         id: 'clerk_incoming',
         updatedAt: new Date('2026-02-03T00:00:00Z').getTime(),
@@ -317,6 +335,7 @@ describe('ClerkAuthGateway', () => {
     const deps = {
       userRepository,
       logger,
+      sessionClerkUserId: 'clerk_incoming',
       getClerkUser: async () => ({
         id: 'clerk_incoming',
         updatedAt: clerkUpdatedAt.getTime(),
@@ -347,60 +366,6 @@ describe('ClerkAuthGateway', () => {
           existingClerkUserId: 'clerk_owner',
           incomingClerkUserId: 'clerk_incoming',
           resolution: 'blocked_existing_identity_missing',
-        },
-        msg: 'Blocked Clerk user email ownership conflict',
-      },
-    ]);
-  });
-
-  it('does not mutate either row when the incoming identity already owns a row', async () => {
-    const userRepository = new FakeUserRepository();
-    const logger = new FakeLogger();
-    const originalOwner = await userRepository.upsertByClerkId(
-      'clerk_owner',
-      'held@example.com',
-      { observedAt: new Date('2026-02-01T00:00:00Z') },
-    );
-    const incomingOwner = await userRepository.upsertByClerkId(
-      'clerk_incoming',
-      'incoming@example.com',
-      { observedAt: new Date('2026-02-01T00:00:00Z') },
-    );
-    const deps = {
-      userRepository,
-      logger,
-      getClerkUser: async () => ({
-        id: 'clerk_incoming',
-        updatedAt: clerkUpdatedAt.getTime(),
-        emailAddresses: [{ emailAddress: 'held@example.com' }],
-      }),
-      getClerkUserById: async () => ({
-        id: 'clerk_owner',
-        updatedAt: new Date('2026-02-03T00:00:00Z').getTime(),
-        emailAddresses: [{ emailAddress: 'owner-new@example.com' }],
-      }),
-    };
-    const gateway = createGateway(deps);
-
-    await expect(gateway.requireUser()).rejects.toMatchObject({
-      code: 'CONFLICT',
-      existingClerkUserId: 'clerk_owner',
-      details: {
-        reason: 'user_email_owned_by_another_identity',
-      },
-    });
-    await expect(userRepository.findByClerkId('clerk_owner')).resolves.toEqual(
-      originalOwner,
-    );
-    await expect(
-      userRepository.findByClerkId('clerk_incoming'),
-    ).resolves.toEqual(incomingOwner);
-    expect(logger.warnCalls).toEqual([
-      {
-        context: {
-          existingClerkUserId: 'clerk_owner',
-          incomingClerkUserId: 'clerk_incoming',
-          resolution: 'blocked_incoming_identity_already_exists',
         },
         msg: 'Blocked Clerk user email ownership conflict',
       },

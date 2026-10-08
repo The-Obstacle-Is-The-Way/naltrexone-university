@@ -47,6 +47,8 @@ describe('server tracing import boundary', () => {
 
   it.each([
     'src/adapters/shared/server-tracing.ts',
+    // DEBT-505: the one place an operational alert reaches Sentry.
+    'src/adapters/shared/operational-alert-events.ts',
     'instrumentation.ts',
     'sentry.client.config.ts',
     'lib/report-client-error.ts',
@@ -55,6 +57,10 @@ describe('server tracing import boundary', () => {
     'lib/sentry-data-collection.ts',
     // BUG-318: the setting is proven through the real SDK.
     'lib/sentry-data-collection-sdk.test.ts',
+    // BUG-331: the browser's breadcrumb hook is proven through the real SDK.
+    'lib/sentry-breadcrumbs-sdk.test.ts',
+    // DEBT-505: the alert event is proven through the real SDK.
+    'lib/operational-alert-events-sdk.test.ts',
     'vitest.browser.setup.ts',
   ])('allows the approved SDK boundary at %s', (filePath) => {
     expect(lintSentryImport(filePath).status).toBe(0);

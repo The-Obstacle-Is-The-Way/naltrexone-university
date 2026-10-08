@@ -1,7 +1,9 @@
+import { getWaitUntilPromiseFromEvent } from 'next/dist/server/web/spec-extension/fetch-event';
 import { NextRequest, NextResponse } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   limitClerkBackendCalls,
+  raiseLimiterFailureAlert,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
@@ -10,12 +12,16 @@ import {
   CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
   ONE_MINUTE_MS,
 } from '@/src/adapters/shared/rate-limits';
-import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
+import {
+  FakeOperationalAlerts,
+  FakeRateLimiter,
+} from '@/src/application/test-helpers/fakes';
 import { proxyInvocation } from '@/tests/shared/next-proxy-invocation';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 const NOW_SECONDS = 1_800_000_000;
@@ -318,6 +324,34 @@ describe('limiting requests that make Clerk call its Backend API', () => {
   });
 });
 
+// DEBT-505: the limiter failing is BUG-323's alert. The log alone reaches
+// nobody.
+describe('the limiter failure alert', () => {
+  it('raises one limiter-failure alert', async () => {
+    const alerts = new FakeOperationalAlerts();
+
+    await raiseLimiterFailureAlert(async () => alerts);
+
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_backend_call_limiter_failed', count: 1 },
+    ]);
+  });
+
+  it('resolves, and logs, when the alerts cannot load', async () => {
+    const reported = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(
+      raiseLimiterFailureAlert(async () => {
+        throw new Error('container unavailable');
+      }),
+    ).resolves.toBeUndefined();
+    expect(reported).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'operational_alert_unavailable' }),
+    );
+    reported.mockRestore();
+  });
+});
+
 describe('the default limiter', () => {
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
@@ -345,6 +379,27 @@ describe('the default limiter', () => {
     expect(typeof limiter.limit).toBe('function');
     expect(typeof limiter.pruneExpiredWindows).toBe('function');
   });
+
+  it("loads the container's operational alerts without touching the database", async () => {
+    Object.assign(process.env, {
+      DATABASE_URL: 'postgresql://user:password@localhost:5432/db',
+      STRIPE_SECRET_KEY: 'sk_test_dummy',
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_test_dummy',
+      STRIPE_WEBHOOK_SECRET: 'whsec_dummy',
+      NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_dummy_monthly',
+      NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_dummy_annual',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_SKIP_CLERK: 'true',
+    });
+    vi.resetModules();
+    const { loadContainerOperationalAlerts } = await import(
+      '@/lib/clerk-backend-call-limit'
+    );
+
+    const alerts = await loadContainerOperationalAlerts();
+
+    expect(typeof alerts.raise).toBe('function');
+  });
 });
 
 describe('proxy with the Clerk Backend API limit', () => {
@@ -357,6 +412,7 @@ describe('proxy with the Clerk Backend API limit', () => {
   async function proxyWith(
     limiter: FakeRateLimiter,
     publishableKey = 'pk_live_x',
+    alertsLoaded: Promise<void> = Promise.resolve(),
   ) {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = publishableKey;
@@ -369,11 +425,19 @@ describe('proxy with the Clerk Backend API limit', () => {
       createRouteMatcher: () => () => true,
     }));
     const loadBackendCallLimiter = vi.fn(async () => limiter);
+    const alerts = new FakeOperationalAlerts();
     const { createProxy } = await import('./proxy');
     return {
-      proxy: createProxy({ loadBackendCallLimiter }),
+      proxy: createProxy({
+        loadBackendCallLimiter,
+        loadOperationalAlerts: async () => {
+          await alertsLoaded;
+          return alerts;
+        },
+      }),
       clerkRuns,
       loadBackendCallLimiter,
+      alerts,
     };
   }
 
@@ -439,6 +503,51 @@ describe('proxy with the Clerk Backend API limit', () => {
       expect.objectContaining({ event: 'clerk_backend_call_limiter_failed' }),
     );
     expect(clerkRuns).toHaveBeenCalledTimes(1);
+  });
+
+  // After the response, so a request never waits on the failing database.
+  it('raises the limiter-failure alert through waitUntil', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const alertsLoaded = createDeferred<void>();
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter(new Error('database unavailable')),
+      'pk_live_x',
+      alertsLoaded.promise,
+    );
+    const [request, event] = proxyInvocation(
+      'https://example.com/pricing?__clerk_handshake_nonce=x',
+    );
+
+    // The response does not wait for the alert.
+    await proxy(request, event);
+    let settled = false;
+    const afterResponse = getWaitUntilPromiseFromEvent(event)?.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+    expect(alerts.raised).toEqual([]);
+
+    // waitUntil holds the function open until the alert is raised.
+    alertsLoaded.resolve();
+    await afterResponse;
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_backend_call_limiter_failed', count: 1 },
+    ]);
+  });
+
+  it('raises no alert while the limiter works', async () => {
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter([UNDER_LIMIT, UNDER_LIMIT, UNDER_LIMIT]),
+    );
+    const [request, event] = proxyInvocation(
+      'https://example.com/pricing?__clerk_handshake_nonce=x',
+    );
+
+    await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(alerts.raised).toEqual([]);
   });
 
   it('never loads the limiter for an ordinary request', async () => {

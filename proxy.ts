@@ -6,7 +6,9 @@ import {
 } from 'next/server';
 import {
   limitClerkBackendCalls,
+  loadContainerOperationalAlerts,
   loadContainerRateLimiter,
+  raiseLimiterFailureAlert,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
@@ -14,7 +16,9 @@ import {
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
+import { sentryEnvironmentFor } from '@/lib/sentry-data-collection';
 import type { RateLimiter } from '@/src/application/ports/gateways';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 
 export function parseSentryIngestOrigin(
   dsn: string | undefined,
@@ -86,8 +90,7 @@ function mergeCspDirectives(
 const sentryIngestOrigin = parseSentryIngestOrigin(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
 );
-const sentryEnvironment =
-  process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+const sentryEnvironment = sentryEnvironmentFor(process.env.VERCEL_ENV);
 const sentrySecurityHeaderEndpoint = parseSentrySecurityHeaderEndpoint(
   process.env.NEXT_PUBLIC_SENTRY_DSN,
   sentryEnvironment,
@@ -243,9 +246,13 @@ function usesProductionClerkInstance(): boolean {
 
 export type ProxyDependencies = {
   loadBackendCallLimiter: () => Promise<RateLimiter>;
+  loadOperationalAlerts: () => Promise<OperationalAlerts>;
 };
 
-export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
+export function createProxy({
+  loadBackendCallLimiter,
+  loadOperationalAlerts,
+}: ProxyDependencies) {
   return async function proxy(request: NextRequest, event: NextFetchEvent) {
     // These exact public machine resources must not require even Clerk's
     // anonymous dev-browser handshake, which redirects HTML requests.
@@ -267,7 +274,12 @@ export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
       const limited = await limitClerkBackendCalls(
         request,
         loadBackendCallLimiter,
-        (failure) => console.error(failure),
+        (failure) => {
+          console.error(failure);
+          // DEBT-505: alert after the response, so the request never waits
+          // on the database that just failed.
+          event.waitUntil(raiseLimiterFailureAlert(loadOperationalAlerts));
+        },
       );
       if (limited) return limited;
     }
@@ -284,6 +296,7 @@ export function createProxy({ loadBackendCallLimiter }: ProxyDependencies) {
 
 export default createProxy({
   loadBackendCallLimiter: loadContainerRateLimiter,
+  loadOperationalAlerts: loadContainerOperationalAlerts,
 });
 
 export const config = {

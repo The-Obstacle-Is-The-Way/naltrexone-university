@@ -1,13 +1,16 @@
 import { resolveCheckoutDisclosure } from '@/lib/checkout-disclosures';
 import {
   ClerkAuthGateway,
-  type ClerkUserLike,
   type ClerkUserLookup,
+  CooldownOperationalAlerts,
   createResendWebhookVerifier,
   DrizzleRateLimiter,
+  LocalAlertCooldown,
+  OPERATIONAL_ALERT_COOLDOWN_KEY_PREFIX,
   ResendTransactionalEmailGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
+import { sendOperationalAlertEvent } from '@/src/adapters/shared/operational-alert-events';
 
 import type {
   ContainerPrimitives,
@@ -16,17 +19,21 @@ import type {
   StripePriceIds,
 } from './types';
 
+// DEBT-505: containers are built per request, so the in-process alert
+// cooldown lives here, one per server process.
+const processAlertCooldown = new LocalAlertCooldown();
+
 export function createGatewayFactories(input: {
   primitives: ContainerPrimitives;
   repositories: RepositoryFactories;
   stripePriceIds: StripePriceIds;
-  getClerkUser: () => Promise<ClerkUserLike | null>;
+  getSessionClerkUserId: () => Promise<string | null>;
   getClerkUserById: ClerkUserLookup;
 }): GatewayFactories {
   const {
     primitives,
     repositories,
-    getClerkUser,
+    getSessionClerkUserId,
     getClerkUserById,
     stripePriceIds,
   } = input;
@@ -35,9 +42,23 @@ export function createGatewayFactories(input: {
     createAuthGateway: () =>
       new ClerkAuthGateway({
         userRepository: repositories.createUserRepository(),
-        getClerkUser,
+        deletedClerkUsers: repositories.createDeletedClerkUserRepository(),
+        getSessionClerkUserId,
         getClerkUserById,
         logger: primitives.logger,
+      }),
+    createOperationalAlerts: () =>
+      new CooldownOperationalAlerts({
+        rateLimiter: new DrizzleRateLimiter(
+          primitives.db,
+          primitives.now,
+          primitives.logger,
+        ),
+        send: sendOperationalAlertEvent,
+        logger: primitives.logger,
+        now: primitives.now,
+        localCooldown: processAlertCooldown,
+        keyPrefix: OPERATIONAL_ALERT_COOLDOWN_KEY_PREFIX,
       }),
     createPaymentGateway: () =>
       new StripePaymentGateway({

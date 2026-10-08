@@ -1,20 +1,21 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-10-08
 
-**Now** — 2026-10-06.
-- **In progress.** DEBT-498 increment 2b, History's rows and filters, follows the payment bugs (BUG-320 to BUG-322).
-- **Held dependency.** DEBT-505 holds lint-staged at 17.5.1 until a tested pre-commit safeguard or enforced isolated worktrees prevents unrelated tracked edits entering a commit.
-- **Next.** DEBT-503 item 1 (identity from the session token), then DEBT-501's two P2 items (the reconcile cursor and legacy price IDs), then DEBT-502.
+**Now** — 2026-10-08.
+- **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
+- **In progress.** DEBT-503: item 1, identity from the session token, released 2026-10-08; items 2–4 follow. DEBT-508, isolating concurrent E2E runs: its overlap check, now that DEBT-503 item 1 is released.
+- **Verifying.** DEBT-505: a test alert of each kind, raised on a deployment, reaches the owner, and a later window emails again; due 2026-10-15.
+- **Held dependency.** DEBT-507 holds lint-staged at 17.5.1 until a tested pre-commit safeguard or enforced isolated worktrees prevents unrelated tracked edits entering a commit.
+- **Next.** DEBT-502 items 2 and 3 (DEBT-511's prerequisites), then DEBT-511 (legal notices read the address from Clerk at send time, with a bounded last-run fallback; it needs DEBT-505's alerts, and must ship before paid acquisition, or 35 days before the earliest live renewal if that is sooner), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then the rest of DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
-  - Private consumers of the application request-ID field (DEBT-504).
-  - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); the notice-deadline notification path (F07), and the counsel review.
+  - DEBT-414: activate the Resend webhook in Resend and set its signing secret (F07); decide Massachusetts' 5–30-day annual notice (F19a); and the counsel review.
   - The production content bootstrap (DEBT-483, Deferred below).
 
-**Next Debt ID:** DEBT-506 · **Next Frontend ID:** FE-056
+**Next Debt ID:** DEBT-512 · **Next Frontend ID:** FE-056
 
 ## Active
 
@@ -22,13 +23,18 @@
 |----|-------|----------|--------|
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Active — engineering remediation, operational evidence and the focused licensed review remain open |
 | [DEBT-465](./debt-465-test-quality-practices-adoption.md) | Advanced test-quality practices adoption | P2 | Open — Parts 1–2 complete; Part 3 replaced by a rule-to-test register, which is done (2026-10-04); Part 4 re-scoped by the 2026-10-03 decision below and remains |
-| [DEBT-498](./debt-498-reviews-grade-items-whose-content-is-in-doubt.md) | Reviews grade items whose content is in doubt | P1 | In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, remains |
-| [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — filed 2026-10-05; resolution decided below |
-| [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — filed 2026-10-05; resolution decided per item below |
-| [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — filed 2026-10-05; resolution decided per item below |
-| [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | Open — filed 2026-10-05; resolution decided per item below |
-| [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the duplicate request ID and manual propagation; retain logger injection |
-| [DEBT-505](./debt-505-lint-staged-shared-clone-staging-race.md) | lint-staged can stage another session's work | P2 | Open — held at 17.5.1; safeguard or worktree isolation required |
+| [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — resolution decided in the record |
+| [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — decided per item; items 1 and 2 first |
+| [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
+| [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | In Progress — item 1 (identity from the session token) released 2026-10-08; DEBT-508's overlap check follows; items 2–4 follow |
+| [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |
+| [DEBT-505](./debt-505-logged-only-failures-alert-nobody.md) | Failures that are only logged alert nobody | P2 | Verifying — a test alert of each kind, raised on a deployment, reaches the owner, and a later window emails again; due 2026-10-15 |
+| [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before paid acquisition or 35 days before the earliest live renewal |
+| [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07 |
+| [DEBT-507](./debt-507-lint-staged-shared-clone-staging-race.md) | lint-staged can stage another session's work | P2 | Open — held at 17.5.1; safeguard or worktree isolation required |
+| [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | In Progress — isolation implemented; CI's per-run evidence follows its merge, and the overlap check follows DEBT-503 item 1 |
+| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; watcher covers every direct dependency (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes |
+| [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Open — resolution decided below |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 
@@ -51,7 +57,7 @@ filing only — archived here means *deferred*, not *done*.
 
 | ID | Title | Priority | Deferred | Revive when |
 |----|-------|----------|----------|-------------|
-| [DEBT-495 accepted risk](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#triage--2026-10-03) | `braces` 3.0.3's denial-of-service advisory (alert #77) has no fixed release; only repository-fixed glob patterns reach it. The alert stays open, so Dependabot raises the fix PR when a fix ships | P3 | 2026-10-03 | Any one: a fixed `braces` release, or a `micromatch` or `fast-glob` release that drops it; runtime code that globs a request-, learner- or network-derived string; Clerk enabling a Web3 sign-in strategy |
+| [DEBT-495 accepted risk](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#triage--2026-10-03) | `braces` 3.0.3's denial-of-service advisory (alert #77) has no fixed release; only repository-fixed glob patterns reach it, through `fast-glob` alone since DEBT-506 removed the React Native chain. The alert stays open, so Dependabot raises the fix PR when a fix ships | P3 | 2026-10-03 | Any one: a fixed `braces` release, or a `micromatch` or `fast-glob` release that drops it; runtime code that globs a request-, learner- or network-derived string |
 | [DEBT-483 production bootstrap](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc) | Production still seeds directly: no release is active there. Bootstrapping adopts what is live as the first release, after which the direct and managed seeds refuse production and content changes only through releases. There is no supported way to undo it | P2 | 2026-10-02 | The owner decides to bootstrap. Its prerequisites, [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md) and [DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md), are released |
 | [DEBT-483 managed seed staging](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc) | Once a release is active, the managed seed refuses that database; it does not yet stage a release instead | P3 | 2026-10-02 | A release is bootstrapped on any database the managed seed serves |
 | [DEBT-483 release zero](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc) | ADR-021's release zero, the content repository's first release, waits for that repository to compute `stored-fields-json-v1` (SPEC-007) | P3 | 2026-10-02 | The content repository computes `stored-fields-json-v1` |
@@ -59,7 +65,7 @@ filing only — archived here means *deferred*, not *done*.
 | [DEBT-472 ratcheted remainder](../_archive/debt/debt-472-test-double-fidelity-and-contract-discipline.md#verified-closeout--2026-09-25-utc) | 22 `as unknown as` casts in 9 files and 29 hand-rolled port doubles in 10 files (2026-09-27, after DEBT-468 Part 3 (a) and the required `StripeClient` members; floors equal live counts) outside the record's named census, frozen by the CI ratchet (cannot grow); not migrated | P3 | 2026-09-25 | A listed file is next edited for another reason (migrate it onto its fake or a narrow seam in the same PR and lower its floor), or the owner asks to drive the floors to zero. |
 | [DEBT-472 register discovery](../_archive/debt/debt-472-test-double-fidelity-and-contract-discipline.md#verified-closeout--2026-09-25-utc) | The fake-contract register scan names adapter-owned fakes explicitly instead of discovering `src/adapters/**/test-helpers/fake-*.ts`; a new adapter-owned fake would not be forced into the register | P3 | 2026-09-25 | A second adapter-owned fake is proposed: make discovery mechanical, red-first, before it lands. |
 | [DEBT-474 isolated accounts](../_archive/debt/debt-474-ci-secret-scope-and-action-immutability.md#verified-closeout--2026-09-22-utc) | Future Dependabot PR-time E2E on a separate Stripe Sandbox and Clerk instance; shared-account credentials remain prohibited and the current no-E2E policy is resolved in the linked record. | P2 | 2026-09-22 | Paying customers or a second engineer: establish genuinely isolated TEST accounts, then review the credential boundary and explicitly change the policy before supplying Dependabot credentials. Metadata namespaces alone are not isolation. |
-| [DEBT-476 accepted risk](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md#deferred-accepted-risk-and-upstream-correction) | Installed stream-json 1.9.1 remains unreachable and unpatched, and alert #55 is open again (2026-10-04) as the watcher for its fix; optional unused Solana-tree reduction is not implemented. The dated fast-uri remediation is resolved in the linked record. | P2 | 2026-09-22 | A supported Solana/Clerk update adopts jayson 5 or removes the adapter tree, or changed imports make the vulnerable filters reachable. Re-audit and reopen #55 if the dismissal no longer holds. Consider an adapter-free Clerk variant only when upstream supports it and the owner prioritizes it; never force a vendor-major override. |
+| [DEBT-476 accepted risk](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md#deferred-accepted-risk-and-upstream-correction) | Installed stream-json 1.9.1 remains unreachable and unpatched; #55/#78/#79 stay open. DEBT-506 removes only the React Native peer now. Clerk UI 1.38.0 has published a supported Solana-tree removal, but is not yet eligible | P2 | 2026-09-22 | After 2026-10-07T21:37:27.585Z, take the supported Clerk upgrade under DEBT-506, verify tree removal and the full gate, and record promoted alert states. Re-audit sooner if imports make the vulnerable code reachable; never force a vendor-major override |
 | [DEBT-488 historical targets](../_archive/debt/debt-488-documentation-archive-convention.md#historical-targets-without-a-mechanically-proven-replacement) | Forty-one historical link occurrences have no mechanically proven replacement; convention, guards and 647 mechanical repairs are resolved in the linked record | P2 | 2026-09-22 | Owner supplies an authoritative replacement or explicitly reopens the source record. Preserve the listed absent targets until then; do not guess destinations or silently delete evidence. |
 | [DEBT-479 step 4](../_archive/debt/debt-479-public-surface-discoverability-and-field-performance.md#verified-closeout--2026-09-22-utc) | Optional structured data (`Organization` plus a truthful `Product`/`Offer` derived from the real price source); not implemented | P3 | 2026-09-22 | Owner prioritizes rich results for the public pages. Then follow step 4's red proof: missing JSON-LD fails first, and mutating only the Offer amount must fail the displayed-price agreement assertion. |
 | [DEBT-479 step 5](../_archive/debt/debt-479-public-surface-discoverability-and-field-performance.md#verified-closeout--2026-09-22-utc) | Browser field measurement (LCP/CLS/INP source, sampling, quota and privacy policy); browser tracing stays at 0% | P3 | 2026-09-22 | Owner chooses a supported source and privacy policy, together with the SPEC-016 amendment and any collection-point notice. Web Analytics remains under DEBT-464. |

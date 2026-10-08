@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
 import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
@@ -39,6 +42,7 @@ function createDeps(): {
     >
   >;
   logger: FakeLogger;
+  alerts: FakeOperationalAlerts;
 } {
   const listDue = vi.fn<AnnualRenewals['listDue']>(async () => [
     {
@@ -74,7 +78,9 @@ function createDeps(): {
   >(async () => []);
   const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
   const logger = new FakeLogger();
+  const alerts = new FakeOperationalAlerts();
   return {
+    alerts,
     listDue,
     listPastNoticeDeadline,
     listActiveMonthly,
@@ -94,6 +100,7 @@ function createDeps(): {
       sendDueRenewalNotices: { execute },
       pruneExpiredTrialPaymentMethodSetups,
       logger,
+      alerts,
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -167,7 +174,8 @@ describe('sendDueRenewalNotices job', () => {
   });
 
   it('alerts on renewals inside 30 days that lack delivered notices, after dispatching', async () => {
-    const { deps, execute, listPastNoticeDeadline, logger } = createDeps();
+    const { deps, execute, listPastNoticeDeadline, logger, alerts } =
+      createDeps();
     listPastNoticeDeadline.mockImplementation(async () => {
       expect(execute).toHaveBeenCalledOnce();
       return [
@@ -194,10 +202,13 @@ describe('sendDueRenewalNotices job', () => {
         context: { count: 1, externalSubscriptionIds: ['sub_late_1'] },
       },
     ]);
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_deadline_missed', count: 1 },
+    ]);
   });
 
   it('raises no alert when every renewal inside 30 days has delivered notices', async () => {
-    const { deps, logger } = createDeps();
+    const { deps, logger, alerts } = createDeps();
 
     await sendDueRenewalNotices(
       { subscriptionLimit: 50, dispatchLimit: 100 },
@@ -205,6 +216,7 @@ describe('sendDueRenewalNotices job', () => {
     );
 
     expect(logger.errorCalls).toEqual([]);
+    expect(alerts.raised).toEqual([]);
   });
 
   it('reports a failed deadline check without failing the run', async () => {
@@ -560,6 +572,7 @@ describe('sendDueRenewalNotices job', () => {
         listActiveMonthly,
         listAnniversaryReminders,
         logger,
+        alerts,
       } = createDeps();
       listActiveMonthly.mockResolvedValueOnce([
         monthlySubscription('sub_late', '2025-09-05T12:00:00.000Z'),
@@ -589,6 +602,9 @@ describe('sendDueRenewalNotices job', () => {
           msg: 'Monthly anniversary reminder deadline missed',
           context: { count: 1, externalSubscriptionIds: ['sub_late'] },
         },
+      ]);
+      expect(alerts.raised).toEqual([
+        { kind: 'anniversary_reminder_deadline_missed', count: 1 },
       ]);
     });
   });

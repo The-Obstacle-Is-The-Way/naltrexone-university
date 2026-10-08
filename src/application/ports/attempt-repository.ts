@@ -45,8 +45,18 @@ export type AttemptedQuestionSummary = {
   sessionMode: PracticeMode | null;
 };
 
+/**
+ * History's result filter. A latest answer whose question's content is in
+ * doubt, or graded on a key corrected since, is under neither (ADR-022
+ * Amendment 2026-10-05, DEBT-498). An answer without a fair chance keeps its
+ * grade, since that is not doubt.
+ */
 export type AttemptedQuestionsResultFilter = 'correct' | 'incorrect';
 export type AttemptedQuestionsSourceFilter = 'tutor' | 'exam' | 'adhoc';
+/**
+ * `incorrect-first` and `correct-first` place a result no score counts after
+ * every graded one (ADR-022 Amendment 2026-10-05).
+ */
 export type AttemptedQuestionsSort =
   | 'recent'
   | 'incorrect-first'

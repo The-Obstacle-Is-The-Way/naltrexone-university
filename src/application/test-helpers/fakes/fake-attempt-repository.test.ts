@@ -556,6 +556,67 @@ describe('FakeAttemptRepository', () => {
       ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
 
+    // DEBT-498: a result no score counts needs the answered question's state.
+    it.each([{ result: 'correct' }, { result: 'incorrect' }] as const)(
+      'throws when the $result filter is used without questions metadata',
+      async (filters) => {
+        const repo = new FakeAttemptRepository([
+          makeAttempt({ id: 'attempt-1' }),
+        ]);
+
+        await expect(
+          repo.listAttemptedQuestionsByUserId(userId, 10, 0, filters),
+        ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+        await expect(
+          repo.countAttemptedQuestionsByUserId(userId, filters),
+        ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+      },
+    );
+
+    it.each(['incorrect-first', 'correct-first'] as const)(
+      'throws when the %s sort is used without questions metadata',
+      async (sort) => {
+        const repo = new FakeAttemptRepository([
+          makeAttempt({ id: 'attempt-1' }),
+        ]);
+
+        await expect(
+          repo.listAttemptedQuestionsByUserId(userId, 10, 0, { sort }),
+        ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+      },
+    );
+
+    // As the adapter: an attempt whose question is gone is in doubt.
+    it('lists an attempt whose question is not listed under neither result filter, and sorts it last', async () => {
+      const repo = new FakeAttemptRepository(
+        [
+          makeAttempt({
+            id: 'attempt-gone',
+            questionId: 'q-gone',
+            answeredAt: new Date('2026-02-02T00:00:00Z'),
+          }),
+          makeAttempt({
+            id: 'attempt-listed',
+            questionId: 'q-listed',
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T00:00:00Z'),
+          }),
+        ],
+        { questions: [createQuestion({ id: 'q-listed' })] },
+      );
+
+      await expect(
+        repo.countAttemptedQuestionsByUserId(userId, { result: 'correct' }),
+      ).resolves.toBe(0);
+      const sorted = await repo.listAttemptedQuestionsByUserId(userId, 10, 0, {
+        sort: 'correct-first',
+      });
+      expect(sorted.map((row) => row.questionId)).toEqual([
+        'q-listed',
+        'q-gone',
+      ]);
+    });
+
     it('throws when difficulty/tagSlug filters are used without questions metadata', async () => {
       const repo = new FakeAttemptRepository([
         makeAttempt({ id: 'attempt-1' }),

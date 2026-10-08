@@ -21,14 +21,29 @@ async function sentryPrivacyOptions() {
   };
 }
 
+// BUG-331: the server sends no breadcrumbs, and scrubs span URLs.
+async function sentryServerPrivacyOptions() {
+  const privacy = await import('@/lib/sentry-data-collection');
+  return {
+    traceLifecycle: 'stream',
+    tracePropagationTargets: [],
+    maxBreadcrumbs: 0,
+    // DEBT-505: no release-health session, which would copy the scope's user
+    // past beforeSend.
+    integrations: privacy.serverIntegrations,
+    dataCollection: privacy.SENTRY_DATA_COLLECTION,
+    beforeSend: privacy.scrubServerEvent,
+    beforeSendSpan: privacy.scrubSpan,
+  };
+}
+
 describe('Sentry configuration', () => {
   const originalEnv = { ...process.env };
 
   const getClientEnvironment = () =>
-    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() || 'local';
 
-  const getServerEnvironment = () =>
-    process.env.VERCEL_ENV?.trim() || process.env.NODE_ENV?.trim();
+  const getServerEnvironment = () => process.env.VERCEL_ENV?.trim() || 'local';
 
   beforeEach(() => {
     initMock.mockClear();
@@ -89,6 +104,21 @@ describe('Sentry configuration', () => {
         environment: 'preview',
         ...(await sentryPrivacyOptions()),
       });
+    });
+
+    it('labels a production build off Vercel as local', async () => {
+      // Arrange
+      process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
+      delete process.env.NEXT_PUBLIC_VERCEL_ENV;
+      Object.assign(process.env, { NODE_ENV: 'production' });
+
+      // Act
+      await import('./sentry.client.config');
+
+      // Assert
+      expect(initMock).toHaveBeenCalledWith(
+        expect.objectContaining({ environment: 'local' }),
+      );
     });
   });
 
@@ -165,11 +195,13 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
-        ...(await sentryPrivacyOptions()),
+        ...(await sentryServerPrivacyOptions()),
       });
     });
 
-    it('returns initialized client using NEXT_PUBLIC_SENTRY_DSN when SENTRY_DSN is unset', async () => {
+    // DEBT-505: the browser's key is public, so server events, operational
+    // alerts among them, go only to the server project's key.
+    it('never sends server events with the browser key', async () => {
       // Arrange
       delete process.env.SENTRY_DSN;
       process.env.NEXT_PUBLIC_SENTRY_DSN = 'https://examplePublicDsn';
@@ -178,12 +210,7 @@ describe('Sentry configuration', () => {
       await instrumentation.register();
 
       // Assert
-      expect(initMock).toHaveBeenCalledWith({
-        dsn: 'https://examplePublicDsn',
-        tracesSampleRate: 0.05,
-        environment: getServerEnvironment(),
-        ...(await sentryPrivacyOptions()),
-      });
+      expect(initMock).not.toHaveBeenCalled();
     });
 
     it('uses VERCEL_ENV when provided', async () => {
@@ -199,8 +226,25 @@ describe('Sentry configuration', () => {
         dsn: 'https://exampleServerDsn',
         tracesSampleRate: 0.05,
         environment: 'preview',
-        ...(await sentryPrivacyOptions()),
+        ...(await sentryServerPrivacyOptions()),
       });
+    });
+
+    // DEBT-505: `next start` is a production build, but off Vercel it is not
+    // production; an event labelled so would page the owner.
+    it('labels a production build off Vercel as local', async () => {
+      // Arrange
+      process.env.SENTRY_DSN = 'https://exampleServerDsn';
+      delete process.env.VERCEL_ENV;
+      Object.assign(process.env, { NODE_ENV: 'production' });
+
+      // Act
+      await instrumentation.register();
+
+      // Assert
+      expect(initMock).toHaveBeenCalledWith(
+        expect.objectContaining({ environment: 'local' }),
+      );
     });
 
     it('returns onRequestError as captureRequestError', async () => {

@@ -20,8 +20,11 @@ This was observed before Playwright or any provider test started.
 
 Inspected at `af21b710` (the code is unchanged from main `0f324edd`):
 
-- `scripts/resolve-local-test-target.ts:111` appends a nine-character hash suffix
-  after sanitizing the basename. The sanitizer caps its input at 48 characters.
+- `deriveInstanceIdFromWorktree` (`scripts/resolve-local-test-target.ts:111`)
+  appends a nine-character suffix (`-` and an eight-character hash, :113-114)
+  after sanitizing the basename. The sanitizer caps its normalized output at 48
+  characters (:165). So a basename that sanitizes to 40 characters or more gives
+  an instance longer than 48: measured, 39 round-trips and 40 changes.
 - Explicit instances pass through that same 48-character cap. The generated
   result can be longer than 48, so resolving it again changes the instance.
 - `scripts/e2e-local-orchestrator.ts:67` passes the resolved target environment
@@ -77,4 +80,4 @@ ports through the existing script. This is a local workaround, not a shipped fix
 ## Related
 
 - [Testing infrastructure](../dev/testing-infrastructure.md).
-- [External audit](../audits/audit-014-external-record-audit-2026-10-06.md).
+- [External audit](../_archive/audits/audit-014-external-record-audit-2026-10-06.md).

@@ -102,16 +102,20 @@ export function hadFairChanceAtEnd(input: {
 
 /**
  * An active session's item, as it would count if the session ended now
- * (ADR-022 Decision 5, as amended): the fair chance its end would record, and
- * its content not in doubt. Review & Submit and the active notice use it.
+ * (ADR-022 Decision 5, as amended): the fair chance its end would record, its
+ * content not in doubt, and, if answered, its key not corrected since
+ * (DEBT-498). Review & Submit and the active notice use it.
  */
 export function countsIfEndedNow(input: {
   mode: PracticeMode;
   answered: boolean;
   availability: QuestionAvailability | null;
+  /** As `countsTowardScore`'s: answered, on a key corrected since. */
+  keyCorrected: boolean;
 }): boolean {
   return countsTowardScore({
     fairChanceAtEnd: hadFairChanceAtEnd(input),
     availability: input.availability,
+    keyCorrected: input.keyCorrected,
   });
 }

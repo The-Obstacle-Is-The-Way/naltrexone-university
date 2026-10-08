@@ -1,21 +1,21 @@
 # DEBT-498: Reviews Grade Items Whose Content Is in Doubt
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — increments 1 and 2a are in production; increment 2b, History's rows and filters, remains
-**Status detail** (moved from the status line 2026-10-05, when status lines became one line): In Progress — increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) are in production (promotions #1372 and #1377, 2026-10-05); increment 2b, History's rows and filters, remains ([Progress](#progress))
+**Status:** Resolved — 2026-10-07; increments 1, 2a and 2b are in production through promotions #1372, #1377 and #1422
+**Status detail** (moved from the status line 2026-10-05, when status lines became one line): Resolved. Increments 1 (the answer views) and 2a (navigators, session breakdown, Dashboard) reached production through promotions #1372 and #1377 on 2026-10-05. Increment 2b (History's rows, result filters and sorts, and Review & Submit's corrected-key label) reached production through promotion #1422 on 2026-10-07 ([Progress](#progress)).
 **Priority:** P1
 **Date:** 2026-10-05
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-07
+**Verification receipts:** promotions #1372 and #1377 (2026-10-05). #1418, through promotion #1422: merge `1e2a5498`, production alias 2026-10-07T18:53:48Z, `main` CI run 37668412704.
 
 ---
 
 ## Summary
 
-**Current position, 2026-10-06:** the answer views, navigators, session breakdown and Dashboard are fixed in production (increments 1 and 2a below). History's rows and result filters remain. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
+**Current position:** every surface is fixed in production. Increments 1 and 2a cover the answer views, navigators, session breakdown and Dashboard. Increment 2b covers History's rows, result filters and sorts, and Review & Submit's label for an answer on a corrected key. The description and screenshots below record the pre-fix behavior at `25c4748b`; they do not describe all current surfaces.
 
-[ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) leaves an item out of every score when its content is in doubt: its answer key was corrected after the learner answered, it was withdrawn, or it is under review. The reason given is that such an item "should neither penalize nor credit the learner". The pages that show the attempt still grade it.
+[ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md) leaves an item out of every score when its content is in doubt: its answer key was corrected after the learner answered, it was withdrawn, or it is under review. The reason given is that such an item "should neither penalize nor credit the learner". The pages that show the attempt still grade it.
 
 The review of a key-corrected attempt shows the caution first: "The answer to this question was corrected after you answered. This attempt isn't scored." Below it, the page grades the attempt against the superseded key:
 - the old keyed choice is highlighted green;
@@ -71,7 +71,9 @@ Option 4, under the owner's delegation of 2026-09-28. A score and a page then sa
    - the caution's link, "Practice the corrected question", remains the way to the corrected answer.
 4. **Withdrawn and under-review attempts** keep their keyed answer and explanation, labelled, under the existing caution. This preserves Decision 2, which shows content to the learner who answered.
 5. **History's result filters** match what each row shows: an item in doubt appears under neither Correct nor Incorrect. Re-practice of a key-corrected item stays with the Incorrect practice filter (Decision 4).
-6. **Order of work:** ADR-022 gains an amendment, and Pattern Registry F-11, F-12 and the outcome badge record the ungraded form, before the code changes ("never invent UI patterns"). History rows gain the key-correction flag, which the attempt repository already computes for the Incorrect filter.
+6. **Order of work:** ADR-022 gains an amendment, and Pattern Registry F-11, F-12 and the outcome badge record the ungraded form, before the code changes ("never invent UI patterns"). History rows gain the key-correction flag, which the question repository already computes for the Incorrect practice filter.
+
+   *Corrected 2026-10-07: the attempt repository did not compute it. The row's flag comes from the question repository's revision read, and History's filters use the attempt repository's key-corrected join, the twin of the question repository's practice filter.*
 
 ## Progress
 
@@ -136,23 +138,55 @@ The code:
   - Both themes were computed from `app/globals.css`.
   - In the product's dark theme, the new forms pass AA, and add no new pair: muted "Not scored" measures 5.04:1 on the Dashboard row and 5.60:1 on the breakdown, and the `secondary` navigator 14.57:1.
   - In light mode, unfinished and switched off (DEBT-421), tinted rows' small metadata and result text falls below 4.5:1, which predates this record. The figures are recorded in Pattern Registry F-11 for when light mode is finished.
-- **Not done yet:** History's rows, and its Correct and Incorrect filters and sorts (increment 2b).
+
+**Increment 2b: History's rows, result filters and sorts, 2026-10-07.**
+- **Docs first.** ADR-022's Amendment and Pattern Registry F-11 now decide the sorts: Incorrect-first and Correct-first place a result no score counts after every graded row, since ranking it with either verdict would credit or penalize it.
+- **Data.** `GetAttemptedQuestionsUseCase`'s available rows carry a required `answerKeyChanged`, false for an omitted attempt, as 2a's rows do.
+- **Row.** History's result reads "Not scored", in the row's muted tone, through 2a's `isResultNotScored`.
+- **Filters and sorts.**
+  - The Correct and Incorrect filters list only what a score counts, and the two result sorts place the rest last.
+  - Both implementations apply it: the adapter's `resultNotScoredSql`, over the once-built key-corrected join, and the fake's `ungradedReason`. The fake refuses a result filter or sort without its questions.
+  - The practice Incorrect filter is unchanged and still offers a key-corrected question again (Decision 4). A real-Postgres test pins the difference.
+- **Two expectations changed with the rule:** a question that no longer exists, which had read Correct or Incorrect, and an omitted attempt on a withdrawn or held question, which had read "Incorrect". The score already leaves both out.
+- **Evidence.**
+  - Every case was red first.
+  - A shared contract, `tests/shared/attempted-question-result-contract.ts`, runs three scenarios against the fake and real Postgres, on the score contract's seeds.
+  - 19 targeted mutations each fail a test: 7 in the SQL (each filter, the doubt and key branches, the omission guard, each sort's rank), 8 in the fake, 2 in the use case's flag and 2 in the row.
+  - DEBT-496's spec asserts History's "Not scored" on the key-corrected and held rows. It also asserts that a key-corrected correct answer and a held incorrect one are under neither filter, while scored correct and incorrect answers keep theirs. A real-Postgres test asserts the same through the use case. Both History screenshots were viewed.
+- **Cost.** On DEBT-493's dataset (one learner, 2,000 answers over 300 questions; 15 keys corrected and 15 stems reworded; 30 questions taken out of the bank, 10 of them withdrawn; 10 held), median of 40 warm `EXPLAIN (ANALYZE)` runs:
+  - the default page is unchanged, at 1.18 ms, because the planner drops the unused join;
+  - a result filter or sort takes about 3 ms, against 1.1 ms before;
+  - no plan uses JIT.
+- **Contrast.** In the dark theme, muted "Not scored" on History's row measures 5.13:1 at rest and 4.61:1 on hover. It is the pair the row already uses for its date.
+- **Found by the screenshots: Review & Submit's label.**
+  - Review & Submit did not list an exam answer on a key corrected mid-exam as "Won't be scored", though submission grades it against the old key and the score leaves it out.
+  - The cause had two parts. `countsIfEndedNow` ignored corrected keys. The review rows set `answerKeyChanged` only from a submitted answer, while an exam answer stays a draft until submission.
+  - Now `countsIfEndedNow` requires `keyCorrected`, so no caller can omit it. The rows count a draft as the answer, and the active notice for a tutor answer on a retired question passes it too.
+  - Red first: the domain rule, the active-exam row, the label, and the tutor notice. Removing either call site's flag fails a test. ADR-022's Decision 3 gains a one-line note.
+- **Screenshots viewed** locally, on dedicated questions, with the session surfaces built through the app's own session repository:
+  - Review & Submit, before and after the fix;
+  - post-exam review and its navigator;
+  - the session breakdown;
+  - an active tutor session's feedback and navigator after a mid-session correction;
+  - the question page's session navigator ("Question 1: Not scored, Current");
+  - History's two rows.
 
 ## Verification
 
-Criteria to meet before closing. Increment 1 meets the key-corrected review's criterion; the others wait for the list surfaces (increment 2).
+Criteria to meet before closing, all met: increments 1, 2a and 2b are in production.
 
-- [ ] Each surface above shows "Not scored", and no success or destructive grading, for a key-corrected, withdrawn or under-review item.
-- [ ] Every scored item still shows its grade as before.
-- [ ] Both are proven by red-first component tests.
+- [x] Each surface above shows "Not scored", and no success or destructive grading, for a key-corrected, withdrawn or under-review item.
+- [x] Every scored item still shows its grade as before.
+- [x] Both are proven by red-first component tests.
 - [x] A key-corrected review shows neither the superseded explanation nor a green key: component tests, DEBT-496's spec on the real page, and its screenshot (increment 1).
-- [ ] DEBT-496's spec asserts the ungraded review, and the History row's "Not scored".
-- [ ] Removing the in-doubt check from each surface fails a test.
-- [ ] Screenshots of each surface are viewed.
+- [x] DEBT-496's spec asserts the ungraded review, and the History row's "Not scored".
+- [x] Removing the in-doubt check from each surface fails a test (increments 1, 2a and 2b each record theirs).
+- [x] Screenshots of each surface are viewed: the reviews and the Dashboard (increments 1 and 2a), and the rest in increment 2b.
+- [x] Increment 2b is in production, through its promotion: #1422 (`1e2a5498`), aliased at 2026-10-07T18:53:48Z. The promotion's first CI run lost its stored Clerk session to a failed token refresh; Clerk listed the session still active. The cause was recorded on #1422, and the one re-run passed.
 
 ## Related
 
-- [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decisions 2 and 4: what a learner sees, and key corrections.
-- [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md): the notices and scores.
-- [DEBT-496](../_archive/debt/debt-496-content-change-notices-route-level-proof.md): the end-to-end screenshots that showed this.
+- [ADR-022](../../adr/adr-022-learner-scores-and-labels-when-content-changes.md), Decisions 2 and 4: what a learner sees, and key corrections.
+- [DEBT-493](debt-493-learner-scores-and-labels-when-content-changes.md): the notices and scores.
+- [DEBT-496](debt-496-content-change-notices-route-level-proof.md): the end-to-end screenshots that showed this.
 - `docs/frontend/pattern-registry.md`: F-11, F-12 and F-13.
