@@ -6,7 +6,8 @@
 **Now** — 2026-10-08.
 - **Security.** DEBT-506's peer/sharp fixes await outside review; source-map-js 1.2.2 follows after 2026-10-07T14:08:09.382Z, then the supported Clerk UI 1.38.0 tree removal after 2026-10-07T21:37:27.585Z.
 - **In progress.** DEBT-503: item 1, identity from the session token, awaits its release; items 2–4 follow. DEBT-508, isolating concurrent E2E runs: its overlap check follows DEBT-503 item 1's release.
-- **Next.** DEBT-505 (failures that are only logged alert nobody; it must ship before paid acquisition), then DEBT-502 items 2 and 3 (DEBT-511's prerequisites), then DEBT-511 (legal notices read the address from Clerk at send time, with a bounded last-run fallback; it needs DEBT-505's alerts, and must ship before paid acquisition, or 35 days before the earliest live renewal if that is sooner), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then the rest of DEBT-502, then DEBT-504.
+- **Verifying.** DEBT-505: a test alert of each kind, raised on a deployment, reaches the owner, and a later window emails again; due 2026-10-15.
+- **Next.** DEBT-502 items 2 and 3 (DEBT-511's prerequisites), then DEBT-511 (legal notices read the address from Clerk at send time, with a bounded last-run fallback; it needs DEBT-505's alerts, and must ship before paid acquisition, or 35 days before the earliest live renewal if that is sooner), then DEBT-501's two P2 items (oldest-first reconcile and legacy price IDs), then the rest of DEBT-502, then DEBT-504.
 - **Owner decisions pending.**
   - One live purchase and refund (DEBT-501 item 7).
   - Verified-email signup settings and whether a re-created account gets a fresh trial (DEBT-502).
