@@ -197,16 +197,22 @@ export function scrubEvent(
  * message and every string of its data. The browser SDK writes a fetch, XHR or navigation URL to
  * `url`, `from` and `to`. No field is named, because an SDK can add one: the
  * server SDK already writes the query to `url.query` (BUG-331).
+ *
+ * A console breadcrumb keeps its line as text in the message, and drops the
+ * logged values in `data.arguments`: they are the app's own, of any type, and
+ * the SDK serialises them after this hook (an error by its message and stack,
+ * a URL by its address, any object by its fields), so no scrubber here could
+ * see all they hold.
  */
 export function scrubBreadcrumb(
   breadcrumb: Sentry.Breadcrumb,
 ): Sentry.Breadcrumb {
-  // A console breadcrumb also joins its arguments into the message.
   if (typeof breadcrumb.message === 'string') {
     breadcrumb.message = redactCredentialParams(breadcrumb.message);
   }
   const data = breadcrumb.data;
   if (data) {
+    if (breadcrumb.category === 'console') delete data.arguments;
     for (const [field, value] of Object.entries(data)) {
       data[field] = redactStrings(value);
     }

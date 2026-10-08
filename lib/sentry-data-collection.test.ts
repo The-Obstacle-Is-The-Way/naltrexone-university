@@ -165,70 +165,73 @@ describe('scrubBreadcrumb', () => {
     });
   });
 
-  // BUG-331: the server SDK also keeps the query in `url.query`. Every string
-  // is redacted, so a field the SDK adds later is covered too.
-  // A console breadcrumb holds the line twice: its arguments, and joined as
-  // its message. In free text a value runs to the end, so more than the
-  // value can be filtered; that errs toward sending less.
-  it("redacts credentials in a console line's message and its arguments alike", () => {
+  // A console breadcrumb holds the line twice: as text in its message, and as
+  // the logged values in `data.arguments`. Those values are the app's own, of
+  // any type, and the SDK serialises them after this hook: an error by its
+  // message and stack, a URL by its address, any object by its fields. So
+  // only the text is kept. In free text a value runs to the end, so more than
+  // the value can be filtered; that errs toward sending less.
+  it('keeps a console line as its redacted text and drops the logged values, whatever they are', () => {
+    class Checkout {
+      returnUrl = '/cb?code=abc';
+    }
+    const logged = [
+      new Error('redirect to /cb?code=abc'),
+      new URL('https://example.com/cb?code=abc'),
+      new Checkout(),
+      { token: 'abc' },
+    ];
+
     expect(
       scrubBreadcrumb({
         category: 'console',
+        level: 'error',
         message: 'redirect to /cb?code=abc 3',
-        data: { arguments: ['redirect to /cb?code=abc', 3], logger: 'console' },
+        data: { arguments: logged, logger: 'console' },
       }),
     ).toEqual({
       category: 'console',
+      level: 'error',
       message: 'redirect to /cb?code=[Filtered]',
-      data: {
-        arguments: ['redirect to /cb?code=[Filtered]', 3],
-        logger: 'console',
-      },
+      data: { logger: 'console' },
     });
   });
 
-  // A console line can log an object; its breadcrumb keeps that object. The
-  // copy is redacted, never the app's own object.
-  it("redacts credentials nested in a logged object's copy, leaving the object itself unchanged", () => {
-    const logged: Record<string, unknown> = {
+  // Other data is copied with every string redacted, through arrays, plain
+  // objects and errors; the app's own values are never changed.
+  it("redacts credentials nested in a data object's copy, leaving the object itself unchanged", () => {
+    const value: Record<string, unknown> = {
       url: '/cb?code=abc',
       nested: { next: '/x?token=t', plain: 'kept' },
     };
-    logged.self = logged;
+    value.self = value;
 
     const scrubbed = scrubBreadcrumb({
-      category: 'console',
-      data: { arguments: [logged, 'plain'], logger: 'console' },
+      category: 'app',
+      data: { value, list: [value, 'plain'] },
     });
 
-    expect(scrubbed.data?.arguments).toEqual([
-      {
-        url: '/cb?code=[Filtered]',
-        nested: { next: '/x?token=[Filtered]', plain: 'kept' },
-        self: '[Circular]',
-      },
-      'plain',
-    ]);
-    expect(logged.url).toBe('/cb?code=abc');
-    expect((logged.nested as { next: string }).next).toBe('/x?token=t');
+    const copy = {
+      url: '/cb?code=[Filtered]',
+      nested: { next: '/x?token=[Filtered]', plain: 'kept' },
+      self: '[Circular]',
+    };
+    expect(scrubbed.data).toEqual({ value: copy, list: [copy, 'plain'] });
+    expect(value.url).toBe('/cb?code=abc');
+    expect((value.nested as { next: string }).next).toBe('/x?token=t');
   });
 
-  // A logged error stays an Error in the breadcrumb, and Sentry serialises it
-  // later, as its name, message, stack and own properties, past this hook.
-  it("redacts credentials in a logged error's copy, as Sentry would serialise it, leaving the error unchanged", () => {
+  // An error is copied as Sentry would serialise it after this hook: its
+  // name, message, stack and own properties.
+  it("redacts credentials in an error's copy, as Sentry would serialise it, leaving the error unchanged", () => {
     const error: Error & { url?: string; self?: unknown } = new Error(
       'redirect to /cb?code=abc',
     );
     error.url = '/x?token=t';
     error.self = error;
 
-    const scrubbed = scrubBreadcrumb({
-      category: 'console',
-      data: { arguments: [error] },
-    });
-    const copy = (scrubbed.data?.arguments as unknown[] | undefined)?.[0] as
-      | Record<string, unknown>
-      | undefined;
+    const scrubbed = scrubBreadcrumb({ category: 'app', data: { error } });
+    const copy = scrubbed.data?.error as Record<string, unknown> | undefined;
 
     expect(copy).toMatchObject({
       name: 'Error',
@@ -240,17 +243,6 @@ describe('scrubBreadcrumb', () => {
     expect(JSON.stringify(copy)).not.toMatch(/code=abc|token=t\b/);
     expect(error.message).toBe('redirect to /cb?code=abc');
     expect(error.url).toBe('/x?token=t');
-  });
-
-  it('redacts an object logged twice in both places, not as a cycle', () => {
-    const shared = { url: '/a?token=t' };
-
-    expect(
-      scrubBreadcrumb({
-        category: 'console',
-        data: { arguments: [shared, shared] },
-      }).data?.arguments,
-    ).toEqual([{ url: '/a?token=[Filtered]' }, { url: '/a?token=[Filtered]' }]);
   });
 
   it("redacts credentials in every string of a breadcrumb's data", () => {

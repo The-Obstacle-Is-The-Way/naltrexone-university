@@ -59,7 +59,10 @@ This affected every server error event until the fix. Operational alerts ([DEBT-
 - **Envelope trace headers redacted.** A server integration redacts the `trace` header's `transaction` before each envelope is sent.
 - **No trace headers to other services.** `tracePropagationTargets: []`: the server calls no service of ours that could continue a trace.
 - **`nonce`** joins the credential parameters `redactCredentialParams` matches.
-- **Every breadcrumb field in the browser.** `scrubBreadcrumb` redacts a breadcrumb's message and every string in its data, through arrays, plain objects and errors such as a console line's arguments, rather than three named fields. A logged error is copied as Sentry serialises it after the hook, by its name, message, stack and own properties, so its text is redacted too. A logged value is copied, never changed, and a cycle in it is cut. A console breadcrumb holds its line twice, as arguments and joined as the message. The browser SDK writes a URL only to `url`, `from` and `to` today, but an SDK can add a field: the server SDK already writes `url.query`.
+- **Every breadcrumb field in the browser.** `scrubBreadcrumb` redacts a breadcrumb's message and every string in its data, through arrays, plain objects and errors, rather than three named fields. An error is copied as Sentry serialises it, by its name, message, stack and own properties. Values are copied, never changed, and a cycle is cut. The browser SDK writes a URL only to `url`, `from` and `to` today, but an SDK can add a field: the server SDK already writes `url.query`.
+- **A console line as text only.** A console breadcrumb holds its line twice: as text in its message, and as the logged values in `data.arguments`. The hook keeps the redacted message and drops the values. They are the app's own, of any type, and the SDK serialises them after the hook: an error by its message and stack, a URL by its address, any object by its fields. So no scrubber could see all they hold.
+
+  *Corrected 2026-10-08 (#1430 review): the first fix copied the arguments with every string redacted, but a logged `Error` passed through untouched and Sentry then sent its message. A logged `URL` or class instance had the same gap.*
 
 Sentry's own query filter keeps its list. Our hooks run last on every event, span, envelope header and breadcrumb, so a second copy of the list there would add nothing a test could see.
 
@@ -68,7 +71,7 @@ Tests:
 - Next.js's request span, opened through Next's own tracer, carries no `__clerk_handshake`, `nonce` or `code`, and an outgoing call's span no `nonce`, with `SENTRY_TRACE_LIFECYCLE=static` set;
 - the outgoing call receives no `sentry-trace` or `baggage` header;
 - a request that fell back to Next's error page sends no credential in any envelope, headers included;
-- `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field, an array attribute, a span link, a console line's message and arguments, a logged object with a cycle, and a logged error.
+- `scrubServerEvent`, `scrubSpan` and `scrubBreadcrumb` unit cases, including a `url.query` field, an array attribute, a span link, a console line kept as its redacted text, a nested object with a cycle, and an error; and, through the real SDK's console integration with the browser's hooks, a logged error, URL and class instance whose credentials do not leave.
 
 **Implemented 2026-10-08,** as decided, in `lib/sentry-data-collection.ts` and `instrumentation.ts`. DEBT-505's real-SDK alert test also runs on `SENTRY_SERVER_SETTINGS` now. Each change was checked against a mutant:
 - without `maxBreadcrumbs: 0`, only the settings tests (`sentry-config.test.ts`) fail, since `scrubServerEvent` still drops the breadcrumbs;
@@ -77,7 +80,8 @@ Tests:
 - without the pinned lifecycle, both span tests fail;
 - without `tracePropagationTargets: []`, the span test fails on the outgoing headers;
 - without the envelope header integration, the error-page test fails;
-- without array handling, or without link handling, its unit case fails; without `nonce`, its unit and SDK cases fail.
+- without array handling, or without link handling, its unit case fails; without `nonce`, its unit and SDK cases fail;
+- without dropping a console line's values, the real-SDK breadcrumb test fails.
 
 Two independent reviews found the gaps closed after the first fix: the span gap that `scrubSpan` closes, then the lifecycle, the envelope header and the span links. Of their other findings, the scope path, the alert test's settings, the untyped settings object and this record's inaccuracies are fixed. The BUG-318 case the first called vacuous on the server stays: the server still must not send that token, which is what the case states.
 
