@@ -64,7 +64,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
    - Look the user up once per run.
    - Honor `Retry-After` on a 429.
    - The largest spender, the app's per-request lookup, is removed by DEBT-503 item 1.
-3. **Give each run its own Stripe customer.** CI tags its customer by run and attempt, and each local clone by the clone identity its test target already resolves. Each run's state is then its own, with no queue.
+3. **Give each run its own Stripe customer.** CI tags its customer by run and attempt, and each local clone by the clone identity its test target already resolves. Each run's state is then its own, with no queue. Runs from one clone share its owner, as they already share its test database, so they must not overlap.
 4. **A lease on the shared identity, honored by every lane.** This covers everything, but CI and local runs share no store both can write atomically, and CI has `contents: read` only.
 
 ## Resolution
@@ -81,7 +81,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 - **Clerk, once per run.**
   - Preflight returns the Clerk user ID, and the seed takes it instead of looking it up again.
   - The reset and the restore helpers find the user in the run's own database, where the seed wrote it: the reset by email, ignoring case, since Clerk stores emails lowercased and the app writes Clerk's back.
-  - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, until one call's waits total 10 seconds, which keeps preflight's two calls inside setup's 60-second budget. The seed's lookup, when one is still needed, uses it.
+  - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, until one call's waits total 10 seconds. The cap bounds waits only: each call can also spend three 15-second attempts, so preflight's two calls can take about 110 seconds, beyond setup's 60-second budget. [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) gives them one deadline inside it. The seed's lookup, when one is still needed, uses it.
   - Each `local-clone-*` customer keeps its active test subscription for as long as its clone exists; a deleted clone's customer is harmless test-mode clutter.
 - **Not serialized.** Serializing would make every run wait for a problem that isolation and fewer calls remove.
 - **Until DEBT-503 item 1 ships:**
