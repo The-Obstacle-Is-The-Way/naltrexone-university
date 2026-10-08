@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeDeletedClerkUserRepository,
   FakeLogger,
@@ -174,6 +175,46 @@ describe('ClerkAuthGateway session identity', () => {
       status: 429,
     });
     expect(calls).toEqual(['clerk_new', 'clerk_new', 'clerk_new']);
+    await expect(userRepository.findByClerkId('clerk_new')).resolves.toBeNull();
+  });
+
+  // BUG-332: Postgres aborts one of a new user's concurrent first inserts as
+  // a deadlock victim (40P01). The repository reports it as it reports any
+  // database failure, with the driver error as the cause.
+  function databaseFailure(sqlState: string) {
+    return new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to ensure user row',
+      undefined,
+      {
+        cause: Object.assign(new Error('database failure'), { code: sqlState }),
+      },
+    );
+  }
+
+  it('retries provisioning after a deadlock, asking Clerk once', async () => {
+    const { gateway, userRepository, calls } = setup({
+      sessionClerkUserId: 'clerk_new',
+      answer: async (id) => clerkUser(id, 'new@example.com'),
+    });
+    userRepository.failNextUpserts(databaseFailure('40P01'));
+
+    await expect(gateway.getCurrentUser()).resolves.toMatchObject({
+      email: 'new@example.com',
+    });
+    expect(calls).toEqual(['clerk_new']);
+  });
+
+  it('does not retry another database failure', async () => {
+    const { gateway, userRepository } = setup({
+      sessionClerkUserId: 'clerk_new',
+      answer: async (id) => clerkUser(id, 'new@example.com'),
+    });
+    userRepository.failNextUpserts(databaseFailure('57014'));
+
+    await expect(gateway.getCurrentUser()).rejects.toMatchObject({
+      message: 'Failed to ensure user row',
+    });
     await expect(userRepository.findByClerkId('clerk_new')).resolves.toBeNull();
   });
 

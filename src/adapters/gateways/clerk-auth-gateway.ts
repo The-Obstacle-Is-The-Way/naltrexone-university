@@ -1,3 +1,4 @@
+import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
 import { retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { ApplicationError } from '@/src/application/errors';
@@ -21,6 +22,12 @@ import {
 } from './clerk-user-provisioner';
 
 export type { ClerkUserLike, ClerkUserLookup } from './clerk-user-provisioner';
+
+const POSTGRES_DEADLOCK_DETECTED = '40P01';
+
+function isPostgresDeadlock(error: unknown): boolean {
+  return getPostgresErrorCode(error) === POSTGRES_DEADLOCK_DETECTED;
+}
 
 export type ClerkAuthGatewayDeps = {
   userRepository: UserRepository;
@@ -105,11 +112,14 @@ export class ClerkAuthGateway implements AuthGateway {
       );
     }
 
-    return ensureClerkUser(this.deps, {
-      clerkUserId,
-      email,
-      observedAt,
-    });
+    // BUG-332: a new user's concurrent first requests can deadlock in the
+    // upsert, and Postgres aborts one as the victim. Provisioning runs outside
+    // any caller transaction, so the whole step can be retried; Clerk is not
+    // asked again.
+    return retry(
+      () => ensureClerkUser(this.deps, { clerkUserId, email, observedAt }),
+      { ...DEFAULT_RETRY_OPTIONS, shouldRetry: isPostgresDeadlock },
+    );
   }
 
   // The Backend API answers 404 for a user Clerk no longer has, whose token
