@@ -23,6 +23,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 ### 1. Read identity from the session token, not the Backend API (P2)
 
 - **Evidence.** `ClerkAuthGateway.getCurrentUser` calls `currentUser()` on every signed-in render and action (`src/adapters/gateways/clerk-auth-gateway.ts`, through `lib/container.ts:61-65`). The middleware has already verified the session token, which carries the Clerk user ID.
+- **Seen in CI, 2026-10-07.** Two overlapping E2E runs share one development instance. They met these lookups' 429s, so signed-in pages rendered as signed out and `main`'s production deploy waited for a re-run ([DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)).
 - **Decided.**
   - Resolve the app user from the verified token's user ID and our own `users` table.
   - Call the Backend API only to provision a user seen for the first time, or when our row is missing.
