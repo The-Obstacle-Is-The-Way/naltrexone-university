@@ -16,7 +16,7 @@ CodeRabbit turns a chat reply into a **learning**, a rule it applies to every la
 
 ## Evidence
 
-- **Volume.** In the 30 days to 21:00Z on 2026-10-09, CodeRabbit recorded 250 learnings in this repository, from 244 replies on 154 pull requests: about eight a day. 74 of them match the wording the weekly job flags as telling CodeRabbit to stop raising something. The first count, 22, covered only the pull requests updated in those two days.
+- **Volume.** In the 30 days to 21:00Z on 2026-10-09, CodeRabbit recorded 250 learnings in this repository, from 244 replies on 154 pull requests: about eight a day. 72 of them match the wording the weekly job flags as telling CodeRabbit to stop raising something. The first count, 22, covered only the pull requests updated in those two days.
 - **Who taught them.** Every reply CodeRabbit learned from was posted by `The-Obstacle-Is-The-Way`, the owner's account, which the agent sessions use. Nothing distinguishes the owner's own replies from theirs.
 - **Applied at once.** `.coderabbit.yaml` set no `knowledge_base.learnings.approval_delay`, and the default of 0 applies a learning immediately. `scope: auto` keeps this public repository's learnings to this repository.
 - **One asked for by the PR under review.** On #1438, an agent asked CodeRabbit to "record a learning" that removing post-closure notes from archived records restores their frozen text ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6086302277)). That widened what CodeRabbit lets through in frozen history, across every later review.
@@ -46,7 +46,7 @@ No defect is known to have shipped because of a learning. The cost is assurance.
   2. #1438: "…The three removed 2026-10-06 notes in docs/_archive/debt/debt-476… do not request their restoration…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6084464245)). It concerns one archived change.
   3. #1438: "a fixing PR can set its debt record and register entry to `Verifying …`" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#discussion_r4232035464)). AGENTS.md now says this.
   4. #1430: "…Errors, DOM nodes, and class instances are intentionally left to Sentry's own serialisation…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1430#discussion_r4221572828)). It is stale and contradicts the code.
-- **Backlog, the owner's call.** The 250 learnings recorded before the hold applied at once. The owner either triages the 74 flagged ones in CodeRabbit's app, or resets the knowledge base: `knowledge_base.opt_out: true` deletes every stored learning, and turning it off again starts a clean, held one. A reset also loses the accurate learnings that keep CodeRabbit from repeating false positives, so triage comes first.
+- **Backlog, the owner's call.** The 250 learnings recorded before the hold applied at once. The owner either triages the 72 flagged ones in CodeRabbit's app, or resets the knowledge base: `knowledge_base.opt_out: true` deletes every stored learning, and turning it off again starts a clean, held one. A reset also loses the accurate learnings that keep CodeRabbit from repeating false positives, so triage comes first.
 - **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. The register's Now stanza lists it among the owner's decisions; it moves to the Deferred table when this record is archived.
 
 ## Verification
