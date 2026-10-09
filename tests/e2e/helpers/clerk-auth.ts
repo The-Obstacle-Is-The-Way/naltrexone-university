@@ -1,14 +1,19 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { clerk } from '@clerk/testing/playwright';
 import type { Page } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
+  E2E_CLERK_RESTORE_FAILURE_PATH,
   E2E_CLERK_SESSION_ID_PATH,
+  readIfPresent,
 } from './clerk-auth-state';
 import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
-import { installE2ELogRedaction } from './e2e-log-redaction';
+import {
+  installE2ELogRedaction,
+  redactSensitiveE2EText,
+} from './e2e-log-redaction';
 
 export { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
 
@@ -102,16 +107,70 @@ export async function releaseClerkE2ESession<
   await input.clerkDriver.waitForSignedOut(input.page);
 }
 
+export type RestoreFailures = {
+  read(): Promise<string | null>;
+  write(message: string): Promise<void>;
+};
+
+const RESTORE_FAILED =
+  'The stored Clerk E2E session could not be restored; every later signed-in test fails with this error';
+
+/**
+ * Restores the session global setup stored, and never creates one. BUG-330:
+ * the first failed restore records one error naming what Clerk's Frontend API
+ * answered, and every later signed-in test fails with it at once, without
+ * loading a page.
+ */
 export async function requireStoredClerkE2ESession<
   TPage extends ClerkE2EPage,
->(input: { clerkDriver: ClerkE2EDriver<TPage>; page: TPage }): Promise<void> {
-  await input.page.goto('/');
-  await input.clerkDriver.load(input.page);
-  if (await input.clerkDriver.hasActiveSession(input.page)) return;
+>(input: {
+  clerkDriver: ClerkE2EDriver<TPage>;
+  page: TPage;
+  failures: RestoreFailures;
+  describeFailure(): Promise<string>;
+}): Promise<void> {
+  const recorded = await input.failures.read();
+  if (recorded) throw new Error(recorded);
 
-  throw new Error(
-    'Stored Clerk E2E session is unavailable; global setup must create it',
-  );
+  let cause = '';
+  try {
+    await input.page.goto('/');
+    await input.clerkDriver.load(input.page);
+    if (await input.clerkDriver.hasActiveSession(input.page)) return;
+  } catch (error) {
+    cause = ` ${redactSensitiveE2EText(error instanceof Error ? error.message : String(error))}`;
+  }
+  const message = `${RESTORE_FAILED}.${cause} ${await input.describeFailure()}`;
+  await input.failures.write(message);
+  throw new Error(message);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * BUG-330: one Frontend API answer, for a failed restore's error: method,
+ * path, status, and for a refusal Clerk's error codes and trace ID. Never the
+ * query string, which carries the development token, nor a header or message.
+ */
+export function describeFrontendApiAnswer(answer: {
+  method: string;
+  url: string;
+  status: number;
+  body: unknown;
+}): string {
+  let text = `${answer.method} ${new URL(answer.url).pathname} ${answer.status}`;
+  if (answer.status < 400 || !isRecord(answer.body)) return text;
+  const { errors, clerk_trace_id: traceId } = answer.body;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const codes = errors.map((error) =>
+      isRecord(error) && typeof error.code === 'string' ? error.code : '?',
+    );
+    text += ` [${codes.join(', ')}]`;
+  }
+  if (typeof traceId === 'string') text += ` trace ${traceId}`;
+  return text;
 }
 
 export async function waitForActiveClerkSession(
@@ -156,10 +215,65 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   // The historical helper name is retained for its existing callers. Global
   // setup is now the only session creator; test cases fail closed if their
   // explicitly configured storage state is missing or invalid.
+  const frontendApi = watchFrontendApi(page);
   await requireStoredClerkE2ESession({
     clerkDriver: playwrightClerkDriver,
     page,
+    failures: restoreFailures,
+    describeFailure: async () =>
+      withTimeout(frontendApi.describe(), DIAGNOSIS_TIMEOUT_MS).catch(
+        () => 'Frontend API answers could not be read in time.',
+      ),
   });
+}
+
+const DIAGNOSIS_TIMEOUT_MS = 5_000;
+
+// A file, not module state: Playwright starts a new worker after a failed
+// test. Global setup clears it, and so does teardown.
+const restoreFailures: RestoreFailures = {
+  read: () => readIfPresent(E2E_CLERK_RESTORE_FAILURE_PATH),
+  write: async (message) => {
+    await mkdir(dirname(E2E_CLERK_RESTORE_FAILURE_PATH), { recursive: true });
+    await writeFile(E2E_CLERK_RESTORE_FAILURE_PATH, message);
+  },
+};
+
+// Records the Frontend API's answers from the page's first request on, since
+// Clerk's script calls it while the page is still loading.
+function watchFrontendApi(page: Page): { describe(): Promise<string> } {
+  const host = process.env.CLERK_FAPI;
+  const answers: Promise<string>[] = [];
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (url.host !== host || !url.pathname.startsWith('/v1/')) return;
+    answers.push(
+      response
+        .json()
+        .catch(() => undefined)
+        .then((body) =>
+          describeFrontendApiAnswer({
+            method: response.request().method(),
+            url: response.url(),
+            status: response.status(),
+            body,
+          }),
+        ),
+    );
+  });
+  return {
+    describe: async () => {
+      const seen = await Promise.all(answers);
+      const status = await page
+        .evaluate(
+          () =>
+            (window as typeof window & { Clerk?: { status?: unknown } }).Clerk
+              ?.status,
+        )
+        .catch(() => undefined);
+      return `Frontend API: ${seen.length > 0 ? seen.join('; ') : 'no answer'}; Clerk status: ${typeof status === 'string' ? status : 'unknown'}.`;
+    },
+  };
 }
 
 export async function createClerkE2EAuthState(page: Page): Promise<void> {
@@ -168,6 +282,8 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
   }
 
   installE2ELogRedaction(console);
+  // BUG-330: a new session clears an earlier run's failed restore.
+  await rm(E2E_CLERK_RESTORE_FAILURE_PATH, { force: true });
   await createClerkE2ESession({
     clerkDriver: playwrightClerkDriver,
     page,

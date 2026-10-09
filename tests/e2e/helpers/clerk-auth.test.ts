@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
   createClerkE2ESession,
+  describeFrontendApiAnswer,
   ensureClerkE2ESession,
   releaseClerkE2ESession,
   requireStoredClerkE2ESession,
@@ -322,16 +323,147 @@ describe('releaseClerkE2ESession', () => {
   });
 });
 
+class MemoryRestoreFailures {
+  recorded: string | null = null;
+
+  async read(): Promise<string | null> {
+    return this.recorded;
+  }
+
+  async write(message: string): Promise<void> {
+    this.recorded = message;
+  }
+}
+
 describe('requireStoredClerkE2ESession', () => {
-  it('fails closed instead of creating a replacement session in a test', async () => {
+  const describeFailure = async () =>
+    'Frontend API: GET /v1/client 401 [authentication_invalid] trace t-1; Clerk status: ready';
+
+  it('restores the stored session without recording anything', async () => {
     const page = new FakeClerkPage();
+    const failures = new MemoryRestoreFailures();
+
+    await requireStoredClerkE2ESession({
+      clerkDriver: new FakeClerkDriver(true),
+      page,
+      failures,
+      describeFailure,
+    });
+
+    expect(page.visitedUrls).toEqual(['/']);
+    expect(failures.recorded).toBeNull();
+  });
+
+  it('fails closed instead of creating a replacement session in a test', async () => {
     const clerkDriver = new FakeClerkDriver(false);
 
     await expect(
-      requireStoredClerkE2ESession({ clerkDriver, page }),
+      requireStoredClerkE2ESession({
+        clerkDriver,
+        page: new FakeClerkPage(),
+        failures: new MemoryRestoreFailures(),
+        describeFailure,
+      }),
     ).rejects.toThrow(
-      'Stored Clerk E2E session is unavailable; global setup must create it',
+      'The stored Clerk E2E session could not be restored; every later signed-in test fails with this error',
     );
     expect(clerkDriver.signInCount).toBe(0);
+  });
+
+  // BUG-330: one failed restore used to fail every later signed-in test one
+  // by one, each with nothing to diagnose it.
+  it("names what Clerk's Frontend API answered, and records it for the later tests", async () => {
+    const failures = new MemoryRestoreFailures();
+
+    const error = await requireStoredClerkE2ESession({
+      clerkDriver: new FakeClerkDriver(false),
+      page: new FakeClerkPage(),
+      failures,
+      describeFailure,
+    }).catch((caught: unknown) => caught);
+
+    expect(String(error)).toContain(
+      'GET /v1/client 401 [authentication_invalid] trace t-1; Clerk status: ready',
+    );
+    expect(failures.recorded).toBe((error as Error).message);
+  });
+
+  it('fails a later test at once with the recorded error, without loading the page', async () => {
+    const failures = new MemoryRestoreFailures();
+    failures.recorded = 'The stored Clerk E2E session could not be restored';
+    const page = new FakeClerkPage();
+
+    await expect(
+      requireStoredClerkE2ESession({
+        clerkDriver: new FakeClerkDriver(true),
+        page,
+        failures,
+        describeFailure,
+      }),
+    ).rejects.toThrow('The stored Clerk E2E session could not be restored');
+    expect(page.visitedUrls).toEqual([]);
+  });
+
+  it('records a restore whose wait for Clerk failed, with that error', async () => {
+    const clerkDriver = new FakeClerkDriver(true);
+    clerkDriver.load = async () => {
+      throw new Error('page.waitForFunction: Timeout 30000ms exceeded.');
+    };
+    const failures = new MemoryRestoreFailures();
+
+    await expect(
+      requireStoredClerkE2ESession({
+        clerkDriver,
+        page: new FakeClerkPage(),
+        failures,
+        describeFailure,
+      }),
+    ).rejects.toThrow('Timeout 30000ms exceeded');
+    expect(failures.recorded).toContain('Timeout 30000ms exceeded');
+    expect(failures.recorded).toContain('GET /v1/client 401');
+  });
+});
+
+describe('describeFrontendApiAnswer', () => {
+  it('names a refusal by method, path, status, error codes and trace ID', () => {
+    expect(
+      describeFrontendApiAnswer({
+        method: 'GET',
+        url: 'https://clerk.example.test/v1/client?__clerk_db_jwt=dvb_secretvalue123&_clerk_js_version=5',
+        status: 401,
+        body: {
+          errors: [
+            {
+              code: 'authentication_invalid',
+              message: 'no',
+              long_message: 'x',
+            },
+          ],
+          clerk_trace_id: 'trace-123',
+        },
+      }),
+    ).toBe('GET /v1/client 401 [authentication_invalid] trace trace-123');
+  });
+
+  it('never names the query string, which carries the development token', () => {
+    const description = describeFrontendApiAnswer({
+      method: 'GET',
+      url: 'https://clerk.example.test/v1/environment?__clerk_db_jwt=dvb_secretvalue123',
+      status: 200,
+      body: undefined,
+    });
+
+    expect(description).toBe('GET /v1/environment 200');
+  });
+
+  it('keeps a refusal whose body is not Clerk-shaped to its status', () => {
+    expect(
+      describeFrontendApiAnswer({
+        method: 'POST',
+        url: 'https://clerk.example.test/v1/client/sessions/x/tokens',
+        status: 429,
+        body: 'Too Many Requests',
+      }),
+    ).toBe('POST /v1/client/sessions/x/tokens 429');
   });
 });

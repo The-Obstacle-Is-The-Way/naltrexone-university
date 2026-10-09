@@ -6,6 +6,11 @@ export const E2E_CLERK_AUTH_STATE_PATH = 'test-results/.auth/e2e-user.json';
 // Backend API whatever a browser restoring the state can see.
 export const E2E_CLERK_SESSION_ID_PATH = 'test-results/.auth/e2e-session-id';
 
+// BUG-330: the first failed restore's error, which every later signed-in
+// test fails with at once. Global setup and teardown remove it.
+export const E2E_CLERK_RESTORE_FAILURE_PATH =
+  'test-results/.auth/e2e-restore-failure';
+
 type ReadIfPresent = (path: string) => Promise<string | null>;
 
 export const readIfPresent: ReadIfPresent = (path) =>

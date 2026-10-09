@@ -3,6 +3,7 @@ import { test as teardown } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
+  E2E_CLERK_RESTORE_FAILURE_PATH,
   E2E_CLERK_SESSION_ID_PATH,
   withStoredClerkE2ESessionId,
 } from './helpers/clerk-auth-state';
@@ -28,6 +29,7 @@ teardown('global teardown', async () => {
   } finally {
     await rm(E2E_CLERK_AUTH_STATE_PATH, { force: true });
     await rm(E2E_CLERK_SESSION_ID_PATH, { force: true });
+    await rm(E2E_CLERK_RESTORE_FAILURE_PATH, { force: true });
     // DEBT-508: a CI run attempt's own Stripe customer goes with it.
     await deleteE2ERunStripeCustomer();
   }
