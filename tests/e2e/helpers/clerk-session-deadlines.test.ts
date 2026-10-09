@@ -5,8 +5,9 @@ import {
   reserveSessionBudget,
 } from './clerk-session-deadlines';
 
-// BUG-328: preparation has no fixed length (clerkSetup alone retries for over
-// half a minute), so the session work's deadlines are reserved once it ends.
+// BUG-328: preparation has no fixed length (preflight, the Stripe sweep, the
+// seed and the reset), so the session work's deadlines are reserved once it
+// ends.
 describe('reserveSessionBudget', () => {
   it('extends the setup timeout past both deadlines from now', () => {
     const testInfo = { setTimeout: vi.fn() };
@@ -23,10 +24,12 @@ describe('reserveSessionBudget', () => {
 
   it('is reserved by global setup before it signs in', () => {
     const source = readFileSync('tests/e2e/global.setup.ts', 'utf8');
+    const prepared = source.indexOf('await runE2EUserStateReset()');
     const reserved = source.indexOf('reserveSessionBudget(testInfo');
     const signedIn = source.indexOf('createClerkE2EAuthState(page)');
 
-    expect(reserved).toBeGreaterThan(source.indexOf('await clerkSetup()'));
+    expect(prepared).toBeGreaterThan(-1);
+    expect(reserved).toBeGreaterThan(prepared);
     expect(reserved).toBeLessThan(signedIn);
   });
 });
