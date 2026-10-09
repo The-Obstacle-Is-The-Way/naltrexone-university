@@ -705,9 +705,9 @@ that behavior or a current-tree false positive prevents legitimate work.
 CodeRabbit turns a chat reply into a **learning**, a rule it applies to every
 later review. Learnings live in CodeRabbit, not in this repository, so nobody
 reviews them. Agents comment as the owner, so CodeRabbit cannot tell an agent's
-argument from the owner's ruling. In two days it recorded 22 learnings from
-agents' chats, one of them stale and contradicting the code's credential-safe
-redaction.
+argument from the owner's ruling. In the 30 days to 2026-10-09 it recorded 250,
+about eight a day. Roughly a third tell it to stop raising something, and one
+was stale, contradicting the code's credential-safe redaction.
 
 - **Never ask CodeRabbit to record a learning.** Answer a finding with its
   receipt and stop there.
@@ -716,8 +716,13 @@ redaction.
   command refuses until each one is linked and lists them in its receipt.
 - **Put reviewer rules in the repository.** A rule CodeRabbit should apply
   belongs in this file or `.coderabbit.yaml`, through a reviewed PR.
-  `.coderabbit.yaml` holds each new learning for up to 30 days, so the owner
-  can approve or reject it in CodeRabbit's app before it applies.
+- **The owner reviews the week's learnings.** `.coderabbit.yaml` holds each new
+  learning for 30 days, then applies it unless the owner rejects it, and
+  CodeRabbit sends no notice. A weekly job
+  (`.github/workflows/coderabbit-learnings-review.yml`) keeps one GitHub issue
+  listing the week's learnings, with those that tell CodeRabbit to stop
+  raising something first. The owner rejects or deletes harmful ones at
+  app.coderabbit.ai/learnings.
 
 ### Why This Matters
 

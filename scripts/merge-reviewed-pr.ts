@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
+import { LEARNING_RECORDED } from './coderabbit-learnings';
 import { hunkBodies, hunksMovedOnlyByBase } from './diff-hunks';
 
 export const REPOSITORY = 'The-Obstacle-Is-The-Way/naltrexone-university';
@@ -403,9 +404,7 @@ export function checkFeatureMerge(
 // every later review, and agents comment as the owner, so an agent's argument
 // can change the reviewer without review. Each CodeRabbit reply that records
 // one must be linked from the PR description, by URL or anchor, so the owner
-// can see it and keep or delete it. Replies that only cite learnings already
-// held say "Learnings used" and are not new.
-const LEARNING_RECORDED = /<summary>[^<]*Learnings added<\/summary>/;
+// can see it and keep or delete it.
 const commentPageSchema = z.object({
   pageInfo,
   nodes: z.array(

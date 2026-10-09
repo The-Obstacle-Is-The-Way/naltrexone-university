@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the four learnings are gone from CodeRabbit's app, and the next new one waits for the owner's approval; due 2026-10-23
+**Status:** Verifying — the four learnings are gone, the first weekly learnings issue opens, and new learnings wait for approval; due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-09
 **Resolved:** —
@@ -16,7 +16,7 @@ CodeRabbit turns a chat reply into a **learning**, a rule it applies to every la
 
 ## Evidence
 
-- **Volume.** From 2026-10-08 to 21:00Z on 2026-10-09, CodeRabbit recorded 22 learnings from agents' chats on eight pull requests in this repository and `addiction-final-2026`. Ten were recorded on 2026-10-09.
+- **Volume.** In the 30 days to 21:00Z on 2026-10-09, CodeRabbit recorded 250 learnings in this repository, from 244 replies on 154 pull requests: about eight a day. 74 of them match the wording the weekly job flags as telling CodeRabbit to stop raising something. The first count, 22, covered only the pull requests updated in those two days.
 - **Who taught them.** Every reply CodeRabbit learned from was posted by `The-Obstacle-Is-The-Way`, the owner's account, which the agent sessions use. Nothing distinguishes the owner's own replies from theirs.
 - **Applied at once.** `.coderabbit.yaml` set no `knowledge_base.learnings.approval_delay`, and the default of 0 applies a learning immediately. `scope: auto` keeps this public repository's learnings to this repository.
 - **One asked for by the PR under review.** On #1438, an agent asked CodeRabbit to "record a learning" that removing post-closure notes from archived records restores their frozen text ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6086302277)). That widened what CodeRabbit lets through in frozen history, across every later review.
@@ -37,7 +37,8 @@ No defect is known to have shipped because of a learning. The cost is assurance.
 
 ## Resolution (decided)
 
-- **Hold new learnings.** `.coderabbit.yaml` sets `knowledge_base.learnings.approval_delay: 30`, the maximum. Each new learning waits for the owner to approve or reject it in CodeRabbit's app. One left alone applies when the 30 days end.
+- **Hold new learnings.** `.coderabbit.yaml` sets `knowledge_base.learnings.approval_delay: 30`, the maximum. Each new learning waits for the owner to approve or reject it in CodeRabbit's app. One left alone is approved when the 30 days end ([CodeRabbit's release note](https://releases.sh/release/rel_ccYP6IMTwPVr_lV4b-Mj8)), and CodeRabbit documents no notice, so the hold protects only if someone looks.
+- **Review them weekly.** `.github/workflows/coderabbit-learnings-review.yml` runs `scripts/coderabbit-learnings-review.ts` every Monday. It keeps one GitHub issue, which notifies the owner, listing the learnings CodeRabbit recorded in the past eight days. Those whose wording tells CodeRabbit to stop raising something come first, quoted with the date a pending one applies by itself; the rest follow as excerpts. The issue closes itself in a week with no new learning. The flag is a heuristic for ordering: every learning is listed. At eight a day, a learning-by-learning review of everything would not happen, so the owner reads the flagged ones and skims the rest.
 - **Make them visible.** `scripts/merge-reviewed-pr.ts` refuses a feature merge while a CodeRabbit reply that records "Learnings added" is not linked from the PR description, and it lists those replies in its receipt. Replies that cite learnings CodeRabbit already holds ("Learnings used") are not new and do not count. Truncated comment data fails closed, as thread and check data do.
 - **Rules live in the repository.** [AGENTS.md](../../AGENTS.md#coderabbit-learnings-debt-515-2026-10-09) forbids asking CodeRabbit for a learning and puts reviewer rules in AGENTS.md or `.coderabbit.yaml`, through reviewed PRs. The Verifying convention that #1438's learning taught is now written in AGENTS.md's record lifecycle: the fixing PR sets the status itself, effective when it merges.
 - **Prune.** The owner deletes these four learnings at app.coderabbit.ai/learnings:
@@ -45,12 +46,15 @@ No defect is known to have shipped because of a learning. The cost is assurance.
   2. #1438: "…The three removed 2026-10-06 notes in docs/_archive/debt/debt-476… do not request their restoration…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6084464245)). It concerns one archived change.
   3. #1438: "a fixing PR can set its debt record and register entry to `Verifying …`" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#discussion_r4232035464)). AGENTS.md now says this.
   4. #1430: "…Errors, DOM nodes, and class instances are intentionally left to Sentry's own serialisation…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1430#discussion_r4221572828)). It is stale and contradicts the code.
-- **Deferred: an account for agents.** The register's Deferred table holds it, with its revive trigger.
+- **Backlog, the owner's call.** The 250 learnings recorded before the hold applied at once. The owner either triages the 74 flagged ones in CodeRabbit's app, or resets the knowledge base: `knowledge_base.opt_out: true` deletes every stored learning, and turning it off again starts a clean, held one. A reset also loses the accurate learnings that keep CodeRabbit from repeating false positives, so triage comes first.
+- **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. The register's Now stanza lists it among the owner's decisions; it moves to the Deferred table when this record is archived.
 
 ## Verification
 
 - [x] On live GitHub data, the new check refuses #1437, #1438 and #1436 as they stood on 2026-10-09, whose descriptions do not link their learning replies, and names every reply. It finds none on #1411 or on promotion #1442.
+- [x] On live data on 2026-10-09, a dry run of the weekly job found 95 learnings recorded in the past eight days, 30 of them flagged, and its issue body was 43,913 characters, inside GitHub's limit.
 - [ ] The four learnings above are gone from CodeRabbit's app.
+- [ ] After promotion, the first scheduled run opens the learnings issue.
 - [ ] After promotion, the next learning CodeRabbit records waits for the owner's approval instead of applying at once.
 
 ## Related

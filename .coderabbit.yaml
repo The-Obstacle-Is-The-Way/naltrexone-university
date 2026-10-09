@@ -192,8 +192,9 @@ knowledge_base:
   # DEBT-515: agents comment as the owner, so a learning drawn from their chat
   # would apply to every later review as if the owner had ruled. Each new
   # learning waits up to 30 days (the maximum) for the owner to approve or
-  # reject it in CodeRabbit's app; one left alone applies when the 30 days end.
-  # Rules the reviewer must apply belong in AGENTS.md through a reviewed PR.
+  # reject it in CodeRabbit's app; one left alone applies when the 30 days end,
+  # with no notice, so the weekly coderabbit-learnings-review workflow lists
+  # them in a GitHub issue. Reviewer rules belong in AGENTS.md, through a PR.
   learnings:
     scope: auto
     approval_delay: 30
