@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — decided below; joins the quick-wins pull request
+**Status:** Verifying — option 1 is built, test-first, in the quick-wins pull request; archive once it is promoted
 **Priority:** P3
 **Date:** 2026-10-08
 **Resolved:** —
@@ -42,9 +42,12 @@ No leak has been seen. This is hardening, found while reviewing BUG-331 (#1430).
 
 **Decided:** option 1, test-first through the real SDK (an error whose message holds `?__clerk_handshake=…` and a cause holding `?code=…` reaches Sentry filtered), in the quick-wins pull request ([AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md), decided order item 2).
 
+**Built (2026-10-09):** `scrubEvent`, the `beforeSend` of the browser and of the server, runs `redactCredentialParams` over each exception's value and over the event's message. The SDK sends a linked cause as another exception value, so causes are covered too. An operational alert keeps its fixed fields, as before.
+
 ## Verification
 
-- [ ] The real-SDK test fails before the change and passes after it.
+- [x] The real-SDK test fails before the change and passes after it. *2026-10-09:* in `lib/sentry-data-collection-sdk.test.ts`, an error with a Clerk handshake parameter and a cause with `?code=`, and a captured message with `?token=`, each reached the transport unfiltered before the change and filtered after it, with the rest of their text kept. Removing either redaction, for exception text or for the message, fails tests.
+- [ ] Promoted to `main`.
 
 ## Related
 

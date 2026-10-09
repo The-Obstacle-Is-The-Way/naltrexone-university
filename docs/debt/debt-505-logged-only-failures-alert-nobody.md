@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the first drill reaches the owner's inbox, the cron monitor checks in, and the next cycle's drill, from 2026-11-03, emails again; due 2026-11-05
+**Status:** Verifying — released 2026-10-09; the first drill reached the owner's inbox and the cron monitor checks in. Still to show: the renewal job reads the watcher as running, and the next cycle's drill, from 2026-11-03, emails again; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -92,11 +92,17 @@ Option 2.
 ## Verification
 
 - [ ] Red first: each listed condition calls the port; the adapter sends fixed tags only; the shared cooldown holds under concurrent calls and survives a restart; when the limiter errors, the event is still sent, tagged, at most once per kind per instance.
-- [ ] Engineering: the first production drill (`operational_alert_drill`), raised by the renewal job on a deployment, reaches the owner's inbox through the alerts' own workflow, as its email or the workflow's history in Sentry shows. The default high-priority workflow also matches, so its email alone does not prove the alerts' workflow.
+- [x] Engineering: the first production drill (`operational_alert_drill`), raised by the renewal job on a deployment, reaches the owner's inbox through the alerts' own workflow, as its email or the workflow's history in Sentry shows. The default high-priority workflow also matches, so its email alone does not prove the alerts' workflow.
+
+  *Done 2026-10-09:* promotion #1439 went live at 14:20Z, and a manual run of the renewal cron at 14:20:55Z answered 200. The drill's email reached the owner's inbox at 14:27:50Z as the server project's first issue. Its link names alert rule 6133179, the alerts' own workflow. It was the only email: the default workflow did not send one.
 
   *Corrected 2026-10-08: this asked for one test alert of each kind from its real call site. In production that means causing a missed legal deadline or a database failure. Every kind shares one delivery path from the port onward, which the drill exercises from the job that raises the deadline alerts, and each call site is proven by its tests. The proxy's limiter-failure kind starts from another bundle, through `waitUntil`; its own tests cover that start. It also covers the separate "test alert from a deployment" item, now removed, so no production check covers the proxy's start.*
-- [ ] Engineering: after the first production run, the `send-renewal-notices` cron monitor exists in Sentry with an `ok` check-in, and once the token exists the watcher's issue lists no problem, or only ones the record explains.
-- [ ] Engineering: once the cron monitor exists, a Sentry workflow on its issues emails the owner on a missed or failed check-in, so a stopped job is reported even if GitHub stops the watcher's schedule.
+- [x] Engineering: after the first production run, the `send-renewal-notices` cron monitor exists in Sentry with an `ok` check-in, and once the token exists the watcher's issue lists no problem, or only ones the record explains.
+
+  *Done 2026-10-09:* the monitor exists, with production status `ok` and a check-in at 14:20:57Z. A manual run of the watcher on `main` at 14:24Z found no problem and opened no issue.
+- [x] Engineering: once the cron monitor exists, a Sentry workflow on its issues emails the owner on a missed or failed check-in, so a stopped job is reported even if GitHub stops the watcher's schedule.
+
+  *Done 2026-10-09:* workflow 6142118, "Cron monitor: email the owner on a missed or failed check-in (DEBT-505)", is connected to the monitor's detector. It covers production, triggers on a new, regressed or reappeared issue, and has the alerts' workflow's email action. It was read back from Sentry's API as enabled. No check-in has failed yet, so it has not sent.
 - [ ] Engineering: after release, the renewal job's response reports `scheduledChecks: running` once the watcher has run.
 - [x] Owner: `GITHUB_READ_TOKEN`, a fine-grained token with read-only Actions access to this repository only, is set for Vercel Production as a sensitive variable (2026-10-08). Before it was stored, it read the workflows as an authenticated caller and was refused a write. It expires about a year after its creation (the exact date is in the owner's GitHub token settings); an expired token raises `scheduled_checks_unreadable`, whose runbook row says how to replace it.
 - [x] Owner: the watcher's read-only Sentry token exists as the repository secret `SENTRY_WATCHER_TOKEN` (2026-10-08): an internal integration, "Operational alert watcher", with Read on Project, Organization and Alerts only. Before it was stored, it made the watcher's three reads (the workflow, the monitors, error usage).
