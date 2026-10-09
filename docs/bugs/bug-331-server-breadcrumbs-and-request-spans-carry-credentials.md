@@ -65,6 +65,8 @@ This affected every server error event until the fix. Operational alerts ([DEBT-
 
   *Corrected 2026-10-08 (#1430 reviews): the first fix kept console breadcrumbs and redacted their strings. A logged `Error`, `URL` or class instance passed the hook and Sentry then sent its text, and a credential after an earlier pair in the line was never checked. The hook also kept any other object for Sentry to serialise; no code puts one in breadcrumb data today, but the hook now keeps only its type.*
 
+**Owner decision pending ([AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)):** whether to keep the server's 5% trace sample. Without it the remaining span surface goes away, and the privacy policy's tracing sentence changes. Until then, every span is redacted as above.
+
 Sentry's own query filter keeps its list. Our hooks run last on every event, span, envelope header and breadcrumb, so a second copy of the list there would add nothing a test could see.
 
 Tests:

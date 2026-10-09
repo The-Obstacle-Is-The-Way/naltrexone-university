@@ -26,7 +26,13 @@ export async function sendOperationalAlertEvent(
   event: OperationalAlertEvent,
 ): Promise<void> {
   if (!Sentry.isEnabled()) throw new Error('Sentry is not enabled');
-  Sentry.captureMessage(`Operational alert: ${event.kind}`, {
+  // A drill's email must read as one (DEBT-505); its level and tags match a
+  // real alert's, so the same workflow sends it.
+  const title =
+    event.kind === 'operational_alert_drill'
+      ? 'Operational alert drill: no action needed'
+      : `Operational alert: ${event.kind}`;
+  Sentry.captureMessage(title, {
     level: 'error',
     fingerprint: [OPERATIONAL_ALERT_FINGERPRINT, event.kind, event.window],
     tags: {

@@ -8,6 +8,7 @@ import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-con
 import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controller';
+import type { ScheduledWorkflows } from '@/src/adapters/jobs/scheduled-checks';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type {
   AuthGateway,
@@ -137,6 +138,7 @@ export type RepositoryFactories = {
 export type GatewayFactories = {
   createAuthGateway: () => AuthGateway;
   createOperationalAlerts: () => OperationalAlerts;
+  createScheduledWorkflows: () => ScheduledWorkflows;
   createPaymentGateway: () => PaymentGateway;
   createRateLimiter: () => RateLimiter;
   createSha256Hasher: () => Sha256Hasher;

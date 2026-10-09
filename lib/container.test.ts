@@ -288,6 +288,8 @@ describe('container factories', () => {
       StripePaymentGateway,
     );
     expect(container.createRateLimiter()).toBeInstanceOf(DrizzleRateLimiter);
+    // DEBT-505: built without a request; only `read` calls GitHub.
+    expect(typeof container.createScheduledWorkflows().read).toBe('function');
     const emailGateway = container.createTransactionalEmailGateway();
     expect(emailGateway).toBeInstanceOf(ResendTransactionalEmailGateway);
     expect(emailGateway.isConfigured()).toBe(false);

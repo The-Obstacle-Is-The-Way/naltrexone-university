@@ -1,8 +1,8 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-06 — external audit and current finding dispositions.
-**Next ID:** AUDIT-015
+**Last Updated:** 2026-10-08 — the registers audited by root cause.
+**Next ID:** AUDIT-016
 
 **2026-09-22 metadata maintenance:** five archived reports gain their existing register dispositions. Audit dates are labeled as audit dates, not inferred fix or deployment dates; AUDIT-011 uses its explicitly recorded March 19 resolution date. AUDIT-009 records a completed zero-finding report, not a newly shipped runtime fix. No audit is rerun by this maintenance. [Evidence and sample](../debt/assets/archive-metadata-2026-09-22/verification.md#brainstorming-and-audit-follow-through).
 
@@ -16,7 +16,7 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
-| — | None | — | — | — |
+| AUDIT-015 | [Bug and Debt Registers, Audited by Root Cause](./audit-015-register-audit-by-root-cause-2026-10-08.md) | 2026-10-08 | Every Active bug and debt record, and four Deferred rows | Active: corrections applied; seven root causes and a decided order; DEBT-512 filed. |
 
 ## Archived Audits
 

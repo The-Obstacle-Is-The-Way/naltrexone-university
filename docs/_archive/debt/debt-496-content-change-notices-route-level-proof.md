@@ -69,5 +69,5 @@ PR #1364 then went to production through promotion #1365. Its key-corrected scre
 ## Related
 
 - [DEBT-493](./debt-493-learner-scores-and-labels-when-content-changes.md): the notices.
-- [DEBT-465](../../debt/debt-465-test-quality-practices-adoption.md) Part 4: the UI QA procedures. This record moves one of their gaps into the automated lane.
+- [DEBT-465](debt-465-test-quality-practices-adoption.md) Part 4: the UI QA procedures. This record moves one of their gaps into the automated lane.
 - `.claude/rules/git-workflow.md`: screenshots for UI changes.

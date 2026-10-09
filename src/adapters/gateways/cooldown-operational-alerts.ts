@@ -3,6 +3,7 @@ import type { Logger } from '@/src/application/ports/logger';
 import type {
   OperationalAlert,
   OperationalAlertKind,
+  OperationalAlertOutcome,
   OperationalAlerts,
 } from '@/src/application/ports/operational-alerts';
 import type { OperationalAlertEvent } from '../shared/operational-alert-events';
@@ -76,18 +77,21 @@ export type CooldownOperationalAlertsDeps = {
 export class CooldownOperationalAlerts implements OperationalAlerts {
   constructor(private readonly deps: CooldownOperationalAlertsDeps) {}
 
-  async raise(alert: OperationalAlert): Promise<void> {
+  async raise(alert: OperationalAlert): Promise<OperationalAlertOutcome> {
     try {
       const nowMs = this.deps.now().getTime();
-      if (!this.deps.localCooldown.admit(alert.kind, nowMs)) return;
+      if (!this.deps.localCooldown.admit(alert.kind, nowMs)) {
+        return 'suppressed';
+      }
       const sharedCooldown = await this.takeSharedCooldown(alert.kind);
-      if (sharedCooldown === 'taken') return;
+      if (sharedCooldown === 'taken') return 'suppressed';
       await this.deps.send({
         kind: alert.kind,
         count: alert.count,
         sharedCooldown,
         window: cooldownWindowStart(nowMs),
       });
+      return 'sent';
     } catch (error) {
       try {
         this.deps.logger.error(
@@ -97,6 +101,7 @@ export class CooldownOperationalAlerts implements OperationalAlerts {
       } catch {
         // An alert that cannot be sent must not change the caller's outcome.
       }
+      return 'failed';
     }
   }
 

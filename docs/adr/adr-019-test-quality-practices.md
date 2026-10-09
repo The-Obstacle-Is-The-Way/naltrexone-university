@@ -63,7 +63,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 
 ## Amendment — 2026-10-03
 
-Decided under the owner's 2026-10-03 delegation, after a review of what each part adds to the test estate. The rationale is in [DEBT-465](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03).
+Decided under the owner's 2026-10-03 delegation, after a review of what each part adds to the test estate. The rationale is in [DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03).
 
 - **Parts 1 and 2 are adopted** and in production: the CRAP report, and mutation testing at 100% across the domain and application layers.
 - **Part 3 (Gherkin acceptance tests) is not adopted.**

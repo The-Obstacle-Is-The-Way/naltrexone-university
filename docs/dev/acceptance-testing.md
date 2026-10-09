@@ -12,7 +12,7 @@ Each rule below states, in plain language, something the system guarantees a lea
 - Every rule must name at least one test.
 - A malformed heading or proof line, or a repeated rule number, is reported rather than skipped. Renaming or deleting a test that proves a rule fails the check until the register is updated in the same change.
 
-This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), [DEBT-465's decision](../debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03)). Its design is in this file's history up to commit `91a24f3e`.
+This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), [DEBT-465's decision](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03)). Its design is in this file's history up to commit `91a24f3e`.
 
 ## How to use it
 

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — peer/sharp fix in outside review; source-map-js and Clerk fixes clear release gates on 2026-10-07
+**Status:** Open — the peer and sharp fixes shipped (#1411, promoted in #1419); source-map-js 1.2.2 and the supported Clerk UI 1.38.0 are eligible since 2026-10-07
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
@@ -73,7 +73,7 @@ Low. No alert is reachable by attacker input here. The cost of leaving them is a
 - [x] The guard test fails on the base lockfile and passes on the branch.
 - [x] A cold `pnpm install --frozen-lockfile` passes the release-age and trust policies.
 - [x] The base and branch builds have identical traced-package and server source-map package sets, with no React Native or Solana wallet-adapter modules; identifier-only text matches are accounted for above.
-- [ ] After promotion, alerts #82 and #83 read `fixed`, and Dependabot's #1404 is closed as superseded.
+- [x] After promotion, alerts #82 and #83 read `fixed`, and Dependabot's #1404 is closed (2026-10-08: both alerts `fixed`; Dependabot closed #1404 on 2026-10-07, as it no longer matched its group).
 - [ ] The `source-map-js` 1.2.2 override is promoted and alert #80 reads `fixed`.
 - [ ] The eligible supported Clerk upgrade passes the full gate, removes the Solana/jayson/stream-json tree and obsolete peer extensions, and promotion makes #55/#78/#79 read `fixed`.
 

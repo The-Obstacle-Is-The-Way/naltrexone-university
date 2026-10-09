@@ -12,6 +12,11 @@ import * as schema from '@/db/schema';
 import { createContainer } from '@/lib/container';
 import { env } from '@/lib/env';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
+import { operationalAlertDrillCycle } from '@/src/adapters/jobs/operational-alert-drill';
+import {
+  OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  type ScheduledWorkflows,
+} from '@/src/adapters/jobs/scheduled-checks';
 import { FakeTransactionalEmailGateway } from '@/src/application/test-helpers/fakes';
 import { DAY_MS } from '@/src/domain/services';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
@@ -34,6 +39,19 @@ const CRON_SECRET = 'debt468-cron-integration-only';
 const MONTHLY_PRICE_ID = 'price_debt468_monthly';
 const ANNUAL_PRICE_ID = 'price_debt468_annual';
 const NOW = new Date('2026-08-16T12:00:00.000Z');
+// DEBT-505: tests never call GitHub; here its scheduled checks all run.
+const runningScheduledWorkflows: ScheduledWorkflows = {
+  read: async () => ({
+    workflows: [
+      {
+        path: OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+        state: 'active',
+        createdAt: NOW,
+      },
+    ],
+    watcherLastSuccessAt: NOW,
+  }),
+};
 
 type StripeSubscriptionFixture = {
   id: string;
@@ -436,7 +454,10 @@ describe('send renewal notices cron route', () => {
       cancelAtPeriodEnd: false,
     });
     const email = new FakeTransactionalEmailGateway({ configured: true });
-    cleanup.rateLimitKeys.push('cron:send-renewal-notices');
+    cleanup.rateLimitKeys.push(
+      'cron:send-renewal-notices',
+      'operational-alert:operational_alert_drill',
+    );
     const handler = createSendRenewalNoticesCronHandler(() =>
       createContainer({
         primitives: {
@@ -446,6 +467,7 @@ describe('send renewal notices cron route', () => {
         },
         gateways: {
           createTransactionalEmailGateway: () => email,
+          createScheduledWorkflows: () => runningScheduledWorkflows,
         },
       }),
     );
@@ -459,7 +481,19 @@ describe('send renewal notices cron route', () => {
       subscriptions: 1,
       queued: 2,
       dispatchFailures: 0,
+      // DEBT-505: Sentry is off here, so the drill cannot be sent; the job
+      // gives its cycle back for the next run.
+      alertDrill: 'not_sent',
+      scheduledChecks: 'running',
     });
+    await expect(
+      db.query.operationalAlertDrills.findFirst({
+        where: eq(
+          schema.operationalAlertDrills.cycle,
+          operationalAlertDrillCycle(NOW),
+        ),
+      }),
+    ).resolves.toBeUndefined();
     const deliveries = await db
       .select()
       .from(schema.renewalNoticeDeliveries)
@@ -505,7 +539,10 @@ describe('send renewal notices cron route: monthly anniversary', () => {
       billingCycleAnchor: anchor,
     });
     const email = new FakeTransactionalEmailGateway({ configured: true });
-    cleanup.rateLimitKeys.push('cron:send-renewal-notices');
+    cleanup.rateLimitKeys.push(
+      'cron:send-renewal-notices',
+      'operational-alert:operational_alert_drill',
+    );
     const handler = createSendRenewalNoticesCronHandler(() =>
       createContainer({
         primitives: {
@@ -515,6 +552,7 @@ describe('send renewal notices cron route: monthly anniversary', () => {
         },
         gateways: {
           createTransactionalEmailGateway: () => email,
+          createScheduledWorkflows: () => runningScheduledWorkflows,
         },
       }),
     );

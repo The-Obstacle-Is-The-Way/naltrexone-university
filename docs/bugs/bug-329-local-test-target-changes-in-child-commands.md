@@ -3,7 +3,7 @@
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — canonicalize generated instance names before passing them to child commands
-**Priority:** P3
+**Priority:** P4
 **Date:** 2026-10-06
 **Resolved:** —
 **Verification receipts:** —

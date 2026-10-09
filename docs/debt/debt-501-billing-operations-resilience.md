@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — decided per item; items 1 and 2 first
+**Status:** Open — decided per item; AUDIT-015 orders them: quick wins, alerts for its silent conditions, then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -15,6 +15,8 @@
 The owner-requested adversarial hunt of the payment flows (2026-10-05) found no defect that charges an ordinary Checkout buyer without granting access. It did find gaps in billing operations. Each one can leave a payer without access, or charge someone twice, when the service grows, an operator changes something, or timing is unlucky. Each item names its trigger. Source inspection establishes the failure paths, not that no production account has encountered them. The live (non-test) purchase path has never been recorded working end to end.
 
 ## Items
+
+**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then operational alerts (DEBT-505) for a reconcile run that stops early and for an unknown price ID, so items 1 and 2 announce their own triggers; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's legacy price-ID list, item 4's add-card recheck (with DEBT-414 F22), and the owner's item 7.
 
 ### 1. The daily reconcile never reaches the tail once the table grows (P2)
 

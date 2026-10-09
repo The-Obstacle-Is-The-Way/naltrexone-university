@@ -40,6 +40,26 @@ async function rows() {
 }
 
 describe('rate-limit guards and triggered cleanup against real Postgres', () => {
+  // DEBT-505: a counter is pruned once its window started more than a day
+  // ago, so a longer window would forget its count while still open and let
+  // every call through.
+  it('refuses a window longer than the day its rows are kept, writing nothing', async () => {
+    const refusedKey = key('too-long');
+
+    await expect(
+      limiter.limit({ key: refusedKey, limit: 1, windowMs: 86_400_001 }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    await expect(rows()).resolves.toEqual([]);
+  });
+
+  it('accepts a window of exactly one day', async () => {
+    const dayKey = key('one-day');
+
+    await expect(
+      limiter.limit({ key: dayKey, limit: 1, windowMs: 86_400_000 }),
+    ).resolves.toMatchObject({ success: true });
+  });
+
   it('prunes at most 100 windows older than 24 hours when a new counter is created', async () => {
     const expiredKeys = Array.from({ length: 101 }, () => key()).sort();
     const boundaryKey = key();

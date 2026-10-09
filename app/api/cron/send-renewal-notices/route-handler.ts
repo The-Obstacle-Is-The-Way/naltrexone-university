@@ -27,6 +27,10 @@ export type RenewalNoticeCronHandlerDependencies = {
   logger: Pick<Logger, 'warn' | 'error'>;
   createRateLimiter: () => RateLimiter;
   run: () => Promise<SendDueRenewalNoticesJobResult>;
+  /** Runs the job under its cron monitor, which records the run (DEBT-505). */
+  monitor: (
+    run: () => Promise<SendDueRenewalNoticesJobResult>,
+  ) => Promise<SendDueRenewalNoticesJobResult>;
 };
 
 function getAuthorizationToken(req: Request): AuthorizationTokenResult {
@@ -130,7 +134,8 @@ export function createRenewalNoticeCronHandler(
     }
 
     try {
-      const result = await dependencies.run();
+      // Only an authorized, admitted request is a run of the job.
+      const result = await dependencies.monitor(dependencies.run);
       return NextResponse.json(result, { status: HTTP_OK });
     } catch (error) {
       dependencies.logger.error(
