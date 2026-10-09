@@ -179,8 +179,9 @@ function keepAlertFields(
 }
 
 /**
- * `beforeSend`: keeps an operational alert to its fixed fields, and redacts
- * credentials in the URLs any other event carries.
+ * `beforeSend`: keeps an operational alert to its fixed fields. In any other
+ * event it redacts credentials in the URLs it carries and in its own text:
+ * each exception's message, linked causes included, and a captured message.
  */
 export function scrubEvent(
   event: Sentry.ErrorEvent,
@@ -191,6 +192,16 @@ export function scrubEvent(
     // Sentry builds the envelope's attachments from this hint.
     if (hint) hint.attachments = [];
     return keepAlertFields(event, at);
+  }
+  // DEBT-513: an error's text is written by our code or a library's, and can
+  // quote a URL with its query.
+  for (const exception of event.exception?.values ?? []) {
+    if (typeof exception.value === 'string') {
+      exception.value = redactCredentialParams(exception.value);
+    }
+  }
+  if (typeof event.message === 'string') {
+    event.message = redactCredentialParams(event.message);
   }
   const request = event.request;
   if (request && typeof request.url === 'string') {

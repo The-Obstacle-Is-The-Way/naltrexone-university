@@ -263,3 +263,59 @@ describe('a sampled request', () => {
     expect(everything).not.toContain(recorded.requestNonce);
   });
 });
+
+// DEBT-513: an error's own text, its cause's, and a captured message reach
+// Sentry with each credential parameter filtered; the rest of the text stays
+// for diagnosis.
+const written = {
+  handshake: randomUUID(),
+  oauthCode: randomUUID(),
+  webhookToken: randomUUID(),
+};
+
+describe('an error or a message whose text holds a credential parameter', () => {
+  it('sends the error and its cause with the credential filtered', async () => {
+    sent = [];
+    Sentry.captureException(
+      new Error(
+        `Redirect failed for /app?__clerk_handshake=${written.handshake}&tab=questions`,
+        {
+          cause: new Error(
+            `Token exchange refused at /callback?code=${written.oauthCode}`,
+          ),
+        },
+      ),
+    );
+    await Sentry.flush(2000);
+
+    const values = sentItems('event').flatMap((event) =>
+      (
+        (event.exception as { values?: Array<{ value?: string }> })?.values ??
+        []
+      ).map((exception) => exception.value),
+    );
+    expect(values).toEqual(
+      expect.arrayContaining([
+        'Redirect failed for /app?__clerk_handshake=[Filtered]&tab=questions',
+        'Token exchange refused at /callback?code=[Filtered]',
+      ]),
+    );
+    expect(sent.join('\n')).not.toContain(written.handshake);
+    expect(sent.join('\n')).not.toContain(written.oauthCode);
+  });
+
+  it('sends a captured message with the credential filtered', async () => {
+    sent = [];
+    Sentry.captureMessage(
+      `Webhook retry for https://example.test/hook?token=${written.webhookToken}`,
+    );
+    await Sentry.flush(2000);
+
+    expect(sentItems('event')).toEqual([
+      expect.objectContaining({
+        message: 'Webhook retry for https://example.test/hook?token=[Filtered]',
+      }),
+    ]);
+    expect(sent.join('\n')).not.toContain(written.webhookToken);
+  });
+});

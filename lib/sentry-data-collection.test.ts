@@ -157,6 +157,34 @@ describe('scrubEvent', () => {
     });
   });
 
+  it("redacts credentials in each exception's text and the event's message, keeping the rest", () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      message: 'Retry https://example.test/hook?token=abc&attempt=2',
+      exception: {
+        values: [
+          { type: 'Error', value: 'Refused at /callback?code=abc' },
+          { type: 'Error', value: 'Redirect to /app?__clerk_handshake=xyz' },
+          { type: 'Error' },
+        ],
+      },
+    };
+
+    expect(scrubEvent(event)).toMatchObject({
+      message: 'Retry https://example.test/hook?token=[Filtered]&attempt=2',
+      exception: {
+        values: [
+          { type: 'Error', value: 'Refused at /callback?code=[Filtered]' },
+          {
+            type: 'Error',
+            value: 'Redirect to /app?__clerk_handshake=[Filtered]',
+          },
+          { type: 'Error' },
+        ],
+      },
+    });
+  });
+
   it('leaves an event without a request or Next.js context unchanged', () => {
     const event: ErrorEvent = { type: undefined, message: 'boom' };
 
