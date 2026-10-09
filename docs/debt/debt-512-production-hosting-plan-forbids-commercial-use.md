@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — owner moves production to Vercel Pro no later than the first live sale; moving now is recommended
+**Status:** Open — the owner keeps Hobby until the first live sale (decided 2026-10-09), then moves production to Vercel Pro
 **Priority:** P2
 **Date:** 2026-10-08
 **Resolved:** —
@@ -32,7 +32,7 @@ The plan also sets several limits the records work around:
 
 ## Resolution
 
-**Decided:** the owner's 2026-08-11 ruling accepts the Hobby plan's risk until the first real users, so production moves to Pro no later than the first live sale. **Recommended (2026-10-08 review):** move now. The live pricing page and checkout are already commercial use under Vercel's definition. The other way to comply is to take pricing and checkout offline until the move. The owner decides. Engineering then re-checks DEBT-505's log assumption and its watcher's timings (the cron monitor's 90-minute check-in margin and the watcher's 25-hour staleness window, both sized for Hobby's late starts), DEBT-511's cron timing and BUG-319's Skew Protection decision, and corrects each record.
+**Decided by the owner (2026-10-09):** keep the Hobby plan until the first live sale, then move production to Pro. The owner accepts the risk that Vercel's terms already apply to the live pricing page and checkout, which Vercel may enforce by limiting the deployment, as the 2026-08-11 ruling did. The other ways to comply, moving now or taking pricing and checkout offline, were offered and declined. Engineering then re-checks DEBT-505's log assumption and its watcher's timings (the cron monitor's 90-minute check-in margin and the watcher's 25-hour staleness window, both sized for Hobby's late starts), DEBT-511's cron timing and BUG-319's Skew Protection decision, and corrects each record.
 
 ## Verification
 

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — two overlapping CI runs both pass, now that DEBT-503 item 1 is released; due 2026-10-22
+**Status:** Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -108,4 +108,10 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
   - the reset needs no Clerk secret, since it no longer imports a Clerk call;
   - the seed calls Clerk only when no ID is passed in.
 - [x] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per setup attempt, and that cleanup stops at its deadline. A CI run's log shows teardown deleting its own customer.
-- [ ] Two overlapping CI runs both pass. DEBT-503 item 1, which this depends on, was released on 2026-10-08.
+- [ ] Two overlapping CI runs both pass. DEBT-503 item 1, which this depends on, was released on 2026-10-08. Not yet observed.
+
+  *Added 2026-10-08:*
+  - **The failure.** A local `pnpm test:e2e` ran inside another pull request's CI E2E window. One test lost its Clerk session and was redirected to sign-in, at `helpers/session.ts`'s `startSession` check; the other 62 passed.
+  - **The control.** The same suite had passed 63/63 alone minutes earlier.
+  - **The cause.** Each run has its own Stripe customer, but both sign in as one shared Clerk user, so this isolation does not cover Clerk sessions. Two overlapping CI runs share that user too.
+  - **Until this is resolved,** sessions on this machine serialize E2E runs, CI included, and this check may fail.
