@@ -181,7 +181,8 @@ function keepAlertFields(
 /**
  * `beforeSend`: keeps an operational alert to its fixed fields. In any other
  * event it redacts credentials in the URLs it carries and in its own text:
- * each exception's message, linked causes included, and a captured message.
+ * each exception's message, linked causes included, a captured message, and
+ * every string of its extra data.
  */
 export function scrubEvent(
   event: Sentry.ErrorEvent,
@@ -202,6 +203,14 @@ export function scrubEvent(
   }
   if (typeof event.message === 'string') {
     event.message = redactCredentialParams(event.message);
+  }
+  // A value captured as an error that is not one, such as a failed server
+  // action's result, reaches Sentry as extra data, its message included.
+  const extra = event.extra;
+  if (extra) {
+    for (const [field, value] of Object.entries(extra)) {
+      extra[field] = redactStrings(value);
+    }
   }
   const request = event.request;
   if (request && typeof request.url === 'string') {

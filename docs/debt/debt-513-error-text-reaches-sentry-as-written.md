@@ -42,11 +42,11 @@ No leak has been seen. This is hardening, found while reviewing BUG-331 (#1430).
 
 **Decided:** option 1, test-first through the real SDK (an error whose message holds `?__clerk_handshake=…` and a cause holding `?code=…` reaches Sentry filtered), in the quick-wins pull request ([AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md), decided order item 2).
 
-**Built (2026-10-09):** `scrubEvent`, the `beforeSend` of the browser and of the server, runs `redactCredentialParams` over each exception's value and over the event's message. The SDK sends a linked cause as another exception value, so causes are covered too. An operational alert keeps its fixed fields, as before.
+**Built (2026-10-09):** `scrubEvent`, the `beforeSend` of the browser and of the server, runs `redactCredentialParams` over each exception's value and over the event's message. The SDK sends a linked cause as another exception value, so causes are covered too. It also redacts every string of the event's extra data. A value captured as an error that is not an `Error`, such as a failed server action's `{ code, message }` result that the browser reports, reaches Sentry there, its message included (found by the pre-review). An operational alert keeps its fixed fields, as before.
 
 ## Verification
 
-- [x] The real-SDK test fails before the change and passes after it. *2026-10-09:* in `lib/sentry-data-collection-sdk.test.ts`, an error with a Clerk handshake parameter and a cause with `?code=`, and a captured message with `?token=`, each reached the transport unfiltered before the change and filtered after it, with the rest of their text kept. Removing either redaction, for exception text or for the message, fails tests.
+- [x] The real-SDK test fails before the change and passes after it. *2026-10-09:* in `lib/sentry-data-collection-sdk.test.ts`, an error with a Clerk handshake parameter and a cause with `?code=`, a captured message with `?token=`, and a plain object captured as an error with `?code=`, each reached the transport unfiltered before the change and filtered after it, with the rest of their text kept. Removing any of the redactions (exception text, message, extra data) fails tests.
 - [ ] Promoted to `main`.
 
 ## Related

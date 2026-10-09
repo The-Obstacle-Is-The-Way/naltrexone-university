@@ -271,6 +271,7 @@ const written = {
   handshake: randomUUID(),
   oauthCode: randomUUID(),
   webhookToken: randomUUID(),
+  actionCode: randomUUID(),
 };
 
 describe('an error or a message whose text holds a credential parameter', () => {
@@ -302,6 +303,21 @@ describe('an error or a message whose text holds a credential parameter', () => 
     );
     expect(sent.join('\n')).not.toContain(written.handshake);
     expect(sent.join('\n')).not.toContain(written.oauthCode);
+  });
+
+  // The browser reports a failed server action's result, a plain object.
+  // The SDK copies such an object, message included, into the event's extra
+  // data rather than its exception value.
+  it('sends a plain object captured as an error with the credential filtered', async () => {
+    sent = [];
+    Sentry.captureException({
+      code: 'STRIPE_ERROR',
+      message: `Refused at /callback?code=${written.actionCode}&step=2`,
+    });
+    await Sentry.flush(2000);
+
+    expect(sent.join('\n')).toContain('step=2');
+    expect(sent.join('\n')).not.toContain(written.actionCode);
   });
 
   it('sends a captured message with the credential filtered', async () => {
