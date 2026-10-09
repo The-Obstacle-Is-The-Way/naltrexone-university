@@ -90,6 +90,42 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
   - The redaction runs in the runner rather than the server process, so the server loads nothing extra.
   - A credential split across two reads of the server's output would pass. Playwright passes each pipe read on as it arrives, prefixing lines without waiting for them to end, so a token split at a read boundary appears in two pieces. That needs a burst of over about 64 KiB or a partial write.
 
+## Mid-run losses: investigation, 2026-10-09
+
+An independent read-only investigation covered the CI history since 2026-08-25, Clerk's middleware and Clerk JS, and the app's auth path.
+
+- **Census (measured).**
+  - Before 2026-10-08: 1,150 E2E attempts with no mid-test loss. The one failed restore at the start of a test is #1422's, on 10-07.
+  - Since 2026-10-08: 50 attempts with 2 mid-test losses (#1428, run 37781264035; #1440, run 37983577282).
+  - No other E2E run overlapped either loss.
+  - #1422's and #1428's failing tests were the first to start after the stored token expired. #1440's was not: 35 restores after expiry had succeeded.
+- **What sent the browser to sign-in (read in code).** Clerk's middleware sends a full-page request straight to sign-in, rather than refreshing it through its handshake, in four cases only (`@clerk/backend` `tokens/request.ts`, `tokens/handshake.ts`):
+  1. the browser has neither `__session` nor `__client_uat`, as Clerk JS leaves it after signing itself out;
+  2. the handshake answers with no session;
+  3. the redirect-loop guard trips, which takes three handshakes within 2 seconds;
+  4. token verification fails without a handshake.
+- **Ruled out:**
+  - the app itself: it never redirects to sign-in, so #1426 cannot;
+  - overlap and Clerk 429s: none in these runs;
+  - Clerk's server SDK: its auth code is identical across 7.9.2, 7.9.4 and 7.9.10;
+  - the BUG-323 limiter: it runs on live keys only;
+  - the E2E reset and seed: they no longer call Clerk.
+- **Leading hypotheses, not yet decidable:**
+  1. Clerk's Frontend API answered "no session" for the run's shared dev browser, either through the handshake or to the page's own Clerk JS.
+  2. The redirect-loop guard tripped. Its log line goes to the server's stdout, which CI dropped until this record's fix.
+- **One floating variable.** Clerk JS loads from Clerk's CDN as `@clerk/clerk-js@6`, so the lockfile does not pin it. 6.38.0 and 6.38.1 came out around the losses, but their auth code did not change.
+- **Diagnostics added (this PR).** The cheapest step that decides between the hypotheses at the next occurrence: `tests/e2e/helpers/clerk-auth-trace.ts`. For the whole of every signed-in test it keeps:
+  - each main-frame answer's `x-clerk-auth-status` and `x-clerk-auth-reason`;
+  - a handshake redirect's `__clerk_hs_reason` and `__clerk_redirect_count`;
+  - Set-Cookie names, including whether `__session` was cleared;
+  - Clerk's own API answers;
+  - Clerk JS's session changes and version.
+
+  When the page reaches sign-in, it prints the trail once, redacted: cookies by name, times and kind, query strings by parameter name. It was proven in real Chromium against a stand-in server that imitates Clerk's headers. The server's stdout, now piped, would also show the loop guard's line.
+- **Not done:**
+  - A retry or re-restore workaround, which would hide the next occurrence.
+  - Pinning Clerk JS's version, which removes the floating variable but is not shown to fix anything. Decide it once a trace names the cause.
+
 ## Verification
 
 - [x] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token. *2026-10-09: `tests/e2e/helpers/clerk-auth.test.ts`.*

@@ -9,6 +9,10 @@ import {
   E2E_CLERK_SESSION_ID_PATH,
   readIfPresent,
 } from './clerk-auth-state';
+import {
+  describeFrontendApiAnswer,
+  startClerkAuthTrace,
+} from './clerk-auth-trace';
 import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
 import {
   installE2ELogRedaction,
@@ -16,6 +20,7 @@ import {
 } from './e2e-log-redaction';
 
 export { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
+export { describeFrontendApiAnswer } from './clerk-auth-trace';
 
 export const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
 export const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
@@ -159,39 +164,6 @@ export async function requireStoredClerkE2ESession<
   throw new Error(message);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-/**
- * BUG-330: one Frontend API answer, for a failed restore's error: method,
- * path, status, and for a refusal Clerk's error codes and trace ID. Never the
- * query string, which carries the development token, nor a header or message.
- */
-export function describeFrontendApiAnswer(answer: {
-  method: string;
-  url: string;
-  status: number;
-  body: unknown;
-}): string {
-  // A Clerk ID in the path is named by its kind only.
-  const path = new URL(answer.url).pathname.replace(
-    /\/([a-z]+)_[A-Za-z0-9]{8,}/g,
-    '/$1_…',
-  );
-  let text = `${answer.method} ${path} ${answer.status}`;
-  if (answer.status < 400 || !isRecord(answer.body)) return text;
-  const { errors, clerk_trace_id: traceId } = answer.body;
-  if (Array.isArray(errors) && errors.length > 0) {
-    const codes = errors.map((error) =>
-      isRecord(error) && typeof error.code === 'string' ? error.code : '?',
-    );
-    text += ` [${codes.join(', ')}]`;
-  }
-  if (typeof traceId === 'string') text += ` trace ${traceId}`;
-  return text;
-}
-
 export async function waitForActiveClerkSession(
   page: ClerkSessionWaitPage,
 ): Promise<void> {
@@ -236,6 +208,8 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   // The historical helper name is retained for its existing callers. Global
   // setup is now the only session creator; test cases fail closed if their
   // explicitly configured storage state is missing or invalid.
+  // BUG-330: kept for the whole test, so a mid-run loss names its cause.
+  await startClerkAuthTrace(page);
   const frontendApi = watchFrontendApi(page);
   try {
     await requireStoredClerkE2ESession({
