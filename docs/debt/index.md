@@ -1,13 +1,13 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-08
+**Last Updated:** 2026-10-09
 
-**Now** — 2026-10-08.
+**Now** — 2026-10-09.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
-- **Security.** Next.js alerts #84–#95 close when 16.3.8 (#1438) is promoted; DEBT-509's advisory watch shipped (#1420, promoted in #1431).
+- **Security.** #1438's promotion (#1442) fixed alerts #80, #55, #78, #79 and #84–#95 on 2026-10-09; #77 and #81 have no published fix (Deferred). DEBT-509's advisory watch shipped (#1420, promoted in #1431).
 - **In progress.** DEBT-503: item 3 next.
-- **Verifying.** DEBT-505: the first drill reaches the inbox and the cron monitor checks in; due 2026-11-05. DEBT-506: after promotion, alerts #80, #55, #78 and #79 read `fixed`; due 2026-10-15. DEBT-508: two overlapping CI runs both pass, now in doubt; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
+- **Verifying.** DEBT-505: the first drill reaches the inbox and the cron monitor checks in; due 2026-11-05. DEBT-508: two overlapping CI runs both pass, now in doubt; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
 - **Held dependency.** DEBT-514 holds lint-staged at 17.5.1 until a tested pre-commit safeguard or enforced isolated worktrees prevents unrelated tracked edits entering a commit.
 - **Next.** One pull request of quick wins (with DEBT-513), then alerts for silent conditions (DEBT-501, DEBT-503 item 3), then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
 - **Owner decisions pending.** Vercel Pro at the first live sale (DEBT-512, decided 2026-10-09); the live purchase and refund (DEBT-501 item 7); Clerk's verified-email setting and a re-created account's trial (DEBT-502); DEBT-414's Resend webhook secret, F19a, Q7 and counsel review; DEBT-505's inbox filter and Sentry push; the 5% server trace sample (AUDIT-015); the production content bootstrap (DEBT-483).
@@ -28,7 +28,6 @@
 | [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) | Legal notices go to a stored email that Clerk may have changed | P2 | Open — resolution decided below; built on DEBT-502's identity resolver, and due before 35 days ahead of the earliest live renewal |
 | [DEBT-512](./debt-512-production-hosting-plan-forbids-commercial-use.md) | Production runs on a hosting plan whose terms forbid commercial use | P2 | Open — the owner keeps Hobby until the first live sale (decided 2026-10-09), then moves production to Vercel Pro |
 | [DEBT-513](./debt-513-error-text-reaches-sentry-as-written.md) | Error text reaches Sentry as written | P3 | Open — decided below; joins the quick-wins pull request |
-| [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: six fixed, two without published fixes | P2 | Verifying — after promotion, alerts #80, #55, #78 and #79 read `fixed`; due 2026-10-15 |
 | [DEBT-514](./debt-514-lint-staged-shared-clone-staging-race.md) | lint-staged can stage another session's work | P2 | Open — held at 17.5.1; safeguard or worktree isolation required |
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22 |
 | [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; watcher covers every direct dependency (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes |
@@ -56,6 +55,7 @@ filing only — archived here means *deferred*, not *done*.
 | ID | Title | Priority | Deferred | Revive when |
 |----|-------|----------|----------|-------------|
 | [DEBT-495 accepted risk](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md#triage--2026-10-03) | `braces` 3.0.3's denial-of-service advisory (alert #77) has no fixed release; only repository-fixed glob patterns reach it, through `fast-glob` alone since DEBT-506 removed the React Native chain. The alert stays open, so Dependabot raises the fix PR when a fix ships | P3 | 2026-10-03 | Any one: a fixed `braces` release, or a `micromatch` or `fast-glob` release that drops it; runtime code that globs a request-, learner- or network-derived string |
+| [DEBT-506 accepted risk](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md#the-rest) | `sprintf-js` 1.0.3's precision-specifier advisory (alert #81) has no fixed release; only `js-yaml`'s command-line tool loads it, through `argparse`, and this application never runs that tool. The alert stays open, so Dependabot raises the fix PR when a fix ships | P3 | 2026-10-06 | Any one: a fixed `sprintf-js` release, or an `argparse` or `js-yaml` release that drops it; code that runs `js-yaml`'s command-line tool or formats caller-supplied `argparse` help |
 | [DEBT-483 production bootstrap](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc) | Production still seeds directly: no release is active there. Bootstrapping adopts what is live as the first release, after which the direct and managed seeds refuse production and content changes only through releases. There is no supported way to undo it | P2 | 2026-10-02 | The owner decides to bootstrap. Its prerequisites, [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md) and [DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md), are released |
 | [DEBT-483 managed seed staging](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc) | Once a release is active, the managed seed refuses that database; it does not yet stage a release instead | P3 | 2026-10-02 | A release is bootstrapped on any database the managed seed serves |
 | [DEBT-483 release zero](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc) | ADR-021's release zero, the content repository's first release, waits for that repository to compute `stored-fields-json-v1` (SPEC-007) | P3 | 2026-10-02 | The content repository computes `stored-fields-json-v1` |

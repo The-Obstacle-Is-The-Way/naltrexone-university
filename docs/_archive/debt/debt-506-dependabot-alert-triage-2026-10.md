@@ -1,12 +1,12 @@
 # DEBT-506: Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — after promotion, alerts #80, #55, #78 and #79 read `fixed`; due 2026-10-15
+**Status:** Resolved — 2026-10-09: #1411 and #1438 fixed six of the eight alerts in production; #77 and #81 have no published fix and stay open (Deferred)
 **Priority:** P2
 **Date:** 2026-10-06
-**Resolved:** —
-**Verification receipts:** [#1411](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1411), promoted in #1419: alerts #82 and #83 `fixed` 2026-10-07
+**Resolved:** 2026-10-09
+**Verification receipts:** [#1411](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1411), promoted in #1419: alerts #82 and #83 `fixed` 2026-10-07. [#1438](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438) merged `000913d4` after exact-head approval 5474573912 on `dd472c9d`; promotion #1442 merged `0e063409`: alerts #80, #55, #78 and #79, with #84–#95, `fixed` 2026-10-09T20:39:03–08Z, and Dependabot closed #1425; main CI 37988390218 `test` passed 20:50:56Z, production assigned 20:50:59Z
 
 ---
 
@@ -19,7 +19,7 @@ On 2026-10-06 the default branch had eight open Dependabot alerts. None is reach
 - **#80 (high, source-map-js)** by an exact 1.2.2 override (the follow-up PR);
 - **#55, #78 and #79 (moderate, stream-json)** by Clerk UI 1.38.1, which drops the Solana adapter tree that installed it (the follow-up PR).
 
-**#77** and **#81** have no published fixed release and stay open as watchers. The follow-up PR also takes Next.js 16.3.8 for alerts #84–#95, which [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) tracks.
+**#77** and **#81** have no published fixed release and stay open as watchers. The follow-up PR also takes Next.js 16.3.8 for alerts #84–#95, which [DEBT-509](../../debt/debt-509-pending-nextjs-security-fixes-have-no-watcher.md) tracks.
 
 ## Evidence
 
@@ -29,7 +29,7 @@ On 2026-10-06 the default branch had eight open Dependabot alerts. None is reach
 | #83 high | `sharp` 0.35.4 | GHSA-wq5f-xc86-pv6w: bundled librsvg memory flaw (CVE-2026-96889) in SVG decoding, possible RCE on glibc Linux | 0.35.5 | `next`; already pinned by an exact override | Override 0.35.4 → 0.35.5 (#1411) |
 | #80 high | `source-map-js` 1.2.1 | GHSA-68fv-2mgg-jv7q: unvalidated indexed-map section offsets block the event loop | 1.2.2, published 2026-09-30T14:08:09Z | `postcss` and `@tailwindcss/node` (build); `css-tree` through jsdom and `magicast` through coverage (dev) | Exact override 1.2.2 (follow-up PR) |
 | #81 moderate | `sprintf-js` 1.0.3 | GHSA-hp3w-g68c-fv3c: unbounded precision specifiers throw `RangeError` | None; 1.1.3, the latest, is affected | `argparse` 1.0.10 ← `js-yaml` 3.15.2 ← `gray-matter` (direct) | Accepted risk; alert stays open |
-| #77 high | `braces` 3.0.3 | GHSA-vfj7-8cjw-p6xm | None | `micromatch` ← `fast-glob` (direct) | [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md) unchanged; its React Native chain is gone |
+| #77 high | `braces` 3.0.3 | GHSA-vfj7-8cjw-p6xm | None | `micromatch` ← `fast-glob` (direct) | [DEBT-495](./debt-495-braces-dos-advisory-without-fixed-release.md) unchanged; its React Native chain is gone |
 | #55, #78, #79 moderate | `stream-json` 1.9.1 | GHSA-528h-pc64-c93x; GHSA-mjw6-4jj6-33hc (Assembler prototype pollution); GHSA-hqr4-qq8f-hg3x (JSONC comment re-scan) | 3.5.0 and 3.6.0 are incompatible pins; Clerk UI 1.38.0 instead removes the parent chain | `jayson` 4.3.0 ← `@solana/web3.js` ← Clerk UI's Solana adapters | Removed from the graph by Clerk UI 1.38.1 (follow-up PR) |
 
 ### The React Native peer (#82)
@@ -85,11 +85,11 @@ Low. No alert is reachable by attacker input here. The cost of leaving them is a
 - [x] The base and branch builds have identical traced-package and server source-map package sets, with no React Native or Solana wallet-adapter modules; identifier-only text matches are accounted for above.
 - [x] After promotion, alerts #82 and #83 read `fixed` (2026-10-07), and Dependabot closed #1404.
 - [x] The follow-up PR, [#1438](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438), passes a cold frozen install and the full gate, and removes the Solana/jayson/stream-json tree and the obsolete configuration.
-- [ ] After its promotion, alerts #80, #55, #78 and #79 read `fixed`.
+- [x] After its promotion, alerts #80, #55, #78 and #79 read `fixed` (2026-10-09), and Dependabot closed #1425.
 
 ## Related
 
-- [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md): `stream-json` and the Solana tree.
-- [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md): `braces`.
-- [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md): the Next.js advisories behind alerts #84–#95.
-- [Supply-chain overrides playbook](../dev/supply-chain-overrides.md#required-peers-a-web-build-never-imports).
+- [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md): `stream-json` and the Solana tree.
+- [DEBT-495](./debt-495-braces-dos-advisory-without-fixed-release.md): `braces`.
+- [DEBT-509](../../debt/debt-509-pending-nextjs-security-fixes-have-no-watcher.md): the Next.js advisories behind alerts #84–#95.
+- [Supply-chain overrides playbook](../../dev/supply-chain-overrides.md#required-peers-a-web-build-never-imports).
