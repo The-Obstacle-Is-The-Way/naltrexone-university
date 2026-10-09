@@ -156,15 +156,28 @@ database; on 2026-10-08 neither had GHSA-h694-7cp9-m8p3 or the three Vite
 advisories.
 
 - `.github/workflows/upstream-advisory-watch.yml` runs
-  `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
+  `scripts/upstream-advisory-watch.ts` every three hours. It reads the published
   advisories of every repository behind `pnpm-lock.yaml`, 465 on 2026-10-08,
   and opens one issue per advisory published since 2026-10-01.
-- GitHub starts this repository's scheduled runs hours late: the daily
-  Stripe Checkout smoke started 3.6 to 9.2 hours late over the 30 days to
-  2026-10-08, 5.0 at the median. So a new advisory can wait about half a day, longer if GitHub
-  drops a run. Two delayed runs can also start in the same hour, about 960
-  requests; a read over the limit fails the run, which names what it could
-  not read.
+- GitHub starts this repository's scheduled runs hours late, and can drop
+  one: the daily Stripe Checkout smoke started 3.6 to 9.2 hours late over the
+  30 days to 2026-10-08, 5.0 at the median. A steady delay does not slow
+  detection, since an advisory waits only for the next run; the gap between
+  runs does. Due every six hours, the watcher's first runs came about seven
+  hours apart, so the job is due every three hours, which halves the usual
+  wait and the cost of a dropped run. Two delayed runs fit in one hour, about
+  960 requests of the token's 1,000. Three would need delays falling by five
+  hours across three slots, near the largest spread seen; at a two-hour
+  schedule a three-hour fall would do. A read over the limit fails the run,
+  which names what it could not read, and the runs before it have already
+  read everything.
+- To see an announced fix at once, such as the two pending Next.js fixes, run
+  the watcher by hand on release day: `gh workflow run
+  upstream-advisory-watch.yml --ref main`, or Run workflow under Actions. A
+  dispatched run starts immediately. A trigger from outside GitHub's
+  scheduler would remove the delay, but Vercel's Hobby plan runs a cron job at
+  most once a day, and another scheduler would need a token that can start
+  this repository's workflows.
 - Direct dependencies use the `DEPENDENCY_REPOSITORIES` map, which gives every
   dependency and devDependency in `package.json` the repository named in its
   npm `repository` field, or `null` when it names none (today only

@@ -539,12 +539,12 @@ describe('watch command outcome', () => {
 });
 
 describe('upstream advisory workflow', () => {
-  it('runs every six hours with serialized issue writes and only the needed token scope', () => {
+  it('runs every three hours with serialized issue writes and only the needed token scope', () => {
     const workflow = parse(
       readFileSync('.github/workflows/upstream-advisory-watch.yml', 'utf8'),
     );
     expect(workflow.on).toEqual({
-      schedule: [{ cron: '23 */6 * * *' }],
+      schedule: [{ cron: '23 */3 * * *' }],
       workflow_dispatch: null,
     });
     expect(workflow.permissions).toEqual({ contents: 'read' });
