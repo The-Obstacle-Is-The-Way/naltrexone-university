@@ -101,11 +101,12 @@ which would copy the scope's user past `scrubEvent`.
   it for an hour. Start from the database.
 - **Being noticed.** An alert protects nothing if it sits unread. Its email
   comes from `noreply@md.getsentry.com` with a subject containing
-  "Operational alert". Keep a Gmail filter on those that stars them, marks them
+  "Operational alert". Keep a Gmail filter that stars them, marks them
   important, labels them and never sends them to spam, and keep the Sentry
   mobile app's push notifications on for issue alerts. The watcher below
-  reports through a GitHub issue; give its notification email, subject
-  "Operational alerts may not be reaching the owner", the same filter.
+  reports through a GitHub issue, whose email comes from
+  `notifications@github.com`, so the filter's query names both senders:
+  `(from:noreply@md.getsentry.com subject:"Operational alert") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`.
 - **Drill.** The renewal job sends one `operational_alert_drill` per fixed
   30-day cycle, from the first run that claims the cycle's row in
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
