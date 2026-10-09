@@ -1,9 +1,12 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { clerk } from '@clerk/testing/playwright';
 import type { Page } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
-import { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
+import {
+  E2E_CLERK_AUTH_STATE_PATH,
+  E2E_CLERK_SESSION_ID_PATH,
+} from './clerk-auth-state';
 import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
 import { installE2ELogRedaction } from './e2e-log-redaction';
 
@@ -172,15 +175,15 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
     saveState: async () => {
       await mkdir(dirname(E2E_CLERK_AUTH_STATE_PATH), { recursive: true });
       await page.context().storageState({ path: E2E_CLERK_AUTH_STATE_PATH });
+      // BUG-330: teardown revokes this session by its ID.
+      const sessionId = await page.evaluate(
+        () => window.Clerk?.session?.id ?? null,
+      );
+      if (!sessionId) {
+        throw new Error('The new Clerk E2E session has no ID to store');
+      }
+      await writeFile(E2E_CLERK_SESSION_ID_PATH, sessionId);
     },
     username: clerkUsername,
-  });
-}
-
-export async function signOutClerkE2ESession(page: Page): Promise<void> {
-  installE2ELogRedaction(console);
-  await releaseClerkE2ESession({
-    clerkDriver: playwrightClerkDriver,
-    page,
   });
 }
