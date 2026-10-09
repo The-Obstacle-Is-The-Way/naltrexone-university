@@ -3,10 +3,10 @@ name: Upstream advisory watch
 # Dependabot alerts come from GitHub's advisory database, and an upstream
 # advisory reaches it late or never (DEBT-509: Next.js's 2026-09-30 advisories
 # took a week). This job reads the published advisories of every repository
-# behind pnpm-lock.yaml, about 465, and opens one issue per new advisory.
+# behind pnpm-lock.yaml, about 390, and opens one issue per new advisory.
 # GitHub starts this repository's scheduled runs hours late. A steady delay
 # does not slow detection, but the gap between runs does, so the job is due
-# every three hours. A run uses about half of the token's 1,000 requests an
+# every three hours. A run uses under half of the token's 1,000 requests an
 # hour, so two delayed runs fit in one hour; a third would stop, saying so.
 # Nothing else in this repository calls the API. To catch an announced fix at
 # once, run it by hand. See docs/dev/supply-chain-overrides.md.

@@ -155,7 +155,7 @@ advisories.
 
 - `.github/workflows/upstream-advisory-watch.yml` runs
   `scripts/upstream-advisory-watch.ts` every three hours. It reads the published
-  advisories of every repository behind `pnpm-lock.yaml`, 465 on 2026-10-08,
+  advisories of every repository behind `pnpm-lock.yaml`, 393 on 2026-10-09,
   and opens one issue per advisory published since 2026-10-01.
 - GitHub starts this repository's scheduled runs hours late, and can drop
   one: the daily Stripe Checkout smoke started 3.6 to 9.2 hours late over the
@@ -198,9 +198,9 @@ advisories.
   because without that list nothing can be deduplicated, and so does a read
   refused for the API rate limit, since every later request would be refused
   too; the next run reads every repository again.
-- A run takes about four minutes and makes about 480 API requests, half of
-  the workflow token's 1,000 an hour. Nothing else in this repository calls
-  the API.
+- A run takes about four minutes and makes about one API request per
+  repository, about 410 on 2026-10-09, under half of the workflow token's
+  1,000 an hour. Nothing else in this repository calls the API.
 - Only issues opened by the job or by the repository owner count. This is a
   public repository, and a stranger's issue titled with a GHSA ID would
   otherwise settle that advisory, so its alert would never open.
