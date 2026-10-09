@@ -2,13 +2,16 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-// DEBT-506: Clerk's Solana wallet adapters declare `react-native` as a peer,
-// but only their React Native entry points (`index.native.js`) import it. The
-// browser and Node entry points this web app resolves never do. pnpm installs
-// a missing non-optional peer by itself, which put react-native and its
-// Metro/Jest tooling, shell-quote (alert #82) among them, into the install
-// graph. The packageExtensions in pnpm-workspace.yaml mark that peer optional,
-// so pnpm leaves it out. If an update declares it again, this fails first.
+// DEBT-506: before Clerk UI 1.38, Clerk's Solana wallet adapters declared
+// `react-native` as a peer that only their React Native entry points
+// (`index.native.js`) imported; the browser and Node entry points this web app
+// resolves never do. pnpm installs a missing non-optional peer by itself, which
+// put react-native and its Metro/Jest tooling, shell-quote (alert #82) among
+// them, into the install graph until packageExtensions marked the peer
+// optional. Clerk UI 1.38 dropped those adapters, and the extensions went with
+// them. If an update declares the peer again, this fails first; the remedy is
+// in docs/dev/supply-chain-overrides.md, "Required peers a web build never
+// imports".
 const NEVER_INSTALLED = ['react-native'];
 
 function installedPackageNames(lockfileText: string): string[] {

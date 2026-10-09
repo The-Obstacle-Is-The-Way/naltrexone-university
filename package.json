@@ -45,8 +45,8 @@
     ]
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.4.1",
-    "@clerk/ui": "^1.13.1",
+    "@clerk/nextjs": "^7.9.10",
+    "@clerk/ui": "^1.38.1",
     "@noble/hashes": "2.4.0",
     "@sentry/nextjs": "^11.0.0",
     "@tailwindcss/postcss": "4.3.3",
@@ -59,7 +59,7 @@
     "fast-glob": "^3.3.3",
     "gray-matter": "^4.0.3",
     "lucide-react": "^1.43.0",
-    "next": "16.3.6",
+    "next": "16.3.8",
     "next-themes": "^0.4.6",
     "pino": "^10.3.0",
     "postgres": "^3.4.8",
@@ -80,7 +80,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.13",
-    "@clerk/testing": "^2.0.33",
+    "@clerk/testing": "^2.2.42",
     "@playwright/test": "^1.61.1",
     "@stripe/cli": "1.51.1",
     "@stryker-mutator/core": "9.6.1",
