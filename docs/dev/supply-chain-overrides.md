@@ -28,12 +28,10 @@ trustPolicyExclude:
   - tinyexec@1.2.2
 allowBuilds:
   '@clerk/shared': false
-  '@sentry/cli': true
-  bufferutil: false
+  '@stripe/cli': true
   core-js: false
   esbuild: true
   sharp: true
-  utf-8-validate: false
 ```
 
 Do not weaken these settings casually. Every exception must be small,
@@ -411,17 +409,13 @@ Current denied examples:
 - `@clerk/shared: false` - postinstall prints a telemetry notice and writes
   `telemetryNoticeVersion` to local Clerk config; no build artifact is
   required.
-- `bufferutil: false` - optional `ws` native performance addon built by
-  `node-gyp-build`; `ws` can fall back without it.
 - `core-js: false` - postinstall prints support/funding text with temp-file
   dedupe; no build artifact is required.
-- `utf-8-validate: false` - optional `ws` legacy UTF-8 native addon built
-  by `node-gyp-build`; Node 24 and `ws` can fall back without it.
 
 Current allowed examples:
 
-- `@sentry/cli: true` - installs or verifies the platform `sentry-cli`
-  binary used by Sentry tooling.
+- `@stripe/cli: true` - installs the pinned official Stripe CLI binary used
+  by the required provider-backed Checkout contract.
 - `esbuild: true` - validates or prepares platform binaries used by Vite,
   tsx, and Drizzle tooling.
 - `sharp: true` - verifies or builds the native image-processing addon used
@@ -497,10 +491,13 @@ Before adding one:
    `tests/dependency-graph-policy.test.ts`, so a later update that declares
    it again fails before the tree returns.
 
-The current entries are the three Solana mobile-wallet packages under
-`@clerk/ui` that declare `react-native`
+There are no current entries. The last three were the Solana mobile-wallet
+packages under `@clerk/ui` that declared `react-native`; they left the graph
+when Clerk UI 1.38 dropped its Solana adapters, and the extensions were
+removed with them
 ([DEBT-506](../debt/debt-506-dependabot-alert-triage-2026-10.md)). Remove an
-entry when upstream marks the peer optional itself.
+entry when its declaring package leaves the graph or upstream marks the peer
+optional itself; keep the `NEVER_INSTALLED` guard.
 
 ## Audit hygiene under pnpm 11
 
@@ -531,10 +528,10 @@ record linked rather than left to drift. The worked precedent is
 patched line is ESM-only with renamed entry points that the sole consumer
 cannot load, the vulnerable functions sit on no import path the
 application can take, and forcing that two-major upgrade is not supported.
-As reverified on 2026-09-22, jayson 5.0.0 has removed its stream-json
-dependency, but even Solana 1.99.0 still requires jayson `^4.3.0` and Clerk
-retains its adapter pins. The archived record and Deferred register row
-retain the adoption/reachability triggers. Zero open alerts does not mean
+The precedent ended upstream: Clerk UI 1.38 replaced its Solana adapters
+with Wallet Standard, which removed jayson and stream-json from the graph
+([DEBT-506](../debt/debt-506-dependabot-alert-triage-2026-10.md)), so the
+alerts close by upgrade rather than dismissal. Zero open alerts does not mean
 the installed package was removed. CI does not run `pnpm audit`, so such a
 case gets no `ignoreGhsas` entry.
 
