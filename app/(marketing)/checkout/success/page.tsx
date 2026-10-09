@@ -5,6 +5,7 @@ import type { JSX } from 'react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
+import { supportMailtoHref } from '@/lib/support';
 import { CheckoutSuccessRedirect } from './checkout-success-redirect';
 import {
   type CheckoutSuccessDeps,
@@ -41,6 +42,9 @@ export async function runCheckoutSuccessPage(
   // Eager sync persists entitlement before anything renders; invalid,
   // signed-out, and non-entitled outcomes redirect away inside the sync.
   const syncResult = await syncCheckoutSuccess({ sessionId }, deps, redirectFn);
+  if ('purchaseOnAnotherAccount' in syncResult) {
+    return <PurchaseOnAnotherAccount />;
+  }
   // DEBT-410: a no-card trial checkout lands here as a trialing subscription.
   const trialStarted = syncResult.status === 'inTrial';
 
@@ -72,6 +76,40 @@ export async function runCheckoutSuccessPage(
           </Button>
         </div>
         <CheckoutSuccessRedirect />
+      </div>
+    </main>
+  );
+}
+
+// DEBT-501 item 5: paid while signed in to one account, returned signed in to
+// another. No dashboard link and no plan, so nobody buys twice.
+function PurchaseOnAnotherAccount(): JSX.Element {
+  return (
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="flex min-h-[60vh] items-center justify-center"
+    >
+      <div className="w-full max-w-md space-y-4 px-4 text-center">
+        <h1 className="text-xl font-semibold font-heading tracking-tight text-foreground">
+          This purchase belongs to another account
+        </h1>
+        <p className="text-base text-muted-foreground">
+          You checked out while signed in to a different account, so the
+          subscription is on that one. Sign out from the account menu, then sign
+          in with the account you paid with. You don’t need to buy again.
+        </p>
+        <div className="flex justify-center">
+          <Button asChild variant="outline">
+            <a
+              href={supportMailtoHref({
+                page: 'Checkout: purchase on another account',
+              })}
+            >
+              Contact support
+            </a>
+          </Button>
+        </div>
       </div>
     </main>
   );
