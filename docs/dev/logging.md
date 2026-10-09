@@ -96,7 +96,13 @@ which would copy the scope's user past `scrubEvent`.
   build the alerts at all, and `operational_alert_shared_cooldown_unavailable`
   that the Postgres cooldown failed or was slow. An event Sentry refuses, for
   quota or rate limit, is dropped without a log line: a flood that uses up the
-  month's quota also silences the alerts (see the flood section below).
+  month's quota also silences the alerts (see the flood section below). The
+  server SDK also drops, unlogged, an event identical to the one it handled
+  just before (Sentry's Dedupe, on by default for the server from
+  `@sentry/nextjs` 11.2). For alerts that is only a repeat of the same kind
+  and window, which would join that alert's open issue without an email; if
+  the issue was resolved in between, its reopening email is lost, and the
+  next window's alert opens a new issue as usual.
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
 - **Being noticed.** An alert protects nothing if it sits unread. Its email
