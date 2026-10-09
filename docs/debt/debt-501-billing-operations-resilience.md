@@ -82,7 +82,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - **Decided.** Count only transient failures: network errors, 5xx and 429.
 - **Done 2026-10-09 (quick-wins pull request).** `CircuitBreaker` takes a rule for which errors count. Any other error is the service answering, so it closes the circuit and restarts the count, in a half-open probe too. The Stripe breaker counts `isStripeOutage`: network errors, 5xx and 429, plus the SDK's outage classes, which would otherwise have stopped counting:
   - `StripeConnectionError`, which carries neither a code nor a status;
-  - `StripeAPIError`, which has no status when a 5xx body is not JSON or a body is cut off;
+  - `StripeAPIError`, only when it has no status, as when a 5xx body is not JSON or a body is cut off. The SDK also raises it for a 409 conflict with another request, which is Stripe answering and does not count (#1440 review);
   - `StripeRateLimitError`, which Stripe can send as a 400.
 
   The classes were added after the pre-review. Test-first; four mutation checks each fail a test.

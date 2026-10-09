@@ -95,6 +95,12 @@ describe('isStripeOutage', () => {
       'a missing resource',
       stripeError('StripeInvalidRequestError', { statusCode: 404 }),
     ],
+    // stripe-node raises a 409 conflict, such as a concurrent request, as a
+    // StripeAPIError with its status (#1440 review).
+    [
+      'a conflict with another request',
+      stripeError('StripeAPIError', { statusCode: 409 }),
+    ],
   ])('does not count %s, which is Stripe answering', (_case, error) => {
     expect(isStripeOutage(error)).toBe(false);
   });

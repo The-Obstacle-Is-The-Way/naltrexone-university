@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — built test-first in the quick-wins pull request; archive once it is promoted; due 2026-10-16
+**Status:** In Progress — built test-first in the quick-wins pull request (#1440), in review; Verifying once it merges, archived once promoted
 **Priority:** P3
 **Date:** 2026-10-08
 **Resolved:** —
