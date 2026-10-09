@@ -10,10 +10,11 @@ export const CLERK_SESSION_DEADLINES = {
 } as const;
 
 // The setup test's timeout until the session budget is reserved: the
-// credential health check, Stripe customer sweep, seed, reset and clerkSetup,
-// which take about 3 seconds in CI. clerkSetup alone retries for over half a
-// minute. Under rate limiting, preflight's two Clerk calls each wait at most
-// 10 seconds for Retry-After, and the sweep stops at 10 seconds (DEBT-508).
+// credential health check, Stripe customer sweep, seed and reset, which take
+// about 3 seconds in CI. Preflight's two Clerk calls share one 30-second
+// deadline (BUG-330), and the sweep stops at 10 seconds (DEBT-508). Clerk's
+// testing token is fetched before any project runs, in Playwright's global
+// setup.
 export const SETUP_PREPARATION_BUDGET_MS = 60_000;
 
 // Playwright counts the test's fixture setup, which runs before startedAt.

@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SETUP_PREPARATION_BUDGET_MS } from './clerk-session-deadlines';
 import {
+  CLERK_PREFLIGHT_DEADLINE_MS,
   type CredentialHealthCheckServices,
   CredentialValidationError,
   fetchWithTimeout,
@@ -220,12 +222,20 @@ describe('runE2ECredentialHealthCheck', () => {
     expect(services.resolveClerkUserId).toHaveBeenCalledWith({
       email: env.E2E_CLERK_USER_USERNAME,
       clerkSecretKey: env.CLERK_SECRET_KEY,
+      deadlineAt: expect.any(Number),
     });
     expect(services.verifyClerkPassword).toHaveBeenCalledWith({
       userId: 'user_123',
       password: env.E2E_CLERK_USER_PASSWORD,
       clerkSecretKey: env.CLERK_SECRET_KEY,
+      deadlineAt: expect.any(Number),
     });
+    // BUG-330: both calls share one deadline.
+    expect(
+      vi.mocked(services.verifyClerkPassword).mock.calls[0]?.[0].deadlineAt,
+    ).toBe(
+      vi.mocked(services.resolveClerkUserId).mock.calls[0]?.[0].deadlineAt,
+    );
     const stripeSecretCallArg = vi.mocked(services.verifyStripeSecretKey).mock
       .calls[0]?.[0];
     const stripePriceCallArgs = vi
@@ -539,5 +549,47 @@ describe('runE2ECredentialHealthCheck', () => {
     );
 
     expect(error.cause).toBe(rootCause);
+  });
+});
+
+// BUG-330: preflight's Clerk calls share one deadline inside setup's budget,
+// so a Clerk API that never answers fails with the credential error rather
+// than Playwright's setup timeout.
+describe('runE2ECredentialHealthCheck against a Clerk API that never answers', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("fails with the Clerk credential error inside setup's budget", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          );
+        }),
+    );
+    const { resolveClerkUserId, verifyClerkPassword, ...notClerk } =
+      createServices();
+    const startedAt = Date.now();
+
+    const outcome = runE2ECredentialHealthCheck({
+      env: createEnv(),
+      services: notClerk,
+    }).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(SETUP_PREPARATION_BUDGET_MS);
+    const error = await outcome;
+
+    expect(String(error)).toContain('E2E_PREFLIGHT:CLERK_API_UNAVAILABLE');
+    expect(Date.now() - startedAt).toBeLessThanOrEqual(
+      SETUP_PREPARATION_BUDGET_MS,
+    );
+    expect(CLERK_PREFLIGHT_DEADLINE_MS).toBeLessThan(
+      SETUP_PREPARATION_BUDGET_MS,
+    );
+    expect(resolveClerkUserId).not.toHaveBeenCalled();
+    expect(verifyClerkPassword).not.toHaveBeenCalled();
   });
 });
