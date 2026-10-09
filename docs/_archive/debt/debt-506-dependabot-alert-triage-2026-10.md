@@ -6,7 +6,7 @@
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** 2026-10-09
-**Verification receipts:** [#1411](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1411), promoted in #1419: alerts #82 and #83 `fixed` 2026-10-07. [#1438](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438) merged `000913d4` after exact-head approval 5474573912 on `dd472c9d`; promotion #1442 merged `0e063409`: alerts #80, #55, #78 and #79, with #84–#95, `fixed` 2026-10-09T20:39:03–08Z, and Dependabot closed #1425; main CI 37988390218 `test` passed 20:50:56Z, production assigned 20:50:59Z
+**Verification receipts:** [#1411](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1411), promoted in #1419: alerts #82 and #83 `fixed` 2026-10-07. [#1438](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438) merged `000913d4` after exact-head approval 5474573912 on `dd472c9d`; promotion #1442 merged `0e063409`: alerts #80, #55, #78 and #79, with #84–#95, `fixed` 2026-10-09T20:39:03–08Z; #1425 closed at 20:38:58Z when #1442 merged; main CI 37988390218 `test` passed 20:50:56Z, production assigned 20:50:59Z
 
 ---
 
@@ -85,7 +85,7 @@ Low. No alert is reachable by attacker input here. The cost of leaving them is a
 - [x] The base and branch builds have identical traced-package and server source-map package sets, with no React Native or Solana wallet-adapter modules; identifier-only text matches are accounted for above.
 - [x] After promotion, alerts #82 and #83 read `fixed` (2026-10-07), and Dependabot closed #1404.
 - [x] The follow-up PR, [#1438](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438), passes a cold frozen install and the full gate, and removes the Solana/jayson/stream-json tree and the obsolete configuration.
-- [x] After its promotion, alerts #80, #55, #78 and #79 read `fixed` (2026-10-09), and Dependabot closed #1425.
+- [x] After its promotion, alerts #80, #55, #78 and #79 read `fixed` (2026-10-09), and #1425 closed when #1442 merged.
 
 ## Related
 

@@ -8,6 +8,8 @@
 **Resolved:** —
 **Verification receipts:** [PR #1409](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1409)
 
+---
+
 ## Summary
 
 lint-staged 17.6.0 stages changes to all tracked files modified while its tasks run, including paths that were not staged initially and do not match its task globs. In this repository, concurrent sessions share a clone. Another session's edit during the pre-commit hook can therefore enter the current commit without being selected or reviewed by its author.
@@ -54,11 +56,21 @@ A follow-up reproduction on 2026-10-07 paused the same Biome task and appended a
 
 All six runs exited 0. The two same-path cases produced identical staged and unstaged diffs across versions. These probes demonstrate a pre-existing same-path risk, not a guarantee that arbitrary concurrent writes are safe: preserving bytes does not mean the commit contains only its author's intended changes.
 
-## Containment
+## Impact
 
-PR #1409 holds the generated lockfile at 17.5.1 without changing the manifest's existing range. The dev-targeted npm version-updates entry in `.github/dependabot.yml` ignores `lint-staged` versions `>=17.6.0` so the next weekly bundle does not reintroduce the race. The separate security-updates entry is unchanged.
+A commit can carry another session's unreviewed edit under the wrong author's message and review. The repository's merge discipline assumes each commit holds only its author's intended change, so such an edit could reach `dev` without anyone choosing it. The same-path risk in the second table exists on 17.5.1 too. Holding 17.5.1 removes only the unrelated-path regression that 17.6.0 adds.
 
-The hold is temporary. No pre-commit safeguard or repository-wide worktree-isolation enforcement is implemented by this record.
+## Options
+
+1. **Take 17.6.0 and run lint-staged with `--hide-unstaged`.** Upstream's release note offers it: "Use `--hide-unstaged` to hide your changes while tasks run." In a shared clone it would hide every session's unstaged edits from the working tree while the hook runs, not just the committer's. Whether it keeps a concurrent edit out of the commit was not tested. Not adopted.
+2. **Hold 17.5.1 until an exit path below is verified.** Chosen.
+3. **Build the pre-commit safeguard or enforce isolated worktrees first, then upgrade.** That is the exit, not something a dependency bundle can ship.
+
+## Resolution (decided)
+
+Option 2. PR #1409 pins `package.json` to `~17.5.1`, so neither `pnpm update` nor a regenerated lockfile can resolve 17.6.0. The dev-targeted npm version-updates entry in `.github/dependabot.yml` ignores `lint-staged` versions `>=17.6.0`, so the weekly group update does not propose it. That ignore does not reach security updates, which use the separate entry that targets `main`. A `lint-staged` security PR would therefore still open and would change the pin visibly. Take it only with a verified exit path, or with a fixed 17.5.x release if one exists.
+
+The hold is temporary. This record implements no pre-commit safeguard and no repository-wide worktree isolation.
 
 ## Exit Paths and Ignore Removal
 
@@ -67,7 +79,7 @@ Complete either path before removing the Dependabot ignore:
 1. **A tested pre-commit safeguard.** Capture the staged paths before lint-staged runs and abort the commit if lint-staged stages a path outside that set. Reproduce the concurrent edit above, prove the commit fails, and prove both sessions' working changes are preserved. Include paths outside the task globs and partially staged files in the tests. This path addresses the unrelated-path regression only. A path-set check cannot protect concurrent writers to an initially staged file; do not accept it as the exit condition for workflows permitting those writers. Such workflows require a separately tested control that prevents same-path overlap and preserves both sessions' work, or the isolated-worktree path below.
 2. **Enforced isolated worktrees.** Every agent writes and commits in its own worktree; no concurrent sessions edit one worktree. Document and enforce that operating rule, including existing shared-clone workflows. An isolated worktree used for one upgrade is not sufficient evidence that all sessions are isolated.
 
-Once one path is verified, remove the `>=17.6.0` ignore in the reviewed upgrade PR, regenerate the lockfile with pnpm under the unchanged release-age and trust policies, and pass the full local gate including E2E. Obtain exact-head CodeRabbit approval. Archive this record only after the chosen protection and upgrade are shipped and promoted, following the archive convention.
+Once one path is verified, remove the `>=17.6.0` ignore and restore a caret range in the reviewed upgrade PR, regenerate the lockfile with pnpm under the unchanged release-age and trust policies, and pass the full local gate including E2E. Obtain exact-head CodeRabbit approval. Archive this record only after the chosen protection and upgrade are shipped and promoted, following the archive convention.
 
 ## Verification
 
@@ -75,3 +87,8 @@ Once one path is verified, remove the `>=17.6.0` ignore in the reviewed upgrade 
 - [ ] One exit path is implemented and verified for all affected workflows.
 - [ ] The reviewed upgrade removes the ignore and passes the full gate.
 - [ ] The protection and upgrade are promoted to `main` with receipts.
+
+## Related
+
+- [Dependency update protocol](../dev/dependency-update-protocol.md#dependabot-config-policy): the Dependabot ignore.
+- [lint-staged#1854](https://github.com/lint-staged/lint-staged/pull/1854): the upstream change.

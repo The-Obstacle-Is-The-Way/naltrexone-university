@@ -19,9 +19,9 @@ updates:
       - dependency-name: '@types/node'
         update-types:
           - version-update:semver-major
-      # DEBT-514: lint-staged can stage another session's tracked edits during
-      # the hook. Remove after a tested pre-commit path safeguard or enforced
-      # isolated worktrees prevents the shared-clone race; verify the full gate.
+      # DEBT-514: lint-staged 17.6.0 can stage another session's tracked edits
+      # during the hook. Remove only after one of the record's Exit Paths is
+      # verified, in the upgrade PR that also restores package.json's caret range.
       - dependency-name: lint-staged
         versions: ['>=17.6.0']
     groups:

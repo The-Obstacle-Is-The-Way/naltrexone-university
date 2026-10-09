@@ -8,7 +8,7 @@
 - **Security.** #1438's promotion (#1442) fixed alerts #80, #55, #78, #79 and #84–#95 on 2026-10-09; #77 and #81 have no published fix (Deferred). DEBT-509's advisory watch shipped (#1420, promoted in #1431).
 - **In progress.** DEBT-503: item 3 next.
 - **Verifying.** DEBT-505: the first drill reaches the inbox and the cron monitor checks in; due 2026-11-05. DEBT-508: two overlapping CI runs both pass, now in doubt; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
-- **Held dependency.** DEBT-514 holds lint-staged at 17.5.1 until a tested pre-commit safeguard or enforced isolated worktrees prevents unrelated tracked edits entering a commit.
+- **Held dependency.** DEBT-514 holds lint-staged at 17.5.1 until one of its exit paths is verified for every workflow that commits.
 - **Next.** One pull request of quick wins (with DEBT-513), then alerts for silent conditions (DEBT-501, DEBT-503 item 3), then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
 - **Owner decisions pending.** Vercel Pro at the first live sale (DEBT-512, decided 2026-10-09); the live purchase and refund (DEBT-501 item 7); Clerk's verified-email setting and a re-created account's trial (DEBT-502); DEBT-414's Resend webhook secret, F19a, Q7 and counsel review; DEBT-505's inbox filter and Sentry push; the 5% server trace sample (AUDIT-015); the production content bootstrap (DEBT-483).
 

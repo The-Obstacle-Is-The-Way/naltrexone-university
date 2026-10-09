@@ -168,7 +168,7 @@ importers:
         specifier: ^30.0.1
         version: 30.1.1(@noble/hashes@2.4.0)
       lint-staged:
-        specifier: ^17.0.5
+        specifier: ~17.5.1
         version: 17.5.1
       tsx:
         specifier: ^4.20.5
