@@ -1,4 +1,4 @@
-# DEBT-507: lint-staged Can Stage Another Session's Work
+# DEBT-514: lint-staged Can Stage Another Session's Work
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
