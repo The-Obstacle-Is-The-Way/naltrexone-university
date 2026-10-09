@@ -35,6 +35,8 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - **Scope.** Do not exclude a row solely because its local status is terminal: repairing stale local state is this job's purpose. Any pruning policy needs an independently justified terminal-state contract.
   - **Tests**, against real Postgres: the ordering, a crash mid-run, interleaved inserts and deletes, sustained inserts (earlier rows are still retried), each row attempted at most once per run (including a claim written in a transaction begun before the run's start was read), a deleted or concurrently claimed row, a failed claim, the budget checked before each claim, two overlapping runs, and provider failure.
 
+- **Request timeout done 2026-10-09 (quick-wins pull request).** The reconcile route gives the job's subscriptions client a 5-second timeout and one network retry (`limitStripeSubscriptionRequests`), in place of the SDK's 80 seconds and two retries, so no single Stripe request outlasts the function. This was proven through the real SDK, and the cron route's integration test checks the time limit on every request. Checking the time budget before each claim, which bounds a whole page, comes with the oldest-first order.
+
   *Corrected 2026-10-06: oldest-first order replaces #1410's keyset cursor with wraparound, checkpoints and run coordination, which needed more state for the same guarantee; terminal rows stay included, as #1410 decided (#1410 review).*
 
 ### 2. Only one price ID per plan is recognized (P2)
@@ -46,6 +48,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - the success page redirects with `unknown_plan`.
 - **Trigger.** Any change of Price for new customers. DEBT-414 freezes existing subscribers' prices, and the portal disables plan changes, so a new Price plus an environment change is the expected way to change a price. That change would lock out every existing subscriber.
 - **Decided.** A recognized list of legacy price IDs per plan, configured alongside the current ones. Add an operator check that refuses a price change while live subscriptions use an ID the list doesn't hold. Until this ships, the runbook must say: never change a price ID.
+- **Runbook line done 2026-10-09 (quick-wins pull request):** [deployment-environments.md](../dev/deployment-environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The legacy list and the operator check remain.
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3)
 

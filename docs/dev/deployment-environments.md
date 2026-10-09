@@ -94,6 +94,17 @@ These rules are enforced by the repo today:
 
 Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md).
 
+### Stripe price ID rule
+
+Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` in an environment that has subscribers. The app recognizes only the current monthly and annual IDs ([DEBT-501](../debt/debt-501-billing-operations-resilience.md) item 2). Every subscription still on an old ID would then fail:
+
+- its webhooks answer 500;
+- reads of it throw;
+- the reconcile job fails its row;
+- the success page sends its buyer to an error.
+
+A new price for new customers waits for item 2's list of recognized legacy IDs. Nothing enforces this rule yet.
+
 ### Clerk key pairing rule
 
 `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must come from the same Clerk instance and the same environment type (`test` vs `live`). `lib/env.ts` validates both conditions.
