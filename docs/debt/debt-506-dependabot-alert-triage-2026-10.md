@@ -84,7 +84,7 @@ Low. No alert is reachable by attacker input here. The cost of leaving them is a
 - [x] A cold `pnpm install --frozen-lockfile` passes the release-age and trust policies.
 - [x] The base and branch builds have identical traced-package and server source-map package sets, with no React Native or Solana wallet-adapter modules; identifier-only text matches are accounted for above.
 - [x] After promotion, alerts #82 and #83 read `fixed` (2026-10-07), and Dependabot closed #1404.
-- [ ] The follow-up PR passes a cold frozen install and the full gate, and removes the Solana/jayson/stream-json tree and the obsolete configuration.
+- [x] The follow-up PR, [#1438](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438), passes a cold frozen install and the full gate, and removes the Solana/jayson/stream-json tree and the obsolete configuration.
 - [ ] After its promotion, alerts #80, #55, #78 and #79 read `fixed`.
 
 ## Related
