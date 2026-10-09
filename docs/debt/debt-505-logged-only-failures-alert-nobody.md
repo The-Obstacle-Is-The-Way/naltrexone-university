@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — released 2026-10-09; the first drill reached the owner's inbox and the cron monitor checks in. Still to show: the renewal job reads the watcher as running, and the next cycle's drill, from 2026-11-03, emails again; due 2026-11-05
+**Status:** Verifying — released 2026-10-09; the first drill and the cron monitor are proven. Still to show: the watcher read as running, and the 2026-11-03 cycle's drill; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —
