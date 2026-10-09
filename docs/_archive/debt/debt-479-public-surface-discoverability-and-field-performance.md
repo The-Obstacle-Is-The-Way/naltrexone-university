@@ -329,4 +329,4 @@ The table covers 14 policies, 13 invocation sites and 18 named operations, inclu
 - [DEBT-450](debt-450-hot-path-query-efficiency.md) — deferred parts; server measurement and the census are actionable independently of F5
 - [DEBT-475](debt-475-toolchain-coherence.md) — resolved typed tracing/toolchain work, including the same-attempt helper-recovery residual
 - [DEBT-414](../../debt/debt-414-public-legal-pages-privacy-terms.md) — owns `/privacy` and `/terms` copy; this filing touches their metadata only, never their text
-- [DEBT-465](../../debt/debt-465-test-quality-practices-adoption.md) — Gherkin/acceptance and mutation lanes; steps 1–3's contracts are ordinary Vitest and do not depend on it
+- [DEBT-465](debt-465-test-quality-practices-adoption.md) — Gherkin/acceptance and mutation lanes; steps 1–3's contracts are ordinary Vitest and do not depend on it

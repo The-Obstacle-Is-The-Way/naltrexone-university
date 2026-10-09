@@ -63,7 +63,7 @@ describe('CooldownOperationalAlerts', () => {
   it('sends the first alert of a kind once it holds the shared cooldown', async () => {
     const { alerts, sent, rateLimiter } = setup([allowed()]);
 
-    await alerts.raise(missedDeadline);
+    await expect(alerts.raise(missedDeadline)).resolves.toBe('sent');
 
     expect(rateLimiter.inputs).toEqual([
       {
@@ -85,7 +85,7 @@ describe('CooldownOperationalAlerts', () => {
   it('sends nothing when another instance already took the shared cooldown', async () => {
     const { alerts, sent } = setup([taken()]);
 
-    await alerts.raise(missedDeadline);
+    await expect(alerts.raise(missedDeadline)).resolves.toBe('suppressed');
 
     expect(sent).toEqual([]);
   });
@@ -98,7 +98,7 @@ describe('CooldownOperationalAlerts', () => {
 
     await alerts.raise(missedDeadline);
     advance(OPERATIONAL_ALERT_COOLDOWN_MS - 1);
-    await alerts.raise(missedDeadline);
+    await expect(alerts.raise(missedDeadline)).resolves.toBe('suppressed');
     expect(rateLimiter.inputs).toHaveLength(1);
 
     advance(1);
@@ -166,12 +166,12 @@ describe('CooldownOperationalAlerts', () => {
     ]);
   });
 
-  it('resolves, and logs the kind only, when the event cannot be sent', async () => {
+  it('resolves as failed, and logs the kind only, when the event cannot be sent', async () => {
     const { alerts, logger } = setup([allowed()], {
       failSend: new Error('transport down'),
     });
 
-    await expect(alerts.raise(missedDeadline)).resolves.toBeUndefined();
+    await expect(alerts.raise(missedDeadline)).resolves.toBe('failed');
 
     expect(logger.errorCalls).toEqual([
       {

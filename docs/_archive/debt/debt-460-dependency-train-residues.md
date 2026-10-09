@@ -24,6 +24,7 @@ blocked one-dependency consolidation; that candidate, Cleanup A, was done in
 2. migrate `proxy.ts` off `createRouteMatcher` **before** accepting any
    `@clerk/nextjs` major bump; and
 3. fold the `biome.json` `$schema` bump into every Biome Dependabot PR.
+   *Corrected 2026-10-08: rule 3 is retired; since 2026-09-29 `biome.json` reads its schema from the installed CLI (AUDIT-015).*
 
 *Corrected 2026-10-05: rule 1 used to treat two `npm:` aliases as a manual
 update surface, because updater jobs skip aliases. [PR #1384](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1384) replaced them

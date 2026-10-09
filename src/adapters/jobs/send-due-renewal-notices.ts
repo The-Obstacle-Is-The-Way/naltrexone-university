@@ -25,6 +25,17 @@ import type {
 } from '@/src/application/use-cases';
 import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { DAY_MS, nextAnniversaryRenewalAt } from '@/src/domain/services';
+import type { CronMonitor } from '../shared/cron-monitor';
+import {
+  type OperationalAlertDrillCycles,
+  type OperationalAlertDrillOutcome,
+  raiseOperationalAlertDrillIfDue,
+} from './operational-alert-drill';
+import {
+  checkScheduledChecksRunning,
+  type ScheduledChecksOutcome,
+  type ScheduledWorkflows,
+} from './scheduled-checks';
 
 export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 80;
@@ -32,6 +43,16 @@ export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT = 80;
 export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
 export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
+// DEBT-505: the job's Sentry cron monitor. Vercel's Hobby plan starts a daily
+// cron at any time within its hour, so a run counts as missed only after 90
+// minutes; one still running after six counts as timed out, since the
+// function stops at five.
+export const SEND_RENEWAL_NOTICES_MONITOR: CronMonitor = {
+  slug: 'send-renewal-notices',
+  schedule: '0 9 * * *',
+  checkinMarginMinutes: 90,
+  maxRuntimeMinutes: 6,
+};
 // DEBT-414 F01: renewals are first selected at 35 days and retried daily down
 // to the shared 30-day minimum (RENEWAL_NOTICE_MINIMUM_DAYS); one inside that
 // minimum without a sent notice is alerted, and dispatch refuses it (F07).
@@ -312,6 +333,10 @@ export type SendDueRenewalNoticesJobDeps = {
   }) => Promise<number>;
   logger: Pick<Logger, 'warn' | 'error'>;
   alerts: OperationalAlerts;
+  /** The alert drill's once-per-cycle claims. */
+  alertDrillCycles: OperationalAlertDrillCycles;
+  /** The repository's GitHub workflows, the alert watcher among them. */
+  scheduledWorkflows: ScheduledWorkflows;
   annualPlan: PlanNoticeTerms;
   monthlyPlan: PlanNoticeTerms;
 };
@@ -331,6 +356,8 @@ export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   anniversaries: number;
   expiredSetupOperationsPruned: number;
   durationMs: number;
+  alertDrill: OperationalAlertDrillOutcome;
+  scheduledChecks: ScheduledChecksOutcome;
 };
 
 function safeLimit(value: number, fallback: number, maximum: number): number {
@@ -343,6 +370,20 @@ export async function sendDueRenewalNotices(
   deps: SendDueRenewalNoticesJobDeps,
 ): Promise<SendDueRenewalNoticesJobResult> {
   const startedAt = deps.monotonicNow();
+  // DEBT-505: first, so the drill and the scheduled-checks check run whatever
+  // the notices do.
+  const alertDrill = await raiseOperationalAlertDrillIfDue({
+    now: deps.now,
+    cycles: deps.alertDrillCycles,
+    alerts: deps.alerts,
+    logger: deps.logger,
+  });
+  const scheduledChecks = await checkScheduledChecksRunning({
+    now: deps.now,
+    workflows: deps.scheduledWorkflows,
+    alerts: deps.alerts,
+    logger: deps.logger,
+  });
   const observedAt = deps.now();
   const subscriptionLimit = safeLimit(
     input.subscriptionLimit,
@@ -427,6 +468,8 @@ export async function sendDueRenewalNotices(
     expiredSetupOperationsPruned,
     ...result,
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
+    alertDrill,
+    scheduledChecks,
   };
 }
 
