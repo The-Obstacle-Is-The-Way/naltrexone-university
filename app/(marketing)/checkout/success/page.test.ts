@@ -31,6 +31,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
 }));
 
+// The other-account view's sign-out button reads Clerk through its hook.
+vi.mock('@clerk/nextjs', () => ({ useClerk: () => ({ signOut: vi.fn() }) }));
+
 class RedirectError extends Error {
   constructor(readonly url: string) {
     super(`REDIRECT:${url}`);
@@ -557,6 +560,9 @@ describe('runCheckoutSuccessPage for a purchase on another account', () => {
       doc.querySelector('a[href^="mailto:support@addictionboards.com?"]')
         ?.textContent,
     ).toBe('Contact support');
+    expect(
+      [...doc.querySelectorAll('button')].map((button) => button.textContent),
+    ).toEqual(['Sign out']);
     expect(doc.querySelector(`a[href="${ROUTES.APP_DASHBOARD}"]`)).toBeNull();
     expect(doc.querySelector(`a[href^="${ROUTES.PRICING}"]`)).toBeNull();
     expect(html).not.toContain('You’ll be redirected');

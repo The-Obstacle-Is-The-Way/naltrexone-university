@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { JSX } from 'react';
+import { AccountSignOutButton } from '@/components/account-sign-out-button';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
@@ -82,7 +83,8 @@ export async function runCheckoutSuccessPage(
 }
 
 // DEBT-501 item 5: paid while signed in to one account, returned signed in to
-// another. No dashboard link and no plan, so nobody buys twice.
+// another. No dashboard link and no plan, so nobody buys twice. The page has
+// no account menu, so it offers its own sign-out.
 function PurchaseOnAnotherAccount(): JSX.Element {
   return (
     <main
@@ -96,10 +98,13 @@ function PurchaseOnAnotherAccount(): JSX.Element {
         </h1>
         <p className="text-base text-muted-foreground">
           You checked out while signed in to a different account, so the
-          subscription is on that one. Sign out from the account menu, then sign
-          in with the account you paid with. You don’t need to buy again.
+          subscription is on that one. Sign out, then sign in with the account
+          you paid with. You don’t need to buy again.
         </p>
-        <div className="flex justify-center">
+        <div className="flex flex-wrap justify-center gap-3">
+          <AccountSignOutButton redirectUrl={ROUTES.SIGN_IN}>
+            Sign out
+          </AccountSignOutButton>
           <Button asChild variant="outline">
             <a
               href={supportMailtoHref({
