@@ -193,17 +193,6 @@ describe('Playwright E2E lane policy', () => {
     ).toBe(true);
   });
 
-  // BUG-330: run in Playwright's main process, Clerk's testing setup reaches
-  // every worker; inside the setup project it reached only that one.
-  it("fetches Clerk's testing token once, in Playwright's main process", () => {
-    expect(playwrightConfig.globalSetup).toBe(
-      './tests/e2e/clerk-testing-setup.ts',
-    );
-    expect(readFileSync('tests/e2e/global.setup.ts', 'utf8')).not.toContain(
-      'clerkSetup',
-    );
-  });
-
   // BUG-330: the server's output reaches public CI logs, redacted.
   it("shows the web server's output, through the E2E log redaction", () => {
     const webServer = playwrightConfig.webServer;

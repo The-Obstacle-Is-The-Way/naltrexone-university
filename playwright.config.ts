@@ -38,8 +38,6 @@ export default defineConfig({
   // cause session and bookmark state conflicts. Use 1 worker to run sequentially.
   workers: 1,
   reporter: [['html', { open: 'never' }], ['list']],
-  // BUG-330: Clerk's testing token, fetched once for every worker.
-  globalSetup: './tests/e2e/clerk-testing-setup.ts',
   use: {
     baseURL,
     trace: process.env.CI ? 'off' : 'retain-on-failure',

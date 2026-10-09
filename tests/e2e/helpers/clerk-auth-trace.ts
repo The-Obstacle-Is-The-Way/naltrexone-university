@@ -1,7 +1,7 @@
 import type { Frame, Page, Response } from '@playwright/test';
 import { redactSensitiveE2EText } from './e2e-log-redaction';
 
-// BUG-330: a signed-in test can lose its session partway through and land on
+// BUG-333: a signed-in test can lose its session partway through and land on
 // sign-in, rarely, with nothing to say why. Clerk's middleware names its
 // decision on every answer (`x-clerk-auth-status` and `x-clerk-auth-reason`)
 // and on a handshake redirect (`__clerk_hs_reason`, `__clerk_redirect_count`).
@@ -131,6 +131,23 @@ export function describeClerkCookies(
   return parts.join('; ');
 }
 
+/**
+ * Clerk's Frontend API host, from the publishable key as Clerk encodes it:
+ * `pk_test_` or `pk_live_`, then the host and a closing `$` in base64.
+ * clerkSetup() sets CLERK_FAPI only in the setup project's worker, but every
+ * worker loads the publishable key with Playwright's config.
+ */
+export function clerkFrontendApiHost(
+  env: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const encoded = env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.match(
+    /^pk_(?:test|live)_(.+)$/,
+  )?.[1];
+  if (!encoded) return undefined;
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  return decoded.endsWith('$') ? decoded.slice(0, -1) : undefined;
+}
+
 export function isSignInUrl(url: string): boolean {
   try {
     return new URL(url).pathname.startsWith('/sign-in');
@@ -187,7 +204,7 @@ declare global {
  */
 export async function startClerkAuthTrace(page: Page): Promise<void> {
   const trace = new ClerkAuthTrace();
-  const frontendApi = process.env.CLERK_FAPI;
+  const frontendApi = clerkFrontendApiHost();
   await page.exposeFunction(
     '__e2eClerkAuthEvent',
     (session: boolean, status: string) =>

@@ -29,8 +29,6 @@ class FakeClerkDriver {
     return this.active;
   }
 
-  async installTestingToken(): Promise<void> {}
-
   async load(): Promise<void> {}
 
   async signIn(): Promise<void> {
@@ -498,55 +496,5 @@ describe('describeFrontendApiAnswer', () => {
         body: undefined,
       }),
     ).toBe('POST /v1/client/sessions/sess_…/tokens 200');
-  });
-});
-
-// BUG-330: clerk.loaded() installs no testing-token route; only clerk.signIn()
-// does. Clerk's script calls the Frontend API while the page is still
-// loading, so the route goes in before the first navigation.
-describe('the testing token', () => {
-  const describeFailure = async () => 'Frontend API: no answer';
-
-  it.each([
-    [
-      'restoring the stored session',
-      (clerkDriver: FakeClerkDriver, page: FakeClerkPage) =>
-        requireStoredClerkE2ESession({
-          clerkDriver,
-          page,
-          failures: new MemoryRestoreFailures(),
-          describeFailure,
-        }),
-    ],
-    [
-      'creating the session',
-      (clerkDriver: FakeClerkDriver, page: FakeClerkPage) =>
-        ensureClerkE2ESession({
-          clerkDriver,
-          page,
-          password: 'password',
-          username: 'user@example.com',
-        }),
-    ],
-    [
-      "releasing a failed attempt's session",
-      (clerkDriver: FakeClerkDriver, page: FakeClerkPage) =>
-        releaseClerkE2ESession({ clerkDriver, page }),
-    ],
-  ])('is installed before the first page load when %s', async (_case, run) => {
-    const steps: string[] = [];
-    const page = new FakeClerkPage();
-    page.goto = async (url: string) => {
-      steps.push(`goto ${url}`);
-    };
-    const clerkDriver = new FakeClerkDriver(true);
-    clerkDriver.installTestingToken = async () => {
-      steps.push('token');
-    };
-
-    await run(clerkDriver, page);
-
-    expect(steps[0]).toBe('token');
-    expect(steps).toContain('goto /');
   });
 });

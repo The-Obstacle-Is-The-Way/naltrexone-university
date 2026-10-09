@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright';
+import { clerk } from '@clerk/testing/playwright';
 import type { Page, Response } from '@playwright/test';
 import { TimeoutError, withTimeout } from '@/lib/with-timeout';
 import {
@@ -10,6 +10,7 @@ import {
   readIfPresent,
 } from './clerk-auth-state';
 import {
+  clerkFrontendApiHost,
   describeFrontendApiAnswer,
   startClerkAuthTrace,
 } from './clerk-auth-trace';
@@ -35,9 +36,6 @@ type ClerkE2EPage = {
 
 type ClerkE2EDriver<TPage extends ClerkE2EPage> = {
   hasActiveSession(page: TPage): Promise<boolean>;
-  // BUG-330: before the first navigation, since Clerk's script calls the
-  // Frontend API while the page is still loading.
-  installTestingToken(page: TPage): Promise<void>;
   load(page: TPage): Promise<void>;
   signIn(input: {
     page: TPage;
@@ -55,7 +53,6 @@ export async function ensureClerkE2ESession<TPage extends ClerkE2EPage>(input: {
   password: string;
   username: string;
 }): Promise<void> {
-  await input.clerkDriver.installTestingToken(input.page);
   await input.page.goto('/');
   await input.clerkDriver.load(input.page);
   if (await input.clerkDriver.hasActiveSession(input.page)) return;
@@ -108,7 +105,6 @@ export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
 export async function releaseClerkE2ESession<
   TPage extends ClerkE2EPage,
 >(input: { clerkDriver: ClerkE2EDriver<TPage>; page: TPage }): Promise<void> {
-  await input.clerkDriver.installTestingToken(input.page);
   await input.page.goto('/');
   await input.clerkDriver.load(input.page);
   if (!(await input.clerkDriver.hasActiveSession(input.page))) return;
@@ -145,7 +141,6 @@ export async function requireStoredClerkE2ESession<
 
   const deadlineMs = input.deadlineMs ?? CLERK_SESSION_DEADLINES.restoreMs;
   const restore = async () => {
-    await input.clerkDriver.installTestingToken(input.page);
     await input.page.goto('/');
     await input.clerkDriver.load(input.page);
     return input.clerkDriver.hasActiveSession(input.page);
@@ -178,8 +173,6 @@ export async function waitForActiveClerkSession(
 const playwrightClerkDriver: ClerkE2EDriver<Page> = {
   hasActiveSession: (page) =>
     page.evaluate(() => Boolean(window.Clerk?.session)),
-  // clerk.loaded() installs no testing-token route; only clerk.signIn() does.
-  installTestingToken: (page) => setupClerkTestingToken({ page }),
   load: (page) => clerk.loaded({ page }),
   signIn: ({ page, password, username }) =>
     clerk.signIn({
@@ -208,7 +201,7 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   // The historical helper name is retained for its existing callers. Global
   // setup is now the only session creator; test cases fail closed if their
   // explicitly configured storage state is missing or invalid.
-  // BUG-330: kept for the whole test, so a mid-run loss names its cause.
+  // BUG-333: kept for the whole test, so a mid-run loss names its cause.
   await startClerkAuthTrace(page);
   const frontendApi = watchFrontendApi(page);
   try {
@@ -245,7 +238,7 @@ function watchFrontendApi(page: Page): {
   describe(): Promise<string>;
   stop(): void;
 } {
-  const host = process.env.CLERK_FAPI;
+  const host = clerkFrontendApiHost();
   const answers: Promise<string>[] = [];
   const onResponse = (response: Response) => {
     const url = new URL(response.url());

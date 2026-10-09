@@ -12,17 +12,11 @@ export const CLERK_SESSION_DEADLINES = {
   restoreMs: 20_000,
 } as const;
 
-// BUG-330: Clerk's testing token, fetched in Playwright's global setup.
-// @clerk/backend's request has no time limit, and clerkSetup retries for over
-// half a minute.
-export const CLERK_TESTING_SETUP_DEADLINE_MS = 60_000;
-
 // The setup test's timeout until the session budget is reserved: the
-// credential health check, Stripe customer sweep, seed and reset, which take
-// about 3 seconds in CI. Preflight's two Clerk calls share one 30-second
-// deadline (BUG-330), and the sweep stops at 10 seconds (DEBT-508). Clerk's
-// testing token is fetched before any project runs, in Playwright's global
-// setup.
+// credential health check, Stripe customer sweep, seed, reset and clerkSetup,
+// which take about 3 seconds in CI. clerkSetup alone retries for over half a
+// minute. Preflight's two Clerk calls share one 30-second deadline (BUG-330),
+// and the sweep stops at 10 seconds (DEBT-508).
 export const SETUP_PREPARATION_BUDGET_MS = 60_000;
 
 // Playwright counts the test's fixture setup, which runs before startedAt.

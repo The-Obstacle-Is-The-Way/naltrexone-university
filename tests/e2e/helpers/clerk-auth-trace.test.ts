@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   ClerkAuthTrace,
+  clerkFrontendApiHost,
   describeClerkCookies,
   describeNavigationAnswer,
   isSignInUrl,
 } from './clerk-auth-trace';
 
-// BUG-330: a signed-in test that lands on sign-in prints how it got there,
+// BUG-333: a signed-in test that lands on sign-in prints how it got there,
 // from Clerk's own reasons, without a token, so the next mid-run loss names
 // its cause.
 const jwt = (payload: object) =>
@@ -76,6 +77,42 @@ describe('describeClerkCookies', () => {
     expect(describeClerkCookies([{ name: '__client_uat', value: '0' }])).toBe(
       'no __session; __client_uat=0',
     );
+  });
+});
+
+describe('clerkFrontendApiHost', () => {
+  const publishableKey = (decoded: string) =>
+    `pk_test_${Buffer.from(decoded).toString('base64')}`;
+
+  // clerkSetup() sets CLERK_FAPI only in the setup project's worker; test
+  // workers load the publishable key with Playwright's config.
+  it("reads Clerk's Frontend API host from the publishable key alone", () => {
+    expect(
+      clerkFrontendApiHost({
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: publishableKey(
+          'clerk.example.test$',
+        ),
+      }),
+    ).toBe('clerk.example.test');
+  });
+
+  it.each([
+    ['no key', {}],
+    [
+      'a key without the closing $',
+      {
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: publishableKey('clerk.example.test'),
+      },
+    ],
+    [
+      'a secret key',
+      {
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+          'sk_test_Y2xlcmsuZXhhbXBsZS50ZXN0JA==',
+      },
+    ],
+  ])('names no host for %s', (_case, env) => {
+    expect(clerkFrontendApiHost(env)).toBeUndefined();
   });
 });
 
