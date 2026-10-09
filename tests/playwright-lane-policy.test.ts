@@ -193,6 +193,17 @@ describe('Playwright E2E lane policy', () => {
     ).toBe(true);
   });
 
+  // BUG-330: run in Playwright's main process, Clerk's testing setup reaches
+  // every worker; inside the setup project it reached only that one.
+  it("fetches Clerk's testing token once, in Playwright's main process", () => {
+    expect(playwrightConfig.globalSetup).toBe(
+      './tests/e2e/clerk-testing-setup.ts',
+    );
+    expect(readFileSync('tests/e2e/global.setup.ts', 'utf8')).not.toContain(
+      'clerkSetup',
+    );
+  });
+
   it('gives the E2E server a test-only consent-state secret unless one is set', () => {
     // Trial add-card signs its Checkout consent state; production and preview
     // carry their own CONSENT_STATE_SECRET, the isolated E2E server this one.

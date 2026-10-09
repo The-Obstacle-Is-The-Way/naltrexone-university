@@ -4,6 +4,7 @@ import {
   createClerkE2ESession,
   describeFrontendApiAnswer,
   ensureClerkE2ESession,
+  loadClerkWithTestingToken,
   releaseClerkE2ESession,
   requireStoredClerkE2ESession,
   waitForActiveClerkSession,
@@ -465,5 +466,28 @@ describe('describeFrontendApiAnswer', () => {
         body: 'Too Many Requests',
       }),
     ).toBe('POST /v1/client/sessions/x/tokens 429');
+  });
+});
+
+// BUG-330: clerk.loaded() installs no testing-token route; only clerk.signIn()
+// does. Every page that loads Clerk installs it first.
+describe('loadClerkWithTestingToken', () => {
+  it('installs the testing-token route for the page before waiting for Clerk', async () => {
+    const page = new FakeClerkPage();
+    const steps: Array<[string, FakeClerkPage]> = [];
+
+    await loadClerkWithTestingToken(page, {
+      setupClerkTestingToken: async (input) => {
+        steps.push(['token', input.page]);
+      },
+      loaded: async (input) => {
+        steps.push(['loaded', input.page]);
+      },
+    });
+
+    expect(steps).toEqual([
+      ['token', page],
+      ['loaded', page],
+    ]);
   });
 });

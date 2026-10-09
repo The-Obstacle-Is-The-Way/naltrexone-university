@@ -1,4 +1,3 @@
-import { clerkSetup } from '@clerk/testing/playwright';
 import { test as setup } from '@playwright/test';
 import { createClerkE2EAuthState } from './helpers/clerk-auth';
 import { reserveSessionBudget } from './helpers/clerk-session-deadlines';
@@ -15,7 +14,6 @@ setup('global setup', async ({ page }, testInfo) => {
   await sweepE2EStripeCustomers();
   await seedTestSubscription({ clerkUserId });
   await runE2EUserStateReset();
-  await clerkSetup();
   // BUG-328: sign-in and a failed attempt's sign-out get their full deadlines,
   // however long preparation took.
   reserveSessionBudget(testInfo, startedAt);

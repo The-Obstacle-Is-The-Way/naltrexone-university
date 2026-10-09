@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { clerk } from '@clerk/testing/playwright';
+import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright';
 import type { Page } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
 import {
@@ -184,10 +184,30 @@ export async function waitForActiveClerkSession(
   });
 }
 
+/**
+ * BUG-330: installs Clerk's testing-token route for the page's context, then
+ * waits for Clerk. clerk.loaded() installs no route; only clerk.signIn() does,
+ * so a restored session's Frontend API requests used to go without the token.
+ */
+export async function loadClerkWithTestingToken<TPage>(
+  page: TPage,
+  clerkTesting: {
+    setupClerkTestingToken(input: { page: TPage }): Promise<void>;
+    loaded(input: { page: TPage }): Promise<void>;
+  },
+): Promise<void> {
+  await clerkTesting.setupClerkTestingToken({ page });
+  await clerkTesting.loaded({ page });
+}
+
 const playwrightClerkDriver: ClerkE2EDriver<Page> = {
   hasActiveSession: (page) =>
     page.evaluate(() => Boolean(window.Clerk?.session)),
-  load: (page) => clerk.loaded({ page }),
+  load: (page) =>
+    loadClerkWithTestingToken(page, {
+      setupClerkTestingToken,
+      loaded: clerk.loaded,
+    }),
   signIn: ({ page, password, username }) =>
     clerk.signIn({
       page,
