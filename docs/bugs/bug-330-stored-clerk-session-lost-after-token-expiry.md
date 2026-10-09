@@ -77,7 +77,7 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
   - The error lives in `test-results/.auth/`, not in module state, because Playwright starts a new worker after a failed test. Every later signed-in test fails with it without loading a page. Setup and teardown clear it.
 - **The testing token reaches every test.**
   - `clerkSetup()` moved to Playwright's `globalSetup`, which runs in the main process, so every worker inherits the token.
-  - Every page that loads Clerk installs the token's route first, through `loadClerkWithTestingToken`.
+  - Every flow that loads Clerk installs the token's route before its first navigation, because Clerk's script calls the Frontend API while the page is still loading. The flows are restore, sign-in and a failed attempt's release.
   - It runs in the restore step all 20 signed-in spec files already call, rather than in a new fixture, so no spec changes. `@clerk/testing` registers the route once per browser context.
 - **Preflight's deadline.** `fetchClerkWithRetry` takes an optional deadline: no attempt runs, and no retry waits, past it. Preflight's two Clerk calls share one 30-second deadline, inside setup's 60-second budget.
 - **The server's output is shown, redacted.**
@@ -89,6 +89,6 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 
 - [x] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token. *2026-10-09: `tests/e2e/helpers/clerk-auth.test.ts`.*
 - [ ] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session. *2026-10-09: the helper test is `clerk-session-revocation.test.ts`; the CI run remains.*
-- [x] Test contexts carry the testing token, shown by a helper test of the fixture. *2026-10-09: a helper test of the restore step's load (`loadClerkWithTestingToken`), which stands in for the fixture, and a config test that the token is fetched in `globalSetup`.*
+- [x] Test contexts carry the testing token, shown by a helper test of the fixture. *2026-10-09: helper tests that each flow installs the route before its first navigation, which stand in for the fixture, and a config test that the token is fetched in `globalSetup`.*
 - [x] A helper test shows preflight's Clerk calls, timing out on every attempt, fail with the credential error inside setup's budget. *2026-10-09: `credential-health-check.test.ts`, on fake timers.*
 - [ ] No recurrence across the first two weeks of CI runs after the fix.

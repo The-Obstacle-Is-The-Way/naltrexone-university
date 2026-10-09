@@ -30,6 +30,9 @@ type ClerkE2EPage = {
 
 type ClerkE2EDriver<TPage extends ClerkE2EPage> = {
   hasActiveSession(page: TPage): Promise<boolean>;
+  // BUG-330: before the first navigation, since Clerk's script calls the
+  // Frontend API while the page is still loading.
+  installTestingToken(page: TPage): Promise<void>;
   load(page: TPage): Promise<void>;
   signIn(input: {
     page: TPage;
@@ -47,6 +50,7 @@ export async function ensureClerkE2ESession<TPage extends ClerkE2EPage>(input: {
   password: string;
   username: string;
 }): Promise<void> {
+  await input.clerkDriver.installTestingToken(input.page);
   await input.page.goto('/');
   await input.clerkDriver.load(input.page);
   if (await input.clerkDriver.hasActiveSession(input.page)) return;
@@ -99,6 +103,7 @@ export async function createClerkE2ESession<TPage extends ClerkE2EPage>(input: {
 export async function releaseClerkE2ESession<
   TPage extends ClerkE2EPage,
 >(input: { clerkDriver: ClerkE2EDriver<TPage>; page: TPage }): Promise<void> {
+  await input.clerkDriver.installTestingToken(input.page);
   await input.page.goto('/');
   await input.clerkDriver.load(input.page);
   if (!(await input.clerkDriver.hasActiveSession(input.page))) return;
@@ -134,6 +139,7 @@ export async function requireStoredClerkE2ESession<
 
   let cause = '';
   try {
+    await input.clerkDriver.installTestingToken(input.page);
     await input.page.goto('/');
     await input.clerkDriver.load(input.page);
     if (await input.clerkDriver.hasActiveSession(input.page)) return;
@@ -184,30 +190,12 @@ export async function waitForActiveClerkSession(
   });
 }
 
-/**
- * BUG-330: installs Clerk's testing-token route for the page's context, then
- * waits for Clerk. clerk.loaded() installs no route; only clerk.signIn() does,
- * so a restored session's Frontend API requests used to go without the token.
- */
-export async function loadClerkWithTestingToken<TPage>(
-  page: TPage,
-  clerkTesting: {
-    setupClerkTestingToken(input: { page: TPage }): Promise<void>;
-    loaded(input: { page: TPage }): Promise<void>;
-  },
-): Promise<void> {
-  await clerkTesting.setupClerkTestingToken({ page });
-  await clerkTesting.loaded({ page });
-}
-
 const playwrightClerkDriver: ClerkE2EDriver<Page> = {
   hasActiveSession: (page) =>
     page.evaluate(() => Boolean(window.Clerk?.session)),
-  load: (page) =>
-    loadClerkWithTestingToken(page, {
-      setupClerkTestingToken,
-      loaded: clerk.loaded,
-    }),
+  // clerk.loaded() installs no testing-token route; only clerk.signIn() does.
+  installTestingToken: (page) => setupClerkTestingToken({ page }),
+  load: (page) => clerk.loaded({ page }),
   signIn: ({ page, password, username }) =>
     clerk.signIn({
       page,
