@@ -199,6 +199,7 @@ The current `.github/dependabot.yml` intentionally separates concerns:
 - The security-only entries set `open-pull-requests-limit: 0` (PR #611). A Dependabot entry emits version updates as well as security updates by default, so without the limit these no-`target-branch` entries also opened ungrouped version PRs straight at `main` with default `increase` semantics (the #604/#605 leak; the #465 `actions/checkout` major merged that way). Zero disables version updates only: per GitHub's dependabot-options-reference, `open-pull-requests-limit` does not carry the security-updates badge, and security updates run under a separate internal limit of ten — GitHub's own security-updates guide recommends exactly this limit-0 + `applies-to: security-updates` + no-`target-branch` shape for "security updates only" entries.
 - `@types/node` semver-major updates are ignored until a deliberate runtime-alignment PR moves the repo to a new active LTS major.
 - `@biomejs/biome` is split from the catch-all npm group so lint contract changes arrive as their own reviewable PR.
+- `lint-staged` `>=17.6.0` is ignored for the `dev` version-updates entry, and `package.json` pins `~17.5.1`, while [DEBT-514](../debt/debt-514-lint-staged-shared-clone-staging-race.md) holds it. Security updates still open against `main`.
 
 These settings do not prove package contents are benign. They only shape Dependabot's queue.
 
