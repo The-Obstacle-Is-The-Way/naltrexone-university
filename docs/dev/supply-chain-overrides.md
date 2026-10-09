@@ -497,7 +497,7 @@ There are no current entries. The last three were the Solana mobile-wallet
 packages under `@clerk/ui` that declared `react-native`; they left the graph
 when Clerk UI 1.38 dropped its Solana adapters, and the extensions were
 removed with them
-([DEBT-506](../debt/debt-506-dependabot-alert-triage-2026-10.md)). Remove an
+([DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)). Remove an
 entry when its declaring package leaves the graph or upstream marks the peer
 optional itself; keep the `NEVER_INSTALLED` guard.
 
@@ -532,7 +532,7 @@ cannot load, the vulnerable functions sit on no import path the
 application can take, and forcing that two-major upgrade is not supported.
 The precedent ended upstream: Clerk UI 1.38 replaced its Solana adapters
 with Wallet Standard, which removed jayson and stream-json from the graph
-([DEBT-506](../debt/debt-506-dependabot-alert-triage-2026-10.md)), so the
+([DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)), so the
 alerts close by upgrade rather than dismissal. Zero open alerts does not mean
 the installed package was removed. CI does not run `pnpm audit`, so such a
 case gets no `ignoreGhsas` entry.
