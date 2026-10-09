@@ -6,6 +6,7 @@ import {
   runMergeReviewedPr,
 } from './merge-reviewed-pr';
 import {
+  commentPage,
   HEAD,
   MAIN,
   OLD_HEAD,
@@ -123,7 +124,7 @@ describe('feature merge decision', () => {
 
   it('refuses unresolved threads', () => {
     const pr = pullRequest();
-    pr.reviewThreads.nodes[0] = { isResolved: false };
+    pr.reviewThreads.nodes = [{ isResolved: false, comments: commentPage() }];
     expect(() => checkFeatureMerge(pr, [[review()]])).toThrow('unresolved');
   });
 
