@@ -156,6 +156,18 @@ describe('createGithubScheduledWorkflows', () => {
       undefined,
     ],
     [
+      'a workflow that is not an object',
+      json({ workflows: [42] }),
+      'unexpected_shape',
+      undefined,
+    ],
+    [
+      'a 200 that is not JSON',
+      new Response('<html>maintenance</html>', { status: 200 }),
+      'unexpected_shape',
+      undefined,
+    ],
+    [
       'a list cut off at its page size',
       json({ ...workflowsBody, total_count: 101 }),
       'unexpected_shape',

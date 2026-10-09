@@ -318,6 +318,37 @@ describe('alert path problems', () => {
   });
 
   // A revoked token or an API change must surface, never read as healthy.
+  // An answer in an unexpected shape is a changed API, not an outage: it is
+  // named as such, and the read is not retried.
+  it.each([
+    ['cron monitor', { monitor: { status: 200, body: 'not an object' } }],
+    [
+      'cron monitor',
+      {
+        monitor: { status: 200, body: monitor({ lastCheckIn: 'not a date' }) },
+      },
+    ],
+    [
+      'alerts workflow',
+      { workflow: { status: 200, body: workflow({ lastTriggered: 'never' }) } },
+    ],
+    [
+      'error usage',
+      {
+        usage: {
+          status: 200,
+          body: { groups: [{ by: { outcome: 'accepted' }, totals: {} }] },
+        },
+      },
+    ],
+  ] as const)('reports the %s in an unexpected shape', async (what, answer) => {
+    const { api } = sentry(answer);
+
+    expect(await findAlertPathProblems(api, NOW, 0)).toEqual([
+      `The watcher could not read the ${what} from Sentry: the answer was not in the shape it expects. Sentry's API may have changed.`,
+    ]);
+  });
+
   it('reports each read that fails, and still makes the others', async () => {
     const { api, reads } = sentry({
       monitor: { status: 401, body: null },
