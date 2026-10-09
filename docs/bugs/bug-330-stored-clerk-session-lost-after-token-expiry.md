@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; its blocker, DEBT-503 item 1, was released 2026-10-08
+**Status:** In Progress — built test-first in its pull request; still to show: a CI run that leaves no active E2E session, then two weeks of CI runs without a recurrence
 **Priority:** P3
 **Date:** 2026-10-07
 **Resolved:** —
@@ -65,10 +65,30 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 
 **Decided:** options 3 and then 4, test-first, in one PR after [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, which has daily impact.
 
+## Progress
+
+**2026-10-09: built in one pull request, test-first** (options 3 and 4).
+
+- **Teardown revokes the session.** `revokeClerkE2ESession` ends the stored session through the Backend API by its ID, which setup stores beside the state. Only an active session can be revoked; on any refusal it reads the session, and one that had already ended needs nothing. It replaces the browser sign-out that skipped a session it could not see.
+- **A failed restore fails fast.**
+  - The first failed restore records one error naming what the Frontend API answered, then `Clerk.status`: method, path, status, and for a refusal Clerk's error codes and trace ID.
+  - It never names a query string, header or message, so no token.
+  - A wait for Clerk that times out is recorded too, with its error.
+  - The error lives in `test-results/.auth/`, not in module state, because Playwright starts a new worker after a failed test. Every later signed-in test fails with it without loading a page. Setup and teardown clear it.
+- **The testing token reaches every test.**
+  - `clerkSetup()` moved to Playwright's `globalSetup`, which runs in the main process, so every worker inherits the token.
+  - Every page that loads Clerk installs the token's route first, through `loadClerkWithTestingToken`.
+  - It runs in the restore step all 20 signed-in spec files already call, rather than in a new fixture, so no spec changes. `@clerk/testing` registers the route once per browser context.
+- **Preflight's deadline.** `fetchClerkWithRetry` takes an optional deadline: no attempt runs, and no retry waits, past it. Preflight's two Clerk calls share one 30-second deadline, inside setup's 60-second budget.
+- **The server's output is shown, redacted.**
+  - `webServer.stdout` is `pipe`, and Playwright's runner passes everything it writes, the `[WebServer]` lines included, through the E2E log redaction.
+  - The redaction runs in the runner rather than the server process, so the server loads nothing extra.
+  - A credential split across two chunks of the server's output would pass. The runner writes whole lines, and the server's chunks are its own writes.
+
 ## Verification
 
-- [ ] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token.
-- [ ] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session.
-- [ ] Test contexts carry the testing token, shown by a helper test of the fixture.
-- [ ] A helper test shows preflight's Clerk calls, timing out on every attempt, fail with the credential error inside setup's budget.
+- [x] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token. *2026-10-09: `tests/e2e/helpers/clerk-auth.test.ts`.*
+- [ ] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session. *2026-10-09: the helper test is `clerk-session-revocation.test.ts`; the CI run remains.*
+- [x] Test contexts carry the testing token, shown by a helper test of the fixture. *2026-10-09: a helper test of the restore step's load (`loadClerkWithTestingToken`), which stands in for the fixture, and a config test that the token is fetched in `globalSetup`.*
+- [x] A helper test shows preflight's Clerk calls, timing out on every attempt, fail with the credential error inside setup's budget. *2026-10-09: `credential-health-check.test.ts`, on fake timers.*
 - [ ] No recurrence across the first two weeks of CI runs after the fix.
