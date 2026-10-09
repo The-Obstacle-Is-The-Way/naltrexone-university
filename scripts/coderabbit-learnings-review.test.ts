@@ -209,4 +209,57 @@ describe('weekly learnings issue (DEBT-515)', () => {
     );
     expect(gh).toHaveBeenCalledTimes(2);
   });
+
+  it('opens the issue through gh on a scheduled run', async () => {
+    gh.mockReturnValueOnce(JSON.stringify([[fact]]))
+      .mockReturnValueOnce(JSON.stringify([]))
+      .mockReturnValueOnce(JSON.stringify([]))
+      .mockReturnValueOnce('');
+    const log = vi.fn();
+
+    expect(await runFromCommandLine([], { log, error: vi.fn() }, NOW)).toBe(0);
+    expect(gh.mock.calls[3]?.[1]).toEqual(
+      expect.arrayContaining([
+        'issue',
+        'create',
+        '--title',
+        LEARNINGS_REVIEW_ISSUE_TITLE,
+      ]),
+    );
+    expect(log).toHaveBeenCalledWith(
+      'CodeRabbit learnings recorded in the past week: 1, 0 telling it to stop raising something (created)',
+    );
+  });
+
+  it('exits nonzero without detail when GitHub cannot be read', async () => {
+    gh.mockImplementationOnce(() => {
+      throw new Error('HTTP 403 with a token in the message');
+    });
+    const error = vi.fn();
+
+    expect(await runFromCommandLine([], { log: vi.fn(), error }, NOW)).toBe(1);
+    expect(error).toHaveBeenCalledWith(
+      'CodeRabbit learnings review failed; inspect GitHub comment and issue access.',
+    );
+  });
+
+  it('keeps a busy week inside GitHub’s body limit, flagged learnings first, and counts what it leaves out', async () => {
+    const replies = Array.from({ length: 400 }, (_, index) =>
+      comment(
+        `${PR}/${2000 + index}#issuecomment-${index}`,
+        '2026-10-19T10:00:00Z',
+        recorded(
+          `${index % 4 === 0 ? 'Do not flag this pattern. ' : ''}${'A long learning about the code. '.repeat(12)}`,
+        ),
+      ),
+    );
+    const issues = new MemoryIssues();
+
+    await reportLearnings(learningReplies([replies], [], NOW), issues);
+
+    const body = issues.issues[0]?.body ?? '';
+    expect(body.length).toBeLessThanOrEqual(60_000);
+    expect(body).toMatch(/…and \d+ more; see the Learnings list\./);
+    expect(body).toContain('Do not flag this pattern.');
+  });
 });
