@@ -76,6 +76,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 - **Evidence.** `src/adapters/shared/circuit-breaker.ts:62-76` counts every thrown error, and one breaker is shared per instance (`stripe-retry.ts:11-16,43`). Five consecutive client errors fail every Stripe call in that instance for 60 seconds, Checkout included.
 - **Decided.** Count only transient failures: network errors, 5xx and 429.
+- **Done 2026-10-09 (quick-wins pull request).** `CircuitBreaker` takes a rule for which errors count. Any other error is the service answering, so it closes the circuit and restarts the count, in a half-open probe too. The Stripe breaker counts `isStripeOutage`: network errors, 5xx and 429, plus the SDK's `StripeConnectionError`, which carries neither a code nor a status and would otherwise have stopped counting. Test-first; four mutation checks each fail a test.
 
 ### 7. Stripe settings not recorded in the repository (P3, owner)
 

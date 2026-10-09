@@ -8,6 +8,12 @@ export type CircuitBreakerOptions = {
   resetTimeoutMs: number;
   openErrorCode: ApplicationErrorCode;
   openErrorMessage?: string;
+  /**
+   * Which errors mean the service is failing. Any other error is the service
+   * answering, so it counts as a success: it closes the circuit and restarts
+   * the count. Every error counts by default.
+   */
+  isFailure?: (error: unknown) => boolean;
 };
 
 type CircuitBreakerState = 'closed' | 'open' | 'half-open';
@@ -65,6 +71,10 @@ export class CircuitBreaker {
       this.close();
       return result;
     } catch (error) {
+      if (!this.countsAsFailure(error)) {
+        this.close();
+        throw error;
+      }
       this.consecutiveFailures += 1;
 
       if (this.consecutiveFailures >= this.options.failureThreshold) {
@@ -87,9 +97,14 @@ export class CircuitBreaker {
       this.close();
       return result;
     } catch (error) {
-      this.open();
+      if (this.countsAsFailure(error)) this.open();
+      else this.close();
       throw error;
     }
+  }
+
+  private countsAsFailure(error: unknown): boolean {
+    return this.options.isFailure?.(error) ?? true;
   }
 
   private isResetTimeoutElapsed(): boolean {
