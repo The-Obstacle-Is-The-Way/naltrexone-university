@@ -189,6 +189,29 @@ describe('sendOperationalAlertEvent', () => {
     expect(events[0]).not.toHaveProperty('extra');
   });
 
+  // DEBT-505: the drill's email must read as a drill, while its level and
+  // tags stay those of a real alert, so the same workflow sends it.
+  it('titles a drill as one needing no action, with the level and tags of a real alert', async () => {
+    sent = [];
+
+    await sendOperationalAlertEvent({
+      kind: 'operational_alert_drill',
+      count: 1,
+      sharedCooldown: 'held',
+      window: '2026-10-08T06:00:00.000Z',
+    });
+
+    expect(sentEvents()).toEqual([
+      expect.objectContaining({
+        level: 'error',
+        message: 'Operational alert drill: no action needed',
+        tags: expect.objectContaining({
+          'alert.kind': 'operational_alert_drill',
+        }),
+      }),
+    ]);
+  });
+
   // Sentry emails on a new issue, not on a later event in one still open. A
   // new issue per kind and cooldown window makes every episode notify.
   it('opens a new issue for each kind and cooldown window, whatever the cooldown tag', async () => {
