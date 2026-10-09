@@ -159,6 +159,12 @@ advisories.
   `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
   advisories of every repository behind `pnpm-lock.yaml`, 465 on 2026-10-08,
   and opens one issue per advisory published since 2026-10-01.
+- GitHub starts this repository's scheduled runs hours late: the daily
+  Stripe Checkout smoke started 3.6 to 9.2 hours late over the 30 days to
+  2026-10-08, 5.0 at the median. So a new advisory can wait about half a day, longer if GitHub
+  drops a run. Two delayed runs can also start in the same hour, about 960
+  requests; a read over the limit fails the run, which names what it could
+  not read.
 - Direct dependencies use the `DEPENDENCY_REPOSITORIES` map, which gives every
   dependency and devDependency in `package.json` the repository named in its
   npm `repository` field, or `null` when it names none (today only

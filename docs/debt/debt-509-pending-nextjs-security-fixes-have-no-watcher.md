@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — rule decided; watcher ran on `main` (2026-10-08) and now covers every repository behind `pnpm-lock.yaml`; waiting for its first scheduled run, `vite` 8.3.3 and the two pending Next.js fixes
+**Status:** Open — rule decided; watcher ran on `main` (2026-10-08) and now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -74,7 +74,7 @@ For the two pending Next.js fixes:
 
 **Local dry run (2026-10-07).** The real advisory and issue reads, with issue creation replaced by a recorder, read all 41 repositories without error and would open exactly the three Vite issues. The first hosted run on `main` should therefore open those three; triage them as above. Under AGENTS.md's evidence rule, the watcher is proven only after that hosted run.
 
-**First hosted run (2026-10-08).** Run 37817779642, dispatched on `main` at 17:35:43Z, succeeded in 31 seconds and opened exactly the three Vite issues, #1432–#1434, unassigned. Each was triaged as not urgent: `vite` is a devDependency used only by tests, and `vite-plus` is not installed. All three were closed at 17:36Z. The scheduled run due at 18:23Z did not start, so the first scheduled run is still to be confirmed.
+**First hosted run (2026-10-08).** Run 37817779642, dispatched on `main` at 17:35:43Z, succeeded in 31 seconds and opened exactly the three Vite issues, #1432–#1434, unassigned. Each was triaged as not urgent: `vite` is a devDependency used only by tests, and `vite-plus` is not installed. All three were closed at 17:36Z. GitHub can start a scheduled run late, or drop it, under load ([GitHub docs](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)). Here the delay is hours: in the 30 days to 2026-10-08, the daily 09:23Z Stripe Checkout smoke started 3.6 to 9.2 hours late, 5.0 at the median. The watcher, due at 18:23Z, 00:23Z, 06:23Z and 12:23Z, started at 23:27:53Z (run 37859575180) and 06:22:35Z (run 37893200724), and had not started again by 13:01Z on 2026-10-09. GitHub does not record which slot a run belongs to. Both runs succeeded in about 31 seconds and raised nothing. So a new advisory can wait about half a day before a run reads it, longer if GitHub drops a run.
 
 **Local dry run with indirect dependencies (2026-10-08).** Real registry, advisory and issue reads, with issue creation replaced by a recorder, resolved all 976 locked packages in 12 seconds. The run read 464 of the 465 repositories in 170 seconds and would open no issue: the Vite issues already exist, and no indirect repository has published a critical or high advisory since 2026-10-01. Not watched: `client-only` and `eyes`, which name no repository, and `commondir`'s deleted `substack/node-commondir`.
 
