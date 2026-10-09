@@ -421,7 +421,8 @@ export type IndirectRepositories = {
 
 // The repositories behind the given packages that are not already watched,
 // compared case-insensitively as GitHub does. Manifests are read a few at a
-// time, and one that cannot be read does not stop the others.
+// time, and one that cannot be read does not stop the others. A failed read
+// is tried once more, so a passing registry error does not fail the run.
 export async function indirectRepositories(
   packages: readonly LockedPackage[],
   watched: readonly string[],
@@ -435,13 +436,14 @@ export async function indirectRepositories(
     for (let index = next++; index < packages.length; index = next++) {
       const entry = packages[index];
       if (!entry) continue;
-      try {
-        fields[index] = {
-          field: await read(entry.name, entry.version),
-          failed: false,
-        };
-      } catch {
-        fields[index] = { field: undefined, failed: true };
+      fields[index] = { field: undefined, failed: true };
+      for (let attempt = 0; attempt < 2 && fields[index]?.failed; attempt++) {
+        try {
+          fields[index] = {
+            field: await read(entry.name, entry.version),
+            failed: false,
+          };
+        } catch {}
       }
     }
   };

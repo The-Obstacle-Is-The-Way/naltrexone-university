@@ -190,8 +190,10 @@ advisories.
 - A package that names no GitHub repository, or whose repository was deleted,
   is listed as not watched in the run's log without failing it. On 2026-10-08
   those were `client-only` and `eyes`, and `commondir`'s
-  `substack/node-commondir`. A manifest or repository that cannot be read
-  fails the run, as does an indirect dependency's.
+  `substack/node-commondir`. A manifest that still cannot be read on a
+  second try fails the run, as does a repository that cannot be read, an
+  indirect dependency's included. The second try keeps a passing registry
+  error from failing a run.
 - One unreadable repository, or one issue that cannot be opened, does not
   stop the others: the run raises what it can, then fails and names what it
   could not. Only a failure to list existing issues fails the run outright,

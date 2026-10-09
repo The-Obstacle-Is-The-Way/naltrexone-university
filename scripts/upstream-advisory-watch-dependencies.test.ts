@@ -223,6 +223,35 @@ describe('repositories reached through indirect dependencies', () => {
     });
   });
 
+  it('reads a manifest once more before calling it unreadable', async () => {
+    const reads: string[] = [];
+    let failedOnce = false;
+    expect(
+      await indirectRepositories(
+        [
+          { name: 'undici', version: '7.29.1' },
+          { name: 'fast-uri', version: '3.1.8' },
+        ],
+        [],
+        async (name, version) => {
+          reads.push(`${name}@${version}`);
+          if (name === 'fast-uri') throw new Error('registry unavailable');
+          if (!failedOnce) {
+            failedOnce = true;
+            throw new Error('connection reset');
+          }
+          return 'https://github.com/nodejs/undici';
+        },
+      ),
+    ).toEqual({
+      repositories: ['nodejs/undici'],
+      unwatched: [],
+      unreadable: ['fast-uri@3.1.8'],
+    });
+    expect(reads.filter((read) => read === 'undici@7.29.1')).toHaveLength(2);
+    expect(reads.filter((read) => read === 'fast-uri@3.1.8')).toHaveLength(2);
+  });
+
   it('reads a bounded number of manifests at a time', async () => {
     let inFlight = 0;
     let most = 0;
