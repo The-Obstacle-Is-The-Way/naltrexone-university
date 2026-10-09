@@ -17,7 +17,7 @@ const PINNED_SETUP_NODE =
 const PINNED_UPLOAD_ARTIFACT =
   'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
 const PINNED_POSTGRES_16 =
-  'postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
+  'mirror.gcr.io/library/postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
 // Every workflow, so a new one cannot miss the action-pin check.
 const WORKFLOW_PATHS = globSync('.github/workflows/*.yml').sort();
 
