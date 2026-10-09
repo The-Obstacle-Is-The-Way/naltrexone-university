@@ -406,6 +406,26 @@ describe('requireStoredClerkE2ESession', () => {
     expect(page.visitedUrls).toEqual([]);
   });
 
+  // A test project sets no page timeouts, so without its own deadline a hung
+  // restore ran to the test timeout, after which Playwright had closed the
+  // page and nothing could be read.
+  it('records a restore that does not finish within its deadline, with the answers so far', async () => {
+    const clerkDriver = new FakeClerkDriver(true);
+    clerkDriver.load = () => new Promise<void>(() => {});
+    const failures = new MemoryRestoreFailures();
+
+    await expect(
+      requireStoredClerkE2ESession({
+        clerkDriver,
+        page: new FakeClerkPage(),
+        failures,
+        describeFailure,
+        deadlineMs: 50,
+      }),
+    ).rejects.toThrow('The restore did not finish within 50 ms.');
+    expect(failures.recorded).toContain('GET /v1/client 401');
+  });
+
   it('records a restore whose wait for Clerk failed, with that error', async () => {
     const clerkDriver = new FakeClerkDriver(true);
     clerkDriver.load = async () => {
@@ -467,6 +487,17 @@ describe('describeFrontendApiAnswer', () => {
         body: 'Too Many Requests',
       }),
     ).toBe('POST /v1/client/sessions/x/tokens 429');
+  });
+
+  it('names Clerk IDs in a path by their kind only, as teardown names statuses only', () => {
+    expect(
+      describeFrontendApiAnswer({
+        method: 'POST',
+        url: 'https://clerk.example.test/v1/client/sessions/sess_2abcDEF345ghi/tokens',
+        status: 200,
+        body: undefined,
+      }),
+    ).toBe('POST /v1/client/sessions/sess_…/tokens 200');
   });
 });
 

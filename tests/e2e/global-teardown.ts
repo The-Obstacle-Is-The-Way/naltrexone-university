@@ -24,7 +24,11 @@ teardown('global teardown', async () => {
       await withTimeout(
         revokeClerkE2ESession({ sessionId, secretKey }),
         CLERK_SESSION_DEADLINES.signOutMs,
-      );
+      ).catch((error: unknown) => {
+        throw new Error('Revoking the stored Clerk E2E session failed', {
+          cause: error,
+        });
+      });
     });
   } finally {
     await rm(E2E_CLERK_AUTH_STATE_PATH, { force: true });

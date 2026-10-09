@@ -58,6 +58,8 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
    - Fail the remaining signed-in tests at once after the first failed restore, with one clear error.
    - Have teardown revoke the stored session through the Backend API by its session ID, instead of signing out through FAPI.
    - Give preflight's Clerk calls one deadline that ends inside setup's 60-second budget, so a Clerk outage fails with the credential error rather than Playwright's setup timeout. Today each call can spend three 15-second attempts and up to about 10 seconds of waits, about 110 seconds for preflight's two.
+
+     *Corrected 2026-10-09 (pre-review): that figure holds for slow 429 or 5xx answers. A Clerk API that never answers ends each call at its first 15-second timeout, since an aborted request is not retried.*
 4. **Carry the testing token into every test context** (decided, second). Run `clerkSetup()` in Playwright's `globalSetup`, so workers inherit the token, and install the testing-token route in each signed-in context through a fixture. This matches Clerk's testing design.
 5. **A live "keeper" context that refreshes the session** and re-exports its state before each signed-in test. Revisit only if a failure recurs with options 3 and 4 in place.
 
@@ -73,17 +75,19 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 - **A failed restore fails fast.**
   - The first failed restore records one error naming what the Frontend API answered, then `Clerk.status`: method, path, status, and for a refusal Clerk's error codes and trace ID.
   - It never names a query string, header or message, so no token.
-  - A wait for Clerk that times out is recorded too, with its error.
+  - A restore that does not finish within 20 seconds is recorded too, with the answers seen so far. Test projects set no page timeouts, so without that deadline a hung restore ran to the test timeout, and by then the page was closed and nothing could be read.
   - The error lives in `test-results/.auth/`, not in module state, because Playwright starts a new worker after a failed test. Every later signed-in test fails with it without loading a page. Setup and teardown clear it.
 - **The testing token reaches every test.**
-  - `clerkSetup()` moved to Playwright's `globalSetup`, which runs in the main process, so every worker inherits the token.
+  - `clerkSetup()` moved to Playwright's `globalSetup`, which runs in the main process, so every worker inherits the token. It has a 60-second deadline, because `@clerk/backend`'s request has none.
   - Every flow that loads Clerk installs the token's route before its first navigation, because Clerk's script calls the Frontend API while the page is still loading. The flows are restore, sign-in and a failed attempt's release.
-  - It runs in the restore step all 20 signed-in spec files already call, rather than in a new fixture, so no spec changes. `@clerk/testing` registers the route once per browser context.
+  - **Its limit:** the token cannot reach Clerk's handshake. Once the stored token has expired, the app's middleware redirects the page to `/v1/client/handshake`, and Playwright continues a redirect without calling any route. If the incident happened in that hop, this option cannot prevent it. The diagnostics still name it (`GET /v1/client/handshake 307`), because a redirect raises a response event.
+  - It runs in the restore step all 19 signed-in spec files already call, rather than in a new fixture, so no spec changes. `@clerk/testing` registers the route once per browser context.
 - **Preflight's deadline.** `fetchClerkWithRetry` takes an optional deadline: no attempt runs, and no retry waits, past it. Preflight's two Clerk calls share one 30-second deadline, inside setup's 60-second budget.
+- **Diagnostics name IDs by kind.** A Clerk ID in a Frontend API path appears as `sess_…`, as teardown names statuses only.
 - **The server's output is shown, redacted.**
   - `webServer.stdout` is `pipe`, and Playwright's runner passes everything it writes, the `[WebServer]` lines included, through the E2E log redaction.
   - The redaction runs in the runner rather than the server process, so the server loads nothing extra.
-  - A credential split across two chunks of the server's output would pass. The runner writes whole lines, and the server's chunks are its own writes.
+  - A credential split across two reads of the server's output would pass. Playwright passes each pipe read on as it arrives, prefixing lines without waiting for them to end, so a token split at a read boundary appears in two pieces. That needs a burst of over about 64 KiB or a partial write.
 
 ## Verification
 

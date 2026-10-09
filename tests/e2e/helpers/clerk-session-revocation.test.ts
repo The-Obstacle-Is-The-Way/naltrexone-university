@@ -81,6 +81,21 @@ describe('revokeClerkE2ESession', () => {
     );
   });
 
+  it('fails when a session still pending was not revoked, since it is live', async () => {
+    const { fetchClerk } = clerkApi({
+      [`POST ${SESSION}/revoke`]: json({ errors: [] }, 400),
+      [`GET ${SESSION}`]: json({ id: 'sess_e2e', status: 'pending' }),
+    });
+
+    await expect(
+      revokeClerkE2ESession({
+        sessionId: 'sess_e2e',
+        secretKey: 'sk_test_key',
+        fetchClerk,
+      }),
+    ).rejects.toThrow('the session is still pending');
+  });
+
   it('fails when neither the revocation nor the session read is answered', async () => {
     const { fetchClerk } = clerkApi({});
 

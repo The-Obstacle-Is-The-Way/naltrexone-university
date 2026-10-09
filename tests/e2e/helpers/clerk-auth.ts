@@ -1,8 +1,8 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright';
-import type { Page } from '@playwright/test';
-import { withTimeout } from '@/lib/with-timeout';
+import type { Page, Response } from '@playwright/test';
+import { TimeoutError, withTimeout } from '@/lib/with-timeout';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
   E2E_CLERK_RESTORE_FAILURE_PATH,
@@ -133,18 +133,26 @@ export async function requireStoredClerkE2ESession<
   page: TPage;
   failures: RestoreFailures;
   describeFailure(): Promise<string>;
+  deadlineMs?: number;
 }): Promise<void> {
   const recorded = await input.failures.read();
   if (recorded) throw new Error(recorded);
 
-  let cause = '';
-  try {
+  const deadlineMs = input.deadlineMs ?? CLERK_SESSION_DEADLINES.restoreMs;
+  const restore = async () => {
     await input.clerkDriver.installTestingToken(input.page);
     await input.page.goto('/');
     await input.clerkDriver.load(input.page);
-    if (await input.clerkDriver.hasActiveSession(input.page)) return;
+    return input.clerkDriver.hasActiveSession(input.page);
+  };
+  let cause = '';
+  try {
+    if (await withTimeout(restore(), deadlineMs)) return;
   } catch (error) {
-    cause = ` ${redactSensitiveE2EText(error instanceof Error ? error.message : String(error))}`;
+    cause =
+      error instanceof TimeoutError
+        ? ` The restore did not finish within ${deadlineMs} ms.`
+        : ` ${redactSensitiveE2EText(error instanceof Error ? error.message : String(error))}`;
   }
   const message = `${RESTORE_FAILED}.${cause} ${await input.describeFailure()}`;
   await input.failures.write(message);
@@ -166,7 +174,12 @@ export function describeFrontendApiAnswer(answer: {
   status: number;
   body: unknown;
 }): string {
-  let text = `${answer.method} ${new URL(answer.url).pathname} ${answer.status}`;
+  // A Clerk ID in the path is named by its kind only.
+  const path = new URL(answer.url).pathname.replace(
+    /\/([a-z]+)_[A-Za-z0-9]{8,}/g,
+    '/$1_…',
+  );
+  let text = `${answer.method} ${path} ${answer.status}`;
   if (answer.status < 400 || !isRecord(answer.body)) return text;
   const { errors, clerk_trace_id: traceId } = answer.body;
   if (Array.isArray(errors) && errors.length > 0) {
@@ -224,15 +237,20 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   // setup is now the only session creator; test cases fail closed if their
   // explicitly configured storage state is missing or invalid.
   const frontendApi = watchFrontendApi(page);
-  await requireStoredClerkE2ESession({
-    clerkDriver: playwrightClerkDriver,
-    page,
-    failures: restoreFailures,
-    describeFailure: async () =>
-      withTimeout(frontendApi.describe(), DIAGNOSIS_TIMEOUT_MS).catch(
-        () => 'Frontend API answers could not be read in time.',
-      ),
-  });
+  try {
+    await requireStoredClerkE2ESession({
+      clerkDriver: playwrightClerkDriver,
+      page,
+      failures: restoreFailures,
+      describeFailure: async () =>
+        withTimeout(frontendApi.describe(), DIAGNOSIS_TIMEOUT_MS).catch(
+          () => 'Frontend API answers could not be read in time.',
+        ),
+    });
+  } finally {
+    // The test's own Frontend API traffic is not read.
+    frontendApi.stop();
+  }
 }
 
 const DIAGNOSIS_TIMEOUT_MS = 5_000;
@@ -249,10 +267,13 @@ const restoreFailures: RestoreFailures = {
 
 // Records the Frontend API's answers from the page's first request on, since
 // Clerk's script calls it while the page is still loading.
-function watchFrontendApi(page: Page): { describe(): Promise<string> } {
+function watchFrontendApi(page: Page): {
+  describe(): Promise<string>;
+  stop(): void;
+} {
   const host = process.env.CLERK_FAPI;
   const answers: Promise<string>[] = [];
-  page.on('response', (response) => {
+  const onResponse = (response: Response) => {
     const url = new URL(response.url());
     if (url.host !== host || !url.pathname.startsWith('/v1/')) return;
     answers.push(
@@ -268,8 +289,12 @@ function watchFrontendApi(page: Page): { describe(): Promise<string> } {
           }),
         ),
     );
-  });
+  };
+  page.on('response', onResponse);
   return {
+    stop: () => {
+      page.off('response', onResponse);
+    },
     describe: async () => {
       const seen = await Promise.all(answers);
       const status = await page

@@ -7,7 +7,15 @@
 export const CLERK_SESSION_DEADLINES = {
   signInMs: 30_000,
   signOutMs: 20_000,
+  // BUG-330: a test restoring the stored session. Test projects set no page
+  // timeouts, so without it a hung restore ran to the 30-second test timeout.
+  restoreMs: 20_000,
 } as const;
+
+// BUG-330: Clerk's testing token, fetched in Playwright's global setup.
+// @clerk/backend's request has no time limit, and clerkSetup retries for over
+// half a minute.
+export const CLERK_TESTING_SETUP_DEADLINE_MS = 60_000;
 
 // The setup test's timeout until the session budget is reserved: the
 // credential health check, Stripe customer sweep, seed and reset, which take

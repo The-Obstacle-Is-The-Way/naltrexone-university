@@ -552,23 +552,34 @@ describe('runE2ECredentialHealthCheck', () => {
   });
 });
 
-// BUG-330: preflight's Clerk calls share one deadline inside setup's budget,
-// so a Clerk API that never answers fails with the credential error rather
-// than Playwright's setup timeout.
-describe('runE2ECredentialHealthCheck against a Clerk API that never answers', () => {
+// BUG-330: preflight's Clerk calls share one deadline inside setup's budget.
+// Each answer below comes after 14 seconds and asks for a 7-second wait, so
+// the user lookup alone held preflight 52 seconds before the deadline.
+describe('runE2ECredentialHealthCheck against a slow, rate-limited Clerk API', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it("fails with the Clerk credential error inside setup's budget", async () => {
+  it('fails with the Clerk credential error within the preflight deadline', async () => {
     vi.useFakeTimers();
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       async (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () =>
-            reject(new DOMException('aborted', 'AbortError')),
+        new Promise<Response>((resolve, reject) => {
+          const answer = setTimeout(
+            () =>
+              resolve(
+                new Response('slow down', {
+                  status: 429,
+                  headers: { 'retry-after': '7' },
+                }),
+              ),
+            14_000,
           );
+          init?.signal?.addEventListener('abort', () => {
+            clearTimeout(answer);
+            reject(new DOMException('aborted', 'AbortError'));
+          });
         }),
     );
     const { resolveClerkUserId, verifyClerkPassword, ...notClerk } =
@@ -578,13 +589,15 @@ describe('runE2ECredentialHealthCheck against a Clerk API that never answers', (
     const outcome = runE2ECredentialHealthCheck({
       env: createEnv(),
       services: notClerk,
-    }).catch((error: unknown) => error);
+    }).catch((error: unknown) => ({ message: String(error), at: Date.now() }));
     await vi.advanceTimersByTimeAsync(SETUP_PREPARATION_BUDGET_MS);
-    const error = await outcome;
+    const settled = await outcome;
 
-    expect(String(error)).toContain('E2E_PREFLIGHT:CLERK_API_UNAVAILABLE');
-    expect(Date.now() - startedAt).toBeLessThanOrEqual(
-      SETUP_PREPARATION_BUDGET_MS,
+    expect(settled).toMatchObject({
+      message: expect.stringContaining('E2E_PREFLIGHT:CLERK_API_UNAVAILABLE'),
+    });
+    expect((settled as { at: number }).at - startedAt).toBeLessThanOrEqual(
+      CLERK_PREFLIGHT_DEADLINE_MS,
     );
     expect(CLERK_PREFLIGHT_DEADLINE_MS).toBeLessThan(
       SETUP_PREPARATION_BUDGET_MS,

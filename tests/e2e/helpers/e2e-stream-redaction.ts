@@ -16,7 +16,8 @@ const redactingStreams = new WeakSet<E2EWritableStream>();
  * BUG-330: Playwright's runner shows the E2E web server's output, which can
  * carry Clerk's development token and Stripe IDs, and CI logs are public. Each
  * chunk the stream writes passes the E2E log redaction first. A credential
- * split across two chunks would pass; the runner writes whole lines.
+ * split across two chunks would pass: Playwright passes on each read of the
+ * server's output as it arrives, so that needs a read boundary inside a token.
  */
 export function installE2EStreamRedaction(stream: E2EWritableStream): void {
   if (redactingStreams.has(stream)) return;

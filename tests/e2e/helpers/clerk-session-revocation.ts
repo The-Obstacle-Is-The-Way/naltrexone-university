@@ -33,8 +33,9 @@ export async function revokeClerkE2ESession(input: {
     );
   }
   const { status } = (await read.json()) as { status?: unknown };
-  if (status !== 'active') return 'already_ended';
+  // A pending session is live too, awaiting a second factor.
+  if (status !== 'active' && status !== 'pending') return 'already_ended';
   throw new Error(
-    `Clerk did not revoke the stored E2E session: it answered ${revocation.status}, and the session is still active`,
+    `Clerk did not revoke the stored E2E session: it answered ${revocation.status}, and the session is still ${status}`,
   );
 }

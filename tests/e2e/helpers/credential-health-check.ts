@@ -218,9 +218,10 @@ type ClerkRetryClock = {
 };
 
 // BUG-330: preflight's Clerk calls share one deadline, which ends inside
-// setup's budget, so a Clerk API that never answers fails with the credential
-// error rather than Playwright's setup timeout. Without it each call could
-// spend three 15-second attempts and up to 10 seconds of waits.
+// setup's budget, so a slow or rate-limited Clerk API fails with the
+// credential error rather than Playwright's setup timeout. Without it, slow
+// 429 or 5xx answers could hold each call for three 15-second attempts and up
+// to 10 seconds of waits.
 export const CLERK_PREFLIGHT_DEADLINE_MS = 30_000;
 
 class ClerkDeadlinePassed extends Error {
