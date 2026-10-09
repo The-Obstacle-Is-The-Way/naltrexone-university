@@ -16,7 +16,7 @@ CodeRabbit turns a chat reply into a **learning**, a rule it applies to every la
 
 ## Evidence
 
-- **Volume.** From 2026-10-08 to 2026-10-09, CodeRabbit recorded 22 learnings from agents' chats on eight pull requests in this repository and `addiction-final-2026`. Ten were recorded on 2026-10-09.
+- **Volume.** From 2026-10-08 to 21:00Z on 2026-10-09, CodeRabbit recorded 22 learnings from agents' chats on eight pull requests in this repository and `addiction-final-2026`. Ten were recorded on 2026-10-09.
 - **Who taught them.** Every reply CodeRabbit learned from was posted by `The-Obstacle-Is-The-Way`, the owner's account, which the agent sessions use. Nothing distinguishes the owner's own replies from theirs.
 - **Applied at once.** `.coderabbit.yaml` set no `knowledge_base.learnings.approval_delay`, and the default of 0 applies a learning immediately. `scope: auto` keeps this public repository's learnings to this repository.
 - **One asked for by the PR under review.** On #1438, an agent asked CodeRabbit to "record a learning" that removing post-closure notes from archived records restores their frozen text ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6086302277)). That widened what CodeRabbit lets through in frozen history, across every later review.
