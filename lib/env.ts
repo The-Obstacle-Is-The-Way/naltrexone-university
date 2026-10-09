@@ -214,6 +214,12 @@ function validateEnv(): Env {
     logInvalidEnv({ NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ['Required'] });
     throw new Error('Invalid environment variables');
   }
+  // "Add a card" signs the trial's consent state with it, and the setup
+  // webhook checks that signature (DEBT-502 item 6).
+  if (isVercelDeploy && !parsed.data.CONSENT_STATE_SECRET) {
+    logInvalidEnv({ CONSENT_STATE_SECRET: ['Required'] });
+    throw new Error('Invalid environment variables');
+  }
 
   if (isProductionRuntime && skipClerk) {
     throw new Error('NEXT_PUBLIC_SKIP_CLERK must not be true in production');

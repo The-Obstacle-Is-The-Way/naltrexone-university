@@ -6,6 +6,8 @@ import {
 
 // A 32-byte base64 key, the shape Next.js reads.
 const ACTION_KEY = Buffer.alloc(32, 7).toString('base64');
+// 64 hex characters, the shape .env.example documents.
+const CONSENT_SECRET = Buffer.alloc(32, 9).toString('hex');
 
 vi.mock('server-only', () => ({}));
 
@@ -149,6 +151,7 @@ describe('env', () => {
     process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
 
     process.env.VERCEL_ENV = 'production';
+    process.env.CONSENT_STATE_SECRET = CONSENT_SECRET;
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 
     process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
@@ -162,6 +165,7 @@ describe('env', () => {
 
   it('allows NEXT_PUBLIC_SKIP_CLERK=true on Vercel preview', async () => {
     process.env.VERCEL_ENV = 'preview';
+    process.env.CONSENT_STATE_SECRET = CONSENT_SECRET;
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -208,6 +212,7 @@ describe('env', () => {
 
   it('allows missing CLERK_WEBHOOK_SIGNING_SECRET when VERCEL_ENV is not production', async () => {
     process.env.VERCEL_ENV = 'preview';
+    process.env.CONSENT_STATE_SECRET = CONSENT_SECRET;
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -233,6 +238,7 @@ describe('env', () => {
 
   it('allows missing CRON_SECRET on Vercel production (validated at route level, not startup)', async () => {
     process.env.VERCEL_ENV = 'production';
+    process.env.CONSENT_STATE_SECRET = CONSENT_SECRET;
 
     process.env.DATABASE_URL =
       'postgresql://postgres:postgres@localhost:5432/db';
@@ -270,6 +276,7 @@ describe('env', () => {
     process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
 
     process.env.VERCEL_ENV = 'production';
+    process.env.CONSENT_STATE_SECRET = CONSENT_SECRET;
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.CLERK_SECRET_KEY = 'sk_test_clerk_dummy';
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
@@ -374,6 +381,8 @@ describe('env', () => {
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_clerk_dummy';
     process.env.CLERK_WEBHOOK_SIGNING_SECRET = 'whsec_clerk_dummy';
     process.env.VERCEL_ENV = vercelEnv;
+    process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = ACTION_KEY;
+    process.env.CONSENT_STATE_SECRET = CONSENT_SECRET;
   }
 
   it.each(['production', 'preview'] as const)(
@@ -400,6 +409,35 @@ describe('env', () => {
       await expect(import('@/lib/env')).resolves.toHaveProperty('env');
     },
   );
+
+  // DEBT-502 item 6: "Add a card" signs the trial's consent state with this
+  // secret and the setup webhook checks it, so a Vercel build without it
+  // fails rather than ship a card form that always errors.
+  it.each(['production', 'preview'] as const)(
+    'requires CONSENT_STATE_SECRET on a Vercel %s build',
+    async (vercelEnv) => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      setValidVercelEnv(vercelEnv);
+      delete process.env.CONSENT_STATE_SECRET;
+      vi.resetModules();
+
+      await expect(import('@/lib/env')).rejects.toThrow(
+        'Invalid environment variables',
+      );
+      expect(errorSpy.mock.calls[0]?.[1]).toEqual({
+        CONSENT_STATE_SECRET: ['Required'],
+      });
+    },
+  );
+
+  it('does not require CONSENT_STATE_SECRET off Vercel', async () => {
+    setValidVercelEnv('production');
+    delete process.env.VERCEL_ENV;
+    delete process.env.CONSENT_STATE_SECRET;
+    vi.resetModules();
+
+    await expect(import('@/lib/env')).resolves.toHaveProperty('env');
+  });
 
   it('does not require NEXT_SERVER_ACTIONS_ENCRYPTION_KEY off Vercel', async () => {
     setValidVercelEnv('production');
