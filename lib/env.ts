@@ -150,7 +150,9 @@ function validateEnv(): Env {
   // page data" phase. Only gate env vars here that MUST be present for the
   // build to succeed (e.g., Clerk keys for auth middleware). Secrets only
   // needed at request time (e.g., CRON_SECRET) should be validated at their
-  // point of use, not here.
+  // point of use, not here. One exception, by decision: CONSENT_STATE_SECRET
+  // is required on Vercel builds, because without it a payment flow fails for
+  // every visitor (DEBT-502 item 6).
   const isProductionRuntime = process.env.VERCEL_ENV === 'production';
   if (!skipClerk) {
     const missingClerkKeys: Record<string, string[]> = {};

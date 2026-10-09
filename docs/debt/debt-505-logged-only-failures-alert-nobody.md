@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — released 2026-10-09; the first drill and the cron monitor are proven. Still to show: the watcher read as running, and the 2026-11-03 cycle's drill; due 2026-11-05
+**Status:** Verifying — released 2026-10-09; the first drill and the cron monitor are proven. Still open: the unchecked items below, among them the 2026-11-03 cycle's drill; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06
 **Resolved:** —

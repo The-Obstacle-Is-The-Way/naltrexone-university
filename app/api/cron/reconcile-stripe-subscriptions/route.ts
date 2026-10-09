@@ -10,9 +10,11 @@ import { createReconcileStripeSubscriptionsCronRouteHandler } from './route-hand
 // Next.js requires route-segment configuration to be a statically analyzable literal.
 export const maxDuration = 60;
 
-// DEBT-501 item 1: one Stripe request takes at most two 5-second tries, so no
-// single request outlasts the function, as the SDK's 80-second timeout with
-// two retries could. The pages are still checked against their 40-second
+// DEBT-501 item 1: each subscriptions request the job sends waits at most 5
+// seconds for its socket to answer, and is tried once more after a failed
+// connection, in place of the SDK's 80 seconds and two retries. Our retry
+// wrapper can still repeat a 5xx or 429 call. The drain's customer deletes
+// keep the SDK's defaults, and pages are checked against their 40-second
 // budget only between pages.
 const RECONCILE_STRIPE_REQUEST_LIMITS = {
   timeoutMs: 5_000,

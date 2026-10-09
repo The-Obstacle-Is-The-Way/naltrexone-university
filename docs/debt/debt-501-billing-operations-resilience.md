@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — decided per item; AUDIT-015 orders them: quick wins, alerts for its silent conditions, then the pre-sale items
+**Status:** Open — quick wins built (items 1's timeout, 2's runbook line, 5 and 6); next, alerts for its silent conditions, then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -35,7 +35,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - **Scope.** Do not exclude a row solely because its local status is terminal: repairing stale local state is this job's purpose. Any pruning policy needs an independently justified terminal-state contract.
   - **Tests**, against real Postgres: the ordering, a crash mid-run, interleaved inserts and deletes, sustained inserts (earlier rows are still retried), each row attempted at most once per run (including a claim written in a transaction begun before the run's start was read), a deleted or concurrently claimed row, a failed claim, the budget checked before each claim, two overlapping runs, and provider failure.
 
-- **Request timeout done 2026-10-09 (quick-wins pull request).** The reconcile route gives the job's subscriptions client a 5-second timeout and one network retry (`limitStripeSubscriptionRequests`), in place of the SDK's 80 seconds and two retries, so no single Stripe request outlasts the function. This was proven through the real SDK, and the cron route's integration test checks the time limit on every request. Checking the time budget before each claim, which bounds a whole page, comes with the oldest-first order.
+- **Request timeout done 2026-10-09 (quick-wins pull request).** The reconcile route gives the job's subscriptions client a 5-second timeout and one network retry (`limitStripeSubscriptionRequests`), in place of the SDK's 80 seconds and two retries. The timeout is the socket's idle limit per try, and our retry wrapper can still repeat a 5xx or 429 call. This was proven through the real SDK, and the cron route's integration test checks the time limit on every subscriptions request it sees. Still open: the drain's customer deletes in the same function keep the SDK's defaults, and checking the time budget before each claim, which bounds a whole page, comes with the oldest-first order.
 
   *Corrected 2026-10-06: oldest-first order replaces #1410's keyset cursor with wraparound, checkpoints and run coordination, which needed more state for the same guarantee; terminal rows stay included, as #1410 decided (#1410 review).*
 
