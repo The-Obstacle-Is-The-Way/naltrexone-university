@@ -29,7 +29,7 @@
 | [DEBT-513](./debt-513-error-text-reaches-sentry-as-written.md) | Error text reaches Sentry as written | P3 | Open — decided below; joins the quick-wins pull request |
 | [DEBT-506](./debt-506-dependabot-alert-triage-2026-10.md) | Dependabot alerts of 2026-10-06: two fixed, four gated, two without published fixes | P2 | Open — the peer and sharp fixes shipped (#1411, promoted in #1419); source-map-js 1.2.2 and the supported Clerk UI 1.38.0 are eligible since 2026-10-07 |
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22 |
-| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; watcher ran on `main` (2026-10-08) and now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes |
+| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; the watcher now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes |
 | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22 |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — rule decided; watcher ran on `main` (2026-10-08) and now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes
+**Status:** Open — rule decided; the watcher now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
