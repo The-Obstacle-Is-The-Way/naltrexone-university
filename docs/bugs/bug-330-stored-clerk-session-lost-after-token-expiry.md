@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; fix after DEBT-503 item 1
+**Status:** Open — resolution decided below; its blocker, DEBT-503 item 1, was released 2026-10-08
 **Priority:** P3
 **Date:** 2026-10-07
 **Resolved:** —

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; after DEBT-505 and DEBT-502 items 2–3, and before paid acquisition or 35 days before the earliest live renewal
+**Status:** Open — resolution decided below; built on DEBT-502's identity resolver, and due before 35 days ahead of the earliest live renewal
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -51,7 +51,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
 - **A stale address** can miss a legally required notice.
 - **A reassigned address** can disclose the subscription to another person.
 - **No one is told.** A misdirected notice is silent.
-- **Timing.** The owner states the product has no real subscribers yet. DEBT-501 item 7 records no live purchase. A new subscriber's first scheduled notice is about eleven months away, and their acknowledgment uses the address checkout refreshes from Clerk. So the exposure is only existing live subscriptions, which the owner can count read-only. This must ship before whichever comes first: paid acquisition, or 35 days before the earliest existing live renewal.
+- **Timing.** The owner states the product has no real subscribers yet. DEBT-501 item 7 records no live purchase. A new subscriber's first scheduled notice is about eleven months away, and their acknowledgment uses the address checkout refreshes from Clerk. So the exposure is only existing live subscriptions, which the owner can count read-only. The notice work must ship 35 days before the earliest live renewal, as the status says. The portal-email item can ship earlier, but no deadline makes it due before paid acquisition, since a new subscriber's notices are about eleven months away (AUDIT-015).
 
 ## Options
 
@@ -103,6 +103,8 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
    - DEBT-502 item 2's locked provisioning transaction comes before the write in item 2 above, and DEBT-502 item 3 before item 4.
    - Ownership conflicts need no prerequisite: until DEBT-502 item 1 automates the repair, the owner replays the stale owner's `user.updated` from the Clerk Dashboard ([runbook](../dev/deployment-environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row)), which moves that owner's address, and the held notice goes out on the next run.
    - Then this record. DEBT-503 item 1 may ship earlier, under the timing in Impact.
+
+**Decided 2026-10-08 (AUDIT-015):** the send-time lookup is built on [DEBT-502](./debt-502-account-identity-and-action-hardening.md)'s identity resolver, not beside it.
 
 ## Verification
 

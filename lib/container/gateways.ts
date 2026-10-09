@@ -3,6 +3,7 @@ import {
   ClerkAuthGateway,
   type ClerkUserLookup,
   CooldownOperationalAlerts,
+  createGithubScheduledWorkflows,
   createResendWebhookVerifier,
   DrizzleRateLimiter,
   LocalAlertCooldown,
@@ -22,6 +23,9 @@ import type {
 // DEBT-505: containers are built per request, so the in-process alert
 // cooldown lives here, one per server process.
 const processAlertCooldown = new LocalAlertCooldown();
+
+// DEBT-505: the repository whose scheduled workflows the renewal job checks.
+const GITHUB_REPOSITORY = 'The-Obstacle-Is-The-Way/naltrexone-university';
 
 export function createGatewayFactories(input: {
   primitives: ContainerPrimitives;
@@ -59,6 +63,11 @@ export function createGatewayFactories(input: {
         now: primitives.now,
         localCooldown: processAlertCooldown,
         keyPrefix: OPERATIONAL_ALERT_COOLDOWN_KEY_PREFIX,
+      }),
+    createScheduledWorkflows: () =>
+      createGithubScheduledWorkflows({
+        repository: GITHUB_REPOSITORY,
+        token: primitives.env.GITHUB_READ_TOKEN,
       }),
     createPaymentGateway: () =>
       new StripePaymentGateway({

@@ -86,6 +86,7 @@ These rules are enforced by the repo today:
 | `SENTRY_DSN` (server project's key, sensitive, never `NEXT_PUBLIC`) / `NEXT_PUBLIC_SENTRY_DSN` (browser project's key) | Set both: server events and operational alerts need `SENTRY_DSN` | Optional | Optional |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Required; generate with `openssl rand -base64 32` | Required | Optional |
 | `CRON_SECRET` | Required anywhere cron route is exercised | Required if you hit cron route | Required if you hit cron route |
+| `GITHUB_READ_TOKEN` (fine-grained, read-only Actions on this repository only, sensitive; DEBT-505) | Required: the renewal job's check of GitHub's scheduled workflows. Without it GitHub is read anonymously, and a refusal at GitHub's per-address limit raises `scheduled_checks_unreadable` | Not needed | Not needed |
 
 ### Stripe account rule
 

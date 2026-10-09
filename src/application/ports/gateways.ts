@@ -236,6 +236,11 @@ export interface PaymentGateway {
 export type RateLimitInput = {
   key: string;
   limit: number;
+  /**
+   * At most one day: counters are kept for a day, so a longer window would
+   * forget its count while still open. The Postgres limiter refuses longer
+   * ones (DEBT-505).
+   */
   windowMs: number;
 };
 

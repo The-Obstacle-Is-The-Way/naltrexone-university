@@ -41,6 +41,15 @@ export class DrizzleRateLimiter implements RateLimiter {
       };
     }
 
+    // A counter is pruned once its window started a day ago, so a longer
+    // window would forget its count while still open (DEBT-505).
+    if (input.windowMs > RATE_LIMIT_WINDOW_RETENTION_TARGET_MS) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Rate-limit window is longer than its rows are kept',
+      );
+    }
+
     const now = this.now();
     const nowMs = now.getTime();
     const windowStartMs = nowMs - (nowMs % input.windowMs);

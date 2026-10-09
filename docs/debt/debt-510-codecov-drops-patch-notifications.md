@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below
+**Status:** Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22
 **Priority:** P3
 **Date:** 2026-10-07
 **Resolved:** —
@@ -62,5 +62,7 @@ A code PR that is approved, with CI green, stops at the merge guard until a pers
 
 ## Verification
 
-- [ ] The step runs on this record's PR and on `main` after promotion, and `codecov/patch` posts.
-- [ ] Over the next two weeks of PR heads, misses are counted the way the evidence above counts them, and the count falls below the 1.3% baseline.
+- [x] The step runs on this record's PR and on `main` after promotion, and `codecov/patch` posts (#1423 and its promotion #1424; it also posted on #1426, #1428 and #1430).
+- [ ] Over two weeks of PR heads, no merge is blocked by a dropped Codecov notification.
+
+  *Corrected 2026-10-08: the 1.3% baseline came from two misses, too few to compare a rate against; a blocked merge is the failure that matters (AUDIT-015).*
