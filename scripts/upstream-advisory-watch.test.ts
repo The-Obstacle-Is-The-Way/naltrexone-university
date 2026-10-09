@@ -9,6 +9,7 @@ import {
 import {
   DEPENDENCY_REPOSITORIES,
   lockfilePackages,
+  RateLimited,
   RepositoryNotFound,
   raiseUpstreamAdvisories,
   runUpstreamAdvisoryWatch,
@@ -318,6 +319,28 @@ describe('watching several repositories', () => {
       unwatched: ['substack/node-commondir'],
     });
   });
+
+  // Once the token's hourly requests are spent, every later read and issue
+  // write would be refused too, so the run stops instead of listing them all.
+  it('stops at the first read refused for the rate limit, raising nothing', async () => {
+    const issues = new MemoryIssues();
+    const read: string[] = [];
+    await expect(
+      watchUpstreamAdvisories(
+        { direct: ['vercel/next.js', 'facebook/react'], indirect: ['a/b'] },
+        manifest,
+        issues,
+        async (repository) => {
+          read.push(repository);
+          if (repository === 'facebook/react') throw new RateLimited();
+          return [advisory()];
+        },
+        unreviewed,
+      ),
+    ).rejects.toBeInstanceOf(RateLimited);
+    expect(read).toEqual(['vercel/next.js', 'facebook/react']);
+    expect(issues.issues).toEqual([]);
+  });
 });
 
 describe('watch command outcome', () => {
@@ -522,6 +545,18 @@ describe('watch command outcome', () => {
     expect(calls.filter((args) => args[1]?.startsWith('advisories/'))).toEqual([
       ['api', 'advisories/GHSA-aaaa-bbbb-cccc'],
       ['api', 'advisories/GHSA-hhhh-hhhh-hhhh'],
+    ]);
+  });
+
+  it('says the rate limit ran out, and returns nonzero', async () => {
+    const { errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(async () => {
+        throw new RateLimited();
+      }, sink),
+    ).toBe(1);
+    expect(errors).toEqual([
+      'GitHub’s API rate limit ran out, so nothing was raised; the next run reads every repository again.',
     ]);
   });
 

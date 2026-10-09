@@ -4,6 +4,7 @@ import {
   createGithubAdvisoryIssues,
   githubAdvisoryDatabase,
   listUpstreamAdvisories,
+  RateLimited,
   RepositoryNotFound,
 } from './upstream-advisory-watch';
 import { advisory, apiAdvisory } from './upstream-advisory-watch-test-helpers';
@@ -130,9 +131,20 @@ describe('GitHub advisory source', () => {
     await expect(
       listUpstreamAdvisories(
         'nodejs/undici',
-        failure('gh: API rate limit exceeded (HTTP 403)\n'),
+        failure('gh: Server Error (HTTP 500)\n'),
       ),
     ).rejects.not.toBeInstanceOf(RepositoryNotFound);
+  });
+
+  it.each([
+    'gh: API rate limit exceeded for installation ID 1. (HTTP 403)\n',
+    'gh: You have exceeded a secondary rate limit. (HTTP 429)\n',
+  ])('reports a spent API rate limit as such: %s', async (stderr) => {
+    await expect(
+      listUpstreamAdvisories('nodejs/undici', () => {
+        throw Object.assign(new Error('Command failed'), { stderr });
+      }),
+    ).rejects.toBeInstanceOf(RateLimited);
   });
 
   it.each([{}, [null], [{}]].map((data) => ({ data })))(

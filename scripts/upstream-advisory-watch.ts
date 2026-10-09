@@ -565,6 +565,15 @@ export class RepositoryNotFound extends Error {
   }
 }
 
+// The workflow token allows 1,000 requests an hour. Once one read is refused
+// for that, the rest would be too, so the run stops; the next reads them all.
+export class RateLimited extends Error {
+  constructor() {
+    super('GitHub API rate limit exceeded');
+    this.name = 'RateLimited';
+  }
+}
+
 export async function listUpstreamAdvisories(
   repository: string,
   run: typeof gh = gh,
@@ -580,12 +589,10 @@ export async function listUpstreamAdvisories(
       `repos/${repository}/security-advisories?state=published&per_page=100`,
     ]);
   } catch (error) {
-    if (
-      isRecord(error) &&
-      typeof error.stderr === 'string' &&
-      error.stderr.includes('(HTTP 404)')
-    )
-      throw new RepositoryNotFound(repository);
+    const stderr =
+      isRecord(error) && typeof error.stderr === 'string' ? error.stderr : '';
+    if (stderr.includes('(HTTP 404)')) throw new RepositoryNotFound(repository);
+    if (/rate limit/i.test(stderr)) throw new RateLimited();
     throw error;
   }
   return slurpedPages(pages, 'Invalid GitHub advisory response')
@@ -844,6 +851,7 @@ export async function watchUpstreamAdvisories(
       );
       read += 1;
     } catch (error) {
+      if (error instanceof RateLimited) throw error;
       // A deleted indirect repository narrows the watch and is reported; a
       // direct dependency's must be noticed and fixed, so it fails the run.
       if (!direct && error instanceof RepositoryNotFound)
@@ -923,9 +931,11 @@ export async function runUpstreamAdvisoryWatch(
     if (unreadable.length > 0)
       output.error(`Could not read advisories for: ${unreadable.join(', ')}`);
     return failed.length > 0 || unreadable.length > 0 ? 1 : 0;
-  } catch {
+  } catch (error) {
     output.error(
-      'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',
+      error instanceof RateLimited
+        ? 'GitHub’s API rate limit ran out, so nothing was raised; the next run reads every repository again.'
+        : 'Upstream advisory watch failed; inspect the advisory source and GitHub issue access.',
     );
     return 1;
   }

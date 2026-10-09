@@ -168,9 +168,8 @@ advisories.
   wait and the cost of a dropped run. Two delayed runs fit in one hour, about
   960 requests of the token's 1,000. Three would need delays falling by five
   hours across three slots, near the largest spread seen; at a two-hour
-  schedule a three-hour fall would do. A read over the limit fails the run,
-  which names what it could not read, and the runs before it have already
-  read everything.
+  schedule a three-hour fall would do. A run that reaches the limit stops
+  and says so, and the runs before it have already read everything.
 - To see an announced fix at once, such as the two pending Next.js fixes, run
   the watcher by hand on release day: `gh workflow run
   upstream-advisory-watch.yml --ref main`, or Run workflow under Actions. A
@@ -198,7 +197,9 @@ advisories.
 - One unreadable repository, or one issue that cannot be opened, does not
   stop the others: the run raises what it can, then fails and names what it
   could not. Only a failure to list existing issues fails the run outright,
-  because without that list nothing can be deduplicated.
+  because without that list nothing can be deduplicated, and so does a read
+  refused for the API rate limit, since every later request would be refused
+  too; the next run reads every repository again.
 - A run takes about four minutes and makes about 480 API requests, half of
   the workflow token's 1,000 an hour. Nothing else in this repository calls
   the API.
