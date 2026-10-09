@@ -39,9 +39,9 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 | GHSA-f87g-xv8r-7p7x | Medium | Metadata image routes under dynamic segments, built with webpack | `app/opengraph-image.tsx` has no dynamic segment; builds use Turbopack (CI log: `Next.js 16.3.5 (Turbopack)`) | Not affected |
 | GHSA-h694-7cp9-m8p3 | Medium | Nested `'use cache'` functions reading a root param | `cacheComponents: true`, with `'use cache'` in three marketing and pricing files; no root params | Not affected |
 | GHSA-3w37-wq28-93x7 | Medium | `'use cache'` with Draft Mode | No `draftMode` | Not affected |
-| GHSA-39w2-rjm5-chcv | Low | `next dev` only | Local development runs `next dev` | Developer machines only, until #1409 takes 16.3.8 |
+| GHSA-39w2-rjm5-chcv | Low | `next dev` only | Local development runs `next dev` | Developer machines only, until DEBT-506's follow-up PR takes 16.3.8 |
 
-No production surface is affected, so #1409 takes 16.3.8 through the normal gate, without an exception.
+No production surface is affected, so DEBT-506's follow-up PR takes 16.3.8 through the normal gate, without an exception.
 
 ## Response When the Pending Fixes Ship — Decided 2026-10-07
 
