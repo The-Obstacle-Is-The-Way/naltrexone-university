@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the fix is in production; a Stripe test-mode E2E of the refused checkout remains
+**Status:** In Progress — the fix is in production; a provider-contract test of the refused checkout's Stripe list and sync remains (AUDIT-015)
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -96,7 +96,9 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 - [x] A sync that fails still shows a message and a portal link: the notice and its Manage billing button. The portal lets the person view or cancel; the notice names support for a card update.
 - [x] The old test is kept as BUG-275's guard, because the new flow uses its own parameter, and new tests cover both outcomes.
 - [x] BUG-275's stale-link case still shows the database's state.
-- [ ] Engineering, by 2026-10-20: a Stripe test-mode E2E reproduces the case end to end. A test customer holds a live subscription with no local row; pressing Subscribe syncs it and the page shows the person as subscribed. A run whose sync fails shows the notice and the portal link. The tests above use the fake gateway, so only a real-provider run proves Stripe's list response and the sync together.
+- [ ] Engineering, by 2026-10-20: a provider-contract test runs the refused checkout's Stripe list and sync against Stripe test mode: a test customer holds a live subscription with no local row, and the adapter lists it and the sync records it. The tests above use the fake gateway, so only a real-provider run proves Stripe's list response and the sync together.
+
+  *Re-scoped 2026-10-08 (AUDIT-015): this asked for a full E2E of the page, which the unit and component tests already cover with the fake gateway; only the provider side was unproven.*
 - **Known limit.** A failed sync in production is visible for an hour at most: it goes to pino, and Vercel Hobby keeps runtime logs for one hour. Since [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md), it also raises the `checkout_stripe_holds_unrecorded` alert, which carries a count only, so its IDs still live only in the hour-long log. Production outcomes of this path therefore cannot close this record.
 
 *Corrected 2026-10-06 (#1410 review): the one-hour production capture had no exit, because the case is rare; replaced by a reproducible test-mode run.*

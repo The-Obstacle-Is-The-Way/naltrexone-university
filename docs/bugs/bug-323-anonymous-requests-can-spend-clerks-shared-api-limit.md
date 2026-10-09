@@ -37,7 +37,9 @@ This record is deliberately general. The repository is public, and the behaviour
 
 ## Impact
 
-For as long as an attacker kept sending these requests, every signed-in page would fail. That includes the pricing page for a signed-in learner and the add-card flow. Nothing is lost permanently; the damage is the outage.
+For as long as an attacker kept sending these requests, a new user's first visit, checkout and trial card setup would fail, since those still call Clerk's Backend API. A returning user with a valid session keeps working, since their pages read our own row. One whose session has expired needs a Clerk Backend API refresh, which the same exhaustion can block. Nothing is lost permanently; the damage is the outage.
+
+*Corrected 2026-10-08: before DEBT-503 item 1 every signed-in page called the Backend API, so every one would have failed (AUDIT-015).*
 
 ## Options
 

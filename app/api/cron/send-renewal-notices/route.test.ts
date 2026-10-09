@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS } from '@/src/adapters/jobs/send-due-renewal-notices';
+import {
+  SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
+  SEND_RENEWAL_NOTICES_MONITOR,
+} from '@/src/adapters/jobs/send-due-renewal-notices';
 import {
   FakeLogger,
   FakeRateLimiter,
@@ -21,7 +24,9 @@ const successResult = {
   staleUnknown: 0,
   dispatchFailures: 0,
   durationMs: 250,
-};
+  alertDrill: 'not_due',
+  scheduledChecks: 'running',
+} as const;
 
 function createHarness(input?: {
   omitCronSecret?: boolean;
@@ -33,6 +38,7 @@ function createHarness(input?: {
   const rateLimiter = input?.rateLimiter ?? new FakeRateLimiter();
   let rateLimiterFactoryCalls = 0;
   let jobCalls = 0;
+  const monitored: Array<'ok' | 'error'> = [];
   const dependencies: RenewalNoticeCronHandlerDependencies = {
     cronSecret: input?.omitCronSecret
       ? undefined
@@ -47,10 +53,22 @@ function createHarness(input?: {
       if (input?.jobError) throw input.jobError;
       return successResult;
     },
+    // Records each run the cron monitor saw and how it ended.
+    monitor: async (run) => {
+      try {
+        const result = await run();
+        monitored.push('ok');
+        return result;
+      } catch (error) {
+        monitored.push('error');
+        throw error;
+      }
+    },
   };
   return {
     handle: createRenewalNoticeCronHandler(() => dependencies),
     jobCalls: () => jobCalls,
+    monitored,
     logger,
     rateLimiter,
     rateLimiterFactoryCalls: () => rateLimiterFactoryCalls,
@@ -69,6 +87,23 @@ describe('renewal notice cron route', () => {
 
     expect(source).toContain(
       `export const maxDuration = ${SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS}`,
+    );
+  });
+
+  // DEBT-505: the cron monitor expects a check-in on the schedule Vercel
+  // runs, and counts a run as timed out only after the function would stop.
+  it('monitors the job on the schedule vercel.json gives it', () => {
+    const vercel = JSON.parse(
+      readFileSync(new URL('../../../../vercel.json', import.meta.url), 'utf8'),
+    ) as { crons: Array<{ path: string; schedule: string }> };
+
+    expect(
+      vercel.crons.find(
+        (cron) => cron.path === '/api/cron/send-renewal-notices',
+      )?.schedule,
+    ).toBe(SEND_RENEWAL_NOTICES_MONITOR.schedule);
+    expect(SEND_RENEWAL_NOTICES_MONITOR.maxRuntimeMinutes * 60).toBeGreaterThan(
+      SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
     );
   });
 
@@ -273,6 +308,39 @@ describe('renewal notice cron route', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(successResult);
     expect(harness.jobCalls()).toBe(1);
+  });
+
+  it('runs the job inside the cron monitor, so each run checks in', async () => {
+    const harness = createHarness();
+
+    await harness.handle(authorizedRequest());
+
+    expect(harness.monitored).toEqual(['ok']);
+  });
+
+  it('reports a failed run to the cron monitor', async () => {
+    const harness = createHarness({ jobError: new Error('job failed') });
+
+    await harness.handle(authorizedRequest());
+
+    expect(harness.monitored).toEqual(['error']);
+  });
+
+  // A request the route turns away is not a run: it must not check in, or a
+  // caller without the secret could make a stopped job look alive.
+  it('does not check in for a request it rejects or rate-limits', async () => {
+    const rejected = createHarness();
+    const limited = createHarness({
+      rateLimiter: new FakeRateLimiter([
+        { success: false, limit: 5, remaining: 0, retryAfterSeconds: 30 },
+      ]),
+    });
+
+    await rejected.handle(authorizedRequest('wrong-secret'));
+    await limited.handle(authorizedRequest());
+
+    expect(rejected.monitored).toEqual([]);
+    expect(limited.monitored).toEqual([]);
   });
 
   it('returns a structured 500 without exposing the job error', async () => {

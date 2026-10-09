@@ -16,6 +16,8 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ## Items
 
+**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) are symptoms. One resolver takes Clerk's verified primary email, provisions under the tombstone lock (item 2), moves a conflicting row (item 1), and syncs Stripe's copy. Provisioning, the billing refresh, the webhook and notice dispatch all use it. It ships before 35 days ahead of the earliest live renewal, in the order items 3, 1, 2.
+
 ### 1. An email change to an address a stale row holds locks the person out (P3)
 
 - **Evidence.** `ensureClerkUser` validates before it resolves (`src/adapters/gateways/clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:305-311`). `clerk-auth-gateway-session.test.ts`'s "keeps both rows when the refreshed email is held by another identity" locks this in for the billing refresh.

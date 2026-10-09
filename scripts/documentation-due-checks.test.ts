@@ -11,9 +11,6 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parse } from 'yaml';
 import {
-  type AlertIssue,
-  type AlertIssues,
-  createGithubAlertIssues,
   DUE_CHECKS_ISSUE_TITLE,
   type DueChecksReport,
   reportDueChecks,
@@ -21,6 +18,7 @@ import {
   runDocumentationDueChecks,
   runFromCommandLine,
 } from './documentation-due-checks';
+import { MemoryIssues } from './github-alert-issues-test-helpers';
 
 // Only execFileSync, which runs gh, is replaced; spawnSync stays real.
 vi.mock('node:child_process', async (importOriginal) => ({
@@ -32,45 +30,6 @@ const gh = vi.mocked(execFileSync);
 afterEach(() => {
   gh.mockReset();
 });
-
-class MemoryIssues implements AlertIssues {
-  issues: AlertIssue[] = [];
-  comments: string[] = [];
-  writes = 0;
-  async find(title: string) {
-    return this.issues.filter((issue) => issue.title.includes(title));
-  }
-  async create(title: string, body: string) {
-    this.issues.push({
-      number: this.issues.length + 1,
-      title,
-      body,
-      state: 'OPEN',
-    });
-    this.writes++;
-  }
-  async update(number: number, body: string) {
-    const issue = this.issue(number);
-    issue.body = body;
-    issue.state = 'OPEN';
-    this.writes++;
-  }
-  async comment(number: number, body: string) {
-    this.issue(number);
-    this.comments.push(body);
-    this.writes++;
-  }
-  async close(number: number, comment: string) {
-    this.issue(number).state = 'CLOSED';
-    this.comments.push(comment);
-    this.writes++;
-  }
-  private issue(number: number): AlertIssue {
-    const issue = this.issues.find((entry) => entry.number === number);
-    if (!issue) throw new Error('Missing fixture issue');
-    return issue;
-  }
-}
 
 const overdue: DueChecksReport = {
   overdue: [
@@ -166,7 +125,7 @@ describe('overdue production checks alert', () => {
     await issues.create(DUE_CHECKS_ISSUE_TITLE, 'b');
 
     await expect(reportDueChecks(overdue, issues)).rejects.toThrow(
-      'Multiple overdue-check issues',
+      `Multiple "${DUE_CHECKS_ISSUE_TITLE}" issues`,
     );
   });
 
@@ -183,104 +142,6 @@ describe('overdue production checks alert', () => {
       }, output),
     ).toBe(1);
     expect(lines.join('\n')).not.toContain('token rejected');
-  });
-});
-
-describe('GitHub alert issues', () => {
-  it('searches for the alert by title on the server, not by listing every issue', async () => {
-    const calls: string[][] = [];
-    const issues = createGithubAlertIssues((args) => {
-      calls.push(args);
-      return JSON.stringify([
-        { number: 7, title: DUE_CHECKS_ISSUE_TITLE, body: 'b', state: 'OPEN' },
-        { number: 8, title: 'Unrelated', body: null, state: 'CLOSED' },
-      ]);
-    });
-
-    expect(await issues.find(DUE_CHECKS_ISSUE_TITLE)).toEqual([
-      { number: 7, title: DUE_CHECKS_ISSUE_TITLE, body: 'b', state: 'OPEN' },
-      { number: 8, title: 'Unrelated', body: '', state: 'CLOSED' },
-    ]);
-    expect(calls[0]).toEqual([
-      'issue',
-      'list',
-      '--state',
-      'all',
-      '--search',
-      `in:title "${DUE_CHECKS_ISSUE_TITLE}"`,
-      '--json',
-      'number,title,body,state',
-      '--limit',
-      '100',
-    ]);
-  });
-
-  // A search capped at its limit may have dropped the existing alert, and
-  // the job would then open a duplicate; it fails instead.
-  it('fails closed when the search may have been cut off at its limit', async () => {
-    const issues = createGithubAlertIssues(() =>
-      JSON.stringify(
-        Array.from({ length: 100 }, (_, index) => ({
-          number: index + 1,
-          title: `Overdue production checks ${index}`,
-          body: '',
-          state: 'CLOSED',
-        })),
-      ),
-    );
-
-    await expect(issues.find(DUE_CHECKS_ISSUE_TITLE)).rejects.toThrow(
-      'Too many matching issues',
-    );
-  });
-
-  it('runs gh with a bounded time and output buffer', async () => {
-    gh.mockReturnValue('[]');
-
-    await createGithubAlertIssues().find(DUE_CHECKS_ISSUE_TITLE);
-
-    expect(gh).toHaveBeenCalledWith(
-      'gh',
-      expect.arrayContaining(['issue', 'list']),
-      { encoding: 'utf8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
-    );
-  });
-
-  it('rejects a malformed search response', async () => {
-    const issues = createGithubAlertIssues(() => '[{"number":"7"}]');
-
-    await expect(issues.find(DUE_CHECKS_ISSUE_TITLE)).rejects.toThrow(
-      'Invalid GitHub issue response',
-    );
-  });
-
-  it('creates, updates, comments on and closes issues through gh', async () => {
-    const calls: string[][] = [];
-    const issues = createGithubAlertIssues((args) => {
-      calls.push(args);
-      return '';
-    });
-
-    await issues.create('T', 'B');
-    await issues.update(7, 'B2');
-    await issues.comment(7, 'C');
-    await issues.close(7, 'D');
-
-    expect(calls).toEqual([
-      ['issue', 'create', '--title', 'T', '--body', 'B'],
-      [
-        'api',
-        '--method',
-        'PATCH',
-        'repos/{owner}/{repo}/issues/7',
-        '-f',
-        'state=open',
-        '-f',
-        'body=B2',
-      ],
-      ['issue', 'comment', '7', '--body', 'C'],
-      ['issue', 'close', '7', '--comment', 'D'],
-    ]);
   });
 });
 
