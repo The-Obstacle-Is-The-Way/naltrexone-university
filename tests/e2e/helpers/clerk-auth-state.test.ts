@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   E2E_CLERK_SESSION_ID_PATH,
   readIfPresent,
+  saveClerkE2EAuthState,
   withStoredClerkE2ESessionId,
 } from './clerk-auth-state';
 
@@ -50,5 +51,40 @@ describe('withStoredClerkE2ESessionId', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+// #1452 review: the stored state is only worth saving with the session ID
+// teardown revokes it by, so the ID goes first.
+describe('saveClerkE2EAuthState', () => {
+  class RecordingAuthStateStore {
+    readonly saved: string[] = [];
+    constructor(private readonly sessionId: string | null) {}
+    async readSessionId() {
+      return this.sessionId;
+    }
+    async writeSessionId(sessionId: string) {
+      this.saved.push(`session ID ${sessionId}`);
+    }
+    async writeState() {
+      this.saved.push('state');
+    }
+  }
+
+  it('stores the session ID before the state', async () => {
+    const store = new RecordingAuthStateStore('sess_2abcDEF345');
+
+    await saveClerkE2EAuthState(store);
+
+    expect(store.saved).toEqual(['session ID sess_2abcDEF345', 'state']);
+  });
+
+  it('saves nothing when the new session has no ID', async () => {
+    const store = new RecordingAuthStateStore(null);
+
+    await expect(saveClerkE2EAuthState(store)).rejects.toThrow(
+      'The new Clerk E2E session has no ID to store',
+    );
+    expect(store.saved).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ import {
   E2E_CLERK_RESTORE_FAILURE_PATH,
   E2E_CLERK_SESSION_ID_PATH,
   readIfPresent,
+  saveClerkE2EAuthState,
 } from './clerk-auth-state';
 import {
   clerkFrontendApiHost,
@@ -290,15 +291,18 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
     password: clerkPassword,
     saveState: async () => {
       await mkdir(dirname(E2E_CLERK_AUTH_STATE_PATH), { recursive: true });
-      await page.context().storageState({ path: E2E_CLERK_AUTH_STATE_PATH });
       // BUG-330: teardown revokes this session by its ID.
-      const sessionId = await page.evaluate(
-        () => window.Clerk?.session?.id ?? null,
-      );
-      if (!sessionId) {
-        throw new Error('The new Clerk E2E session has no ID to store');
-      }
-      await writeFile(E2E_CLERK_SESSION_ID_PATH, sessionId);
+      await saveClerkE2EAuthState({
+        readSessionId: () =>
+          page.evaluate(() => window.Clerk?.session?.id ?? null),
+        writeSessionId: (sessionId) =>
+          writeFile(E2E_CLERK_SESSION_ID_PATH, sessionId),
+        writeState: () =>
+          page
+            .context()
+            .storageState({ path: E2E_CLERK_AUTH_STATE_PATH })
+            .then(() => undefined),
+      });
     },
     username: clerkUsername,
   });

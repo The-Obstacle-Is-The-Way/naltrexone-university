@@ -93,7 +93,7 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 - **The server's output is shown, redacted.**
   - `webServer.stdout` is `pipe`, and Playwright's runner passes everything it writes, the `[WebServer]` lines included, through the E2E log redaction.
   - The redaction runs in the runner rather than the server process, so the server loads nothing extra.
-  - A credential split across two reads of the server's output would pass. Playwright passes each pipe read on as it arrives, prefixing lines without waiting for them to end, so a token split at a read boundary appears in two pieces. That needs a burst of over about 64 KiB or a partial write.
+  - A credential split across two reads of the server's output is redacted whole. Playwright passes each pipe read on as it arrives, so a token can arrive in two pieces. The run of token characters that ends a write is held for the next write, or written when the runner exits (#1452 review).
 - **Every signed-in test keeps a Clerk trace** (`tests/e2e/helpers/clerk-auth-trace.ts`), so a mid-run loss names its cause ([BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md)).
   - For the whole test it keeps each page answer's `x-clerk-auth-status` and `x-clerk-auth-reason`, and a handshake redirect's `__clerk_hs_reason` and `__clerk_redirect_count`.
   - It also keeps Set-Cookie names, including whether `__session` was cleared, Clerk's own API answers, and Clerk JS's session changes and version.
