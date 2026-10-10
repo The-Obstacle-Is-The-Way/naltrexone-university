@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — after its merge, the next merge that needs a carry across a merged-in main commit passes the guard, and it is promoted; due 2026-10-24
+**Status:** Verifying — promoted to main; due 2026-10-17
 **Priority:** P3
 **Date:** 2026-10-10
 **Resolved:** —
@@ -50,4 +50,4 @@ A finished PR cannot merge until it spends another CodeRabbit review, the shared
 
 - [x] A test of `headPushedAsOf` with #1440's sequence picks the earlier head, not the merged-in `main` commit; red before the change. *2026-10-10: `merge-reviewed-pr-carry.test.ts`, "ignores a merged-in commit's check suites from another branch".*
 - [x] The guard carries #1440's approval when run against GitHub. *2026-10-10: read-only run, `carriedFrom` `62874a39`.*
-- [ ] Promoted to `main`, and the checked-in guard carries an approval across a merged-in `main` commit in a real merge, or no such merge occurs before the due date. Then it closes.
+- [ ] Promoted to `main`. The carry is already proven on real data above: the read-only run used #1440's GitHub state with the same code this pull request merges. A later merge cannot be relied on for that proof, since branches now merge `main` before their review rather than after it.
