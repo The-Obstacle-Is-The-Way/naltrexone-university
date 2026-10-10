@@ -32,9 +32,25 @@ updates:
         exclude-patterns:
           - '@biomejs/biome'
           - 'stripe'
+          - 'vitest'
+          - '@vitest/*'
+          - 'vitest-browser-react'
         update-types:
           - minor
           - patch
+      vitest:
+        # DEBT-500: a lone vitest major mixed majors with @vitest/* and failed
+        # typecheck (#1370), so the first-party packages and their React
+        # adapter move together, a major as one reviewed migration.
+        applies-to: version-updates
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - 'vitest-browser-react'
+        update-types:
+          - minor
+          - patch
+          - major
       biome:
         applies-to: version-updates
         patterns:

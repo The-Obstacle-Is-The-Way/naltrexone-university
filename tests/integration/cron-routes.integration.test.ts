@@ -35,6 +35,8 @@ const subscriptionsToRestore: ReconciliationRow[] = [];
 const stripeCustomerUserIdsToDelete: string[] = [];
 const clerkEventIdsToDelete: string[] = [];
 const deletedStripeCustomerIds: string[] = [];
+// DEBT-501 item 1: each subscriptions request's time limit, as the SDK sent it.
+const subscriptionRequestTimeouts: number[] = [];
 const CRON_SECRET = 'debt468-cron-integration-only';
 const MONTHLY_PRICE_ID = 'price_debt468_monthly';
 const ANNUAL_PRICE_ID = 'price_debt468_annual';
@@ -121,7 +123,14 @@ class ReconciliationStripeHttpClient extends Stripe.HttpClient {
     _port: string,
     path: string,
     method: string,
+    _headers: object,
+    _requestData: string | null,
+    _protocol: string,
+    timeout: number,
   ): Promise<Stripe.HttpClientResponse> {
+    if (path.startsWith('/v1/subscriptions')) {
+      subscriptionRequestTimeouts.push(timeout);
+    }
     const deleteMatch = /^\/v1\/customers\/([^?/]+)$/.exec(path);
     if (method === 'DELETE' && deleteMatch?.[1]) {
       const stripeCustomerId = decodeURIComponent(deleteMatch[1]);
@@ -252,6 +261,7 @@ afterEach(async () => {
   }
   clerkEventIdsToDelete.length = 0;
   deletedStripeCustomerIds.length = 0;
+  subscriptionRequestTimeouts.length = 0;
   if (renewalSubscriptionIds.length > 0) {
     await db
       .delete(schema.renewalNoticeDeliveries)
@@ -343,6 +353,9 @@ describe('reconcile Stripe subscriptions cron route', () => {
     expect(result.failed).toBe(0);
     expect(result.scanned).toBeGreaterThanOrEqual(1);
     expect(result.updated).toBe(result.scanned);
+    // No request may wait out the SDK's 80-second default.
+    expect(subscriptionRequestTimeouts.length).toBeGreaterThan(0);
+    expect(new Set(subscriptionRequestTimeouts)).toEqual(new Set([5_000]));
     await expect(
       db.query.stripeSubscriptions.findFirst({
         where: eq(schema.stripeSubscriptions.userId, user.id),
