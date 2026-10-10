@@ -1,8 +1,8 @@
-# BUG-333: A Signed-In E2E Test Loses Its Clerk Session Partway Through a CI Run, Cause Unknown
+# BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — cause traced: a navigation during Clerk JS's dev-browser cookie rewrite; tests now drop the echo that triggers it, to be shown by repeated E2E runs
+**Status:** Verifying — no mid-run Clerk session loss in CI with the echo dropped; due 2026-10-17
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -12,7 +12,11 @@
 
 ## Summary
 
-Three times since 2026-10-08, one signed-in E2E test has been sent to Clerk's sign-in page partway through, after its stored session restored normally: twice in CI and once in a local run. Each time the other 62 tests passed, and each re-run passed. Nothing recorded why. [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) adds a trace that names Clerk's decisions at the next loss. This record holds the losses, the investigation and the hypotheses until a trace explains one.
+Since 2026-10-08, a signed-in E2E test has sometimes been sent to Clerk's sign-in page partway through, after its stored session restored normally, while the other tests passed.
+- **Two captures, 2026-10-10.** One came through [BUG-330](../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md)'s trace, one through a kept Playwright trace. Both show the cause: the test navigated while Clerk JS was rewriting its dev-browser cookies.
+- **Three earlier losses**, twice in CI and once locally, left no trace. They fit the same race, but are not shown to be it.
+- **The fix.** E2E contexts drop Clerk's echo of the dev-browser token, which triggers the rewrite.
+- **Remaining check.** A week of CI without a mid-run loss. A loss whose trace names another cause reopens the investigation.
 
 ## Evidence
 
@@ -103,4 +107,5 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 
 - [x] A loss prints an `[E2E_CLERK_AUTH_TRACE]` trail, recorded here. *2026-10-10: a local gate's hosted lane, above; a CI one would show whether the earlier losses share it.*
 - [x] The trail, with the server's output, names which of Clerk's four cases sent the page to sign-in, and why. *2026-10-10: case 2, after a `dev-browser-missing` handshake, caused by a navigation during Clerk JS's cookie rewrite.*
-- [ ] A fix against that cause, test-first, or an explained acceptance. *2026-10-10: option 8, unit-tested. Still to show: repeated E2E runs without a loss, against today's rate of about one loss in two runs.*
+- [x] A fix against that cause, test-first, or an explained acceptance. *2026-10-10: option 8, unit-tested. In #1452's pull request: three local E2E runs and two stripe-hosted runs, then CI, without a loss. Another session's synced run and promotion #1455's CI also ran without one. That day's rate before it was about one loss in two runs.*
+- [ ] No mid-run Clerk session loss in CI for a week with the echo dropped, due 2026-10-17. A loss with a trace that names another cause reopens the investigation.

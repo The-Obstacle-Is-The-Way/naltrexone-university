@@ -387,6 +387,21 @@ describe('head as of an approval', () => {
     ).toBe(HEAD);
   });
 
+  // BUG-335: once a branch merges main, main's promotion commit is one of the
+  // PR's commits, with check suites from its own push to main.
+  it("ignores a merged-in commit's check suites from another branch", () => {
+    expect(
+      headPushedAsOf(
+        pushes(
+          [OLD_HEAD, '2026-09-22T02:00:00Z'],
+          [MAIN, { createdAt: '2026-09-22T02:30:00Z', branch: 'main' }],
+          [HEAD, '2026-09-22T04:00:00Z'],
+        ),
+        '2026-09-22T03:00:00Z',
+      ),
+    ).toBe(OLD_HEAD);
+  });
+
   it('finds no head when every push follows the approval', () => {
     expect(
       headPushedAsOf(
