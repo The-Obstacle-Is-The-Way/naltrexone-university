@@ -9,6 +9,25 @@ export const review = (state = 'APPROVED', commit = HEAD) => ({
   commit_id: commit,
   submitted_at: '2026-09-22T03:00:00Z',
 });
+// A page of PR or review-thread comments, as the merge query reads them.
+export const commentPage = (
+  ...nodes: { author: { login: string } | null; url: string; body: string }[]
+) => ({ pageInfo: { hasNextPage: false }, nodes });
+// A CodeRabbit reply that records a learning, in the form its chat replies use.
+export const learningReply = (url: string, login = 'coderabbitai') => ({
+  author: { login },
+  url,
+  body: [
+    'Thanks for the clarification.',
+    '<details>',
+    '<summary>✏️ Learnings added</summary>',
+    '',
+    '```',
+    'Learning: In this repository, a later review must not raise this again.',
+    '```',
+    '</details>',
+  ].join('\n'),
+});
 // The head commit's GitHub Actions check suites, created when it was pushed.
 export const pushedAt = (...createdAt: string[]) => ({
   pageInfo: { hasNextPage: false },
@@ -24,8 +43,10 @@ export const pullRequest = (
   headRefOid: HEAD,
   mergeable: 'MERGEABLE',
   mergeStateStatus: 'CLEAN',
+  body: 'Summary of the change.',
+  comments: commentPage(),
   reviewThreads: {
-    nodes: [{ isResolved: true }],
+    nodes: [{ isResolved: true, comments: commentPage() }],
     pageInfo: { hasNextPage: false },
   },
   files: {

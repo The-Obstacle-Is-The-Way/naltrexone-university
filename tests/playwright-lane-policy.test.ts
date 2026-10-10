@@ -193,6 +193,19 @@ describe('Playwright E2E lane policy', () => {
     ).toBe(true);
   });
 
+  // BUG-330: the server's output reaches public CI logs, redacted.
+  it("shows the web server's output, through the E2E log redaction", () => {
+    const webServer = playwrightConfig.webServer;
+    const source = readFileSync('playwright.config.ts', 'utf8');
+
+    expect(Array.isArray(webServer) ? undefined : webServer?.stdout).toBe(
+      'pipe',
+    );
+    expect(source).toContain(
+      'installRunnerStreamRedaction(process.env, [process.stdout, process.stderr]);',
+    );
+  });
+
   it('gives the E2E server a test-only consent-state secret unless one is set', () => {
     // Trial add-card signs its Checkout consent state; production and preview
     // carry their own CONSENT_STATE_SECRET, the isolated E2E server this one.

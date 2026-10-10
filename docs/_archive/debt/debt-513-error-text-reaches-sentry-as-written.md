@@ -1,18 +1,18 @@
 # DEBT-513: Error Text Reaches Sentry as Written
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — built test-first in the quick-wins pull request (#1440), in review; Verifying once it merges, archived once promoted
+**Status:** Resolved — shipped in #1440, promoted in #1449
 **Priority:** P3
 **Date:** 2026-10-08
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-10
+**Verification receipts:** the checklist below; promotion #1449
 
 ---
 
 ## Summary
 
-`scrubEvent` redacts credential parameters in the URLs an error event carries: the request URL, its query string and the Next.js request path. [BUG-331](../bugs/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) covers breadcrumbs, spans and envelope headers. The event's own text is sent as written: an exception's message (`exception.values[].value`), a linked cause's message, and a captured message. If that text embeds a URL with a credential parameter, Sentry receives it.
+`scrubEvent` redacts credential parameters in the URLs an error event carries: the request URL, its query string and the Next.js request path. [BUG-331](../../bugs/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) covers breadcrumbs, spans and envelope headers. The event's own text is sent as written: an exception's message (`exception.values[].value`), a linked cause's message, and a captured message. If that text embeds a URL with a credential parameter, Sentry receives it.
 
 No leak has been seen. This is hardening, found while reviewing BUG-331 (#1430).
 
@@ -40,16 +40,16 @@ No leak has been seen. This is hardening, found while reviewing BUG-331 (#1430).
 
 ## Resolution
 
-**Decided:** option 1, test-first through the real SDK (an error whose message holds `?__clerk_handshake=…` and a cause holding `?code=…` reaches Sentry filtered), in the quick-wins pull request ([AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md), decided order item 2).
+**Decided:** option 1, test-first through the real SDK (an error whose message holds `?__clerk_handshake=…` and a cause holding `?code=…` reaches Sentry filtered), in the quick-wins pull request ([AUDIT-015](../../audits/audit-015-register-audit-by-root-cause-2026-10-08.md), decided order item 2).
 
 **Built (2026-10-09):** `scrubEvent`, the `beforeSend` of the browser and of the server, runs `redactCredentialParams` over each exception's value and over the event's message. The SDK sends a linked cause as another exception value, so causes are covered too. It also redacts every string of the event's extra data. A value captured as an error that is not an `Error`, such as a failed server action's `{ code, message }` result that the browser reports, reaches Sentry there, its message included (found by the pre-review). An operational alert keeps its fixed fields, as before.
 
 ## Verification
 
 - [x] The real-SDK test fails before the change and passes after it. *2026-10-09:* in `lib/sentry-data-collection-sdk.test.ts`, an error with a Clerk handshake parameter and a cause with `?code=`, a captured message with `?token=`, and a plain object captured as an error with `?code=`, each reached the transport unfiltered before the change and filtered after it, with the rest of their text kept. Removing any of the redactions (exception text, message, extra data) fails tests.
-- [ ] Promoted to `main`.
+- [x] Promoted to `main`. *2026-10-10: promotion #1449; production went live at 07:26Z, with `main`'s CI green.*
 
 ## Related
 
-- [BUG-331](../bugs/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md): the review that found it.
-- [BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md): the URL scrubbing it extends.
+- [BUG-331](../../bugs/bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md): the review that found it.
+- [BUG-318](../bugs/bug-318-sentry-sends-credentials-on-server-error-events.md): the URL scrubbing it extends.
