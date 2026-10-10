@@ -201,8 +201,9 @@ describe('Playwright E2E lane policy', () => {
     expect(Array.isArray(webServer) ? undefined : webServer?.stdout).toBe(
       'pipe',
     );
-    expect(source).toContain('installE2EStreamRedaction(process.stdout);');
-    expect(source).toContain('installE2EStreamRedaction(process.stderr);');
+    expect(source).toContain(
+      'installRunnerStreamRedaction(process.env, [process.stdout, process.stderr]);',
+    );
   });
 
   it('gives the E2E server a test-only consent-state secret unless one is set', () => {

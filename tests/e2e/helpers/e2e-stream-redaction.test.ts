@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { installE2EStreamRedaction } from './e2e-stream-redaction';
+import {
+  installE2EStreamRedaction,
+  installRunnerStreamRedaction,
+} from './e2e-stream-redaction';
 
 // BUG-330: the E2E web server's output reaches CI logs, which are public, so
 // everything Playwright's runner writes passes the E2E log redaction.
@@ -59,5 +62,34 @@ describe('installE2EStreamRedaction', () => {
     expect(stream.written).toEqual([
       '  ✓ 12 [chromium] › practice.spec.ts (3.1s)\n',
     ]);
+  });
+});
+
+describe('installRunnerStreamRedaction', () => {
+  const token = '__clerk_db_jwt=dvb_abcdefghijklmnop';
+
+  it("redacts each of the runner's streams", () => {
+    const out = new RecordingStream();
+    const err = new RecordingStream();
+    installRunnerStreamRedaction({}, [out, err]);
+
+    out.write(token);
+    err.write(token);
+
+    expect([...out.written, ...err.written]).toEqual([
+      '__clerk_db_jwt=[redacted]',
+      '__clerk_db_jwt=[redacted]',
+    ]);
+  });
+
+  // Vitest imports the Playwright config to check its policy and keeps its
+  // own output.
+  it('leaves the streams alone under Vitest', () => {
+    const out = new RecordingStream();
+    installRunnerStreamRedaction({ VITEST: 'true' }, [out]);
+
+    out.write(token);
+
+    expect(out.written).toEqual([token]);
   });
 });

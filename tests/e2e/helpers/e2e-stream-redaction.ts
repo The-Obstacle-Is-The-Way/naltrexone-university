@@ -37,3 +37,16 @@ export function installE2EStreamRedaction(stream: E2EWritableStream): void {
     return write(redactSensitiveE2EText(text), done);
   };
 }
+
+/**
+ * BUG-330: the Playwright config redacts the runner's own output streams,
+ * except when Vitest imports the config to check its policy and keeps its own
+ * output.
+ */
+export function installRunnerStreamRedaction(
+  env: Record<string, string | undefined>,
+  streams: E2EWritableStream[],
+): void {
+  if (env.VITEST) return;
+  for (const stream of streams) installE2EStreamRedaction(stream);
+}

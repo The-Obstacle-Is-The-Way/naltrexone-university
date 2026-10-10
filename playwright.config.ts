@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
 import { SETUP_PREPARATION_BUDGET_MS } from './tests/e2e/helpers/clerk-session-deadlines';
-import { installE2EStreamRedaction } from './tests/e2e/helpers/e2e-stream-redaction';
+import { installRunnerStreamRedaction } from './tests/e2e/helpers/e2e-stream-redaction';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
@@ -14,10 +14,7 @@ const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
 // which can carry Clerk's development token and Stripe IDs, and CI logs are
 // public, so all it writes passes the E2E log redaction. Vitest imports this
 // file to check its policy and keeps its own output.
-if (!process.env.VITEST) {
-  installE2EStreamRedaction(process.stdout);
-  installE2EStreamRedaction(process.stderr);
-}
+installRunnerStreamRedaction(process.env, [process.stdout, process.stderr]);
 
 // BUG-328: page waits have no timeout by default. Bounded waits make a hung
 // Clerk wait fail with its own error; the session deadlines in
