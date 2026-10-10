@@ -8,6 +8,7 @@ import {
 import {
   commentPage,
   HEAD,
+  learningReply,
   MAIN,
   OLD_HEAD,
   pullRequest,
@@ -649,4 +650,52 @@ describe('merge command', () => {
       expect(execFileSync).not.toHaveBeenCalled();
     },
   );
+});
+
+// DEBT-515: the receipt names every CodeRabbit reply that recorded a learning.
+describe('merge command with CodeRabbit learnings (DEBT-515)', () => {
+  const CHAT_REPLY =
+    'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/987#issuecomment-6084464245';
+
+  function responses(pr: ReturnType<typeof pullRequest>) {
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce(
+        JSON.stringify({ behind_by: 0, base_commit: { sha: MAIN } }),
+      )
+      .mockReturnValueOnce('')
+      .mockReturnValueOnce('merged');
+  }
+
+  it('refuses an unlinked learning before posting a receipt or merging', () => {
+    const pr = pullRequest();
+    pr.comments = commentPage(learningReply(CHAT_REPLY));
+    responses(pr);
+    expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
+      'does not link',
+    );
+    expect(execFileSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('lists the linked learning replies in the receipt it posts', () => {
+    const pr = pullRequest();
+    pr.comments = commentPage(learningReply(CHAT_REPLY));
+    pr.body = `Learnings CodeRabbit recorded: ${CHAT_REPLY}`;
+    responses(pr);
+    const receipt = runMergeReviewedPr(['987', '--merge'], () => {});
+    expect(receipt).toMatchObject({ head: HEAD, learnings: [CHAT_REPLY] });
+    expect(vi.mocked(execFileSync).mock.calls[3]?.[2]).toMatchObject({
+      input: expect.stringContaining(`"learnings":["${CHAT_REPLY}"]`),
+    });
+  });
+
+  it('keeps the receipt unchanged when CodeRabbit recorded no learning', () => {
+    responses(pullRequest());
+    expect(runMergeReviewedPr(['987'], () => {})).not.toHaveProperty(
+      'learnings',
+    );
+  });
 });

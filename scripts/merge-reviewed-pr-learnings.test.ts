@@ -1,20 +1,10 @@
-import { execFileSync } from 'node:child_process';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { linkedLearningReplies, runMergeReviewedPr } from './merge-reviewed-pr';
+import { describe, expect, it } from 'vitest';
+import { linkedLearningReplies } from './merge-reviewed-pr';
 import {
   commentPage,
-  HEAD,
   learningReply,
-  MAIN,
   pullRequest,
-  review,
 } from './merge-reviewed-pr-test-helpers';
-
-vi.mock('node:child_process', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('node:child_process')>()),
-  execFileSync: vi.fn(),
-}));
-afterEach(() => vi.resetAllMocks());
 
 const PR_URL =
   'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/987';
@@ -52,6 +42,13 @@ describe('CodeRabbit learnings recorded on the PR (DEBT-515)', () => {
     expect(linkedLearningReplies(pr)).toEqual([CHAT_REPLY, THREAD_REPLY]);
   });
 
+  it('refuses a link the rendered description hides in an HTML comment', () => {
+    const pr = pullRequest();
+    pr.comments = commentPage(learningReply(CHAT_REPLY));
+    pr.body = `Summary of the change.\n<!-- ${CHAT_REPLY} -->`;
+    expect(() => linkedLearningReplies(pr)).toThrow('does not link');
+  });
+
   it('does not take a longer comment ID for the reply', () => {
     const pr = pullRequest();
     pr.comments = commentPage(learningReply(CHAT_REPLY));
@@ -87,50 +84,6 @@ describe('CodeRabbit learnings recorded on the PR (DEBT-515)', () => {
     const { body: _body, ...withoutBody } = pullRequest();
     expect(() => linkedLearningReplies(withoutBody)).toThrow(
       'Invalid GitHub comment response',
-    );
-  });
-});
-
-describe('merge command with CodeRabbit learnings (DEBT-515)', () => {
-  function responses(pr: ReturnType<typeof pullRequest>) {
-    vi.mocked(execFileSync)
-      .mockReturnValueOnce(
-        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
-      )
-      .mockReturnValueOnce(JSON.stringify([[review()]]))
-      .mockReturnValueOnce(
-        JSON.stringify({ behind_by: 0, base_commit: { sha: MAIN } }),
-      )
-      .mockReturnValueOnce('')
-      .mockReturnValueOnce('merged');
-  }
-
-  it('refuses an unlinked learning before posting a receipt or merging', () => {
-    const pr = pullRequest();
-    pr.comments = commentPage(learningReply(CHAT_REPLY));
-    responses(pr);
-    expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
-      'does not link',
-    );
-    expect(execFileSync).toHaveBeenCalledTimes(2);
-  });
-
-  it('lists the linked learning replies in the receipt it posts', () => {
-    const pr = pullRequest();
-    pr.comments = commentPage(learningReply(CHAT_REPLY));
-    pr.body = `Learnings CodeRabbit recorded: ${CHAT_REPLY}`;
-    responses(pr);
-    const receipt = runMergeReviewedPr(['987', '--merge'], () => {});
-    expect(receipt).toMatchObject({ head: HEAD, learnings: [CHAT_REPLY] });
-    expect(vi.mocked(execFileSync).mock.calls[3]?.[2]).toMatchObject({
-      input: expect.stringContaining(`"learnings":["${CHAT_REPLY}"]`),
-    });
-  });
-
-  it('keeps the receipt unchanged when CodeRabbit recorded no learning', () => {
-    responses(pullRequest());
-    expect(runMergeReviewedPr(['987'], () => {})).not.toHaveProperty(
-      'learnings',
     );
   });
 });

@@ -165,22 +165,18 @@ export function reportLearnings(
   );
 }
 
-function gh(args: string[]): string {
-  // Credentials come only from the workflow's scoped GH_TOKEN; never log them.
-  return execFileSync('gh', args, {
-    encoding: 'utf8',
-    timeout: 60_000,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-}
+// Runs gh with the given arguments and returns its output. The command line
+// supplies the real one below, so tests answer for GitHub without mocking a
+// Node module.
+type Gh = (args: string[]) => string;
 
 // GitHub's `since` filters on the last update, which is never before creation,
 // so it keeps every comment created inside the window.
-export function readLearningReplies(now: Date): LearningReply[] {
+export function readLearningReplies(now: Date, run: Gh): LearningReply[] {
   const since = new Date(now.getTime() - LOOKBACK_DAYS * DAY_MS).toISOString();
   const read = (endpoint: string): unknown =>
     JSON.parse(
-      gh([
+      run([
         'api',
         '--paginate',
         '--slurp',
@@ -193,11 +189,12 @@ export function readLearningReplies(now: Date): LearningReply[] {
 // `--dry-run` reports what the job would raise without touching GitHub issues.
 export async function runFromCommandLine(
   argv: readonly string[],
-  output: Pick<Console, 'log' | 'error'> = console,
-  now = new Date(),
+  output: Pick<Console, 'log' | 'error'>,
+  now: Date,
+  run: Gh,
 ): Promise<number> {
   try {
-    const replies = readLearningReplies(now);
+    const replies = readLearningReplies(now, run);
     const flagged = replies.filter((reply) =>
       reply.learnings.some((learning) => learning.suppresses),
     ).length;
@@ -206,7 +203,7 @@ export async function runFromCommandLine(
       output.log(`${summary} (dry run; no issue touched)`);
       return 0;
     }
-    const result = await reportLearnings(replies, createGithubAlertIssues());
+    const result = await reportLearnings(replies, createGithubAlertIssues(run));
     output.log(`${summary} (${result})`);
     return 0;
   } catch {
@@ -218,11 +215,22 @@ export async function runFromCommandLine(
 }
 
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-// No top-level await: tsx runs this repository's scripts as CommonJS.
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
-  void runFromCommandLine(process.argv).then((code) => {
-    process.exitCode = code;
+function gh(args: string[]): string {
+  // Credentials come only from the workflow's scoped GH_TOKEN; never log them.
+  return execFileSync('gh', args, {
+    encoding: 'utf8',
+    timeout: 60_000,
+    maxBuffer: 64 * 1024 * 1024,
   });
+}
+
+// No top-level await: tsx runs this repository's scripts as CommonJS.
+if (import.meta.url === executedPath) {
+  void runFromCommandLine(process.argv, console, new Date(), gh).then(
+    (code) => {
+      process.exitCode = code;
+    },
+  );
 }
 /* v8 ignore stop */

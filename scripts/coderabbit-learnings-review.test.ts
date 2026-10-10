@@ -1,5 +1,4 @@
-import { execFileSync } from 'node:child_process';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   LEARNINGS_REVIEW_ISSUE_TITLE,
   learningReplies,
@@ -10,12 +9,19 @@ import {
 } from './coderabbit-learnings-review';
 import { MemoryIssues } from './github-alert-issues-test-helpers';
 
-vi.mock('node:child_process', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('node:child_process')>()),
-  execFileSync: vi.fn(),
-}));
-const gh = vi.mocked(execFileSync);
-afterEach(() => gh.mockReset());
+// A gh stand-in: answers each call in turn and records the arguments.
+function scriptedGh(...answers: (string | Error)[]) {
+  const calls: string[][] = [];
+  const run = (args: string[]): string => {
+    calls.push(args);
+    const answer = answers.shift();
+    if (answer === undefined)
+      throw new Error(`Unexpected gh call: ${args.join(' ')}`);
+    if (answer instanceof Error) throw answer;
+    return answer;
+  };
+  return { run, calls };
+}
 
 const NOW = new Date('2026-10-20T13:00:00Z');
 const PR =
@@ -174,12 +180,12 @@ describe('weekly learnings issue (DEBT-515)', () => {
   });
 
   it('reads both comment lists for the past eight days, every page', () => {
-    gh.mockReturnValueOnce(JSON.stringify([[fact]])).mockReturnValueOnce(
-      JSON.stringify([[]]),
-    );
+    const gh = scriptedGh(JSON.stringify([[fact]]), JSON.stringify([[]]));
 
-    expect(readLearningReplies(NOW).map((r) => r.url)).toEqual([fact.html_url]);
-    expect(gh.mock.calls.map(([, args]) => args)).toEqual([
+    expect(readLearningReplies(NOW, gh.run).map((r) => r.url)).toEqual([
+      fact.html_url,
+    ]);
+    expect(gh.calls).toEqual([
       [
         'api',
         '--paginate',
@@ -196,29 +202,39 @@ describe('weekly learnings issue (DEBT-515)', () => {
   });
 
   it('reports without touching GitHub issues on a dry run', async () => {
-    gh.mockReturnValueOnce(
+    const gh = scriptedGh(
       JSON.stringify([[fact, leniency]]),
-    ).mockReturnValueOnce(JSON.stringify([]));
+      JSON.stringify([]),
+    );
     const log = vi.fn();
 
     expect(
-      await runFromCommandLine(['--dry-run'], { log, error: vi.fn() }, NOW),
+      await runFromCommandLine(
+        ['--dry-run'],
+        { log, error: vi.fn() },
+        NOW,
+        gh.run,
+      ),
     ).toBe(0);
     expect(log).toHaveBeenCalledWith(
       'CodeRabbit learnings recorded in the past week: 2, 1 telling it to stop raising something (dry run; no issue touched)',
     );
-    expect(gh).toHaveBeenCalledTimes(2);
+    expect(gh.calls).toHaveLength(2);
   });
 
   it('opens the issue through gh on a scheduled run', async () => {
-    gh.mockReturnValueOnce(JSON.stringify([[fact]]))
-      .mockReturnValueOnce(JSON.stringify([]))
-      .mockReturnValueOnce(JSON.stringify([]))
-      .mockReturnValueOnce('');
+    const gh = scriptedGh(
+      JSON.stringify([[fact]]),
+      JSON.stringify([]),
+      JSON.stringify([]),
+      '',
+    );
     const log = vi.fn();
 
-    expect(await runFromCommandLine([], { log, error: vi.fn() }, NOW)).toBe(0);
-    expect(gh.mock.calls[3]?.[1]).toEqual(
+    expect(
+      await runFromCommandLine([], { log, error: vi.fn() }, NOW, gh.run),
+    ).toBe(0);
+    expect(gh.calls[3]).toEqual(
       expect.arrayContaining([
         'issue',
         'create',
@@ -232,12 +248,12 @@ describe('weekly learnings issue (DEBT-515)', () => {
   });
 
   it('exits nonzero without detail when GitHub cannot be read', async () => {
-    gh.mockImplementationOnce(() => {
-      throw new Error('HTTP 403 with a token in the message');
-    });
+    const gh = scriptedGh(new Error('HTTP 403 with a token in the message'));
     const error = vi.fn();
 
-    expect(await runFromCommandLine([], { log: vi.fn(), error }, NOW)).toBe(1);
+    expect(
+      await runFromCommandLine([], { log: vi.fn(), error }, NOW, gh.run),
+    ).toBe(1);
     expect(error).toHaveBeenCalledWith(
       'CodeRabbit learnings review failed; inspect GitHub comment and issue access.',
     );

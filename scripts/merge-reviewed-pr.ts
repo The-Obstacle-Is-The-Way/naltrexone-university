@@ -423,6 +423,19 @@ const learningCommentsSchema = z.object({
   }),
 });
 
+// An anchor must not continue with a digit, so issuecomment-12 is not linked
+// by issuecomment-123.
+function mentionsAnchor(text: string, anchor: string): boolean {
+  for (
+    let at = text.indexOf(anchor);
+    at >= 0;
+    at = text.indexOf(anchor, at + 1)
+  ) {
+    if (!/\d/.test(text.charAt(at + anchor.length))) return true;
+  }
+  return false;
+}
+
 export function linkedLearningReplies(input: unknown): string[] {
   const parsed = learningCommentsSchema.safeParse(input);
   if (!parsed.success) throw new Error('Invalid GitHub comment response');
@@ -442,13 +455,11 @@ export function linkedLearningReplies(input: unknown): string[] {
         LEARNING_RECORDED.test(comment.body),
     )
     .map((comment) => comment.url);
-  // An anchor must not continue with a digit, so issuecomment-12 is not
-  // linked by issuecomment-123.
-  const unlinked = replies.filter((url) => {
-    const anchor = url.slice(url.indexOf('#') + 1);
-    const escaped = anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return !new RegExp(`${escaped}(?!\\d)`).test(pr.body);
-  });
+  // The owner reads the rendered description, which hides HTML comments.
+  const visible = pr.body.replace(/<!--[\s\S]*?-->/g, '');
+  const unlinked = replies.filter(
+    (url) => !mentionsAnchor(visible, url.slice(url.indexOf('#') + 1)),
+  );
   if (unlinked.length > 0) {
     throw new Error(
       `CodeRabbit recorded a learning the PR description does not link: ${unlinked.join(', ')}. Link each reply from the description so the owner can keep or delete it (AGENTS.md, CodeRabbit Learnings)`,
