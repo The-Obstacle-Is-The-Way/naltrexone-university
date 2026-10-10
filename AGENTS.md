@@ -700,6 +700,30 @@ data-flow analysis, or special cases merely to give an already-failing input a
 more precise label. Broaden the resolver only when a governing requirement names
 that behavior or a current-tree false positive prevents legitimate work.
 
+### CodeRabbit Learnings (DEBT-515, 2026-10-09)
+
+CodeRabbit turns a chat reply into a **learning**, a rule it applies to every
+later review. Learnings live in CodeRabbit, not in this repository, so nobody
+reviews them. Agents comment as the owner, so CodeRabbit cannot tell an agent's
+argument from the owner's ruling. In the 30 days to 2026-10-09 it recorded 250,
+about eight a day. Roughly a third tell it to stop raising something, and one
+was stale, contradicting the code's credential-safe redaction.
+
+- **Never ask CodeRabbit to record a learning.** Answer a finding with its
+  receipt and stop there.
+- **Link every learning it records anyway.** Its reply then says "Learnings
+  added". Link that reply from the PR description, by URL or anchor. The merge
+  command refuses until each one is linked and lists them in its receipt.
+- **Put reviewer rules in the repository.** A rule CodeRabbit should apply
+  belongs in this file or `.coderabbit.yaml`, through a reviewed PR.
+- **The owner reviews the week's learnings.** `.coderabbit.yaml` holds each new
+  learning for 30 days, then applies it unless the owner rejects it, and
+  CodeRabbit sends no notice. A weekly job
+  (`.github/workflows/coderabbit-learnings-review.yml`) keeps one GitHub issue,
+  assigned to the owner, listing every learning since its last report, with
+  those that tell CodeRabbit to stop raising something first. The owner
+  rejects or deletes harmful ones at app.coderabbit.ai/learnings.
+
 ### Why This Matters
 
 - CodeRabbit catches bugs, security issues, and architectural problems
@@ -762,7 +786,9 @@ must be in the PR head or already in `dev` (DEBT-491). Base each branch made aft
 promotion on `origin/main`, or merge `origin/main` into it. This check is early
 detection, not a lock: `dev` can move between the check and the merge, and
 `--match-head-commit` pins only the PR head; `verify-promotion` remains the
-enforcement and fails closed. The merge uses
+enforcement and fails closed. It refuses while a CodeRabbit reply recording
+"Learnings added" is not linked from the PR description, and lists those
+replies in the receipt as `learnings` (DEBT-515). The merge uses
 `--match-head-commit` so a subsequent push cannot substitute unreviewed code.
 With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
 This is mandatory operator tooling, not a claim that GitHub's zero-approval
@@ -960,7 +986,9 @@ The indexes' earlier content is frozen, unchanged, in
   wrong.
 - **Lifecycle.** A record moves from `Open` (or `Active`, `In Progress`) to
   `Verifying — <the remaining check>; due YYYY-MM-DD` when its fix merges but
-  a check remains that only promotion or production can satisfy. It stays
+  a check remains that only promotion or production can satisfy. The fixing
+  PR sets that status itself, effective when it merges, and ticks the
+  pre-merge checks it has passed. It stays
   live, so the queue stays complete. Once the check is recorded, it is
   archived in the next pull request that touches the register; closing needs
   no pull request of its own. A documentation-only record closes on its
