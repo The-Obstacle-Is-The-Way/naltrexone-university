@@ -45,6 +45,26 @@ describe('alertWhenClerkRefuses', () => {
     ]);
   });
 
+  it('rethrows the refusal, and logs, when the alerts cannot be built', async () => {
+    const logger = new FakeLogger();
+    const lookup = alertWhenClerkRefuses(
+      async () => {
+        throw refusal;
+      },
+      {
+        alerts: () => {
+          throw new Error('alerts unavailable');
+        },
+        logger,
+      },
+    );
+
+    await expect(lookup('user_1')).rejects.toBe(refusal);
+    expect(logger.errorCalls.map(({ context }) => context)).toEqual([
+      expect.objectContaining({ event: 'operational_alert_unavailable' }),
+    ]);
+  });
+
   it('rethrows any other failure without an alert', async () => {
     const outage = Object.assign(new Error('Bad Gateway'), { status: 502 });
     const { lookup, alerts } = lookUp(async () => {
