@@ -95,6 +95,28 @@ esac
 const FAKE_SLEEP = `#!/bin/sh
 ${LOG_CALL}
 `;
+// Stock macOS has no `timeout` (GNU coreutils), which the script bounds each
+// pull with. On such a host the harness supplies a stand-in for the one form
+// the script uses: it ends the command with TERM after the limit and exits
+// 124, as GNU timeout does. CI's runner and hosts with coreutils use the
+// real command.
+const HOST_HAS_TIMEOUT =
+  spawnSync('sh', ['-c', 'command -v timeout'], { stdio: 'ignore' }).status ===
+  0;
+const FAKE_TIMEOUT = `#!/bin/sh
+case "$1" in --kill-after=*) shift ;; esac
+limit=\${1%s}
+shift
+"$@" &
+pid=$!
+( /bin/sleep "$limit"; kill -TERM "$pid" 2>/dev/null ) &
+watcher=$!
+wait "$pid"
+status=$?
+kill "$watcher" 2>/dev/null
+if [ "$status" -gt 128 ]; then exit 124; fi
+exit "$status"
+`;
 
 const roots: string[] = [];
 afterAll(() =>
@@ -123,6 +145,10 @@ async function runStartScript({
   await writeFile(join(binDir, 'sleep'), FAKE_SLEEP);
   await chmod(join(binDir, 'docker'), 0o755);
   await chmod(join(binDir, 'sleep'), 0o755);
+  if (!HOST_HAS_TIMEOUT) {
+    await writeFile(join(binDir, 'timeout'), FAKE_TIMEOUT);
+    await chmod(join(binDir, 'timeout'), 0o755);
+  }
   await writeFile(logPath, '');
 
   const startedAt = Date.now();
