@@ -13,7 +13,7 @@
 - **Next.** Alerts for silent conditions (DEBT-501, DEBT-503 item 3), then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
 - **Owner decisions pending.** Vercel Pro at the first live sale (DEBT-512, decided 2026-10-09); the live purchase and refund (DEBT-501 item 7); Clerk's verified-email setting and a re-created account's trial (DEBT-502); DEBT-414's Resend webhook secret, F19a, Q7 and counsel review; DEBT-505's optional Sentry push; the 5% server trace sample (AUDIT-015); the production content bootstrap (DEBT-483); triaging the CodeRabbit learnings backlog and an account for agents (DEBT-515).
 
-**Next Debt ID:** DEBT-516 · **Next Frontend ID:** FE-056
+**Next Debt ID:** DEBT-517 · **Next Frontend ID:** FE-056
 
 ## Active
 
@@ -32,8 +32,9 @@
 | [DEBT-514](./debt-514-lint-staged-shared-clone-staging-race.md) | lint-staged can stage another session's work | P2 | Open — held at 17.5.1; safeguard or worktree isolation required |
 | [DEBT-515](./debt-515-coderabbit-learns-rules-from-agents.md) | CodeRabbit learns lasting rules from agents speaking as the owner | P2 | Verifying — after promotion, the first weekly learnings issue opens and new learnings wait for approval; due 2026-10-23 |
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22 |
-| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; watcher covers every direct dependency (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes |
+| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; the watcher now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes |
 | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22 |
+| [DEBT-516](./debt-516-ci-database-image-depends-on-one-registry.md) | CI's database image depends on one registry | P3 | Open — decided: pull Postgres with automatic failover across three registries at one digest; #1444's mirror serves it meanwhile |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 
