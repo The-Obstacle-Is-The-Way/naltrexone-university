@@ -12,12 +12,13 @@
 
 ## Summary
 
-Twice since 2026-10-08, one signed-in E2E test in a CI run has been sent to Clerk's sign-in page partway through, after its stored session restored normally. The other 62 tests passed, and each re-run passed. Nothing recorded why. [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) adds a trace that names Clerk's decisions at the next loss. This record holds the losses, the investigation and the hypotheses until a trace explains one.
+Three times since 2026-10-08, one signed-in E2E test has been sent to Clerk's sign-in page partway through, after its stored session restored normally: twice in CI and once in a local run. Each time the other 62 tests passed, and each re-run passed. Nothing recorded why. [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) adds a trace that names Clerk's decisions at the next loss. This record holds the losses, the investigation and the hypotheses until a trace explains one.
 
 ## Evidence
 
 - **2026-10-08, #1428, run 37781264035, first attempt.** `cross-page-navigation.spec.ts:26` had restored the session, confirmed the subscription and submitted an answer. Then `/app/dashboard` redirected to Clerk's hosted sign-in, as Playwright's failure snapshot showed (recorded on #1428). The run had no `[WebServer]` Clerk error, and the re-run passed.
 - **2026-10-09, #1440, run 37983577282.** `session-review-navigation.spec.ts:37` failed with `startSession lost Clerk authentication and was redirected to sign-in`. The same head had passed E2E 63/63 locally minutes earlier. It was the first CI run with Clerk's 2026-10-01 release set (#1438). The cause was recorded on #1440 before its one re-run, which passed.
+- **2026-10-10, #1436's local run, 01:27–01:31Z.** `practice.spec.ts:111` failed with the same `startSession` error, as test 23 of 63 on one worker. No CI or other local run overlapped it: #1443's CI had ended at 01:26:14Z. #1436 changes only scripts and docs. The loss is therefore not specific to CI runners. The failure's Playwright trace, which would have shown Clerk's headers, was overwritten by the re-run.
 - **Census (measured).** An independent read-only investigation covered the CI history since 2026-08-25.
   - Before 2026-10-08: 1,150 E2E attempts with no mid-test loss. The one failed restore at the start of a test is #1422's, on 2026-10-07, which is BUG-330.
   - Since 2026-10-08: 50 attempts with these 2 losses.
@@ -35,6 +36,8 @@ Twice since 2026-10-08, one signed-in E2E test in a CI run has been sent to Cler
   - the BUG-323 limiter: it runs on live keys only;
   - the E2E reset and seed: they no longer call Clerk.
 - **One floating variable.** Clerk JS loads from Clerk's CDN as `@clerk/clerk-js@6`, so the lockfile does not pin it. 6.38.0 and 6.38.1 came out around the losses, but their auth code did not change.
+
+- **Keeping the evidence.** A local failure keeps a Playwright trace (`test-results/<test>/trace.zip`, kept on failure). It holds every response's Clerk headers and the redirect chain. Before re-running after a local loss, copy that test's folder somewhere private: it contains Clerk tokens and must never be published. Then record what it shows here.
 
 ## Hypotheses (not yet decidable)
 
