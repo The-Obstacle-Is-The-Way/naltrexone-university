@@ -48,7 +48,8 @@ const commentPagesSchema = z.array(
 
 export type LearningReply = {
   url: string;
-  pullRequest: number;
+  // The pull request or issue the reply is on.
+  number: number;
   recordedAt: string;
   appliesOn: string;
   learnings: { text: string; suppresses: boolean }[];
@@ -81,7 +82,7 @@ export function learningReplies(
       const recorded = Date.parse(comment.created_at);
       return {
         url: comment.html_url,
-        pullRequest: Number(/\/pull\/(\d+)#/.exec(comment.html_url)?.[1]),
+        number: Number(/\/(?:pull|issues)\/(\d+)#/.exec(comment.html_url)?.[1]),
         recordedAt: day(recorded),
         appliesOn: day(recorded + HOLD_DAYS * DAY_MS),
         learnings: recordedLearnings(comment.body ?? '').map((text) => ({
@@ -96,7 +97,7 @@ export function learningReplies(
 // GitHub's limit; the rest are counted, so a busy week still opens the issue.
 function describeLearnings(replies: LearningReply[]): string {
   const link = (reply: LearningReply) =>
-    `[#${reply.pullRequest}](${reply.url}), recorded ${reply.recordedAt}`;
+    `[#${reply.number}](${reply.url}), recorded ${reply.recordedAt}`;
   const first = replies.filter((reply) =>
     reply.learnings.some((learning) => learning.suppresses),
   );

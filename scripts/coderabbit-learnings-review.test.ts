@@ -89,7 +89,7 @@ describe('CodeRabbit learnings recorded in the past week (DEBT-515)', () => {
     expect(learningReplies([[leniency], [fact]], [], NOW)).toEqual([
       {
         url: fact.html_url,
-        pullRequest: 1444,
+        number: 1444,
         recordedAt: '2026-10-19',
         appliesOn: '2026-11-18',
         learnings: [
@@ -101,7 +101,7 @@ describe('CodeRabbit learnings recorded in the past week (DEBT-515)', () => {
       },
       {
         url: leniency.html_url,
-        pullRequest: 1438,
+        number: 1438,
         recordedAt: '2026-10-13',
         appliesOn: '2026-11-12',
         learnings: [
@@ -112,6 +112,15 @@ describe('CodeRabbit learnings recorded in the past week (DEBT-515)', () => {
         ],
       },
     ]);
+  });
+
+  it('numbers a learning recorded on a plain issue by that issue', () => {
+    const onIssue = comment(
+      'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/1449#issuecomment-1',
+      '2026-10-19T10:00:00Z',
+      recorded('A learning from an issue thread.'),
+    );
+    expect(learningReplies([[onIssue]], [], NOW)[0]?.number).toBe(1449);
   });
 
   it('reads review-thread replies as well as PR comments', () => {
