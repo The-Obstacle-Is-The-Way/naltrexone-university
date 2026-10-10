@@ -13,12 +13,16 @@ import {
 // agents post as the owner, and applies each to every later review.
 // `.coderabbit.yaml` holds a new one for HOLD_DAYS, but one nobody rejects
 // applies when the hold ends, and CodeRabbit sends no notice. This weekly job
-// keeps one GitHub issue listing the past week's learnings, which notifies the
-// owner. Learnings that tell CodeRabbit to stop raising something come first,
-// because those are the ones that can let a defect through.
+// keeps one GitHub issue, assigned to the owner so GitHub notifies them,
+// listing every learning since the last report. Learnings that tell CodeRabbit
+// to stop raising something come first, because those are the ones that can
+// let a defect through.
 const HOLD_DAYS = 30;
-// A week, plus a day so that a delayed scheduled run misses nothing.
+// Where a first run starts: a week, plus a day for a delayed scheduled run.
 const LOOKBACK_DAYS = 8;
+// The report records the newest learning it listed, so the next run starts
+// after it, whatever runs were dropped in between.
+const CURSOR = /<!-- coderabbit-learnings-through: (\S+) -->/;
 export const LEARNINGS_REVIEW_ISSUE_TITLE =
   'CodeRabbit learnings recorded this week';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -48,6 +52,8 @@ const commentPagesSchema = z.array(
 
 export type LearningReply = {
   url: string;
+  // When CodeRabbit posted the reply, as GitHub reports it.
+  recorded: string;
   // The pull request or issue the reply is on.
   number: number;
   recordedAt: string;
@@ -58,30 +64,30 @@ export type LearningReply = {
 const day = (time: number) => new Date(time).toISOString().slice(0, 10);
 
 // CodeRabbit's replies, among PR comments and review-thread replies, that
-// recorded a learning in the LOOKBACK_DAYS before `now`, newest first.
+// recorded a learning after `since`, newest first.
 export function learningReplies(
   issueComments: unknown,
   reviewComments: unknown,
-  now: Date,
+  since: Date,
 ): LearningReply[] {
   const comments = [issueComments, reviewComments].flatMap((input) => {
     const parsed = commentPagesSchema.safeParse(input);
     if (!parsed.success) throw new Error('Invalid GitHub comment response');
     return parsed.data.flat();
   });
-  const start = now.getTime() - LOOKBACK_DAYS * DAY_MS;
   return comments
     .filter(
       (comment) =>
         comment.user?.login === 'coderabbitai[bot]' &&
         LEARNING_RECORDED.test(comment.body ?? '') &&
-        Date.parse(comment.created_at) >= start,
+        Date.parse(comment.created_at) > since.getTime(),
     )
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
     .map((comment) => {
       const recorded = Date.parse(comment.created_at);
       return {
         url: comment.html_url,
+        recorded: comment.created_at,
         number: Number(/\/(?:pull|issues)\/(\d+)#/.exec(comment.html_url)?.[1]),
         recordedAt: day(recorded),
         appliesOn: day(recorded + HOLD_DAYS * DAY_MS),
@@ -117,7 +123,7 @@ function describeLearnings(replies: LearningReply[]): string {
         .slice(0, 240)}\n`,
   );
   const intro =
-    `CodeRabbit recorded these learnings from pull-request chat in the past week. Each one applies to every later review. Agents comment as the owner, so a learning may come from an agent's argument rather than the owner's ruling. \`.coderabbit.yaml\` holds a new learning for ${HOLD_DAYS} days, then applies it unless the owner rejects it (DEBT-515).\n\n` +
+    `CodeRabbit recorded these learnings from pull-request chat since the last report. Each one applies to every later review. Agents comment as the owner, so a learning may come from an agent's argument rather than the owner's ruling. \`.coderabbit.yaml\` holds a new learning for ${HOLD_DAYS} days, then applies it unless the owner rejects it (DEBT-515).\n\n` +
     'At https://app.coderabbit.ai/learnings, reject a pending learning under **Pending approvals**, or delete an applied one, if it would let a defect through or states a decision the owner did not make.\n\n';
   const firstHeading =
     '**Review first.** These tell CodeRabbit to stop raising something:\n\n';
@@ -147,7 +153,8 @@ function describeLearnings(replies: LearningReply[]): string {
     (shownFirst.length > 0 ? `${firstHeading}${shownFirst.join('')}\n` : '') +
     (shownRest.length > 0 ? `${restHeading}${shownRest.join('')}\n` : '') +
     (omitted > 0 ? `- …and ${omitted} more; see the Learnings list.\n\n` : '') +
-    outro
+    outro +
+    `<!-- coderabbit-learnings-through: ${replies[0]?.recorded ?? ''} -->\n`
   );
 }
 
@@ -171,10 +178,28 @@ export function reportLearnings(
 // Node module.
 type Gh = (args: string[]) => string;
 
+// After the newest learning the last report listed, open or closed, or eight
+// days back before any report; never before the hold, since older learnings
+// already apply.
+export async function coverageStart(
+  issues: AlertIssues,
+  now: Date,
+): Promise<Date> {
+  const marked = (await issues.find(LEARNINGS_REVIEW_ISSUE_TITLE))
+    .filter((issue) => issue.title === LEARNINGS_REVIEW_ISSUE_TITLE)
+    .map((issue) => Date.parse(CURSOR.exec(issue.body)?.[1] ?? ''))
+    .filter((time) => Number.isFinite(time));
+  const start =
+    marked.length > 0
+      ? Math.max(...marked)
+      : now.getTime() - LOOKBACK_DAYS * DAY_MS;
+  return new Date(Math.max(start, now.getTime() - HOLD_DAYS * DAY_MS));
+}
+
 // GitHub's `since` filters on the last update, which is never before creation,
-// so it keeps every comment created inside the window.
-export function readLearningReplies(now: Date, run: Gh): LearningReply[] {
-  const since = new Date(now.getTime() - LOOKBACK_DAYS * DAY_MS).toISOString();
+// so it keeps every comment created after `start`.
+export function readLearningReplies(start: Date, run: Gh): LearningReply[] {
+  const since = start.toISOString();
   const read = (endpoint: string): unknown =>
     JSON.parse(
       run([
@@ -184,7 +209,11 @@ export function readLearningReplies(now: Date, run: Gh): LearningReply[] {
         `repos/{owner}/{repo}/${endpoint}?since=${since}&per_page=100`,
       ]),
     );
-  return learningReplies(read('issues/comments'), read('pulls/comments'), now);
+  return learningReplies(
+    read('issues/comments'),
+    read('pulls/comments'),
+    start,
+  );
 }
 
 // `--dry-run` reports what the job would raise without touching GitHub issues.
@@ -193,18 +222,22 @@ export async function runFromCommandLine(
   output: Pick<Console, 'log' | 'error'>,
   now: Date,
   run: Gh,
+  // The repository owner, whom the issue is assigned to; none for a local run.
+  owner: string | null,
 ): Promise<number> {
   try {
-    const replies = readLearningReplies(now, run);
+    const issues = createGithubAlertIssues(run, owner);
+    const start = await coverageStart(issues, now);
+    const replies = readLearningReplies(start, run);
     const flagged = replies.filter((reply) =>
       reply.learnings.some((learning) => learning.suppresses),
     ).length;
-    const summary = `CodeRabbit learnings recorded in the past week: ${replies.length}, ${flagged} telling it to stop raising something`;
+    const summary = `CodeRabbit learnings recorded since ${start.toISOString()}: ${replies.length}, ${flagged} telling it to stop raising something`;
     if (argv.includes('--dry-run')) {
       output.log(`${summary} (dry run; no issue touched)`);
       return 0;
     }
-    const result = await reportLearnings(replies, createGithubAlertIssues(run));
+    const result = await reportLearnings(replies, issues);
     output.log(`${summary} (${result})`);
     return 0;
   } catch {
@@ -228,10 +261,14 @@ function gh(args: string[]): string {
 
 // No top-level await: tsx runs this repository's scripts as CommonJS.
 if (import.meta.url === executedPath) {
-  void runFromCommandLine(process.argv, console, new Date(), gh).then(
-    (code) => {
-      process.exitCode = code;
-    },
-  );
+  void runFromCommandLine(
+    process.argv,
+    console,
+    new Date(),
+    gh,
+    process.env.GITHUB_REPOSITORY_OWNER ?? null,
+  ).then((code) => {
+    process.exitCode = code;
+  });
 }
 /* v8 ignore stop */

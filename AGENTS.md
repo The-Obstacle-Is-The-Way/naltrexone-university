@@ -719,10 +719,10 @@ was stale, contradicting the code's credential-safe redaction.
 - **The owner reviews the week's learnings.** `.coderabbit.yaml` holds each new
   learning for 30 days, then applies it unless the owner rejects it, and
   CodeRabbit sends no notice. A weekly job
-  (`.github/workflows/coderabbit-learnings-review.yml`) keeps one GitHub issue
-  listing the week's learnings, with those that tell CodeRabbit to stop
-  raising something first. The owner rejects or deletes harmful ones at
-  app.coderabbit.ai/learnings.
+  (`.github/workflows/coderabbit-learnings-review.yml`) keeps one GitHub issue,
+  assigned to the owner, listing every learning since its last report, with
+  those that tell CodeRabbit to stop raising something first. The owner
+  rejects or deletes harmful ones at app.coderabbit.ai/learnings.
 
 ### Why This Matters
 

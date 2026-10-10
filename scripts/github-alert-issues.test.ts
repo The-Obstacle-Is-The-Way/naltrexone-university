@@ -194,4 +194,40 @@ describe('GitHub alert issues', () => {
       ['issue', 'close', '7', '--comment', 'D'],
     ]);
   });
+
+  it('assigns created and reopened issues to the given assignee, whom GitHub notifies whatever their watch setting', async () => {
+    const calls: string[][] = [];
+    const issues = createGithubAlertIssues((args) => {
+      calls.push(args);
+      return '';
+    }, 'repo-owner');
+
+    await issues.create('T', 'B');
+    await issues.update(7, 'B2');
+
+    expect(calls).toEqual([
+      [
+        'issue',
+        'create',
+        '--title',
+        'T',
+        '--body',
+        'B',
+        '--assignee',
+        'repo-owner',
+      ],
+      [
+        'api',
+        '--method',
+        'PATCH',
+        'repos/{owner}/{repo}/issues/7',
+        '-f',
+        'state=open',
+        '-f',
+        'body=B2',
+        '-f',
+        'assignees[]=repo-owner',
+      ],
+    ]);
+  });
 });
