@@ -328,7 +328,10 @@ export async function runCheckoutSuccessProviderContract(
         defaultPaymentMethodAbsent,
         customerCardCount: cardCount,
       },
-      successSyncStatus: syncResult.status,
+      successSyncStatus:
+        'status' in syncResult
+          ? syncResult.status
+          : 'purchase_on_another_account',
       persisted: {
         rowCount: persistedRows.length,
         status: persisted?.status ?? null,

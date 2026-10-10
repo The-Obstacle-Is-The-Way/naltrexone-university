@@ -31,6 +31,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn() }),
 }));
 
+// The other-account view's sign-out button reads Clerk through its hook.
+vi.mock('@clerk/nextjs', () => ({ useClerk: () => ({ signOut: vi.fn() }) }));
+
 class RedirectError extends Error {
   constructor(readonly url: string) {
     super(`REDIRECT:${url}`);
@@ -476,6 +479,93 @@ describe('runCheckoutSuccessPage', () => {
     expect(html).toContain('You’ll be redirected to your dashboard shortly.');
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
     expect(html).toContain('Go to your dashboard');
+  });
+});
+
+describe('runCheckoutSuccessPage for a purchase on another account', () => {
+  // DEBT-501 item 5: paid on account A, returned signed in to account B.
+  // "Checkout failed" would invite B to buy again, a second charge.
+  it('says the purchase belongs to another account and offers neither the dashboard nor a plan', async () => {
+    const deps = {
+      authGateway: new FakeAuthGateway({
+        id: fixtureUser1Id,
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      }),
+      subscriptionVersions: new FakeSubscriptionRepository(),
+      rateLimiter: new FakeRateLimiter(),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger: new FakeLogger(),
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: { id: 'sub_123' },
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'active',
+            cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
+            metadata: { user_id: crypto.randomUUID() },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async () => {
+        throw new Error('should not start a transaction');
+      },
+    } satisfies CheckoutSuccessDeps;
+    const redirectFn = vi.fn((_: string): never => undefined as never);
+
+    const element = await runCheckoutSuccessPage(
+      { searchParams: Promise.resolve({ session_id: 'cs_test' }) },
+      deps,
+      redirectFn,
+    );
+
+    const html = renderToStaticMarkup(element);
+    const doc = parseHtml(html);
+    expect(redirectFn).not.toHaveBeenCalled();
+    expect(
+      findHeadingByText(doc, 'This purchase belongs to another account', {
+        level: 1,
+      }),
+    ).not.toBeNull();
+    expect(doc.body.textContent).toContain(
+      'sign in with the account you paid with',
+    );
+    expect(
+      doc.querySelector('a[href^="mailto:support@addictionboards.com?"]')
+        ?.textContent,
+    ).toBe('Contact support');
+    expect(
+      [...doc.querySelectorAll('button')].map((button) => button.textContent),
+    ).toEqual(['Sign out']);
+    expect(doc.querySelector(`a[href="${ROUTES.APP_DASHBOARD}"]`)).toBeNull();
+    expect(doc.querySelector(`a[href^="${ROUTES.PRICING}"]`)).toBeNull();
+    expect(html).not.toContain('You’ll be redirected');
   });
 });
 

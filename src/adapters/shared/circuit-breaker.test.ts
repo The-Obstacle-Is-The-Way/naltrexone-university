@@ -265,4 +265,72 @@ describe('CircuitBreaker', () => {
 
     await expect(probePromise).resolves.toBe('probe ok');
   });
+
+  // DEBT-501 item 6: an error the rule does not count is the service
+  // answering, so it also ends a run of failures.
+  describe('with a rule for which errors count', () => {
+    const isOutage = (error: unknown) =>
+      error instanceof Error && error.message === 'down';
+
+    function breakerWithRule(now: () => number) {
+      return new CircuitBreaker(
+        {
+          failureThreshold: 2,
+          resetTimeoutMs: 60_000,
+          openErrorCode: 'STRIPE_ERROR',
+          isFailure: isOutage,
+        },
+        now,
+      );
+    }
+
+    const failWith = (breaker: CircuitBreaker, message: string) =>
+      breaker.execute(async () => {
+        throw new Error(message);
+      });
+
+    it('never opens on errors the rule does not count', async () => {
+      const breaker = breakerWithRule(() => 0);
+
+      for (let call = 0; call < 3; call += 1) {
+        await expect(failWith(breaker, 'refused')).rejects.toThrow('refused');
+      }
+
+      await expect(breaker.execute(async () => 'ok')).resolves.toBe('ok');
+    });
+
+    it('restarts the count of failures after an error it does not count', async () => {
+      const breaker = breakerWithRule(() => 0);
+
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+      await expect(failWith(breaker, 'refused')).rejects.toThrow('refused');
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+
+      await expect(breaker.execute(async () => 'ok')).resolves.toBe('ok');
+    });
+
+    it('opens on consecutive errors the rule counts', async () => {
+      const breaker = breakerWithRule(() => 0);
+
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+
+      await expect(breaker.execute(async () => 'ok')).rejects.toMatchObject({
+        code: 'STRIPE_ERROR',
+      });
+    });
+
+    it('closes when a half-open probe ends in an error it does not count', async () => {
+      let nowMs = 0;
+      const breaker = breakerWithRule(() => nowMs);
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+      nowMs = 60_000;
+
+      await expect(failWith(breaker, 'refused')).rejects.toThrow('refused');
+
+      await expect(failWith(breaker, 'down')).rejects.toThrow('down');
+      await expect(breaker.execute(async () => 'ok')).resolves.toBe('ok');
+    });
+  });
 });
