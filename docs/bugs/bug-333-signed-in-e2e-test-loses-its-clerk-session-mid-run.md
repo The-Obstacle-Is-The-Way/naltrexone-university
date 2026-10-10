@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — a traced loss (2026-10-10) shows the cause: a navigation during Clerk JS's dev-browser cookie rewrite; the fix is to be chosen
+**Status:** In Progress — cause traced: a navigation during Clerk JS's dev-browser cookie rewrite; tests now drop the echo that triggers it, to be shown by repeated E2E runs
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -88,14 +88,19 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 4. **Pin Clerk JS's version.** Rejected: the cookie setter is the same in every version since at least 6.37.0.
 5. **Report the race to Clerk.** Ask that the dev-browser setter overwrite in place, or skip an unchanged token. That is the root fix, in Clerk's code, and filing it publicly is the owner's call.
 6. **Let tests navigate only once Clerk JS has stored its answers.** A navigation helper waits until no Frontend API request is pending on the page before it moves. That narrows the window but cannot close it: token refreshes answer at any time.
+8. **Drop Clerk's echo in tests** (decided 2026-10-10).
+   - **The evidence.** In the traced capture, every Frontend API answer's `Clerk-Db-Jwt` header carried the same token as the request's `__clerk_db_jwt` (compared by hash, never value). So each rewrite set identical cookies: a no-op that opens the race.
+   - **The change.** A context route (`tests/e2e/helpers/clerk-dev-browser-echo.ts`) passes Clerk JS's own Frontend API calls through and removes that header only when it equals the token the request sent. A different token still passes, so a real rotation is kept. Navigations, such as the handshake, are not intercepted.
+   - **Where.** Every signed-in test's restore and global setup install it before their first navigation.
+   - **Why not the testing token's route** (BUG-330 option 4). That route retries answers and rewrites their bodies. This one changes nothing but the trigger, now that the trace has named it.
 7. **Recover from this one cause, visibly.** When a navigation reaches sign-in and the trail shows `dev-browser-missing`, restore the stored session once and repeat the navigation, printing the trail. Unlike option 2, it acts only on the cause this record now explains.
 
 ## Resolution
 
-**Decided:** option 1, now done. Next: choose among options 5 to 7, ideally 5 with 6 or 7 until Clerk fixes it. A quiet period does not close this record: it would not show whether the cause went away or only did not fire, since 1,150 attempts passed before the first loss.
+**Decided:** option 1, done; option 8, built. Option 5, reporting the race to Clerk, is the owner's call, and would let option 8 go once Clerk fixes it. A quiet period does not close this record: it would not show whether the cause went away or only did not fire, since 1,150 attempts passed before the first loss.
 
 ## Verification
 
 - [x] A loss prints an `[E2E_CLERK_AUTH_TRACE]` trail, recorded here. *2026-10-10: a local gate's hosted lane, above; a CI one would show whether the earlier losses share it.*
 - [x] The trail, with the server's output, names which of Clerk's four cases sent the page to sign-in, and why. *2026-10-10: case 2, after a `dev-browser-missing` handshake, caused by a navigation during Clerk JS's cookie rewrite.*
-- [ ] A fix against that cause, test-first, or an explained acceptance.
+- [ ] A fix against that cause, test-first, or an explained acceptance. *2026-10-10: option 8, unit-tested. Still to show: repeated E2E runs without a loss, against today's rate of about one loss in two runs.*
