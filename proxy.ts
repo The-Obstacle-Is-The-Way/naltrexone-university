@@ -16,6 +16,7 @@ import {
   clerkCallFailure,
   reportClerkCallFailure,
 } from '@/lib/clerk-call-failures';
+import { parseClerkJwtKey } from '@/lib/clerk-jwt-key';
 import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
@@ -203,6 +204,28 @@ function shouldBypassClerkAuth(): boolean {
   return true;
 }
 
+// DEBT-503 item 5: with Clerk's signing key, the middleware verifies session
+// tokens without fetching keys from Clerk's Backend API, whose outage would
+// sign every visitor out, and which any token naming an unknown key ID calls. `@clerk/nextjs` does not read
+// CLERK_JWT_KEY itself. An unreadable key is logged and left out, so Clerk
+// fetches its keys as before; the production build refuses one.
+function configuredClerkJwtKey(): string | undefined {
+  try {
+    return parseClerkJwtKey(process.env.CLERK_JWT_KEY);
+  } catch (error) {
+    console.error({
+      event: 'clerk_jwt_key_unreadable',
+      reason: error instanceof Error ? error.message : 'unknown',
+    });
+    return undefined;
+  }
+}
+
+function clerkJwtKeyOption(): { jwtKey?: string } {
+  const jwtKey = configuredClerkJwtKey();
+  return jwtKey ? { jwtKey } : {};
+}
+
 async function getClerkMiddleware(): Promise<NextMiddleware> {
   if (cachedClerkMiddleware) return cachedClerkMiddleware;
 
@@ -219,6 +242,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
       }
     },
     {
+      ...clerkJwtKeyOption(),
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
         strict: true,

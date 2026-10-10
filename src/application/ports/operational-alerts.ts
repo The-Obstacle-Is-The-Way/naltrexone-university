@@ -20,6 +20,9 @@ export const OPERATIONAL_ALERT_KINDS = [
   // Clerk's middleware could not fetch Clerk's signing keys, so every
   // signed-in visitor on that server instance was signed out.
   'clerk_signing_keys_unavailable',
+  // DEBT-503 item 5: session tokens failed their signature check past a
+  // threshold, as every token does when CLERK_JWT_KEY is not Clerk's key.
+  'clerk_session_tokens_rejected',
   // DEBT-501 item 1: the Stripe reconcile run stopped before its last page,
   // and nothing resumes it, so later rows go unrepaired.
   'stripe_reconcile_stopped_early',

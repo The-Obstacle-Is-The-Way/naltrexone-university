@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD } from '@/src/adapters/shared/rate-limits';
+import {
+  CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD,
+  CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD,
+} from '@/src/adapters/shared/rate-limits';
 import {
   FakeOperationalAlerts,
   FakeRateLimiter,
@@ -97,6 +100,13 @@ describe('clerkCallFailure', () => {
     ).toBeNull();
   });
 
+  // DEBT-503 item 5: a configured key that is not Clerk's rejects every token.
+  it('names a session token whose signature failed', () => {
+    expect(clerkCallFailure(request(), answer('token-invalid-signature'))).toBe(
+      'signature',
+    );
+  });
+
   it('ignores an answer with no failure', () => {
     expect(clerkCallFailure(request(), answer())).toBeNull();
     expect(
@@ -167,6 +177,26 @@ describe('reportClerkCallFailure', () => {
 
     expect(alerts.raised).toEqual([
       { kind: 'clerk_backend_calls_refused', count: 1 },
+    ]);
+  });
+
+  it('counts rejected signatures apart, and raises their own alert past the threshold', async () => {
+    const limiter = new FakeRateLimiter([OVER_THRESHOLD]);
+    const { done, alerts, warned } = report('signature', limiter);
+
+    await done;
+
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_session_token_rejected',
+    });
+    expect(limiter.inputs).toEqual([
+      {
+        key: 'clerk-session-token-rejected:site',
+        ...CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD,
+      },
+    ]);
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_session_tokens_rejected', count: 1 },
     ]);
   });
 

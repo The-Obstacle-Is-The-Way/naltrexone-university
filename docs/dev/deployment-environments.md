@@ -109,6 +109,15 @@ A new price for new customers waits for item 2's list of recognized legacy IDs. 
 
 `CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must come from the same Clerk instance and the same environment type (`test` vs `live`). `lib/env.ts` validates both conditions.
 
+### Clerk JWT key (Production)
+
+`CLERK_JWT_KEY` lets the middleware verify session tokens without fetching Clerk's signing keys from the Backend API ([DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 5). Without it, each server instance fetches them every five minutes, and a failed fetch, in a Clerk outage or a network failure, signs every visitor on that instance out. A session token naming an uncached key ID also forces a fetch, so anyone can make a request wait on Clerk. `@clerk/nextjs` does not read this variable itself; `proxy.ts` passes it to `clerkMiddleware` as `jwtKey`.
+
+- **Value.** The production instance's public key in PEM form, from the Clerk Dashboard's API keys page, or built from the key the Frontend API publishes at `/.well-known/jwks.json`. It is public, not a secret. Escaped `\n` newlines are restored.
+- **Where.** Vercel Production only. Preview and development use the development instance, and keep fetching.
+- **Checked twice.** The build (`scripts/check-clerk-jwt-key.ts`, before `next build`) fails unless the key is one Clerk publishes for the publishable key's instance, so a wrong key never deploys. At runtime, more than three rejected signatures in a minute raise `clerk_session_tokens_rejected`.
+- **If Clerk changes its signing key,** every visitor is signed out until this is updated: remove the variable or set the new key, then redeploy.
+
 ---
 
 ## Known Gotchas

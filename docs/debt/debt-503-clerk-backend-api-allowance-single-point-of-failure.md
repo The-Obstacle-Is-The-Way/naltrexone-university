@@ -128,10 +128,20 @@ This record holds the structural fixes, so that the allowance stops being the on
   - **Setting `CLERK_JWT_KEY` alone would do nothing.** `@clerk/nextjs` 7.9.10 does not read that variable; its server constants read only the keys, URLs and flags. The key must be passed to `clerkMiddleware` as `jwtKey`. BUG-325 called it an optional owner setting that only saves middleware time, which was wrong on both counts.
 - **The risk of fixing it.** A static key that no longer matches Clerk's would sign every visitor out, with `token-invalid-signature`, until it was corrected. The fetched keys follow a change by themselves: a token whose key ID is not cached triggers a new fetch.
 - **Decided.**
-  1. Pass `jwtKey` from `CLERK_JWT_KEY` to `clerkMiddleware`, validated in `lib/env.ts` as a public key in PEM format. Without the variable, behaviour is unchanged.
-  2. Before relying on it, check it against the keys Clerk publishes at the Frontend API's `/.well-known/jwks.json`, which needs no secret. Run that check daily through DEBT-505's alert path, and as a build step that fails a production build on a mismatch.
-  3. Then set it in Vercel Production, from those published keys, and deploy through a promotion. Preview and development keep fetching, since they use the development instance.
-- **Due 2026-10-14,** the pull request after item 3's. The owner asked on 2026-10-10 for this to be fixed now or soon.
+  1. Pass `jwtKey` from `CLERK_JWT_KEY` to `clerkMiddleware`. Without the variable, behaviour is unchanged.
+  2. Accept only a key Clerk reads exactly. Clerk strips the PEM's newlines, header and a fixed 2048-bit RSA prefix, so a key it would misread, or one pasted with escaped newlines it would keep, signs every visitor out.
+  3. Check it against the keys Clerk publishes at the Frontend API's `/.well-known/jwks.json`, which needs no secret, as a build step that fails the build on a mismatch. A failed build leaves the live deployment serving, so the step fails closed.
+  4. Count rejected signatures, and alert past three in a minute. A key that stops matching signs out every visitor who tries, and each signs in and fails again.
+  5. Then set it in Vercel Production, from those published keys, and deploy through a promotion. Preview and development keep fetching, since they use the development instance.
+
+  *Changed 2026-10-10, while building: the daily comparison is dropped. The build step catches a wrong key before it deploys, and the rejected-signature alert catches a key that stops matching within a minute of signed-in traffic. A daily check would add only the hours without traffic, for another job, port and alert.*
+- **Built 2026-10-10, test-first** (steps 1 to 4).
+  - `lib/clerk-jwt-key.ts` parses and validates the key, and compares it with Clerk's published keys. `proxy.ts` passes it as `jwtKey`; an unreadable key is logged and left out, so Clerk fetches as before.
+  - `scripts/check-clerk-jwt-key.ts` runs before `next build`.
+  - Item 3's detector counts `token-invalid-signature` apart, as `clerk_session_tokens_rejected` (`CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD`).
+  - **Proof.** `lib/clerk-jwt-key-sdk.test.ts` runs the real middleware: with the key, a signed-in visitor verifies with no call to Clerk; with another key, the visitor is signed out with `token-invalid-signature`. Against the development instance's published keys, read 2026-10-10, the build step passes Clerk's real key in both newline forms; it is RSA 2048 with exponent 65537.
+  - **Still to do:** step 5, after this merges and is promoted.
+- **Due 2026-10-14,** the pull request after item 3's. The owner asked on 2026-10-10 for this to be fixed now or soon, including the production setting.
 
 ## Verification
 

@@ -48,6 +48,15 @@ export const CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+// DEBT-503 item 5: a session token whose signature fails is a forgery, or,
+// when CLERK_JWT_KEY is not Clerk's signing key, every signed-in request. A
+// visitor signed out that way signs in again and fails again, so even one
+// active visitor passes this; forgeries alone rarely do.
+export const CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD = {
+  limit: 3,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 // BUG-325: each checkout-success visit costs a Clerk user lookup and a Stripe
 // call. A buyer lands there once or twice, so ten a minute per signed-in user
 // leaves real visits untouched.

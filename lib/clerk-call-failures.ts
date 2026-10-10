@@ -1,4 +1,7 @@
-import { CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD } from '@/src/adapters/shared/rate-limits';
+import {
+  CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD,
+  CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD,
+} from '@/src/adapters/shared/rate-limits';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
@@ -10,8 +13,10 @@ import { raiseOperationalAlert } from './clerk-backend-call-limit';
 // signed-in visitor on this server instance is signed out. `refresh`: an
 // expired session token's refresh, which then redirects through a handshake.
 // `handshake`: the lookup of the nonce that handshake returns with, which
-// signs the visitor out when it fails.
-export type ClerkCallFailure = 'keys' | 'refresh' | 'handshake';
+// signs the visitor out when it fails. `signature` (DEBT-503 item 5): a
+// session token whose signature failed, as every token does when a configured
+// CLERK_JWT_KEY is not Clerk's signing key.
+export type ClerkCallFailure = 'keys' | 'refresh' | 'handshake' | 'signature';
 
 const REFRESH_FAILED = 'session-token-expired-refresh-';
 
@@ -44,6 +49,7 @@ export function clerkCallFailure(
 ): ClerkCallFailure | null {
   const reason = response.headers.get('x-clerk-auth-reason') ?? '';
   if (reason === 'jwk-remote-failed-to-load') return 'keys';
+  if (reason === 'token-invalid-signature') return 'signature';
   if (
     reason.startsWith(REFRESH_FAILED) &&
     !REFRESH_FAILED_WITHOUT_CLERK.has(reason.slice(REFRESH_FAILED.length))
@@ -77,14 +83,29 @@ export async function reportClerkCallFailure(
   failure: ClerkCallFailure,
   { loadLimiter, loadAlerts }: ClerkCallFailureReporting,
 ): Promise<void> {
-  console.warn({ event: 'clerk_backend_call_failed', call: failure });
+  // A rejected signature is its own condition: a forged token, or every
+  // token when the configured key is wrong. It counts apart, so forgeries
+  // never mask Clerk's failures, and its alert names the key.
+  const signature = failure === 'signature';
+  console.warn(
+    signature
+      ? { event: 'clerk_session_token_rejected' }
+      : { event: 'clerk_backend_call_failed', call: failure },
+  );
   if (failure !== 'keys') {
     try {
       const limiter = await loadLimiter();
-      const counted = await limiter.limit({
-        key: 'clerk-backend-call-failed:site',
-        ...CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD,
-      });
+      const counted = await limiter.limit(
+        signature
+          ? {
+              key: 'clerk-session-token-rejected:site',
+              ...CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD,
+            }
+          : {
+              key: 'clerk-backend-call-failed:site',
+              ...CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD,
+            },
+      );
       if (counted.success) return;
     } catch (error) {
       console.error({
@@ -96,8 +117,10 @@ export async function reportClerkCallFailure(
   }
   await raiseOperationalAlert(
     loadAlerts,
-    failure === 'keys'
-      ? 'clerk_signing_keys_unavailable'
-      : 'clerk_backend_calls_refused',
+    signature
+      ? 'clerk_session_tokens_rejected'
+      : failure === 'keys'
+        ? 'clerk_signing_keys_unavailable'
+        : 'clerk_backend_calls_refused',
   );
 }

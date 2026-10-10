@@ -1,0 +1,115 @@
+import { generateKeyPairSync } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
+import { checkClerkJwtKey } from './check-clerk-jwt-key';
+
+const PUBLISHABLE_KEY = `pk_live_${Buffer.from('clerk.example.com$').toString('base64')}`;
+
+function rsaKey() {
+  const { publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  return {
+    pem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    jwk: { ...publicKey.export({ format: 'jwk' }), kid: 'ins_live' },
+  };
+}
+
+function run(
+  env: Record<string, string | undefined>,
+  published: () => Promise<unknown> = async () => ({ keys: [] }),
+) {
+  const lines: string[] = [];
+  const read: string[] = [];
+  const done = checkClerkJwtKey({
+    env,
+    readJson: async (url) => {
+      read.push(url);
+      return published();
+    },
+    output: {
+      log: (line: string) => lines.push(`log ${line}`),
+      error: (line: string) => lines.push(`error ${line}`),
+    },
+  });
+  return { done, lines, read };
+}
+
+// DEBT-503 item 5: a configured key that is not Clerk's would sign every
+// visitor out, so the build refuses it before it can deploy.
+describe('checkClerkJwtKey', () => {
+  it('passes without a configured key, and reads nothing', async () => {
+    const { done, read } = run({
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+    });
+
+    expect(await done).toBe(0);
+    expect(read).toEqual([]);
+  });
+
+  it('passes a key Clerk publishes for the instance', async () => {
+    const key = rsaKey();
+    const { done, read } = run(
+      {
+        CLERK_JWT_KEY: key.pem,
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+      },
+      async () => ({ keys: [key.jwk] }),
+    );
+
+    expect(await done).toBe(0);
+    expect(read).toEqual(['https://clerk.example.com/.well-known/jwks.json']);
+  });
+
+  it('fails a key Clerk does not publish', async () => {
+    const { done, lines } = run(
+      {
+        CLERK_JWT_KEY: rsaKey().pem,
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+      },
+      async () => ({ keys: [rsaKey().jwk] }),
+    );
+
+    expect(await done).toBe(1);
+    expect(lines).toEqual([
+      'error CLERK_JWT_KEY is not a key Clerk publishes for clerk.example.com',
+    ]);
+  });
+
+  it('fails an unreadable key', async () => {
+    const { done, lines } = run({
+      CLERK_JWT_KEY: 'not a key',
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+    });
+
+    expect(await done).toBe(1);
+    expect(lines).toEqual([
+      'error CLERK_JWT_KEY is not a public key in PEM form',
+    ]);
+  });
+
+  // A failed build leaves the live deployment serving, so the check fails
+  // closed rather than deploy a key it could not compare.
+  it("fails when Clerk's published keys cannot be read", async () => {
+    const { done, lines } = run(
+      {
+        CLERK_JWT_KEY: rsaKey().pem,
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+      },
+      async () => {
+        throw new Error('HTTP 503');
+      },
+    );
+
+    expect(await done).toBe(1);
+    expect(lines).toEqual([
+      'error could not read the keys Clerk publishes for clerk.example.com: HTTP 503',
+    ]);
+  });
+
+  it('fails without a publishable key naming the instance', async () => {
+    const { done, lines } = run({ CLERK_JWT_KEY: rsaKey().pem });
+
+    expect(await done).toBe(1);
+    expect(lines).toEqual([
+      'error CLERK_JWT_KEY needs NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to find the keys Clerk publishes',
+    ]);
+  });
+});
