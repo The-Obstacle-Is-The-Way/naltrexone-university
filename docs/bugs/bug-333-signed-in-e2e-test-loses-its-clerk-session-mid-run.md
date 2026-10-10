@@ -12,7 +12,11 @@
 
 ## Summary
 
-Three times since 2026-10-08, one signed-in E2E test has been sent to Clerk's sign-in page partway through, after its stored session restored normally: twice in CI and once in a local run. Each time the other 62 tests passed, and each re-run passed. Nothing recorded why. [BUG-330](../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) adds a trace that names Clerk's decisions at the next loss. This record holds the losses, the investigation and the hypotheses until a trace explains one.
+Since 2026-10-08, a signed-in E2E test has sometimes been sent to Clerk's sign-in page partway through, after its stored session restored normally, while the other tests passed.
+- **Two captures, 2026-10-10.** One came through [BUG-330](../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md)'s trace, one through a kept Playwright trace. Both show the cause: the test navigated while Clerk JS was rewriting its dev-browser cookies.
+- **Three earlier losses**, twice in CI and once locally, left no trace. They fit the same race, but are not shown to be it.
+- **The fix.** E2E contexts drop Clerk's echo of the dev-browser token, which triggers the rewrite.
+- **Remaining check.** A week of CI without a mid-run loss. A loss whose trace names another cause reopens the investigation.
 
 ## Evidence
 
