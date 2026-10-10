@@ -79,8 +79,8 @@ This record holds the structural fixes, so that the allowance stops being the on
 
   *Corrected 2026-10-06: `lib/logger.ts` writes stdout, while `instrumentation.ts` captures exceptions; no pino-to-Sentry forwarding is installed. The account API confirms Developer, not a paid logging assumption.*
 
-- **Built 2026-10-10, test-first.** One alert kind, `clerk_backend_calls_refused`, covers both refusals.
-  - **Our caps.** `limitClerkBackendCalls` names the limit that tripped: `address`, `session` or `site`, never the address or session itself. The proxy logs `clerk_backend_call_refused` with that limit, and raises the alert after the response through `waitUntil`, as the limiter-failure alert does.
+- **Built 2026-10-10, test-first.** Three alert kinds, one per impact (see the change below).
+  - **Our caps.** `limitClerkBackendCalls` names the limit that tripped: `address`, `session` or `site`, never the address or session itself. The proxy logs `clerk_backend_call_refused` with that limit. Only `site` raises an alert, `clerk_site_limit_reached`, after the response through `waitUntil`, as the limiter-failure alert does. One client over its own limit is the limit working.
   - **Clerk's 429.** The container's `getClerkUserById` is wrapped by `alertWhenClerkRefuses`. It logs `clerk_backend_call_refused` with `limit: clerk`, raises the alert, and rethrows the same error to the caller's retry. An integration test drives the real container against a Clerk SDK stubbed to answer 429, and finds the alert's cooldown row in Postgres.
   - **The bound** is the shared cooldown's, unchanged: one alert per kind per six hours across instances, or one per instance while the limiter errors. DEBT-505's integration tests prove it with eight concurrent instances and across a restart.
   - **The response.** The runbook row in `docs/dev/logging.md` names Vercel's Attack Challenge Mode for a sustained trip.
@@ -92,11 +92,18 @@ This record holds the structural fixes, so that the allowance stops being the on
     Our site cap usually trips before Clerk's limit, but not always: it counts 1,000 requests a minute against Clerk's documented 1,000 calls per 10 seconds, up to 2,000 pass across a fixed-window boundary, and the key fetches are not counted at all.
 
     `lib/clerk-call-failures.ts` reads Clerk's answer after the middleware runs, on a production instance only. `clerkCallFailure` names the failed call from the auth reason. A refresh reason decided before Clerk answered, such as `non-eligible-no-refresh-cookie` or `invalid-session-token`, is not Clerk failing. A nonce lookup that set cookies succeeded, even for a signed-out visitor. Each failure logs `clerk_backend_call_failed` with its `call`, after the response:
-    - **`keys`** raises `clerk_backend_calls_refused` at once, since a key fetch never fails in normal operation.
+    - **`keys`** raises `clerk_signing_keys_unavailable` at once, since a key fetch never fails in normal operation.
     - **`refresh` and `handshake`** count on the existing limiter, and raise it past 10 in a minute site-wide (`CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD`). Some of these fail for ordinary reasons, such as a session that ended elsewhere or a reused nonce. Counting failures needs no knowledge of Clerk's 429 code. Item 4's measurements retune the threshold.
 
     **Proof.** `lib/clerk-call-failures-sdk.test.ts` runs the real Clerk middleware over a stubbed Backend API. It refuses each of the three calls with a 429, and checks that a healthy signed-in visitor and a signed-out nonce answer name nothing. Unit tests cover each reason and the reporting. The proxy tests cover the production-only gate and the report after the response. Six mutations, one per guard, each fail a test. This is also the first half of item 2's option 1, which reads Clerk's answer after the middleware runs.
-  - **Still to show after release:** one test event of this kind reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
+  - **Changed 2026-10-10, before review: one kind per impact.** A kind's six-hour cooldown also hides its own next episode. With one kind for every refusal, a single bot tripping its per-address limit would have silenced a mass sign-out hours later. So:
+    - `clerk_site_limit_reached`: our site-wide limit refused visitors. The response is Attack Challenge Mode.
+    - `clerk_backend_calls_refused`: Clerk refused or failed our calls, a lookup's 429 or refreshes and nonce lookups past the threshold.
+    - `clerk_signing_keys_unavailable`: a mass sign-out on one instance.
+    - Per-address and per-session refusals are logged and never alert.
+
+    Kinds are independent downstream too: each kind and window opens its own Sentry issue, and each new issue emails. The rule is in `docs/dev/logging.md` under Operational alerts.
+  - **Still to show after release:** one test event of these kinds reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
 
 ### 4. Measure the real volume of these requests (P3)
 

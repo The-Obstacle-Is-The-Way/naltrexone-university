@@ -67,10 +67,11 @@ export type ClerkCallFailureReporting = {
 
 /**
  * Logs the failure, then alerts the owner through the bounded alert path:
- * at once for the signing keys, which never fail in normal operation, and
- * for refreshes and nonce lookups once more than the threshold fail in a
- * minute, since some fail for ordinary reasons. It runs after the response,
- * and never rejects.
+ * at once for the signing keys, which never fail in normal operation, under
+ * their own kind, since every visitor on the instance is signed out; and for
+ * refreshes and nonce lookups once more than the threshold fail in a minute,
+ * since some fail for ordinary reasons. It runs after the response, and never
+ * rejects.
  */
 export async function reportClerkCallFailure(
   failure: ClerkCallFailure,
@@ -93,5 +94,10 @@ export async function reportClerkCallFailure(
       return;
     }
   }
-  await raiseOperationalAlert(loadAlerts, 'clerk_backend_calls_refused');
+  await raiseOperationalAlert(
+    loadAlerts,
+    failure === 'keys'
+      ? 'clerk_signing_keys_unavailable'
+      : 'clerk_backend_calls_refused',
+  );
 }

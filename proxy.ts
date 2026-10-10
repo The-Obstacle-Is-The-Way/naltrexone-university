@@ -286,15 +286,18 @@ export function createProxy({
           event.waitUntil(raiseLimiterFailureAlert(loadOperationalAlerts));
         },
         (limit) => {
-          // DEBT-503 item 3: each refusal is logged for diagnosis, and the
-          // owner is alerted, at most once per cooldown, after the response.
+          // DEBT-503 item 3: each refusal is logged for diagnosis. Only the
+          // site-wide limit alerts the owner, after the response: one client
+          // over its own limit is the limit working, and needs no one.
           console.warn({ event: 'clerk_backend_call_refused', limit });
-          event.waitUntil(
-            raiseOperationalAlert(
-              loadOperationalAlerts,
-              'clerk_backend_calls_refused',
-            ),
-          );
+          if (limit === 'site') {
+            event.waitUntil(
+              raiseOperationalAlert(
+                loadOperationalAlerts,
+                'clerk_site_limit_reached',
+              ),
+            );
+          }
         },
       );
       if (limited) return limited;

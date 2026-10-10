@@ -590,9 +590,10 @@ describe('proxy with the Clerk Backend API limit', () => {
     ]);
   });
 
-  // DEBT-503 item 3: a cap trip is logged for diagnosis and alerts the owner,
-  // after the response.
-  it('logs a refusal by its limit and raises the refusal alert through waitUntil', async () => {
+  // DEBT-503 item 3: a site-wide trip is logged for diagnosis and alerts the
+  // owner, after the response, under its own kind: returning visitors
+  // everywhere are waiting, and the response is Attack Challenge Mode.
+  it('logs a site-wide refusal and raises its own alert through waitUntil', async () => {
     const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { proxy, alerts } = await proxyWith(
       new FakeRateLimiter([OVER_LIMIT]),
@@ -611,8 +612,31 @@ describe('proxy with the Clerk Backend API limit', () => {
       limit: 'site',
     });
     expect(alerts.raised).toEqual([
-      { kind: 'clerk_backend_calls_refused', count: 1 },
+      { kind: 'clerk_site_limit_reached', count: 1 },
     ]);
+  });
+
+  // One client over its own limit is the limit working, and needs no one; an
+  // alert for it would also spend the cooldown of an alert that does.
+  it('logs a per-address refusal and raises nothing', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter([OVER_LIMIT]),
+    );
+    const [request, event] = proxyInvocation(
+      'https://example.com/pricing?__clerk_handshake_nonce=x',
+    );
+    request.headers.set('x-vercel-forwarded-for', '203.0.113.7');
+
+    const response = await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(response?.status).toBe(429);
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_refused',
+      limit: 'address',
+    });
+    expect(alerts.raised).toEqual([]);
   });
 
   it('raises no alert while the limiter works', async () => {
@@ -659,7 +683,7 @@ describe('proxy with the Clerk Backend API limit', () => {
       call: 'keys',
     });
     expect(alerts.raised).toEqual([
-      { kind: 'clerk_backend_calls_refused', count: 1 },
+      { kind: 'clerk_signing_keys_unavailable', count: 1 },
     ]);
   });
 

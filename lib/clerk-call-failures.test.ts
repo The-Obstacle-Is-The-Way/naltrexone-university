@@ -124,7 +124,7 @@ describe('reportClerkCallFailure', () => {
     return { done, alerts, limiter, warned, errored };
   }
 
-  it('logs the call and alerts at once when the signing keys failed', async () => {
+  it('logs the call and alerts at once, under its own kind, when the signing keys failed', async () => {
     const { done, alerts, limiter, warned } = report('keys');
 
     await done;
@@ -134,7 +134,7 @@ describe('reportClerkCallFailure', () => {
       call: 'keys',
     });
     expect(alerts.raised).toEqual([
-      { kind: 'clerk_backend_calls_refused', count: 1 },
+      { kind: 'clerk_signing_keys_unavailable', count: 1 },
     ]);
     expect(limiter.inputs).toEqual([]);
   });
