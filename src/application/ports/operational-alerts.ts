@@ -13,6 +13,9 @@ export const OPERATIONAL_ALERT_KINDS = [
   // DEBT-503 item 3: a call that would reach Clerk's Backend API was refused,
   // by one of the sign-in limits or by Clerk itself (429).
   'clerk_backend_calls_refused',
+  // DEBT-501 item 1: the Stripe reconcile run stopped before its last page,
+  // and nothing resumes it, so later rows go unrepaired.
+  'stripe_reconcile_stopped_early',
   // A scheduled GitHub check, the alert watcher among them, has stopped.
   'scheduled_checks_stopped',
   // The check that the scheduled checks run needs a person: GitHub refused

@@ -14,6 +14,7 @@ import type {
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import {
@@ -64,6 +65,7 @@ function createHarness(input?: {
   const pageCalls: ReconcileStripeSubscriptionsInput[] = [];
   const allPagesCalls: ReconcileAllStripeSubscriptionPagesInput[] = [];
   const drainCalls: DrainPendingStripeCustomerCleanupsRequest[] = [];
+  const alerts = new FakeOperationalAlerts();
   const dependencies: ReconcileStripeSubscriptionsCronHandlerDependencies = {
     cronSecret: input?.omitCronSecret
       ? undefined
@@ -85,6 +87,7 @@ function createHarness(input?: {
       if (input?.drainError) throw input.drainError;
       return input?.drainResult ?? drainResult;
     },
+    operationalAlerts: alerts,
   };
   return {
     handle: createReconcileStripeSubscriptionsCronRouteHandler(
@@ -95,6 +98,7 @@ function createHarness(input?: {
     pageCalls,
     allPagesCalls,
     drainCalls,
+    alerts,
   };
 }
 
@@ -559,6 +563,43 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(call?.dryRun).toBe(false);
     expect(call?.olderThan.getTime()).toBeGreaterThanOrEqual(before);
     expect(call?.olderThan.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+});
+
+// DEBT-501 item 1: a run that stops early leaves rows unrepaired, and nothing
+// resumes it, so the owner hears of it through the bounded alert path.
+describe('a reconcile run that stops early', () => {
+  it('alerts the owner and still answers with its result', async () => {
+    const { handle, alerts } = createHarness({
+      allPagesResult: {
+        ...allPagesResult,
+        stoppedEarly: true,
+        nextOffset: 400,
+      },
+    });
+
+    const response = await handle(request());
+
+    expect(response.status).toBe(200);
+    expect(alerts.raised).toEqual([
+      { kind: 'stripe_reconcile_stopped_early', count: 1 },
+    ]);
+  });
+
+  it('raises nothing for a run that reached the end', async () => {
+    const { handle, alerts } = createHarness();
+
+    await handle(request());
+
+    expect(alerts.raised).toEqual([]);
+  });
+
+  it('raises nothing for a single page, which never stops early', async () => {
+    const { handle, alerts } = createHarness();
+
+    await handle(request({ query: '?scope=page' }));
+
+    expect(alerts.raised).toEqual([]);
   });
 });
 
