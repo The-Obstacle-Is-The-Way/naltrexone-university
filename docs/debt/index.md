@@ -6,11 +6,11 @@
 **Now** — 2026-10-09.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
 - **Security.** #1438's promotion (#1442) fixed alerts #80, #55, #78, #79 and #84–#95 on 2026-10-09; #77 and #81 have no published fix (Deferred). DEBT-509's advisory watch shipped (#1420, promoted in #1431).
-- **In progress.** DEBT-503: item 3 built in its pull request.
+- **In progress.** The silent-condition alerts pull request: DEBT-503 item 3, and DEBT-501 item 1's stopped-early alert.
 - **Verifying.** DEBT-505: released 2026-10-09; the first drill reached the inbox and the cron monitor checks in; still open: its unchecked items, among them the 2026-11-03 cycle's drill; due 2026-11-05. DEBT-508: two overlapping CI runs both pass, now in doubt; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22.
 - **Held dependency.** DEBT-514 holds lint-staged at 17.5.1 until one of its exit paths is verified for every workflow that commits.
 - **In review.** The quick-wins pull request: DEBT-513, DEBT-502 item 6, DEBT-501 items 1, 2, 5 and 6, and DEBT-500's Dependabot group.
-- **Next.** Alerts for DEBT-501's silent conditions, then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
+- **Next.** The pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
 - **Owner decisions pending.** Vercel Pro at the first live sale (DEBT-512, decided 2026-10-09); the live purchase and refund (DEBT-501 item 7); Clerk's verified-email setting and a re-created account's trial (DEBT-502); DEBT-414's Resend webhook secret, F19a, Q7 and counsel review; DEBT-505's optional Sentry push; the 5% server trace sample (AUDIT-015); the production content bootstrap (DEBT-483).
 
 **Next Debt ID:** DEBT-515 · **Next Frontend ID:** FE-056
@@ -21,7 +21,7 @@
 |----|-------|----------|--------|
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Active — engineering has F21 and F22 left; the rest waits on the owner, counsel and a tax adviser (AUDIT-015) |
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — resolution decided in the record |
-| [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — quick wins built (items 1's timeout, 2's runbook line, 5 and 6); next, alerts for its silent conditions, then the pre-sale items |
+| [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — quick wins built (items 1's timeout, 2's runbook line, 5 and 6); item 1's stopped-early alert built in its pull request; next, the pre-sale items |
 | [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
 | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) | Clerk's shared Backend API allowance is a single point of failure | P2 | In Progress — item 1 released 2026-10-08; item 3 built in its pull request; items 2 and 4 wait for their triggers |
 | [DEBT-504](./debt-504-duplicate-request-correlation.md) | Request correlation duplicates the hosting platform | P4 | Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies |

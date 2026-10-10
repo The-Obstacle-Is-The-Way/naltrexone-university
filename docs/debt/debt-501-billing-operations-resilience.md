@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — quick wins built (items 1's timeout, 2's runbook line, 5 and 6); next, alerts for its silent conditions, then the pre-sale items
+**Status:** Open — quick wins built (items 1's timeout, 2's runbook line, 5 and 6); item 1's stopped-early alert built in its pull request; next, the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -37,6 +37,8 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 - **Request timeout done 2026-10-09 (quick-wins pull request).** The reconcile route gives the job's subscriptions client a 5-second timeout and one network retry (`limitStripeSubscriptionRequests`), in place of the SDK's 80 seconds and two retries. The timeout is the socket's idle limit per try, and our retry wrapper can still repeat a 5xx or 429 call. This was proven through the real SDK, and the cron route's integration test checks the time limit on every subscriptions request it sees. Still open: the drain's customer deletes in the same function keep the SDK's defaults, and checking the time budget before each claim, which bounds a whole page, comes with the oldest-first order.
 
+- **Stopped-early alert built 2026-10-10 (silent-condition alerts pull request).** When an all-pages run stops early, for its time budget, page cap or a rejected page, the cron raises `stripe_reconcile_stopped_early` through DEBT-505's bounded alert path. It does so after the deleted-account cleanup drain, so the alert never takes the drain's time. The runbook row in `docs/dev/logging.md` says what each reason means. Tested red first in the route handler's tests. Item 1 now announces its own trigger, so the oldest-first order is next for it.
+
   *Corrected 2026-10-06: oldest-first order replaces #1410's keyset cursor with wraparound, checkpoints and run coordination, which needed more state for the same guarantee; terminal rows stay included, as #1410 decided (#1410 review).*
 
 ### 2. Only one price ID per plan is recognized (P2)
@@ -49,6 +51,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - **Trigger.** Any change of Price for new customers. DEBT-414 freezes existing subscribers' prices, and the portal disables plan changes, so a new Price plus an environment change is the expected way to change a price. That change would lock out every existing subscriber.
 - **Decided.** A recognized list of legacy price IDs per plan, configured alongside the current ones. Add an operator check that refuses a price change while live subscriptions use an ID the list doesn't hold. Until this ships, the runbook must say: never change a price ID.
 - **Runbook line done 2026-10-09 (quick-wins pull request):** [deployment-environments.md](../dev/deployment-environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The legacy list and the operator check remain.
+- **Unknown-price alert moved here, 2026-10-10.** AUDIT-015's order placed it with item 1's alert. An unknown price, though, surfaces at five sites: the normalizer, the subscription read, the success sync, and the webhook and reconcile handlers that report the normalizer's error. The legacy list reshapes the same lookup, so one price catalog should resolve every price and raise the alert on an unknown one. It is built with the legacy list rather than as raises at five sites. Until then, the runbook line forbids the change that would trigger it.
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3)
 
