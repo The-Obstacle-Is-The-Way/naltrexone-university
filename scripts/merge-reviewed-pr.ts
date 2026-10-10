@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
+import { LEARNING_RECORDED } from './coderabbit-learnings';
 import { hunkBodies, hunksMovedOnlyByBase } from './diff-hunks';
 
 export const REPOSITORY = 'The-Obstacle-Is-The-Way/naltrexone-university';
@@ -399,6 +400,74 @@ export function checkFeatureMerge(
   };
 }
 
+// DEBT-515: CodeRabbit turns a chat reply into a learning that it applies to
+// every later review, and agents comment as the owner, so an agent's argument
+// can change the reviewer without review. Each CodeRabbit reply that records
+// one must be linked from the PR description, by URL or anchor, so the owner
+// can see it and keep or delete it.
+const commentPageSchema = z.object({
+  pageInfo,
+  nodes: z.array(
+    z.object({
+      author: z.object({ login: z.string() }).nullable(),
+      url: z.string(),
+      body: z.string(),
+    }),
+  ),
+});
+const learningCommentsSchema = z.object({
+  body: z.string(),
+  comments: commentPageSchema,
+  reviewThreads: z.object({
+    nodes: z.array(z.object({ comments: commentPageSchema })),
+  }),
+});
+
+// An anchor must not continue with a digit, so issuecomment-12 is not linked
+// by issuecomment-123.
+function mentionsAnchor(text: string, anchor: string): boolean {
+  for (
+    let at = text.indexOf(anchor);
+    at >= 0;
+    at = text.indexOf(anchor, at + 1)
+  ) {
+    if (!/\d/.test(text.charAt(at + anchor.length))) return true;
+  }
+  return false;
+}
+
+export function linkedLearningReplies(input: unknown): string[] {
+  const parsed = learningCommentsSchema.safeParse(input);
+  if (!parsed.success) throw new Error('Invalid GitHub comment response');
+  const pr = parsed.data;
+  const pages = [
+    pr.comments,
+    ...pr.reviewThreads.nodes.map((thread) => thread.comments),
+  ];
+  if (pages.some((page) => page.pageInfo.hasNextPage)) {
+    throw new Error('Incomplete GitHub comments; refusing merge');
+  }
+  const replies = pages
+    .flatMap((page) => page.nodes)
+    .filter(
+      (comment) =>
+        comment.author?.login === 'coderabbitai' &&
+        LEARNING_RECORDED.test(comment.body),
+    )
+    .map((comment) => comment.url);
+  // The owner reads the rendered description, which hides HTML comments.
+  const visible = pr.body.replace(/<!--[\s\S]*?-->/g, '');
+  const unlinked = replies.filter(
+    (url) => !mentionsAnchor(visible, url.slice(url.indexOf('#') + 1)),
+  );
+  if (unlinked.length > 0) {
+    throw new Error(
+      `CodeRabbit recorded a learning the PR description does not link: ${unlinked.join(', ')}. Link each reply from the description so the owner can keep or delete it (AGENTS.md, CodeRabbit Learnings)`,
+    );
+  }
+  return replies;
+}
+
 // DEBT-491: every promotion adds a merge commit that only main has. dev must
 // keep containing main, or the next promotion cannot be verified, so a merge
 // into dev needs main in the PR head or already in dev.
@@ -469,8 +538,16 @@ const query = `query($number:Int!) {
     pullRequest(number:$number) {
       number state isDraft baseRefName headRefOid mergeable mergeStateStatus
       baseRefOid headRefName headRepository { nameWithOwner }
-      mergeCommit { oid } mergedAt
-      reviewThreads(first:100) { nodes { isResolved } pageInfo { hasNextPage } }
+      mergeCommit { oid } mergedAt body
+      comments(first:100) {
+        pageInfo { hasNextPage } nodes { author { login } url body }
+      }
+      reviewThreads(first:100) {
+        nodes { isResolved comments(first:100) {
+          pageInfo { hasNextPage } nodes { author { login } url body }
+        } }
+        pageInfo { hasNextPage }
+      }
       files(first:100) { nodes { path } pageInfo { hasNextPage } }
       pushes: commits(last:100) {
         pageInfo { hasPreviousPage }
@@ -646,8 +723,10 @@ export function runMergeReviewedPr(
   );
   if (receipt.number !== Number(number))
     throw new Error('PR number changed during verification');
+  const learnings = linkedLearningReplies(evidence.pullRequest);
   const verified = {
     ...receipt,
+    ...(learnings.length > 0 ? { learnings } : {}),
     carriesMain: checkCarriesMain(readMainAncestry(receipt.head)),
   };
   write(JSON.stringify(verified));
