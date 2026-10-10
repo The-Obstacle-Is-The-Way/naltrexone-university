@@ -22,10 +22,12 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 
 - **The two pending fixes.** Next.js's [advance notice](https://nextjs.org/blog/upcoming-nextjs-security-release-september-2026), updated on September 30: "This release now addresses seven vulnerabilities instead of nine. The remaining two (one **critical**, one **high**) are pending upstream coordination and will be addressed in a later Next.js release." The [release post](https://nextjs.org/blog/september-2026-security-release) lists seven advisories, none critical.
 - **Still unreleased.** `vercel/next.js` has published no advisory since the seven on 2026-09-30. Next.js 16.4.0 (npm, 2026-10-06T18:35Z) lists no security fix; its security entries are upgrade-prompt tooling.
-- **Versions.** `dev` and `main` run `next` 16.3.6. #1409 moves it to 16.3.7, and to 16.3.8 once that version clears the release-age gate at 2026-10-07T16:07:21Z.
+- **Versions.** `dev` and `main` run `next` 16.3.6. [DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)'s follow-up PR moves it to 16.3.8, which cleared the release-age gate at 2026-10-07T16:07:21Z; #1409 no longer carries `next`.
 - **A separate critical, already fixed.** GHSA-vcvr-r3jv-pc5j (remote code execution in `next/og`'s Node `ImageResponse`) was published by Next.js on 2026-09-22, alongside 16.3.6, which `dev` and `main` already run. It reached GitHub's advisory database only on 2026-09-30, eight days later. The September 30 note still calls the critical fix pending, so it is not this one. `app/opengraph-image.tsx` renders constant content and reads no request input, so it was not exposed either.
 - **No alerts.** `gh api 'advisories?ghsa_id=<id>'` returns nothing for any of the seven IDs, reviewed or unreviewed. They exist only as repository advisories on `vercel/next.js`, and several give their ranges as `16.3.?`, which may be why they were not imported. The repository has no Dependabot alert for any of them. Earlier `next` advisories did reach the database, including alerts #28–#31, #41–#42 and #59–#62, and GHSA-vcvr-r3jv-pc5j was reviewed on publication, so coverage is inconsistent rather than absent.
-- **Update, 2026-10-08.** Six of the seven reached the database as reviewed advisories at 2026-10-07T20:30–20:32Z, seven days after Next.js published them. Dependabot raised alerts #84–#95 at 2026-10-08T05:50Z, one per advisory for each of `package.json` and `pnpm-lock.yaml`, and opened security PR #1425 into `main` for 16.3.8. GHSA-h694-7cp9-m8p3 is still missing. As with #1404, the fix reaches `main` through `dev`, here in #1409, and Dependabot then closes its PR.
+- **Update, 2026-10-08.** Six of the seven reached the database as reviewed advisories at 2026-10-07T20:30–20:32Z, seven days after Next.js published them. Dependabot raised alerts #84–#95 at 2026-10-08T05:50Z, one per advisory for each of `package.json` and `pnpm-lock.yaml`, and opened security PR #1425 into `main` for 16.3.8. GHSA-h694-7cp9-m8p3 is still missing. As with #1404, the fix reaches `main` through `dev`, here in DEBT-506's follow-up PR, and Dependabot then closes its PR.
+
+  *Corrected 2026-10-08: 16.3.8 moved from #1409 to DEBT-506's follow-up PR, by agreement between the sessions holding them; #1409 was stalled behind `dev`.*
 
 ## Exposure to the Seven Published Advisories
 
@@ -37,9 +39,9 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 | GHSA-f87g-xv8r-7p7x | Medium | Metadata image routes under dynamic segments, built with webpack | `app/opengraph-image.tsx` has no dynamic segment; builds use Turbopack (CI log: `Next.js 16.3.5 (Turbopack)`) | Not affected |
 | GHSA-h694-7cp9-m8p3 | Medium | Nested `'use cache'` functions reading a root param | `cacheComponents: true`, with `'use cache'` in three marketing and pricing files; no root params | Not affected |
 | GHSA-3w37-wq28-93x7 | Medium | `'use cache'` with Draft Mode | No `draftMode` | Not affected |
-| GHSA-39w2-rjm5-chcv | Low | `next dev` only | Local development runs `next dev` | Developer machines only, until #1409 takes 16.3.8 |
+| GHSA-39w2-rjm5-chcv | Low | `next dev` only | Local development runs `next dev` | Developer machines only, until DEBT-506's follow-up PR takes 16.3.8 |
 
-No production surface is affected, so #1409 takes 16.3.8 through the normal gate, without an exception.
+No production surface is affected, so DEBT-506's follow-up PR takes 16.3.8 through the normal gate, without an exception.
 
 ## Response When the Pending Fixes Ship — Decided 2026-10-07
 
@@ -66,7 +68,7 @@ For the two pending Next.js fixes:
 
 **Why every dependency, not a list.** The first version watched only Next.js. On 2026-10-07 a reviewer asked whether Clerk should be added. Measuring every dependency repository answered it: Clerk's 5 published advisories had all reached GitHub's database, but Sentry and Vite each had advisories that had not. That makes a hand-picked list the wrong shape, and the map plus its test the right one. The measurement is in the playbook's table.
 
-**Vite, found by the measurement.** Three Vite advisories from 2026-10-06 (GHSA-rq7h-c2jc-7f22 and GHSA-vfpm-58rq-9qcg, medium; GHSA-9jrq-w75r-8gcw, low) affect `vite` 8.3.0 to 8.3.2. This repository runs 8.3.0, and #1409 moves it to 8.3.1. They concern Vite's development server, which runs only on developer machines and in CI test runs, so under the playbook rule they are not urgent. The fix, 8.3.3, was published at 2026-10-06T04:10:19Z and clears the release-age gate at 2026-10-13T04:10:19Z; take it in the next dependency update.
+**Vite, found by the measurement.** Three Vite advisories from 2026-10-06 (GHSA-rq7h-c2jc-7f22 and GHSA-vfpm-58rq-9qcg, medium; GHSA-9jrq-w75r-8gcw, low) affect `vite` 8.3.0 to 8.3.2. This repository runs 8.3.0, and #1409 moves it to 8.3.2, still inside that range. They concern Vite's development server, which runs only on developer machines and in CI test runs, so under the playbook rule they are not urgent. The fix, 8.3.3, was published at 2026-10-06T04:10:19Z and clears the release-age gate at 2026-10-13T04:10:19Z; take it in the next dependency update.
 
 **Local dry run (2026-10-07).** The real advisory and issue reads, with issue creation replaced by a recorder, read all 41 repositories without error and would open exactly the three Vite issues. The first hosted run on `main` should therefore open those three; triage them as above. Under AGENTS.md's evidence rule, the watcher is proven only after that hosted run.
 
