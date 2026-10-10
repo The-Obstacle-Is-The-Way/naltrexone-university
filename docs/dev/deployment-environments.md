@@ -116,7 +116,7 @@ A new price for new customers waits for item 2's list of recognized legacy IDs. 
 - **Value.** The production instance's public key in PEM form, from the Clerk Dashboard's API keys page, or built from the key the Frontend API publishes at `/.well-known/jwks.json`. It is public, not a secret. Escaped `\n` newlines are restored.
 - **Where.** Vercel Production only. Preview and development use the development instance, and keep fetching.
 - **Checked twice.** The build (`scripts/check-clerk-jwt-key.ts`, before `next build`) fails unless the key is one Clerk publishes for the publishable key's instance, so a wrong key never deploys. At runtime, more than three rejected signatures in a minute raise `clerk_session_tokens_rejected`.
-- **If Clerk changes its signing key,** every visitor is signed out until this is updated: remove the variable or set the new key, then redeploy.
+- **If Clerk changes its signing key,** every visitor is signed out until this is updated. The fastest way back is Vercel's Instant Rollback to a production deployment built without the key; then remove the variable, or set the new key, and redeploy.
 
 ---
 

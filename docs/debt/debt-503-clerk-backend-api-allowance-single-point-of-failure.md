@@ -141,7 +141,9 @@ This record holds the structural fixes, so that the allowance stops being the on
   - Item 3's detector counts `token-invalid-signature` apart, as `clerk_session_tokens_rejected` (`CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD`).
   - **Proof.** `lib/clerk-jwt-key-sdk.test.ts` runs the real middleware: with the key, a signed-in visitor verifies with no call to Clerk; with another key, the visitor is signed out with `token-invalid-signature`. Against the development instance's published keys, read 2026-10-10, the build step passes Clerk's real key in both newline forms; it is RSA 2048 with exponent 65537.
   - **Still to do:** step 5, after this merges and is promoted.
-- **Due 2026-10-14,** the pull request after item 3's. The owner asked on 2026-10-10 for this to be fixed now or soon, including the production setting.
+- **Due 2026-10-14,** the pull request after item 3's. The owner asked on 2026-10-10 for this to be fixed now or soon. Asked about the production setting itself, the owner left it to engineering judgment the same day, since the service is pre-revenue with no live users: the cheapest time to change sign-in.
+- **Why no daily key check, and what remains.** Clerk documents the key as the instance's PEM public key, with no rotation. If it ever changed, every token would fail at once, and the rejected-signature alert fires within a minute of signed-in traffic; a daily comparison would report up to a day later. The undetected window is only a period with no sign-ins, when no one is affected.
+- **Step 5's checks.** After setting the key: the production build log reads "CLERK_JWT_KEY is a key Clerk publishes", the runtime logs show no `clerk_jwt_key_unreadable`, and no `clerk_session_tokens_rejected` alert arrives. Rollback is Vercel's Instant Rollback to the previous production deployment, which was built without the key, then removing the variable.
 
 ## Verification
 
