@@ -91,8 +91,10 @@ const headCheckSuitesSchema = z.object({
   }),
 });
 
-// The PR's recent heads, each with its GitHub Actions check suites.
+// The PR's recent heads, each with its GitHub Actions check suites and the
+// branch each suite ran on.
 const pushesSchema = z.object({
+  headRefName: z.string(),
   pushes: z.object({
     pageInfo: z.object({ hasPreviousPage: z.boolean() }),
     nodes: z.array(
@@ -101,7 +103,12 @@ const pushesSchema = z.object({
           oid: sha,
           checkSuites: z.object({
             pageInfo: z.object({ hasNextPage: z.boolean() }),
-            nodes: z.array(z.object({ createdAt: z.iso.datetime() })),
+            nodes: z.array(
+              z.object({
+                createdAt: z.iso.datetime(),
+                branch: z.object({ name: z.string() }).nullable(),
+              }),
+            ),
           }),
         }),
       }),
@@ -126,9 +133,11 @@ export function headPushedAsOf(
   let found: { oid: string; pushed: number } | undefined;
   for (const { commit } of parsed.data.pushes.nodes) {
     if (commit.checkSuites.pageInfo.hasNextPage) return undefined;
-    const created = commit.checkSuites.nodes.map((suite) =>
-      Date.parse(suite.createdAt),
-    );
+    // BUG-335: a commit merged in from main carries suites from its own push
+    // to main, which are no push of this PR's head.
+    const created = commit.checkSuites.nodes
+      .filter((suite) => suite.branch?.name === parsed.data.headRefName)
+      .map((suite) => Date.parse(suite.createdAt));
     if (!created.length) continue;
     const pushed = Math.min(...created);
     if (pushed <= limit && (!found || pushed > found.pushed)) {
@@ -476,7 +485,7 @@ const query = `query($number:Int!) {
         pageInfo { hasPreviousPage }
         nodes { commit { oid
           checkSuites(first:20, filterBy:{appId:15368}) {
-            pageInfo { hasNextPage } nodes { createdAt }
+            pageInfo { hasNextPage } nodes { createdAt branch { name } }
           }
         } }
       }

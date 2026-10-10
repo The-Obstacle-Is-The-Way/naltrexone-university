@@ -99,8 +99,8 @@ describe('feature merge decision', () => {
     [
       'a truncated check-suite list',
       {
+        ...pushedAt('2026-09-22T02:00:00Z'),
         pageInfo: { hasNextPage: true },
-        nodes: [{ createdAt: '2026-09-22T02:00:00Z' }],
       },
     ],
   ])('fails closed on %s', (_name, checkSuites) => {
