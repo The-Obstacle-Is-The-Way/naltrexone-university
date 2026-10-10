@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 released 2026-10-08; item 3 built in its pull request; item 5, verifying session tokens without Clerk's network, due 2026-10-14; items 2 and 4 wait for their triggers
+**Status:** In Progress — item 1 released 2026-10-08; item 3 built in its pull request; item 5, verifying session tokens without Clerk's network, due 2026-10-14; item 4, measuring these requests and a per-address bucket for real signed-in visitors, due 2026-10-21; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -85,11 +85,11 @@ This record holds the structural fixes, so that the allowance stops being the on
   - **The bound** is the shared cooldown's, unchanged: one alert per kind per six hours across instances, or one per instance while the limiter errors. DEBT-505's integration tests prove it with eight concurrent instances and across a restart.
   - **The response.** The runbook row in `docs/dev/logging.md` names Vercel's Attack Challenge Mode for a sustained trip.
   - **Refusals inside Clerk's middleware, built the same day.** Review of the part above found that Clerk's middleware swallows Clerk failing three of its own calls (`@clerk/backend` 3.18.1), so a quiet inbox would not have meant Clerk was answering:
-    - **The signing keys.** Without `jwtKey`, the middleware fetches them from the Backend API, cached five minutes per server instance. A refused fetch leaves every signed-in visitor on that instance signed out, with the reason `jwk-remote-failed-to-load`.
+    - **The signing keys.** Without `jwtKey`, the middleware fetches them from the Backend API, cached five minutes per server instance. Clerk documents no rate limit for that endpoint, so the fetch does not spend the allowance. But when it fails, in a Clerk outage or a network failure, every signed-in visitor on that instance is signed out, with the reason `jwk-remote-failed-to-load`.
     - **The refresh of an expired session token.** A refusal redirects through a handshake, with the reason `session-token-expired-refresh-` followed by Clerk's error code. Clerk does not document its 429 body, so that code is unknown.
     - **The lookup of the handshake nonce** the visitor returns with. In production the handshake's format is `nonce`. A refusal is logged to the console, and the visitor is signed out with the reason `session-token-missing` and no cookies set.
 
-    Our site cap usually trips before Clerk's limit, but not always: it counts 1,000 requests a minute against Clerk's documented 1,000 calls per 10 seconds, up to 2,000 pass across a fixed-window boundary, and the key fetches are not counted at all.
+    Our site cap usually trips before Clerk's limit, but not always: it counts 1,000 requests a minute against Clerk's documented 1,000 calls per 10 seconds, and up to 2,000 pass across a fixed-window boundary.
 
     `lib/clerk-call-failures.ts` reads Clerk's answer after the middleware runs, on a production instance only. `clerkCallFailure` names the failed call from the auth reason. A refresh reason decided before Clerk answered, such as `non-eligible-no-refresh-cookie` or `invalid-session-token`, is not Clerk failing. A nonce lookup that set cookies succeeded, even for a signed-out visitor. Each failure logs `clerk_backend_call_failed` with its `call`, after the response:
     - **`keys`** raises `clerk_signing_keys_unavailable` at once, since a key fetch never fails in normal operation.
@@ -105,10 +105,18 @@ This record holds the structural fixes, so that the allowance stops being the on
     Kinds are independent downstream too: each kind and window opens its own Sentry issue, and each new issue emails. The rule is in `docs/dev/logging.md` under Operational alerts.
   - **Still to show after release:** one test event of these kinds reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
 
-### 4. Measure the real volume of these requests (P3)
+### 4. Measure these requests, and stop refusing real signed-in visitors per address (P2)
 
 - **Decided.** Record the per-minute count of requests that would make Clerk call its Backend API. Retune BUG-323's caps from that number instead of from the allowance alone.
 - **Trigger** (AUDIT-015, 2026-10-08): item 3's alert first fires, or Clerk answers item 2's report.
+
+  *Changed 2026-10-10: dated, and widened. Item 3 stopped alerting on one address tripping its limit, since that is usually a bot. But everyone on a hospital or clinic network can share one address, and the 30-a-minute limit was sized for them without real traffic. Production keeps runtime logs for an hour (Vercel Hobby), so a log line alone shows nothing a day later.*
+  - **What the SDK allows** (`@clerk/backend` 3.18.1, read 2026-10-10). Clerk verifies a session token's signature before its expiry, so it refreshes only a token it signed. A forged expired token costs no refresh call, only a rejected signature. So a refresh can spend the allowance only for a real session, and a real signed-in visitor's refresh can be told from a bot's request by its signature.
+  - **Decided.**
+    1. **Measure, before the first live sale.** The limiter's own window rows already hold each address's, session's and the site's per-minute count for about a day, and they keep counting past the limit. A daily step in the renewal job rolls the last 24 hours into one row with no address or session in it: the busiest minute site-wide, the number of address and session windows over their limits, how far over the worst went, and the requests refused. It adds no write per request.
+    2. **With item 5's key, verify a refresh's session token in the proxy, before counting it.** A token whose signature fails costs Clerk nothing, so it does not count against any limit. A genuine one counts per session, site-wide, and per address in a bucket of its own, sized from step 1 for a shared network. A handshake nonce, which only Clerk can check, keeps today's per-address limit.
+    3. **Alert when that signed-in bucket refuses,** as its own kind. Then real people were refused, which a bot cannot cause without real accounts, and the response is raising that limit.
+  - **Due 2026-10-21,** after item 5, which step 2 needs, and before the first live sale in any case.
 
 
 ### 5. Verify session tokens without Clerk's network (P2)

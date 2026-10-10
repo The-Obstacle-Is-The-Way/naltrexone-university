@@ -108,13 +108,15 @@ describe('Clerk calls the real middleware fails silently', () => {
     vi.resetModules();
   });
 
-  it('names refused signing keys, which leave a signed-in visitor signed out', async () => {
+  // Clerk documents no rate limit for its keys endpoint, so this fails only
+  // in an outage or a network failure.
+  it('names a failed signing-key fetch, which leaves a signed-in visitor signed out', async () => {
     const key = signingKey();
 
     const { request, response, paths } = await clerkAnswerTo(
       'https://example.com/app/dashboard',
       signedInCookies(key.token(60)),
-      (path) => (path === '/v1/jwks' ? refused() : undefined),
+      (path) => (path === '/v1/jwks' ? json(503, { errors: [] }) : undefined),
     );
 
     expect(paths).toContain('/v1/jwks');
