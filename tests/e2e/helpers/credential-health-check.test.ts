@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SETUP_PREPARATION_BUDGET_MS } from './clerk-session-deadlines';
 import {
+  CLERK_PREFLIGHT_DEADLINE_MS,
   type CredentialHealthCheckServices,
   CredentialValidationError,
   fetchWithTimeout,
@@ -220,12 +222,20 @@ describe('runE2ECredentialHealthCheck', () => {
     expect(services.resolveClerkUserId).toHaveBeenCalledWith({
       email: env.E2E_CLERK_USER_USERNAME,
       clerkSecretKey: env.CLERK_SECRET_KEY,
+      deadlineAt: expect.any(Number),
     });
     expect(services.verifyClerkPassword).toHaveBeenCalledWith({
       userId: 'user_123',
       password: env.E2E_CLERK_USER_PASSWORD,
       clerkSecretKey: env.CLERK_SECRET_KEY,
+      deadlineAt: expect.any(Number),
     });
+    // BUG-330: both calls share one deadline.
+    expect(
+      vi.mocked(services.verifyClerkPassword).mock.calls[0]?.[0].deadlineAt,
+    ).toBe(
+      vi.mocked(services.resolveClerkUserId).mock.calls[0]?.[0].deadlineAt,
+    );
     const stripeSecretCallArg = vi.mocked(services.verifyStripeSecretKey).mock
       .calls[0]?.[0];
     const stripePriceCallArgs = vi
@@ -539,5 +549,60 @@ describe('runE2ECredentialHealthCheck', () => {
     );
 
     expect(error.cause).toBe(rootCause);
+  });
+});
+
+// BUG-330: preflight's Clerk calls share one deadline inside setup's budget.
+// Each answer below comes after 14 seconds and asks for a 7-second wait, so
+// the user lookup alone held preflight 52 seconds before the deadline.
+describe('runE2ECredentialHealthCheck against a slow, rate-limited Clerk API', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('fails with the Clerk credential error within the preflight deadline', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_input, init) =>
+        new Promise<Response>((resolve, reject) => {
+          const answer = setTimeout(
+            () =>
+              resolve(
+                new Response('slow down', {
+                  status: 429,
+                  headers: { 'retry-after': '7' },
+                }),
+              ),
+            14_000,
+          );
+          init?.signal?.addEventListener('abort', () => {
+            clearTimeout(answer);
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        }),
+    );
+    const { resolveClerkUserId, verifyClerkPassword, ...notClerk } =
+      createServices();
+    const startedAt = Date.now();
+
+    const outcome = runE2ECredentialHealthCheck({
+      env: createEnv(),
+      services: notClerk,
+    }).catch((error: unknown) => ({ message: String(error), at: Date.now() }));
+    await vi.advanceTimersByTimeAsync(SETUP_PREPARATION_BUDGET_MS);
+    const settled = await outcome;
+
+    expect(settled).toMatchObject({
+      message: expect.stringContaining('E2E_PREFLIGHT:CLERK_API_UNAVAILABLE'),
+    });
+    expect((settled as { at: number }).at - startedAt).toBeLessThanOrEqual(
+      CLERK_PREFLIGHT_DEADLINE_MS,
+    );
+    expect(CLERK_PREFLIGHT_DEADLINE_MS).toBeLessThan(
+      SETUP_PREPARATION_BUDGET_MS,
+    );
+    expect(resolveClerkUserId).not.toHaveBeenCalled();
+    expect(verifyClerkPassword).not.toHaveBeenCalled();
   });
 });

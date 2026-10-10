@@ -23,10 +23,12 @@ describe('reserveSessionBudget', () => {
 
   it('is reserved by global setup before it signs in', () => {
     const source = readFileSync('tests/e2e/global.setup.ts', 'utf8');
+    const prepared = source.indexOf('await clerkSetup()');
     const reserved = source.indexOf('reserveSessionBudget(testInfo');
     const signedIn = source.indexOf('createClerkE2EAuthState(page)');
 
-    expect(reserved).toBeGreaterThan(source.indexOf('await clerkSetup()'));
+    expect(prepared).toBeGreaterThan(-1);
+    expect(reserved).toBeGreaterThan(prepared);
     expect(reserved).toBeLessThan(signedIn);
   });
 });

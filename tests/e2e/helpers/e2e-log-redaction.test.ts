@@ -107,6 +107,18 @@ describe('installE2ELogRedaction', () => {
     expect(redacted.match(/\[REDACTED\]/g)).toHaveLength(prefixes.length);
   });
 
+  // #1452's hosted run printed a Checkout URL whose Session ID carries a
+  // mode infix, which the plain prefix shape missed.
+  it('redacts a Stripe ID that carries a test or live mode infix', () => {
+    const redacted = redactSensitiveE2EText(
+      'GET checkout.stripe.com/c/pay/cs_test_a1B2c3D4e5 then cs_live_Z9y8X7#fid',
+    );
+
+    expect(redacted).toBe(
+      'GET checkout.stripe.com/c/pay/cs_[REDACTED] then cs_[REDACTED]#fid',
+    );
+  });
+
   it('preserves non-sensitive text and non-string arguments', () => {
     const fake = createFakeLogTarget();
     const context = { status: 'closed' };

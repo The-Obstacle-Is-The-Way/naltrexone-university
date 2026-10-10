@@ -141,29 +141,103 @@ six of the 12 were still missing that day. A week is as long as the
 release-age gate, so waiting for Dependabot would forfeit the same-day rule
 above.
 
+Indirect dependencies have the same gap, and a longer one. 55 of this
+repository's 90 Dependabot alerts were in indirect packages. In the year to
+2026-10-08, 26 of the 424 repositories reached only through indirect
+dependencies published 109 advisories, 48 of them critical or high. 106
+reached the database, a median of 5 days after publication, and 41 took more
+than a week: `undici`'s eleven 2026-09-04 advisories, three of them high,
+took 24 to 25 days. `shell-quote`'s critical GHSA-pqg4-j6r4-53mv, alerted
+here on 2026-10-06, took 7. Direct dependencies'
+advisories took a median of 1.8 days. `pnpm audit` and OSV read the same
+database; on 2026-10-08 neither had GHSA-h694-7cp9-m8p3 or the three Vite
+advisories.
+
 - `.github/workflows/upstream-advisory-watch.yml` runs
-  `scripts/upstream-advisory-watch.ts` every six hours. It reads the published
-  advisories of each repository in its `DEPENDENCY_REPOSITORIES` map and opens
-  one issue per advisory published since 2026-10-01.
-- The map gives every dependency and devDependency in `package.json` the
-  repository named in its npm `repository` field, or `null` when it names
-  none (today only `server-only`, a marker package). A test
-  requires its keys to equal `package.json`'s, so adding or removing a
-  dependency fails CI until the map is updated.
+  `scripts/upstream-advisory-watch.ts` every three hours. It reads the published
+  advisories of every repository behind `pnpm-lock.yaml`, 393 on 2026-10-09,
+  and opens one issue per advisory published since 2026-10-01.
+- GitHub starts this repository's scheduled runs hours late, and can drop
+  one: the daily Stripe Checkout smoke started 3.6 to 9.2 hours late over the
+  30 days to 2026-10-08, 5.0 at the median. A steady delay does not slow
+  detection, since an advisory waits only for the next run; the gap between
+  runs does. Due every six hours, the watcher's first runs came about seven
+  hours apart, so the job is due every three hours, which halves the usual
+  wait and the cost of a dropped run. Two delayed runs fit in one hour, about
+  960 requests of the token's 1,000. Three would need delays falling by five
+  hours across three slots, near the largest spread seen; at a two-hour
+  schedule a three-hour fall would do. A run that reaches the limit stops
+  and says so, and the runs before it have already read everything.
+- To see an announced fix at once, such as the two pending Next.js fixes, run
+  the watcher by hand on release day: `gh workflow run
+  upstream-advisory-watch.yml --ref main`, or Run workflow under Actions. A
+  dispatched run starts immediately. A trigger from outside GitHub's
+  scheduler would remove the delay, but Vercel's Hobby plan runs a cron job at
+  most once a day, and another scheduler would need a token that can start
+  this repository's workflows.
+- Direct dependencies use the `DEPENDENCY_REPOSITORIES` map, which gives every
+  dependency and devDependency in `package.json` the repository named in its
+  npm `repository` field, or `null` when it names none (today only
+  `server-only`, a marker package). A test requires its keys to equal
+  `package.json`'s, so adding or removing a dependency fails CI until the map
+  is updated.
+- Every other package in `pnpm-lock.yaml` is resolved when the job runs, from
+  the npm `repository` field of its locked version, so a lockfile change
+  needs no edit. From a repository reached only this way, critical and high
+  advisories are raised, as is any of unknown severity, including one
+  published without a severity, which GitHub allows. Medium and low ones are
+  left to Dependabot: 106 of the 109 arrived, and none of the other three
+  affected this app.
+- A package that names no GitHub repository, or whose repository was deleted,
+  is listed as not watched in the run's log without failing it. On 2026-10-08
+  those were `client-only` and `eyes`, and `commondir`'s
+  `substack/node-commondir`. A manifest that still cannot be read on a
+  second try fails the run, as does a repository that cannot be read, an
+  indirect dependency's included. The second try keeps a passing registry
+  error from failing a run.
 - One unreadable repository, or one issue that cannot be opened, does not
   stop the others: the run raises what it can, then fails and names what it
   could not. Only a failure to list existing issues fails the run outright,
-  because without that list nothing can be deduplicated.
+  because without that list nothing can be deduplicated, and so does a read
+  refused for the API rate limit, since every later request would be refused
+  too; the next run reads every repository again.
+- A run takes about four minutes and makes about one API request per
+  repository, about 410 on 2026-10-09, under half of the workflow token's
+  1,000 an hour. Nothing else in this repository calls the API.
+- Only issues opened by the job or by the repository owner count. This is a
+  public repository, and a stranger's issue titled with a GHSA ID would
+  otherwise settle that advisory, so its alert would never open.
 - Critical and high advisories are assigned to the repository owner. GitHub
   notifies an assignee whatever their watch setting, and the same-day rule
   needs someone to see them. Medium and low advisories open unassigned. In the
-  12 months to 2026-10-07 the watched repositories published 81 advisories:
-  12 critical, 33 high, 32 medium and 4 low. Most concern features or versions
-  this app does not use, so the issue body gives `package.json`'s pins for a
-  quick triage.
+  12 months to 2026-10-07 the direct dependencies' repositories published 81
+  advisories: 12 critical, 33 high, 32 medium and 4 low. Most concern features
+  or versions this app does not use, so the issue body gives `package.json`'s
+  pins and every version `pnpm-lock.yaml` resolves.
+- An issue opens on the upstream advisory's own ranges, which are free text
+  and can be wrong, so the job does not evaluate them. Checked against the 95
+  advisories published from 2026-06-14 to 2026-10-08, reading them as
+  GitHub's syntax would have wrongly ruled out two that did affect this app.
+  `brace-expansion`'s high GHSA-rgw5-rvv9-x895 used commas to mean "or", and
+  `next`'s GHSA-3w37-wq28-93x7 gave a bare `16.3.0` for a range that covered
+  16.3.5.
+- GitHub's review settles the versions later. Once GitHub has reviewed an
+  advisory and its ranges include no version `pnpm-lock.yaml` resolves, the
+  job closes the issue with that evidence; Dependabot reads the same review.
+  An issue a person reopens is not closed again. An advisory already reviewed
+  and ruled out when the job first sees it opens no issue, and each run
+  checks it again in case the lockfile changes. Anything uncertain stays
+  open: no review yet, another ecosystem, an unreadable range or version, or
+  a package the lockfile lacks, which another package may compile in.
+- Over those 16 weeks the indirect dependencies would have raised 33
+  critical or high issues, about two a week; 13 never affected this app. The
+  review would have closed 10 of the 13, and not one of the advisories
+  Dependabot alerted on.
 
 Triage each issue with the rule above, record the outcome in it, and close it.
-Transitive dependencies are left to Dependabot and `pnpm audit`.
+Neither the job nor Dependabot sees code that a package compiles in rather
+than depends on, as Next.js does with dozens of packages; that maintainer's
+own advisory is the signal.
 
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 
