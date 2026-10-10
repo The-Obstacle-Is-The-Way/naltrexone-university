@@ -40,7 +40,7 @@ Low today. The repository still installs Vitest 4.1.11; its current lanes are no
 
 Option 2, in its own PR when it is next in the queue:
 - read the [Vitest 5 migration guide](https://vitest.dev/guide/migration/) and reproduce the incompatible boundary before changing specs;
-- group `vitest`, `@vitest/*` and `vitest-browser-react` in Dependabot's configuration;
+- group `vitest`, `@vitest/*` and `vitest-browser-react` in Dependabot's configuration (*done 2026-10-09 in the quick-wins pull request: one `vitest` group takes their minor, patch and major updates, the routine group excludes them, and `tests/dependabot-config.test.ts` holds both*);
 - migrate the browser specs and lane configuration;
 - confirm that every lane passes, coverage maps still merge for CRAP, and Stryker's runner works;
 - close #1370 as superseded.
