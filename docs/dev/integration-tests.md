@@ -102,9 +102,9 @@ This runs `docker compose -p <resolved-project> down -v` and then starts the res
 | Environment | Port | How Set |
 |-------------|------|---------|
 | **Local** | Per-clone derived port | `scripts/resolve-local-test-target.ts` exports `DB_TEST_PORT` into `pnpm db:test:*` and local integration/E2E wrappers |
-| **CI** | 5432 | GitHub Actions PostgreSQL service (`.github/workflows/ci.yml`) |
+| **CI** | 5432 | `Start Postgres` step (`scripts/ci/start-postgres.sh`) in `.github/workflows/ci.yml` |
 
-The committed `.env.test` file deliberately contains no `DATABASE_URL`. Local wrappers inject the resolver-owned target, and CI opts into its service target with `INTEGRATION_USE_EXISTING_DATABASE=true`. A raw Vitest invocation with no explicit database therefore fails closed instead of guessing a shared local target.
+The committed `.env.test` file deliberately contains no `DATABASE_URL`. Local wrappers inject the resolver-owned target, and CI opts into its runner-local database with `INTEGRATION_USE_EXISTING_DATABASE=true`. A raw Vitest invocation with no explicit database therefore fails closed instead of guessing a shared local target.
 
 To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To force a specific DB port, set `DB_TEST_PORT` and use `pnpm exec tsx scripts/resolve-local-test-target.ts database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
 
