@@ -3,7 +3,7 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-09
 
-**Now** — 2026-10-09.
+**Now** — 2026-10-10.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
 - **Security.** #1438's promotion (#1442) fixed alerts #80, #55, #78, #79 and #84–#95 on 2026-10-09; #77 and #81 have no published fix (Deferred). DEBT-509's advisory watch shipped (#1420, promoted in #1431).
 - **In progress.** The silent-condition alerts pull request: DEBT-503 item 3, and DEBT-501 item 1's stopped-early alert.
