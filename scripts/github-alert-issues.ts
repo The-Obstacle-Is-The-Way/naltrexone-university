@@ -105,7 +105,13 @@ function parseIssues(json: string): AlertIssue[] {
   });
 }
 
-export function createGithubAlertIssues(run: typeof gh = gh): AlertIssues {
+// GitHub notifies an assignee whatever their watch setting, so a job whose
+// issue must reach the owner passes the repository owner here (DEBT-515).
+export function createGithubAlertIssues(
+  run: typeof gh = gh,
+  assignee: string | null = null,
+): AlertIssues {
+  const assign = assignee ? ['--assignee', assignee] : [];
   return {
     // A server-side title search, so the job does not grow with the
     // repository's issue and pull-request count.
@@ -129,7 +135,7 @@ export function createGithubAlertIssues(run: typeof gh = gh): AlertIssues {
       return issues;
     },
     async create(title, body) {
-      run(['issue', 'create', '--title', title, '--body', body]);
+      run(['issue', 'create', '--title', title, '--body', body, ...assign]);
     },
     async update(number, body) {
       run([
@@ -141,6 +147,7 @@ export function createGithubAlertIssues(run: typeof gh = gh): AlertIssues {
         'state=open',
         '-f',
         `body=${body}`,
+        ...(assignee ? ['-f', `assignees[]=${assignee}`] : []),
       ]);
     },
     async comment(number, body) {
