@@ -148,5 +148,5 @@ DATABASE_URL="<verified target connection string>" pnpm db:migrate
 
 Verify the target host without printing credentials before mutating any remote
 database. CI migration success only proves the journal applies to CI's
-throwaway Postgres service; it does not migrate Vercel Preview or Production
+throwaway Postgres container; it does not migrate Vercel Preview or Production
 databases.

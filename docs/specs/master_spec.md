@@ -1990,7 +1990,7 @@ it('records attempt when answer submitted', async () => {
 
 **Test DB:**
 
-* GitHub Actions uses a Postgres service container and a `DATABASE_URL` pointing to it.
+* GitHub Actions starts a Postgres container in its `Start Postgres` step and points `DATABASE_URL` at it.
 
 ### 8.3 E2E Tests (Playwright)
 

@@ -24,6 +24,7 @@ const source = (pushedAt = '2026-09-22T03:10:00Z', commitOid = HEAD) => ({
   number: 987,
   state: 'MERGED',
   baseRefName: 'dev',
+  headRefName: 'feature',
   headRefOid: HEAD,
   mergeCommit: { oid: MERGE },
   mergedAt: '2026-09-22T03:24:23Z',
@@ -434,7 +435,7 @@ describe('promotion proof command', () => {
             oid,
             checkSuites: {
               pageInfo: { hasNextPage: false },
-              nodes: [{ createdAt }],
+              nodes: [{ createdAt, branch: { name: 'feature' } }],
             },
           },
         })),

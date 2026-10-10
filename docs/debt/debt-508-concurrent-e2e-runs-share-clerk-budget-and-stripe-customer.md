@@ -81,7 +81,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 - **Clerk, once per run.**
   - Preflight returns the Clerk user ID, and the seed takes it instead of looking it up again.
   - The reset and the restore helpers find the user in the run's own database, where the seed wrote it: the reset by email, ignoring case, since Clerk stores emails lowercased and the app writes Clerk's back.
-  - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, until one call's waits total 10 seconds. The cap bounds waits only: each call can also spend three 15-second attempts, so preflight's two calls can take about 110 seconds, beyond setup's 60-second budget. [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) gives them one deadline inside it. The seed's lookup, when one is still needed, uses it.
+  - `fetchClerkWithRetry` honors `Retry-After`, as seconds or as an HTTP date, until one call's waits total 10 seconds. The cap bounds waits only: each call can also spend three 15-second attempts, so preflight's two calls can take about 110 seconds, beyond setup's 60-second budget. [BUG-330](../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) gives them one deadline inside it. The seed's lookup, when one is still needed, uses it.
   - Each `local-clone-*` customer keeps its active test subscription for as long as its clone exists; a deleted clone's customer is harmless test-mode clutter.
 - **Not serialized.** Serializing would make every run wait. Per-run Stripe ownership already stops one run from changing another's billing state, and fewer Clerk calls lower the rate-limit pressure. Overlapping runs can still meet Clerk 429s until DEBT-503 item 1 removes the app's per-request lookup, so the overlap check follows it.
 - **Until DEBT-503 item 1 ships:**
@@ -97,7 +97,7 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
 | --- | --- | --- |
 | Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, released 2026-10-08; the overlap check follows |
 | Runs can change each other's Stripe state (a hazard; it caused none of today's failures) | One Stripe customer per lane | This record |
-| Signed-in tests fail after the stored token expires | A failed Clerk session restore, undiagnosable | [BUG-330](../bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) |
+| Signed-in tests fail after the stored token expires | A failed Clerk session restore, undiagnosable | [BUG-330](../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) |
 | `codecov/patch` missing after a good upload | Codecov drops the notification | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) |
 
 ## Verification
