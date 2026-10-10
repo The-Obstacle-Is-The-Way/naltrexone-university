@@ -263,3 +263,75 @@ describe('a sampled request', () => {
     expect(everything).not.toContain(recorded.requestNonce);
   });
 });
+
+// DEBT-513: an error's own text, its cause's, and a captured message reach
+// Sentry with each credential parameter filtered; the rest of the text stays
+// for diagnosis.
+const written = {
+  handshake: randomUUID(),
+  oauthCode: randomUUID(),
+  webhookToken: randomUUID(),
+  actionCode: randomUUID(),
+};
+
+describe('an error or a message whose text holds a credential parameter', () => {
+  it('sends the error and its cause with the credential filtered', async () => {
+    sent = [];
+    Sentry.captureException(
+      new Error(
+        `Redirect failed for /app?__clerk_handshake=${written.handshake}&tab=questions`,
+        {
+          cause: new Error(
+            `Token exchange refused at /callback?code=${written.oauthCode}`,
+          ),
+        },
+      ),
+    );
+    await Sentry.flush(2000);
+
+    const values = sentItems('event').flatMap((event) =>
+      (
+        (event.exception as { values?: Array<{ value?: string }> })?.values ??
+        []
+      ).map((exception) => exception.value),
+    );
+    expect(values).toEqual(
+      expect.arrayContaining([
+        'Redirect failed for /app?__clerk_handshake=[Filtered]&tab=questions',
+        'Token exchange refused at /callback?code=[Filtered]',
+      ]),
+    );
+    expect(sent.join('\n')).not.toContain(written.handshake);
+    expect(sent.join('\n')).not.toContain(written.oauthCode);
+  });
+
+  // The browser reports a failed server action's result, a plain object.
+  // The SDK copies such an object, message included, into the event's extra
+  // data rather than its exception value.
+  it('sends a plain object captured as an error with the credential filtered', async () => {
+    sent = [];
+    Sentry.captureException({
+      code: 'STRIPE_ERROR',
+      message: `Refused at /callback?code=${written.actionCode}&step=2`,
+    });
+    await Sentry.flush(2000);
+
+    expect(sent.join('\n')).toContain('step=2');
+    expect(sent.join('\n')).not.toContain(written.actionCode);
+  });
+
+  it('sends a captured message with the credential filtered', async () => {
+    sent = [];
+    Sentry.captureMessage(
+      `Webhook retry for https://example.test/hook?token=${written.webhookToken}`,
+    );
+    await Sentry.flush(2000);
+
+    expect(sentItems('event')).toEqual([
+      expect.objectContaining({
+        message: 'Webhook retry for https://example.test/hook?token=[Filtered]',
+      }),
+    ]);
+    expect(sent.join('\n')).not.toContain(written.webhookToken);
+  });
+});

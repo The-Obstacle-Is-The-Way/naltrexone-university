@@ -93,6 +93,8 @@ Criteria to meet before closing.
 - [ ] Engineering, by 2026-10-19: search Sentry through its API for the recorded resume-error message and affected route since the production assignment. The old issue was deleted under BUG-318, so searching only its issue key cannot detect a recurrence. Record query, time range, count and ingestion health, either way.
 - [ ] Engineering, by 2026-10-19: a test through the real Sentry SDK, as BUG-318's privacy test does, proves the error pages send an `UnrecognizedActionError` before they reload; then record the first production event, or none, after two weeks. Without that test, "none" would mean nothing, because the event is sent just before the reload. *Corrected 2026-10-06: a real-SDK test replaces forcing a stale action in production.*
 
+  *Tried 2026-10-09 in the quick-wins pull request, and not shipped there.* The browser lane stubs `@sentry/nextjs` in `vitest.browser.setup.ts`, and a spec cannot lift that stub: Vitest's `vi.unmock` fails with "Mock … wasn't registered". So the test first needs the stub moved into the specs that rely on it, or a browser project without it. The open question it answers is whether the event reaches Sentry's transport before `reloadPage` runs. The report and the reload are separate effects in one commit, and the event may still be queued at the reload.
+
 ## Related
 
 - [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md), [BUG-321](./bug-321-already-subscribed-answer-discarded.md), [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md): the other findings of the same hunt.

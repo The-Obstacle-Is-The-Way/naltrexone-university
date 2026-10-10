@@ -66,6 +66,7 @@ These rules are enforced by the repo today:
 - `NEXT_PUBLIC_SKIP_CLERK=true` is allowed for local/CI non-production flows, but it is rejected when `VERCEL_ENV=production`.
 - `CLERK_WEBHOOK_SIGNING_SECRET` is required at Vercel production runtime when Clerk is enabled.
 - `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is required on Vercel production and preview builds, and must be a base64 AES key of 16, 24 or 32 bytes. Without it, Next.js salts server-action IDs with a key it generates and caches for 14 days, so a deploy after that cache expires (or misses the build cache) leaves a page loaded earlier unable to call its actions ([BUG-319](../bugs/bug-319-subscribe-actions-break-after-a-deploy.md)). Changing the key changes every action ID once. A page open at the time fails its next action; it recovers on a full page load, which the error page starts by itself for the payment forms, "Try again" starts, and the next in-app navigation starts because the build changed. Production and Preview each have their own key.
+- `CONSENT_STATE_SECRET` is required on Vercel production and preview builds, and must be at least 32 characters. "Add a card" signs the trial's consent state with it, and the setup webhook checks that signature, so without it the card form always fails ([DEBT-502](../debt/debt-502-account-identity-and-action-hardening.md) item 6). Off Vercel it stays optional, and the flow then fails closed.
 - `CRON_SECRET` is intentionally not startup-validated. The cron route validates it at request time and returns `401` when it is missing or invalid.
 - Sentry DSNs are optional. `instrumentation.ts` logs `[SENTRY_DISABLED] ...` on Vercel production when `SENTRY_DSN` is unset; the browser's key no longer stands in for it.
 - `playwright.config.ts` loads `.env.local` first, then `.env`, and uses `NEXT_PUBLIC_APP_URL` for `baseURL`.
@@ -85,12 +86,24 @@ These rules are enforced by the repo today:
 | `NEXT_PUBLIC_APP_URL` | Canonical production domain | Actual preview deployment URL | Local origin you are serving (`127.0.0.1` or `localhost`) |
 | `SENTRY_DSN` (server project's key, sensitive, never `NEXT_PUBLIC`) / `NEXT_PUBLIC_SENTRY_DSN` (browser project's key) | Set both: server events and operational alerts need `SENTRY_DSN` | Optional | Optional |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Required; generate with `openssl rand -base64 32` | Required | Optional |
+| `CONSENT_STATE_SECRET` | Required; generate with `openssl rand -hex 32` | Required | Optional; the E2E server gets a test-only value |
 | `CRON_SECRET` | Required anywhere cron route is exercised | Required if you hit cron route | Required if you hit cron route |
 | `GITHUB_READ_TOKEN` (fine-grained, read-only Actions on this repository only, sensitive; DEBT-505) | Required: the renewal job's check of GitHub's scheduled workflows. Without it GitHub is read anonymously, and a refusal at GitHub's per-address limit raises `scheduled_checks_unreadable` | Not needed | Not needed |
 
 ### Stripe account rule
 
 Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md).
+
+### Stripe price ID rule
+
+Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` in an environment that has subscribers. The app recognizes only the current monthly and annual IDs ([DEBT-501](../debt/debt-501-billing-operations-resilience.md) item 2). Every subscription still on an old ID would then fail:
+
+- its webhooks answer 500;
+- reads of it throw;
+- the reconcile job fails its row;
+- the success page sends its buyer to an error.
+
+A new price for new customers waits for item 2's list of recognized legacy IDs. Nothing enforces this rule yet.
 
 ### Clerk key pairing rule
 
