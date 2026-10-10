@@ -203,6 +203,29 @@ The current `.github/dependabot.yml` intentionally separates concerns:
 
 These settings do not prove package contents are benign. They only shape Dependabot's queue.
 
+## CI's Postgres Image
+
+CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then ECR Public, then Google's mirror, and `docker-compose.yml` runs the same digest locally ([DEBT-516](../debt/debt-516-ci-database-image-depends-on-one-registry.md)). Dependabot updates neither, so the refresh is by hand.
+
+- **When.** Refresh on each PostgreSQL 16 minor release (the [roadmap](https://www.postgresql.org/developer/roadmap/) lists the dates) or on an advisory against the image. A rebuild that changes only the Debian base needs no refresh.
+- **Resolve the digest from Docker Hub only**, never from a mirror's copy of the tag, and check its version:
+
+  ```sh
+  docker buildx imagetools inspect docker.io/library/postgres:16 --format '{{.Manifest.Digest}}'
+  docker run --rm docker.io/library/postgres@<digest> postgres --version
+  ```
+
+- **Confirm each registry serves it.** `--raw` reads only the index. Without it, ECR Public's limit of one unauthenticated pull per second refuses the per-platform reads (429).
+
+  ```sh
+  for registry in docker.io/library public.ecr.aws/docker/library mirror.gcr.io/library; do
+    docker buildx imagetools inspect --raw "$registry/postgres@<digest>" > /dev/null && echo "$registry serves it"
+  done
+  ```
+
+  Google keeps only what it has cached. If its mirror lacks a new digest, CI still has the other two; say so in the pull request and check again before the next refresh.
+- **Change four places in one pull request:** `POSTGRES_IMAGE_DIGEST` in `.github/workflows/ci.yml` and `.github/workflows/stripe-hosted-checkout-smoke.yml`, the `image` in `docker-compose.yml`, and `PINNED_POSTGRES_16_DIGEST` in `tests/ci-workflow.test.ts`. `tests/ci-service-images.test.ts` fails while the workflows and the compose file disagree. Update the PostgreSQL version in their comments too.
+
 ## Supply-Chain Boundary
 
 Dependabot tells us a version exists. It does not vouch for the package contents.
