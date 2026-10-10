@@ -63,6 +63,12 @@ BUG-330's branch, in its own local gate (`stripe-hosted` project, trial add-card
   - Its cookie setter removes both copies, suffixed first, and only then sets both. A navigation that starts during that rewrite carries the plain copy without the suffixed one.
   - The setter is the same in 6.37.0, 6.38.0, 6.38.1 and 6.39.0. So the race is not new code, though something else may have made it likelier from 2026-10-08, such as how often Clerk's answers carry the header.
 - **Scope.** Development instances only: a production instance has no dev browser. Real users are not affected.
+- **A second capture, the same day.** Another session's local run, on a branch without the trace, lost `session-review-navigation.spec.ts:37` at `startSession`. Its Playwright trace was kept before the re-run.
+  - At 12:52:07.649, the page's `/v1/environment` and `/v1/client` answers carried `Clerk-Db-Jwt`.
+  - At 07.748, the navigation to the new session's page carried neither `__clerk_db_jwt` cookie: both copies removed, neither set yet.
+  - The handshake then answered signed out, and the next request went to sign-in.
+
+  It is the same race, caught at the other point in the rewrite.
 - **Not yet shown:** that the earlier three losses were this race. Each was also a navigation shortly after a page load, which fits.
 
 ## Hypotheses before the trace
