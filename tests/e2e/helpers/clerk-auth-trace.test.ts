@@ -28,13 +28,13 @@ describe('describeNavigationAnswer', () => {
           'x-clerk-auth-status': 'handshake',
           'x-clerk-auth-reason': 'session-token-expired-refresh-non-eligible',
           location:
-            'https://clerk.example.test/v1/client/handshake?redirect_url=x&__clerk_hs_reason=session-token-expired&__clerk_db_jwt=dvb_secretvalue123',
+            'https://example-12.clerk.accounts.dev/v1/client/handshake?redirect_url=x&__clerk_hs_reason=session-token-expired&__clerk_db_jwt=dvb_secretvalue123',
           'set-cookie':
             '__clerk_redirect_count=1; Max-Age=2\n__session=; Max-Age=0\n__client_uat=1791560000; Path=/',
         },
       }),
     ).toBe(
-      'GET 127.0.0.1:3000/app/practice 307 auth=handshake/session-token-expired-refresh-non-eligible → clerk.example.test/v1/client/handshake hs_reason=session-token-expired params=redirect_url,__clerk_hs_reason,__clerk_db_jwt; cookies: __clerk_redirect_count=1, __session cleared, __client_uat=1791560000',
+      'GET 127.0.0.1:3000/app/practice 307 auth=handshake/session-token-expired-refresh-non-eligible → example-12.clerk.accounts.dev/v1/client/handshake hs_reason=session-token-expired params=redirect_url,__clerk_hs_reason,__clerk_db_jwt; cookies: __clerk_redirect_count=1, __session cleared, __client_uat=1791560000',
     );
   });
 
@@ -47,6 +47,32 @@ describe('describeNavigationAnswer', () => {
         headers: { 'x-clerk-auth-status': 'signed-in' },
       }),
     ).toBe('GET 127.0.0.1:3000/app/dashboard 200 auth=signed-in');
+  });
+});
+
+describe('describeNavigationAnswer for another site', () => {
+  // A third-party path can carry an ID, such as Stripe Checkout's Session, so
+  // only the app's and Clerk's paths are kept.
+  it('names only the host of a page outside the app and Clerk', () => {
+    expect(
+      describeNavigationAnswer({
+        method: 'GET',
+        url: 'https://checkout.stripe.com/c/pay/cs_test_a1B2c3D4e5#fidkdW',
+        status: 200,
+        headers: {},
+      }),
+    ).toBe('GET checkout.stripe.com 200');
+  });
+
+  it("keeps the path of Clerk's hosted pages", () => {
+    expect(
+      describeNavigationAnswer({
+        method: 'GET',
+        url: 'https://example-12.accounts.dev/sign-in?redirect_url=x',
+        status: 200,
+        headers: {},
+      }),
+    ).toBe('GET example-12.accounts.dev/sign-in 200');
   });
 });
 

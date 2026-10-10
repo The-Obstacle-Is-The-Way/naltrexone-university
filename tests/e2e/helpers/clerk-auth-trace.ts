@@ -45,8 +45,13 @@ export function describeFrontendApiAnswer(answer: {
   return text;
 }
 
+// The app's and Clerk's paths name the step; another site's path can carry an
+// ID, such as Stripe Checkout's Session, so it is reduced to its host.
 function place(url: URL): string {
-  return `${url.host}${url.pathname}`;
+  const known =
+    ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
+    url.hostname.endsWith('.accounts.dev');
+  return known ? `${url.host}${url.pathname}` : url.host;
 }
 
 function describeSetCookies(header: string | undefined): string[] {
