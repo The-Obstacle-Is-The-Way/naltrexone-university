@@ -1,10 +1,13 @@
 # Local development database for integration tests
 # Usage: docker compose up -d
-# Matches CI environment (GitHub Actions postgres service)
+# Matches CI's database: the same image digest, credentials and health check
+# as scripts/ci/start-postgres.sh (DEBT-516).
 
 services:
   db:
-    image: postgres:16
+    # postgres:16 (PostgreSQL 16.15), pinned to the digest CI pulls; the two
+    # change together (docs/dev/dependency-update-protocol.md).
+    image: postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

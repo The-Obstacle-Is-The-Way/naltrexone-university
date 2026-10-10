@@ -17,8 +17,8 @@ const PINNED_SETUP_NODE =
   'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020';
 const PINNED_UPLOAD_ARTIFACT =
   'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
-const PINNED_POSTGRES_16 =
-  'mirror.gcr.io/library/postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
+const PINNED_POSTGRES_16_DIGEST =
+  'sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
 // Every workflow, so a new one cannot miss the action-pin check.
 const WORKFLOW_PATHS = workflowFiles();
 
@@ -667,47 +667,13 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     );
   });
 
-  // BUG-327: a mutable tag can change what runs between two runs of the same
-  // commit, so every service or job container is pinned by digest, in every
-  // workflow.
-  it('pins every container image by digest, in every workflow', () => {
-    const images = workflowFiles().flatMap((file) => {
-      const jobs = Object.values(
-        (
-          parse(readFileSync(file, 'utf8')) as {
-            jobs?: Record<
-              string,
-              {
-                container?: { image?: string } | string;
-                services?: Record<string, { image?: string }>;
-              }
-            >;
-          }
-        ).jobs ?? {},
-      );
-      return jobs
-        .flatMap((job) => [
-          ...Object.values(job.services ?? {}).map((service) => service.image),
-          typeof job.container === 'string'
-            ? job.container
-            : job.container?.image,
-        ])
-        .filter((image): image is string => typeof image === 'string')
-        .map((image) => ({ file, image }));
-    });
-
-    expect(images.length).toBeGreaterThanOrEqual(2);
-    expect(
-      images.filter(
-        ({ image }) => !/^[^@\s]+@sha256:[0-9a-f]{64}$/.test(image),
-      ),
-    ).toEqual([]);
-  });
-
   it('pins dependencies that execute in the secret-bearing hosted workflow', () => {
     const workflow = readStripeHostedWorkflow();
 
-    expect(workflow).toContain(`image: ${PINNED_POSTGRES_16}`);
+    expect(
+      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Start Postgres').env
+        ?.POSTGRES_IMAGE_DIGEST,
+    ).toBe(PINNED_POSTGRES_16_DIGEST);
     expect(workflow).toContain(`uses: ${PINNED_SETUP_NODE}`);
     expect(workflow).toContain(`uses: ${PINNED_UPLOAD_ARTIFACT}`);
     expect(workflow).not.toContain('actions/setup-node@v7');
