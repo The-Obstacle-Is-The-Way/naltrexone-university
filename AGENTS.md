@@ -543,7 +543,7 @@ The maintained application-fake barrel remains `src/application/test-helpers/fak
 4. **Use test factories** — `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
 5. **Descriptive names** — `it('returns isCorrect=false when incorrect choice selected')`
 
-Integration tests run against a real Postgres instance. In CI, a service container provides the database.
+Integration tests run against a real Postgres instance. In CI, the `Start Postgres` step (`scripts/ci/start-postgres.sh`) provides the database.
 
 ## Commit & PR Guidelines
 

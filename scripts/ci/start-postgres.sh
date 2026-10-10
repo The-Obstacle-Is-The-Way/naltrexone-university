@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # DEBT-516: CI's database image came from one registry, and on 2026-10-09
-# Docker Hub refused it for half an hour, failing every pull request before
-# any code ran. This starts CI's Postgres from the first of three registries
-# that serves the pinned digest. A pull by digest checks the manifest and
-# every layer against it, so each registry yields the same bytes.
+# Docker Hub refused it, failing every pull request before any code ran.
+# This starts CI's Postgres from the first of three registries that serves
+# the pinned digest. A pull by digest checks the manifest and every layer
+# against it, so each registry yields the same bytes.
 registries=(
   docker.io/library/postgres
   public.ecr.aws/docker/library/postgres
@@ -13,9 +13,12 @@ registries=(
 )
 digest="${POSTGRES_IMAGE_DIGEST:-}"
 pull_attempts=2
-retry_delay_seconds="${POSTGRES_PULL_RETRY_DELAY_SECONDS:-10}"
-health_checks="${POSTGRES_HEALTH_CHECKS:-60}"
-health_interval_seconds="${POSTGRES_HEALTH_INTERVAL_SECONDS:-2}"
+# During the incident some pulls hung before failing; a stalled registry
+# must not use up the step's time before the others are tried.
+pull_timeout_seconds="${POSTGRES_PULL_TIMEOUT_SECONDS:-60}"
+retry_delay_seconds=10
+health_checks=60
+health_interval_seconds=2
 container=postgres
 
 if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
@@ -27,7 +30,7 @@ pull() {
   local image="$1"
   local attempt
   for ((attempt = 1; attempt <= pull_attempts; attempt++)); do
-    if docker pull --quiet "$image"; then
+    if timeout --kill-after=10s "${pull_timeout_seconds}s" docker pull --quiet "$image"; then
       return 0
     fi
     if ((attempt < pull_attempts)); then
@@ -55,7 +58,7 @@ echo "::notice::Postgres image pulled from ${image%%/*}."
 
 # The same database, credentials and health check the job's service
 # container had; the job's DATABASE_URL points here.
-docker run \
+if ! docker run \
   --detach \
   --name "$container" \
   --env POSTGRES_USER=postgres \
@@ -66,7 +69,10 @@ docker run \
   --health-interval 5s \
   --health-timeout 5s \
   --health-retries 10 \
-  "$image" > /dev/null
+  "$image" > /dev/null; then
+  echo "::error::Could not start Postgres from ${image}." >&2
+  exit 1
+fi
 
 for ((check = 1; check <= health_checks; check++)); do
   status="$(docker inspect --format '{{.State.Health.Status}}' "$container")"

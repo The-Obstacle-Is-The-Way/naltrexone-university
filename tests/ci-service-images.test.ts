@@ -4,46 +4,58 @@ import { parse } from 'yaml';
 import { workflowFiles, workflowImages } from '@/tests/shared/workflow-files';
 
 const START_POSTGRES = 'bash scripts/ci/start-postgres.sh';
-const CI_DATABASE_URL =
-  'postgresql://postgres:postgres@localhost:5432/addiction_boards_test';
+const PRINT_POSTGRES_LOG = 'docker logs postgres || true';
+const LOCAL_DATABASE_URL = /@(localhost|127\.0\.0\.1):/;
+
+type Env = Record<string, string>;
 
 type Step = {
   name?: string;
   run?: string;
-  env?: Record<string, string>;
+  if?: string;
+  env?: Env;
   'timeout-minutes'?: number;
 };
 
 type Job = {
-  env?: Record<string, string>;
+  env?: Env;
   services?: Record<string, { image?: string }>;
   steps?: Step[];
 };
 
 function workflowJobs() {
-  return workflowFiles().flatMap((file) =>
-    Object.entries(
-      (parse(readFileSync(file, 'utf8')) as { jobs?: Record<string, Job> })
-        .jobs ?? {},
-    ).map(([name, job]) => ({ file, name, job })),
-  );
+  return workflowFiles().flatMap((file) => {
+    const workflow = parse(readFileSync(file, 'utf8')) as {
+      env?: Env;
+      jobs?: Record<string, Job>;
+    };
+    return Object.values(workflow.jobs ?? {}).map((job) => ({
+      file,
+      job,
+      workflowEnv: workflow.env,
+    }));
+  });
 }
 
-function databaseJobs() {
-  return workflowJobs().filter(
-    ({ job }) => job.env?.DATABASE_URL === CI_DATABASE_URL,
+// A job uses a database on the runner when DATABASE_URL points at localhost,
+// whether the workflow, the job or one of its steps sets it.
+function localDatabaseJobs() {
+  return workflowJobs().filter(({ job, workflowEnv }) =>
+    [workflowEnv, job.env, ...(job.steps ?? []).map((step) => step.env)].some(
+      (env) => LOCAL_DATABASE_URL.test(env?.DATABASE_URL ?? ''),
+    ),
   );
 }
 
 function startSteps() {
-  return databaseJobs().flatMap(({ job }) =>
+  return localDatabaseJobs().flatMap(({ job }) =>
     (job.steps ?? []).filter((step) => step.run === START_POSTGRES),
   );
 }
 
 describe('CI container images', () => {
   // BUG-327: a mutable tag can change what runs between two runs of the same
-  // commit, so every image a workflow references is pinned by digest.
+  // commit, so every image a workflow declares is pinned by digest.
   it('pins every service, job-container and docker:// step image by digest', () => {
     const unpinned = workflowFiles().flatMap((file) =>
       workflowImages(readFileSync(file, 'utf8'))
@@ -54,8 +66,8 @@ describe('CI container images', () => {
     expect(unpinned).toEqual([]);
   });
 
-  // DEBT-516: on 2026-10-09 Docker Hub refused the Postgres service image for
-  // half an hour, and a service container pulls from one registry only.
+  // DEBT-516: on 2026-10-09 Docker Hub refused the Postgres service image,
+  // and a service container pulls from one registry only.
   it('runs no Postgres service container', () => {
     const services = workflowJobs().flatMap(({ file, job }) =>
       Object.values(job.services ?? {})
@@ -66,8 +78,8 @@ describe('CI container images', () => {
     expect(services).toEqual([]);
   });
 
-  it('starts Postgres with registry failover, bounded, before any pnpm step, in every job that uses CI database', () => {
-    const jobs = databaseJobs();
+  it('starts Postgres with registry failover, bounded, before any pnpm step, in every job that uses a local database', () => {
+    const jobs = localDatabaseJobs();
 
     expect(jobs.map(({ file }) => file)).toEqual([
       '.github/workflows/ci.yml',
@@ -81,6 +93,17 @@ describe('CI container images', () => {
       expect(start).toBeGreaterThanOrEqual(0);
       expect(start).toBeLessThan(firstPnpm);
       expect(steps[start]?.['timeout-minutes']).toBeGreaterThan(0);
+    }
+  });
+
+  // The runner printed a service container's log after the job; the
+  // database's log is evidence for a deadlock or crash in any later step.
+  it('prints the Postgres log as the last step of every job that starts it, unless cancelled', () => {
+    for (const { job } of localDatabaseJobs()) {
+      expect(job.steps?.at(-1)).toMatchObject({
+        if: `\${{ !cancelled() }}`,
+        run: PRINT_POSTGRES_LOG,
+      });
     }
   });
 

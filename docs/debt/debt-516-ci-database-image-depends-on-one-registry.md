@@ -12,7 +12,7 @@
 
 ## Summary
 
-CI starts Postgres as a GitHub Actions service container before any step runs. When that image cannot be pulled, the required `test` check fails with no code run, and no pull request can merge. On 2026-10-09 this happened for about an hour, on #1409, #1436 and #1443. Docker's own status page reports the incident "Hub Registry Authenticated Actions Failing" for the same evening.
+CI started Postgres as a GitHub Actions service container before any step ran. When that image could not be pulled, the required `test` check failed with no code run, and no pull request could merge. On 2026-10-09 every pull failed from 21:04Z to 21:35Z, on #1409, #1436 and #1443. Docker's own status page reports the incident "Hub Registry Authenticated Actions Failing" for the same evening.
 
 GitHub-hosted runners pull from Docker Hub as an authenticated `githubactions` account, and that is how GitHub exempts them from Docker Hub's anonymous limit. When the authenticated requests failed, the pulls fell back to the anonymous limit and were refused.
 
@@ -43,12 +43,12 @@ The decided fix, option 3, now starts Postgres in a workflow step that pulls the
 - **ECR Public.** Amazon ECR Public's Docker Official Images, `public.ecr.aws/docker/library/postgres`, served the same digests. AWS documents its own [quotas](https://docs.aws.amazon.com/AmazonECR/latest/public/public-service-quotas.html) for unauthenticated pulls: 1 pull per second per Region and 500 GB of data a month, neither adjustable. So it is another anonymous source with limits, but a different failure domain.
   - On 2026-10-10 a `docker pull` of the pinned digest from ECR Public took 6 seconds. An `imagetools inspect` that read all 16 per-platform manifests at once got `429 Too Many Requests`, so the refresh checks each registry with `--raw`, which reads only the index.
 - **Integrity.** For a pull by digest, Docker checks the manifest and each layer against their digests. So any registry that serves the pinned digest serves the same bytes, provided the digest was first resolved from Docker Hub.
-- **Guards.** `tests/ci-service-images.test.ts` checks only image references containing `postgres`. `tests/ci-workflow.test.ts` pins the full mirror reference.
-- **Local parity.** `docker-compose.yml` says it "Matches CI environment", but it uses Docker Hub's moving `postgres:16` tag. Compose never pulls a newer copy of that tag, so each clone keeps whatever it pulled first.
+- **Guards.** Before the fix, `tests/ci-service-images.test.ts` checked only image references containing `postgres`, and `tests/ci-workflow.test.ts` pinned the full mirror reference.
+- **Local parity.** Before the fix, `docker-compose.yml` said it "Matches CI environment", but it used Docker Hub's moving `postgres:16` tag. Compose never pulls a newer copy of that tag, so each clone kept whatever it pulled first.
 
 ## Impact
 
-While the image cannot be pulled, every pull request's required `test` check fails before any code runs, and nothing merges. Production is unaffected and the failure is loud. Recovery by hand is bounded by the review queue, not the code change: on 2026-10-09 it took about an hour and a half. Locally, a clone can test against a different Postgres 16 build from CI's.
+While the image could not be pulled, every pull request's required `test` check failed before any code ran, and nothing merged. Production was unaffected and the failure was loud. Recovery by hand was bounded by the review queue, not the code change: on 2026-10-09 it took about an hour and a half. Locally, a clone could test against a different Postgres 16 build from CI's. With the fix, the check fails this way only if all three registries refuse the digest.
 
 ## Options
 
@@ -62,14 +62,14 @@ While the image cannot be pulled, every pull request's required `test` check fai
 ## Resolution (decided)
 
 - **Option 3, built in its own pull request.**
-  - `scripts/ci/start-postgres.sh` pulls the digest from Docker Hub first, since it is GitHub's documented path, then `public.ecr.aws`, then `mirror.gcr.io`. It tries each registry twice, ten seconds apart, and logs `Postgres image pulled from <registry>` as a notice. Then it starts the database with the service container's credentials, port and health check, and fails with the container's log if Postgres never becomes healthy.
-  - Both workflows run it as their `Start Postgres` step, right after checkout, bounded at 10 minutes, with the digest in `POSTGRES_IMAGE_DIGEST`. Neither runs a Postgres service container any more.
+  - `scripts/ci/start-postgres.sh` pulls the digest from Docker Hub first, since it is GitHub's documented path, then `public.ecr.aws`, then `mirror.gcr.io`. It tries each registry twice, ten seconds apart, stops any pull that runs past 60 seconds, and logs `Postgres image pulled from <registry>` as a notice. Then it starts the database with the service container's credentials, port and health check, and fails with the container's log if Postgres never becomes healthy.
+  - Both workflows run it as their `Start Postgres` step, right after checkout, bounded at 12 minutes, with the digest in `POSTGRES_IMAGE_DIGEST`. Neither runs a Postgres service container any more. Their last step, `Postgres log`, prints the database's log, as the runner did for the service container.
   - The same pull request:
-    - widens `tests/ci-service-images.test.ts` to every image the workflows reference: service images, job containers and `docker://` steps. It also fails on a Postgres service container, and on a job using CI's database that does not start Postgres this way before its first `pnpm` step;
+    - widens `tests/ci-service-images.test.ts` to every image a workflow declares: service images, job containers and `docker://` steps. It also fails on a Postgres service container, and on a job using a local database that does not start Postgres this way before its first `pnpm` step and print its log last;
     - pins `docker-compose.yml` to the same digest, and that test keeps the two equal;
     - adds the digest refresh below to the [dependency update protocol](../dev/dependency-update-protocol.md#cis-postgres-image).
   - Option 4 is not adopted, because its authenticated path is what failed. Option 5 adds a package and a write credential for one image. Option 6 drops the pin.
-- **If every registry refuses,** the step fails with `No registry served postgres@<digest>`. Check the three registries' status pages before changing anything; a refresh to a digest all three serve is the only fix the step needs.
+- **If every registry refuses,** the step fails with `No registry served postgres@<digest>`. If the pulls say `manifest unknown`, the digest is gone: refresh it as below. Otherwise check the three registries' status pages and re-run once one recovers.
 - **Freshness.**
   - Resolve a new digest only from Docker Hub's `postgres:16` tag, never from a mirror's copy of the tag. Then confirm that every registry in the list serves it.
   - Refresh on each PostgreSQL 16 minor release, or on an advisory against the image. The [roadmap](https://www.postgresql.org/developer/roadmap/) names 2026-11-12 as the earliest date for the next release.

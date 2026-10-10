@@ -112,7 +112,7 @@ To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. T
 
 ## CI Pipeline
 
-GitHub Actions (`.github/workflows/ci.yml`) spins up its own PostgreSQL 16 service container on every run. It does not depend on local Docker state. The pipeline runs:
+GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 container on every run, in its `Start Postgres` step (`scripts/ci/start-postgres.sh`), from the first of Docker Hub, ECR Public and Google's mirror that serves the pinned digest. It does not depend on local Docker state. The pipeline runs:
 
 1. `pnpm db:migrate` — applies migrations to the CI database
 2. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks

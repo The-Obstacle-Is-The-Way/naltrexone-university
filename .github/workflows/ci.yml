@@ -35,7 +35,7 @@ jobs:
       # docs/dev/dependency-update-protocol.md.
       - name: Start Postgres
         run: bash scripts/ci/start-postgres.sh
-        timeout-minutes: 10
+        timeout-minutes: 12
         env:
           POSTGRES_IMAGE_DIGEST: sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5 # postgres:16, PostgreSQL 16.15
 
@@ -223,3 +223,9 @@ jobs:
           summarize 'Browser tests' "$BROWSER_OUTCOME" 'an earlier required step did not succeed'
           summarize 'Build' "$BUILD_OUTCOME" 'an earlier required step did not succeed'
           summarize 'E2E smoke' "$E2E_OUTCOME" "$E2E_SKIP_REASON"
+
+      # DEBT-516: the runner printed a service container's log after the job;
+      # Start Postgres runs the database itself, so this step prints it.
+      - name: Postgres log
+        if: ${{ !cancelled() }}
+        run: docker logs postgres || true
