@@ -153,6 +153,31 @@ reviews:
         RAISE NOTICE; and constraint names match the exported constants in
         db/schema.ts.
 
+    # DEBT-515: record conventions live in AGENTS.md, reviewed with the code.
+    # A learning stored from #285 (2026-04-25) told CodeRabbit that a bug
+    # record keeps "Status: Open" with a "Resolution State" field until after
+    # merge, the opposite of today's lifecycle, and it was still applied on
+    # #1456 (2026-10-10).
+    - path: "docs/bugs/**"
+      instructions: &record_instructions |
+        Review numbered records against AGENTS.md, "Register Indexes and
+        Records (2026-10-05)" and "Closing and Archiving Documentation
+        Records". Those sections govern status and closure, over any stored
+        learning:
+        - Statuses are Open, In Progress, Blocked, Verifying, then a closed
+          disposition: Resolved, Won't Fix, Reclassified, Accepted, Deferred
+          or Superseded. There is no separate "Resolution State" field.
+        - When a fix merges but a check remains that only promotion or
+          production can satisfy, the fixing PR itself sets
+          "Verifying — <the remaining check>; due YYYY-MM-DD", effective when
+          it merges.
+        - Once that check is recorded, the record is archived to
+          docs/_archive/ in the next PR that touches the register.
+        If a stored learning conflicts with these sections, follow AGENTS.md
+        and name the learning that conflicts.
+    - path: "docs/debt/**"
+      instructions: *record_instructions
+
   finishing_touches:
     docstrings:
       enabled: false

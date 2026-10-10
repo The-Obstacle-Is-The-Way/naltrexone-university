@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 released 2026-10-08; item 3 built in its pull request; item 5, verifying session tokens without Clerk's network, due 2026-10-14; item 4, measuring these requests and a per-address bucket for real signed-in visitors, due 2026-10-21; item 2 waits for its trigger
+**Status:** In Progress — item 1 released; item 3 built in its pull request; item 5 due 2026-10-14; item 4 due 2026-10-21; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
