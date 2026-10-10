@@ -7,14 +7,15 @@
 - **Verifying.** BUG-319: its fix is in production since 2026-10-05; the Sentry checks and a real-SDK test that the stale-action event reaches Sentry, due 2026-10-19. BUG-323: the owner confirms the production limiter writes its rows, due 2026-10-19. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-325: no Sentry event from the fixed paths for two weeks, due 2026-10-20. BUG-327: no Dependabot head deploys; merge through the tooling remains, due 2026-10-20. BUG-332: no "Failed to ensure user row" event in Sentry for two weeks after the deploy (2026-10-08), due 2026-10-22. BUG-331: a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered, due 2026-10-22.
 - **In progress.** BUG-330: built in its pull request. BUG-333: the traced cause, a race in Clerk JS's dev-browser cookie rewrite, is mitigated in tests; repeated E2E runs remain.
 - **Next.** Write BUG-321's provider-contract test; fix BUG-329; archive each Verifying record when its check passes.
-- **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan. BUG-331: whether to keep the server's 5% trace sample (AUDIT-015).
+- **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan. BUG-331: whether to keep the server's 5% trace sample (AUDIT-015). BUG-334: a production check for E592, and whether E2E should fail on server errors outside a known-noise list.
 
-**Next Bug ID:** BUG-334
+**Next Bug ID:** BUG-335
 
 ## Active
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
+| [BUG-334](./bug-334-nextjs-logs-e592-when-e2e-opens-a-question.md) | Next.js logs invariant E592 when E2E opens a question | P3 | Open — upstream Next.js bug (vercel/next.js#99500); no failed request found; the owner's production check and the Next.js fix remain |
 | [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P4 | Open — canonicalize generated instance names before passing them to child commands |
 | [BUG-332](./bug-332-concurrent-first-requests-can-deadlock-provisioning.md) | A new user's concurrent first requests can deadlock provisioning | P2 | Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22 |
 | [BUG-331](./bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) | Server breadcrumbs and request spans carry credentials the scrubbers miss | P2 | Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22 |
