@@ -3,7 +3,7 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-10-09
 
-**Now** — 2026-10-08.
+**Now** — 2026-10-09.
 - **Verifying.** BUG-319: its fix is in production since 2026-10-05; the Sentry checks and a real-SDK test that the stale-action event reaches Sentry, due 2026-10-19. BUG-323: the owner confirms the production limiter writes its rows, due 2026-10-19. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-325: no Sentry event from the fixed paths for two weeks, due 2026-10-20. BUG-327: no Dependabot head deploys; merge through the tooling remains, due 2026-10-20. BUG-332: no "Failed to ensure user row" event in Sentry for two weeks after the deploy (2026-10-08), due 2026-10-22. BUG-331: a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered, due 2026-10-22.
 - **Next.** Fix BUG-330; write BUG-321's provider-contract test; fix BUG-329; archive each Verifying record when its check passes.
 - **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan. BUG-331: whether to keep the server's 5% trace sample (AUDIT-015). BUG-334: a production check for E592, and whether E2E should fail on server errors outside a known-noise list.

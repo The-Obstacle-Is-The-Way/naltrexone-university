@@ -57,7 +57,7 @@ describe('GitHub advisory source', () => {
   it.each([
     { ghsa_id: 'not-an-id' },
     { cve_id: 42 },
-    { severity: null },
+    { severity: 42 },
     { summary: null },
     { html_url: 'https://example.com/advisory' },
     { published_at: 'yesterday' },
@@ -71,6 +71,17 @@ describe('GitHub advisory source', () => {
         JSON.stringify([[{ ...apiAdvisory, ...overrides }]]),
       ),
     ).rejects.toThrow('Invalid GitHub advisory response');
+  });
+
+  // GitHub's schema allows a published repository advisory without a
+  // severity; it is read as unknown, which the watcher raises.
+  it('reads an advisory published without a severity as unknown', async () => {
+    const advisories = await listUpstreamAdvisories('vercel/next.js', () =>
+      JSON.stringify([[{ ...apiAdvisory, severity: null }]]),
+    );
+    expect(advisories).toEqual([
+      advisory({ summary: 'Remote code execution', severity: 'unknown' }),
+    ]);
   });
 
   it.each([

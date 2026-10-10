@@ -184,8 +184,9 @@ advisories.
 - Every other package in `pnpm-lock.yaml` is resolved when the job runs, from
   the npm `repository` field of its locked version, so a lockfile change
   needs no edit. From a repository reached only this way, critical and high
-  advisories are raised, as is any of unknown severity. Medium and low ones
-  are left to Dependabot: 106 of the 109 arrived, and none of the other three
+  advisories are raised, as is any of unknown severity, including one
+  published without a severity, which GitHub allows. Medium and low ones are
+  left to Dependabot: 106 of the 109 arrived, and none of the other three
   affected this app.
 - A package that names no GitHub repository, or whose repository was deleted,
   is listed as not watched in the run's log without failing it. On 2026-10-08

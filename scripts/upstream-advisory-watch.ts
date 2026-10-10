@@ -513,7 +513,7 @@ function parseAdvisory(entry: unknown): UpstreamAdvisory {
     typeof ghsa_id !== 'string' ||
     !/^GHSA(-[0-9a-z]{4}){3}$/.test(ghsa_id) ||
     !isOptionalString(cve_id) ||
-    typeof severity !== 'string' ||
+    !isOptionalString(severity) ||
     typeof summary !== 'string' ||
     typeof html_url !== 'string' ||
     !html_url.startsWith('https://github.com/') ||
@@ -525,7 +525,8 @@ function parseAdvisory(entry: unknown): UpstreamAdvisory {
   return {
     ghsaId: ghsa_id,
     cveId: cve_id,
-    severity,
+    // GitHub's schema allows a published advisory without a severity.
+    severity: severity ?? 'unknown',
     summary: summary.replace(/\s+/g, ' ').trim(),
     url: html_url,
     publishedAt: published_at,
