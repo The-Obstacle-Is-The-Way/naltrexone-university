@@ -7,7 +7,10 @@ import {
 } from '@/src/adapters/shared/rate-limits';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
-import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
+import type {
+  OperationalAlertKind,
+  OperationalAlerts,
+} from '@/src/application/ports/operational-alerts';
 
 // BUG-323: the request shapes for which Clerk's SDK calls Clerk's Backend API
 // before answering: a handshake value, or a GET whose session has expired and
@@ -93,18 +96,22 @@ function tooManyRequests(
   return response;
 }
 
+export type ClerkBackendCallLimit = 'address' | 'session' | 'site';
+
 /**
  * Limits these requests per client address, per refreshing session, then
  * site-wide, before they reach
  * Clerk. Returns the 429 response, or null to continue. A limiter failure,
  * including one while loading it, lets the request through: failing closed
  * would break every real session refresh while the database is down, and the
- * firewall rule still bounds the volume.
+ * firewall rule still bounds the volume. A refusal names the limit that
+ * tripped (DEBT-503 item 3), never the address or session.
  */
 export async function limitClerkBackendCalls(
   request: ClerkRequest,
   loadLimiter: () => Promise<RateLimiter>,
   report: (failure: unknown) => void,
+  refused: (limit: ClerkBackendCallLimit) => void = () => {},
 ): Promise<NextResponse | null> {
   try {
     const limiter = await loadLimiter();
@@ -116,8 +123,10 @@ export async function limitClerkBackendCalls(
         key: `clerk-backend-call:${address}`,
         ...CLERK_BACKEND_CALL_RATE_LIMIT,
       });
-      if (!perAddress.success)
+      if (!perAddress.success) {
+        refused('address');
         return tooManyRequests(request, perAddress.retryAfterSeconds);
+      }
     }
     const session = refreshingSession(request, Math.floor(Date.now() / 1000));
     if (session) {
@@ -125,14 +134,19 @@ export async function limitClerkBackendCalls(
         key: `clerk-backend-call:session:${session.id}`,
         ...CLERK_BACKEND_CALL_SESSION_RATE_LIMIT,
       });
-      if (!perSession.success)
+      if (!perSession.success) {
+        refused('session');
         return tooManyRequests(request, perSession.retryAfterSeconds);
+      }
     }
     const site = await limiter.limit({
       key: 'clerk-backend-call:site',
       ...CLERK_BACKEND_CALL_SITE_RATE_LIMIT,
     });
-    if (!site.success) return tooManyRequests(request, site.retryAfterSeconds);
+    if (!site.success) {
+      refused('site');
+      return tooManyRequests(request, site.retryAfterSeconds);
+    }
     return null;
   } catch (error) {
     report({
@@ -143,20 +157,28 @@ export async function limitClerkBackendCalls(
   }
 }
 
-// DEBT-505: the limiter failing is BUG-323's alert; the log line alone
-// reaches nobody. It never rejects, since it runs after the response.
-export async function raiseLimiterFailureAlert(
+// DEBT-505: an alert the proxy raises after its response. It never rejects.
+export async function raiseOperationalAlert(
   loadAlerts: () => Promise<OperationalAlerts>,
+  kind: OperationalAlertKind,
 ): Promise<void> {
   try {
     const alerts = await loadAlerts();
-    await alerts.raise({ kind: 'clerk_backend_call_limiter_failed', count: 1 });
+    await alerts.raise({ kind, count: 1 });
   } catch (error) {
     console.error({
       event: 'operational_alert_unavailable',
       error: projectSafeErrorDiagnostics(error),
     });
   }
+}
+
+// DEBT-505: the limiter failing is BUG-323's alert; the log line alone
+// reaches nobody.
+export function raiseLimiterFailureAlert(
+  loadAlerts: () => Promise<OperationalAlerts>,
+): Promise<void> {
+  return raiseOperationalAlert(loadAlerts, 'clerk_backend_call_limiter_failed');
 }
 
 // The production alerts: the container's, which share one in-process

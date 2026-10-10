@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   limitClerkBackendCalls,
   raiseLimiterFailureAlert,
+  raiseOperationalAlert,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
@@ -295,6 +296,43 @@ describe('limiting requests that make Clerk call its Backend API', () => {
 
   // Failing closed would break every real session refresh while the database
   // is down; the firewall rule still bounds the volume.
+  // DEBT-503 item 3: a refusal names the limit that tripped, never the
+  // address or session.
+  it.each([
+    ['address', [OVER_LIMIT]],
+    ['session', [UNDER_LIMIT, OVER_LIMIT]],
+    ['site', [UNDER_LIMIT, UNDER_LIMIT, OVER_LIMIT]],
+  ] as const)(
+    'names the %s limit when it refuses a call',
+    async (limit, answers) => {
+      const refused: string[] = [];
+
+      await limitClerkBackendCalls(
+        fromAddress('https://example.com/pricing', {
+          cookie: `__session=${sessionToken(1, 'sess_busy')}; __refresh_abc=x`,
+        }),
+        async () => new FakeRateLimiter([...answers]),
+        () => {},
+        (tripped) => refused.push(tripped),
+      );
+
+      expect(refused).toEqual([limit]);
+    },
+  );
+
+  it('names no limit when every limit lets the call through', async () => {
+    const refused: string[] = [];
+
+    await limitClerkBackendCalls(
+      fromAddress('https://example.com/?__clerk_handshake_nonce=x'),
+      async () => new FakeRateLimiter([UNDER_LIMIT, UNDER_LIMIT]),
+      () => {},
+      (tripped) => refused.push(tripped),
+    );
+
+    expect(refused).toEqual([]);
+  });
+
   it('lets the request through and reports when the limiter fails', async () => {
     const reports: unknown[] = [];
 
@@ -326,6 +364,21 @@ describe('limiting requests that make Clerk call its Backend API', () => {
 
 // DEBT-505: the limiter failing is BUG-323's alert. The log alone reaches
 // nobody.
+describe('an operational alert raised after the response', () => {
+  it('raises the given kind once', async () => {
+    const alerts = new FakeOperationalAlerts();
+
+    await raiseOperationalAlert(
+      async () => alerts,
+      'clerk_backend_calls_refused',
+    );
+
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_backend_calls_refused', count: 1 },
+    ]);
+  });
+});
+
 describe('the limiter failure alert', () => {
   it('raises one limiter-failure alert', async () => {
     const alerts = new FakeOperationalAlerts();
@@ -533,6 +586,31 @@ describe('proxy with the Clerk Backend API limit', () => {
     await afterResponse;
     expect(alerts.raised).toEqual([
       { kind: 'clerk_backend_call_limiter_failed', count: 1 },
+    ]);
+  });
+
+  // DEBT-503 item 3: a cap trip is logged for diagnosis and alerts the owner,
+  // after the response.
+  it('logs a refusal by its limit and raises the refusal alert through waitUntil', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter([OVER_LIMIT]),
+    );
+    const [request, event] = proxyInvocation(
+      'https://example.com/pricing?__clerk_handshake_nonce=x',
+    );
+
+    const response = await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(response?.status).toBe(429);
+    // The invocation carries no client address, so the site limit refuses.
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_refused',
+      limit: 'site',
+    });
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_backend_calls_refused', count: 1 },
     ]);
   });
 

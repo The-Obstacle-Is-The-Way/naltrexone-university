@@ -9,6 +9,7 @@ import {
   loadContainerOperationalAlerts,
   loadContainerRateLimiter,
   raiseLimiterFailureAlert,
+  raiseOperationalAlert,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
@@ -279,6 +280,17 @@ export function createProxy({
           // DEBT-505: alert after the response, so the request never waits
           // on the database that just failed.
           event.waitUntil(raiseLimiterFailureAlert(loadOperationalAlerts));
+        },
+        (limit) => {
+          // DEBT-503 item 3: each refusal is logged for diagnosis, and the
+          // owner is alerted, at most once per cooldown, after the response.
+          console.warn({ event: 'clerk_backend_call_refused', limit });
+          event.waitUntil(
+            raiseOperationalAlert(
+              loadOperationalAlerts,
+              'clerk_backend_calls_refused',
+            ),
+          );
         },
       );
       if (limited) return limited;
