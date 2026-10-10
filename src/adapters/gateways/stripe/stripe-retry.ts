@@ -2,6 +2,7 @@ import { CircuitBreaker } from '@/src/adapters/shared/circuit-breaker';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import type { Logger } from '@/src/application/ports/logger';
+import { isStripeOutage } from './stripe-errors';
 
 const STRIPE_CIRCUIT_FAILURE_THRESHOLD = 5;
 const STRIPE_CIRCUIT_RESET_TIMEOUT_MS = 60_000;
@@ -13,6 +14,9 @@ const stripeCircuitBreaker = new CircuitBreaker({
   resetTimeoutMs: STRIPE_CIRCUIT_RESET_TIMEOUT_MS,
   openErrorCode: STRIPE_OPEN_CIRCUIT_ERROR_CODE,
   openErrorMessage: STRIPE_OPEN_CIRCUIT_MESSAGE,
+  // DEBT-501 item 6: Stripe refusing a request answers it; only an outage
+  // opens the circuit.
+  isFailure: isStripeOutage,
 });
 
 function toStripeErrorContext(error: unknown): Record<string, unknown> {

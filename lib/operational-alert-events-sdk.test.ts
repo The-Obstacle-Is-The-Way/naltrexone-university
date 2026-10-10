@@ -15,6 +15,13 @@ beforeAll(() => {
     // sessions; set one here so a run without it proves the same thing.
     release: 'operational-alert-test',
     ...SENTRY_SERVER_SETTINGS,
+    // From @sentry/nextjs 11.2 the server drops an event identical to the
+    // one before it; added here so the alerts are proven with it, whichever
+    // version is installed.
+    integrations: (defaults) => [
+      ...SENTRY_SERVER_SETTINGS.integrations(defaults),
+      Sentry.dedupeIntegration(),
+    ],
     transport: () => ({
       send: async (envelope: unknown) => {
         sent.push(JSON.stringify(envelope));
@@ -213,7 +220,11 @@ describe('sendOperationalAlertEvent', () => {
   });
 
   // Sentry emails on a new issue, not on a later event in one still open. A
-  // new issue per kind and cooldown window makes every episode notify.
+  // new issue per kind and cooldown window makes every episode notify. The
+  // server drops an event identical to the one just before it (Dedupe), so a
+  // repeat of the last alert's kind and window may not arrive; it would join
+  // that alert's open issue without an email. The first event of each kind and
+  // window differs from every earlier one, so it always arrives.
   it('opens a new issue for each kind and cooldown window, whatever the cooldown tag', async () => {
     sent = [];
     const first = '2026-10-08T00:00:00.000Z';
@@ -221,8 +232,8 @@ describe('sendOperationalAlertEvent', () => {
 
     for (const [kind, sharedCooldown, window] of [
       ['clerk_backend_call_limiter_failed', 'held', first],
-      ['clerk_backend_call_limiter_failed', 'unavailable', first],
       ['clerk_backend_call_limiter_failed', 'held', second],
+      ['clerk_backend_call_limiter_failed', 'unavailable', first],
       ['renewal_notice_outcome_unknown', 'held', first],
     ] as const) {
       await sendOperationalAlertEvent({
@@ -233,7 +244,7 @@ describe('sendOperationalAlertEvent', () => {
       });
     }
 
-    const [held, unavailable, later, otherKind] = sentEvents().map(
+    const [held, later, unavailable, otherKind] = sentEvents().map(
       (event) => event.fingerprint,
     );
     expect(held).toEqual([
@@ -241,20 +252,21 @@ describe('sendOperationalAlertEvent', () => {
       'clerk_backend_call_limiter_failed',
       first,
     ]);
-    // The cooldown tag does not split an issue.
-    expect(unavailable).toEqual(held);
-    // A later window, or another kind, opens its own.
+    // A later window opens its own, even straight after the same kind.
     expect(later).toEqual([
       'operational-alert',
       'clerk_backend_call_limiter_failed',
       second,
     ]);
+    // The cooldown tag does not split an issue.
+    expect(unavailable).toEqual(held);
+    // Another kind opens its own.
     expect(otherKind).toEqual([
       'operational-alert',
       'renewal_notice_outcome_unknown',
       first,
     ]);
-    expect(sentEvents()[1]).toMatchObject({
+    expect(sentEvents()[2]).toMatchObject({
       tags: { 'alert.shared_cooldown': 'unavailable' },
     });
   });

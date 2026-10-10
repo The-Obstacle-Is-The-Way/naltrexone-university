@@ -217,4 +217,69 @@ describe('callStripeWithRetry', () => {
 
     expect(blockedFn).not.toHaveBeenCalled();
   });
+
+  // DEBT-501 item 6: Stripe refusing a request is an answer, not an outage.
+  // Five refusals in a row used to fail every Stripe call in the instance,
+  // Checkout included, for a minute.
+  it('keeps the circuit closed through any number of client errors', async () => {
+    const logger = new FakeLogger();
+    const clientError = createStripeError('invalid request', {
+      statusCode: 400,
+    });
+
+    for (let call = 0; call < 6; call += 1) {
+      await expect(
+        callStripeWithRetry({
+          operation: 'checkout.sessions.create',
+          fn: async () => {
+            throw clientError;
+          },
+          logger,
+        }),
+      ).rejects.toBe(clientError);
+    }
+
+    await expect(
+      callStripeWithRetry({
+        operation: 'checkout.sessions.create',
+        fn: async () => 'ok',
+        logger,
+      }),
+    ).resolves.toBe('ok');
+  });
+
+  // The SDK raises a lost connection, or its own timeout, as a
+  // StripeConnectionError, with neither a code nor a status.
+  it('counts Stripe connection errors toward opening the circuit', async () => {
+    const logger = new FakeLogger();
+    const connectionError = createStripeError(
+      'An error occurred with our connection to Stripe.',
+      { type: 'StripeConnectionError' },
+    );
+
+    for (let call = 0; call < 5; call += 1) {
+      await expect(
+        callStripeWithRetry({
+          operation: 'subscriptions.retrieve',
+          fn: async () => {
+            throw connectionError;
+          },
+          logger,
+        }),
+      ).rejects.toBe(connectionError);
+    }
+
+    const blockedFn = vi.fn(async () => 'ok');
+    await expect(
+      callStripeWithRetry({
+        operation: 'subscriptions.retrieve',
+        fn: blockedFn,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe temporarily unavailable',
+    });
+    expect(blockedFn).not.toHaveBeenCalled();
+  });
 });

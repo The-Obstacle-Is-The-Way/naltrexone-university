@@ -1,6 +1,7 @@
-import { globSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { workflowFiles } from '@/tests/shared/workflow-files';
 
 const CI_WORKFLOW_PATH = '.github/workflows/ci.yml';
 const CODECOV_CONFIG_PATH = 'codecov.yml';
@@ -19,7 +20,7 @@ const PINNED_UPLOAD_ARTIFACT =
 const PINNED_POSTGRES_16 =
   'mirror.gcr.io/library/postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
 // Every workflow, so a new one cannot miss the action-pin check.
-const WORKFLOW_PATHS = globSync('.github/workflows/*.yml').sort();
+const WORKFLOW_PATHS = workflowFiles();
 
 type WorkflowStep = {
   'continue-on-error'?: boolean;
@@ -277,10 +278,7 @@ describe('CI workflow', () => {
 });
 
 describe('Playwright artifact publication', () => {
-  const ALL_WORKFLOWS = [
-    ...globSync('.github/workflows/*.yml'),
-    ...globSync('.github/workflows/*.yaml'),
-  ].sort();
+  const ALL_WORKFLOWS = workflowFiles();
   const SCAN_COMMAND = 'pnpm exec tsx scripts/ci/scan-playwright-output.ts';
   const SCAN_GATE = "steps.playwright_output_scan.outcome == 'success'";
   // Uploads that carry no browser output, keyed by workflow, artifact name
@@ -673,10 +671,7 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
   // commit, so every service or job container is pinned by digest, in every
   // workflow.
   it('pins every container image by digest, in every workflow', () => {
-    const images = [
-      ...globSync('.github/workflows/*.yml'),
-      ...globSync('.github/workflows/*.yaml'),
-    ].flatMap((file) => {
+    const images = workflowFiles().flatMap((file) => {
       const jobs = Object.values(
         (
           parse(readFileSync(file, 'utf8')) as {
