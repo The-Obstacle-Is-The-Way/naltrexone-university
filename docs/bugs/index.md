@@ -1,14 +1,15 @@
 # Bug Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-10-08
+**Last Updated:** 2026-10-09
 
-**Now** — 2026-10-08.
+**Now** — 2026-10-09.
 - **Verifying.** BUG-319: its fix is in production since 2026-10-05; the Sentry checks and a real-SDK test that the stale-action event reaches Sentry, due 2026-10-19. BUG-323: the owner confirms the production limiter writes its rows, due 2026-10-19. BUG-320: no `User could not be upserted` error in Sentry for two weeks after the deploy, due 2026-10-20. BUG-325: no Sentry event from the fixed paths for two weeks, due 2026-10-20. BUG-327: no Dependabot head deploys; merge through the tooling remains, due 2026-10-20. BUG-332: no "Failed to ensure user row" event in Sentry for two weeks after the deploy (2026-10-08), due 2026-10-22. BUG-331: a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered, due 2026-10-22.
-- **Next.** Fix BUG-330; write BUG-321's provider-contract test; fix BUG-329; archive each Verifying record when its check passes.
+- **In progress.** BUG-330: built in its pull request. BUG-333: the traced cause, a race in Clerk JS's dev-browser cookie rewrite, is mitigated in tests; repeated E2E runs remain.
+- **Next.** Write BUG-321's provider-contract test; fix BUG-329; archive each Verifying record when its check passes.
 - **Owner decisions pending.** BUG-319: whether to adopt Skew Protection, which needs Vercel's Pro plan. BUG-331: whether to keep the server's 5% trace sample (AUDIT-015).
 
-**Next Bug ID:** BUG-333
+**Next Bug ID:** BUG-334
 
 ## Active
 
@@ -17,7 +18,8 @@
 | [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P4 | Open — canonicalize generated instance names before passing them to child commands |
 | [BUG-332](./bug-332-concurrent-first-requests-can-deadlock-provisioning.md) | A new user's concurrent first requests can deadlock provisioning | P2 | Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22 |
 | [BUG-331](./bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) | Server breadcrumbs and request spans carry credentials the scrubbers miss | P2 | Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22 |
-| [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) | Signed-in E2E fails en masse when the stored Clerk session cannot be restored after its token expires | P3 | Open — resolution decided below; its blocker, DEBT-503 item 1, was released 2026-10-08 |
+| [BUG-330](./bug-330-stored-clerk-session-lost-after-token-expiry.md) | Signed-in E2E fails en masse when the stored Clerk session cannot be restored after its token expires | P3 | In Progress — built test-first in its pull request; still to show in CI: no E2E session left active, and the web server's output in the log |
+| [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) | A signed-in E2E test loses its Clerk session partway through a CI run, cause unknown | P3 | In Progress — cause traced: a navigation during Clerk JS's dev-browser cookie rewrite; tests now drop the echo that triggers it, to be shown by repeated E2E runs |
 | [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md) | Subscribe and add-card fail for a page loaded before a deploy | P2 | Verifying — the Sentry checks, and a real-SDK test that the stale-action event reaches Sentry; due 2026-10-19 |
 | [BUG-323](./bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md) | Anonymous requests can spend Clerk's shared Backend API limit | P1 | Verifying — owner confirms the production limiter writes its rows; due 2026-10-19 |
 | [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) | A new user's first visit can fail when two requests create their row at once | P2 | Verifying — no `User could not be upserted` error in Sentry for two weeks after the deploy; due 2026-10-20 |

@@ -51,11 +51,13 @@ export type CredentialHealthCheckServices = {
   resolveClerkUserId: (input: {
     clerkSecretKey: string;
     email: string;
+    deadlineAt: number;
   }) => Promise<string | null>;
   verifyClerkPassword: (input: {
     clerkSecretKey: string;
     userId: string;
     password: string;
+    deadlineAt: number;
   }) => Promise<boolean>;
   verifyStripeSecretKey: (stripe: Stripe) => Promise<void>;
   verifyStripePriceId: (input: {
@@ -211,22 +213,43 @@ export function parseRetryAfterMs(
 type ClerkRetryClock = {
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
+  /** When set, no attempt runs and no retry waits past this time. */
+  deadlineAt?: number;
 };
+
+// BUG-330: preflight's Clerk calls share one deadline, which ends inside
+// setup's budget, so a slow or rate-limited Clerk API fails with the
+// credential error rather than Playwright's setup timeout. Without it, slow
+// 429 or 5xx answers could hold each call for three 15-second attempts and up
+// to 10 seconds of waits.
+export const CLERK_PREFLIGHT_DEADLINE_MS = 30_000;
+
+class ClerkDeadlinePassed extends Error {
+  constructor() {
+    super('Clerk API call passed its deadline');
+  }
+}
 
 export async function fetchClerkWithRetry(
   input: string,
   init: RequestInit,
-  { sleep = delay, now = Date.now }: ClerkRetryClock = {},
+  {
+    sleep = delay,
+    now = Date.now,
+    deadlineAt = Number.POSITIVE_INFINITY,
+  }: ClerkRetryClock = {},
 ): Promise<Response> {
   let retryAfterMs: number | null = null;
   let waitedMs = 0;
   try {
     return await retry(
       async () => {
+        const remainingMs = deadlineAt - now();
+        if (remainingMs <= 0) throw new ClerkDeadlinePassed();
         const response = await fetchWithTimeout(
           input,
           init,
-          CLERK_API_TIMEOUT_MS,
+          Math.min(CLERK_API_TIMEOUT_MS, remainingMs),
         );
         if (isTransientExternalError({ status: response.status })) {
           throw new TransientClerkResponse(response);
@@ -248,9 +271,12 @@ export async function fetchClerkWithRetry(
           }
         },
         sleep: (backoffMs) => {
-          const waitMs = Math.max(
-            backoffMs,
-            Math.min(retryAfterMs ?? 0, CLERK_RETRY_AFTER_MAX_MS - waitedMs),
+          const waitMs = Math.min(
+            Math.max(
+              backoffMs,
+              Math.min(retryAfterMs ?? 0, CLERK_RETRY_AFTER_MAX_MS - waitedMs),
+            ),
+            Math.max(deadlineAt - now(), 0),
           );
           waitedMs += waitMs;
           return sleep(waitMs);
@@ -324,14 +350,16 @@ const defaultServices: CredentialHealthCheckServices = {
     }
   },
 
-  resolveClerkUserId: async ({ clerkSecretKey, email }) => {
+  resolveClerkUserId: async ({ clerkSecretKey, email, deadlineAt }) => {
     const url = `${CLERK_API_BASE}/users?email_address=${encodeURIComponent(email)}&limit=1`;
 
     let response: Response;
     try {
-      response = await fetchClerkWithRetry(url, {
-        headers: { Authorization: `Bearer ${clerkSecretKey}` },
-      });
+      response = await fetchClerkWithRetry(
+        url,
+        { headers: { Authorization: `Bearer ${clerkSecretKey}` } },
+        { deadlineAt },
+      );
     } catch {
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:CLERK_API_UNAVAILABLE',
@@ -363,19 +391,28 @@ const defaultServices: CredentialHealthCheckServices = {
     return firstUser.id;
   },
 
-  verifyClerkPassword: async ({ clerkSecretKey, userId, password }) => {
+  verifyClerkPassword: async ({
+    clerkSecretKey,
+    userId,
+    password,
+    deadlineAt,
+  }) => {
     const url = `${CLERK_API_BASE}/users/${userId}/verify_password`;
 
     let response: Response;
     try {
-      response = await fetchClerkWithRetry(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${clerkSecretKey}`,
-          'Content-Type': 'application/json',
+      response = await fetchClerkWithRetry(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${clerkSecretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ password }),
         },
-        body: JSON.stringify({ password }),
-      });
+        { deadlineAt },
+      );
     } catch {
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:CLERK_API_UNAVAILABLE',
@@ -572,9 +609,11 @@ function buildValidators(
     validators.push({
       id: 'clerk',
       run: async () => {
+        const deadlineAt = Date.now() + CLERK_PREFLIGHT_DEADLINE_MS;
         const userId = await services.resolveClerkUserId({
           email: clerkEmail,
           clerkSecretKey,
+          deadlineAt,
         });
 
         if (!userId) {
@@ -589,6 +628,7 @@ function buildValidators(
           userId,
           password: clerkPassword,
           clerkSecretKey,
+          deadlineAt,
         });
 
         if (!isVerified) {

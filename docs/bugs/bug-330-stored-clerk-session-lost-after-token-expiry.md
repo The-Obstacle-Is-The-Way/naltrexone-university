@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided below; its blocker, DEBT-503 item 1, was released 2026-10-08
+**Status:** In Progress — built test-first in its pull request; still to show in CI: no E2E session left active, and the web server's output in the log
 **Priority:** P3
 **Date:** 2026-10-07
 **Resolved:** —
@@ -14,10 +14,11 @@
 
 Global setup signs in once and stores the Clerk session, and every signed-in test restores it in a fresh browser context. Once the stored 60-second session token has expired, restoring the session needs Clerk's Frontend API (FAPI). In one CI run, the restored browser reported no session: `window.Clerk.session` was null once `clerk.loaded()` resolved. From then on every signed-in test failed, while the session stayed active on Clerk's side.
 
-Our side has three defects that turn one failed restore into a red run nobody can diagnose:
-- **No testing token in test contexts.** Test contexts never install Clerk's testing token.
+Our side has two defects that turn one failed restore into a red run nobody can diagnose:
 - **No evidence.** A failed restore leaves nothing to diagnose it with.
 - **Teardown fails open.** It skips the sign-out when no session is visible, and leaks the session.
+
+Test contexts also run without Clerk's testing token. That is how Clerk's guide restores a stored session, and nothing shows it caused this failure (option 4).
 
 ## Evidence
 
@@ -35,10 +36,12 @@ Our side has three defects that turn one failed restore into a red run nobody ca
 - **Not the usual failures.** Backend API 429s and handshake errors log `[WebServer]` lines, as in run 37613122068, and this run has none. A FAPI 429 on `/v1/client` hangs `clerk.loaded()` until the 30-second timeout, but these failures took about one second. Every failure snapshot shows the normal home page, signed out.
 - **Our defects.**
   - `clerk.loaded()` does not install the testing-token route; only `clerk.signIn()` does. `clerkSetup()` runs in the setup project's worker, so `CLERK_TESTING_TOKEN` never reaches test workers.
+
+    *Corrected 2026-10-09: this is not a defect.* Clerk's guide for a stored session installs no token in the tests that load it. Clerk describes the token as a way past its bot detection, and nothing shows a refusal of that kind here; the run kept no Frontend API statuses.
   - Playwright ignores the server's stdout by default, so Clerk's own log line for a silently signed-out client (an open upstream issue) is invisible. No FAPI status or Clerk trace ID is captured.
   - Teardown's `releaseClerkE2ESession` found no session and skipped the sign-out. That run's session stayed live until 2026-10-14, though its token was never published.
-- **A related loss, 2026-10-08.** In #1428's first CI attempt, one signed-in test lost its session partway through. `cross-page-navigation.spec.ts:26` had signed in with the password, confirmed the subscription and submitted an answer; then `/app/dashboard` redirected to Clerk's hosted sign-in, as Playwright's failure snapshot showed (recorded on #1428). The other 62 tests passed. The run had no `[WebServer]` Clerk error, no other run overlapped it, and the re-run passed. Whether it shares this record's cause is not proven: here one test lost its session mid-test, while the incident failed every test that restored the stored session.
-- **Frequency.** Up to the incident, it had happened once in the 1,209 CI runs since the stored-session design landed (`2f6b6223`, 2026-08-25). The related loss above is the only one seen since. [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md), an intermittent session loss whose cause was never proven, led to that design.
+- **Later losses of another shape.** On 2026-10-08 (#1428) and 2026-10-09 (#1440), one signed-in test of 63 lost its session partway through a CI run, after its restore had succeeded, and the other 62 passed. The incident instead failed every test after a failed restore. [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) records those losses and their investigation.
+- **Frequency.** Up to the incident, it had happened once in the 1,209 CI runs since the stored-session design landed (`2f6b6223`, 2026-08-25). It has not recurred as of 2026-10-09. [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md), an intermittent session loss whose cause was never proven, led to that design.
 - **What is not proven.** The two explanations the evidence leaves are:
   - FAPI rejected or rotated the stored development-browser token;
   - FAPI had failed for this client from the start, with tests passing on the unexpired token alone.
@@ -58,17 +61,49 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
    - Fail the remaining signed-in tests at once after the first failed restore, with one clear error.
    - Have teardown revoke the stored session through the Backend API by its session ID, instead of signing out through FAPI.
    - Give preflight's Clerk calls one deadline that ends inside setup's 60-second budget, so a Clerk outage fails with the credential error rather than Playwright's setup timeout. Today each call can spend three 15-second attempts and up to about 10 seconds of waits, about 110 seconds for preflight's two.
-4. **Carry the testing token into every test context** (decided, second). Run `clerkSetup()` in Playwright's `globalSetup`, so workers inherit the token, and install the testing-token route in each signed-in context through a fixture. This matches Clerk's testing design.
-5. **A live "keeper" context that refreshes the session** and re-exports its state before each signed-in test. Revisit only if a failure recurs with options 3 and 4 in place.
+
+     *Corrected 2026-10-09 (pre-review): that figure holds for slow 429 or 5xx answers. A Clerk API that never answers ends each call at its first 15-second timeout, since an aborted request is not retried.*
+4. **Carry the testing token into every test context.** Run `clerkSetup()` in Playwright's `globalSetup`, so workers inherit the token, and install the testing-token route in each signed-in context through a fixture.
+
+   *Changed 2026-10-09: deferred.* It was decided second, built, and removed before review:
+   - **Not Clerk's design.** Clerk's guide for a stored session ([Test authenticated flows](https://clerk.com/docs/guides/development/testing/playwright/test-authenticated-flows)) runs `clerkSetup()` in a setup project and installs no token in the tests that load the state. The token's purpose, in [Clerk's overview](https://clerk.com/docs/guides/development/testing/playwright/overview), is to let a test bypass Clerk's bot detection. Nothing shows a refusal of that kind.
+   - **It changes the traffic under study.** The token's route (`@clerk/testing` 2.2.36) takes over every Frontend API request. It retries 429, 502, 503 and 504 answers and network errors up to three times, which can send a write again. It also rewrites `captcha_bypass` in answers. While BUG-333's losses are unexplained, it would change the requests the trace observes, and a retry could hide the answer that explains a loss.
+   - **It cannot reach the handshake.** Playwright follows Clerk's handshake redirect without calling routes.
+
+   Revisit if a trace or a failed restore's error shows Clerk refusing the client for want of the token.
+5. **A live "keeper" context that refreshes the session** and re-exports its state before each signed-in test. Revisit only if a failure recurs with option 3 in place.
 
 ## Resolution
 
-**Decided:** options 3 and then 4, test-first, in one PR after [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, which has daily impact.
+**Decided:** option 3, test-first, in one PR after [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, which has daily impact. *Changed 2026-10-09:* option 4 is deferred (above), and the record closes on option 3's checks. The mid-run losses, whose cause is unknown, are [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md).
+
+## Progress
+
+**2026-10-09: built in one pull request, test-first** (option 3).
+
+- **Teardown revokes the session.** `revokeClerkE2ESession` ends the stored session through the Backend API by its ID, which setup stores beside the state. Only an active session can be revoked; on any refusal it reads the session, and one that had already ended needs nothing. It replaces the browser sign-out that skipped a session it could not see.
+- **A failed restore fails fast.**
+  - The first failed restore records one error naming what the Frontend API answered, then `Clerk.status`: method, path, status, and for a refusal Clerk's error codes and trace ID.
+  - It never names a query string, header or message, so no token.
+  - A restore that does not finish within 20 seconds is recorded too, with the answers seen so far. Test projects set no page timeouts, so without that deadline a hung restore ran to the test timeout, and by then the page was closed and nothing could be read.
+  - The error lives in `test-results/.auth/`, not in module state, because Playwright starts a new worker after a failed test. Every later signed-in test fails with it without loading a page. Setup and teardown clear it.
+- **The testing token was built, then removed** (option 4, deferred). Setup runs `clerkSetup()` in its project, as before.
+- **Preflight's deadline.** `fetchClerkWithRetry` takes an optional deadline: no attempt runs, and no retry waits, past it. Preflight's two Clerk calls share one 30-second deadline, inside setup's 60-second budget.
+- **Diagnostics name IDs by kind.** A Clerk ID in a Frontend API path appears as `sess_…`, as teardown names statuses only.
+- **The server's output is shown, redacted.**
+  - `webServer.stdout` is `pipe`, and Playwright's runner passes everything it writes, the `[WebServer]` lines included, through the E2E log redaction.
+  - The redaction runs in the runner rather than the server process, so the server loads nothing extra.
+  - A credential split across two reads of the server's output is redacted whole. Playwright passes each pipe read on as it arrives, so a token can arrive in two pieces. The run of token characters that ends a write is held for the next write, or written when the runner exits (#1452 review).
+- **Every signed-in test keeps a Clerk trace** (`tests/e2e/helpers/clerk-auth-trace.ts`), so a mid-run loss names its cause ([BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md)).
+  - For the whole test it keeps each page answer's `x-clerk-auth-status` and `x-clerk-auth-reason`, and a handshake redirect's `__clerk_hs_reason` and `__clerk_redirect_count`.
+  - It also keeps Set-Cookie names, including whether `__session` was cleared, Clerk's own API answers, and Clerk JS's session changes and version.
+  - When the page reaches sign-in, it prints the trail once, redacted: cookies by name, times and kind, and query strings by parameter name.
+  - It and the failed-restore error find Clerk's Frontend API from the publishable key, which every worker loads; `clerkSetup()` sets `CLERK_FAPI` only in the setup project's worker.
 
 ## Verification
 
-- [ ] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token.
-- [ ] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session.
-- [ ] Test contexts carry the testing token, shown by a helper test of the fixture.
-- [ ] A helper test shows preflight's Clerk calls, timing out on every attempt, fail with the credential error inside setup's budget.
-- [ ] No recurrence across the first two weeks of CI runs after the fix.
+- [x] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token. *2026-10-09: `tests/e2e/helpers/clerk-auth.test.ts`.*
+- [ ] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session. *2026-10-09: the helper test is `clerk-session-revocation.test.ts`; the CI run remains.*
+- [x] A helper test shows preflight's Clerk calls, timing out on every attempt, fail with the credential error inside setup's budget. *2026-10-09: `credential-health-check.test.ts`, on fake timers.*
+- [x] A signed-in test that reaches sign-in prints a redacted trace of Clerk's decisions, its Frontend API answers and its cookies. *2026-10-09: `clerk-auth-trace.test.ts`; and a Chromium run against stand-in app and Frontend API servers, with only the publishable key set. Reading `CLERK_FAPI` instead, as a mutation, records no API answer.*
+- [ ] A CI run's log shows the web server's `[WebServer]` lines, redacted.
