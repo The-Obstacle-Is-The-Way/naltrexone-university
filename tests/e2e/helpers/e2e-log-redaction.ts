@@ -8,8 +8,9 @@ type LogMethod = (...values: unknown[]) => void;
 export type E2ELogTarget = Record<LogMethodName, LogMethod>;
 
 const redactingLogMethods = new WeakSet<LogMethod>();
+// An ID may carry a mode infix, as a Checkout Session's `cs_test_…` does.
 const SENSITIVE_STRIPE_IDENTIFIER_PATTERN =
-  /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+\b/g;
+  /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_(?:(?:test|live)_)?[A-Za-z0-9]+\b/g;
 
 export function redactSensitiveE2EText(value: string): string {
   return redactClerkCredentials(value).replace(
