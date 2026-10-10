@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — diagnostics ship with BUG-330's pull request; closes only when a trace explains a loss, never on a quiet period
+**Status:** In Progress — a traced loss (2026-10-10) shows the cause: a navigation during Clerk JS's dev-browser cookie rewrite; the fix is to be chosen
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -39,7 +39,33 @@ Three times since 2026-10-08, one signed-in E2E test has been sent to Clerk's si
 
 - **Keeping the evidence.** A local failure keeps a Playwright trace (`test-results/<test>/trace.zip`, kept on failure). It holds every response's Clerk headers and the redirect chain. Before re-running after a local loss, copy that test's folder somewhere private: it contains Clerk tokens and must never be published. Then record what it shows here.
 
-## Hypotheses (not yet decidable)
+## The first traced loss, 2026-10-10
+
+BUG-330's branch, in its own local gate (`stripe-hosted` project, trial add-card), lost the session at its last step. The trace printed the chain, and the test's Playwright trace showed each request's cookies.
+
+- **The trail** (as printed; Stripe's paths left out):
+  ```text
+  +31161ms GET 127.0.0.1/app/billing 200                       (the test's page.reload)
+  +31533ms GET 127.0.0.1/app/dashboard 307 auth=handshake/dev-browser-missing
+           → <instance>.clerk.accounts.dev/v1/client/handshake hs_reason=dev-browser-missing
+  +31637ms GET 127.0.0.1/app/dashboard 307 auth=signed-out/session-token-missing; cookies: __session_<suffix> cleared, __client_uat=0
+  +31641ms GET 127.0.0.1/app/dashboard 307 auth=signed-out/session-token-and-uat-missing → <instance>.accounts.dev/sign-in
+  ```
+- **The cookies sent** (names only):
+  - The billing reload's prefetches at 12:43:07.90–.93 carried both `__clerk_db_jwt` and `__clerk_db_jwt_<suffix>`.
+  - The dashboard navigation at 07.981, the test's `page.goto('/app/dashboard')`, carried `__clerk_db_jwt` and the other suffixed cookies, but not `__clerk_db_jwt_<suffix>`.
+  - No response in between removed it.
+  - The stored state's cookies expire in 2027.
+- **Why the server saw no dev browser.** `@clerk/backend` 3.22.0 reads the token from the `__clerk_db_jwt` query parameter or, through `getSuffixedOrUnSuffixedCookie`, the suffixed cookie when the request uses suffixed cookies, as this one did. With the suffixed copy gone, it handshakes with `dev-browser-missing`. That handshake carries no dev browser, so Clerk's Frontend API answers signed out, and the next request goes to sign-in: case 2 above.
+- **Why the suffixed copy was gone.**
+  - Clerk JS 6.39.0, which the billing page loaded at 07.915, stores the dev-browser token from any Frontend API answer that carries a `Clerk-Db-Jwt` header.
+  - That page's `/v1/environment` and `/v1/client` answers, at 07.872, both did.
+  - Its cookie setter removes both copies, suffixed first, and only then sets both. A navigation that starts during that rewrite carries the plain copy without the suffixed one.
+  - The setter is the same in 6.37.0, 6.38.0, 6.38.1 and 6.39.0. So the race is not new code, though something else may have made it likelier from 2026-10-08, such as how often Clerk's answers carry the header.
+- **Scope.** Development instances only: a production instance has no dev browser. Real users are not affected.
+- **Not yet shown:** that the earlier three losses were this race. Each was also a navigation shortly after a page load, which fits.
+
+## Hypotheses before the trace
 
 1. Clerk's Frontend API answered "no session" for the run's shared development browser, either through the handshake or to the page's own Clerk JS.
 2. The redirect-loop guard tripped. Its log line goes to the server's stdout, which CI dropped until BUG-330's pull request.
@@ -50,17 +76,20 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 
 ## Options
 
-1. **Observe first** (decided). BUG-330's trace and piped server output decide between the hypotheses at the next loss, and change no test traffic.
+1. **Observe first** (done 2026-10-10: the trace above names the cause). BUG-330's trace and piped server output decide between the hypotheses at the next loss, and change no test traffic.
 2. **Retry or restore the session again when it is lost.** Rejected: it hides the next occurrence and its cause.
 3. **Install Clerk's testing token in every test** (BUG-330 option 4). Deferred: its route retries and rewrites Frontend API traffic, which would change what the trace observes, and nothing shows the token is missing.
-4. **Pin Clerk JS's version.** It removes the floating variable but is not shown to fix anything. Decide once a trace names the cause.
+4. **Pin Clerk JS's version.** Rejected: the cookie setter is the same in every version since at least 6.37.0.
+5. **Report the race to Clerk.** Ask that the dev-browser setter overwrite in place, or skip an unchanged token. That is the root fix, in Clerk's code, and filing it publicly is the owner's call.
+6. **Let tests navigate only once Clerk JS has stored its answers.** A navigation helper waits until no Frontend API request is pending on the page before it moves. That narrows the window but cannot close it: token refreshes answer at any time.
+7. **Recover from this one cause, visibly.** When a navigation reaches sign-in and the trail shows `dev-browser-missing`, restore the stored session once and repeat the navigation, printing the trail. Unlike option 2, it acts only on the cause this record now explains.
 
 ## Resolution
 
-**Decided:** option 1. When a trace arrives, record it here (redacted, as printed), name the cause, and choose a fix against it. A quiet period does not close this record: it would not show whether the cause went away or only did not fire, since 1,150 attempts passed before the first loss.
+**Decided:** option 1, now done. Next: choose among options 5 to 7, ideally 5 with 6 or 7 until Clerk fixes it. A quiet period does not close this record: it would not show whether the cause went away or only did not fire, since 1,150 attempts passed before the first loss.
 
 ## Verification
 
-- [ ] A CI loss prints an `[E2E_CLERK_AUTH_TRACE]` trail, recorded here.
-- [ ] The trail, with the server's output, names which of Clerk's four cases sent the page to sign-in, and why.
+- [x] A loss prints an `[E2E_CLERK_AUTH_TRACE]` trail, recorded here. *2026-10-10: a local gate's hosted lane, above; a CI one would show whether the earlier losses share it.*
+- [x] The trail, with the server's output, names which of Clerk's four cases sent the page to sign-in, and why. *2026-10-10: case 2, after a `dev-browser-missing` handshake, caused by a navigation during Clerk JS's cookie rewrite.*
 - [ ] A fix against that cause, test-first, or an explained acceptance.
