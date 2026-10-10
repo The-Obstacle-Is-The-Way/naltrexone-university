@@ -13,6 +13,10 @@ import {
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
+  clerkCallFailure,
+  reportClerkCallFailure,
+} from '@/lib/clerk-call-failures';
+import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
 } from '@/lib/public-routes';
@@ -300,6 +304,20 @@ export function createProxy({
     const response = await clerkMw(request, event);
     if (response) {
       logCheckoutSuccessAuthBounce(request, response);
+      // DEBT-503 item 3: Clerk's middleware swallows Clerk failing its own
+      // calls; its answer still says which, and the owner hears of it after
+      // the response. Only production's allowance is at stake.
+      const failure = usesProductionClerkInstance()
+        ? clerkCallFailure(request, response)
+        : null;
+      if (failure) {
+        event.waitUntil(
+          reportClerkCallFailure(failure, {
+            loadLimiter: loadBackendCallLimiter,
+            loadAlerts: loadOperationalAlerts,
+          }),
+        );
+      }
     }
 
     return response;

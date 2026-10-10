@@ -83,6 +83,8 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **Cron routes.** A warn line per unauthenticated request, with fixed text. **Accepted:** bounded and contentless.
 - **Malformed Clerk handshake token.** A garbage `__clerk_handshake` logs `Clerk: unable to resolve handshake` inside Clerk's SDK. **Decided:** BUG-323's limiter covers this parameter too.
 - **Clerk's optional `CLERK_JWT_KEY`** lets the middleware verify session tokens without fetching Clerk's signing keys over the network. **Decided:** an optional owner setting; the cost without it is middleware time only.
+
+  *Corrected 2026-10-10: without it, each server instance fetches the keys from Clerk's Backend API every five minutes, and a refused fetch signs every visitor on it out. `@clerk/nextjs` 7.9.10 also does not read this variable, so it must be passed as `jwtKey`. The fix is [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 5.*
 - **The logger's redaction list** (`lib/logger.ts:27-46`) predates `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `DATABASE_URL`. Nothing logs `env` today. **Decided:** add them.
 - **CSP violation reports** reach Sentry's report endpoint. This is already recorded as known noise in DEBT-420 (archived), so it is not re-filed.
 

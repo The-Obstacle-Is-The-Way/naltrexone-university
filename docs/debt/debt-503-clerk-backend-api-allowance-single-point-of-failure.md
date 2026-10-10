@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 released 2026-10-08; item 3's cap and lookup alerts built in their pull request, its alert for refusals inside Clerk's middleware next, due 2026-10-13; items 2 and 4 wait for their triggers
+**Status:** In Progress — item 1 released 2026-10-08; item 3 built in its pull request; item 5, verifying session tokens without Clerk's network, due 2026-10-14; items 2 and 4 wait for their triggers
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -65,7 +65,7 @@ This record holds the structural fixes, so that the allowance stops being the on
   1. Count only failed lookups. Clerk's answer, read after the middleware runs, shows whether a lookup succeeded.
   2. Accept a handshake value only from a browser our middleware just redirected to Clerk.
   3. Clerk validates the value before spending the allowance. This was reported to Clerk on 2026-10-05.
-- **Decided.** Revisit after Clerk replies and item 1 ships, starting from option 1 in two levels. A site-wide ceiling counts every lookup before the call and is never refunded, so it still bounds what Clerk's allowance can spend, including successful refreshes from free accounts. Below it, a lower refusal threshold counts lookups before the call and refunds each one that Clerk's answer shows succeeded, so successful lookups do not count toward it. Refunding needs a new `RateLimiter` port method that decrements the same window row the count used; the port has only `limit` and `pruneExpiredWindows` today. Windows are fixed, so size the ceiling for up to twice its limit across a window boundary. Size the window and cap to Clerk's 10-second window, including retries and concurrent instances; a minute average proves no burst headroom. Do not raise caps from averages alone. Item 3's next part (due 2026-10-13) builds the first half of this: it reads Clerk's answer after the middleware runs and counts the failures Clerk answered.
+- **Decided.** Revisit after Clerk replies and item 1 ships, starting from option 1 in two levels. A site-wide ceiling counts every lookup before the call and is never refunded, so it still bounds what Clerk's allowance can spend, including successful refreshes from free accounts. Below it, a lower refusal threshold counts lookups before the call and refunds each one that Clerk's answer shows succeeded, so successful lookups do not count toward it. Refunding needs a new `RateLimiter` port method that decrements the same window row the count used; the port has only `limit` and `pruneExpiredWindows` today. Windows are fixed, so size the ceiling for up to twice its limit across a window boundary. Size the window and cap to Clerk's 10-second window, including retries and concurrent instances; a minute average proves no burst headroom. Do not raise caps from averages alone. Item 3 built the first half of this: it reads Clerk's answer after the middleware runs and counts the failures Clerk answered.
 
   *Corrected 2026-10-06: #1410 ruled option 1 out by considering only counting after the call; a never-refunded ceiling with a refunded threshold below it keeps the bound, and forged lookups fill the threshold faster than real ones (#1410 review).*
 
@@ -84,17 +84,38 @@ This record holds the structural fixes, so that the allowance stops being the on
   - **Clerk's 429.** The container's `getClerkUserById` is wrapped by `alertWhenClerkRefuses`. It logs `clerk_backend_call_refused` with `limit: clerk`, raises the alert, and rethrows the same error to the caller's retry. An integration test drives the real container against a Clerk SDK stubbed to answer 429, and finds the alert's cooldown row in Postgres.
   - **The bound** is the shared cooldown's, unchanged: one alert per kind per six hours across instances, or one per instance while the limiter errors. DEBT-505's integration tests prove it with eight concurrent instances and across a restart.
   - **The response.** The runbook row in `docs/dev/logging.md` names Vercel's Attack Challenge Mode for a sustained trip.
-  - **Next, due 2026-10-13: refusals inside Clerk's middleware.** Found in review of this part, 2026-10-10. The alert above does not see them, so a quiet inbox does not yet mean Clerk is answering.
-    - **Two calls swallow a refusal** (`@clerk/backend` 3.18.1). The refresh of an expired session token catches Clerk's error and redirects through a handshake, recording only the reason `session-token-expired-refresh-` and Clerk's error code. The lookup of a handshake nonce logs the error to the console, and the visitor is signed out.
-    - **Clerk does not document its 429 body,** so the code a refused refresh records is unknown.
-    - **Our site cap usually trips first, but not always.** It counts these requests at 1,000 a minute against Clerk's documented 1,000 calls per 10 seconds. Across a fixed-window boundary, though, up to 2,000 can pass in a few seconds. It also counts requests, not calls, so retries and calls it does not count can reach Clerk's limit unseen.
-    - **The plan.** After the middleware runs, read its answer for each request our limits counted. Count the refresh and nonce failures that Clerk answered, through the existing limiter, and raise `clerk_backend_calls_refused` when they pass a threshold set well above normal failures. A threshold needs no knowledge of Clerk's 429 code. The proof runs the real SDK over a stubbed 429. This is also the first half of item 2's option 1.
+  - **Refusals inside Clerk's middleware, built the same day.** Review of the part above found that Clerk's middleware swallows Clerk failing three of its own calls (`@clerk/backend` 3.18.1), so a quiet inbox would not have meant Clerk was answering:
+    - **The signing keys.** Without `jwtKey`, the middleware fetches them from the Backend API, cached five minutes per server instance. A refused fetch leaves every signed-in visitor on that instance signed out, with the reason `jwk-remote-failed-to-load`.
+    - **The refresh of an expired session token.** A refusal redirects through a handshake, with the reason `session-token-expired-refresh-` followed by Clerk's error code. Clerk does not document its 429 body, so that code is unknown.
+    - **The lookup of the handshake nonce** the visitor returns with. In production the handshake's format is `nonce`. A refusal is logged to the console, and the visitor is signed out with the reason `session-token-missing` and no cookies set.
+
+    Our site cap usually trips before Clerk's limit, but not always: it counts 1,000 requests a minute against Clerk's documented 1,000 calls per 10 seconds, up to 2,000 pass across a fixed-window boundary, and the key fetches are not counted at all.
+
+    `lib/clerk-call-failures.ts` reads Clerk's answer after the middleware runs, on a production instance only. `clerkCallFailure` names the failed call from the auth reason. A refresh reason decided before Clerk answered, such as `non-eligible-no-refresh-cookie` or `invalid-session-token`, is not Clerk failing. A nonce lookup that set cookies succeeded, even for a signed-out visitor. Each failure logs `clerk_backend_call_failed` with its `call`, after the response:
+    - **`keys`** raises `clerk_backend_calls_refused` at once, since a key fetch never fails in normal operation.
+    - **`refresh` and `handshake`** count on the existing limiter, and raise it past 10 in a minute site-wide (`CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD`). Some of these fail for ordinary reasons, such as a session that ended elsewhere or a reused nonce. Counting failures needs no knowledge of Clerk's 429 code. Item 4's measurements retune the threshold.
+
+    **Proof.** `lib/clerk-call-failures-sdk.test.ts` runs the real Clerk middleware over a stubbed Backend API. It refuses each of the three calls with a 429, and checks that a healthy signed-in visitor and a signed-out nonce answer name nothing. Unit tests cover each reason and the reporting. The proxy tests cover the production-only gate and the report after the response. Six mutations, one per guard, each fail a test. This is also the first half of item 2's option 1, which reads Clerk's answer after the middleware runs.
   - **Still to show after release:** one test event of this kind reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
 
 ### 4. Measure the real volume of these requests (P3)
 
 - **Decided.** Record the per-minute count of requests that would make Clerk call its Backend API. Retune BUG-323's caps from that number instead of from the allowance alone.
 - **Trigger** (AUDIT-015, 2026-10-08): item 3's alert first fires, or Clerk answers item 2's report.
+
+
+### 5. Verify session tokens without Clerk's network (P2)
+
+- **Evidence** (2026-10-10, item 3's real-SDK test).
+  - **Every signed-in request depends on a Backend API call.** To verify a session token, Clerk's middleware needs the instance's signing key. Without `jwtKey` it fetches the keys from the Backend API, cached five minutes per server instance. Production sets no `CLERK_JWT_KEY` (Vercel's variable names, read 2026-10-10).
+  - **A refused or failed key fetch signs everyone out.** Every signed-in visitor on that instance is signed out until a fetch succeeds. A Clerk Backend API outage does the same. Item 3 now alerts on it, but cannot prevent it.
+  - **Setting `CLERK_JWT_KEY` alone would do nothing.** `@clerk/nextjs` 7.9.10 does not read that variable; its server constants read only the keys, URLs and flags. The key must be passed to `clerkMiddleware` as `jwtKey`. BUG-325 called it an optional owner setting that only saves middleware time, which was wrong on both counts.
+- **The risk of fixing it.** A static key that no longer matches Clerk's would sign every visitor out, with `token-invalid-signature`, until it was corrected. The fetched keys follow a change by themselves: a token whose key ID is not cached triggers a new fetch.
+- **Decided.**
+  1. Pass `jwtKey` from `CLERK_JWT_KEY` to `clerkMiddleware`, validated in `lib/env.ts` as a public key in PEM format. Without the variable, behaviour is unchanged.
+  2. Before relying on it, check it against the keys Clerk publishes at the Frontend API's `/.well-known/jwks.json`, which needs no secret. Run that check daily through DEBT-505's alert path, and as a build step that fails a production build on a mismatch.
+  3. Then set it in Vercel Production, from those published keys, and deploy through a promotion. Preview and development keep fetching, since they use the development instance.
+- **Due 2026-10-14,** the pull request after item 3's. The owner asked on 2026-10-10 for this to be fixed now or soon.
 
 ## Verification
 
