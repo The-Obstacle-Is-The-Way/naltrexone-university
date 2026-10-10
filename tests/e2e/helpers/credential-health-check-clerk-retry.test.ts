@@ -249,3 +249,71 @@ it('waits at most ten seconds in all for one call', async () => {
 
   expect(waits).toEqual([7_000, 3_000]);
 });
+
+// A Clerk API that accepts the request and never answers, until aborted.
+function neverAnswers() {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(
+    async (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError')),
+        );
+      }),
+  );
+}
+
+// BUG-330: setup's budget holds preflight's Clerk calls, so they share one
+// deadline: no attempt outlasts it and no retry waits past it.
+describe('fetchClerkWithRetry with a deadline', () => {
+  it('ends an attempt that has not answered at the deadline', async () => {
+    const fetchSpy = neverAnswers();
+    const startedAt = Date.now();
+
+    await expect(
+      fetchClerkWithRetry(URL, {}, { deadlineAt: startedAt + 200 }),
+    ).rejects.toThrow();
+
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts no attempt once the deadline has passed', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('no request may start'));
+
+    await expect(
+      fetchClerkWithRetry(URL, {}, { deadlineAt: Date.now() - 1 }),
+    ).rejects.toThrow('Clerk API call passed its deadline');
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('waits no longer than the time left before the deadline', async () => {
+    const waits: number[] = [];
+    let clock = Date.parse('2026-10-09T12:00:00Z');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response('slow down', {
+          status: 429,
+          headers: { 'retry-after': '7' },
+        }),
+    );
+
+    const response = await fetchClerkWithRetry(
+      URL,
+      {},
+      {
+        now: () => clock,
+        deadlineAt: clock + 2_000,
+        sleep: async (ms) => {
+          waits.push(ms);
+          clock += ms;
+        },
+      },
+    ).catch((error: unknown) => error);
+
+    expect(waits).toEqual([2_000]);
+    expect(response).toBeInstanceOf(Error);
+  });
+});
