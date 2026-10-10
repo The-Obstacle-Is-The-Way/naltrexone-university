@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — the four learnings are gone, the first weekly learnings issue opens, and new learnings wait for approval; due 2026-10-23
+**Status:** Verifying — after promotion, the first weekly learnings issue opens and new learnings wait for approval; due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-09
 **Resolved:** —
@@ -41,7 +41,7 @@ No defect is known to have shipped because of a learning. The cost is assurance.
 - **Review them weekly.** `.github/workflows/coderabbit-learnings-review.yml` runs `scripts/coderabbit-learnings-review.ts` every Monday. It keeps one GitHub issue, which notifies the owner, listing the learnings CodeRabbit recorded in the past eight days. Those whose wording tells CodeRabbit to stop raising something come first, quoted with the date a pending one applies by itself; the rest follow as excerpts. The issue closes itself in a week with no new learning. The flag is a heuristic for ordering: every learning is listed. At eight a day, a learning-by-learning review of everything would not happen, so the owner reads the flagged ones and skims the rest.
 - **Make them visible.** `scripts/merge-reviewed-pr.ts` refuses a feature merge while a CodeRabbit reply that records "Learnings added" is not linked from the PR description, and it lists those replies in its receipt. Replies that cite learnings CodeRabbit already holds ("Learnings used") are not new and do not count. Truncated comment data fails closed, as thread and check data do.
 - **Rules live in the repository.** [AGENTS.md](../../AGENTS.md#coderabbit-learnings-debt-515-2026-10-09) forbids asking CodeRabbit for a learning and puts reviewer rules in AGENTS.md or `.coderabbit.yaml`, through reviewed PRs. The Verifying convention that #1438's learning taught is now written in AGENTS.md's record lifecycle: the fixing PR sets the status itself, effective when it merges.
-- **Prune.** The owner deletes these four learnings at app.coderabbit.ai/learnings:
+- **Prune.** The owner deleted these four learnings at app.coderabbit.ai/learnings on 2026-10-10:
   1. #1438: "removing post-closure state-update notes from an archived record under docs/_archive/ restores its frozen text…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6086302277)).
   2. #1438: "…The three removed 2026-10-06 notes in docs/_archive/debt/debt-476… do not request their restoration…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6084464245)). It concerns one archived change.
   3. #1438: "a fixing PR can set its debt record and register entry to `Verifying …`" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#discussion_r4232035464)). AGENTS.md now says this.
@@ -53,7 +53,7 @@ No defect is known to have shipped because of a learning. The cost is assurance.
 
 - [x] On live GitHub data, the new check refuses #1437, #1438 and #1436 as they stood on 2026-10-09, whose descriptions do not link their learning replies, and names every reply. It finds none on #1411 or on promotion #1442.
 - [x] On live data on 2026-10-09, a dry run of the weekly job found 95 learnings recorded in the past eight days, 30 of them flagged, and its issue body was 43,913 characters, inside GitHub's limit.
-- [ ] The four learnings above are gone from CodeRabbit's app.
+- [x] The four learnings above are gone from CodeRabbit's app (2026-10-10). The owner deleted each one, and a search for each now returns nothing. The app then held 520 learnings, 83 of them created that week.
 - [ ] After promotion, the first scheduled run opens the learnings issue.
 - [ ] After promotion, the next learning CodeRabbit records waits for the owner's approval instead of applying at once.
 
