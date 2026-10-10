@@ -34,7 +34,7 @@
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22 |
 | [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; watcher covers every direct dependency (2026-10-07); waiting for its first hosted run and the two pending Next.js fixes |
 | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22 |
-| [DEBT-516](./debt-516-ci-database-image-depends-on-one-registry.md) | CI's database image depends on one registry | P3 | Verifying — CI pulls Postgres with failover across three registries at one digest, and `docker-compose.yml` runs the same digest; after promotion, `main`'s CI logs which registry served it; due 2026-10-24 |
+| [DEBT-516](./debt-516-ci-database-image-depends-on-one-registry.md) | CI's database image depends on one registry | P3 | Verifying — CI pulls Postgres from the first of three registries serving its digest, and compose pins it too; after promotion, `main`'s CI logs which one served it; due 2026-10-24 |
 
 Frontend debt uses `FE-NNN` IDs in the same table; none is open.
 

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — CI pulls Postgres with failover across three registries at one digest, and `docker-compose.yml` runs the same digest; after promotion, `main`'s CI logs which registry served it; due 2026-10-24
+**Status:** Verifying — CI pulls Postgres from the first of three registries serving its digest, and compose pins it too; after promotion, `main`'s CI logs which one served it; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
