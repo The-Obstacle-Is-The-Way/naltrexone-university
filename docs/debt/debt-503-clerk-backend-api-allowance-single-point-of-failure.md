@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 released 2026-10-08; item 3, an alert for a cap trip, is next; items 2 and 4 wait for their triggers
+**Status:** In Progress — item 1 released 2026-10-08; item 3 built in its pull request; items 2 and 4 wait for their triggers
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -78,6 +78,13 @@ This record holds the structural fixes, so that the allowance stops being the on
   *Corrected 2026-10-06: one cooldown key on the existing limiter replaces #1410's incident transition, cooldown and separate budget, three mechanisms for one bound; the shared alert path now belongs to DEBT-505 (#1410 review).*
 
   *Corrected 2026-10-06: `lib/logger.ts` writes stdout, while `instrumentation.ts` captures exceptions; no pino-to-Sentry forwarding is installed. The account API confirms Developer, not a paid logging assumption.*
+
+- **Built 2026-10-10, test-first.** One alert kind, `clerk_backend_calls_refused`, covers both refusals.
+  - **Our caps.** `limitClerkBackendCalls` names the limit that tripped: `address`, `session` or `site`, never the address or session itself. The proxy logs `clerk_backend_call_refused` with that limit, and raises the alert after the response through `waitUntil`, as the limiter-failure alert does.
+  - **Clerk's 429.** The container's `getClerkUserById` is wrapped by `alertWhenClerkRefuses`. It logs `clerk_backend_call_refused` with `limit: clerk`, raises the alert, and rethrows the same error to the caller's retry. An integration test drives the real container against a Clerk SDK stubbed to answer 429, and finds the alert's cooldown row in Postgres.
+  - **The bound** is the shared cooldown's, unchanged: one alert per kind per six hours across instances, or one per instance while the limiter errors. DEBT-505's integration tests prove it with eight concurrent instances and across a restart.
+  - **The response.** The runbook row in `docs/dev/logging.md` names Vercel's Attack Challenge Mode for a sustained trip.
+  - **Still to show after release:** one test event of this kind reaches the owner through the alerts' workflow, which matches any `alert.kind` tag.
 
 ### 4. Measure the real volume of these requests (P3)
 
