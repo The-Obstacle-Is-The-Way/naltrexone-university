@@ -327,24 +327,78 @@ describe('weekly learnings issue (DEBT-515)', () => {
     );
   });
 
-  it('keeps a busy week inside GitHub’s body limit, flagged learnings first, and counts what it leaves out', async () => {
-    const replies = Array.from({ length: 400 }, (_, index) =>
+  // 400 replies a minute apart from 2026-10-13T00:00Z, every fourth flagged.
+  const busyWeek = () =>
+    Array.from({ length: 400 }, (_, index) =>
       comment(
         `${PR}/${2000 + index}#issuecomment-${index}`,
-        '2026-10-19T10:00:00Z',
+        new Date(Date.UTC(2026, 9, 13) + index * 60_000)
+          .toISOString()
+          .replace('.000Z', 'Z'),
         recorded(
           `${index % 4 === 0 ? 'Do not flag this pattern. ' : ''}${'A long learning about the code. '.repeat(12)}`,
         ),
       ),
     );
+  const cursorOf = (body: string) =>
+    /coderabbit-learnings-through: (\S+) -->/.exec(body)?.[1] ?? '';
+  const listed = (body: string) =>
+    [...body.matchAll(/issuecomment-(\d+)\)/g)].map((match) =>
+      Number(match[1]),
+    );
+
+  it('keeps a busy week inside GitHub’s body limit, oldest first, flagged ones shown first, and leaves the newest for the next run', async () => {
     const issues = new MemoryIssues();
 
-    await reportLearnings(learningReplies([replies], [], SINCE), issues);
+    await reportLearnings(learningReplies([busyWeek()], [], SINCE), issues);
 
     const body = issues.issues[0]?.body ?? '';
+    const shown = listed(body);
     expect(body.length).toBeLessThanOrEqual(60_000);
-    expect(body).toMatch(/…and \d+ more; see the Learnings list\./);
-    expect(body).toContain('Do not flag this pattern.');
+    expect(body).toMatch(
+      /…and \d+ newer learnings, which the next run lists\./,
+    );
+    expect(body.indexOf('Do not flag this pattern.')).toBeLessThan(
+      body.indexOf('**Also recorded:**'),
+    );
+    // The oldest are shown, so the cursor (the newest shown) skips none.
+    expect(Math.max(...shown)).toBe(shown.length - 1);
+    expect(cursorOf(body)).toBe(
+      busyWeek()[shown.length - 1]?.created_at ?? 'missing',
+    );
+  });
+
+  it('drains a backlog over successive runs without losing or repeating a learning', async () => {
+    const all = busyWeek();
+    const seen: number[] = [];
+    let start = SINCE;
+    for (let run = 0; run < 5 && seen.length < all.length; run++) {
+      const issues = new MemoryIssues();
+      await reportLearnings(learningReplies([all], [], start), issues);
+      const body = issues.issues[0]?.body ?? '';
+      seen.push(...listed(body));
+      start = new Date(cursorOf(body));
+    }
+    expect([...seen].sort((a, b) => a - b)).toEqual(
+      all.map((_, index) => index),
+    );
+  });
+
+  it('never splits replies posted in the same second across runs', async () => {
+    const all = busyWeek().map((reply, index) =>
+      index >= 150 && index <= 160
+        ? { ...reply, created_at: '2026-10-13T02:30:00Z' }
+        : reply,
+    );
+    const issues = new MemoryIssues();
+    await reportLearnings(learningReplies([all], [], SINCE), issues);
+    const body = issues.issues[0]?.body ?? '';
+    const shown = new Set(listed(body));
+    const sameSecond = [150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160];
+    expect(
+      sameSecond.every((index) => shown.has(index)) ||
+        sameSecond.every((index) => !shown.has(index)),
+    ).toBe(true);
   });
 });
 

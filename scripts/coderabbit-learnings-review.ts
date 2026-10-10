@@ -99,29 +99,26 @@ export function learningReplies(
     });
 }
 
-// Entries are added in order, flagged ones first, until the body would pass
-// GitHub's limit; the rest are counted, so a busy week still opens the issue.
+// The oldest replies are taken first until the body would pass GitHub's
+// limit, and the cut never falls between replies posted in the same second.
+// So every reply up to the cursor, the newest one taken, is listed, and the
+// newer ones wait for the next run, which starts after the cursor. Within the
+// body, those that tell CodeRabbit to stop raising something come first.
 function describeLearnings(replies: LearningReply[]): string {
   const link = (reply: LearningReply) =>
     `[#${reply.number}](${reply.url}), recorded ${reply.recordedAt}`;
-  const first = replies.filter((reply) =>
-    reply.learnings.some((learning) => learning.suppresses),
-  );
-  const rest = replies.filter((reply) => !first.includes(reply));
-  const quoted = first.map(
-    (reply) =>
-      `- ${link(reply)}; if still pending, applies by itself ${reply.appliesOn}\n` +
-      reply.learnings
-        .map((learning) => `  > ${learning.text.slice(0, 600)}\n`)
-        .join(''),
-  );
-  const listed = rest.map(
-    (reply) =>
-      `- ${link(reply)}: ${reply.learnings
-        .map((learning) => learning.text)
-        .join(' ')
-        .slice(0, 240)}\n`,
-  );
+  const flagged = (reply: LearningReply) =>
+    reply.learnings.some((learning) => learning.suppresses);
+  const entry = (reply: LearningReply) =>
+    flagged(reply)
+      ? `- ${link(reply)}; if still pending, applies by itself ${reply.appliesOn}\n` +
+        reply.learnings
+          .map((learning) => `  > ${learning.text.slice(0, 600)}\n`)
+          .join('')
+      : `- ${link(reply)}: ${reply.learnings
+          .map((learning) => learning.text)
+          .join(' ')
+          .slice(0, 240)}\n`;
   const intro =
     `CodeRabbit recorded these learnings from pull-request chat since the last report. Each one applies to every later review. Agents comment as the owner, so a learning may come from an agent's argument rather than the owner's ruling. \`.coderabbit.yaml\` holds a new learning for ${HOLD_DAYS} days, then applies it unless the owner rejects it (DEBT-515).\n\n` +
     'At https://app.coderabbit.ai/learnings, reject a pending learning under **Pending approvals**, or delete an applied one, if it would let a defect through or states a decision the owner did not make.\n\n';
@@ -130,31 +127,46 @@ function describeLearnings(replies: LearningReply[]): string {
   const restHeading = '**Also recorded:**\n\n';
   const outro =
     'This issue is rewritten weekly and closes itself in a week with no new learning. Procedure: AGENTS.md, "CodeRabbit Learnings".\n';
-  // Room for the fixed text and the line counting what is left out.
-  let budget =
+  // Room for the fixed text, the count line and the cursor.
+  const budget =
     BODY_LIMIT -
     intro.length -
     firstHeading.length -
     restHeading.length -
     outro.length -
-    100;
-  const withinBudget = (entries: string[]) =>
-    entries.filter((entry) => {
-      if (entry.length > budget) return false;
-      budget -= entry.length;
-      return true;
-    });
-  const shownFirst = withinBudget(quoted);
-  const shownRest = withinBudget(listed);
-  const omitted =
-    quoted.length - shownFirst.length + listed.length - shownRest.length;
+    300;
+  const oldestFirst = [...replies].sort(
+    (a, b) => Date.parse(a.recorded) - Date.parse(b.recorded),
+  );
+  let taken = 0;
+  let used = 0;
+  while (taken < oldestFirst.length) {
+    const second = oldestFirst[taken]?.recorded;
+    let end = taken;
+    let size = 0;
+    for (const reply of oldestFirst.slice(taken)) {
+      if (Date.parse(reply.recorded) !== Date.parse(second ?? '')) break;
+      size += entry(reply).length;
+      end++;
+    }
+    // The first second is always taken, so every run makes progress.
+    if (taken > 0 && used + size > budget) break;
+    used += size;
+    taken = end;
+  }
+  const shown = oldestFirst.slice(0, taken).reverse();
+  const shownFirst = shown.filter(flagged).map(entry);
+  const shownRest = shown.filter((reply) => !flagged(reply)).map(entry);
+  const deferred = oldestFirst.length - taken;
   return (
     intro +
     (shownFirst.length > 0 ? `${firstHeading}${shownFirst.join('')}\n` : '') +
     (shownRest.length > 0 ? `${restHeading}${shownRest.join('')}\n` : '') +
-    (omitted > 0 ? `- …and ${omitted} more; see the Learnings list.\n\n` : '') +
+    (deferred > 0
+      ? `- …and ${deferred} newer learnings, which the next run lists. The Learnings list shows them now.\n\n`
+      : '') +
     outro +
-    `<!-- coderabbit-learnings-through: ${replies[0]?.recorded ?? ''} -->\n`
+    `<!-- coderabbit-learnings-through: ${shown[0]?.recorded ?? ''} -->\n`
   );
 }
 
