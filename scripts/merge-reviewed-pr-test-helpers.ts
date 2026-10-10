@@ -28,10 +28,17 @@ export const learningReply = (url: string, login = 'coderabbitai') => ({
     '</details>',
   ].join('\n'),
 });
-// The head commit's GitHub Actions check suites, created when it was pushed.
-export const pushedAt = (...createdAt: string[]) => ({
+export const HEAD_BRANCH = 'feature';
+// The head commit's GitHub Actions check suites, created when it was pushed,
+// on the PR's branch unless a suite names another.
+type Suite = string | { createdAt: string; branch: string };
+export const pushedAt = (...suites: Suite[]) => ({
   pageInfo: { hasNextPage: false },
-  nodes: createdAt.map((time) => ({ createdAt: time })),
+  nodes: suites.map((suite) =>
+    typeof suite === 'string'
+      ? { createdAt: suite, branch: { name: HEAD_BRANCH } }
+      : { createdAt: suite.createdAt, branch: { name: suite.branch } },
+  ),
 });
 export const pullRequest = (
   checkSuites = pushedAt('2026-09-22T02:00:00Z'),
@@ -40,6 +47,7 @@ export const pullRequest = (
   state: 'OPEN',
   isDraft: false,
   baseRefName: 'dev',
+  headRefName: HEAD_BRANCH,
   headRefOid: HEAD,
   mergeable: 'MERGEABLE',
   mergeStateStatus: 'CLEAN',
@@ -89,7 +97,8 @@ export const pullRequest = (
   },
 });
 // The PR's heads, each with the times its GitHub Actions check suites began.
-export const pushes = (...heads: [string, ...string[]][]) => ({
+export const pushes = (...heads: [string, ...Suite[]][]) => ({
+  headRefName: HEAD_BRANCH,
   pushes: {
     pageInfo: { hasPreviousPage: false },
     nodes: heads.map(([oid, ...createdAt]) => ({
