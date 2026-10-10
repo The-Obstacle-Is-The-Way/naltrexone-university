@@ -113,6 +113,10 @@ function isStripeResourceMissing(error: unknown): boolean {
   );
 }
 
+// Raised inside the Stripe read so nothing is written to the signed-in
+// account; the sync turns it into its result.
+class PurchaseOnAnotherAccount extends Error {}
+
 export async function syncCheckoutSuccess(
   input: SyncCheckoutSuccessInput,
   deps?: CheckoutSuccessDeps,
@@ -259,12 +263,19 @@ export async function syncCheckoutSuccess(
       metadataUserId: metadataUserId ?? null,
     });
     // Prevent cross-account leakage if the user switches accounts mid-checkout.
+    // DEBT-501 item 5: the page says whose purchase it is; "Checkout failed"
+    // would invite a second purchase.
     if (metadataUserId !== user.id) {
-      fail('user_id_mismatch', {
-        sessionId,
-        metadataUserId,
-        userId: user.id,
-      });
+      d.logger.warn?.(
+        {
+          reason: 'user_id_mismatch',
+          sessionId,
+          metadataUserId,
+          userId: user.id,
+        },
+        'Checkout success: the purchase belongs to another account',
+      );
+      throw new PurchaseOnAnotherAccount();
     }
 
     const stripeStatus = subscription.status;
@@ -397,6 +408,9 @@ export async function syncCheckoutSuccess(
 
     effectiveSubscription = write.persisted ? observation : write.current;
   } catch (error) {
+    if (error instanceof PurchaseOnAnotherAccount) {
+      return { purchaseOnAnotherAccount: true };
+    }
     if (!isSubscriptionObservationAttemptsExhaustedError(error)) {
       throw error;
     }

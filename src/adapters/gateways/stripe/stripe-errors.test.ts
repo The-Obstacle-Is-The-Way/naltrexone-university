@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAlreadyCanceledError } from './stripe-errors';
+import { isAlreadyCanceledError, isStripeOutage } from './stripe-errors';
 
 describe('isAlreadyCanceledError', () => {
   it('returns true for resource_missing with invalid_request_error', () => {
@@ -49,5 +49,59 @@ describe('isAlreadyCanceledError', () => {
     expect(isAlreadyCanceledError('string error')).toBe(false);
     expect(isAlreadyCanceledError(null)).toBe(false);
     expect(isAlreadyCanceledError(undefined)).toBe(false);
+  });
+});
+
+// DEBT-501 item 6: shaped as stripe-node 22 raises them (Error.js,
+// RequestSender.js): each carries its class name as `type`.
+function stripeError(type: string, extra: Record<string, unknown> = {}) {
+  return Object.assign(new Error(type), { type, ...extra });
+}
+
+describe('isStripeOutage', () => {
+  it.each([
+    [
+      'a network error',
+      Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
+    ],
+    ['a 5xx', stripeError('StripeAPIError', { statusCode: 503 })],
+    ['a 429', stripeError('StripeRateLimitError', { statusCode: 429 })],
+    [
+      'a lost connection, with no code or status',
+      stripeError('StripeConnectionError'),
+    ],
+    // A 5xx whose body is not JSON, or a body cut off mid-stream.
+    ['an API error with no status', stripeError('StripeAPIError')],
+    // Stripe can answer a rate limit as a 400 with code rate_limit.
+    [
+      'a rate limit sent as a 400',
+      stripeError('StripeRateLimitError', {
+        statusCode: 400,
+        code: 'rate_limit',
+      }),
+    ],
+  ])('counts %s', (_case, error) => {
+    expect(isStripeOutage(error)).toBe(true);
+  });
+
+  it.each([
+    [
+      'an invalid request',
+      stripeError('StripeInvalidRequestError', { statusCode: 400 }),
+    ],
+    ['a declined card', stripeError('StripeCardError', { statusCode: 402 })],
+    ['a conflict', stripeError('StripeIdempotencyError', { statusCode: 400 })],
+    [
+      'a missing resource',
+      stripeError('StripeInvalidRequestError', { statusCode: 404 }),
+    ],
+    // stripe-node raises a 409 conflict, such as a concurrent request, as a
+    // StripeAPIError with its status (#1440 review).
+    [
+      'a conflict with another request',
+      stripeError('StripeAPIError', { statusCode: 409 }),
+    ],
+  ])('does not count %s, which is Stripe answering', (_case, error) => {
+    expect(isStripeOutage(error)).toBe(false);
   });
 });

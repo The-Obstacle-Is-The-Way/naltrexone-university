@@ -57,12 +57,6 @@ describe('syncCheckoutSuccess', () => {
       subscription: { metadata: { user_id: '' } },
     },
     {
-      reason: 'user_id_mismatch',
-      input: { sessionId: 'cs_test' },
-      session: { customer: 'cus_123', subscription: 'sub_123' },
-      subscription: { metadata: { user_id: fixtureUser2Id } },
-    },
-    {
       reason: 'invalid_subscription_status',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
@@ -221,6 +215,82 @@ describe('syncCheckoutSuccess', () => {
       expect(logger.warnCalls).toHaveLength(0);
     },
   );
+
+  // DEBT-501 item 5: someone who paid on one account and came back signed in
+  // to another is told so, not that checkout failed, and nothing is written
+  // to the signed-in account.
+  it("returns the purchase as another account's, without a redirect or a write, when its subscription names another user", async () => {
+    const logger = new FakeLogger();
+    const deps = {
+      authGateway: new FakeAuthGateway({
+        id: fixtureUser1Id,
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      }),
+      subscriptionVersions: {
+        findObservationVersionByUserId: async () => null,
+      },
+      rateLimiter: new FakeRateLimiter(),
+      getClerkAuth: async () => ({
+        userId: 'clerk_user_1',
+        redirectToSignIn: () => {
+          throw new Error('should not redirect to sign-in');
+        },
+      }),
+      logger,
+      stripe: {
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              customer: 'cus_123',
+              subscription: 'sub_123',
+            }),
+          },
+        },
+        subscriptions: {
+          retrieve: async () => ({
+            id: 'sub_123',
+            customer: 'cus_123',
+            status: 'active',
+            cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
+            metadata: { user_id: fixtureUser2Id },
+            items: {
+              data: [
+                {
+                  current_period_end: 2_000_000_000,
+                  price: { id: 'price_monthly' },
+                },
+              ],
+            },
+          }),
+        },
+      },
+      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+      appUrl: 'https://example.com',
+      transaction: async () => {
+        throw new Error('should not start a transaction');
+      },
+    };
+    const redirectFn = vi.fn((url: string): never => {
+      throw new RedirectError(url);
+    });
+
+    await expect(
+      syncCheckoutSuccess({ sessionId: 'cs_test' }, deps as never, redirectFn),
+    ).resolves.toEqual({ purchaseOnAnotherAccount: true });
+
+    expect(redirectFn).not.toHaveBeenCalled();
+    expect(logger.errorCalls).toEqual([]);
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        msg: 'Checkout success: the purchase belongs to another account',
+        context: expect.objectContaining({ reason: 'user_id_mismatch' }),
+      }),
+    ]);
+  });
 
   it('returns redirect to pricing with reason=payment_processing when subscription is not entitled', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();

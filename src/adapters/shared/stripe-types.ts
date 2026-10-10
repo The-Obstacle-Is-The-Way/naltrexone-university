@@ -1,5 +1,9 @@
 export type StripeRequestOptions = {
   idempotencyKey?: string;
+  /** Milliseconds before the SDK abandons one try of the request. */
+  timeout?: number;
+  /** How many more tries the SDK makes after a failed connection. */
+  maxNetworkRetries?: number;
 };
 
 export type CustomerCreateParams = {
