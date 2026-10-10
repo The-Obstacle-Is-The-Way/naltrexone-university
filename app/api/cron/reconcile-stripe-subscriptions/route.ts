@@ -1,4 +1,5 @@
 import { createContainer } from '@/lib/container';
+import { limitStripeSubscriptionRequests } from '@/src/adapters/gateways/stripe/stripe-request-limits';
 import { deleteStripeCustomer } from '@/src/adapters/gateways/stripe-customer-deleter';
 import { drainPendingStripeCustomerCleanups } from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
 import { reconcileAllStripeSubscriptionPages } from '@/src/adapters/jobs/reconcile-all-stripe-subscription-pages';
@@ -8,6 +9,17 @@ import { createReconcileStripeSubscriptionsCronRouteHandler } from './route-hand
 
 // Next.js requires route-segment configuration to be a statically analyzable literal.
 export const maxDuration = 60;
+
+// DEBT-501 item 1: each subscriptions request the job sends waits at most 5
+// seconds for its socket to answer, and is tried once more after a failed
+// connection, in place of the SDK's 80 seconds and two retries. Our retry
+// wrapper can still repeat a 5xx or 429 call. The drain's customer deletes
+// keep the SDK's defaults, and pages are checked against their 40-second
+// budget only between pages.
+const RECONCILE_STRIPE_REQUEST_LIMITS = {
+  timeoutMs: 5_000,
+  maxNetworkRetries: 1,
+};
 
 type CronContainerResolver = () => ReturnType<typeof createContainer>;
 
@@ -23,7 +35,10 @@ export function createReconcileStripeSubscriptionsCronHandler(
   return createReconcileStripeSubscriptionsCronRouteHandler(() => {
     const container = resolveContainer();
     const reconciliationDeps: ReconcileStripeSubscriptionsDeps = {
-      stripe: container.stripe,
+      stripe: limitStripeSubscriptionRequests(
+        container.stripe,
+        RECONCILE_STRIPE_REQUEST_LIMITS,
+      ),
       priceIds: {
         monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
         annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,

@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — decided per item; AUDIT-015 orders them: quick wins, alerts for its silent conditions, then the pre-sale items
+**Status:** Open — quick wins built (items 1's timeout, 2's runbook line, 5 and 6); next, alerts for its silent conditions, then the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -35,6 +35,8 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - **Scope.** Do not exclude a row solely because its local status is terminal: repairing stale local state is this job's purpose. Any pruning policy needs an independently justified terminal-state contract.
   - **Tests**, against real Postgres: the ordering, a crash mid-run, interleaved inserts and deletes, sustained inserts (earlier rows are still retried), each row attempted at most once per run (including a claim written in a transaction begun before the run's start was read), a deleted or concurrently claimed row, a failed claim, the budget checked before each claim, two overlapping runs, and provider failure.
 
+- **Request timeout done 2026-10-09 (quick-wins pull request).** The reconcile route gives the job's subscriptions client a 5-second timeout and one network retry (`limitStripeSubscriptionRequests`), in place of the SDK's 80 seconds and two retries. The timeout is the socket's idle limit per try, and our retry wrapper can still repeat a 5xx or 429 call. This was proven through the real SDK, and the cron route's integration test checks the time limit on every subscriptions request it sees. Still open: the drain's customer deletes in the same function keep the SDK's defaults, and checking the time budget before each claim, which bounds a whole page, comes with the oldest-first order.
+
   *Corrected 2026-10-06: oldest-first order replaces #1410's keyset cursor with wraparound, checkpoints and run coordination, which needed more state for the same guarantee; terminal rows stay included, as #1410 decided (#1410 review).*
 
 ### 2. Only one price ID per plan is recognized (P2)
@@ -46,6 +48,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - the success page redirects with `unknown_plan`.
 - **Trigger.** Any change of Price for new customers. DEBT-414 freezes existing subscribers' prices, and the portal disables plan changes, so a new Price plus an environment change is the expected way to change a price. That change would lock out every existing subscriber.
 - **Decided.** A recognized list of legacy price IDs per plan, configured alongside the current ones. Add an operator check that refuses a price change while live subscriptions use an ID the list doesn't hold. Until this ships, the runbook must say: never change a price ID.
+- **Runbook line done 2026-10-09 (quick-wins pull request):** [deployment-environments.md](../dev/deployment-environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The legacy list and the operator check remain.
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3)
 
@@ -71,11 +74,18 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 - **Evidence.** Every validation failure in `app/(marketing)/checkout/success/checkout-success-sync.tsx` redirects to `?checkout=error`. That includes `user_id_mismatch` (`:190-196`): paid on account A, returned signed in to account B. B can then buy again, creating a second customer and a second charge.
 - **Decided.** A specific message for a mismatched account ("This purchase belongs to another account"), and no repurchase offer on that path.
+- **Done 2026-10-09 (quick-wins pull request).** The success page no longer redirects this case to `?checkout=error`. The sync returns it as a purchase on another account before anything is written, and logs a warning with the reason. The page says "This purchase belongs to another account" and tells the person to sign in with the account they paid with. It offers its own Sign out, which then opens sign-in, because the page has no account menu (found by the pre-review). It also offers Contact support, but no dashboard link and no plan. The pricing page is unchanged, so its offer still comes from the database alone (BUG-275). Test-first for the sync and the page. It is not seen in a browser: reaching it needs a Checkout paid on one account and returned to on another.
 
 ### 6. The Stripe circuit breaker also counts ordinary 4xx errors (P3)
 
 - **Evidence.** `src/adapters/shared/circuit-breaker.ts:62-76` counts every thrown error, and one breaker is shared per instance (`stripe-retry.ts:11-16,43`). Five consecutive client errors fail every Stripe call in that instance for 60 seconds, Checkout included.
 - **Decided.** Count only transient failures: network errors, 5xx and 429.
+- **Done 2026-10-09 (quick-wins pull request).** `CircuitBreaker` takes a rule for which errors count. Any other error is the service answering, so it closes the circuit and restarts the count, in a half-open probe too. The Stripe breaker counts `isStripeOutage`: network errors, 5xx and 429, plus the SDK's outage classes, which would otherwise have stopped counting:
+  - `StripeConnectionError`, which carries neither a code nor a status;
+  - `StripeAPIError`, only when it has no status, as when a 5xx body is not JSON or a body is cut off. The SDK also raises it for a 409 conflict with another request, which is Stripe answering and does not count (#1440 review);
+  - `StripeRateLimitError`, which Stripe can send as a 400.
+
+  The classes were added after the pre-review. Test-first; four mutation checks each fail a test.
 
 ### 7. Stripe settings not recorded in the repository (P3, owner)
 

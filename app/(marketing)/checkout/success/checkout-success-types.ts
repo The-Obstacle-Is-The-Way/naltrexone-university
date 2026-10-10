@@ -86,13 +86,15 @@ export type SyncCheckoutSuccessInput = {
 /**
  * Synced subscription state consumed by the checkout-success interstitial.
  * Entitled outcomes resolve with the synced status so the page can render
- * status-driven confirmation copy. Invalid, signed-out, and non-entitled
- * outcomes redirect before returning; their post-redirect return only
- * surfaces when the redirect is intercepted in tests.
+ * status-driven confirmation copy. A purchase whose subscription names
+ * another user resolves as that, with nothing written (DEBT-501 item 5).
+ * Invalid, signed-out, and non-entitled outcomes redirect before returning;
+ * their post-redirect return only surfaces when the redirect is intercepted
+ * in tests.
  */
-export type CheckoutSuccessSyncResult = {
-  status: SubscriptionStatus;
-};
+export type CheckoutSuccessSyncResult =
+  | { status: SubscriptionStatus }
+  | { purchaseOnAnotherAccount: true };
 
 export type CheckoutSuccessSearchParams = {
   session_id?: string | string[];

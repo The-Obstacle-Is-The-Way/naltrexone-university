@@ -96,17 +96,30 @@ which would copy the scope's user past `scrubEvent`.
   build the alerts at all, and `operational_alert_shared_cooldown_unavailable`
   that the Postgres cooldown failed or was slow. An event Sentry refuses, for
   quota or rate limit, is dropped without a log line: a flood that uses up the
-  month's quota also silences the alerts (see the flood section below).
+  month's quota also silences the alerts (see the flood section below). From
+  `@sentry/nextjs` 11.2 the server SDK also runs Sentry's Dedupe, which drops,
+  unlogged, an event that repeats the one just before it: the same message or
+  first exception value, fingerprint and stack frames, whatever its tags. For
+  alerts that is only a repeat of the same kind and window, such as an
+  `unavailable` send straight after a `held` one, which would join that
+  alert's open issue without an email. If the issue was resolved in between,
+  its reopening email is lost; the next window's alert opens a new issue as
+  usual.
 - **Diagnosis.** The log line beside each alert carries the IDs, but Vercel keeps
   it for an hour. Start from the database.
-- **Being noticed.** An alert protects nothing if it sits unread. Its email
-  comes from `noreply@md.getsentry.com` with a subject containing
-  "Operational alert". Keep a Gmail filter that stars them, marks them
-  important, labels them and never sends them to spam, and keep the Sentry
-  mobile app's push notifications on for issue alerts. The watcher below
-  reports through a GitHub issue, whose email comes from
-  `notifications@github.com`, so the filter's query names both senders:
-  `(from:noreply@md.getsentry.com subject:"Operational alert") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`.
+- **Being noticed.** An alert protects nothing if it sits unread. Keep a Gmail
+  filter that stars these emails, marks them important, labels them and never
+  sends them to spam, and keep the Sentry mobile app's push notifications on
+  for issue alerts. The filter keys on what every server-project alert email
+  shares, not on an alert's wording. The email comes from
+  `noreply@md.getsentry.com` with a subject starting with the issue's ID,
+  `ADDICTION-BOARDS-SERVER-<n>`. That covers the operational alerts, the drill,
+  the cron monitor's missed or failed check-in, whose title never says
+  "Operational alert", and new server errors. It leaves out the browser
+  project's noisier `ADDICTION-BOARDS-WEB-` issues and the weekly reports. The
+  watcher below reports through a GitHub issue, so the query names that email
+  too:
+  `(from:noreply@md.getsentry.com subject:"ADDICTION-BOARDS-SERVER") OR (from:notifications@github.com subject:"Operational alerts may not be reaching the owner")`.
 - **Drill.** The renewal job sends one `operational_alert_drill` per fixed
   30-day cycle, from the first run that claims the cycle's row in
   `operational_alert_drills`, so the inbox keeps proving the path. Its email
