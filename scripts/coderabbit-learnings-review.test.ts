@@ -114,6 +114,20 @@ describe('CodeRabbit learnings recorded in the past week (DEBT-515)', () => {
     ]);
   });
 
+  it('lists a learning CodeRabbit holds for approval, which it labels pending', () => {
+    const pending = comment(
+      `${PR}/1443#discussion_r4236308457`,
+      '2026-10-19T10:00:00Z',
+      recorded('A held learning.').replace(
+        'Learnings added</summary>',
+        'Learnings added — pending approval</summary>',
+      ),
+    );
+    expect(learningReplies([[pending]], [], NOW)[0]?.learnings).toEqual([
+      { text: 'A held learning.', suppresses: false },
+    ]);
+  });
+
   it('numbers a learning recorded on a plain issue by that issue', () => {
     const onIssue = comment(
       'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/1449#issuecomment-1',

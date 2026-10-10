@@ -42,6 +42,17 @@ describe('CodeRabbit learnings recorded on the PR (DEBT-515)', () => {
     expect(linkedLearningReplies(pr)).toEqual([CHAT_REPLY, THREAD_REPLY]);
   });
 
+  it('refuses a learning CodeRabbit holds for approval, which it labels pending', () => {
+    const pr = pullRequest();
+    const pending = learningReply(CHAT_REPLY);
+    pending.body = pending.body.replace(
+      'Learnings added</summary>',
+      'Learnings added — pending approval</summary>',
+    );
+    pr.comments = commentPage(pending);
+    expect(() => linkedLearningReplies(pr)).toThrow(CHAT_REPLY);
+  });
+
   it('refuses a link the rendered description hides in an HTML comment', () => {
     const pr = pullRequest();
     pr.comments = commentPage(learningReply(CHAT_REPLY));
