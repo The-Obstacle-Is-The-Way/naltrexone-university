@@ -86,8 +86,10 @@ have raised this error when it first appeared, at the cost of keeping the list.
 ## Checklist
 
 - [ ] Owner: on production, open a question from Dashboard, then within the
-      hour search Vercel's runtime logs, and Sentry, for "postponed state". A
-      hit raises this to P1.
+      hour search Vercel's runtime logs, and Sentry, for "postponed state".
+      For each hit, find the request that logged it and its status. A failed
+      response, or a page that did not load, raises this to P1. A hit on a
+      request that succeeded is the same noise as in E2E.
 - [ ] Owner decision: option 3.
 - [ ] A Next.js release fixes vercel/next.js#99500; after taking it, a local
       E2E run logs no E592.
