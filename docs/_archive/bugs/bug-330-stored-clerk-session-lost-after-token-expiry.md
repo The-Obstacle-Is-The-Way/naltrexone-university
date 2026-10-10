@@ -1,12 +1,12 @@
 # BUG-330: Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — built test-first in its pull request; still to show in CI: no E2E session left active, and the web server's output in the log
+**Status:** Resolved — shipped in #1452, promoted in #1455; option 4 deferred (Deferred table)
 **Priority:** P3
 **Date:** 2026-10-07
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-10
+**Verification receipts:** the checklist below; promotion #1455's `main` CI run, in the closing pull request's description
 
 ---
 
@@ -40,8 +40,8 @@ Test contexts also run without Clerk's testing token. That is how Clerk's guide 
     *Corrected 2026-10-09: this is not a defect.* Clerk's guide for a stored session installs no token in the tests that load it. Clerk describes the token as a way past its bot detection, and nothing shows a refusal of that kind here; the run kept no Frontend API statuses.
   - Playwright ignores the server's stdout by default, so Clerk's own log line for a silently signed-out client (an open upstream issue) is invisible. No FAPI status or Clerk trace ID is captured.
   - Teardown's `releaseClerkE2ESession` found no session and skipped the sign-out. That run's session stayed live until 2026-10-14, though its token was never published.
-- **Later losses of another shape.** On 2026-10-08 (#1428) and 2026-10-09 (#1440), one signed-in test of 63 lost its session partway through a CI run, after its restore had succeeded, and the other 62 passed. The incident instead failed every test after a failed restore. [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) records those losses and their investigation.
-- **Frequency.** Up to the incident, it had happened once in the 1,209 CI runs since the stored-session design landed (`2f6b6223`, 2026-08-25). It has not recurred as of 2026-10-09. [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md), an intermittent session loss whose cause was never proven, led to that design.
+- **Later losses of another shape.** On 2026-10-08 (#1428) and 2026-10-09 (#1440), one signed-in test of 63 lost its session partway through a CI run, after its restore had succeeded, and the other 62 passed. The incident instead failed every test after a failed restore. [BUG-333](../../bugs/bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) records those losses and their investigation.
+- **Frequency.** Up to the incident, it had happened once in the 1,209 CI runs since the stored-session design landed (`2f6b6223`, 2026-08-25). It has not recurred as of 2026-10-09. [BUG-306](bug-306-required-e2e-clerk-session-loss-and-accumulation.md), an intermittent session loss whose cause was never proven, led to that design.
 - **What is not proven.** The two explanations the evidence leaves are:
   - FAPI rejected or rotated the stored development-browser token;
   - FAPI had failed for this client from the start, with tests passing on the unexpired token alone.
@@ -54,7 +54,7 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 ## Options
 
 1. **Re-run when it happens.** Rejected: an unexplained failure becomes routine.
-2. **Sign in per test.** Rejected: it brings back BUG-306's session pile-up, and spends the Clerk budget DEBT-503 and [DEBT-508](../debt/debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) protect.
+2. **Sign in per test.** Rejected: it brings back BUG-306's session pile-up, and spends the Clerk budget DEBT-503 and [DEBT-508](../../debt/debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) protect.
 3. **Make a failed restore diagnosable and deterministic** (decided, first).
    - Record FAPI status codes, Clerk error codes, trace IDs and `Clerk.status` on a failed restore, never tokens.
    - Pipe the web server's output through the existing log redaction.
@@ -75,7 +75,7 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 
 ## Resolution
 
-**Decided:** option 3, test-first, in one PR after [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, which has daily impact. *Changed 2026-10-09:* option 4 is deferred (above), and the record closes on option 3's checks. The mid-run losses, whose cause is unknown, are [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md).
+**Decided:** option 3, test-first, in one PR after [DEBT-503](../../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, which has daily impact. *Changed 2026-10-09:* option 4 is deferred (above), and the record closes on option 3's checks. The mid-run losses, whose cause is unknown, are [BUG-333](../../bugs/bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md).
 
 ## Progress
 
@@ -94,7 +94,7 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
   - `webServer.stdout` is `pipe`, and Playwright's runner passes everything it writes, the `[WebServer]` lines included, through the E2E log redaction.
   - The redaction runs in the runner rather than the server process, so the server loads nothing extra.
   - A credential split across two reads of the server's output is redacted whole. Playwright passes each pipe read on as it arrives, so a token can arrive in two pieces. The run of token characters that ends a write is held for the next write, or written when the runner exits (#1452 review).
-- **Every signed-in test keeps a Clerk trace** (`tests/e2e/helpers/clerk-auth-trace.ts`), so a mid-run loss names its cause ([BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md)).
+- **Every signed-in test keeps a Clerk trace** (`tests/e2e/helpers/clerk-auth-trace.ts`), so a mid-run loss names its cause ([BUG-333](../../bugs/bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md)).
   - For the whole test it keeps each page answer's `x-clerk-auth-status` and `x-clerk-auth-reason`, and a handshake redirect's `__clerk_hs_reason` and `__clerk_redirect_count`.
   - It also keeps Set-Cookie names, including whether `__session` was cleared, Clerk's own API answers, and Clerk JS's session changes and version.
   - When the page reaches sign-in, it prints the trail once, redacted: cookies by name, times and kind, and query strings by parameter name.
@@ -103,7 +103,7 @@ A red run holds a promotion's production alias until it is diagnosed and re-run.
 ## Verification
 
 - [x] A failed restore, forced in a helper test, fails the remaining signed-in tests with one error that names the FAPI status and trace ID and prints no token. *2026-10-09: `tests/e2e/helpers/clerk-auth.test.ts`.*
-- [ ] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session. *2026-10-09: the helper test is `clerk-session-revocation.test.ts`; the CI run remains.*
+- [x] Teardown revokes the stored session through the Backend API, shown by a helper test and by a CI run leaving no active E2E session. *2026-10-09: the helper test is `clerk-session-revocation.test.ts`. 2026-10-10: in `main`'s CI after promotion #1455, the cleanup project passed, and it fails when the revocation fails.*
 - [x] A helper test shows preflight's Clerk calls, timing out on every attempt, fail with the credential error inside setup's budget. *2026-10-09: `credential-health-check.test.ts`, on fake timers.*
 - [x] A signed-in test that reaches sign-in prints a redacted trace of Clerk's decisions, its Frontend API answers and its cookies. *2026-10-09: `clerk-auth-trace.test.ts`; and a Chromium run against stand-in app and Frontend API servers, with only the publishable key set. Reading `CLERK_FAPI` instead, as a mutation, records no API answer.*
-- [ ] A CI run's log shows the web server's `[WebServer]` lines, redacted.
+- [x] A CI run's log shows the web server's `[WebServer]` lines, redacted. *2026-10-10: the same `main` CI run shows 22 `[WebServer]` lines and no development token, JSON Web Token or Stripe secret.*
