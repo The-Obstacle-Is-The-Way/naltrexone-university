@@ -6,7 +6,7 @@
 **Now** — 2026-10-11.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
 - **Security.** #1438's promotion (#1442) fixed alerts #80, #55, #78, #79 and #84–#95 on 2026-10-09; #77 and #81 have no published fix (Deferred). DEBT-509's advisory watch shipped (#1420, promoted in #1431).
-- **In progress.** DEBT-503 item 5's deploy check, corrected so a Clerk outage cannot block a deploy.
+- **In progress.** DEBT-509: a repository's advisory read is tried once more, after a passing GitHub 502 failed a scheduled run.
 - **Verifying.** DEBT-505: released 2026-10-09; the first drill reached the inbox and the cron monitor checks in; still open: its unchecked items, among them the 2026-11-03 cycle's drill; due 2026-11-05. DEBT-508: two overlapping CI runs both pass, now in doubt; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22. DEBT-515: the weekly learnings issue opens, new learnings held; due 2026-10-23. DEBT-516: `main`'s CI and hosted-checkout smoke log which registry served Postgres; due 2026-10-24.
 - **Held dependency.** DEBT-514 holds lint-staged at 17.5.1 until one of its exit paths is verified for every workflow that commits.
 - **Next.** DEBT-503 item 4, due 2026-10-21. Then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
@@ -30,7 +30,7 @@
 | [DEBT-514](./debt-514-lint-staged-shared-clone-staging-race.md) | lint-staged can stage another session's work | P2 | Open — held at 17.5.1; safeguard or worktree isolation required |
 | [DEBT-515](./debt-515-coderabbit-learns-rules-from-agents.md) | CodeRabbit learns lasting rules from agents speaking as the owner | P2 | Verifying — after promotion, the first weekly learnings issue opens and new learnings wait for approval; due 2026-10-23 |
 | [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md) | Concurrent E2E runs share one Clerk rate budget and one Stripe customer | P2 | Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22 |
-| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; the watcher now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes |
+| [DEBT-509](./debt-509-pending-nextjs-security-fixes-have-no-watcher.md) | Pending Next.js security fixes have no watcher | P2 | Open — rule decided; the watcher covers every repository behind `pnpm-lock.yaml`, and its scheduled runs read them; waiting for `vite` 8.3.3 and the two pending Next.js fixes |
 | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) | Codecov sometimes drops the patch notification after a successful upload | P3 | Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22 |
 | [DEBT-516](./debt-516-ci-database-image-depends-on-one-registry.md) | CI's database image depends on one registry | P3 | Verifying — CI pulls Postgres from the first of three registries serving its digest, and compose pins it too; after promotion, `main`'s CI logs which one served it; due 2026-10-24 |
 
