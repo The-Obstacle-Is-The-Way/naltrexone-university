@@ -22,7 +22,7 @@ This document serves two purposes:
 ├───────────────────────────────────────────────────────────────────────┤
 │ 2. SEEDING                                                            │
 │    pnpm db:seed                                                       │
-│    gray-matter → Zod validation → section extraction → canonicalize   │
+│    front matter → Zod validation → section extraction → canonicalize  │
 │    → compare with current revision → append a revision if changed      │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 3. DATABASE STORAGE                                                   │
@@ -250,8 +250,8 @@ Notes:
 
 | Step | Code | What Happens |
 |------|------|-------------|
-| Discover | `fast-glob('content/questions/**/*.mdx')` | Finds all MDX files |
-| Split | `gray-matter(raw)` → `{ data, content }` | Separates YAML frontmatter from body |
+| Discover | `glob('content/questions/**/*.mdx')` (`tinyglobby`) | Finds all MDX files |
+| Split | `matter(raw)` (`@11ty/gray-matter`) → `{ data, content }` | Separates YAML frontmatter from body |
 | Validate | `QuestionFrontmatterSchema.parse(data)` | Zod validates frontmatter structure |
 | Extract | `parseMdxQuestionBody(content)` | `lib/content/parse-mdx-question.ts` — extracts text between `## Stem` and `## Explanation` headings |
 | Parse explanations | `parseExplanationAndReference(explanationMd)` | `scripts/seed-helpers.ts` — splits the general explanation from a terminal `### Reference` section; per-choice explanations come from each frontmatter choice's `explanation` |
@@ -532,8 +532,8 @@ Current withdrawal and release gaps remain tracked in
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `gray-matter` | ^4.0.3 | YAML frontmatter parsing at seed time |
-| `fast-glob` | ^3.3.3 | File discovery at seed time |
+| `@11ty/gray-matter` | ^3.0.0 | YAML frontmatter parsing at seed time (js-yaml 5's safe `load`; JavaScript front matter is refused) |
+| `tinyglobby` | ^0.2.17 | File discovery at seed time |
 | `react-markdown` | ^10.1.0 | Client-side markdown → HTML at view time |
 | `remark-gfm` | ^4.0.1 | GitHub Flavored Markdown tables, strikethrough, etc. |
 | `rehype-sanitize` | ^6.0.0 | HTML sanitization (XSS prevention) |

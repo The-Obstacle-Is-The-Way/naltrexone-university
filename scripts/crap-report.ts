@@ -2,13 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from '@typescript/typescript6';
-import fg from 'fast-glob';
 import {
   type CoverageMap,
   type CoverageMapData,
   createCoverageMap,
   type FileCoverageData,
 } from 'istanbul-lib-coverage';
+import { globSync } from 'tinyglobby';
 
 export type CoverageLane = 'merged' | 'unit' | 'browser' | 'integration';
 
@@ -288,14 +288,13 @@ export function createCrapReport({
   const coverageFiles = new Set(
     coverageMap.files().map((file) => resolve(file)),
   );
-  const sourceFiles = fg
-    .sync([...SOURCE_PATTERNS], {
-      absolute: true,
-      cwd: repositoryRoot,
-      ignore: [...SOURCE_IGNORES],
-      onlyFiles: true,
-      unique: true,
-    })
+  const sourceFiles = globSync(SOURCE_PATTERNS, {
+    absolute: true,
+    cwd: repositoryRoot,
+    expandDirectories: false,
+    ignore: SOURCE_IGNORES,
+    onlyFiles: true,
+  })
     .map((filePath) => resolve(filePath))
     .sort((left, right) =>
       toDisplayPath(repositoryRoot, left).localeCompare(

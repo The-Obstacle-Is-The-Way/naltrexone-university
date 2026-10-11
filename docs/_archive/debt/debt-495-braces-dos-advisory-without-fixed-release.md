@@ -64,6 +64,8 @@ The dismissal above hid the one trigger that can arrive without our action: a fi
 
 *Corrected 2026-10-06: alert #77 is still open with no patched version, and alert #55 is open again, not dismissed; adopting #55's patched release through its parent dependency is DEBT-476's decision.*
 
+*Corrected 2026-10-11: no fix is coming, because the `braces` maintainer disputes the report; [DEBT-517](../../debt/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md) removes `braces` by replacing `fast-glob` with `tinyglobby`, which the DEBT-506 removal of the React Native chain made sufficient, and the Deferred row is gone.*
+
 ## Related
 
 - [DEBT-476](./debt-476-dependabot-alert-triage-2026-09.md) §F: the same unused Solana tree, for `stream-json`.

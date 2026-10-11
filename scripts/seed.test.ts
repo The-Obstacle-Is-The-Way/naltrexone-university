@@ -149,6 +149,41 @@ describe('parseSeedQuestionFile', () => {
     expect(parsed.choices[0]?.explanation_md).toBe('Why A is wrong.');
   });
 
+  // Front matter is data. gray-matter 4 ran a `---js` block through eval and
+  // js-yaml 3's full schema built functions from `!!js/function`; the parser
+  // must refuse both rather than execute or construct code from a file.
+  it('refuses a JavaScript front-matter block without running it', () => {
+    const flag = 'seedFrontMatterExecuted';
+    const raw = [
+      '---js',
+      `{ slug: (globalThis.${flag} = true, 'demo-js') }`,
+      '---',
+      '## Stem',
+      'A clinical task.',
+    ].join('\n');
+
+    try {
+      expect(() => parseSeedQuestionFile(raw)).toThrow();
+      expect(Reflect.get(globalThis, flag)).toBeUndefined();
+    } finally {
+      Reflect.deleteProperty(globalThis, flag);
+    }
+  });
+
+  it('rejects a YAML tag that would construct a JavaScript function', () => {
+    const raw = [
+      '---',
+      'slug: !!js/function \'function () { return "demo"; }\'',
+      '---',
+      '## Stem',
+      'A clinical task.',
+    ].join('\n');
+
+    expect(() => parseSeedQuestionFile(raw)).toThrow(
+      expect.objectContaining({ name: 'YAMLException' }),
+    );
+  });
+
   it('uses YAML explanations and extracts reference_md for new-format MDX', () => {
     const raw = readSeedFixture('new-format-example.mdx');
 

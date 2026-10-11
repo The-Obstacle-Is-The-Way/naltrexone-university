@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url';
 // dependency cannot go unwatched.
 export const DEPENDENCY_REPOSITORIES: Readonly<Record<string, string | null>> =
   {
+    '@11ty/gray-matter': '11ty/gray-matter',
     '@biomejs/biome': 'biomejs/biome',
     '@clerk/nextjs': 'clerk/javascript',
     '@clerk/testing': 'clerk/javascript',
@@ -40,8 +41,6 @@ export const DEPENDENCY_REPOSITORIES: Readonly<Record<string, string | null>> =
     dotenv: 'motdotla/dotenv',
     'drizzle-kit': 'drizzle-team/drizzle-orm',
     'drizzle-orm': 'drizzle-team/drizzle-orm',
-    'fast-glob': 'mrmlnc/fast-glob',
-    'gray-matter': 'jonschlinkert/gray-matter',
     husky: 'typicode/husky',
     'istanbul-lib-coverage': 'istanbuljs/istanbuljs',
     jsdom: 'jsdom/jsdom',
@@ -62,6 +61,7 @@ export const DEPENDENCY_REPOSITORIES: Readonly<Record<string, string | null>> =
     stripe: 'stripe/stripe-node',
     'tailwind-merge': 'dcastil/tailwind-merge',
     tailwindcss: 'tailwindlabs/tailwindcss',
+    tinyglobby: 'SuperchupuDev/tinyglobby',
     tsx: 'privatenumber/tsx',
     'tw-animate-css': 'Wombosvideo/tw-animate-css',
     typescript: 'microsoft/TypeScript',
