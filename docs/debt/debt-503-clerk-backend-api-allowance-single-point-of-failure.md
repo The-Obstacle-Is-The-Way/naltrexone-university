@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — item 1 released; items 3 and 5 built in #1458, then item 5's production key; item 4 due 2026-10-21; item 2 waits for its trigger
+**Status:** In Progress — items 1, 3 and 5 released, item 5's key set in production 2026-10-11 and its deploy check corrected the same day; item 4 due 2026-10-21; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
 **Resolved:** —
@@ -130,20 +130,37 @@ This record holds the structural fixes, so that the allowance stops being the on
 - **Decided.**
   1. Pass `jwtKey` from `CLERK_JWT_KEY` to `clerkMiddleware`. Without the variable, behaviour is unchanged.
   2. Accept only a key Clerk reads exactly. Clerk strips the PEM's newlines, header and a fixed 2048-bit RSA prefix, so a key it would misread, or one pasted with escaped newlines it would keep, signs every visitor out.
-  3. Check it against the keys Clerk publishes at the Frontend API's `/.well-known/jwks.json`, which needs no secret, as a build step that fails the build on a mismatch. A failed build leaves the live deployment serving, so the step fails closed.
+  3. Check it against the keys Clerk publishes at the Frontend API's `/.well-known/jwks.json`, which needs no secret, as the first step of every Vercel deploy. Only a key set without the key stops the deploy. When the keys cannot be read, the deploy goes on and its log says the key is unchecked.
+
+     *Corrected 2026-10-11, after a reviewer's heads-up.* Step 3 first also stopped the deploy when Clerk's keys could not be read, since a failed build leaves the live deployment serving. That ignored what a refused deploy costs:
+     - **No fix could ship.** Through a Clerk Frontend API outage, or any network failure between Vercel's builders and Clerk, no production deploy could go out, including a fix for that outage. Removing the key to get one out is a production edit in the middle of an incident. Reproduced with the real script: a host that does not resolve and an address that never answers both exited 1, which stops the build command.
+     - **A failed read says nothing about the key.** The key changes only when someone edits it. A wrong key still raises `clerk_session_tokens_rejected` within a minute of signed-in traffic, and Instant Rollback needs no build.
+     - **The check ran too late.** It ran inside `pnpm build`, after the build command had migrated the production database. It now runs before the migrations.
+     - **Same rule as the fonts.** Self-hosting the layout fonts on 2026-09-26 (F19) followed it: a deploy must not wait on a third party it can do without.
+     - **Not chosen.**
+       - A bypass variable: a production edit during an incident, and easily left set.
+       - Retries: they would only check more builds, and an unchecked build costs nothing unless the key was just edited.
+       - Committing the public key to the repository: a second copy of one value, where Clerk documents the variable.
   4. Count rejected signatures, and alert past three in a minute. A key that stops matching signs out every visitor who tries, and each signs in and fails again.
   5. Then set it in Vercel Production, from those published keys, and deploy through a promotion. Preview and development keep fetching, since they use the development instance.
 
   *Changed 2026-10-10, while building: the daily comparison is dropped. The build step catches a wrong key before it deploys, and the rejected-signature alert catches a key that stops matching within a minute of signed-in traffic. A daily check would add only the hours without traffic, for another job, port and alert.*
 - **Built 2026-10-10, test-first** (steps 1 to 4).
   - `lib/clerk-jwt-key.ts` parses and validates the key, and compares it with Clerk's published keys. `proxy.ts` passes it as `jwtKey`; an unreadable key is logged and left out, so Clerk fetches as before.
-  - `scripts/check-clerk-jwt-key.ts` runs before `next build`.
+  - `scripts/check-clerk-jwt-key.ts` checks it on every deploy (step 3).
   - Item 3's detector counts `token-invalid-signature` apart, as `clerk_session_tokens_rejected` (`CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD`).
   - **Proof.** `lib/clerk-jwt-key-sdk.test.ts` runs the real middleware: with the key, a signed-in visitor verifies with no call to Clerk; with another key, the visitor is signed out with `token-invalid-signature`. Against the development instance's published keys, read 2026-10-10, the build step passes Clerk's real key in both newline forms; it is RSA 2048 with exponent 65537.
-  - **Still to do:** step 5, after this merges and is promoted.
 - **Built in #1458,** with item 3, whose detector it extends; the production key follows its promotion. The owner asked on 2026-10-10 for this to be fixed now or soon. Asked about the production setting itself, the owner left it to engineering judgment the same day, since the service is pre-revenue with no live users: the cheapest time to change sign-in.
 - **Why no daily key check, and what remains.** Clerk documents the key as the instance's PEM public key, with no rotation. If it ever changed, every token would fail at once, and the rejected-signature alert fires within a minute of signed-in traffic; a daily comparison would report up to a day later. The undetected window is only a period with no sign-ins, when no one is affected.
-- **Step 5's checks.** After setting the key: the production build log reads "CLERK_JWT_KEY is a key Clerk publishes", the runtime logs show no `clerk_jwt_key_unreadable`, and no `clerk_session_tokens_rejected` alert arrives. Rollback is Vercel's Instant Rollback to the previous production deployment, which was built without the key, then removing the variable.
+- **Step 5, done 2026-10-11** after promotion #1459.
+  - **Set and deployed.** `CLERK_JWT_KEY` was set in Vercel Production from the keys `clerk.addictionboards.com` publishes. Production was redeployed from `23ea4bbe` (created 04:48:36Z, Ready), and its build log read "CLERK_JWT_KEY is a key Clerk publishes for clerk.addictionboards.com".
+  - **Checked after.**
+    - Health answered 200.
+    - A signed-out request was redirected to sign-in, as before.
+    - The runtime logs showed no `clerk_jwt_key_unreadable`.
+    - Sentry has recorded no issue of any kind since; read 2026-10-11 12:52Z, its last issue was seen 2026-10-09.
+  - **Not yet observed:** a signed-in visit on the live instance, which needs the owner.
+  - **Rollback.** Vercel's Instant Rollback to the deployment before it, built from the same commit without the key, then removing the variable.
 
 ## Verification
 
