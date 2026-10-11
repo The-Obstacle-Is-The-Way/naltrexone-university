@@ -19,7 +19,7 @@ Neither advisory was exploitable here, and this change does not alter that. What
 ## Evidence
 
 - **No fix for `braces`.** The advisory ([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)) names no patched version, and 3.0.3 is still npm's latest. On [micromatch/braces#70](https://github.com/micromatch/braces/issues/70) the maintainer disputes the report (2026-10-05): the length cap already bounds nesting depth, and user-supplied glob patterns are the real risk. The issue is locked, with no linked pull request.
-- **No reachable fix for `sprintf-js`.** The advisory ([GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c)) names no patched version, and 1.1.3 is still npm's latest. On [alexei/sprintf.js#237](https://github.com/alexei/sprintf.js/issues/237) a CNA dispute has been filed (2026-10-06), and the first proposed fix was closed because it only swapped one exception for another. Three precision-cap pull requests are open (#239–#241, 2026-10-09 to 2026-10-11), but a fix would ship as 1.1.x. `argparse` 1.0.10 requires `sprintf-js` `~1.0.2`, so it could not reach the lockfile without an override.
+- **No reachable fix for `sprintf-js`.** The advisory ([GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c)) names no patched version, and 1.1.3 is still npm's latest. On [alexei/sprintf.js#237](https://github.com/alexei/sprintf.js/issues/237) a CNA dispute has been filed (2026-10-06), and the first proposed fix was closed because it only swapped one exception for another. Two numeric precision-cap pull requests are open ([#239](https://github.com/alexei/sprintf.js/pull/239) and [#241](https://github.com/alexei/sprintf.js/pull/241), 2026-10-09 and 2026-10-11), but a fix would ship as 1.1.x. `argparse` 1.0.10 requires `sprintf-js` `~1.0.2`, so it could not reach the lockfile without an override.
 - **One route each.**
   - `braces` came only through `fast-glob` → `micromatch`, now that DEBT-506 removed the React Native tree. When DEBT-495 was decided, that tree also carried `braces`, so replacing `fast-glob` could not have closed #77.
   - `sprintf-js` came only through `gray-matter` → `js-yaml` 3 → `argparse` 1.
@@ -28,6 +28,8 @@ Neither advisory was exploitable here, and this change does not alter that. What
   - `tinyglobby` 0.2.17 was already installed through Vite and Vitest.
   - `@11ty/gray-matter` 3.0.0 is Eleventy's maintained fork. Its `index.js`, `lib/parse.js`, `lib/defaults.js` and `lib/excerpt.js` are byte-identical to `gray-matter` 4.0.3. It parses YAML with `js-yaml` 5's safe `load`, refuses `---js` front matter, which 4.0.3 ran through `eval`, and drops `kind-of`, `strip-bom-string` and `Buffer` for built-ins.
   - GitHub's advisory database lists no advisory for `tinyglobby` 0.2.17, `@11ty/gray-matter` 3.0.0, `js-yaml` 5.4.2 or `argparse` 2.0.1 (checked 2026-10-11).
+
+*Corrected 2026-10-11: two upstream pull requests cap numeric precision; #240 fixes a separate `%v` truncation error.*
 
 ## Impact
 
@@ -54,6 +56,7 @@ Nothing reaches users or production: neither advisory is reachable. Leaving thin
 - **The upstream advisory watch** maps the two new direct dependencies in place of the removed ones.
 - **The guards.**
   - `scripts/seed.test.ts` gains two tests. The first fails on `gray-matter` 4.0.3, where the `---js` block runs, and passes on the fork. The second checks that `parseSeedQuestionFile` rejects `!!js/function` as a YAML error.
+  - `scripts/seed/file-reader.test.ts` is new. The seed reader had no unit test, so `codecov/patch` counted its changed glob call as uncovered. The suite now pins the reader's file selection on a temporary tree: nested files, dot files, non-MDX files, directories, placeholders, symlinks and the empty-tree errors. Turning on `dot` or dropping the placeholder exclusion makes it fail.
   - Dependabot raises #77 or #81 again if either package returns.
 
 ## Verification
