@@ -1,6 +1,6 @@
 import { lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import fg from 'fast-glob';
+import { glob } from 'tinyglobby';
 import {
   convertDraftQuestionToMdx,
   draftQuestionOutputPath,
@@ -106,12 +106,12 @@ async function assertEmptyOutputRoot(outRoot: string): Promise<void> {
 async function main(): Promise<void> {
   const { inRoot, outRoot, status, dryRun } = parseArgs(process.argv.slice(2));
 
-  const files = await fg(['**/recall.md', '**/vignettes.md'], {
+  const files = await glob(['**/recall.md', '**/vignettes.md'], {
     cwd: inRoot,
     onlyFiles: true,
-    unique: true,
     absolute: true,
     dot: false,
+    expandDirectories: false,
   });
 
   if (files.length === 0) {

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import fg from 'fast-glob';
+import { globSync } from 'tinyglobby';
 
 export type SkipPolicySourceFile = {
   filePath: string;
@@ -56,11 +56,11 @@ export function readSkipPolicySources(
 }
 
 export function readRepositorySkipPolicySources(): SkipPolicySourceFile[] {
-  const filePaths = fg.sync(SOURCE_GLOBS, {
+  const filePaths = globSync(SOURCE_GLOBS, {
     cwd: process.cwd(),
+    expandDirectories: false,
     ignore: GENERATED_SOURCE_IGNORES,
     onlyFiles: true,
-    unique: true,
   });
   return readSkipPolicySources(filePaths);
 }
