@@ -1,6 +1,5 @@
 # DEBT-502: Rare Account States Can Lock a Person Out, and Payment Actions Expose Test Seams
 
-
 **Status:** Open — decided per item
 **Priority:** P3
 **Date:** 2026-10-05
@@ -61,7 +60,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ## Verification
 
-Criteria to meet before closing: each item shipped with red-first tests, or deferred with its trigger in the register.
+Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index.
 
 ## Related
 

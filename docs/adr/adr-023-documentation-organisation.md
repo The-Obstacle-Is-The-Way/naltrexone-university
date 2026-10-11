@@ -21,7 +21,7 @@ On 2026-10-11, four read-only censuses covered every document in the repository:
    - The deploy build command is written three different ways.
    - The 2,215-line `master_spec.md` is called the single source of truth in four places. It disclaims that itself, omits the free trial, and lists 15 of 24 environment variables.
 3. **Hand-kept inventories rot; test-parsed registers do not.** Test tables, spec lists, file indexes, coverage maps, version matrices and rate-limit tables had all drifted. The two registers a test parses had not.
-4. **Closed records bury current truth.** The archive outnumbers the live documents in every search, and 486 live links point into it (DEBT-518).
+4. **Closed records bury current truth.** The archive outnumbers the live documents in every search, and nearly 500 live links point into it (DEBT-518 counts them).
 5. **Several registers no longer earn their keep.** Specs has had no new item since June, and brainstorming has three ideas idle since March. Audits close on publication. QA procedures are guides, not records.
 
 ## Decision

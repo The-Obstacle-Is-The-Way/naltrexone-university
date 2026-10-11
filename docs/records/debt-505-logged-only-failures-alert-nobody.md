@@ -1,6 +1,5 @@
 # DEBT-505: Failures That Are Only Logged Alert Nobody
 
-
 **Status:** Verifying — released 2026-10-09; the first drill and the cron monitor are proven. Still open: the unchecked items below, among them the 2026-11-03 cycle's drill; due 2026-11-05
 **Priority:** P2
 **Date:** 2026-10-06

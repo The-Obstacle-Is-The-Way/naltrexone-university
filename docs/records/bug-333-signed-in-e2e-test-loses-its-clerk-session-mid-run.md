@@ -1,6 +1,5 @@
 # BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
-
 **Status:** Verifying — no mid-run Clerk session loss in CI with the echo dropped; due 2026-10-17
 **Priority:** P3
 **Date:** 2026-10-09

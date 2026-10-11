@@ -1,6 +1,5 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-
 **Status:** In Progress — step 0's layout (ADR-023) and the records move are in review; the agent instructions, the layout and the archive's removal follow
 **Priority:** P2
 **Date:** 2026-10-11
@@ -83,19 +82,19 @@ Measured 2026-10-11 on `dev` after #1464.
 1. **When to file.**
    - File a record when the work spans more than one pull request, or needs an independent challenge before any code.
    - A fix that is already proven and lands in one pull request uses that PR's description as its record. The description has the same sections as a record: evidence, options, decision and verification.
-   - If a check outlives that pull request, such as its promotion, the index gets a Verifying row that links the pull request and carries the due date, so the due check still sees it.
+   - If a check outlives that pull request, such as its promotion, it needs a record, so the weekly due check sees it.
 2. **Write first, and challenge on the branch.**
-   - Take the register's Next ID, after checking open branches for IDs they have already taken.
+   - Take the next ID from `scripts/next-record-id.ts`; the guard fails a duplicate that two branches took at once.
    - Commit the record first on the work branch, and push the branch without opening a PR.
    - A second agent challenges it there, and corrects it in place with a `Corrected YYYY-MM-DD` note.
    - No CodeRabbit review is spent until there is code.
    - **Exception:** a security finding that an outsider could use is challenged locally and not pushed until its fix ships, as `AGENTS.md` already requires.
 3. **Ship it with its fix.** The record and its fix go up in one pull request, so one review covers both. A record that must be visible before any code, such as an investigation or a decision deferred to the owner, merges without a fix. It can share a pull request with another small change to save a review, as this record does with BUG-336.
 4. **Close by deleting.** Once a record's checks are recorded, the next pull request that touches its register:
-   1. moves any lasting knowledge to its home: a rule to `AGENTS.md` or `docs/dev/`, a decision to an ADR, a reason to a code comment, and an unfinished tail to a self-contained Deferred row;
+   1. moves any lasting knowledge to its home: a rule to `AGENTS.md` or `docs/dev/`, a decision to an ADR, a reason to a code comment, and an unfinished tail to a self-contained Waiting row;
    2. deletes the file and its asset folder;
-   3. adds one ledger line: ID, title, disposition, date, closing PR, and the commit and path of the record's last version. Those give a GitHub permanent link, and an offline read with `git show <commit>:<path>`.
-5. **Keep what works:** the Now stanza; the Active, Verifying, Parked and Deferred tables; due dates and the weekly due-check issue; one-line statuses; `Corrected` notes; and red-first evidence.
+   3. adds one ledger line: ID, title, disposition, date and path, then the closing PR and the commit of the record's last version. Those give a GitHub permanent link, and an offline read with `git show <commit>:<path>`.
+5. **Keep what works:** the Now stanza; the Active table and the Waiting rows; due dates and the weekly due-check issue; one-line statuses; `Corrected` notes; and red-first evidence.
 6. **Scope.**
    - ADRs are never deleted, only superseded.
    - Living guides, policies and `master_spec*.md` stay live.
@@ -200,7 +199,7 @@ Each pull request stands alone, with no reservations or waits on other sessions.
 1. **Records** (this record's second pull request):
    - `docs/records/` holds the open records, one index (`README.md`: Now, Active, Waiting, and how records work) and the ledger (`closed.md`, 928 lines from the archive).
    - The specs, brainstorming, audits and QA registers are retired: QA procedures move to `docs/guides/qa/`, and ideas to `docs/product/ideas.md`.
-   - The 27 Deferred rows become 18 self-contained Waiting rows and 5 ideas; the rest are dropped as shipped or obsolete.
+   - The 27 Deferred rows become 19 self-contained Waiting rows (two pairs merged) and 2 product ideas; DEBT-472's fired trigger becomes DEBT-519, and 3 rows are dropped as shipped, obsolete or superseded. The three idle brainstorms join the ideas list.
    - The guard requires unique IDs, rejects files left in a retired folder, and rejects links into records outside the index.
    - `scripts/next-record-id.ts` computes IDs.
    - `AGENTS.md`'s records sections become a pointer.
@@ -217,7 +216,7 @@ Each pull request stands alone, with no reservations or waits on other sessions.
    - the stale snapshots deleted, and the contradictions fixed;
    - the ADR README, the amendments, and ADR-024 to ADR-027.
 5. **Archive removal.**
-   - Permanent links replace the remaining live links into the archive; most of the 469 are gone with their files by then.
+   - Permanent links replace the remaining live links into the archive; most are gone with their files by then.
    - `docs/_archive/` is deleted, along with the asset folders only it links.
    - A guard bans the string `docs/_archive/`.
    - A CodeRabbit path filter lands first, because the deletion spans about 1,460 files.

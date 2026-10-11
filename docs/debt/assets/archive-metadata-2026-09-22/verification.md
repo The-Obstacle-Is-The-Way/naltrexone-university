@@ -2,7 +2,7 @@
 
 ## Authority and evidence limits
 
-Owner-directed follow-through on the existing [archive convention](../../../../AGENTS.md#closing-and-archiving-documentation-records), not a new debt record or a declaration that unfinished work shipped. Baseline dev `1fec454c`, main `66172ad6`, common tree `be746740cd1ec4315291f113b250d6a2b465f310`; fetch succeeded, the working tree was clean and GitHub listed no open PRs.
+Owner-directed follow-through on the existing [archive convention](../../../records/README.md#how-records-work), not a new debt record or a declaration that unfinished work shipped. Baseline dev `1fec454c`, main `66172ad6`, common tree `be746740cd1ec4315291f113b250d6a2b465f310`; fetch succeeded, the working tree was clean and GitHub listed no open PRs.
 
 Backfill precedes the guard follow-up. The affected set is bounded, but the proposed census and date assumptions were not accurate enough to encode as a temporary exception list. Each maintenance PR keeps the existing guard green; the final tooling PR will prove the new forbidden states red against synthetic fixtures. It will not add a permanent historical-disposition allowlist. The external proposed test file has not been copied into the tree.
 

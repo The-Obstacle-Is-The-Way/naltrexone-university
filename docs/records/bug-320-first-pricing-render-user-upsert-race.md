@@ -1,6 +1,5 @@
 # BUG-320: A New User's First Visit Can Fail When Two Requests Create Their Row at Once
 
-
 **Status:** Verifying — no `User could not be upserted` error in Sentry for two weeks after the deploy; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-05

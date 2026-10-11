@@ -1,6 +1,5 @@
 # DEBT-503: Clerk's Shared Backend API Allowance Is a Single Point of Failure
 
-
 **Status:** In Progress — items 1, 3 and 5 released, item 5's key set in production 2026-10-11 and its deploy check corrected the same day; item 4 due 2026-10-21; item 2 waits for its trigger
 **Priority:** P2
 **Date:** 2026-10-05
@@ -117,7 +116,6 @@ This record holds the structural fixes, so that the allowance stops being the on
     3. **Alert when that signed-in bucket refuses,** as its own kind. Then real people were refused, which a bot cannot cause without real accounts, and the response is raising that limit.
   - **Due 2026-10-21,** after item 5, which step 2 needs, and before the first live sale in any case.
 
-
 ### 5. Verify session tokens without Clerk's network (P2)
 
 - **Evidence** (2026-10-10, item 3's real-SDK test).
@@ -163,7 +161,7 @@ This record holds the structural fixes, so that the allowance stops being the on
 
 ## Verification
 
-Criteria to meet before closing: each item shipped with red-first tests, or deferred with its trigger in the register.
+Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index.
 
 ## Related
 

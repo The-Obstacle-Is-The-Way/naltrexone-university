@@ -1,6 +1,5 @@
 # DEBT-516: CI's Database Image Depends on One Registry
 
-
 **Status:** Verifying — CI pulls Postgres from the first of three registries serving its digest, and compose pins it too; after promotion, `main`'s CI logs which one served it; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09

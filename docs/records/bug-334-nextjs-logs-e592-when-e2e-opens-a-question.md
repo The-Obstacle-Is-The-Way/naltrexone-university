@@ -1,6 +1,5 @@
 # BUG-334: Next.js Logs Invariant E592 When E2E Opens a Question
 
-
 **Status:** Open — upstream Next.js bug (vercel/next.js#99500); no failed request found; the owner's production check and the Next.js fix remain
 **Priority:** P3
 **Date:** 2026-10-09

@@ -1,6 +1,5 @@
 # BUG-325: Malformed Anonymous Requests Make Our Code Throw and Write Oversized Error Logs
 
-
 **Status:** Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20
 **Priority:** P3 (first drafted as P2; lowered 2026-10-05, see item 5)
 **Date:** 2026-10-05 (found); filed 2026-10-06
@@ -116,7 +115,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 **Known gap.**
 - The new checkout-success tests hand-build their dependencies and Stripe's error, as the existing checkout-success tests do.
 - The maintained `FakeStripeCheckoutClient` throws a plain error for an unknown session, not Stripe's `resource_missing`.
-- Giving it Stripe's answer needs a shared provider-contract scenario. That is carried to this register's Deferred table at closeout.
+- Giving it Stripe's answer needs a shared provider-contract scenario. At closeout it becomes a Waiting row in the records index.
 
 ## Verification
 

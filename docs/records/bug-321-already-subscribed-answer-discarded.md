@@ -1,6 +1,5 @@
 # BUG-321: Stripe's "Already Subscribed" Answer Is Discarded for Signed-In Users
 
-
 **Status:** In Progress — the fix is in production; a provider-contract test of the refused checkout's Stripe list and sync remains (AUDIT-015)
 **Priority:** P2
 **Date:** 2026-10-05

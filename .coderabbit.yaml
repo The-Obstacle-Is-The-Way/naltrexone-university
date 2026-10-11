@@ -208,6 +208,8 @@ knowledge_base:
       - "**/AGENTS.md"
       - "**/CLAUDE.md"
       - ".claude/rules/**"
+      # The records rules govern docs/records/**, the folder this file is in.
+      - "docs/records/README.md"
       - "docs/specs/master_spec.md"
       - "docs/frontend/standards.md"
       - "docs/frontend/design-principles.md"

@@ -1,6 +1,5 @@
 # DEBT-500: Vitest 5 Needs a Coordinated Migration
 
-
 **Status:** Open — the grouped Dependabot PR #1451 is the migration vehicle; resolution decided in the record
 **Priority:** P3
 **Date:** 2026-10-05

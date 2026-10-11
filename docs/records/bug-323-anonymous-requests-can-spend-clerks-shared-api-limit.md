@@ -1,6 +1,5 @@
 # BUG-323: Anonymous Requests Can Spend Clerk's Shared Backend API Limit
 
-
 **Status:** Verifying — owner confirms the production limiter writes its rows; due 2026-10-19
 **Priority:** P1
 **Date:** 2026-10-05

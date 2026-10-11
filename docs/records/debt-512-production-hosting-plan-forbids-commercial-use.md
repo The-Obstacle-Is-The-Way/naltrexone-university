@@ -1,6 +1,5 @@
 # DEBT-512: Production Runs on a Hosting Plan Whose Terms Forbid Commercial Use
 
-
 **Status:** Open — the owner keeps Hobby until the first live sale (decided 2026-10-09), then moves production to Vercel Pro
 **Priority:** P2
 **Date:** 2026-10-08

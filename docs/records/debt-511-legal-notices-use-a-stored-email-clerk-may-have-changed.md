@@ -1,6 +1,5 @@
 # DEBT-511: Legal Notices Go to a Stored Email That Clerk May Have Changed
 
-
 **Status:** Open — resolution decided below; built on DEBT-502's identity resolver, and due before 35 days ahead of the earliest live renewal
 **Priority:** P2
 **Date:** 2026-10-07

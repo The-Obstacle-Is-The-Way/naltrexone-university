@@ -1,6 +1,5 @@
 # DEBT-510: Codecov Sometimes Drops the Patch Notification After a Successful Upload
 
-
 **Status:** Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22
 **Priority:** P3
 **Date:** 2026-10-07

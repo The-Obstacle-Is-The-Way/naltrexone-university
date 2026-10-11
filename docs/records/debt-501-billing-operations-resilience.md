@@ -1,6 +1,5 @@
 # DEBT-501: Billing Operations Can Leave Payers Without Access as the Service Grows or Changes
 
-
 **Status:** Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items
 **Priority:** P2
 **Date:** 2026-10-05
@@ -122,7 +121,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 ## Verification
 
-Criteria to meet before closing: each item shipped with red-first tests, or deferred with its trigger in the register; and item 7's live purchase recorded.
+Criteria to meet before closing: each item shipped with red-first tests, or left as a Waiting row with its trigger in the records index; and item 7's live purchase recorded.
 
 ## Related
 

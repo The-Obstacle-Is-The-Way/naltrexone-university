@@ -1,6 +1,5 @@
 # BUG-319: Subscribe and Add-Card Fail for a Page Loaded Before a Deploy
 
-
 **Status:** Verifying — the Sentry checks, and a real-SDK test that the stale-action event reaches Sentry; due 2026-10-19
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
 **Date:** 2026-10-05

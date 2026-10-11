@@ -1,6 +1,5 @@
 # DEBT-515: CodeRabbit Learns Lasting Rules From Agents Speaking as the Owner
 
-
 **Status:** Verifying — after promotion, the first weekly learnings issue opens and new learnings wait for approval; due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-09
@@ -50,7 +49,7 @@ No defect is known to have shipped because of a learning. The cost is assurance.
   - **In the repository:** `.coderabbit.yaml` now gives `docs/records/**` path instructions that cite the records rules and override any stored learning. AGENTS.md's CodeRabbit Learnings section says what to do with the next learning that contradicts it.
   - **The pattern.** Stale backlog learnings are the risk the hold cannot reach. This is a second one, after #1430's, so it strengthens the case for triaging the backlog's 72 flagged learnings, or resetting the knowledge base.
 - **Backlog, the owner's call.** The 250 learnings recorded before the hold applied at once. The owner either triages the 72 flagged ones in CodeRabbit's app, or resets the knowledge base: `knowledge_base.opt_out: true` deletes every stored learning, and turning it off again starts a clean, held one. A reset also loses the accurate learnings that keep CodeRabbit from repeating false positives, so triage comes first.
-- **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. The register's Now stanza lists it among the owner's decisions; it moves to the Deferred table when this record is archived.
+- **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. The records index's Now stanza lists it among the owner's decisions; it becomes a Waiting row when this record closes.
 
 ## Verification
 

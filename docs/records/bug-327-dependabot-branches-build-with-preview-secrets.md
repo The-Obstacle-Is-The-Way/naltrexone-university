@@ -1,6 +1,5 @@
 # BUG-327: Dependabot Branches Are Built on Vercel With Preview Secrets
 
-
 **Status:** Verifying — no Dependabot head deploys; a Dependabot merge through the tooling remains; due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-05 (found); filed 2026-10-06

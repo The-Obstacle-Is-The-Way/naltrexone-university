@@ -1,6 +1,5 @@
 # DEBT-514: lint-staged Can Stage Another Session's Work
 
-
 **Status:** Open — lint-staged held at 17.5.1; safe upgrade requires a tested safeguard or enforced worktree isolation
 **Priority:** P2
 **Date:** 2026-10-06

@@ -356,7 +356,7 @@ Framework code lives in:
 
 4. **Composition root** - Dependencies are wired at entry points via `lib/container.ts`, `lib/container/**`, and `lib/controller-helpers.ts`, not ad hoc imports inside use cases.
 
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-022; `docs/adr/index.md` lists each status).
+See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-023; `docs/adr/index.md` lists each status).
 
 ## Tech Stack
 
@@ -921,7 +921,7 @@ Leave a blank line before and after every heading in live Markdown (MD022). ADRs
 **Key documents:**
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-022 accepted; ADR-019 and ADR-022 as amended 2026-10-03)
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-023 accepted; ADR-019 and ADR-022 as amended 2026-10-03)
 - `docs/records/README.md` — Open bug and debt records, and how records work; `docs/records/closed.md` is the ledger of closed ones
 - `docs/guides/qa/README.md` — UI QA procedures (method in `docs/dev/qa-procedures.md`)
 - `docs/product/ideas.md` — Unscheduled product ideas

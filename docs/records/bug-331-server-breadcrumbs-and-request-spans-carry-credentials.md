@@ -1,6 +1,5 @@
 # BUG-331: Server Breadcrumbs and Request Spans Carry Credentials the Scrubbers Miss
 
-
 **Status:** Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-08

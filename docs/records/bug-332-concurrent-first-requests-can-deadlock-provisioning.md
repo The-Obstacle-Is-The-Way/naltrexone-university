@@ -1,6 +1,5 @@
 # BUG-332: A New User's Concurrent First Requests Can Deadlock Provisioning
 
-
 **Status:** Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-08

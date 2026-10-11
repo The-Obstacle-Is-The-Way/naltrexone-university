@@ -1,6 +1,5 @@
 # BUG-329: Long Clone Names Change the Local Test Target in Child Commands
 
-
 **Status:** Open — canonicalize generated instance names before passing them to child commands
 **Priority:** P4
 **Date:** 2026-10-06

@@ -1,10 +1,10 @@
 # Closed Records
 
-One line per closed record: ID · title · disposition · date closed · path.
+One line per closed record: `ID · title · disposition · date · path`. A record closed from 2026-10-11 on adds ` · #PR · commit`: the closing pull request, and the last commit that held the record. For a record closed earlier, the date is the day it moved to the archive (for the four audits with no file, the audit date).
 
 Every record closed before 2026-10-11 is readable at commit `63a8f220324b`, on GitHub at `https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/63a8f220324b1b6b363913a4cf0865663c8dacc1/<path>` or offline with `git show 63a8f220324b:<path>`.
 
-A record closed later adds the commit of its last version after its path. The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/register-*.md` at the same commit.
+The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/register-*.md` at the same commit.
 
 ## Bugs
 
@@ -187,11 +187,11 @@ A record closed later adds the commit of its last version after its path. The fr
 - BUG-196 · Practice Session Review Stage loadReview Double-Call Race · Fixed · 2026-03-03 · docs/_archive/bugs/bug-196-review-stage-load-review-double-call-race.md
 - BUG-197 · SubmitAnswer Two-Phase Write Without Transaction · Fixed · 2026-03-03 · docs/_archive/bugs/bug-197-submit-answer-two-phase-write-without-transaction.md
 - BUG-198 · Idempotency Key Zombie on Server Crash · Fixed · 2026-03-03 · docs/_archive/bugs/bug-198-idempotency-key-zombie-on-server-crash.md
-- BUG-199 · ~~BUG-199~~ → INVALIDATED: Stripe Subscription Items Are Already Validated Upstream · Invalidated · 2026-03-08 · docs/_archive/bugs/bug-199-unsafe-array-index-access.md
-- BUG-200 · ~~BUG-200~~ → RECLASSIFIED as DEBT-286 · Reclassified · 2026-03-08 · docs/_archive/bugs/bug-200-production-error-observability-gaps.md
+- BUG-199 · BUG-199 → INVALIDATED: Stripe Subscription Items Are Already Validated Upstream · Invalidated · 2026-03-08 · docs/_archive/bugs/bug-199-unsafe-array-index-access.md
+- BUG-200 · BUG-200 → RECLASSIFIED as DEBT-286 · Reclassified · 2026-03-08 · docs/_archive/bugs/bug-200-production-error-observability-gaps.md
 - BUG-201 · Clerk Webhook Route Uses an Unnecessary Output Cast · Resolved · 2026-03-08 · docs/_archive/bugs/bug-201-clerk-webhook-double-cast.md
 - BUG-202 · Redundant Condition After `.find()` · Resolved · 2026-03-08 · docs/_archive/bugs/bug-202-redundant-condition-after-find.md
-- BUG-203 · ~~BUG-203~~ → INVALIDATED: `whsec_dummy` Fallback Is Not Used by Clerk Webhook Verification · Invalidated · 2026-03-10 · docs/_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md
+- BUG-203 · BUG-203 → INVALIDATED: `whsec_dummy` Fallback Is Not Used by Clerk Webhook Verification · Invalidated · 2026-03-10 · docs/_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md
 - BUG-204 · Billing Portal Session Creation Lacks Abuse Controls · Resolved · 2026-03-10 · docs/_archive/bugs/bug-204-billing-portal-missing-abuse-controls.md
 - BUG-205 · Reconciliation Prefers Stale Local Subscription Over Canonical Stripe State · Resolved · 2026-03-11 · docs/_archive/bugs/bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md
 - BUG-206 · Raw DB Errors Escape Adapter Layer via `throw error` Fallback · Resolved · 2026-03-14 · docs/_archive/bugs/bug-206-raw-db-errors-escape-adapter-layer.md
@@ -940,12 +940,12 @@ A record closed later adds the commit of its last version after its path. The fr
 - AUDIT-002 · Foundation Audit Report #2 · Resolved · 2026-02-11 · docs/_archive/audits/audit-002-foundation-report-2.md
 - AUDIT-003 · External Integrations Review · Resolved · 2026-02-11 · docs/_archive/audits/audit-003-external-integrations.md
 - AUDIT-004 · Spec Alignment Audit (2026-02-06) · Resolved · 2026-02-11 · docs/_archive/audits/audit-004-spec-alignment.md
-- AUDIT-005 · Six-Axis Codebase Bug Sweep · Resolved · 2026-02-22 · docs/audits/index.md (row only; no file)
-- AUDIT-006 · Full-Stack Bug Sweep with 5 Parallel Agents · Resolved · 2026-02-25 · docs/audits/index.md (row only; no file)
-- AUDIT-007 · Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs · Resolved · 2026-02-27 · docs/audits/index.md (row only; no file)
+- AUDIT-005 · Six-Axis Codebase Bug Sweep · Resolved · 2026-02-22 · docs/_archive/bugs/register-frozen-2026-10-05.md (section "Audit #5"; it had no file of its own)
+- AUDIT-006 · Full-Stack Bug Sweep with 5 Parallel Agents · Resolved · 2026-02-25 · docs/_archive/bugs/register-frozen-2026-10-05.md (section "Audit #6"; it had no file of its own)
+- AUDIT-007 · Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs · Resolved · 2026-02-27 · docs/_archive/bugs/register-frozen-2026-10-05.md (section "Audit #7"; it had no file of its own)
 - AUDIT-008 · Bug Audit #8 — Deep Codebase Sweep (Verified) · Resolved · 2026-03-02 · docs/_archive/audits/audit-008-deep-codebase-sweep.md
 - AUDIT-009 · Bug Audit #9 — Stripe Integration & Full Codebase Sweep · Resolved · 2026-03-10 · docs/_archive/audits/audit-009-stripe-and-codebase-sweep.md
-- AUDIT-010 · Exam Secrecy and Cross-Layer Invariant Sweep · Resolved · 2026-03-19 · docs/audits/index.md (row only; no file)
+- AUDIT-010 · Exam Secrecy and Cross-Layer Invariant Sweep · Resolved · 2026-03-02 · docs/_archive/bugs/register-frozen-2026-10-05.md (section "Audit #10"; it had no file of its own)
 - AUDIT-011 · Error Observability & Defensive Coding Sweep · Resolved · 2026-03-19 · docs/_archive/audits/audit-011-error-observability-defensive-coding.md
 - AUDIT-012 · Repository Organization, Dev Tooling, and Agent Documentation · Resolved · 2026-06-14 · docs/_archive/audits/audit-012-repo-org-devx.md
 - AUDIT-013 · Security Review of Recent Work · Resolved · 2026-10-06 · docs/_archive/audits/audit-013-security-review-2026-10-05.md

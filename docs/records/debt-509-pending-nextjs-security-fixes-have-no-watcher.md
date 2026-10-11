@@ -1,6 +1,5 @@
 # DEBT-509: Pending Next.js Security Fixes Have No Watcher
 
-
 **Status:** Open — rule decided; the watcher covers every repository behind `pnpm-lock.yaml`, and its scheduled runs read them; waiting for `vite` 8.3.3 and the two pending Next.js fixes
 **Priority:** P2
 **Date:** 2026-10-07
