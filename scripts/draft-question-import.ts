@@ -1,5 +1,5 @@
 import path from 'node:path';
-import matter from 'gray-matter';
+import matter from '@11ty/gray-matter';
 import { z } from 'zod';
 import {
   CANONICAL_SUBSTANCE_DISPLAY_NAMES,

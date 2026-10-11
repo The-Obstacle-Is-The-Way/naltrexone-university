@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from '@typescript/typescript6';
-import fg from 'fast-glob';
+import { globSync } from 'tinyglobby';
 
 export {
   collectHandRolledPortDoubleOccurrences,
@@ -222,12 +222,12 @@ export const UNKNOWN_CAST_ALLOWLIST: readonly UnknownCastAllowlistRule[] = [
 ];
 
 export function readTestSources(): TestSourceFile[] {
-  return fg
-    .sync(TEST_FILE_GLOBS, {
-      cwd: process.cwd(),
-      ignore: TEST_FILE_IGNORE_GLOBS,
-      onlyFiles: true,
-    })
+  return globSync(TEST_FILE_GLOBS, {
+    cwd: process.cwd(),
+    expandDirectories: false,
+    ignore: TEST_FILE_IGNORE_GLOBS,
+    onlyFiles: true,
+  })
     .sort()
     .map((filePath) => ({
       filePath,

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from '@typescript/typescript6';
-import fg from 'fast-glob';
+import { globSync } from 'tinyglobby';
 
 export type ArchitectureSourceFile = {
   filePath: string;
@@ -68,12 +68,12 @@ const QUESTION_ROUTE_ROOT = 'app/(app)/app/questions/[slug]/';
 const QUESTION_ROUTE_HOOKS_ROOT = `${QUESTION_ROUTE_ROOT}hooks/`;
 
 export function readProductionArchitectureSources(): ArchitectureSourceFile[] {
-  return fg
-    .sync(PRODUCTION_ARCHITECTURE_SOURCE_GLOBS, {
-      cwd: process.cwd(),
-      ignore: PRODUCTION_ARCHITECTURE_SOURCE_IGNORE_GLOBS,
-      onlyFiles: true,
-    })
+  return globSync(PRODUCTION_ARCHITECTURE_SOURCE_GLOBS, {
+    cwd: process.cwd(),
+    expandDirectories: false,
+    ignore: PRODUCTION_ARCHITECTURE_SOURCE_IGNORE_GLOBS,
+    onlyFiles: true,
+  })
     .sort()
     .map((filePath) => ({
       filePath,
@@ -82,12 +82,11 @@ export function readProductionArchitectureSources(): ArchitectureSourceFile[] {
 }
 
 export function readRepositoryTypescriptFilePaths(): string[] {
-  return fg
-    .sync(REPOSITORY_TYPESCRIPT_FILE_GLOBS, {
-      cwd: process.cwd(),
-      onlyFiles: true,
-    })
-    .sort();
+  return globSync(REPOSITORY_TYPESCRIPT_FILE_GLOBS, {
+    cwd: process.cwd(),
+    expandDirectories: false,
+    onlyFiles: true,
+  }).sort();
 }
 
 export function collectArchitectureBoundaryIssues(

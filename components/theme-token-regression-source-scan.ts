@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import fg from 'fast-glob';
+import { globSync } from 'tinyglobby';
 
 type SourceFile = {
   filePath: string;
@@ -73,12 +73,12 @@ export const DOCUMENTED_OPACITY_TOKENS = new Set([
 export const TEMPORARY_OPACITY_EXEMPTIONS: readonly OpacityExemption[] = [];
 
 export function readProductionUiSources(): SourceFile[] {
-  return fg
-    .sync(PRODUCTION_UI_SOURCE_GLOBS, {
-      cwd: process.cwd(),
-      ignore: PRODUCTION_UI_SOURCE_IGNORE_GLOBS,
-      onlyFiles: true,
-    })
+  return globSync(PRODUCTION_UI_SOURCE_GLOBS, {
+    cwd: process.cwd(),
+    expandDirectories: false,
+    ignore: PRODUCTION_UI_SOURCE_IGNORE_GLOBS,
+    onlyFiles: true,
+  })
     .sort()
     .map((filePath) => ({
       filePath,
