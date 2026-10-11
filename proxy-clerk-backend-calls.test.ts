@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   limitClerkBackendCalls,
   raiseLimiterFailureAlert,
+  raiseOperationalAlert,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
 import {
@@ -295,6 +296,43 @@ describe('limiting requests that make Clerk call its Backend API', () => {
 
   // Failing closed would break every real session refresh while the database
   // is down; the firewall rule still bounds the volume.
+  // DEBT-503 item 3: a refusal names the limit that tripped, never the
+  // address or session.
+  it.each([
+    ['address', [OVER_LIMIT]],
+    ['session', [UNDER_LIMIT, OVER_LIMIT]],
+    ['site', [UNDER_LIMIT, UNDER_LIMIT, OVER_LIMIT]],
+  ] as const)(
+    'names the %s limit when it refuses a call',
+    async (limit, answers) => {
+      const refused: string[] = [];
+
+      await limitClerkBackendCalls(
+        fromAddress('https://example.com/pricing', {
+          cookie: `__session=${sessionToken(1, 'sess_busy')}; __refresh_abc=x`,
+        }),
+        async () => new FakeRateLimiter([...answers]),
+        () => {},
+        (tripped) => refused.push(tripped),
+      );
+
+      expect(refused).toEqual([limit]);
+    },
+  );
+
+  it('names no limit when every limit lets the call through', async () => {
+    const refused: string[] = [];
+
+    await limitClerkBackendCalls(
+      fromAddress('https://example.com/?__clerk_handshake_nonce=x'),
+      async () => new FakeRateLimiter([UNDER_LIMIT, UNDER_LIMIT]),
+      () => {},
+      (tripped) => refused.push(tripped),
+    );
+
+    expect(refused).toEqual([]);
+  });
+
   it('lets the request through and reports when the limiter fails', async () => {
     const reports: unknown[] = [];
 
@@ -326,6 +364,21 @@ describe('limiting requests that make Clerk call its Backend API', () => {
 
 // DEBT-505: the limiter failing is BUG-323's alert. The log alone reaches
 // nobody.
+describe('an operational alert raised after the response', () => {
+  it('raises the given kind once', async () => {
+    const alerts = new FakeOperationalAlerts();
+
+    await raiseOperationalAlert(
+      async () => alerts,
+      'clerk_backend_calls_refused',
+    );
+
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_backend_calls_refused', count: 1 },
+    ]);
+  });
+});
+
 describe('the limiter failure alert', () => {
   it('raises one limiter-failure alert', async () => {
     const alerts = new FakeOperationalAlerts();
@@ -413,6 +466,7 @@ describe('proxy with the Clerk Backend API limit', () => {
     limiter: FakeRateLimiter,
     publishableKey = 'pk_live_x',
     alertsLoaded: Promise<void> = Promise.resolve(),
+    clerkAnswers: () => Response = () => NextResponse.next(),
   ) {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = publishableKey;
@@ -420,7 +474,7 @@ describe('proxy with the Clerk Backend API limit', () => {
     vi.doMock('@clerk/nextjs/server', () => ({
       clerkMiddleware: () => async () => {
         clerkRuns();
-        return NextResponse.next();
+        return clerkAnswers();
       },
       createRouteMatcher: () => () => true,
     }));
@@ -536,6 +590,55 @@ describe('proxy with the Clerk Backend API limit', () => {
     ]);
   });
 
+  // DEBT-503 item 3: a site-wide trip is logged for diagnosis and alerts the
+  // owner, after the response, under its own kind: returning visitors
+  // everywhere are waiting, and the response is Attack Challenge Mode.
+  it('logs a site-wide refusal and raises its own alert through waitUntil', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter([OVER_LIMIT]),
+    );
+    const [request, event] = proxyInvocation(
+      'https://example.com/pricing?__clerk_handshake_nonce=x',
+    );
+
+    const response = await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(response?.status).toBe(429);
+    // The invocation carries no client address, so the site limit refuses.
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_refused',
+      limit: 'site',
+    });
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_site_limit_reached', count: 1 },
+    ]);
+  });
+
+  // One client over its own limit is the limit working, and needs no one; an
+  // alert for it would also spend the cooldown of an alert that does.
+  it('logs a per-address refusal and raises nothing', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter([OVER_LIMIT]),
+    );
+    const [request, event] = proxyInvocation(
+      'https://example.com/pricing?__clerk_handshake_nonce=x',
+    );
+    request.headers.set('x-vercel-forwarded-for', '203.0.113.7');
+
+    const response = await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(response?.status).toBe(429);
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_refused',
+      limit: 'address',
+    });
+    expect(alerts.raised).toEqual([]);
+  });
+
   it('raises no alert while the limiter works', async () => {
     const { proxy, alerts } = await proxyWith(
       new FakeRateLimiter([UNDER_LIMIT, UNDER_LIMIT, UNDER_LIMIT]),
@@ -547,6 +650,76 @@ describe('proxy with the Clerk Backend API limit', () => {
     await proxy(request, event);
     await getWaitUntilPromiseFromEvent(event);
 
+    expect(alerts.raised).toEqual([]);
+  });
+
+  // DEBT-503 item 3: Clerk's middleware swallows Clerk failing its own calls,
+  // and says so only in its auth reason. The owner hears of it after the
+  // response; `lib/clerk-call-failures-sdk.test.ts` reads that reason from the
+  // real middleware.
+  function clerkFailed(reason: string) {
+    return () => {
+      const response = NextResponse.next();
+      response.headers.set('x-clerk-auth-reason', reason);
+      return response;
+    };
+  }
+
+  it('alerts after the response when Clerk could not load its signing keys', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { proxy, alerts } = await proxyWith(
+      new FakeRateLimiter(),
+      'pk_live_x',
+      Promise.resolve(),
+      clerkFailed('jwk-remote-failed-to-load'),
+    );
+    const [request, event] = proxyInvocation();
+
+    await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(warned).toHaveBeenCalledWith({
+      event: 'clerk_backend_call_failed',
+      call: 'keys',
+    });
+    expect(alerts.raised).toEqual([
+      { kind: 'clerk_signing_keys_unavailable', count: 1 },
+    ]);
+  });
+
+  it('counts a refresh Clerk failed toward the alert threshold', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const limiter = new FakeRateLimiter();
+    const { proxy, alerts } = await proxyWith(
+      limiter,
+      'pk_live_x',
+      Promise.resolve(),
+      clerkFailed('session-token-expired-refresh-too_many_requests'),
+    );
+    const [request, event] = proxyInvocation();
+
+    await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(limiter.inputs.map(({ key }) => key)).toEqual([
+      'clerk-backend-call-failed:site',
+    ]);
+    expect(alerts.raised).toEqual([]);
+  });
+
+  it("leaves a development instance's Clerk failures unreported", async () => {
+    const { proxy, alerts, loadBackendCallLimiter } = await proxyWith(
+      new FakeRateLimiter(),
+      'pk_test_x',
+      Promise.resolve(),
+      clerkFailed('jwk-remote-failed-to-load'),
+    );
+    const [request, event] = proxyInvocation();
+
+    await proxy(request, event);
+    await getWaitUntilPromiseFromEvent(event);
+
+    expect(loadBackendCallLimiter).not.toHaveBeenCalled();
     expect(alerts.raised).toEqual([]);
   });
 

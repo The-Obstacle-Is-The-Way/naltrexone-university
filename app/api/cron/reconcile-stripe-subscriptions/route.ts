@@ -81,6 +81,7 @@ export function createReconcileStripeSubscriptionsCronHandler(
     return {
       cronSecret: container.env.CRON_SECRET,
       logger: container.logger,
+      operationalAlerts: container.createOperationalAlerts(),
       createRateLimiter: container.createRateLimiter,
       reconcilePage,
       reconcileAllPages: (input) =>

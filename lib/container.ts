@@ -1,5 +1,6 @@
 import 'server-only';
 import { NobleSha256Hasher } from '@/src/adapters/gateways';
+import { alertWhenClerkRefuses } from '@/src/adapters/gateways/clerk-refusal-alert';
 import { createControllerFactories } from './container/controllers';
 import { createGatewayFactories } from './container/gateways';
 import { createRepositoryFactories } from './container/repositories';
@@ -67,12 +68,20 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     return (await auth()).userId ?? null;
   };
 
-  const getClerkUserById = async (clerkUserId: string) => {
-    if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') return null;
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    const client = await clerkClient();
-    return client.users.getUser(clerkUserId);
-  };
+  // DEBT-503 item 3: Clerk answering 429 alerts the owner. The alerts come
+  // from the finished gateways, built below, when a refusal first occurs.
+  const getClerkUserById = alertWhenClerkRefuses(
+    async (clerkUserId: string) => {
+      if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') return null;
+      const { clerkClient } = await import('@clerk/nextjs/server');
+      const client = await clerkClient();
+      return client.users.getUser(clerkUserId);
+    },
+    {
+      alerts: () => gateways.createOperationalAlerts(),
+      logger: primitives.logger,
+    },
+  );
 
   const repositoryFactories = createRepositoryFactories(
     primitives,
