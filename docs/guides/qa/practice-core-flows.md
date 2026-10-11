@@ -9,7 +9,7 @@
 **Promotion gate:** yes
 **Promoted to:** — (overlaps `practice.spec.ts`, `session-continuation.spec.ts`; this procedure keeps the judgment checks and the not-yet-automated edges)
 
-This procedure is written to absorb Flows A–C of the Core Flow Verification section in `docs/dev/stabilization-checklist.md` once it is Active (that section remains in place until then). Behavior contracts cited below live in `docs/product/practice/interaction-contracts.md` and `docs/product/practice/exam-answer-secrecy.md`.
+This procedure absorbed the stabilization checklist's core flows, including review, bookmarks and the dashboard (Flow D). Behavior contracts cited below live in `docs/product/practice/interaction-contracts.md` and `docs/product/practice/exam-answer-secrecy.md`.
 
 ---
 
@@ -49,10 +49,19 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 | 20 | Activate a choice; if using keyboard/AT or the agent label-click fallback, press **Submit** when it appears | Verdict pill + explanation render (tutor-style feedback); **Next** loads another question |
 | 21 | ⚠ Switch the status filter (e.g. to "Incorrect") | Question pool and counts change accordingly |
 
+## Steps — Review, bookmarks and dashboard
+
+| # | Action | Expected |
+|---|--------|----------|
+| 22 | Go to `/app/history` | The Sessions and Questions tabs both render |
+| 23 | Go to `/app/bookmarks`; remove one bookmark | The list shows bookmarks, and the removed one disappears after confirming |
+| 24 | Go to `/app/dashboard` | Stats and recent activity render |
+| 25 | During an active exam session, open the dashboard, History, and a question in that session | No surface reveals correctness or explanations before the exam ends ([exam answer secrecy](../../product/practice/exam-answer-secrecy.md)) |
+
 ## Visual checks
 
 - [ ] Entire flow renders forced-dark; no light-mode leakage anywhere (DEBT-421 invariant)
-- [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/design-system/pattern-registry.md` I-3 / `docs/frontend/pages/quick-practice.md`
+- [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/design-system/pattern-registry.md` I-3
 - [ ] Action bar stays reachable on long questions (sticky bottom bar; whole-page scroll) — `docs/design-system/layout.md`
 - [ ] Focus rings on all interactive controls are the canonical ring — `docs/design-system/standards.md` §3
 - [ ] Question stem and choices render at the Primary content tier (`text-base`, 16px); the post-submit explanation is promoted to Primary per the Feedback Context Override — `docs/design-system/typography.md` § Content Tier System

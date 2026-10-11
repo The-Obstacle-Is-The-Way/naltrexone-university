@@ -198,11 +198,10 @@ History question filters:
 
 - Use [tag-taxonomy-golden-spec.md](../product/content-taxonomy.md) for the
   canonical slug and display-name tables.
-- Use [question-format-spec.md](./question-format-spec.md) for authoring and
+- Use the importer's schema (`scripts/draft-question-import.ts`, `lib/content/schemas.ts`) for authoring and
   parser rules.
-- Use the latest dated census report for coverage analysis instead of relying on
-  migration-era assumptions:
-  [tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
+- Measure coverage from the database rather than relying on migration-era
+  assumptions.
 - Do not derive taxonomy from directory structure or source-group names.
 - Do not surface diagnosis filters without an explicit product decision.
 
@@ -211,8 +210,6 @@ History question filters:
 ## 6) Related Files
 
 - [tag-taxonomy-golden-spec.md](../product/content-taxonomy.md)
-- [question-format-spec.md](./question-format-spec.md)
-- [tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
 - `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`
 - `docs/_archive/specs/spec-033-tag-taxonomy-migration.md`
 - `lib/content/draftTaxonomy.ts`

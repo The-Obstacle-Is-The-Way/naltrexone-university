@@ -1,6 +1,6 @@
 # Practice Engine: Security Model
 
-> **Parent:** [Practice Engine Index](./index.md)
+> **Parent:** [Documentation map](../README.md)
 > **Scope:** Authentication, authorization, rate limiting, idempotency, data isolation
 > **Last Verified:** 2026-03-17
 

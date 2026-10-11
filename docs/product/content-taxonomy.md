@@ -1,8 +1,8 @@
 # Tag Taxonomy — Golden Spec
 
 > **Status:** Implemented (2026-02-18 via SPEC-033; re-verified 2026-03-17)
-> **Companion docs:** [tag-taxonomy-pipeline.md](../content/tag-taxonomy-pipeline.md),
-> [question-format-spec.md](../content/question-format-spec.md)
+> **Companion docs:** [the tag taxonomy's implementation](../architecture/tag-taxonomy.md).
+> The authoring format is owned by the importer's schema, `scripts/draft-question-import.ts`, and `lib/content/schemas.ts`.
 >
 > This is the canonical taxonomy reference. Runtime implementation is aligned;
 > use this doc for slugs, display names, ordering, and migration intent.
@@ -196,16 +196,10 @@ The migration defined by this doc is complete.
 Use dated census reports for coverage analysis instead of relying on old
 migration-era expectations.
 
-Latest verified report:
-[tag-census-2026-03-17.md](../content/reports/tag-census-2026-03-17.md)
-
-As of 2026-03-17:
+The last census, on 2026-03-17 (its reports and script have since been removed), found:
 
 - Zero-count canonical slugs: substance `inhalants`
 - Low-count canonical slugs at the default `<= 3` threshold: none
-
-Historical snapshot:
-[tag-census-2026-02-18.md](../content/reports/tag-census-2026-02-18.md)
 
 ---
 

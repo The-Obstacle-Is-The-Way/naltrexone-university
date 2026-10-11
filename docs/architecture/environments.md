@@ -52,7 +52,7 @@ Owner ruling 2026-09-19, recorded 2026-09-20:
 
 ### Deploy Migration Contract
 
-[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
+[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs the checked-in Drizzle migrations, between ledger checks, before `pnpm build` ([the exact command](../guides/database/migrations.md)), so they apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
 
 ---
 
@@ -235,7 +235,7 @@ Do not run migrations by relying on implicit `.env.local` resolution. Every data
 
 **Prevention**
 
-The Vercel Build Command runs `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds (set in `vercel.json`), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
+The Vercel Build Command applies the checked-in migrations before `pnpm build` for git-triggered Preview and Production builds ([the exact command](../guides/database/migrations.md)), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
 
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
@@ -268,7 +268,7 @@ When changing environment configuration, verify all of the following:
 
 - [deployment-procedure.md](../guides/release/promote-to-production.md)
 - [database-rollbacks.md](../guides/operations/database-recovery.md)
-- [license-baseline.md](../dev/license-baseline.md)
+- [Supply-chain policy: licences](../policies/supply-chain.md#licences)
 - [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
 - [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
 - [proxy.ts](../../proxy.ts)

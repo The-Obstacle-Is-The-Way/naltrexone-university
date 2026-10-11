@@ -516,7 +516,7 @@ The remaining inline action bars on the question-review route are still separate
 
 | Document | Relevance |
 |----------|-----------|
-| [Frontend Layer](../practice-engine/frontend-layer.md) | Routes, hook architecture, data flow |
+| [Frontend Layer](./practice-engine.md#the-frontend-layer) | Routes, hook architecture, data flow |
 | [Practice Modes](../product/practice/modes.md) | Tutor vs Exam behavior differences |
 | [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) | Canonical correctness/explanation exposure timing contract |
 | [Retry Logic](../product/practice/retries.md) | Retry/reattempt SSOT including provenance, hydration states, and inline session-review retry contract |

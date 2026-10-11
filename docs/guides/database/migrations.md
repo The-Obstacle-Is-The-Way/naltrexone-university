@@ -128,16 +128,21 @@ Do not invoke the raw dependency CLI for repository work. It loads
 `drizzle.config.ts` directly and therefore does not provide the package entry's
 human acknowledgement boundary.
 
-Git-triggered Vercel Preview and Production deploys run a content/ledger
-pre-check, the checked-in migration journal, an exact post-check, and then the
-application build through the configured Build Command:
+Git-triggered Vercel Preview and Production deploys run the Build Command in
+`vercel.json`, which `vercel.test.ts` pins. It checks the Clerk JWT key against
+Clerk's published keys, runs a content/ledger pre-check, applies the
+checked-in migration journal, runs an exact post-check, and then builds:
 
 ```bash
-pnpm exec tsx scripts/verify-migration-ledger.ts pre \
+pnpm exec tsx scripts/check-clerk-jwt-key.ts \
+  && pnpm exec tsx scripts/verify-migration-ledger.ts pre \
   && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
   && pnpm exec tsx scripts/verify-migration-ledger.ts post \
   && pnpm build
 ```
+
+This guide is the only place that writes the command out; other documents link
+here.
 
 For any manual fallback or operator-run migration, pass the intended database
 explicitly:

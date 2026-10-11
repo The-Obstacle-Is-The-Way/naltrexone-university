@@ -7,14 +7,7 @@
 
 ## 1. Migration Contract: Build-Command Migration
 
-[BUG-241](../../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
-
-```bash
-pnpm exec tsx scripts/verify-migration-ledger.ts pre \
-  && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
-  && pnpm exec tsx scripts/verify-migration-ledger.ts post \
-  && pnpm build
-```
+[BUG-241](../../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command (`buildCommand` in `vercel.json`) checks the Clerk JWT key, then runs the ledger pre-check, the managed migration and the post-check, and then `pnpm build`. [The migrations guide](../database/migrations.md) writes out the exact command.
 
 The pre-check rejects applied-row content drift and ledger-only rows while
 allowing expected pending journal entries. Vercel then applies checked-in
@@ -230,7 +223,7 @@ Before merging to `main` (production deploy):
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
-- [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](../../architecture/environments.md#missing-database-migration-causes-silent-write-failures))
+- [ ] If schema changed: confirm the Vercel build ran the Build Command's migration step before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](../../architecture/environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
 
 ---
@@ -297,6 +290,6 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 ## Related
 
 - [Deployment Environments](../../architecture/environments.md) — Env var scoping, Clerk/Stripe/Neon config
-- [License Baseline](../../dev/license-baseline.md) — Production dependency license distribution and review-worthy exceptions
+- [Supply-chain policy: licences](../../policies/supply-chain.md#licences) — how dependency licences are reviewed
 - [Content Pipeline](../../architecture/content-pipeline.md) — MDX → seed → DB flow
 - [SPEC-033 §14](../../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure

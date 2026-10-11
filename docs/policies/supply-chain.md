@@ -559,3 +559,12 @@ If Vercel falls back to pnpm 10.x or fails before installing, stop and
 root-cause before merge. Possible fixes include an explicit install command
 or Corepack activation in Vercel configuration, but do not add those until
 the preview log proves they are necessary.
+
+## Licences
+
+A dependency's licence is reviewed when it is added, and a list is generated on demand with `pnpm licenses list --prod --long --json`, rather than kept as a snapshot that drifts.
+
+1. Add no direct dependency licensed `Unknown`, `FSL-*` or `LGPL-*` without an explicit review.
+2. A new licence bucket in that list is reviewed in the dependency PR that introduces it.
+3. A package that moves from a permissive licence to a restricted or unknown one is a dependency-hygiene finding, not a routine patch.
+4. No CI check enforces this; a licence allowlist check can be added if the list starts to move.

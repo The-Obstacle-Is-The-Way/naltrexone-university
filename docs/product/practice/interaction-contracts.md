@@ -1,6 +1,6 @@
 # Practice Engine: Interaction Contracts
 
-> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
+> **Parent:** [Practice](./README.md)
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./modes.md) (lifecycle/data), [BS-055](../../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam decisions), [BS-064](../../_archive/brainstorming/bs-064-radio-choice-modality-split.md) (Tutor/Quick choice modality decision)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.

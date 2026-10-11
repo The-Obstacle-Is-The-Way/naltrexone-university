@@ -92,7 +92,7 @@ schema to maintain; consult the linked source for the current inventory.
 The design keeps vendor identifiers in persistence rather than domain entities,
 uses timezone-aware timestamps, and preserves user/question/choice relationships
 through database constraints. Details such as normalized practice-question state
-belong to the physical schema and the owning [practice-engine contracts](../practice-engine/index.md),
+belong to the physical schema and the owning [practice contracts](../product/practice/README.md),
 not an independent implementation in this document.
 
 ---

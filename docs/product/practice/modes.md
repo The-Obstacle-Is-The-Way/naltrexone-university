@@ -1,6 +1,6 @@
 # Practice Engine: Practice Modes
 
-> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
+> **Parent:** [Practice](./README.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
 > **Last Verified:** 2026-07-07
 

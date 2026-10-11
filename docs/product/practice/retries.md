@@ -1,6 +1,6 @@
 # Practice Engine: Retry and Reattempt Logic
 
-> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
+> **Parent:** [Practice](./README.md)
 > **Scope:** Current retry/reattempt behavior, provenance rules, and cross-mode consistency
 > **Last Verified:** 2026-04-25
 
