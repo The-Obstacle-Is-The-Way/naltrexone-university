@@ -138,7 +138,7 @@ Stripe renders each event payload at the receiving endpoint's API version. An en
 | Surface | API version | Evidence |
 |---------|-------------|----------|
 | Code client pin | `2026-08-26.dahlia` | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`) |
-| Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Enabled; created 2026-06-04 by [DEBT-406](../_archive/debt/debt-406-stripe-live-endpoint-version-reconciliation.md); the only live endpoint |
+| Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Enabled; created 2026-06-04 by DEBT-406; the only live endpoint |
 | Test endpoint (the `dev` branch preview alias) | Found `null`, so the account default; now `2026-05-27.dahlia`, explicit | `we_1T19r…` (created 2026-02-15) had no version. It was replaced on 2026-10-11 by `we_1UPPK…`, see [Test endpoint rotation](#test-endpoint-rotation-2026-10-11). The only test endpoint |
 | Account default, live and test | `2026-01-28.clover` | `api_version` on the latest events in both modes |
 
@@ -161,7 +161,7 @@ Endpoints follow the code pin's **major release** (Dahlia, Endive, …), not eac
 
 The code handles 13 event types ([Webhooks We Handle](#webhooks-we-handle)); at the census the endpoints sent 7. Five of the six never sent report changes to a subscription: `customer.subscription.paused`, `customer.subscription.resumed`, `customer.subscription.pending_update_applied`, `customer.subscription.pending_update_expired` and `invoice.payment_action_required`. A subscribed `customer.subscription.updated` usually reports the same change, but this census did not confirm that for each of them.
 
-`checkout.session.expired` has no such substitute. PR #753 added its handling: a setup-mode add-card session that expires marks its trial payment-method setup operation `expired`. The renewal-notice cron's `pruneExpired` deletes only `expired` operations, so an abandoned add-card session stays `pending` and is never pruned. This confirms the gap that [DEBT-501](../debt/debt-501-billing-operations-resilience.md) item 7 suspected. Subscribing the live endpoint to all 13 handled events closes it. No backfill was needed: a live Stripe check on 2026-10-11 found no missed setup-mode expiry. The live receipt below covers subscription-mode expiry.
+`checkout.session.expired` has no such substitute. PR #753 added its handling: a setup-mode add-card session that expires marks its trial payment-method setup operation `expired`. The renewal-notice cron's `pruneExpired` deletes only `expired` operations, so an abandoned add-card session stays `pending` and is never pruned. This confirms the gap that DEBT-501 item 7 suspected. Subscribing the live endpoint to all 13 handled events closes it. No backfill was needed: a live Stripe check on 2026-10-11 found no missed setup-mode expiry. The live receipt below covers subscription-mode expiry.
 
 Fix status (endpoint configuration only; the version and signing secret are unchanged):
 
