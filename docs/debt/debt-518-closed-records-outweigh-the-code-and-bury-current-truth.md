@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — migration plan written; waiting for the owner's approval before step 1
+**Status:** In Progress — the owner approved option G on 2026-10-11 and widened it to every document; step 0, the inventory and target layout, is next
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -16,7 +16,7 @@ Every bug and debt item here is written up as a numbered Markdown record before 
 
 Keeping every closed record in the working tree is not. The archive is now about twice the size of the production code, and it outnumbers the live documents in every search. Closing a record is a ceremony of its own, and record edits take review capacity that code needs.
 
-This record measures the setup, sets out what each kind of document is for, compares the options, and proposes a move to **records as working files**: written first, challenged on the branch, shipped with their fix, and deleted on close, leaving a one-line ledger entry. **Nothing changes until the owner approves the plan.**
+This record measures the setup, sets out what each kind of document is for, compares the options, and plans a move to **records as working files**: written first, challenged on the branch, shipped with their fix, and deleted on close, leaving a one-line ledger entry. **The owner approved the plan on 2026-10-11, and widened it to every document in the repository,** with clean namespaces and names.
 
 ## Evidence
 
@@ -75,9 +75,9 @@ Measured 2026-10-11 on `dev` after #1464.
 
   Issues stay for notifications, which they suit: the advisory watcher and the weekly due-check issue.
 - **F. Move the archive to another repository, branch or wiki.** It removes the search noise, but keeps a second store to maintain and link into, and the move ceremony stays.
-- **G. Records as working files, deleted on close, with the existing archive deleted once.** *Proposed, subject to the owner's approval.*
+- **G. Records as working files, deleted on close, with the existing archive deleted once.** *Chosen; the owner approved it on 2026-10-11.*
 
-## Resolution (proposed)
+## Resolution (decided)
 
 ### The Model
 
@@ -101,6 +101,22 @@ Measured 2026-10-11 on `dev` after #1464.
    - ADRs are never deleted, only superseded.
    - Living guides, policies and `master_spec*.md` stay live.
    - Specs, brainstorming and audits follow the record rule.
+
+### Scope, Widened 2026-10-11
+
+The owner widened the plan from records to every document: the product spec, architecture notes, ADRs, guides, policies, the frontend standards, and the instructions agents load (`AGENTS.md`, `CLAUDE.md`, `.claude/rules/`). The migration gains two steps:
+
+- **Step 0, inventory and layout.** Before anything moves, every live document gets:
+  - a disposition: keep, rename, move, merge, rewrite or delete;
+  - a target path under one layout with clean namespaces and names.
+
+  This record holds the result. A second agent challenges it.
+- **Step 6, reorganise.**
+  - Move and rename the live documents to that layout.
+  - Rewrite their links, and every path hard-coded in code, tests, scripts, workflows and review configuration.
+  - Bring `AGENTS.md`, `CLAUDE.md` and `.claude/rules/` into line.
+
+The archive goes first (steps 1 to 4), so the reorganisation does not rewrite links inside an archive that is about to be deleted.
 
 ### Migration
 
@@ -132,16 +148,18 @@ Do steps 1 to 4 in one pull request: the ledger and the rewritten links must exi
 
 ## Owner Decisions
 
-- [ ] Approve option G, or amend it.
+- [x] Approve option G, or amend it. Approved 2026-10-11, and widened to every document.
 - [ ] Optional: a CodeRabbit plan with a higher review limit, since that limit is now the bottleneck shared across repositories.
 
 ## Verification
 
-- [ ] The owner approves the model.
+- [x] The owner approves the model (2026-10-11).
+- [ ] Step 0: every live document has a disposition and a target path, and a second agent has challenged them.
 - [ ] The ledger is complete: every archived record has a line, and every record ID cited in code resolves.
 - [ ] Every Deferred row is self-contained, and no live link points into `docs/_archive/`.
 - [ ] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted.
 - [ ] `AGENTS.md`, `CLAUDE.md` and the guard describe and enforce delete-on-close.
+- [ ] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location.
 - [ ] Three records are closed under the model, and the reviewing agent reports no lost knowledge.
 - [ ] A month later, these are re-measured against this record's table: the share of documentation-only PRs, the search-noise ratios, and the record lines in the tree.
 
