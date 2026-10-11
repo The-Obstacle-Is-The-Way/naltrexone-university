@@ -223,7 +223,7 @@ knowledge_base:
       - files: ".claude/rules/testing-browser.md"
         applyTo: "**/*.browser.spec.tsx"
       - files: ".claude/rules/test-isolation.md"
-        applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**}"
+        applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**,src/**/test-helpers/**,**/*-test-helpers.ts,**/*-test-helpers.tsx,**/*.fixtures.ts}"
       - files: ".claude/rules/fixture-integrity.md"
         applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**,src/**/test-helpers/**,**/*-test-helpers.ts,**/*-test-helpers.tsx,**/*.fixtures.ts}"
       - files: "docs/design-system/standards.md"

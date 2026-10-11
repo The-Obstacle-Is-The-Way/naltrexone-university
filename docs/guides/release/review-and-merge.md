@@ -11,7 +11,7 @@ How a feature PR gets reviewed and merged into `dev`. The rules are in [`AGENTS.
 
 ## The Review Allowance
 
-- **One allowance for every agent.** CodeRabbit's included allowance is metered per developer identity, and every agent session shares one. The hourly rate steps down with the past seven days' use, to one review an hour at 60 or more ([rate limits](https://docs.coderabbit.ai/management/rate-limits)).
+- **One allowance for every agent.** CodeRabbit's included allowance is metered per developer identity, and every agent session shares one. The rolling allowance depends on the account’s plan and recent use ([rate limits](https://docs.coderabbit.ai/management/rate-limits)). Coordinate the next review with the owning session using the latest provider cooldown receipt; do not assume that the top of the hour resets it. A locally green stack does not reserve a review slot.
 - **When CodeRabbit reviews.** `.coderabbit.yaml` sets `auto_incremental_review: false`, so a push starts no review. CodeRabbit reviews by itself when a PR opens ready or a draft is marked ready; otherwise only when asked with `@coderabbitai full review`.
 - **Fix in one push.** Push every fix together, then request the review. Do not move a PR back to draft and ready again.
 - **Avoid force-pushes and rebases.** Its FAQ lists them as review events, so they may spend a review.

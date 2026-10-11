@@ -1,7 +1,6 @@
 # Architecture Decision Records
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-27
 
 ---
 
@@ -39,7 +38,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
 | [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03) | 2026-10-03 |
-| [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted | 2026-10-11 |
+| [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted (amended 2026-10-11) | 2026-10-11 |
 | [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
 
@@ -215,6 +214,10 @@ A question a learner answered is in one of four states, derived at read time fro
 
 ## How to Propose a New ADR
 
+Use the next unused ADR number after integrating the target branch; do not renumber an accepted decision. Write context, alternatives, decision, consequences and how compliance is checked. Proposed text is explicitly Proposed until its decision maker accepts it. The index links the ADR and reflects its status.
+
+Once accepted, preserve the decision text. Correct or extend it in a dated `Amendment — YYYY-MM-DD` section and update its status and index row. A replacement decision gets a new number, links what it supersedes, and updates the old ADR's status to `Superseded by ADR-NNN` with a link. Record any partly superseded scope precisely; do not erase the unaffected decisions. Mechanical link maintenance is allowed. Progress and verification receipts belong in the work record or PR.
+
 1. Create `adr-NNN-short-title.md` using the template below
 2. Set status to "Proposed"
 3. Submit PR for review
@@ -265,5 +268,5 @@ How will we verify this decision is followed?
 
 ## Related Documentation
 
-- [Master Specification](../specs/master_spec.md)
-- [Implementation Specs](../specs/) (after ADRs are established)
+- [Master Specification](../product/specification.md)
+- [Product specification workflow](../product/README.md)

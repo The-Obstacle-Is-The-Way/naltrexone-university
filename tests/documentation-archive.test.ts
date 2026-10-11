@@ -744,7 +744,7 @@ describe('repository documentation', () => {
   });
 
   it('gives every Verifying record a due date', () => {
-    expect(result.invalidVerifying).toEqual([]);
+    expect(result.invalidScheduledChecks).toEqual([]);
   });
 
   it('keeps every live record status to one line', () => {

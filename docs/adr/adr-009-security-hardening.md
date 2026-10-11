@@ -29,7 +29,7 @@ We implement defense-in-depth controls aligned with OWASP principles.
 ### Authorization and Entitlement
 
 - All “subscribed” features must enforce entitlement server-side.
-- Entitlement source of truth: `stripe_subscriptions` state (see `docs/specs/master_spec.md` Section 4.2).
+- Entitlement source of truth: `stripe_subscriptions` state (see `docs/product/specification.md` Section 4.2).
 
 ### Input Validation
 

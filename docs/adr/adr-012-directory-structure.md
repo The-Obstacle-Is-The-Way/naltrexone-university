@@ -92,7 +92,7 @@ We adopt a **hybrid structure** that places Clean Architecture layers under `src
 This ADR is authoritative at the **directory boundary** level. For file-level indexes that evolve with refactors, prefer:
 
 - `docs/specs/index.md` (spec index)
-- `docs/adr/index.md` (ADR index)
+- `docs/adr/README.md` (ADR index)
 - `docs/practice-engine/index.md` (practice-engine file index + status)
 
 ### Layer Mapping

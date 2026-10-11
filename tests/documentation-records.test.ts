@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -27,6 +28,57 @@ function audit(files: Record<string, string>) {
 // Open bug and debt records live in docs/records/, with one index; a closed
 // record is deleted and leaves a line in the ledger (DEBT-518, ADR-023).
 describe('records folder and ledger', () => {
+  it('compares closed ledger IDs by number, including historical allowances', () => {
+    expect(
+      audit({
+        [RECORDS.ledger]: [
+          '- BUG-005 · One · Resolved · 2026-10-01 · docs/a.md',
+          '- BUG-05 · Two · Resolved · 2026-10-01 · docs/b.md',
+        ].join('\n'),
+      }).duplicateLedgerIds,
+    ).toHaveLength(1);
+  });
+
+  it.each(['', 'Verifyng — check; due 2026-10-20', 'Openish'])(
+    'rejects an unrecognized or absent live status: %s',
+    (status) => {
+      expect(
+        audit({ 'docs/records/bug-001-x.md': `**Status:** ${status}` })
+          .invalidStatus,
+      ).toEqual(['docs/records/bug-001-x.md']);
+    },
+  );
+
+  it('requires a remaining check as well as a Verifying due date', () => {
+    expect(
+      audit({
+        'docs/records/bug-001-x.md': '**Status:** Verifying — due 2026-10-20',
+      }).invalidScheduledChecks,
+    ).toEqual(['docs/records/bug-001-x.md']);
+  });
+
+  it('requires a retrieval commit and closing PR for a deleted working record', () => {
+    expect(
+      audit({
+        [RECORDS.ledger]:
+          '- BUG-338 · Example · Resolved · 2026-10-11 · docs/records/bug-338-example.md',
+      }).malformedLedgerLines,
+    ).toEqual([`${RECORDS.ledger}:1`]);
+    expect(
+      audit({
+        [RECORDS.ledger]:
+          '- BUG-338 · Example · Resolved · 2026-10-11 · docs/records/bug-338-example.md · #1468 · 0123456789abcdef0123456789abcdef01234567',
+      }).malformedLedgerLines,
+    ).toEqual([]);
+  });
+
+  it('rejects a record recreated under a nested retired register path', () => {
+    expect(
+      audit({ 'docs/bugs/investigation/bug-338-x.md': '**Status:** Open' })
+        .retiredRegisterFiles,
+    ).toEqual(['docs/bugs/investigation/bug-338-x.md']);
+  });
+
   it('reports two open records with the same ID', () => {
     expect(
       audit({
@@ -80,11 +132,25 @@ describe('records folder and ledger', () => {
     },
   );
 
-  it('allows living documents in an old register folder', () => {
+  it('rejects the old specification path after the layout move', () => {
     expect(
       audit({ 'docs/specs/master_spec.md': '# Living spec' })
         .retiredRegisterFiles,
-    ).toEqual([]);
+    ).toEqual(['docs/specs/master_spec.md']);
+  });
+
+  it.each([
+    'dev',
+    'frontend',
+    'practice-engine',
+    'content',
+    'tooling',
+    'vendor-docs',
+  ])('rejects a concurrent guide added to retired docs/%s', (folder) => {
+    const file = `docs/${folder}/new-concurrent-guide.md`;
+    expect(audit({ [file]: '# New guide' }).retiredRegisterFiles).toEqual([
+      file,
+    ]);
   });
 
   it('reports a link into a record from anywhere but the index', () => {
@@ -251,6 +317,42 @@ describe('records command', () => {
     }
   }
 
+  it('checks links in colocated documentation and nested agent instructions', () => {
+    const root = fixture();
+    const colocated = [
+      'app/fonts/README.md',
+      'content/questions/README.md',
+      'content/drafts/questions/AGENTS.md',
+      'tests/shared/README.md',
+      'src/domain/README.md',
+      '.agents/skills/README.md',
+    ];
+    populate(
+      root,
+      Object.fromEntries(
+        colocated.map((file) => [file, '[Missing](missing.md)']),
+      ),
+    );
+    const reports: DocumentationAudit[] = [];
+    expect(
+      runDocumentationCommand(root, (json) => reports.push(JSON.parse(json))),
+    ).toBe(1);
+    expect(reports[0]?.brokenLive.map((link) => link.file).sort()).toEqual(
+      colocated.sort(),
+    );
+  });
+
+  it('exits nonzero when a status typo hides a due check', () => {
+    const root = fixture();
+    populate(root, {
+      [RECORDS.index]:
+        '# Records\n\n**Now** — BUG-001\n\n| ID | Title |\n|---|---|\n| [BUG-001](./bug-001-x.md) | Example |',
+      'docs/records/bug-001-x.md':
+        '**Status:** Verifyng — production check; due 2026-10-20',
+    });
+    expect(runDocumentationCommand(root, () => {})).toBe(1);
+  });
+
   it('exits nonzero for an ID listed twice in the ledger, and for a file left in a replaced register folder', () => {
     const root = fixture();
     populate(root, {
@@ -277,6 +379,20 @@ describe('repository records', () => {
   beforeAll(() => {
     result = auditRecordLifecycle(files, exists);
   }, 30_000);
+
+  it('includes every tracked repository-authored Markdown file in the link audit', () => {
+    const tracked = execFileSync('git', ['ls-files', '-z', '*.md'], {
+      encoding: 'utf8',
+    })
+      .split('\0')
+      .filter(Boolean)
+      .filter(
+        (file) =>
+          !file.startsWith('.agents/skills/') ||
+          file === '.agents/skills/README.md',
+      );
+    expect(tracked.filter((file) => !files.has(file))).toEqual([]);
+  });
 
   it('keeps no record or index in a register folder that docs/records replaced', () => {
     expect(result.retiredRegisterFiles).toEqual([]);

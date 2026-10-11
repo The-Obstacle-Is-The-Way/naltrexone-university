@@ -1,4 +1,4 @@
-# QA-002: Billing & Entitlement (Pricing States, Trial, Portal, Gate Redirects)
+# Billing & Entitlement (Pricing States, Trial, Portal, Gate Redirects)
 
 **Status:** Draft
 **Created:** 2026-08-13

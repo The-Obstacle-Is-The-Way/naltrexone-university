@@ -568,3 +568,15 @@ A dependency's licence is reviewed when it is added, and a list is generated on 
 2. A new licence bucket in that list is reviewed in the dependency PR that introduces it.
 3. A package that moves from a permissive licence to a restricted or unknown one is a dependency-hygiene finding, not a routine patch.
 4. No CI check enforces this; a licence allowlist check can be added if the list starts to move.
+
+### Existing Review Decisions
+
+The retired licence snapshot contained decisions as well as counts. Preserve these as the scope of those reviews, not as a claim about today's resolved graph:
+
+- `sentry` 0.44.1, FSL-1.1-Apache-2.0: reviewed as a transitive CLI through Sentry's bundler plugins, with no application CLI invocation or `withSentryConfig` build step. New FSL packages or material usage changes require review.
+- `rpc-websockets` 9.3.9, LGPL-3.0-only: reviewed only as a transitive JSON-RPC/WebSocket package; direct use or new LGPL additions require review.
+- `@img/sharp-libvips-darwin-arm64` 1.2.4, LGPL-3.0-or-later: reviewed for the existing sharp image-processing dependency; new LGPL packages require review.
+- `eyes` 0.1.8 and `text-encoding-utf-8` 1.0.2 had unknown licences: add no new unknown-licence packages, and review replacement if either becomes direct or runtime-critical.
+- MPL-2.0 was accepted for the then-current graph, with review before adding direct dependencies. CC-BY-4.0 was accepted only for metadata/data, with review before runtime-code use. The permissive buckets approved there were MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, BlueOak-1.0.0, Unlicense, 0BSD, CC0-1.0, MIT OR Apache-2.0, and MIT OR CC0-1.0.
+
+Generate a fresh graph for any dependency decision. Do not commit raw licence JSON containing machine-local paths. The old package counts were snapshots and are intentionally not maintained here.

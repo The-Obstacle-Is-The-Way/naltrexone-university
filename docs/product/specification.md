@@ -1,8 +1,10 @@
-# Addiction Boards Question Bank SaaS — Technical Specification (SPEC.md)
+# Addiction Boards Product Specification
 
-> **2026-09-22 reconciliation (DEBT-481).** The six confirmed contradictions are corrected below. This master owns product/design narrative; executable source owns physical schema, validation, action configuration, seed identity and CI. Linked practice-engine policies own shipped interaction details. The four split parts are navigation views, not independent copies. Remaining narrative examples are not a complete inventory or a claim that every implementation detail was re-audited. The dated warning below is preserved as history and superseded for the six reconciled contracts.
+> **2026-09-22 reconciliation (DEBT-481).** The six confirmed contradictions are corrected below. This master owns product/design narrative; executable source owns physical schema, validation, action configuration, seed identity and CI. Linked practice-engine policies own shipped interaction details. The four former split parts were navigation views and have been removed; this specification remains whole, including its API contracts. Remaining narrative examples are not a complete inventory or a claim that every implementation detail was re-audited. The dated warning below is preserved as history and superseded for the six reconciled contracts.
 
 > **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../_archive/debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current [SPEC-016](../_archive/specs/spec-016-observability.md) and [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) while documentation ownership is reconciled; product decisions are not superseded by this warning.
+
+> **Contract ownership:** this document owns the product overview and the API narratives below. The linked topic documents own detailed practice interactions; update their canonical contract and its tests when behaviour changes, and update this summary in the same PR. Executable controller schemas/types, the database schema and `.env.example` own exact runtime shapes and configuration. The dated warnings record earlier reconciliation; they are not instructions to resurrect retired spec files.
 
 ## 1. System Overview
 
@@ -22,6 +24,8 @@ Board-relevant questions with detailed explanations, fast practice workflows, an
 
 * **Pro Monthly:** **$29/month** (recurring subscription)
 * **Pro Annual:** **$199/year** (recurring subscription)
+
+Eligible first subscriptions receive a seven-day trial without a required payment method. A trial without an added payment method ends without a charge; adding a card requires separate renewal consent. Returning subscribers use the paid offer. The billing controller validates the displayed offer and disclosure version before creating Checkout; the use case decides eligibility from the existing subscription. Renewal notices and delivery handling are implemented by the renewal-notice use cases and scheduled route, rather than by a client timer.
 
 ---
 
@@ -83,7 +87,7 @@ and its SQL files own the deployed evolution; the
 describes applying that history. Do not recreate the database from a copied
 schema block or use schema push to bypass migrations.
 
-**Reconciled 2026-09-22:** the implementation has 21 tables. The former
+**Historical census, reconciled 2026-09-22:** the implementation then had 21 tables; the current schema has 29. The former
 14-table copy omitted trial payment-method setup operations, renewal consent
 records, renewal notice deliveries, Clerk events, deleted Clerk users, pending
 Stripe cancellations and question feedback. This dated census is not a second
@@ -148,6 +152,7 @@ export type ActionResult<T> =
         code: ActionErrorCode;
         message: string;
         fieldErrors?: Record<string, string[]>;
+        details?: ApplicationErrorDetails; // application-owned public details
       };
     };
 ```
@@ -157,16 +162,11 @@ export type ActionResult<T> =
 #### 4.4.1 `POST /api/health`
 
 * **Path:** `/app/api/health/route.ts`
-* **Method:** POST
+* **Method:** GET or POST (both invoke the same handler)
 * **Auth:** public
 * **Purpose:** health check for uptime monitoring; verifies DB connectivity
 
-**Input (Zod):**
-
-```ts
-import { z } from 'zod';
-export const HealthInputSchema = z.object({}).strict();
-```
+**Input:** no request-body contract. GET and POST share the [health handler](../../app/api/health/handler.ts), which reads the request headers for the client-IP rate limit and does not parse a JSON body.
 
 **Output (TypeScript):**
 
@@ -174,7 +174,6 @@ export const HealthInputSchema = z.object({}).strict();
 export type HealthResponse = {
   ok: true;
   db: true;
-  timestamp: string; // ISO
 };
 ```
 
@@ -198,7 +197,7 @@ export type HealthErrorResponse = { ok: false; error: string };
   * `X-RateLimit-Remaining`
 * If rate limiter fails, returns `503` with `{ ok:false, error:'Rate limiter unavailable' }`.
 * Runs `SELECT 1` via Drizzle
-* Returns 200 with `{ ok:true, db:true, timestamp:new Date().toISOString() }`
+* Returns 200 with `{ ok:true, db:true }`
 
 ---
 
@@ -305,7 +304,7 @@ All inputs MUST be validated with Zod before any DB/Stripe calls.
 ```ts
 import { z } from 'zod';
 
-export const zUuid = z.string().uuid();
+export const zUuid = z.guid();
 export const zNonEmptyString = z.string().min(1);
 
 export const zDifficulty = z.enum(['easy', 'medium', 'hard']);
@@ -355,6 +354,11 @@ remain separate protections; a rate limit is not an authorization mechanism.
 export const CreateCheckoutSessionInputSchema = z.object({
   plan: zSubscriptionPlan,
   idempotencyKey: zUuid.optional(),
+  expectedOffer: z.object({
+    hasTrial: z.boolean(),
+    disclosureVersion: zDisclosureVersion,
+  }).strict(),
+  renewalOptIn: z.literal(true),
 }).strict();
 ```
 
@@ -404,7 +408,7 @@ export type CreateCheckoutSessionOutput = {
    * `cancel_url: ${NEXT_PUBLIC_APP_URL}/pricing?checkout=cancel`
    * `client_reference_id: <users.id>` (internal uuid)
    * `subscription_data.metadata.user_id = <users.id>`
-7. Return `{ url: session.url }` (must be non-null; if null => STRIPE_ERROR)
+7. For an eligible first subscription, include the seven-day trial and the no-payment-method completion behaviour. Verify `expectedOffer` against the current eligibility and disclosure before creating Checkout; a mismatch returns `CONFLICT`. Require the affirmative `renewalOptIn` and persist its consent through the billing flow. Return `{ url: session.url }` (must be non-null; if null => STRIPE_ERROR)
 8. If `idempotencyKey` is provided, wrap the operation with application-level idempotency (`action='billing:createCheckoutSession'`) so retries replay cached results instead of re-executing the flow.
 
 ---
@@ -1252,7 +1256,12 @@ export type GetTagsOutput = {
 ```ts
 export const GetQuestionBySlugInputSchema = z.object({
   slug: z.string().min(1).max(255),
+  review: z.object({
+    attemptId: zUuid.optional(),
+    sessionId: zUuid.optional(),
+  }).strict().optional(),
 }).strict();
+// The controller additionally rejects both review IDs supplied together.
 ```
 
 **Output:**
@@ -1263,6 +1272,9 @@ export type GetQuestionBySlugOutput = {
   slug: string;
   stemMd: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  availability: 'available' | 'withdrawn' | 'under_review' | 'retired';
+  superseded: boolean;
+  answerKeyChanged: boolean;
   choices: Array<{
     id: string;
     label: string;
@@ -1282,7 +1294,7 @@ export type GetQuestionBySlugOutput = {
 **Behavior:**
 
 1. Enforce entitlement (subscribed user).
-2. Load question by slug from published questions only.
+2. Delegate to `GetQuestionForView`: practice reads current published content; an authorized review resolves the learner’s own stored revision, applying current availability and correction notices. Do not expose another learner’s revision or active-exam answer evidence.
 3. Return public question payload for the question detail page (`/app/questions/[slug]`), excluding correctness flags.
 
 ---
@@ -1322,8 +1334,10 @@ export const GetPreviousAttemptInputSchema = z
 export type GetPreviousAttemptOutput =
   | {
       kind: 'attempt';
+      sessionMode: 'tutor' | 'exam' | null;
+      isOmitted: boolean;
       attemptId: string;
-      selectedChoiceId: string;
+      selectedChoiceId: string | null;
       isCorrect: boolean;
       correctChoiceId: string;
       explanationMd: string | null;
@@ -1333,6 +1347,7 @@ export type GetPreviousAttemptOutput =
     }
   | {
       kind: 'session_unanswered';
+      sessionMode: 'tutor' | 'exam' | null;
       correctChoiceId: string;
       explanationMd: string | null;
       referenceMd: string | null;
@@ -1367,14 +1382,24 @@ export type GetPreviousAttemptOutput =
    * Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
    * Return `{ kind: 'session_unanswered', correctChoiceId, explanationMd, referenceMd, choiceExplanations }`.
 6. If an attempt is found but its `questionId` does not equal the requested `questionId`, log a warning and throw `NOT_FOUND`.
-7. If the resolved attempt belongs to an active exam session through an exact identifier path (`attemptId` or active `sessionId`), return `null` so the answer key is not revealed before the session ends. The implicit latest-by-question path should already have selected only visible attempts; BUG-239 tracks the remaining implementation gap.
-8. Load the published question referenced by the attempt.
+7. If the resolved attempt belongs to an active exam session through an exact identifier path (`attemptId` or active `sessionId`), return `null` so the answer key is not revealed before the session ends. The implicit latest-by-question path should already have selected only visible attempts; the repository visibility predicate enforces this before ranking (BUG-239 is closed).
+8. Load the revision referenced by the attempt, with the current availability overlay; the owning use case controls revealability for held or withdrawn content.
 9. If the question is missing (orphaned attempt), log a warning and return `null`.
 10. Find the correct choice; if none exists, throw `INTERNAL_ERROR`.
 11. Build `choiceExplanations` using `buildShuffledChoiceViews(question, userId)` for consistent display labels.
 12. Return `{ kind: 'attempt', attemptId, selectedChoiceId, isCorrect, correctChoiceId, explanationMd, referenceMd, choiceExplanations, answeredAt }`.
 
 ---
+
+#### 4.5.18 Additional Shipped Contracts
+
+The earlier sections are retained narratives, not an exhaustive export inventory. These newer surfaces have their exact validated inputs, outputs and authorization at the linked boundaries:
+
+- [Billing controller](../../src/adapters/controllers/billing-controller.ts): `createTrialPaymentMethodSetupSession` accepts optional `idempotencyKey`, required `expectedDisclosureVersion`, and `renewalOptIn: true`; it returns a hosted setup URL after validating the current trial and consent.
+- [Practice controller](../../src/adapters/controllers/practice-controller.ts): draft answer persistence, finalization, discard, marking, summary and completed-question review. The [interaction contract](./practice/interaction-contracts.md) owns what the learner sees.
+- [Bookmark controller](../../src/adapters/controllers/bookmark-controller.ts): explicit desired-state `setBookmark`, ID-list reads and single-question `getBookmarkStatus` in addition to the bookmark page query.
+- [Feedback controller](../../src/adapters/controllers/question-feedback-controller.ts): question ratings and problem reports with their context and validation.
+- [Renewal-notice cron](../../app/api/cron/send-renewal-notices/route.ts) and [Resend webhook](../../app/api/webhooks/resend/route.ts): notice dispatch and authenticated delivery/bounce reports. [Stripe reconciliation](../../app/api/cron/reconcile-stripe-subscriptions/route.ts) repairs subscription state. Each route owns its request authentication; these are not public browser actions.
 
 ## 5. Content Pipeline
 
@@ -1483,7 +1508,7 @@ would bypass protections that the executable seed path now enforces.
 This master spec documents the directory structure at the directory-boundary level to avoid drift as files are refactored. For file-level indexes, prefer:
 
 * `docs/specs/index.md`
-* `docs/adr/index.md`
+* `docs/adr/README.md`
 * `docs/practice-engine/index.md`
 
 ```text
@@ -1650,8 +1675,8 @@ As a user, I can subscribe and manage billing so that I can access the question 
 
 **Test Cases:**
 
-* `tests/integration/actions.stripe.integration.test.ts`: verify Stripe checkout session creation (Stripe mocked).
-* `tests/e2e/subscribe.spec.ts`: end-to-end checkout in Stripe test mode using test card 4242. ([Stripe Docs][6])
+* Provider-contract E2E covers Stripe Checkout/session behavior against Stripe test mode; adapter unit tests cover only shape/error translation under the canonical test-double rules.
+* `tests/e2e/checkout-redirect.spec.ts` and `checkout-success-provider.spec.ts` prove the repository-owned redirect and provider contract. `stripe-hosted-*.spec.ts` contains the separate observational hosted Checkout DOM journeys.
 
 **Implementation Checklist:**
 
@@ -2008,7 +2033,7 @@ it('records attempt when answer submitted', async () => {
 
 **Stripe test mode:**
 
-* Use Stripe test card `4242 4242 4242 4242` with a future date (e.g., 12/34). ([Stripe Docs][6])
+* Only the observational `stripe-hosted-*.spec.ts` journeys fill a Stripe test card such as `4242 4242 4242 4242` with a future expiry. Required E2E may verify the `checkout.stripe.com` origin and repository-owned contracts but does not manipulate Stripe-owned markup.
 
 ### 8.4 CI Pipeline (GitHub Actions)
 
@@ -2073,7 +2098,7 @@ release. An echo-only deployment job is not a gate.
 
 ## 10. Environment Variables
 
-> Variables marked ✅ MUST be present in that environment.
+> [`.env.example`](../../.env.example) documents all variables and [`lib/env.ts`](../../lib/env.ts) owns startup requirements; the consuming workflow or route owns runtime-only checks. The table below preserves the original deployment categories, not a complete inventory or permission to expose credentials to every CI step.
 >
 > Notes:
 >
@@ -2098,6 +2123,9 @@ release. An echo-only deployment job is not a gate.
 | NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL  | Stripe Price ID for $199/yr                                                                                                 |               ✅ |            ✅ |                   ✅ |                ✅ |
 | E2E_CLERK_USER_USERNAME             | Clerk test user username for Playwright                                                                                     |               — |            ✅ |                   — |                — |
 | E2E_CLERK_USER_PASSWORD             | Clerk test user password for Playwright                                                                                     |               — |            ✅ |                   — |                — |
+
+
+The environment surface also includes `CONSENT_STATE_SECRET` (trial consent), `RESEND_API_KEY` and `RESEND_WEBHOOK_SECRET` (notice delivery), `GITHUB_READ_TOKEN` (scheduled-check observability), and the E2E ownership/isolation settings. Observability uses runtime variables outside the startup schema. Consult `.env.example` for these and any future additions; do not derive the required set from the older table. Provider credentials in CI remain step-scoped as specified in §8.4.
 
 ---
 
