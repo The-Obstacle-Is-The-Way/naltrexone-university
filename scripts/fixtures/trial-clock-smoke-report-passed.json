@@ -99,6 +99,10 @@
         {
           "status": "passed",
           "title": "creates a portal configuration once per idempotency key and lists it among the active ones"
+        },
+        {
+          "status": "passed",
+          "title": "retrieves a Customer by id with its metadata"
         }
       ],
       "status": "passed",

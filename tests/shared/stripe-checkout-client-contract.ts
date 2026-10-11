@@ -45,7 +45,7 @@ export type StripeCheckoutClientContractHarness = {
   subscriptions: StripeSubscriptionsClient &
     Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel' | 'update'>>;
   paymentMethods: Required<StripePaymentMethodsClient>;
-  customers: Required<Pick<StripeCustomersClient, 'search'>>;
+  customers: Required<Pick<StripeCustomersClient, 'search' | 'retrieve'>>;
   portalConfigurations: StripeClient['billingPortal']['configurations'];
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
@@ -573,6 +573,21 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
       expect(found).toHaveLength(1);
       expect(found[0]?.id === first.id).toBe(true);
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[10],
+    // GitHub #883: the webhook reads a Customer's e2e_owner by id to decide
+    // whether an unverifiable add-card Session belongs to another environment.
+    async run(harness) {
+      const userId = `debt472_retrieve_${randomUUID()}`;
+      const seeded = await harness.seedCustomer(userId);
+
+      const retrieved = await harness.customers.retrieve(seeded.id);
+
+      expect(retrieved.id).toBe(seeded.id);
+      expect(retrieved.deleted).toBeUndefined();
+      expect(retrieved.metadata?.user_id).toBe(userId);
     },
   },
 ];

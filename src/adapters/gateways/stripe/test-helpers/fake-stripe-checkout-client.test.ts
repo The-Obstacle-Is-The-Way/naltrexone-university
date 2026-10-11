@@ -224,6 +224,25 @@ describe('FakeStripeCheckoutClient', () => {
     ).resolves.toEqual({ data: [] });
   });
 
+  it('retrieves a seeded Customer by id with its metadata and records the call', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const id = stripe.seedCustomer({ e2e_owner: 'owner-a' });
+
+    await expect(stripe.customers.retrieve(id)).resolves.toEqual({
+      id,
+      metadata: { e2e_owner: 'owner-a' },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([id]);
+  });
+
+  it('refuses to retrieve a Customer it does not hold', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+
+    await expect(stripe.customers.retrieve('cus_missing')).rejects.toThrow(
+      'Missing fake Customer: cus_missing',
+    );
+  });
+
   it('caps Search results at the limit, defaulting to ten', async () => {
     const stripe = new FakeStripeCheckoutClient();
     for (let index = 0; index < 11; index += 1) {

@@ -241,9 +241,11 @@ export class FakeStripeCheckoutClient implements StripeClient {
     Required<Pick<StripeClient['customers'], 'search'>> & {
       readonly seeded: SeededCustomer[];
       readonly searchCalls: CustomerSearchParams[];
+      readonly retrieveCalls: string[];
     } = {
     seeded: [],
     searchCalls: [],
+    retrieveCalls: [],
     create: async () => ({ id: 'cus_fake_checkout' }),
     async search(params) {
       this.searchCalls.push({ ...params });
@@ -263,6 +265,18 @@ export class FakeStripeCheckoutClient implements StripeClient {
         .slice(0, params.limit ?? DEFAULT_SEARCH_LIMIT)
         .map((customer) => ({ id: customer.id }));
       return { data };
+    },
+    // Serves a seeded Customer by id with its metadata. Deleted Customers are
+    // not modelled.
+    async retrieve(customerId) {
+      this.retrieveCalls.push(customerId);
+      const customer = this.seeded.find(
+        (candidate) => candidate.id === customerId,
+      );
+      if (!customer) {
+        throw new Error(`Missing fake Customer: ${customerId}`);
+      }
+      return { id: customer.id, metadata: { ...customer.metadata } };
     },
   };
 

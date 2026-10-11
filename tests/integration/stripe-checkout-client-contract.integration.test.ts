@@ -119,7 +119,10 @@ runStripeCheckoutClientContract(
 
     const customers = {
       search: (params, options) => stripe.customers.search(params, options),
-    } satisfies Required<Pick<StripeClient['customers'], 'search'>>;
+      retrieve: (customerId) => stripe.customers.retrieve(customerId),
+    } satisfies Required<
+      Pick<StripeClient['customers'], 'search' | 'retrieve'>
+    >;
 
     // Stripe cannot delete a portal configuration; cleanup deactivates each
     // one this case created.

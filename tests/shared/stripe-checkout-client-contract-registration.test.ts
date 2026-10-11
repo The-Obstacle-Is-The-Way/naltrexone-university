@@ -27,6 +27,7 @@ describe('Stripe Checkout client contract registration', () => {
       'attaches a PaymentMethod to one customer only and retires it once detached',
       "sets a Subscription's default only to a PaymentMethod on its customer",
       'creates a portal configuration once per idempotency key and lists it among the active ones',
+      'retrieves a Customer by id with its metadata',
     ]);
   });
 
@@ -52,6 +53,7 @@ describe('Stripe Checkout client contract registration', () => {
       undefined,
       undefined,
       120_000,
+      undefined,
       undefined,
       undefined,
       undefined,
