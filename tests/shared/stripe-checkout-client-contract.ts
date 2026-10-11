@@ -588,6 +588,22 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       expect(retrieved.id).toBe(seeded.id);
       expect(retrieved.deleted).toBeUndefined();
       expect(retrieved.metadata?.user_id).toBe(userId);
+
+      // An id Stripe does not hold is refused with a 404 resource_missing,
+      // which the webhook reads as no owner evidence.
+      const missingId = `cus_debt472missing${randomUUID().replaceAll('-', '')}`;
+      const caught = await harness.customers.retrieve(missingId).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      expect(readErrorField(caught, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(caught, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(caught, 'code')).toBe('resource_missing');
+      expect(readErrorField(caught, 'statusCode')).toBe(404);
+      expect(readErrorField(caught, 'param')).toBe('id');
+      expect(readErrorField(caught, 'message')).toBe(
+        `No such customer: '${missingId}'`,
+      );
     },
   },
 ];

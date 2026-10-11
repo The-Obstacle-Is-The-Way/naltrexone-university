@@ -11,6 +11,7 @@ import {
   stripeTrialPaymentMethodSetupSessionSchema,
   subscriptionEventTypes,
 } from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
+import { isMissingStripeCustomerError } from '@/src/adapters/gateways/stripe-customer-deleter';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -210,9 +211,18 @@ async function unverifiedSetupStateError(input: {
   message: string;
 }): Promise<ApplicationError> {
   if (input.webhookE2EOwner) {
-    const customer = await input.stripe.customers.retrieve(input.customerId);
+    // A Customer Stripe does not hold is no owner evidence; any other read
+    // failure propagates so Stripe retries the delivery.
+    const customer = await input.stripe.customers
+      .retrieve(input.customerId)
+      .catch((error: unknown) => {
+        if (isMissingStripeCustomerError(error)) return null;
+        throw error;
+      });
     const customerE2EOwner =
-      customer.deleted === true ? undefined : customer.metadata?.e2e_owner;
+      customer === null || customer.deleted === true
+        ? undefined
+        : customer.metadata?.e2e_owner;
     if (customerE2EOwner && customerE2EOwner !== input.webhookE2EOwner) {
       return new ApplicationError(
         'STRIPE_ERROR',

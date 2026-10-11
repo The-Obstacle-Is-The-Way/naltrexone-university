@@ -243,6 +243,28 @@ describe('trial payment-method setup completion webhook', () => {
     },
   );
 
+  it('rejects an unverifiable setup completion as an invalid payload when Stripe holds no such Customer', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.setWebhookEvent(
+      setupCompletionEvent(
+        createCompletedSetupSession({
+          signature: '0'.repeat(64),
+          customerId: 'cus_unknown',
+        }),
+      ),
+    );
+    stripe.seedSetupIntent(savedCard);
+
+    await expect(
+      processEvent(stripe, {
+        consentStateSecret,
+        webhookE2EOwner: 'preview-owner',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    expect(stripe.customers.retrieveCalls).toEqual(['cus_unknown']);
+    expect(stripe.setupIntents.retrieveCalls).toEqual([]);
+  });
+
   it('resolves its own signed setup completion when this webhook has an E2E owner', async () => {
     const stripe = createStripe(
       setupCompletionEvent(createCompletedSetupSession(), 1_775_649_600),

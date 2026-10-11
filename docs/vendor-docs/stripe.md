@@ -180,7 +180,7 @@ Fix status (endpoint configuration only; the version and signing secret are unch
 1. Read the new release's breaking changes against [Fields We Depend On](#fields-we-depend-on) and the schemas in `stripe-webhook-schemas.ts`. During the overlap, payloads from both versions must parse.
 2. Recreate the test endpoint at the new version, as in [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and exercise the handled events against Preview.
 3. For live, follow [Stripe's procedure](https://docs.stripe.com/webhooks/versioning): a second endpoint at the new version, distinguished by a query parameter, with only one of the two processed at a time. The route verifies a single `STRIPE_WEBHOOK_SECRET`, so overlapping endpoints need either verification of both secrets or a deliberate swap that relies on Stripe retrying failed deliveries and on the `stripe_events` claim for idempotency. DEBT-406's direct swap was safe because the endpoint had no traffic. It now has live traffic, so choose one approach and record it before changing anything live.
-4. Retire the old endpoint only after deliveries to the new one show `pending_webhooks: 0`.
+4. Decide what happens to the deliveries the old endpoint rejected before you retire it. `pending_webhooks` counts every endpoint still owed an event, so it stays at 1 or more while the old endpoint keeps rejecting, and `0` cannot be the test. In a swap, every event also reaches the new endpoint, so a delivery the old endpoint rejected after the swap needs no redelivery once the new endpoint has acknowledged the same event. Retire the old endpoint only when every event since the new endpoint was enabled shows a successful delivery to the new endpoint (its delivery log in the Dashboard). An event whose only outstanding delivery is the old endpoint's (`pending_webhooks: 1`) passes. Disabling or deleting the old endpoint stops Stripe redelivering what it rejected, and that is the rollback path: until then, restoring the old signing secret and redeploying lets those retries succeed.
 
 ### Test endpoint rotation (2026-10-11)
 
@@ -190,7 +190,7 @@ Stripe fixes an endpoint's version at creation, so the test endpoint was recreat
 2. Set `STRIPE_WEBHOOK_SECRET` in Vercel Preview and Development to its signing secret, piped from a private file and confirmed by hash, never printed.
 3. Redeployed the `dev` preview, so the branch alias serves a build with the new secret.
 4. Probed with a test-mode trial subscription tagged with another `e2e_owner`. The new endpoint's deliveries returned 200 (`e2e_owner_mismatch` skip). The old endpoint's returned 400 `Webhook signature verification failed`, as expected once its secret was retired.
-5. Deleted the old endpoint `we_1T19r…` and the probe customer.
+5. Deleted the old endpoint `we_1T19r…` and the probe customer, once the probe's events showed the new endpoint's acknowledgement with only the old endpoint's delivery outstanding (`pending_webhooks: 1`).
 
 Each event reaches both endpoints while they overlap, and the `stripe_events` claim makes processing idempotent, so the swap loses no event.
 

@@ -235,12 +235,29 @@ describe('FakeStripeCheckoutClient', () => {
     expect(stripe.customers.retrieveCalls).toEqual([id]);
   });
 
-  it('refuses to retrieve a Customer it does not hold', async () => {
+  it("refuses a Customer it does not hold with Stripe's 404 resource_missing", async () => {
     const stripe = new FakeStripeCheckoutClient();
 
-    await expect(stripe.customers.retrieve('cus_missing')).rejects.toThrow(
-      'Missing fake Customer: cus_missing',
-    );
+    await expect(
+      stripe.customers.retrieve('cus_missing'),
+    ).rejects.toMatchObject({
+      type: 'StripeInvalidRequestError',
+      rawType: 'invalid_request_error',
+      code: 'resource_missing',
+      statusCode: 404,
+      param: 'id',
+      message: "No such customer: 'cus_missing'",
+    });
+  });
+
+  it('throws a caller-supplied fault from a Customer read after recording it', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const id = stripe.seedCustomer({ e2e_owner: 'owner-a' });
+    const fault = new Error('Stripe connection reset');
+    stripe.setCustomerRetrieveFault(fault);
+
+    await expect(stripe.customers.retrieve(id)).rejects.toBe(fault);
+    expect(stripe.customers.retrieveCalls).toEqual([id]);
   });
 
   it('caps Search results at the limit, defaulting to ten', async () => {

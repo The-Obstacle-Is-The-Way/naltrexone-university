@@ -266,19 +266,35 @@ export class FakeStripeCheckoutClient implements StripeClient {
         .map((customer) => ({ id: customer.id }));
       return { data };
     },
-    // Serves a seeded Customer by id with its metadata. Deleted Customers are
+    // Serves a seeded Customer by id with its metadata, and refuses an id it
+    // does not hold with Stripe's 404 resource_missing. Deleted Customers are
     // not modelled.
-    async retrieve(customerId) {
-      this.retrieveCalls.push(customerId);
-      const customer = this.seeded.find(
+    retrieve: async (customerId) => {
+      this.customers.retrieveCalls.push(customerId);
+      if (this.customerRetrieveFault) throw this.customerRetrieveFault;
+      const customer = this.customers.seeded.find(
         (candidate) => candidate.id === customerId,
       );
       if (!customer) {
-        throw new Error(`Missing fake Customer: ${customerId}`);
+        throw Object.assign(new Error(`No such customer: '${customerId}'`), {
+          type: 'StripeInvalidRequestError',
+          rawType: 'invalid_request_error',
+          code: 'resource_missing',
+          statusCode: 404,
+          param: 'id',
+        });
       }
       return { id: customer.id, metadata: { ...customer.metadata } };
     },
   };
+
+  // Test seam: a Customer read is recorded, then throws this error. It models
+  // no Stripe fault shape.
+  private customerRetrieveFault: Error | null = null;
+
+  setCustomerRetrieveFault(fault: Error | null): void {
+    this.customerRetrieveFault = fault;
+  }
 
   // Seeds a Customer that Search can find; returns its id.
   seedCustomer(metadata: Record<string, string>): string {

@@ -21,7 +21,7 @@ function getStringProperty(value: unknown, key: string): string | null {
   return typeof property === 'string' ? property : null;
 }
 
-function isMissingStripeCustomerError(error: unknown): boolean {
+export function isMissingStripeCustomerError(error: unknown): boolean {
   return (
     getNumberProperty(error, 'statusCode') === 404 ||
     getNumberProperty(error, 'status') === 404 ||

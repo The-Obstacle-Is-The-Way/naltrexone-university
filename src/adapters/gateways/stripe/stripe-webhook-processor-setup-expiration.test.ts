@@ -302,6 +302,39 @@ describe('expired trial payment-method setup webhook', () => {
     },
   );
 
+  it('rejects an unverifiable expired setup Session as an invalid payload when Stripe holds no such Customer', async () => {
+    const { stripe } = unverifiableSession({ e2e_owner: 'other-owner' });
+    stripe.setWebhookEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {
+            ...signedSetupMetadata(),
+            consent_customer_id: 'cus_unknown',
+            consent_state_signature: '0'.repeat(64),
+          },
+        },
+      },
+    });
+
+    await expect(processWithOwner(stripe)).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_PAYLOAD',
+    });
+    expect(stripe.customers.retrieveCalls).toEqual(['cus_unknown']);
+  });
+
+  it('lets a transient Customer read failure propagate so Stripe retries the delivery', async () => {
+    const { stripe } = unverifiableSession({ e2e_owner: 'other-owner' });
+    const fault = new Error('Stripe connection reset');
+    stripe.setCustomerRetrieveFault(fault);
+
+    await expect(processWithOwner(stripe)).rejects.toBe(fault);
+  });
+
   it('normalizes its own signed setup Session when this webhook has an E2E owner', async () => {
     const stripe = stripeWithEvent({
       id: 'evt_setup_expired',
