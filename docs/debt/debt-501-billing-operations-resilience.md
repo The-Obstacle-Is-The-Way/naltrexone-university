@@ -16,7 +16,9 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 ## Items
 
-**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then operational alerts (DEBT-505) for a reconcile run that stops early and for an unknown price ID, so items 1 and 2 announce their own triggers; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's legacy price-ID list, item 4's add-card recheck (with DEBT-414 F22), and the owner's item 7.
+**Decided 2026-10-08 (AUDIT-015): order.** Quick wins first: item 1's Stripe timeout, item 2's runbook line, items 5 and 6. Then an operational alert (DEBT-505) for a reconcile run that stops early, so item 1 announces its own trigger; once that alert exists, item 1's oldest-first reconcile waits for it. Before the first live sale: item 2's recorded-price design with its unknown-price alert, item 4's add-card recheck (with DEBT-414 F22), and the owner's item 7.
+
+*Corrected 2026-10-10: the unknown-price alert moved from the alerts step to item 2, whose legacy price-ID list became the recorded-price design.*
 
 ### 1. The daily reconcile never reaches the tail once the table grows (P2)
 
@@ -49,13 +51,13 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
   - reconcile rows fail;
   - the success page redirects with `unknown_plan`.
 - **Trigger.** Any change of Price for new customers. DEBT-414 freezes existing subscribers' prices, and the portal disables plan changes, so a new Price plus an environment change is the expected way to change a price. That change would lock out every existing subscriber.
-- **Decided.** A recognized list of legacy price IDs per plan, configured alongside the current ones. Add an operator check that refuses a price change while live subscriptions use an ID the list doesn't hold. Until this ships, the runbook must say: never change a price ID.
+- **Decided: a subscription's plan is a recorded fact, not a lookup against today's prices.** Until this ships, the runbook says: never change a price ID.
 
-  *Changed 2026-10-10: a subscription's plan becomes a recorded fact, not a lookup against today's prices.*
+  *Corrected 2026-10-10: this was a list of legacy price IDs per plan and an operator check; the recorded-price design below replaces both.*
   - **The structural cause.** The price IDs in the environment answer two different questions: which Price to sell now, and which plan an existing subscription is on. The table stores only each subscription's price ID, and every read maps it through today's two IDs. The amounts, though, are rightly fixed in reviewed code, because the checkout consent text and the Terms state them: `lib/pricing-data.ts`, `lib/checkout-disclosures.ts`, the Terms. A price change is a code change either way.
   - **A second gap, found 2026-10-10.** Renewal notices state the configured annual amount (`send-due-renewal-notices.ts`, `deps.annualPlan.amountCents`), not the subscriber's own. After a price change, an existing annual subscriber's legally required notice would state the new price while Stripe charges the old one.
   - **A third gap, found 2026-10-10.** The renewal job also finds who gets a notice by today's price IDs. `listAnnualSubscriptionsDue`, `listActiveMonthlySubscriptions` and `listAnnualRenewalsPastNoticeDeadline` filter on `price_id` equal to the configured annual or monthly ID. The repository stores the configured ID for a plan, not Stripe's own. So after a price-ID change, every existing subscriber would silently get no renewal notice or reminder, and the missed-deadline alert would not count them. Monthly anniversary reminders likewise state the configured monthly amount (`deps.monthlyPlan`).
-  - **The design**, replacing the legacy list and operator check:
+  - **The design:**
     1. **Record the plan at write.** When the webhook, the reconcile or the success sync learns of a subscription, the plan comes from Stripe's own Price. `recurring.interval` `month` is monthly and `year` is annual, accepted only when `price.product` is ours (a configured product ID). The amount and currency come from `unit_amount` and `currency`. The subscription row stores plan, amount and currency. A SQL migration cannot fill existing rows, since each environment maps different price IDs to the plans. So the columns are added nullable. Every write fills them, and the daily reconcile, which reads each subscription from Stripe, fills the rest. Until a row has them, reads fall back to today's mapping. Once production has no empty row, a second migration makes them required and the fallback is removed.
     2. **Reads use the stored plan.** Only Checkout creation reads the configured price IDs, to choose what to sell.
     3. **Renewal notices and reminders select subscriptions by stored plan, and state the stored amount and currency.**
@@ -63,8 +65,8 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
     5. **Checkout refuses a configured price whose Stripe amount or interval differs from `lib/pricing-data.ts`,** and alerts. The consent text can then never state a different charge from the one Stripe makes.
   - **Then a price change is routine.** Create a new Price under the same product, and update the amounts, the disclosures (a new disclosure version) and the Terms in one reviewed pull request. Deploy it, then switch the environment's price IDs. Existing subscribers keep their price and their own notices.
   - **When.** Before the first live sale, with the other pre-sale items. Until then, the runbook line stands.
-- **Runbook line done 2026-10-09 (quick-wins pull request):** [deployment-environments.md](../dev/deployment-environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The legacy list and the operator check remain.
-- **Unknown-price alert moved here, 2026-10-10.** AUDIT-015's order placed it with item 1's alert. An unknown price, though, surfaces at five sites: the normalizer, the subscription read, the success sync, and the webhook and reconcile handlers that report the normalizer's error. The legacy list reshapes the same lookup, so one price catalog should resolve every price and raise the alert on an unknown one. It is built with the legacy list rather than as raises at five sites. Until then, the runbook line forbids the change that would trigger it.
+- **Runbook line done 2026-10-09 (quick-wins pull request):** [deployment-environments.md](../dev/deployment-environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The recorded-price design remains.
+- **Unknown-price alert moved here, 2026-10-10.** AUDIT-015's order placed it with item 1's alert. An unknown price, though, surfaces at five sites: the normalizer, the subscription read, the success sync, and the webhook and reconcile handlers that report the normalizer's error. The recorded-price design replaces that lookup with one resolver, which raises the alert on an unknown product or interval. So the alert is built with it, rather than as raises at five sites. Until then, the runbook line forbids the change that would trigger it.
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3)
 
