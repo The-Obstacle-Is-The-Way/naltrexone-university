@@ -97,7 +97,7 @@ Measured 2026-10-11 on `dev` after #1464.
 5. **Keep what works:** the Now stanza; the Active table and the Waiting rows; due dates and the weekly due-check issue; one-line statuses; `Corrected` notes; and red-first evidence.
 6. **Scope.**
    - ADRs are never deleted, only superseded.
-   - Living guides, policies and `master_spec*.md` stay live.
+   - Living guides, policies and the product specification stay live.
    - Specs, brainstorming and audits follow the record rule.
 
 ### Scope, Widened 2026-10-11
@@ -120,7 +120,7 @@ The owner widened the plan from records to every document: the product spec, arc
 
 | Old | New |
 |---|---|
-| `docs/specs/master_spec.md` | split: `product/README.md` (§1, §13), `product/billing-and-access.md` (§4.1–4.2, §11.3, trial and renewal; the Terms govern commercial terms), `product/practice/*` + `product/{history-and-review,bookmarks,dashboard-and-scores,question-feedback}.md` (behaviour bullets of §4.5), `architecture/README.md` (§2 corrected), `architecture/api-conventions.md` (§4.3–4.4), `architecture/security.md` (§9), `.env.example` comments (§10, corrected; `.env.example` becomes the reference), `guides/operations/stripe-setup.md` (§11); §3 → `architecture/data-model.md` (schema authority: `db/schema.ts`); §5 → `architecture/content-pipeline.md`; §8.4 → `guides/release/promote-to-production.md`; the §4.5 contract blocks are dropped in favour of the code, keeping each action's behaviour bullets in its product page, and the code comments citing §4.5.5 and §4.5.7 are repointed; delete §6, §7, §8.1–8.3, §12 |
+| `docs/specs/master_spec.md` | **keep whole** (owner, 2026-10-11): rename to `product/specification.md`; correct its stale facts against the code (the free trial, renewal notices, the missing routes, controller entry points and environment variables, 29 tables); keep the API contract sections and correct them; remove nothing |
 | `docs/specs/master_spec_part{1..4}.md` | delete |
 | `docs/specs/index.md` | delete; IDs to ledger; 4 Deferred → Waiting |
 | `docs/dev/acceptance-testing.md` | `product/business-rules.md` (update `RULE_REGISTER_PATH`) |
@@ -211,7 +211,7 @@ Each pull request stands alone, with no reservations or waits on other sessions.
    - the front-door `README.md`, the skills pruned, and Tailwind's `@source not` entries.
 3. **Layout moves.** Pure renames into the layout, plus every path that code, tests, workflows, configuration and open issues name, and `docs/README.md`.
 4. **Layout content:**
-   - the `master_spec` split;
+   - the master spec renamed and corrected in place, nothing removed;
    - merges and rewrites;
    - the stale snapshots deleted, and the contradictions fixed;
    - the ADR README, the amendments, and ADR-024 to ADR-027.
@@ -232,6 +232,7 @@ Each pull request stands alone, with no reservations or waits on other sessions.
 ## Owner Decisions
 
 - [x] Approve option G, or amend it. Approved 2026-10-11, and widened to every document.
+- [x] The master spec: keep it whole and correct it in place, keeping its API contracts; remove nothing but its four navigation stubs (2026-10-11).
 - [ ] Optional: a CodeRabbit plan with a higher review limit, since that limit is now the bottleneck shared across repositories.
 
 ## Verification

@@ -74,7 +74,8 @@ The folders above are the target; DEBT-518 moves documents into them in steps.
 ### 3. Content
 
 - **One home per rule.** Every other place links to it.
-- **The code owns the facts.** Types, schemas, inventories and lists live in code. A list in a document must be checked by a test, or it goes.
+- **The code owns the facts.** A new document links the code for types, schemas, inventories and lists rather than copying them, and a list kept in a document needs a test that checks it.
+- **Preserve what exists.** A revamp moves, renames, corrects and merges. It removes substantive content, such as a specification's contract sections or the reasons behind a design, only with the owner's agreement. Pure snapshots and exact duplicates can go. The master specification is kept whole and corrected in place (owner, 2026-10-11).
 - **Records point to documents, never the reverse.**
   - A record is deleted when it closes, so only the records index links records.
   - Everywhere else a record is cited by its ID, which the ledger resolves.
