@@ -146,14 +146,14 @@ At the census, both endpoints subscribed to the same seven events: `checkout.ses
 
 Delivery receipts:
 
-- **Live.** Every event in the latest live page (10 events, 2026-10-04T23:37Z to 2026-10-09T04:30Z) has `pending_webhooks: 0`. They include `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.trial_will_end`, `customer.subscription.deleted` and `invoice.payment_succeeded`. The live endpoint is the only one, so production's `STRIPE_WEBHOOK_SECRET` verifies its signatures. No secret value was read.
+- **Live.** Every recent live event checked on 2026-10-11 has `pending_webhooks: 0`. The live endpoint is the only one, so production's `STRIPE_WEBHOOK_SECRET` verifies its signatures. No secret value was read.
 - **Test.** The `dev` preview deployment answers deliveries at the inherited Clover version with HTTP 200. Its 500s in the same hour fail with `Stripe subscription metadata.user_id is required`, on subscriptions that the provider-contract trial-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts`) creates without user metadata. That failure does not depend on the payload version.
 
 ### Decision
 
 Endpoints follow the code pin's **major release** (Dahlia, Endive, …), not each monthly version.
 
-- **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. The live endpoint therefore stays at `2026-05-27.dahlia` while the client is at `2026-08-26.dahlia`. Recreating it each month would rotate production's signing secret and redeploy, now under live trial traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable across Dahlia and passes the rest through.
+- **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. The live endpoint therefore stays at `2026-05-27.dahlia` while the client is at `2026-08-26.dahlia`. Recreating it each month would rotate production's signing secret and redeploy, now under live traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable across Dahlia and passes the rest through.
 - **At a major release, the endpoints move,** following [Major-release migration](#major-release-migration). The test endpoint goes first.
 - **The test endpoint mirrors the live endpoint's version, explicitly.** Preview then receives production's payload shape. An endpoint without a version follows the account default (`2026-01-28.clover`, before Dahlia), which is how Preview came to receive Clover payloads while production received Dahlia ones. Do not align them by upgrading the account default. That also changes how the Events API renders events, and every other caller that relies on the default.
 
@@ -161,7 +161,7 @@ Endpoints follow the code pin's **major release** (Dahlia, Endive, …), not eac
 
 The code handles 13 event types ([Webhooks We Handle](#webhooks-we-handle)); at the census the endpoints sent 7. Five of the six never sent report changes to a subscription: `customer.subscription.paused`, `customer.subscription.resumed`, `customer.subscription.pending_update_applied`, `customer.subscription.pending_update_expired` and `invoice.payment_action_required`. A subscribed `customer.subscription.updated` usually reports the same change, but this census did not confirm that for each of them.
 
-`checkout.session.expired` has no such substitute. PR #753 added its handling: a setup-mode add-card session that expires marks its trial payment-method setup operation `expired`. The renewal-notice cron's `pruneExpired` deletes only `expired` operations, so an abandoned add-card session stays `pending` and is never pruned. This confirms the gap that [DEBT-501](../debt/debt-501-billing-operations-resilience.md) item 7 suspected. Subscribing the live endpoint to all 13 handled events closes it. No backfill is needed in live: on 2026-10-11 live Stripe held no open or expired setup-mode Checkout session, so no missed expiry can have left an operation `pending`. The live receipt below covers subscription-mode expiry; setup-mode expiry has not yet run in live.
+`checkout.session.expired` has no such substitute. PR #753 added its handling: a setup-mode add-card session that expires marks its trial payment-method setup operation `expired`. The renewal-notice cron's `pruneExpired` deletes only `expired` operations, so an abandoned add-card session stays `pending` and is never pruned. This confirms the gap that [DEBT-501](../debt/debt-501-billing-operations-resilience.md) item 7 suspected. Subscribing the live endpoint to all 13 handled events closes it. No backfill was needed: a live Stripe check on 2026-10-11 found no missed setup-mode expiry. The live receipt below covers subscription-mode expiry.
 
 Fix status (endpoint configuration only; the version and signing secret are unchanged):
 
@@ -179,7 +179,7 @@ Fix status (endpoint configuration only; the version and signing secret are unch
 
 1. Read the new release's breaking changes against [Fields We Depend On](#fields-we-depend-on) and the schemas in `stripe-webhook-schemas.ts`. During the overlap, payloads from both versions must parse.
 2. Recreate the test endpoint at the new version, as in [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and exercise the handled events against Preview.
-3. For live, follow [Stripe's procedure](https://docs.stripe.com/webhooks/versioning): a second endpoint at the new version, distinguished by a query parameter, with only one of the two processed at a time. The route verifies a single `STRIPE_WEBHOOK_SECRET`, so overlapping endpoints need either verification of both secrets or a deliberate swap that relies on Stripe retrying failed deliveries and on the `stripe_events` claim for idempotency. DEBT-406's direct swap was safe because the endpoint had no traffic. It now has live trial traffic, so choose one approach and record it before changing anything live.
+3. For live, follow [Stripe's procedure](https://docs.stripe.com/webhooks/versioning): a second endpoint at the new version, distinguished by a query parameter, with only one of the two processed at a time. The route verifies a single `STRIPE_WEBHOOK_SECRET`, so overlapping endpoints need either verification of both secrets or a deliberate swap that relies on Stripe retrying failed deliveries and on the `stripe_events` claim for idempotency. DEBT-406's direct swap was safe because the endpoint had no traffic. It now has live traffic, so choose one approach and record it before changing anything live.
 4. Retire the old endpoint only after deliveries to the new one show `pending_webhooks: 0`.
 
 ### Test endpoint rotation (2026-10-11)
