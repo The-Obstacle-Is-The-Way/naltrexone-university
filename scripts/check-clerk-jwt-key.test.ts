@@ -1,4 +1,5 @@
 import { generateKeyPairSync } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { checkClerkJwtKey } from './check-clerk-jwt-key';
 
@@ -110,6 +111,18 @@ describe('checkClerkJwtKey', () => {
     expect(await done).toBe(1);
     expect(lines).toEqual([
       'error CLERK_JWT_KEY needs NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to find the keys Clerk publishes',
+    ]);
+  });
+});
+
+describe('the build', () => {
+  it('runs this check before next build, so no deploy is built with a wrong key', () => {
+    const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+    const steps: string[] = scripts.build.split(' && ');
+
+    expect(steps.slice(0, steps.indexOf('next build') + 1)).toEqual([
+      'tsx scripts/check-clerk-jwt-key.ts',
+      'next build',
     ]);
   });
 });

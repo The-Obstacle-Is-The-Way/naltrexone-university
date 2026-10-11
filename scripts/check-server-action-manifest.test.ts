@@ -83,9 +83,12 @@ describe('the build', () => {
   it('runs this check after next build, so every deploy is checked', () => {
     const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
 
-    expect(scripts.build).toBe(
-      'next build && tsx scripts/check-server-action-manifest.ts',
-    );
+    const steps: string[] = scripts.build.split(' && ');
+
+    expect(steps.slice(steps.indexOf('next build'))).toEqual([
+      'next build',
+      'tsx scripts/check-server-action-manifest.ts',
+    ]);
   });
 });
 
