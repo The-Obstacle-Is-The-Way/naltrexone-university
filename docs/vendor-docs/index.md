@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for all external dependencies — API versions, breaking changes we've hit, fields we depend on, and migration paths.
 
-**Last Updated:** 2026-09-16
+**Last Updated:** 2026-10-11
 
 ---
 

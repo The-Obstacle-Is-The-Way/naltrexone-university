@@ -165,7 +165,12 @@ The code handles 13 event types ([Webhooks We Handle](#webhooks-we-handle)); at 
 
 Fix status (endpoint configuration only; the version and signing secret are unchanged):
 
-- **Test: 12 of 13 until this change reaches the `dev` preview.** With all 13 subscribed, a probe subscription-mode Checkout session, created and expired through the API at 15:01:40Z, produced a `checkout.session.expired` event with `pending_webhooks: 0`. Setup-mode sessions from other test runs then arrived (15:04:26Z, 15:05:15Z), and the preview answered 400 `Stripe webhook validation failed`: its consent-state secret cannot verify a session signed in another environment, and every E2E run that exercises add-card creates and expires one. `checkout.session.expired` was removed from the test endpoint that day. The webhook now skips such sessions when it has an E2E owner (`unverifiedSetupStateError` in `stripe-webhook-processor.ts`), as it skips another owner's subscription events (`e2e_owner_mismatch`, DEBT-386). Nothing is written either way, and production, which has no E2E owner, still answers 400. Once this change reaches the `dev` preview, the event goes back on the test endpoint.
+- **Test: 12 of 13 now, 13 once this change reaches the `dev` preview.** In order, on 2026-10-11 UTC:
+  1. The census found 7 events.
+  2. All 13 were subscribed (15:00Z). A probe subscription-mode Checkout session, created and expired through the API at 15:01:40Z, produced a `checkout.session.expired` event with `pending_webhooks: 0`.
+  3. Setup-mode sessions from other test runs then arrived (15:04:26Z, 15:05:15Z), and the preview answered 400 `Stripe webhook validation failed`. Its consent-state secret cannot verify a session signed in another environment, and every E2E run that exercises add-card creates and expires one. `checkout.session.expired` was removed, leaving 12.
+  4. The replacement endpoint `we_1UPPK…` was created with those 12 events ([Test endpoint rotation](#test-endpoint-rotation-2026-10-11)).
+  5. The webhook now skips such sessions when it has an E2E owner (`unverifiedSetupStateError` in `stripe-webhook-processor.ts`), as it skips another owner's subscription events (`e2e_owner_mismatch`, DEBT-386). Nothing is written either way, and production, which has no E2E owner, still answers 400. Once this change reaches the `dev` preview, `checkout.session.expired` is added back to `we_1UPPK…`, making 13.
 - **Live: done 2026-10-11.** The live endpoint now subscribes to all 13 handled events, with `api_version` still `2026-05-27.dahlia`. A probe subscription-mode Checkout session, created through the API with the minimum 30-minute expiry, expired at 15:39:33Z. Its `checkout.session.expired` event shows `pending_webhooks: 0`, so production acknowledged it.
 
 ### Major-release migration
@@ -181,7 +186,7 @@ Fix status (endpoint configuration only; the version and signing secret are unch
 
 Stripe fixes an endpoint's version at creation, so the test endpoint was recreated rather than edited. The same recreate-and-swap is step 2 of a major-release migration:
 
-1. Created `we_1UPPK…` at `2026-05-27.dahlia`, with the old endpoint's URL and events.
+1. Created `we_1UPPK…` at `2026-05-27.dahlia`, with the old endpoint's URL and its 12 events: every handled event except `checkout.session.expired`, for the reason in [Event-set gap](#event-set-gap-handled-but-not-subscribed).
 2. Set `STRIPE_WEBHOOK_SECRET` in Vercel Preview and Development to its signing secret, piped from a private file and confirmed by hash, never printed.
 3. Redeployed the `dev` preview, so the branch alias serves a build with the new secret.
 4. Probed with a test-mode trial subscription tagged with another `e2e_owner`. The new endpoint's deliveries returned 200 (`e2e_owner_mismatch` skip). The old endpoint's returned 400 `Webhook signature verification failed`, as expected once its secret was retired.
