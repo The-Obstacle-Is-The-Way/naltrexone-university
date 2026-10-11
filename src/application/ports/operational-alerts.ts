@@ -10,6 +10,22 @@ export const OPERATIONAL_ALERT_KINDS = [
   'renewal_notice_outcome_unknown',
   'checkout_stripe_holds_unrecorded',
   'clerk_backend_call_limiter_failed',
+  // DEBT-503 item 3, one kind per impact, so a lesser one never spends the
+  // cooldown of a worse one. Our site-wide sign-in limit refused requests:
+  // returning visitors everywhere wait.
+  'clerk_site_limit_reached',
+  // Clerk refused or failed our calls: a user lookup's 429, or session
+  // refreshes and handshake nonce lookups failing past a threshold.
+  'clerk_backend_calls_refused',
+  // Clerk's middleware could not fetch Clerk's signing keys, so every
+  // signed-in visitor on that server instance was signed out.
+  'clerk_signing_keys_unavailable',
+  // DEBT-503 item 5: session tokens failed their signature check past a
+  // threshold, as every token does when CLERK_JWT_KEY is not Clerk's key.
+  'clerk_session_tokens_rejected',
+  // DEBT-501 item 1: the Stripe reconcile run stopped before its last page,
+  // and nothing resumes it, so later rows go unrepaired.
+  'stripe_reconcile_stopped_early',
   // A scheduled GitHub check, the alert watcher among them, has stopped.
   'scheduled_checks_stopped',
   // The check that the scheduled checks run needs a person: GitHub refused

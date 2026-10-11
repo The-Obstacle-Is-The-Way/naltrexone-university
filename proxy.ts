@@ -9,8 +9,14 @@ import {
   loadContainerOperationalAlerts,
   loadContainerRateLimiter,
   raiseLimiterFailureAlert,
+  raiseOperationalAlert,
   triggersClerkBackendCall,
 } from '@/lib/clerk-backend-call-limit';
+import {
+  clerkCallFailure,
+  reportClerkCallFailure,
+} from '@/lib/clerk-call-failures';
+import { parseClerkJwtKey } from '@/lib/clerk-jwt-key';
 import {
   PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
@@ -198,6 +204,28 @@ function shouldBypassClerkAuth(): boolean {
   return true;
 }
 
+// DEBT-503 item 5: with Clerk's signing key, the middleware verifies session
+// tokens without fetching keys from Clerk's Backend API, whose outage would
+// sign every visitor out, and which any token naming an unknown key ID calls. `@clerk/nextjs` does not read
+// CLERK_JWT_KEY itself. An unreadable key is logged and left out, so Clerk
+// fetches its keys as before; the production build refuses one.
+function configuredClerkJwtKey(): string | undefined {
+  try {
+    return parseClerkJwtKey(process.env.CLERK_JWT_KEY);
+  } catch (error) {
+    console.error({
+      event: 'clerk_jwt_key_unreadable',
+      reason: error instanceof Error ? error.message : 'unknown',
+    });
+    return undefined;
+  }
+}
+
+function clerkJwtKeyOption(): { jwtKey?: string } {
+  const jwtKey = configuredClerkJwtKey();
+  return jwtKey ? { jwtKey } : {};
+}
+
 async function getClerkMiddleware(): Promise<NextMiddleware> {
   if (cachedClerkMiddleware) return cachedClerkMiddleware;
 
@@ -214,6 +242,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
       }
     },
     {
+      ...clerkJwtKeyOption(),
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
         strict: true,
@@ -280,6 +309,20 @@ export function createProxy({
           // on the database that just failed.
           event.waitUntil(raiseLimiterFailureAlert(loadOperationalAlerts));
         },
+        (limit) => {
+          // DEBT-503 item 3: each refusal is logged for diagnosis. Only the
+          // site-wide limit alerts the owner, after the response: one client
+          // over its own limit is the limit working, and needs no one.
+          console.warn({ event: 'clerk_backend_call_refused', limit });
+          if (limit === 'site') {
+            event.waitUntil(
+              raiseOperationalAlert(
+                loadOperationalAlerts,
+                'clerk_site_limit_reached',
+              ),
+            );
+          }
+        },
       );
       if (limited) return limited;
     }
@@ -288,6 +331,20 @@ export function createProxy({
     const response = await clerkMw(request, event);
     if (response) {
       logCheckoutSuccessAuthBounce(request, response);
+      // DEBT-503 item 3: Clerk's middleware swallows Clerk failing its own
+      // calls; its answer still says which, and the owner hears of it after
+      // the response. Only production's allowance is at stake.
+      const failure = usesProductionClerkInstance()
+        ? clerkCallFailure(request, response)
+        : null;
+      if (failure) {
+        event.waitUntil(
+          reportClerkCallFailure(failure, {
+            loadLimiter: loadBackendCallLimiter,
+            loadAlerts: loadOperationalAlerts,
+          }),
+        );
+      }
     }
 
     return response;

@@ -37,6 +37,26 @@ export const CLERK_BACKEND_CALL_SITE_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+// DEBT-503 item 3: Clerk's middleware refreshes and resolves handshakes
+// itself, and some of those calls fail for ordinary reasons, such as a session
+// that ended elsewhere or a reused handshake nonce. Past this many in a
+// minute, across the site, Clerk is refusing or failing them: far above what a
+// pre-launch site's ended sessions produce, and far below the hundreds a
+// spent allowance fails. Item 4's measurements retune it.
+export const CLERK_BACKEND_CALL_FAILURE_ALERT_THRESHOLD = {
+  limit: 10,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
+// DEBT-503 item 5: a session token whose signature fails is a forgery, or,
+// when CLERK_JWT_KEY is not Clerk's signing key, every signed-in request. A
+// visitor signed out that way signs in again and fails again, so even one
+// active visitor passes this; forgeries alone rarely do.
+export const CLERK_SESSION_TOKEN_REJECTED_ALERT_THRESHOLD = {
+  limit: 3,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 // BUG-325: each checkout-success visit costs a Clerk user lookup and a Stripe
 // call. A buyer lands there once or twice, so ten a minute per signed-in user
 // leaves real visits untouched.

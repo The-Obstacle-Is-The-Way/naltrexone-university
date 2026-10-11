@@ -82,7 +82,9 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **Unsigned webhook posts.** A request with a bogus signature header passes the header-presence check, then costs one rate-limiter write and two error lines before verification fails (Stripe `app/api/stripe/webhook/handler.ts:48-100`, Clerk and Resend similarly). The limiter bounds it (Audit #21 and SPEC-017 accepted this residual). **Decided:** log failed verifications at warn, once per limiter window. **Narrowed 2026-10-06:** a failed signature check, which anyone can cause, logs at warn with fixed text and the safe diagnostics. An invalid payload after a valid signature means the provider sent something unexpected, so it stays at error. The limiter already bounds the count, so "once per window" is dropped.
 - **Cron routes.** A warn line per unauthenticated request, with fixed text. **Accepted:** bounded and contentless.
 - **Malformed Clerk handshake token.** A garbage `__clerk_handshake` logs `Clerk: unable to resolve handshake` inside Clerk's SDK. **Decided:** BUG-323's limiter covers this parameter too.
-- **Clerk's optional `CLERK_JWT_KEY`** lets the middleware verify session tokens without fetching Clerk's signing keys over the network. **Decided:** an optional owner setting; the cost without it is middleware time only.
+- **Clerk's `CLERK_JWT_KEY`** lets the middleware verify session tokens without fetching Clerk's signing keys from the Backend API. Without it, each server instance fetches them every five minutes. A failed fetch, in a Clerk outage or a network failure, signs every visitor on that instance out, and a token naming an uncached key ID forces a fetch. `@clerk/nextjs` 7.9.10 does not read the variable itself, so it must be passed as `jwtKey`. **Decided:** [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 5.
+
+  *Corrected 2026-10-10: this was an optional owner setting whose absence cost only middleware time.*
 - **The logger's redaction list** (`lib/logger.ts:27-46`) predates `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `DATABASE_URL`. Nothing logs `env` today. **Decided:** add them.
 - **CSP violation reports** reach Sentry's report endpoint. This is already recorded as known noise in DEBT-420 (archived), so it is not re-filed.
 
@@ -124,7 +126,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 - [x] Item 3: a malformed session ID, or one Stripe lacks, redirects with `invalid_session_id`, logged at info, with nothing thrown. Each signed-in user is limited before Clerk and Stripe, and a session from the other Stripe mode stays an error.
 - [x] Item 4: decided with a trigger; production Sentry had none of these errors in 14 days.
 - [x] Item 5: the response plan is in the logging guide, `docs/dev/logging.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
-- [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` stays an optional owner setting.
+- [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` moved to DEBT-503 item 5 on 2026-10-10.
 - [ ] Engineering, by 2026-10-20: search Sentry through its API for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions cover their content and level, and no production log capture has been made. *Corrected 2026-10-06 (#1410 review): no one-hour Vercel capture exists.* The original 14-day historical search remains an operator receipt.
 
 ## Related
