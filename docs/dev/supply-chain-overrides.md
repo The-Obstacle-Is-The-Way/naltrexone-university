@@ -295,6 +295,7 @@ pnpm typecheck && pnpm lint && pnpm test --run && pnpm build
 version is older than 7 days (~2026-07-03); a clean `pnpm install` will still
 resolve `3.15.0` because the override remains. The override pin itself can stay
 until a newer mature `js-yaml` (or a `4.x` consumer) makes it unnecessary.
+*Corrected 2026-10-11: DEBT-517 replaced `gray-matter` with `@11ty/gray-matter`, which uses `js-yaml` 5, so no `js-yaml` 3 remains and the override is gone.*
 
 ## Adding a new native-build package to allowBuilds
 

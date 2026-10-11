@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import fg from 'fast-glob';
+import { glob } from 'tinyglobby';
 
 const ALL_QUESTION_PATTERNS = ['content/questions/**/*.mdx'] as const;
 const NON_PLACEHOLDER_PATTERNS = [
@@ -25,11 +25,11 @@ function getMissingFilesMessage(includePlaceholders: boolean): string {
 export async function readSeedQuestionFiles(
   includePlaceholders: boolean,
 ): Promise<SeedSourceFile[]> {
-  const filePaths = await fg([...getSeedPatterns(includePlaceholders)], {
+  const filePaths = await glob(getSeedPatterns(includePlaceholders), {
     onlyFiles: true,
-    unique: true,
     absolute: true,
     dot: false,
+    expandDirectories: false,
   });
 
   if (filePaths.length === 0) {

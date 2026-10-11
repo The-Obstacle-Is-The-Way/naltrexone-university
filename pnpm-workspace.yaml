@@ -32,14 +32,6 @@ overrides:
   # so defense-in-depth. 7.29.1 satisfies jsdom's ^7.25.0. Aged past the 7-day
   # gate (published 2026-09-04).
   undici: 7.29.1
-  # Security: GHSA-2883-xcg3-v3hh (CVE-2026-84375) — maxTotalMergeKeys did not
-  # bound CPU for empty merge sources; the earlier GHSA-h67p-54hq-rp68 +
-  # GHSA-5p4m-2wfm-xmqj alias/!!omap quadratic-CPU fixes remain covered.
-  # Transitive via gray-matter over first-party YAML/Markdown only, so
-  # defense-in-depth. Alert #63 retargeted the v3-legacy line from 3.15.1 to
-  # 3.15.2, which satisfies gray-matter's ^3.13.1 (DEBT-476). Aged past the
-  # 7-day gate as of 2026-09-02 (published 2026-08-26).
-  js-yaml: 3.15.2
   # Security: GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895 — unbounded brace
   # expansion could allocate oversized intermediate arrays and exhaust memory;
   # GHSA-6j4f-fj2g-mc7p + GHSA-qhr7-859c-m2p7 — uncontrolled recursion; and
