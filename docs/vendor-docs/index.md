@@ -29,8 +29,12 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 
 Package versions above were reconciled against `package.json` on 2026-09-16.
 Stripe's API version is pinned in `lib/stripe-api-version.ts` and read by
-`lib/stripe.ts`. Clerk's API version remains a tracked vendor setting rather
-than a local code constant.
+`lib/stripe.ts`. That pin covers outbound requests only: each Stripe webhook
+endpoint has its own version. The live endpoint was at `2026-05-27.dahlia` and
+the test endpoint at the account default `2026-01-28.clover` when checked on
+2026-10-11 ([census and decision](./stripe.md#webhook-endpoint-api-versions)).
+Clerk's API version remains a tracked vendor setting rather than a local code
+constant.
 
 ---
 
