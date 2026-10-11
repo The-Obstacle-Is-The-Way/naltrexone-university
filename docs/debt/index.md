@@ -6,7 +6,7 @@
 **Now** — 2026-10-11.
 - **Order.** [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)'s "Decided order" is the queue; each record holds its own part.
 - **Security.** #1438's promotion (#1442) fixed alerts #80, #55, #78, #79 and #84–#95 on 2026-10-09; no fix is coming for #77 and none can reach #81's chain, so DEBT-517 removes `braces` and `sprintf-js` by replacing `fast-glob` and `gray-matter`. DEBT-509's advisory watch shipped (#1420, promoted in #1431).
-- **In progress.** DEBT-518: the owner approved the documentation revamp and widened it to every document; the inventory of every document (step 0) is under way.
+- **In progress.** DEBT-518: the owner approved the documentation revamp and widened it to every document; step 0, the inventory and target layout, is next.
 - **Verifying.** DEBT-505: released 2026-10-09; the first drill reached the inbox and the cron monitor checks in; still open: its unchecked items, among them the 2026-11-03 cycle's drill; due 2026-11-05. DEBT-508: two overlapping CI runs both pass, now in doubt; due 2026-10-22. DEBT-510: no merge blocked by a dropped Codecov notification; due 2026-10-22. DEBT-515: the weekly learnings issue opens, new learnings held; due 2026-10-23. DEBT-516: `main`'s CI and hosted-checkout smoke log which registry served Postgres; due 2026-10-24. DEBT-517: Dependabot marks alerts #77 and #81 fixed on `main`; due 2026-10-25.
 - **Held dependency.** DEBT-514 holds lint-staged at 17.5.1 until one of its exit paths is verified for every workflow that commits.
 - **Next.** DEBT-503 item 4, due 2026-10-21. Then the pre-sale items, then one identity resolver (DEBT-502) with DEBT-511 on it.
