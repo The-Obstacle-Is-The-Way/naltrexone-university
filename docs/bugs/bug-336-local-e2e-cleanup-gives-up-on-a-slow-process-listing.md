@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — promotion to `main`; due 2026-10-14
+**Status:** Verifying — promotion to `main`, then two weeks of CI without `spawnSync ps ETIMEDOUT`; due 2026-10-25
 **Priority:** P3
 **Date:** 2026-10-11
 **Resolved:** —
@@ -18,9 +18,9 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 
 ## Evidence
 
-- **The failure.** Promotion #1461's CI run 38146749448 failed one test of 7,804: "preserves an operating-system SIGTERM failure". The test expected its injected `EPERM`, and received `spawnSync ps ETIMEDOUT`, which is the error the one-second limit raises. The same tree passed #1460's CI and the full local gate, and a re-run passed. [The cause is recorded on #1461.](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1461#issuecomment-6110055900)
-- **A passing stall, not a slow runner.** The failed attempt's unit step took 186 s and the passing re-run 181 s. No other failed CI run since 2026-09-11 has this error.
-- **`ps` normally takes milliseconds.** The orchestrator's exact command, timed 50 times on macOS: median 26 ms idle, 41 ms with 20 busy loops, at most 59 ms.
+- **The failure.** Promotion #1461's first CI run failed one test of 7,804: "preserves an operating-system SIGTERM failure". The test expected its injected `EPERM`, and received `spawnSync ps ETIMEDOUT`, which is the error the one-second limit raises. The same tree passed #1460's CI and the full local gate, and a re-run passed. [The cause is recorded on #1461.](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1461#issuecomment-6110055900)
+- **A passing stall, not a slow runner.** The failed attempt's unit step took 186 s and the passing re-run 181 s. None of the 15 other failed CI runs since 2026-09-11, Dependabot's excluded, has this error in its failed steps.
+- **`ps` normally takes milliseconds.** The orchestrator's exact command, timed 50 times on macOS: median 26 ms idle, 41 ms with 20 busy loops, at most 59 ms. CI runs on Ubuntu, where it was not timed; all that is known of the stall is that it passed one second.
 - **Reproduced.** A `ps` slowed to 1.5 s on `PATH` gives the same `spawnSync ps ETIMEDOUT`. With a detached descendant, standing in for Playwright's web server, that descendant was still alive after the interrupt finished.
 
 ## Impact
@@ -37,15 +37,18 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 
 ## Options
 
-1. **Raise the limit to five seconds.** About a hundred times the slowest listing measured under load, and short enough that an interrupt still ends promptly. *Chosen.*
+1. **Raise the limit to five seconds.** About 85 times the slowest listing measured under load, and short enough that an interrupt still ends promptly. *Chosen.*
 2. **Retry once on a timeout.** It behaves like a longer limit, with more code.
 3. **List asynchronously, or earlier.** The snapshot must precede the signals, and an earlier one misses later descendants.
 4. **Inject the process lister in tests.** It would hide the production exposure the test found.
 5. **Remove the limit.** A hung `ps` would block cleanup indefinitely.
+6. **When listing fails, forward the original signal and wait the grace period, instead of `SIGKILL` at once.** Playwright 1.63 stops its web server when its runner gets `SIGINT`. On `SIGTERM` it does not: the runner has no handler, and the web server's launcher installs only an exit handler, which Node does not run when a signal ends the process. So this would help only a Ctrl-C, and only when `ps` hangs past the limit. Not chosen.
 
 ## Resolution (decided)
 
-`PROCESS_DISCOVERY_TIMEOUT_MS = 5_000`, with a comment giving its purpose. The red test `still signals a detached descendant when process discovery is slow` puts a `ps` slowed to 1.5 s on `PATH`. It requires the interrupt to finish normally and the detached descendant to be gone. It is the only child-process time limit in `scripts/`, `lib/` and `src/`.
+`PROCESS_DISCOVERY_TIMEOUT_MS = 5_000`, with a comment giving its purpose. The red test `still signals a detached descendant when process discovery is slow` puts a `ps` slowed to 1.5 s on `PATH`. It requires the interrupt to finish normally and the detached descendant to be gone. The one-second limit was the only child-process time limit under 30 seconds in `scripts/`, `lib/` and `src/`; the others allow 30 seconds to five minutes.
+
+**What remains.** A `ps` that hangs for more than five seconds still ends in the fallback, which can leave a detached group running (option 6).
 
 ## Verification
 
@@ -53,8 +56,9 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 - [x] Under the old limit, the detached descendant survives the interrupt (2026-10-11).
 - [x] Under the new limit the test passes, and the whole cleanup test file passed 8 of 8 runs beside 20 busy loops (2026-10-11).
 - [ ] Promoted to `main`.
+- [ ] No CI run fails with `spawnSync ps ETIMEDOUT` in the two weeks after the merge (due 2026-10-25).
 
 ## Related
 
-- Commit `bc0978ed` added the process listing and its one-second limit.
+- #939 added the process listing and its one-second limit.
 - [DEBT-518](../debt/debt-518-closed-records-outweigh-the-code-and-bury-current-truth.md) uses this record as an example of what a small fix costs under the current record process.

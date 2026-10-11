@@ -107,9 +107,9 @@ describe('local E2E command failures', () => {
   });
 
   // Process discovery's time limit only guards against a hang. On a loaded CI
-  // runner (run 38146749448, 2026-10-11) `ps` took over a second, and the old
-  // one-second limit fell back to the root group alone, leaving a detached
-  // descendant's group, such as Playwright's web server, running.
+  // runner `ps` took over a second (BUG-336), and the old one-second limit fell
+  // back to the root group alone, leaving a detached descendant's group, such
+  // as Playwright's web server, running.
   it('still signals a detached descendant when process discovery is slow', async () => {
     const realPs = execFileSync('sh', ['-c', 'command -v ps'], {
       encoding: 'utf8',
@@ -118,7 +118,7 @@ describe('local E2E command failures', () => {
     try {
       await writeFile(
         path.join(slow, 'ps'),
-        `#!/bin/sh\nsleep 1.5\nexec ${realPs} "$@"\n`,
+        `#!/bin/sh\nsleep 1.5\nexec "${realPs}" "$@"\n`,
         { mode: 0o755 },
       );
       await withRunningCommand(
