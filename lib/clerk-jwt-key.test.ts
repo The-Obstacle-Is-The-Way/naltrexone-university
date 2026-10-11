@@ -42,6 +42,14 @@ describe('parseClerkJwtKey', () => {
     );
   });
 
+  it('refuses a PEM whose body is not a key', () => {
+    expect(() =>
+      parseClerkJwtKey(
+        '-----BEGIN PUBLIC KEY-----\nbm90IGEga2V5\n-----END PUBLIC KEY-----',
+      ),
+    ).toThrow('CLERK_JWT_KEY is not a public key in PEM form');
+  });
+
   it('refuses a private key', () => {
     expect(() => parseClerkJwtKey(rsaKeys().privatePem)).toThrow(
       'CLERK_JWT_KEY is not a public key in PEM form',

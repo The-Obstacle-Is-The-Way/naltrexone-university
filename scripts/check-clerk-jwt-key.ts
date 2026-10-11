@@ -26,6 +26,10 @@ function frontendApiHost(publishableKey: string | undefined): string | null {
   return /^[a-z0-9.-]+\$$/i.test(decoded) ? decoded.slice(0, -1) : null;
 }
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function checkClerkJwtKey({
   env,
   readJson,
@@ -35,7 +39,7 @@ export async function checkClerkJwtKey({
   try {
     key = parseClerkJwtKey(env.CLERK_JWT_KEY);
   } catch (error) {
-    output.error(error instanceof Error ? error.message : String(error));
+    output.error(messageOf(error));
     return 1;
   }
   if (!key) {
@@ -54,7 +58,7 @@ export async function checkClerkJwtKey({
     published = await readJson(`https://${host}/.well-known/jwks.json`);
   } catch (error) {
     output.error(
-      `could not read the keys Clerk publishes for ${host}: ${error instanceof Error ? error.message : String(error)}`,
+      `could not read the keys Clerk publishes for ${host}: ${messageOf(error)}`,
     );
     return 1;
   }
@@ -66,19 +70,34 @@ export async function checkClerkJwtKey({
   return 0;
 }
 
-async function readJson(url: string): Promise<unknown> {
-  const response = await fetch(url, {
+/** Reads the keys Clerk publishes, within a time limit. */
+export async function readPublishedKeys(
+  url: string,
+  fetchKeys: typeof fetch = fetch,
+): Promise<unknown> {
+  const response = await fetchKeys(url, {
     signal: AbortSignal.timeout(READ_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-if (import.meta.url === executedPath) {
-  void checkClerkJwtKey({ env: process.env, readJson, output: console }).then(
-    (code) => {
-      process.exitCode = code;
-    },
-  );
+/** The command line's run: the real environment, console and Clerk. */
+export function runFromCommandLine(
+  env: Record<string, string | undefined> = process.env,
+  output: Pick<Console, 'log' | 'error'> = console,
+  readJson: (url: string) => Promise<unknown> = readPublishedKeys,
+): Promise<number> {
+  return checkClerkJwtKey({ env, readJson, output });
 }
+
+/* v8 ignore start */
+function setExitCode(code: number): void {
+  process.exitCode = code;
+}
+
+// No top-level await: tsx runs this repository's scripts as CommonJS.
+const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
+if (import.meta.url === executedPath)
+  void runFromCommandLine().then(setExitCode);
+/* v8 ignore stop */
