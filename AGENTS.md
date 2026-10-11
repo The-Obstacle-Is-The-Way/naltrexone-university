@@ -723,6 +723,12 @@ was stale, contradicting the code's credential-safe redaction.
   assigned to the owner, listing every learning since its last report, with
   those that tell CodeRabbit to stop raising something first. The owner
   rejects or deletes harmful ones at app.coderabbit.ai/learnings.
+- **A finding that rests on a learning contradicting this file** is declined
+  with the section it contradicts, quoting the "Learnings used" entry, in the
+  same reply. The rule it broke is then written into `.coderabbit.yaml`'s path
+  instructions, which outrank stored learnings, and the learning is added to
+  DEBT-515's prune list for the owner to delete. An old learning keeps
+  applying until someone deletes it.
 
 ### Why This Matters
 

@@ -1,12 +1,12 @@
 # BUG-335: The Merge Guard Mistakes a Merged-In `main` Commit for the Approved Head
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+> Close using [the archive convention](../../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Verifying — promoted to main; due 2026-10-17
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-10-10
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-10
+**Verification receipts:** #1456 merged through the guard at exact-head approval 5481035065; promoted in #1457 (`main` `4dde3ad6`), whose CI passed and whose production deploy answered healthy on 2026-10-10.
 
 ---
 
@@ -23,7 +23,7 @@
   4. `917ac631` merged `main` into the branch, with the same tree as `62874a39`, and was pushed at 00:52:40Z.
   5. GitHub repointed the approval to `917ac631`, as it does after a merge-only push.
 - **The cause (read in code).** When the approval's commit is the current head, `readCarryEvidence` takes the approved head from `headPushedAsOf`: the PR commit whose earliest GitHub Actions check suite was created last before the approval. `291b6476` is one of the PR's commits once `main` is merged in. Its own suites ran on `main` at 00:39:05Z, after `62874a39`'s push and before the approval. So the guard took it for the approved head. The diff against `dev` at `291b6476` is not #1440's, so the carry failed.
-- **When it happens.** A branch that merges `main` after a promotion, between CodeRabbit's approval and the merge, when the promotion's suites were created between the branch's previous push and the approval. Every branch must carry the latest promotion ([merge tooling](../../AGENTS.md#how-to-check)), so this can recur after any promotion.
+- **When it happens.** A branch that merges `main` after a promotion, between CodeRabbit's approval and the merge, when the promotion's suites were created between the branch's previous push and the approval. Every branch must carry the latest promotion ([merge tooling](../../../AGENTS.md#how-to-check)), so this can recur after any promotion.
 
 ## Impact
 
@@ -50,4 +50,4 @@ A finished PR cannot merge until it spends another CodeRabbit review, the shared
 
 - [x] A test of `headPushedAsOf` with #1440's sequence picks the earlier head, not the merged-in `main` commit; red before the change. *2026-10-10: `merge-reviewed-pr-carry.test.ts`, "ignores a merged-in commit's check suites from another branch".*
 - [x] The guard carries #1440's approval when run against GitHub. *2026-10-10: read-only run, `carriedFrom` `62874a39`.*
-- [ ] Promoted to `main`. The carry is already proven on real data above: the read-only run used #1440's GitHub state with the same code this pull request merges. A later merge cannot be relied on for that proof, since branches now merge `main` before their review rather than after it.
+- [x] Promoted to `main`. *2026-10-10: #1457, `main` `4dde3ad6`; `main`'s CI passed, and production's health checks answered 200 with the database up.* The carry is already proven on real data above: the read-only run used #1440's GitHub state with the same code this pull request merges. A later merge cannot be relied on for that proof, since branches now merge `main` before their review rather than after it.

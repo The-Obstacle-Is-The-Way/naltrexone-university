@@ -77,6 +77,9 @@ describe('container (skip clerk)', () => {
       await expect(
         container.createBillingControllerDeps().getClerkUserId(),
       ).resolves.toBeNull();
+      await expect(
+        container.getClerkUserById('clerk_owner'),
+      ).resolves.toBeNull();
     });
   });
 

@@ -26,7 +26,11 @@ import {
   HTTP_UNAUTHORIZED,
 } from '@/src/adapters/shared/http-status';
 import { CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
-import type { Logger, RateLimiter } from '@/src/application/ports';
+import type {
+  Logger,
+  OperationalAlerts,
+  RateLimiter,
+} from '@/src/application/ports';
 
 const ROUTE = '/api/cron/reconcile-stripe-subscriptions';
 
@@ -61,6 +65,7 @@ export type ReconcileStripeSubscriptionsCronHandlerDependencies = {
   drainPendingStripeCustomerCleanups: (
     input: DrainPendingStripeCustomerCleanupsRequest,
   ) => Promise<DrainPendingStripeCustomerCleanupsOutput>;
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
 };
 
 function getAuthorizationToken(req: Request): AuthorizationTokenResult {
@@ -262,6 +267,16 @@ async function handleCronRequest(
       },
       'Pending Stripe customer cleanup drain failed',
     );
+  }
+
+  // DEBT-501 item 1: a run that stopped early leaves its later rows
+  // unrepaired, and nothing resumes it until the oldest-first order ships, so
+  // the owner is told. After the drain, so the alert never takes its time.
+  if (result && 'stoppedEarly' in result && result.stoppedEarly) {
+    await deps.operationalAlerts.raise({
+      kind: 'stripe_reconcile_stopped_early',
+      count: 1,
+    });
   }
 
   if (reconciliationFailed || drainFailed) {
