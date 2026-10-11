@@ -58,11 +58,11 @@ export type DocumentationAudit = {
   duplicateLedgerIds: string[];
   malformedLedgerLines: string[];
   unnamedVerifying: string[];
-  invalidVerifying: string[];
+  invalidScheduledChecks: string[];
   invalidStatus: string[];
   longStatus: string[];
-  verifyingOverdue: { file: string; due: string }[];
-  verifyingFarFuture: { file: string; due: string }[];
+  scheduledOverdue: { file: string; due: string }[];
+  scheduledFarFuture: { file: string; due: string }[];
   missingLiveRows: string[];
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
@@ -432,11 +432,11 @@ export function auditRecordLifecycle(
     duplicateLedgerIds: [],
     malformedLedgerLines: [],
     unnamedVerifying: [],
-    invalidVerifying: [],
+    invalidScheduledChecks: [],
     invalidStatus: [],
     longStatus: [],
-    verifyingOverdue: [],
-    verifyingFarFuture: [],
+    scheduledOverdue: [],
+    scheduledFarFuture: [],
     missingLiveRows: [],
     missingRowTargets: [],
     brokenLive: [],
@@ -542,7 +542,7 @@ export function auditRecordLifecycle(
       result.longStatus.push(record);
     // A record whose fix shipped but whose check can only happen in
     // production stays live, as Verifying, until that check is done.
-    if (VERIFYING_STATUS.test(status)) {
+    if (VERIFYING_STATUS.test(status) || /\bdue \d/i.test(status)) {
       const dues = [...status.matchAll(DUE_DATE)].map((match) => match[1]);
       const due = dues[0];
       const check = status
@@ -555,11 +555,14 @@ export function auditRecordLifecycle(
         !isCalendarDate(due) ||
         !/[\p{L}\p{N}]/u.test(check)
       )
-        result.invalidVerifying.push(record);
-      else if (due < today) result.verifyingOverdue.push({ file: record, due });
+        result.invalidScheduledChecks.push(record);
+      else if (due < today) result.scheduledOverdue.push({ file: record, due });
       else if (due > addDays(today, VERIFYING_HORIZON_DAYS))
-        result.verifyingFarFuture.push({ file: record, due });
-      if (!nowText.toLowerCase().includes(recordId(record) ?? record))
+        result.scheduledFarFuture.push({ file: record, due });
+      if (
+        VERIFYING_STATUS.test(status) &&
+        !nowText.toLowerCase().includes(recordId(record) ?? record)
+      )
         result.unnamedVerifying.push(record);
     }
   }
@@ -745,7 +748,7 @@ export function runDocumentationCommand(
     result.duplicateLedgerIds,
     result.malformedLedgerLines,
     result.unnamedVerifying,
-    result.invalidVerifying,
+    result.invalidScheduledChecks,
     result.invalidStatus,
     result.longStatus,
     result.missingLiveRows,

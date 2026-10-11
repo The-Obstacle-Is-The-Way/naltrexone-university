@@ -53,7 +53,7 @@ describe('records folder and ledger', () => {
     expect(
       audit({
         'docs/records/bug-001-x.md': '**Status:** Verifying — due 2026-10-20',
-      }).invalidVerifying,
+      }).invalidScheduledChecks,
     ).toEqual(['docs/records/bug-001-x.md']);
   });
 

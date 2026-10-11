@@ -1,9 +1,8 @@
 name: Documentation due checks
 
-# A record whose fix shipped but whose final check can only happen in
-# production stays live as Verifying, with a due date. Pull-request CI never
-# fails on a calendar date; this weekly job opens one issue when any such
-# check is overdue, so it reaches the owner. See AGENTS.md, Documentation.
+# Scheduled record actions and the human review of Waiting/owner decisions.
+# Runs from the default branch; calendar expiry raises one aggregate issue
+# rather than failing unrelated PRs. See docs/records/README.md.
 on:
   schedule:
     - cron: '17 13 * * 1'
@@ -44,7 +43,7 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Raise overdue production checks
+      - name: Raise overdue documentation checks
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

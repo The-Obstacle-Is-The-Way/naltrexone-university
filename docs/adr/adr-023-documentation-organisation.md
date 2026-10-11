@@ -1,6 +1,6 @@
 # ADR-023: Documentation Organisation
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-10-11)
 **Date:** 2026-10-11
 **Decision Makers:** On 2026-10-11 the owner approved records as working files, deleted on close (DEBT-518, option G). The owner widened the revamp to every document, "with clean namespaces and names", and delegated the layout. This ADR records that layout; the owner reviews it in its pull request.
 **Executed by:** DEBT-518, in pull requests: records first, then the agent instructions, the layout, and the archive's removal.
@@ -130,3 +130,13 @@ Mechanical link repair is allowed. Implementation progress belongs in records an
 
 - DEBT-518: the measurements, the options, and the migration this ADR's layout drives.
 - [ADR-019](./adr-019-test-quality-practices.md): its UI QA "register" becomes the QA procedures in `docs/guides/qa/`.
+
+## Amendment — 2026-10-11
+
+The independent review clarifies the layout without changing the owner's preservation decisions:
+
+- A new feature is specified before code in `product/<subject>.md`, with delivery state, acceptance criteria, open decisions and rollout steps. Multi-PR duration alone is not debt. See [Product Documents](../product/README.md).
+- Apply the placement test to a document's primary purpose. UI standards remain in `design-system/`; agent instructions route to them instead of duplicating them. Colocated contracts and READMEs remain beside code, with a pointer from the relevant topic. Product contracts in the master remain there unless the owner agrees to consolidate them.
+- The records index owns a weekly human queue review. Automation can detect its due date and dated record actions; humans evaluate Waiting triggers and pending owner decisions. The index defines accountability and the evidence for completing that review.
+- Closed IDs remain stable. Concurrent candidate IDs are resolved after integrating the target branch, and a newly fired Waiting item gets a new ID or joins an already-open record. Closure verifies that final evidence is retrievable at the ledger's pinned commit before deletion.
+- Legal and security files remain in their current folders pending the owner's decision. An exploitable finding stays private through deployment and owner-approved disclosure, including its Git history and reproducer.

@@ -42,7 +42,7 @@ Measured 2026-10-11 on `dev` after #1464.
   - why the code has its shape: a comment where it happens;
   - how we work: `AGENTS.md`, `.claude/rules/` and `docs/dev/`;
   - what was decided, and what else was weighed: an ADR, which is not edited once accepted, only superseded ([Fowler, *Architecture Decision Record*](https://www.martinfowler.com/bliki/ArchitectureDecisionRecord.html));
-  - what happened, with its receipts: pull-request descriptions and git history, permanent and unchangeable.
+  - what happened, with its receipts: reachable git commits for durable evidence, and pull-request descriptions for review context. PR descriptions can be edited; they are not immutable evidence.
 - **An archived record is none of these.** It is a second, frozen copy of the story of a problem that no longer exists, kept where searches and agents read it beside what is true now. A document that is no longer true but looks current is worse than none.
 
 ## Impact
@@ -79,8 +79,10 @@ Measured 2026-10-11 on `dev` after #1464.
 
 ### The Model
 
+*Corrected 2026-10-11: the independent review separates feature specifications from defect/debt records, makes Waiting review accountable, and requires retrieval evidence before deletion. The current lifecycle rules are in `docs/records/README.md`; ADR-023’s amendment and `docs/product/README.md` define feature work.*
+
 1. **When to file.**
-   - File a record when the work spans more than one pull request, or needs an independent challenge before any code.
+   - File a defect/debt record when that work spans more than one pull request or needs an independent challenge. A new product feature instead uses the product specification workflow, regardless of PR count.
    - A fix that is already proven and lands in one pull request uses that PR's description as its record. The description has the same sections as a record: evidence, options, decision and verification.
    - If a check outlives that pull request, such as its promotion, it needs a record, so the weekly due check sees it.
 2. **Write first, and challenge on the branch.**
@@ -142,7 +144,7 @@ The owner widened the plan from records to every document: the product spec, arc
 | `practice-engine/security-model.md` | merge → `architecture/security.md` |
 | `practice-engine/content-pipeline.md` | `architecture/content-pipeline.md` + `guides/content/{import-and-seed,release-and-withdraw,troubleshooting}.md` |
 | `practice-engine/{current-state,spec-coverage-map,file-index}.md` | delete |
-| `docs/content/question-format-spec.md` | delete (superseded; repoint to `content/drafts/questions/SCHEMA.md` and the code) |
+| `docs/content/question-format-spec.md` | reconcile against `content/drafts/questions/SCHEMA.md` and the code; preserve unique operational guidance before removal, and obtain owner agreement for substantive deletion |
 | `docs/content/tag-taxonomy-pipeline.md` | merge → `architecture/content-pipeline.md` |
 | `docs/content/reports/*` | delete |
 | `docs/vendor-docs/{index,clerk,stripe,postgres}.md` | `architecture/integrations/{README,clerk,stripe,postgres}.md` (drop version tables) |
@@ -181,8 +183,8 @@ The owner widened the plan from records to every document: the product spec, arc
 |---|---|
 | `frontend/{index,standards,pattern-registry,typography-policy,contrast-policy,design-principles,bookmark-surface-policy}.md` | `design-system/{README,standards,pattern-registry,typography,contrast,layout,bookmark-surfaces}.md` (rewrite `layout.md` §2; drop inventories) |
 | `frontend/pages/*` | delete |
-| `docs/legal/*` | `policies/legal/*` (**owner**; path-only; tests updated) |
-| `docs/security/*` | `policies/security/*` (**owner**; path-only) |
+| `docs/legal/*` (held pending owner decision) | `policies/legal/*` (**owner**; path-only; tests updated) |
+| `docs/security/*` (held pending owner decision) | `policies/security/*` (**owner**; path-only) |
 | `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
 | `docs/{bugs,debt}/*` | `docs/records/` (flat); indexes merge into `records/README.md` |
 | `docs/audits/*` | AUDIT-015 closes: its order → records Now/Next, its trace-sample decision → BUG-331; the index is deleted |
@@ -194,7 +196,7 @@ The owner widened the plan from records to every document: the product spec, arc
 
 ### Migration, in Pull Requests
 
-Each pull request stands alone, with no reservations or waits on other sessions. Moves are pure `git mv` commits, so rename detection carries other branches' edits across, and the guard names the new location when it rejects a file left at an old path.
+Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` commits, but do not promise automatic conflict-free integration: Git detects renames heuristically, and adding a new file at an old path can merge without a textual conflict. Before each move PR, capture `git ls-files '*.md'` and review `git diff --name-status -M <base>...HEAD`; include every repository-authored Markdown file, including colocated files and `.github`, while treating vendored skill bodies as tooling. After integrating other sessions' branches, re-run the inventory, retired-path and live-link checks, move any newly added old-path file, and recheck duplicate IDs and citations. Code comments in applied migrations and the ledger's pinned historical paths are deliberate exceptions, not strings to rewrite. The guard reports old paths; use this mapping to choose the new home. Keep an explicit receipt for files that disappear or split; rename detection alone does not establish preservation.
 
 1. **Records** (this record's second pull request):
    - `docs/records/` holds the open records, one index (`README.md`: Now, Active, Waiting, and how records work) and the ledger (`closed.md`, 928 lines from the archive).
@@ -218,16 +220,16 @@ Each pull request stands alone, with no reservations or waits on other sessions.
 5. **Archive removal.**
    - Permanent links replace the remaining live links into the archive; most are gone with their files by then.
    - `docs/_archive/` is deleted, along with the asset folders only it links.
-   - A guard bans the string `docs/_archive/`.
-   - A CodeRabbit path filter lands first, because the deletion spans about 1,460 files.
+   - The guard rejects live, unpinned archive destinations and recreated archive files. It permits commit-pinned historical URLs, ledger retrieval paths, immutable applied-migration comments, and scanner fixtures; a blanket string ban would reject the history the ledger must retain.
+   - An exact-path CodeRabbit deletion filter lands in a separate reviewed PR first, because the deletion spans about 1,460 files. Review the deletion manifest, ledger reachability, extracted lessons and rewritten live links before filtering; verify the effective configuration and remaining file count against the actual plan limit. Remove the temporary filter afterwards so reintroduced files cannot silently escape review.
 6. **Pilot.** The next three records close under the model; the rules are adjusted once, from what they show.
 
 ### Risks
 
-- **History.** Nothing is lost: git keeps every version, and the ledger points to each record's last version. What is lost is searching closed records in the working tree. `git log -S'<term>' -- docs/_archive` recovers that when it is needed.
-- **Lessons already archived.** The current convention moves unfinished tails out at close, but not lessons, so some live only in the 856 archived numbered records. The plan does not harvest them one by one. The 91 archived IDs cited in code resolve through the ledger, and a lesson that matters is reached from its citation. For each future record, the reviewing agent checks the harvest at close.
+- **History.** Retrieval is preserved only after the reachability checks: git keeps every version, and the ledger points to each record's last version. What is lost is searching closed records in the working tree. `git log -S'<term>' -- docs/_archive` recovers that when it is needed.
+- **Lessons already archived.** The current convention moves unfinished tails out at close, but not lessons, so some live only in the 856 archived numbered records. The purge first reviews the archived records cited by live code and policies, plus every archive asset linked by a live document, for unique rationale that needs a live home. Do not claim that a working permalink proves the knowledge was harvested. Broader extraction or substantive deletion beyond snapshots and exact duplicates needs the owner’s decision. The 91 archived IDs cited in code resolve through the ledger, and a lesson that matters is reached from its citation. For each future record, the reviewing agent checks the harvest at close.
 - **Old links.** Links that pin a commit keep working. Links to `docs/_archive/` paths on a branch break, as they did once already when each record was archived.
-- **A large deletion.** It is mostly removed lines, but about 1,460 files may exceed CodeRabbit's per-review limit, and merging needs an exact-head approval. If the limit bites, a path filter in `.coderabbit.yaml` keeps the review on the ledger, the rules and the rewritten links.
+- **A large deletion.** It is mostly removed lines, but about 1,460 files may exceed CodeRabbit's per-review limit, and merging needs an exact-head approval. CodeRabbit counts files after path exclusions (its plans documentation). Use the reviewed deletion-only filter described above before attempting the purge review, retain review of every addition/modification, and coordinate the shared review slot. Do not buy capacity or weaken exact-head approval without the owner.
 
 ## Owner Decisions
 

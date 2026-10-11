@@ -3,6 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   auditRecordLifecycle,
+  RECORDS,
   readDocumentationFiles,
 } from './documentation-archive';
 import {
@@ -12,10 +13,9 @@ import {
   syncAlertIssue,
 } from './github-alert-issues';
 
-// A record whose fix shipped but whose final check can only happen in
-// production stays live as Verifying, with a due date. A pull request must
-// not fail because a calendar date passed, so this weekly job raises overdue
-// and far-off checks as one GitHub issue instead, which notifies the owner.
+// Keep the existing issue title so rollout updates the same notification.
+// The issue now covers dated actions in every live status and the human
+// queue review that evaluates Waiting triggers and pending owner decisions.
 export const DUE_CHECKS_ISSUE_TITLE =
   'Overdue production checks on Verifying records';
 
@@ -26,14 +26,14 @@ function describeReport({ overdue, farFuture }: DueChecksReport): string {
   const list = (checks: DueCheck[]) =>
     checks.map(({ file, due }) => `- \`${file}\` (due ${due})\n`).join('');
   return (
-    'These records are Verifying: their fix shipped, and a check remains that only production can satisfy.\n\n' +
+    'These records have scheduled actions or checks. The README entry is the weekly human review of Waiting triggers and pending owner decisions; it is not a production verification.\n\n' +
     (overdue.length > 0
       ? `**Past their due date:**\n\n${list(overdue)}\n`
       : '') +
     (farFuture.length > 0
       ? `**Due more than 90 days out**, so the check may never happen:\n\n${list(farFuture)}\n`
       : '') +
-    'For each one, do the check and record the result in the record, then close it; or set a nearer due date with the reason. ' +
+    'For each record, do the named action and record its outcome; close only after all required checks pass. For the README, review every Waiting trigger and owner decision, record the outcome in the closing PR description, update Now, then move Queue review due forward by at most seven days. Do not move dates merely to dismiss this issue. ' +
     'This issue closes itself once none remain. Procedure: docs/records/README.md, "How Records Work".\n'
   );
 }
@@ -49,26 +49,50 @@ export function reportDueChecks(
     DUE_CHECKS_ISSUE_TITLE,
     nothingDue ? null : describeReport(report),
     {
-      resolved: 'No Verifying check is overdue or far off any more.',
+      resolved: 'No scheduled record check or queue review needs attention.',
       changed:
-        'The list of Verifying checks needing attention changed; see the description.',
+        'The documentation checks needing attention changed; see the description.',
     },
   );
 }
 
 export function repositoryDueChecks(
   root = process.cwd(),
-  today?: string,
+  today = new Date().toISOString().slice(0, 10),
 ): DueChecksReport {
+  const files = readDocumentationFiles(root);
   const result = auditRecordLifecycle(
-    readDocumentationFiles(root),
+    files,
     (file) => existsSync(path.resolve(root, file)),
     today,
   );
-  return {
-    overdue: result.verifyingOverdue,
-    farFuture: result.verifyingFarFuture,
+  const report = {
+    overdue: result.scheduledOverdue,
+    farFuture: result.scheduledFarFuture,
   };
+  const dates = [
+    ...(files.get(RECORDS.index) ?? '').matchAll(
+      /^\*\*Queue review due:\*\* (\d{4}-\d{2}-\d{2})$/gm,
+    ),
+  ];
+  const due = dates[0]?.[1];
+  const date = new Date(`${due}T00:00:00Z`);
+  if (
+    dates.length !== 1 ||
+    !due ||
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== due
+  ) {
+    throw new Error(
+      'Queue review due must name one valid calendar date in docs/records/README.md',
+    );
+  }
+  const horizon = new Date(`${today}T00:00:00Z`);
+  const horizonDays = 90;
+  horizon.setUTCDate(horizon.getUTCDate() + horizonDays);
+  if (due <= today) report.overdue.push({ file: RECORDS.index, due });
+  else if (date > horizon) report.farFuture.push({ file: RECORDS.index, due });
+  return report;
 }
 
 export async function runDocumentationDueChecks(

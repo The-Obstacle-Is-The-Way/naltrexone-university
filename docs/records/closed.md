@@ -1,6 +1,6 @@
 # Closed Records
 
-One line per closed record: `ID · title · disposition · date · path`. A record closed from 2026-10-11 on adds ` · #PR · commit`: the closing pull request, and the last commit that held the record. For a record closed earlier, the date is the day it moved to the archive (for the four audits with no file, the audit date).
+One line per closed record: `ID · title · disposition · date · path`. A record closed from 2026-10-11 on adds ` · #PR · commit`: the closing pull request, and a full 40-character, reachable commit that held the final record. Verify `git show <commit>:<path>` before deletion; a PR description is editable and is not the retrieval anchor. For a record closed earlier, the date is the day it moved to the archive (for the four audits with no file, the audit date).
 
 Every record closed before 2026-10-11 is readable at commit `63a8f220324b`, on GitHub at `https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/63a8f220324b1b6b363913a4cf0865663c8dacc1/<path>` or offline with `git show 63a8f220324b:<path>`.
 
