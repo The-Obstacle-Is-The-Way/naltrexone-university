@@ -1,6 +1,5 @@
 # DEBT-514: lint-staged Can Stage Another Session's Work
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — lint-staged held at 17.5.1; safe upgrade requires a tested safeguard or enforced worktree isolation
 **Priority:** P2

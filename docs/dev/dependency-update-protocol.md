@@ -140,6 +140,11 @@ Expect lint and test brittleness, and treat it as migration work rather than noi
 
 The rule is not "avoid dev-tooling majors." The rule is "isolate them so their fallout is reviewable."
 
+## Packages That Move Together
+
+- **TypeScript 7 and 6.** Advance `typescript` and `@typescript/typescript6` together. Keep the Stryker `packageExtensions` TypeScript range in `pnpm-workspace.yaml` on TypeScript 6; Dependabot does not update it. One package can go once TypeScript 7 has a stable compiler API and every compiler-API consumer is ported.
+- **Clerk.** Move `proxy.ts` off `createRouteMatcher` before any `@clerk/nextjs` major.
+
 ## Schema-Validation Majors
 
 Major updates to Zod or another validation/schema library must include a boundary-fixture audit before merge. PR #330 is the local precedent: Zod 4 changed UUID/GUID validation semantics, so app-owned ID fixtures had to be checked against `zUuid = z.guid()` and Drizzle `uuid()` columns.
@@ -199,13 +204,13 @@ The current `.github/dependabot.yml` intentionally separates concerns:
 - The security-only entries set `open-pull-requests-limit: 0` (PR #611). A Dependabot entry emits version updates as well as security updates by default, so without the limit these no-`target-branch` entries also opened ungrouped version PRs straight at `main` with default `increase` semantics (the #604/#605 leak; the #465 `actions/checkout` major merged that way). Zero disables version updates only: per GitHub's dependabot-options-reference, `open-pull-requests-limit` does not carry the security-updates badge, and security updates run under a separate internal limit of ten — GitHub's own security-updates guide recommends exactly this limit-0 + `applies-to: security-updates` + no-`target-branch` shape for "security updates only" entries.
 - `@types/node` semver-major updates are ignored until a deliberate runtime-alignment PR moves the repo to a new active LTS major.
 - `@biomejs/biome` is split from the catch-all npm group so lint contract changes arrive as their own reviewable PR.
-- `lint-staged` `>=17.6.0` is ignored for the `dev` version-updates entry, and `package.json` pins `~17.5.1`, while [DEBT-514](../debt/debt-514-lint-staged-shared-clone-staging-race.md) holds it. Security updates still open against `main`.
+- `lint-staged` `>=17.6.0` is ignored for the `dev` version-updates entry, and `package.json` pins `~17.5.1`, while DEBT-514 holds it. Security updates still open against `main`.
 
 These settings do not prove package contents are benign. They only shape Dependabot's queue.
 
 ## CI's Postgres Image
 
-CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then ECR Public, then Google's mirror, and `docker-compose.yml` runs the same digest locally ([DEBT-516](../debt/debt-516-ci-database-image-depends-on-one-registry.md)). Dependabot updates neither, so the refresh is by hand.
+CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then ECR Public, then Google's mirror, and `docker-compose.yml` runs the same digest locally (DEBT-516). Dependabot updates neither, so the refresh is by hand.
 
 - **When.** Refresh on each PostgreSQL 16 minor release (the [roadmap](https://www.postgresql.org/developer/roadmap/) lists the dates) or on an advisory against the image. A rebuild that changes only the Debian base needs no refresh.
 - **Resolve the digest from Docker Hub only**, never from a mirror's copy of the tag, and check its version:

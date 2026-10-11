@@ -1,6 +1,5 @@
 # BUG-321: Stripe's "Already Subscribed" Answer Is Discarded for Signed-In Users
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** In Progress — the fix is in production; a provider-contract test of the refused checkout's Stripe list and sync remains (AUDIT-015)
 **Priority:** P2
@@ -99,7 +98,7 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 - [ ] Engineering, by 2026-10-20: a provider-contract test runs the refused checkout's Stripe list and sync against Stripe test mode: a test customer holds a live subscription with no local row, and the adapter lists it and the sync records it. The tests above use the fake gateway, so only a real-provider run proves Stripe's list response and the sync together.
 
   *Re-scoped 2026-10-08 (AUDIT-015): this asked for a full E2E of the page, which the unit and component tests already cover with the fake gateway; only the provider side was unproven.*
-- **Known limit.** A failed sync in production is visible for an hour at most: it goes to pino, and Vercel Hobby keeps runtime logs for one hour. Since [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md), it also raises the `checkout_stripe_holds_unrecorded` alert, which carries a count only, so its IDs still live only in the hour-long log. Production outcomes of this path therefore cannot close this record.
+- **Known limit.** A failed sync in production is visible for an hour at most: it goes to pino, and Vercel Hobby keeps runtime logs for one hour. Since DEBT-505, it also raises the `checkout_stripe_holds_unrecorded` alert, which carries a count only, so its IDs still live only in the hour-long log. Production outcomes of this path therefore cannot close this record.
 
 *Corrected 2026-10-06 (#1410 review): the one-hour production capture had no exit, because the case is rare; replaced by a reproducible test-mode run.*
 
@@ -107,5 +106,5 @@ Option 2, because it repairs the cause: the database learns of the subscription 
 
 ## Related
 
-- [BUG-319](./bug-319-subscribe-actions-break-after-a-deploy.md), [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md), [DEBT-501](../debt/debt-501-billing-operations-resilience.md): the same hunt.
+- BUG-319, [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md), DEBT-501: the same hunt.
 - BUG-275 (archived): the stale-return-link fix this must preserve.

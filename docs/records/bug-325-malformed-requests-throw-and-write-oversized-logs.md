@@ -1,6 +1,5 @@
 # BUG-325: Malformed Anonymous Requests Make Our Code Throw and Write Oversized Error Logs
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — no Sentry event from the fixed paths for two weeks after the deploy; due 2026-10-20
 **Priority:** P3 (first drafted as P2; lowered 2026-10-05, see item 5)
@@ -82,7 +81,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 - **Unsigned webhook posts.** A request with a bogus signature header passes the header-presence check, then costs one rate-limiter write and two error lines before verification fails (Stripe `app/api/stripe/webhook/handler.ts:48-100`, Clerk and Resend similarly). The limiter bounds it (Audit #21 and SPEC-017 accepted this residual). **Decided:** log failed verifications at warn, once per limiter window. **Narrowed 2026-10-06:** a failed signature check, which anyone can cause, logs at warn with fixed text and the safe diagnostics. An invalid payload after a valid signature means the provider sent something unexpected, so it stays at error. The limiter already bounds the count, so "once per window" is dropped.
 - **Cron routes.** A warn line per unauthenticated request, with fixed text. **Accepted:** bounded and contentless.
 - **Malformed Clerk handshake token.** A garbage `__clerk_handshake` logs `Clerk: unable to resolve handshake` inside Clerk's SDK. **Decided:** BUG-323's limiter covers this parameter too.
-- **Clerk's `CLERK_JWT_KEY`** lets the middleware verify session tokens without fetching Clerk's signing keys from the Backend API. Without it, each server instance fetches them every five minutes. A failed fetch, in a Clerk outage or a network failure, signs every visitor on that instance out, and a token naming an uncached key ID forces a fetch. `@clerk/nextjs` 7.9.10 does not read the variable itself, so it must be passed as `jwtKey`. **Decided:** [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 5.
+- **Clerk's `CLERK_JWT_KEY`** lets the middleware verify session tokens without fetching Clerk's signing keys from the Backend API. Without it, each server instance fetches them every five minutes. A failed fetch, in a Clerk outage or a network failure, signs every visitor on that instance out, and a token naming an uncached key ID forces a fetch. `@clerk/nextjs` 7.9.10 does not read the variable itself, so it must be passed as `jwtKey`. **Decided:** DEBT-503 item 5.
 
   *Corrected 2026-10-10: this was an optional owner setting whose absence cost only middleware time.*
 - **The logger's redaction list** (`lib/logger.ts:27-46`) predates `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` and `DATABASE_URL`. Nothing logs `env` today. **Decided:** add them.
@@ -131,5 +130,5 @@ This is likely the report the owner remembered, that "a user with certain parame
 
 ## Related
 
-- [BUG-323](bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
+- BUG-323, [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
 - BUG-318 (archived): what Sentry may collect. This record covers how much can be sent.

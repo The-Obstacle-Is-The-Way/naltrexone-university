@@ -1,8 +1,7 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** In Progress — the owner approved option G on 2026-10-11 and widened it to every document; step 0, the inventory and target layout, is next
+**Status:** In Progress — step 0's layout (ADR-023) and the records move are in review; the agent instructions, the layout and the archive's removal follow
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -57,7 +56,7 @@ Measured 2026-10-11 on `dev` after #1464.
    - The guard checks all of it.
 
    483 links point into the archive now.
-3. **Review capacity goes to bookkeeping.** A documentation-only PR spends an hourly CodeRabbit slot and a promotion. Record edits ride in almost every PR, and CodeRabbit has learned lasting rules from record text (DEBT-515). [BUG-336](../bugs/bug-336-local-e2e-cleanup-gives-up-on-a-slow-process-listing.md), filed in the same PR as this record, shows the cost of a small fix: a record, a Verifying status, and a later move, all for a one-line change.
+3. **Review capacity goes to bookkeeping.** A documentation-only PR spends an hourly CodeRabbit slot and a promotion. Record edits ride in almost every PR, and CodeRabbit has learned lasting rules from record text (DEBT-515). BUG-336, filed in the same PR as this record, shows the cost of a small fix: a record, a Verifying status, and a later move, all for a one-line change.
 4. **The format needs its own tooling:** 2,308 lines, and 188 lines of rules. Some of it stays under any model: the due check, the heading and asset-budget tests, and the guard's checks of the live registers. The part that moves closed files, rewrites their links for the new depth, and checks the archive and frozen histories goes.
 5. **It only grows.** 723 files arrived from February to May, then 56, 77, 3, 33 and 41 a month. The assets that only archived records link add about 51 MB beside its 9.3 MB.
 
@@ -104,40 +103,125 @@ Measured 2026-10-11 on `dev` after #1464.
 
 ### Scope, Widened 2026-10-11
 
-The owner widened the plan from records to every document: the product spec, architecture notes, ADRs, guides, policies, the frontend standards, and the instructions agents load (`AGENTS.md`, `CLAUDE.md`, `.claude/rules/`). The migration gains two steps:
+The owner widened the plan from records to every document: the product spec, architecture notes, ADRs, guides, policies, the frontend standards, and the instructions agents load (`AGENTS.md`, `CLAUDE.md`, `.claude/rules/`).
 
-- **Step 0, inventory and layout.** Before anything moves, every live document gets:
-  - a disposition: keep, rename, move, merge, rewrite or delete;
-  - a target path under one layout with clean namespaces and names.
+### Step 0: Inventory, Layout and Mapping
 
-  This record holds the result. A second agent challenges it.
-- **Step 6, reorganise.**
-  - Move and rename the live documents to that layout.
-  - Rewrite their links, and every path hard-coded in code, tests, scripts, workflows and review configuration.
-  - Bring `AGENTS.md`, `CLAUDE.md` and `.claude/rules/` into line.
+- **Inventory.** Four read-only censuses inventoried every document on 2026-10-11, and a second agent challenged the resulting plan. Their findings are in [ADR-023](../adr/adr-023-documentation-organisation.md)'s Context.
+- **The decision.** ADR-023 records the layout, the placement test, and the naming and content rules.
+- **The mapping.** Below, each document's disposition and target. Corrections from the challenge are applied:
+  - no `reference/` folder;
+  - CodeRabbit `applyTo` mappings;
+  - only the index links records;
+  - one ledger commit in place of per-line URLs, which keeps the ledger at 160 KB;
+  - unique IDs, computed by a script;
+  - the archive deleted last.
 
-The archive goes first (steps 1 to 4), so the reorganisation does not rewrite links inside an archive that is about to be deleted.
+#### Specs and Product
 
-### Migration
+| Old | New |
+|---|---|
+| `docs/specs/master_spec.md` | split: `product/README.md` (§1, §13), `product/billing-and-access.md` (§4.1–4.2, §11.3, trial and renewal; the Terms govern commercial terms), `product/practice/*` + `product/{history-and-review,bookmarks,dashboard-and-scores,question-feedback}.md` (behaviour bullets of §4.5), `architecture/README.md` (§2 corrected), `architecture/api-conventions.md` (§4.3–4.4), `architecture/security.md` (§9), `.env.example` comments (§10, corrected; `.env.example` becomes the reference), `guides/operations/stripe-setup.md` (§11); §3 → `architecture/data-model.md` (schema authority: `db/schema.ts`); §5 → `architecture/content-pipeline.md`; §8.4 → `guides/release/promote-to-production.md`; the §4.5 contract blocks are dropped in favour of the code, keeping each action's behaviour bullets in its product page, and the code comments citing §4.5.5 and §4.5.7 are repointed; delete §6, §7, §8.1–8.3, §12 |
+| `docs/specs/master_spec_part{1..4}.md` | delete |
+| `docs/specs/index.md` | delete; IDs to ledger; 4 Deferred → Waiting |
+| `docs/dev/acceptance-testing.md` | `product/business-rules.md` (update `RULE_REGISTER_PATH`) |
+| `docs/content/tag-taxonomy-golden-spec.md` | `product/content-taxonomy.md` (decision only) |
+| `docs/brainstorming/*` | `product/ideas.md` lines; delete |
 
-Do steps 1 to 4 in one pull request: the ledger and the rewritten links must exist before the delete, and the guard must change with the tree.
+#### Practice Engine and Content
 
-1. **Ledger.** Generate `closed.md` beside each register index from the archive: one line per record, giving ID, title, final disposition, and the commit and path of its last version. A test requires a ledger line for every archived record, and every record ID cited in code to resolve to a live record or a ledger line.
-2. **Links and Deferred rows.**
-   - Rewrite the 483 live links into `docs/_archive/`, and any into archived records' asset folders, as GitHub permanent links at that commit, keeping their fragments. The guard does not follow web addresses. A test requires that no live file links into `docs/_archive/`.
-   - Make the 25 Deferred rows that link into the archive self-contained: each states its remaining work and revive trigger, and links its record's last version for the history. The archive also holds those records' tails, so this must happen before step 3.
-   - Keep the `#closing-and-archiving-documentation-records` anchor working, or rewrite the 36 live files that link it, among them every record header, `CLAUDE.md` and `.claude/rules/git-workflow.md`. The guard does not check anchors.
-3. **Delete** `docs/_archive/`, including the frozen register histories, and the 20 asset folders that only archived records link (530 files, about 51 MB). Update `.coderabbit.yaml`, the comment in `proxy.ts`, and the asset-budget list in `scripts/documentation-asset-budget.ts`.
-4. **Rules and tooling.**
-   - Rewrite `AGENTS.md`'s "Closing and Archiving Documentation Records" for delete-on-close, and update `CLAUDE.md` with it.
-   - Reduce the guard to live-tree checks plus the ledger. `scripts/documentation-due-checks.ts` imports the guard, and must also read Verifying rows that link a pull request (model rule 1).
-   - Retire the archive-only checks in the guard's test and in the heading, register-budget and register-convention tests.
-   - Add a ratchet so nothing can be added under `docs/_archive/` again.
-5. **Pilot.** The next three records follow the model. Adjust the rules once, from what those three show.
+| Old | New |
+|---|---|
+| `practice-engine/index.md` | delete (→ `product/practice/README.md`, `architecture/practice-engine.md`) |
+| `practice-engine/architecture-layers.md` + `frontend-layer.md` | `architecture/practice-engine.md` (fix `paramsJson` → `practice_session_question_states`) |
+| `practice-engine/question-rendering-architecture.md` | `architecture/question-rendering.md` (drop §9 file index, §12 changelog) |
+| `practice-engine/practice-modes.md` | `product/practice/modes.md` (§7 CAS → architecture) |
+| `practice-engine/interaction-contracts.md` | `product/practice/interaction-contracts.md` (drop §3 proposals; datetime section → `architecture/api-conventions.md`; update `tests/controller-output-datetime-source-scan.ts:52`) |
+| `practice-engine/exam-answer-secrecy-policy.md` | `product/practice/exam-answer-secrecy.md` (reconcile §5 with the code; add `GetQuestionForView`) |
+| `practice-engine/ordering-policy.md` | `product/practice/question-ordering.md` |
+| `practice-engine/retry-logic.md` | `product/practice/retries.md` (drop §8–10) |
+| `practice-engine/security-model.md` | merge → `architecture/security.md` |
+| `practice-engine/content-pipeline.md` | `architecture/content-pipeline.md` + `guides/content/{import-and-seed,release-and-withdraw,troubleshooting}.md` |
+| `practice-engine/{current-state,spec-coverage-map,file-index}.md` | delete |
+| `docs/content/question-format-spec.md` | delete (superseded; repoint to `content/drafts/questions/SCHEMA.md` and the code) |
+| `docs/content/tag-taxonomy-pipeline.md` | merge → `architecture/content-pipeline.md` |
+| `docs/content/reports/*` | delete |
+| `docs/vendor-docs/{index,clerk,stripe,postgres}.md` | `architecture/integrations/{README,clerk,stripe,postgres}.md` (drop version tables) |
 
-**Before step 1:**
-- Announce the window to the other sessions, so that no open branch edits an archived file.
-- Check CodeRabbit's limit on files per review against the size of the pull request.
+#### Engineering Guides
+
+| Old | New |
+|---|---|
+| `dev/code-quality-metrics.md` | `guides/testing/crap-report.md` |
+| `dev/integration-tests.md` | `guides/testing/integration-tests.md` (drop inventory) |
+| `dev/testing-infrastructure.md` | `guides/testing/e2e-tests.md` + `guides/testing/browser-automation.md` (delete `--state` advice) |
+| `tooling/agent-browser.md` | `guides/testing/browser-automation.md` |
+| `dev/react-vitest-testing.md` | `guides/testing/react-component-tests.md` (rationale only) |
+| `dev/mutation-testing.md` | `guides/testing/mutation-testing.md` (trim wave tables) |
+| `dev/qa-procedures.md` + `docs/qa/index.md` | `guides/qa/README.md` |
+| `docs/qa/qa-001-practice-core-flows.md` (+ stabilization flows) | `guides/qa/practice-core-flows.md` |
+| `docs/qa/qa-002-billing-entitlement.md` | `guides/qa/billing-and-entitlement.md` (fix the 375×667 comments) |
+| `dev/stabilization-checklist.md` | delete (Flow D → QA guide) |
+| `dev/deployment-procedure.md` | `guides/release/promote-to-production.md` + `guides/release/seed-content.md` + `guides/release/repository-settings.md` |
+| `dev/migration-authoring.md` | rules → `.claude/rules/migrations.md`; procedure → `guides/database/migrations.md` (the only copy of the build chain; "formerly" note for the two immutable migrations) |
+| `dev/sanitized-explain-capture.md` | `guides/database/query-plan-capture.md` |
+| `dev/database-rollbacks.md` | `guides/operations/database-recovery.md` |
+| `dev/deployment-environments.md` | `architecture/environments.md` + `guides/operations/environment-troubleshooting.md` |
+| `dev/logging.md` | `architecture/observability.md` (logger, request context, Sentry) + `guides/operations/operational-alerts.md` (update watcher strings and test) |
+| `dev/dependency-update-protocol.md` | `guides/dependencies/updating-dependencies.md` (policy → `policies/supply-chain.md`) |
+| `dev/supply-chain-overrides.md` | `policies/supply-chain.md` + `guides/dependencies/supply-chain-exceptions.md` (keep the urgent-patch anchor: it is in opened issues) |
+| `dev/license-baseline.md` | delete (rules → `policies/supply-chain.md`) |
+| `dev/question-feedback-analytics.md` | `guides/content/feedback-export.md` |
+| `dev/bookmark-cardinality-census.md` | fold into DEBT-450's Waiting row; delete |
+| `dev/test-double-contract-register.md` | `guides/testing/fake-contracts.md` (update the scan constant and the `.claude/rules/testing.md` assertion) |
+| `dev/index.md` | delete (→ `docs/README.md`) |
+
+#### Design System, Policies, Records
+
+| Old | New |
+|---|---|
+| `frontend/{index,standards,pattern-registry,typography-policy,contrast-policy,design-principles,bookmark-surface-policy}.md` | `design-system/{README,standards,pattern-registry,typography,contrast,layout,bookmark-surfaces}.md` (rewrite `layout.md` §2; drop inventories) |
+| `frontend/pages/*` | delete |
+| `docs/legal/*` | `policies/legal/*` (**owner**; path-only; tests updated) |
+| `docs/security/*` | `policies/security/*` (**owner**; path-only) |
+| `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
+| `docs/{bugs,debt}/*` | `docs/records/` (flat); indexes merge into `records/README.md` |
+| `docs/audits/*` | AUDIT-015 closes: its order → records Now/Next, its trace-sample decision → BUG-331; the index is deleted |
+| `docs/_archive/**` + 20 archive-only asset folders | delete last, after the ledger and permalinks |
+| Colocated Markdown: `app/(app)/app/practice/shared/idempotency-protocol-contract.md`, `app/fonts/README.md`, `content/questions/README.md`, `tests/shared/README.md`, `tests/test-helpers/README.md` | stay beside their code. The guard's link check widens to `app/**`, `content/**` and `tests/**`. The contract gets a link from `.claude/rules/frontend.md`, `tests/shared/README.md` its missing scope, and `content/questions/README.md` a format example that parses. |
+| Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (DEBT-414) | permalink, then delete with the purge; DEBT-414's own assets stay until it closes |
+| Open GitHub issues citing doc paths (#423, #772, #883, #902, #903) | a comment on each with the new path, in the PR that moves it |
+| Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; a guard test bans the string `docs/_archive/` and every retired folder path |
+
+### Migration, in Pull Requests
+
+Each pull request stands alone, with no reservations or waits on other sessions. Moves are pure `git mv` commits, so rename detection carries other branches' edits across, and the guard names the new location when it rejects a file left at an old path.
+
+1. **Records** (this record's second pull request):
+   - `docs/records/` holds the open records, one index (`README.md`: Now, Active, Waiting, and how records work) and the ledger (`closed.md`, 928 lines from the archive).
+   - The specs, brainstorming, audits and QA registers are retired: QA procedures move to `docs/guides/qa/`, and ideas to `docs/product/ideas.md`.
+   - The 27 Deferred rows become 18 self-contained Waiting rows and 5 ideas; the rest are dropped as shipped or obsolete.
+   - The guard requires unique IDs, rejects files left in a retired folder, and rejects links into records outside the index.
+   - `scripts/next-record-id.ts` computes IDs.
+   - `AGENTS.md`'s records sections become a pointer.
+   - ADR-023 lands here.
+2. **Agent instructions:**
+   - `AGENTS.md` at most 16 KiB, with its runbooks moved to their guide paths, and the "editing X, read Y" table;
+   - `CLAUDE.md` imports it, and `.claude/rules/` is cleaned;
+   - CodeRabbit `applyTo` mappings, with the tests for glob agreement, the byte budget and the absence of IDs;
+   - the front-door `README.md`, the skills pruned, and Tailwind's `@source not` entries.
+3. **Layout moves.** Pure renames into the layout, plus every path that code, tests, workflows, configuration and open issues name, and `docs/README.md`.
+4. **Layout content:**
+   - the `master_spec` split;
+   - merges and rewrites;
+   - the stale snapshots deleted, and the contradictions fixed;
+   - the ADR README, the amendments, and ADR-024 to ADR-027.
+5. **Archive removal.**
+   - Permanent links replace the remaining live links into the archive; most of the 469 are gone with their files by then.
+   - `docs/_archive/` is deleted, along with the asset folders only it links.
+   - A guard bans the string `docs/_archive/`.
+   - A CodeRabbit path filter lands first, because the deletion spans about 1,460 files.
+6. **Pilot.** The next three records close under the model; the rules are adjusted once, from what they show.
 
 ### Risks
 
@@ -154,7 +238,7 @@ Do steps 1 to 4 in one pull request: the ledger and the rewritten links must exi
 ## Verification
 
 - [x] The owner approves the model (2026-10-11).
-- [ ] Step 0: every live document has a disposition and a target path, and a second agent has challenged them.
+- [x] Step 0: every live document has a disposition and a target path, and a second agent has challenged them (2026-10-11; ADR-023 and the mapping above).
 - [ ] The ledger is complete: every archived record has a line, and every record ID cited in code resolves.
 - [ ] Every Deferred row is self-contained, and no live link points into `docs/_archive/`.
 - [ ] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted.
@@ -165,5 +249,6 @@ Do steps 1 to 4 in one pull request: the ledger and the rewritten links must exi
 
 ## Related
 
-- `AGENTS.md`: [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records), adopted 2026-09-21 (DEBT-488), and "Register Indexes and Records", adopted 2026-10-05. Those two rounds slimmed the indexes but kept the archive.
-- [DEBT-515](./debt-515-coderabbit-learns-rules-from-agents.md): CodeRabbit learned lasting rules from record text.
+- [ADR-023](../adr/adr-023-documentation-organisation.md): the layout, names and content rules this migration follows.
+- [How records work](./README.md#how-records-work): the records rules that replace `AGENTS.md`'s "Closing and Archiving Documentation Records" (DEBT-488, 2026-09-21) and "Register Indexes and Records" (2026-10-05). Those two rounds slimmed the indexes but kept the archive.
+- DEBT-515: CodeRabbit learned lasting rules from record text.

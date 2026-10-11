@@ -1,6 +1,5 @@
 # DEBT-510: Codecov Sometimes Drops the Patch Notification After a Successful Upload
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — over two weeks of PR heads, no merge is blocked by a dropped Codecov notification; due 2026-10-22
 **Priority:** P3
@@ -33,7 +32,7 @@ CI uploads coverage, and Codecov processes it, but sometimes never posts `codeco
 
 ## Impact
 
-A code PR that is approved, with CI green, stops at the merge guard until a person notices that the status is missing and re-runs CI. Each re-run costs about 14 minutes of CI and an E2E window on the shared test identity ([DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)).
+A code PR that is approved, with CI green, stops at the merge guard until a person notices that the status is missing and re-runs CI. Each re-run costs about 14 minutes of CI and an E2E window on the shared test identity (DEBT-508).
 
 ## Options
 

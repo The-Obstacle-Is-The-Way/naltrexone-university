@@ -1,6 +1,5 @@
 # DEBT-504: Request Correlation Duplicates the Hosting Platform
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — remove the request-ID helper and the per-call logger option; keep the Logger port in controller dependencies
 **Priority:** P4

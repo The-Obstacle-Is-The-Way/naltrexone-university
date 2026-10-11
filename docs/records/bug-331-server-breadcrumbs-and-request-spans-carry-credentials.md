@@ -1,6 +1,5 @@
 # BUG-331: Server Breadcrumbs and Request Spans Carry Credentials the Scrubbers Miss
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22
 **Priority:** P2
@@ -21,7 +20,7 @@ So a server error event could carry, in clear:
 
 Request spans were worse: Next.js's own request span keeps the raw request URL, so any credential in a page's query reached Sentry in clear. Outgoing calls also sent trace headers carrying the server project's key. Production's sampled spans held no credential in the 14 days checked (see Evidence).
 
-This affected every server error event until the fix. Operational alerts ([DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md)) are not affected: `scrubEvent` keeps an alert event to fixed fields, breadcrumbs dropped.
+This affected every server error event until the fix. Operational alerts (DEBT-505) are not affected: `scrubEvent` keeps an alert event to fixed fields, breadcrumbs dropped.
 
 ## Evidence
 
@@ -65,7 +64,7 @@ This affected every server error event until the fix. Operational alerts ([DEBT-
 
   *Corrected 2026-10-08 (#1430 reviews): the first fix kept console breadcrumbs and redacted their strings. A logged `Error`, `URL` or class instance passed the hook and Sentry then sent its text, and a credential after an earlier pair in the line was never checked. The hook also kept any other object for Sentry to serialise; no code puts one in breadcrumb data today, but the hook now keeps only its type.*
 
-**Owner decision pending ([AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)):** whether to keep the server's 5% trace sample. Without it the remaining span surface goes away, and the privacy policy's tracing sentence changes. Until then, every span is redacted as above.
+**Owner decision pending (AUDIT-015, 2026-10-08):** whether to keep the server's 5% trace sample. Without it the remaining span surface goes away, and the privacy policy's tracing sentence changes. Until then, every span is redacted as above.
 
 Sentry's own query filter keeps its list. Our hooks run last on every event, span, envelope header and breadcrumb, so a second copy of the list there would add nothing a test could see.
 
@@ -97,4 +96,4 @@ Two independent reviews found the gaps closed after the first fix: the span gap 
 ## Related
 
 - [BUG-318](../_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md): the scrubbers this extends.
-- [DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md): whose review found this, and whose alert events carry fixed fields only.
+- DEBT-505: whose review found this, and whose alert events carry fixed fields only.

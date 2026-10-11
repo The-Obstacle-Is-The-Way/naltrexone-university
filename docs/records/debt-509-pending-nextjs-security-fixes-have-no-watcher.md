@@ -1,6 +1,5 @@
 # DEBT-509: Pending Next.js Security Fixes Have No Watcher
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — rule decided; the watcher covers every repository behind `pnpm-lock.yaml`, and its scheduled runs read them; waiting for `vite` 8.3.3 and the two pending Next.js fixes
 **Priority:** P2

@@ -1,6 +1,5 @@
 # BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — no mid-run Clerk session loss in CI with the echo dropped; due 2026-10-17
 **Priority:** P3
@@ -26,7 +25,7 @@ Since 2026-10-08, a signed-in E2E test has sometimes been sent to Clerk's sign-i
 - **Census (measured).** An independent read-only investigation covered the CI history since 2026-08-25.
   - Before 2026-10-08: 1,150 E2E attempts with no mid-test loss. The one failed restore at the start of a test is #1422's, on 2026-10-07, which is BUG-330.
   - Since 2026-10-08: 50 attempts with these 2 losses.
-  - No other E2E run overlapped either loss, so [DEBT-508](../debt/debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md)'s overlap is not shown to cause it.
+  - No other E2E run overlapped either loss, so DEBT-508's overlap is not shown to cause it.
   - #1428's failing test was the first to start after the stored token expired. #1440's was not: 35 restores after expiry had succeeded.
 - **What can send a page to sign-in (read in code).** Clerk's middleware sends a full-page request straight to sign-in, rather than refreshing it through its handshake, in four cases only (`@clerk/backend` `tokens/request.ts`, `tokens/handshake.ts`):
   1. the browser has neither `__session` nor `__client_uat`, as Clerk JS leaves it after signing itself out;

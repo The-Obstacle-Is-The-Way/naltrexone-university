@@ -1,6 +1,5 @@
 # DEBT-516: CI's Database Image Depends on One Registry
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — CI pulls Postgres from the first of three registries serving its digest, and compose pins it too; after promotion, `main`'s CI logs which one served it; due 2026-10-24
 **Priority:** P3
@@ -86,5 +85,5 @@ While the image could not be pulled, every pull request's required `test` check 
 ## Related
 
 - [DEBT-471](../_archive/debt/debt-471-e2e-ci-external-fragility.md): E2E and CI external fragility, which introduced the digest pin.
-- [BUG-327](../bugs/bug-327-dependabot-branches-build-with-preview-secrets.md): pinned every workflow's container images by digest.
+- BUG-327: pinned every workflow's container images by digest.
 - [Dependency update protocol](../dev/dependency-update-protocol.md): where option 3's pull request adds the digest refresh.

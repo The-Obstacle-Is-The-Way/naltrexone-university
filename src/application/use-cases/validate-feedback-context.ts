@@ -28,7 +28,7 @@ export type ValidatedFeedbackContext = {
 /**
  * Validates optional feedback context against the caller's own data.
  *
- * Rules (decided in docs/bugs/bug-260-...):
+ * Rules (decided in BUG-260):
  * - `attemptId` present -> must be owned by `userId` and its `questionId` must
  *   equal the feedback `questionId`.
  * - `practiceSessionId` present -> must be owned by `userId` and its

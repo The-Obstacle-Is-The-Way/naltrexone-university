@@ -1,8 +1,7 @@
 # DEBT-500: Vitest 5 Needs a Coordinated Migration
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — resolution decided in the record
+**Status:** Open — the grouped Dependabot PR #1451 is the migration vehicle; resolution decided in the record
 **Priority:** P3
 **Date:** 2026-10-05
 **Resolved:** —
@@ -54,4 +53,4 @@ Criteria to meet before closing; none is met yet.
   *Corrected 2026-10-06: the closing criterion asks for compatible peer ranges, not major 5 everywhere, and the migration first reproduces the incompatible boundary (#1410).*
 - [ ] Every lane passes in the full gate.
 - [ ] The CRAP report and Stryker run.
-- [ ] #1370 is closed as superseded.
+- [x] #1370 is closed as superseded (Dependabot closed it 2026-10-07; the grouped `vitest` update is #1451, opened 2026-10-10).

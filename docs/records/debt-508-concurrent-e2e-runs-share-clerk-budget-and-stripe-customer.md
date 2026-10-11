@@ -1,6 +1,5 @@
 # DEBT-508: Concurrent E2E Runs Share One Clerk Rate Budget and One Stripe Customer
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22
 **Priority:** P2
@@ -31,7 +30,7 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
 - **One Clerk rate budget for every lane.**
   - Clerk limits a development instance's Backend API to 100 requests per 10 seconds per instance ([system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)).
   - CI, the daily hosted-checkout smoke and every local clone use one Clerk user on one instance.
-  - Until [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 (released 2026-10-08), the app made one `currentUser()` call per signed-in request (`lib/container.ts`).
+  - Until DEBT-503 item 1 (released 2026-10-08), the app made one `currentUser()` call per signed-in request (`lib/container.ts`).
   - The test helpers add more lookups:
     - Global setup looks the user up three times: preflight, the seed and the reset.
     - The reset looks it up again before each mutating test (`tests/e2e/helpers/e2e-reset-shared.ts`, `resolveClerkUserIdByEmail`).
@@ -95,10 +94,10 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
 
 | Failure | Cause | Record |
 | --- | --- | --- |
-| Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1, released 2026-10-08; the overlap check follows |
+| Clerk 429s when E2E runs overlap | The app's per-request Backend API lookup | DEBT-503 item 1, released 2026-10-08; the overlap check follows |
 | Runs can change each other's Stripe state (a hazard; it caused none of today's failures) | One Stripe customer per lane | This record |
 | Signed-in tests fail after the stored token expires | A failed Clerk session restore, undiagnosable | [BUG-330](../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md) |
-| `codecov/patch` missing after a good upload | Codecov drops the notification | [DEBT-510](./debt-510-codecov-drops-patch-notifications.md) |
+| `codecov/patch` missing after a good upload | Codecov drops the notification | DEBT-510 |
 
 ## Verification
 
@@ -116,4 +115,4 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
   - **The cause.** Each run has its own Stripe customer, but both sign in as one shared Clerk user, so this isolation does not cover Clerk sessions. Two overlapping CI runs share that user too.
   - **Until this is resolved,** sessions on this machine serialize E2E runs, CI included, and this check may fail.
 
-  *Added 2026-10-09: overlap is not shown to be the cause.* #1440's CI run 37983577282 failed the same way: one test's `startSession` check found itself redirected to sign-in, and 62 passed. No other E2E run was in its window. So the 2026-10-08 failure may be this same mid-run loss, which [BUG-333](../bugs/bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) records, rather than an effect of the overlap. A failure of this check therefore says nothing about isolation until that loss is explained.
+  *Added 2026-10-09: overlap is not shown to be the cause.* #1440's CI run 37983577282 failed the same way: one test's `startSession` check found itself redirected to sign-in, and 62 passed. No other E2E run was in its window. So the 2026-10-08 failure may be this same mid-run loss, which BUG-333 records, rather than an effect of the overlap. A failure of this check therefore says nothing about isolation until that loss is explained.

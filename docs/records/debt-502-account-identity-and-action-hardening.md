@@ -1,6 +1,5 @@
 # DEBT-502: Rare Account States Can Lock a Person Out, and Payment Actions Expose Test Seams
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — decided per item
 **Priority:** P3
@@ -16,12 +15,12 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 
 ## Items
 
-**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and [DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md) are symptoms. One resolver takes Clerk's verified primary email, provisions under the tombstone lock (item 2), moves a conflicting row (item 1), and syncs Stripe's copy. Provisioning, the billing refresh, the webhook and notice dispatch all use it. It ships before 35 days ahead of the earliest live renewal, in the order items 3, 1, 2.
+**Decided 2026-10-08 (AUDIT-015): one identity resolver.** Clerk, `users.email` and the Stripe customer each hold the user's email, and nothing keeps them in step; items 1–3 and DEBT-511 are symptoms. One resolver takes Clerk's verified primary email, provisions under the tombstone lock (item 2), moves a conflicting row (item 1), and syncs Stripe's copy. Provisioning, the billing refresh, the webhook and notice dispatch all use it. It ships before 35 days ahead of the earliest live renewal, in the order items 3, 1, 2.
 
 ### 1. An email change to an address a stale row holds locks the person out (P3)
 
 - **Evidence.** `ensureClerkUser` validates before it resolves (`src/adapters/gateways/clerk-user-provisioner.ts:309-310`). It refuses as soon as the incoming Clerk user already has a row (`:110-120`, `blocked_incoming_identity_already_exists`), even when Clerk proves the stale owner has moved to another address. The webhook does the same (`clerk-webhook-controller.ts:305-311`). `clerk-auth-gateway-session.test.ts`'s "keeps both rows when the refreshed email is held by another identity" locks this in for the billing refresh.
-- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:50`). The person cannot change their email back in the app. Once [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 ships, signed-in pages read the person's own row by Clerk ID, so the lockout narrows to the billing refresh (checkout and trial card setup) and the webhook.
+- **Impact.** Every signed-in page errors, the marketing navigation included (`components/auth-nav.tsx:50`). The person cannot change their email back in the app. Once DEBT-503 item 1 ships, signed-in pages read the person's own row by Clerk ID, so the lockout narrows to the billing refresh (checkout and trial card setup) and the webhook.
 - **Decided.** When Clerk confirms the stale owner's current email differs, move that owner's row first, as the new-user path already does, then continue. The refusal stays for an owner that Clerk cannot confirm.
 
 ### 2. A row whose Clerk user no longer exists blocks its email permanently, and nothing repairs it (P3)
@@ -45,7 +44,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 ### 4. Clerk's rate limit is a single point of failure for signed-in traffic (moved to DEBT-503 on 2026-10-05)
 
 - **Evidence.** Every signed-in render and action called `currentUser()`, one Clerk Backend API call (`lib/container.ts:61-65` at the time), and Checkout made two. Clerk documents 1,000 requests per 10 seconds in production.
-- **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. *Moved 2026-10-05 to [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md), at P2 and without waiting for the traffic trigger: BUG-323 showed the allowance can be spent from outside.*
+- **Decided.** Read identity from the session token's claims where they suffice, and call the Backend API only for provisioning. *Moved 2026-10-05 to DEBT-503, at P2 and without waiting for the traffic trigger: BUG-323 showed the allowance can be spent from outside.*
 
 ### 5. Exported payment server actions accept caller-supplied dependencies (moved to BUG-324 on 2026-10-05)
 
@@ -66,5 +65,5 @@ Criteria to meet before closing: each item shipped with red-first tests, or defe
 
 ## Related
 
-- [DEBT-501](./debt-501-billing-operations-resilience.md), [BUG-320](../bugs/bug-320-first-pricing-render-user-upsert-race.md): the same hunt.
+- DEBT-501, BUG-320: the same hunt.
 - BUG-078, BUG-284 and BUG-293 (archived): earlier identity decisions this builds on.

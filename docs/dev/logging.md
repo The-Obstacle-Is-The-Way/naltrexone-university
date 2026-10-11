@@ -46,7 +46,7 @@ const logger = getRequestLogger(ctx);
 That child logger automatically carries `requestId`, and can also include `userId` when available.
 
 The duplicate ID and manual propagation are planned for removal in
-[DEBT-504](../debt/debt-504-duplicate-request-correlation.md). Do not extend this
+DEBT-504. Do not extend this
 pattern to new routes. Keep explicit logger injection.
 
 ## Retention and verification
@@ -61,7 +61,7 @@ Sentry exception/tracing capture, with no pino integration or log forwarding.
 A caught error that is only logged is not thereby a Sentry event. An alert on
 such an outcome needs explicit, bounded telemetry or a retained operational
 receipt; do not claim a Sentry search proves its absence.
-[DEBT-505](../debt/debt-505-logged-only-failures-alert-nobody.md) added that
+DEBT-505 added that
 path for the conditions a person must act on: see Operational alerts below.
 
 ## Operational alerts

@@ -1,6 +1,5 @@
 # DEBT-511: Legal Notices Go to a Stored Email That Clerk May Have Changed
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — resolution decided below; built on DEBT-502's identity resolver, and due before 35 days ahead of the earliest live renewal
 **Priority:** P2
@@ -18,7 +17,7 @@ So an annual subscriber who changed their address, and has not started a checkou
 
 Stripe's own renewal emails go to a third copy of the address, which is never synced and which the customer can edit in Stripe's portal.
 
-[DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1 widens the gap slightly. It stops refreshing the email on every signed-in page, so active users also depend on the webhook between checkouts. The gap itself exists today.
+DEBT-503 item 1 widens the gap slightly. It stops refreshing the email on every signed-in page, so active users also depend on the webhook between checkouts. The gap itself exists today.
 
 ## Evidence
 
@@ -27,7 +26,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
   - It snapshots that address into `renewal_notice_deliveries.destination` and the payload (`src/application/use-cases/send-due-renewal-notices.ts`).
   - At send time, dispatch re-reads `users.email` and supersedes a notice whose address changed (`dispatch-renewal-notice-delivery.ts`). That is still our copy, not Clerk's.
 - **The acknowledgment** is queued from `users.email` inside the Stripe webhook's transaction, and dispatched without a recheck (`stripe-webhook-controller.ts`).
-- **Which address the law wants.** DEBT-414 F07 decided that notices go to the account's *current* email, and nothing requires the address given at consent ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)). Counsel still holds F19d, whether email is "reasonably calculated to be seen".
+- **Which address the law wants.** DEBT-414 F07 decided that notices go to the account's *current* email, and nothing requires the address given at consent (DEBT-414). Counsel still holds F19d, whether email is "reasonably calculated to be seen".
 - **How the stored copy changes,** since DEBT-503 item 1. Before it, every signed-in request's `currentUser()` upsert also wrote it.
   - The `user.updated` webhook: Svix-verified, recorded on failure and reprocessed on redelivery (`clerk-webhook-controller.ts`).
   - The refresh when the user starts a checkout or trial card setup.
@@ -104,7 +103,7 @@ Stripe's own renewal emails go to a third copy of the address, which is never sy
    - Ownership conflicts need no prerequisite: until DEBT-502 item 1 automates the repair, the owner replays the stale owner's `user.updated` from the Clerk Dashboard ([runbook](../dev/deployment-environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row)), which moves that owner's address, and the held notice goes out on the next run.
    - Then this record. DEBT-503 item 1 may ship earlier, under the timing in Impact.
 
-**Decided 2026-10-08 (AUDIT-015):** the send-time lookup is built on [DEBT-502](./debt-502-account-identity-and-action-hardening.md)'s identity resolver, not beside it.
+**Decided 2026-10-08 (AUDIT-015):** the send-time lookup is built on DEBT-502's identity resolver, not beside it.
 
 ## Verification
 

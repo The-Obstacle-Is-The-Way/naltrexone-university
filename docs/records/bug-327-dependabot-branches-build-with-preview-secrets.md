@@ -1,6 +1,5 @@
 # BUG-327: Dependabot Branches Are Built on Vercel With Preview Secrets
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — no Dependabot head deploys; a Dependabot merge through the tooling remains; due 2026-10-20
 **Priority:** P3

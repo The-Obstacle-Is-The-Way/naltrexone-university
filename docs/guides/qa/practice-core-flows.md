@@ -61,8 +61,8 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 
 ## Evidence
 
-Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feedback), step 16 (post-exam review), one 390×844 capture of the active question. Representative WebP → `docs/qa/assets/qa-001/`.
+Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feedback), step 16 (post-exam review), one 390×844 capture of the active question. Attach representative screenshots to the pull request or the run's report.
 
 ## On failure
 
-Behavioral defect → file `BUG-NNN` (`docs/bugs/index.md`) citing the step number and the governing contract doc. Visual drift → check `docs/frontend/` policy first; undocumented pattern = Discoverability Rule finding, not a pass.
+Behavioral defect → file a bug record in `docs/records/`, citing the step number and the governing contract doc. Visual drift → check `docs/frontend/` policy first; undocumented pattern = Discoverability Rule finding, not a pass.

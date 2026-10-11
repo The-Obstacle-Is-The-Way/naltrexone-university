@@ -1,6 +1,5 @@
 # DEBT-517: Alerts #77 and #81 Wait on Fixes That Are Not Coming
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — `braces` and `sprintf-js` are out of the lockfile; after promotion, Dependabot marks alerts #77 and #81 fixed on `main`; due 2026-10-25
 **Priority:** P3

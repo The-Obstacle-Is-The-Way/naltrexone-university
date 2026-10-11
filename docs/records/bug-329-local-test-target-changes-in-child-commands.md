@@ -1,6 +1,5 @@
 # BUG-329: Long Clone Names Change the Local Test Target in Child Commands
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — canonicalize generated instance names before passing them to child commands
 **Priority:** P4

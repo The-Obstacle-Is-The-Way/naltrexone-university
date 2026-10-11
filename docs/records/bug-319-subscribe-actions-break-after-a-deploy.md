@@ -1,6 +1,5 @@
 # BUG-319: Subscribe and Add-Card Fail for a Page Loaded Before a Deploy
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — the Sentry checks, and a real-SDK test that the stale-action event reaches Sentry; due 2026-10-19
 **Priority:** P2 (filed as P1; lowered 2026-10-05, see the correction under Evidence)
@@ -97,6 +96,6 @@ Criteria to meet before closing.
 
 ## Related
 
-- [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md), [BUG-321](./bug-321-already-subscribed-answer-discarded.md), [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md): the other findings of the same hunt.
-- [DEBT-501](../debt/debt-501-billing-operations-resilience.md), [DEBT-502](../debt/debt-502-account-identity-and-action-hardening.md).
+- BUG-320, BUG-321, [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md): the other findings of the same hunt.
+- DEBT-501, DEBT-502.
 - [Next.js: Failed to find Server Action](https://nextjs.org/docs/messages/failed-to-find-server-action); [Vercel: Skew Protection](https://vercel.com/docs/skew-protection).

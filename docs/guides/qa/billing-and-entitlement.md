@@ -61,7 +61,7 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 
 ## Evidence
 
-Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). Representative WebP → `docs/qa/assets/qa-002/`.
+Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellation banner). Attach representative screenshots to the pull request or the run's report.
 
 ## On failure
 

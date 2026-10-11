@@ -1,6 +1,5 @@
 # BUG-336: Local E2E Cleanup Gives Up on a Slow Process Listing and Leaves Playwright's Web Server Running
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — promotion to `main`, then two weeks of CI without `spawnSync ps ETIMEDOUT`; due 2026-10-25
 **Priority:** P3
@@ -61,4 +60,4 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 ## Related
 
 - #939 added the process listing and its one-second limit.
-- [DEBT-518](../debt/debt-518-closed-records-outweigh-the-code-and-bury-current-truth.md) uses this record as an example of what a small fix costs under the current record process.
+- DEBT-518 uses this record as an example of what a small fix costs under the current record process.

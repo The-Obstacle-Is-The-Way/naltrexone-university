@@ -1,6 +1,5 @@
 # BUG-332: A New User's Concurrent First Requests Can Deadlock Provisioning
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22
 **Priority:** P2
@@ -14,7 +13,7 @@
 
 A new user's first page load can send several requests at once. Each finds no `users` row and provisions one through the same upsert. When three or more do so together, Postgres can detect a deadlock among their inserts and abort one of them, with SQLSTATE `40P01`. That request fails with "Failed to ensure user row", and the user sees an error on their first visit.
 
-[BUG-320](./bug-320-first-pricing-render-user-upsert-race.md) fixed the two-request case, where the loser trips the email index and retries once. Its retry does not cover a deadlock, and its verification watches only for "User could not be upserted", so this failure would not show there.
+BUG-320 fixed the two-request case, where the loser trips the email index and retries once. Its retry does not cover a deadlock, and its verification watches only for "User could not be upserted", so this failure would not show there.
 
 ## Evidence
 
@@ -33,7 +32,7 @@ A new user's first page load can send several requests at once. Each finds no `u
 ## Options
 
 1. **Retry a deadlock victim** (recommended). Postgres's documentation expects applications to retry a transaction it aborts as a deadlock victim. The session gateway provisions outside any transaction, so it can retry the whole provisioning step, through the shared `retry` helper and its default attempts, when the error's SQLSTATE is `40P01`. Clerk is not asked again.
-2. **Serialize provisioning per Clerk user** with a transaction-scoped advisory lock. This removes the cycle, but adds a lock whose order against the deletion path must be proven. [DEBT-502](../debt/debt-502-account-identity-and-action-hardening.md) item 2 already decided to provision under the existing tombstone lock, in one transaction, with both interleavings proven against real Postgres.
+2. **Serialize provisioning per Clerk user** with a transaction-scoped advisory lock. This removes the cycle, but adds a lock whose order against the deletion path must be proven. DEBT-502 item 2 already decided to provision under the existing tombstone lock, in one transaction, with both interleavings proven against real Postgres.
 3. **Retry inside the repository.** Rejected: the repository can be bound to a caller's transaction, and a deadlock aborts that transaction, so an inner retry cannot recover it.
 
 ## Resolution
@@ -51,6 +50,6 @@ A new user's first page load can send several requests at once. Each finds no `u
 
 ## Related
 
-- [BUG-320](./bug-320-first-pricing-render-user-upsert-race.md): the two-request race this extends.
-- [DEBT-503](../debt/debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 1: whose contract test found it.
-- [DEBT-502](../debt/debt-502-account-identity-and-action-hardening.md) item 2: the locked provisioning that removes the cause.
+- BUG-320: the two-request race this extends.
+- DEBT-503 item 1: whose contract test found it.
+- DEBT-502 item 2: the locked provisioning that removes the cause.

@@ -1,6 +1,5 @@
 # DEBT-505: Failures That Are Only Logged Alert Nobody
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — released 2026-10-09; the first drill and the cron monitor are proven. Still open: the unchecked items below, among them the 2026-11-03 cycle's drill; due 2026-11-05
 **Priority:** P2
@@ -29,7 +28,7 @@ The sharpest case is renewal consent. If a renewal notice misses its legal deadl
 
 ## Impact
 
-The product is pre-revenue with no active users, so nothing has been missed yet. Once annual subscribers exist, a missed renewal-notice deadline is a compliance failure ([DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) F07) that nobody would learn of in time.
+The product is pre-revenue with no active users, so nothing has been missed yet. Once annual subscribers exist, a missed renewal-notice deadline is a compliance failure (DEBT-414 F07) that nobody would learn of in time.
 
 ## Options
 
@@ -67,7 +66,7 @@ Option 2.
   - the dispatch refusal and quarantine alerts;
   - BUG-321's failed sync;
   - BUG-323's limiter failure;
-  - [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 3's Clerk cap trips.
+  - DEBT-503 item 3's Clerk cap trips.
 
 - **Implemented 2026-10-08.**
   - The port is `OperationalAlerts`, with a closed list of kinds and only a count, so no free text can reach Sentry. One `raise` method covers every kind: the closed list keeps the fields fixed, and a new kind needs no new method.
@@ -87,7 +86,7 @@ Option 2.
 
 *Corrected 2026-10-08: grouping every alert of a kind into one issue would have emailed only the first; each kind and cooldown window now opens its own issue.*
 
-- **Decided 2026-10-08 ([AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md)): the path is watched, not assumed.** The alerts protect a legal deadline, so a drill proves the path each cycle, a watcher outside Sentry email notices when the job or the path stops, and the owner's inbox filter makes an alert stand out. The first two are implemented below; the filter is the owner's.
+- **Decided 2026-10-08 (AUDIT-015): the path is watched, not assumed.** The alerts protect a legal deadline, so a drill proves the path each cycle, a watcher outside Sentry email notices when the job or the path stops, and the owner's inbox filter makes an alert stand out. The first two are implemented below; the filter is the owner's.
 
 ## Verification
 
@@ -117,6 +116,6 @@ Option 2.
 
 ## Related
 
-- [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) F07, which cannot be verified until this ships.
-- [DEBT-503](./debt-503-clerk-backend-api-allowance-single-point-of-failure.md) item 3, a consumer of this path.
-- [BUG-321](../bugs/bug-321-already-subscribed-answer-discarded.md) and [BUG-323](../bugs/bug-323-anonymous-requests-can-spend-clerks-shared-api-limit.md), whose failures this makes visible.
+- DEBT-414 F07, which cannot be verified until this ships.
+- DEBT-503 item 3, a consumer of this path.
+- BUG-321 and BUG-323, whose failures this makes visible.

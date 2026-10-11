@@ -1,0 +1,953 @@
+# Closed Records
+
+One line per closed record: ID · title · disposition · date closed · path.
+
+Every record closed before 2026-10-11 is readable at commit `63a8f220324b`, on GitHub at `https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/63a8f220324b1b6b363913a4cf0865663c8dacc1/<path>` or offline with `git show 63a8f220324b:<path>`.
+
+A record closed later adds the commit of its last version after its path. The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/register-*.md` at the same commit.
+
+## Bugs
+
+- BUG-001 · `pnpm -s …` Can Launch Vim and Hang Non-Interactive Sessions · Resolved · 2026-02-01 · docs/_archive/bugs/bug-001-pnpm-s-vim-hang.md
+- BUG-002 · `NEXT_PUBLIC_SKIP_CLERK` blocked `next build` due to `NODE_ENV` override · Resolved · 2026-02-01 · docs/_archive/bugs/bug-002-next-build-node-env-skip-clerk.md
+- BUG-003 · FakePracticeSessionRepository throws Error instead of ApplicationError · Resolved · 2026-02-01 · docs/_archive/bugs/bug-003-fake-repo-throws-error-not-application-error.md
+- BUG-004 · SubmitAnswer use case hardcodes timeSpentSeconds to 0 · Resolved · 2026-02-01 · docs/_archive/bugs/bug-004-submit-answer-hardcoded-time-spent.md
+- BUG-005 · Signed-in Nav Links to Missing `/app/dashboard` Route (404) · Resolved · 2026-02-01 · docs/_archive/bugs/bug-005-auth-nav-dashboard-link-404.md
+- BUG-006 · Dark Theme Tokens Not Applied Due to Missing `.dark` Toggle + Overriding Body Classes · Resolved · 2026-02-01 · docs/_archive/bugs/bug-006-dark-mode-not-applied.md
+- BUG-007 · Question Frontmatter Allows Duplicate Tag Slugs (Breaks Seeding via `question_tags` PK) · Resolved · 2026-02-01 · docs/_archive/bugs/bug-007-question-frontmatter-duplicate-tag-slugs.md
+- BUG-008 · Stripe Webhook Endpoint Missing (`/api/stripe/webhook`) · Resolved · 2026-02-01 · docs/_archive/bugs/bug-008-stripe-webhook-endpoint-missing.md
+- BUG-009 · Vercel Preview Deployment Status Fails Due to Rate Limit · Won't fix · 2026-02-02 · docs/_archive/bugs/bug-009-vercel-preview-deployment-rate-limit.md
+- BUG-010 · Database Not Seeded — No Questions Available · Resolved · 2026-02-01 · docs/_archive/bugs/bug-010-database-not-seeded.md
+- BUG-011 · UX Flow Gaps — Multiple Navigation and Wiring Issues · Resolved · 2026-02-01 · docs/_archive/bugs/bug-011-ux-flow-gaps-multiple-issues.md
+- BUG-012 · Incomplete Feature Wiring — Missing Controllers and E2E Coverage · Resolved · 2026-02-01 · docs/_archive/bugs/bug-012-incomplete-feature-wiring.md
+- BUG-013 · Silent Error Handling — Errors Swallowed Without Logging or User Feedback · Resolved · 2026-02-01 · docs/_archive/bugs/bug-013-silent-error-handling.md
+- BUG-014 · Pricing Subscribe Action Not Working (Server Action Serialization) · Resolved · 2026-02-01 · docs/_archive/bugs/bug-014-pricing-subscribe-action-not-working.md
+- BUG-015 · Fragile Webhook Error Matching Uses String Instead of Error Code · Resolved · 2026-02-02 · docs/_archive/bugs/bug-015-fragile-webhook-error-matching.md
+- BUG-016 · Memory Exhaustion for Power Users — All Attempts Loaded Into Memory · Resolved · 2026-02-02 · docs/_archive/bugs/bug-016-memory-exhaustion-power-users.md
+- BUG-017 · Billing Page Shows "Manage in Stripe" When User Has No Subscription · Resolved · 2026-02-02 · docs/_archive/bugs/bug-017-billing-button-without-subscription.md
+- BUG-018 · Silent Fallbacks in Controllers — Data Inconsistency Without Warning · Resolved · 2026-02-02 · docs/_archive/bugs/bug-018-silent-fallbacks-in-controllers.md
+- BUG-019 · Missing Bookmarks View Page — Users Can Bookmark But Can't View · Resolved · 2026-02-02 · docs/_archive/bugs/bug-019-missing-bookmarks-view-page.md
+- BUG-020 · Missing Review/Missed Questions Page — Dead Controller Code · Resolved · 2026-02-02 · docs/_archive/bugs/bug-020-missing-review-missed-questions-page.md
+- BUG-021 · Practice Sessions Never Started/Ended — Dead Session Controller Code · Resolved · 2026-02-02 · docs/_archive/bugs/bug-021-practice-sessions-never-started.md
+- BUG-022 · Missing Loading States on Form Buttons · Resolved · 2026-02-02 · docs/_archive/bugs/bug-022-missing-loading-states-on-forms.md
+- BUG-023 · Missing Clerk Webhook for User Deletion — Orphaned Data · Resolved · 2026-02-02 · docs/_archive/bugs/bug-023-missing-clerk-user-deletion-webhook.md
+- BUG-024 · Entitlement Race Condition During Payment Failure · Won't fix · 2026-02-02 · docs/_archive/bugs/bug-024-entitlement-race-condition-past-due.md
+- BUG-025 · Missing Subscription Event Handlers (paused/resumed) · Resolved · 2026-02-02 · docs/_archive/bugs/bug-025-missing-subscription-event-handlers.md
+- BUG-026 · No Protection Against Concurrent Checkout Sessions · Resolved · 2026-02-02 · docs/_archive/bugs/bug-026-concurrent-checkout-sessions.md
+- BUG-027 · Stripe Events Table Unbounded Growth · Resolved · 2026-02-02 · docs/_archive/bugs/bug-027-stripe-events-unbounded-growth.md
+- BUG-028 · Inconsistent Cascade Delete for Attempts · Won't fix · 2026-02-02 · docs/_archive/bugs/bug-028-inconsistent-cascade-delete-attempts.md
+- BUG-029 · Answer Choices Not Randomized · Resolved · 2026-02-02 · docs/_archive/bugs/bug-029-answer-choices-not-randomized.md
+- BUG-030 · Time Spent Always Zero · Resolved · 2026-02-02 · docs/_archive/bugs/bug-030-time-spent-always-zero.md
+- BUG-031 · Non-Unique React Key in Dashboard Recent Activity · Resolved · 2026-02-02 · docs/_archive/bugs/bug-031-non-unique-react-key-dashboard.md
+- BUG-032 · State Update After Component Unmount · Resolved · 2026-02-02 · docs/_archive/bugs/bug-032-state-update-after-unmount.md
+- BUG-033 · Stale Closure in onToggleBookmark · Resolved · 2026-02-02 · docs/_archive/bugs/bug-033-stale-closure-toggle-bookmark.md
+- BUG-034 · Webhook Catch Block Loses Error Context · Resolved · 2026-02-02 · docs/_archive/bugs/bug-034-webhook-error-context-lost.md
+- BUG-035 · Error Banner Not Clearable on Pricing Page · Resolved · 2026-02-02 · docs/_archive/bugs/bug-035-error-banner-not-clearable.md
+- BUG-036 · No Loading State on Subscribe Buttons · Resolved · 2026-02-02 · docs/_archive/bugs/bug-036-no-loading-state-subscribe-buttons.md
+- BUG-037 · No Mobile Navigation Menu · Resolved · 2026-02-02 · docs/_archive/bugs/bug-037-no-mobile-navigation-menu.md
+- BUG-038 · Missing Clerk user.updated Webhook — Email Sync Gap · Resolved · 2026-02-02 · docs/_archive/bugs/bug-038-missing-clerk-user-updated-webhook.md
+- BUG-039 · Checkout Success Page Crashes — searchParams Not Awaited · Resolved · 2026-02-02 · docs/_archive/bugs/bug-039-checkout-success-searchparams-not-awaited.md
+- BUG-040 · Clerk Infinite Redirect Loop Warning (Key Mismatch) · Resolved · 2026-02-02 · docs/_archive/bugs/bug-040-clerk-key-mismatch-infinite-redirect.md
+- BUG-041 · Webhook 500 on `customer.subscription.created` (Missing `metadata.user_id`) · Resolved · 2026-02-02 · docs/_archive/bugs/bug-041-webhook-subscription-created-missing-metadata.md
+- BUG-042 · Checkout Success Redirects Without Diagnostics · Resolved · 2026-02-02 · docs/_archive/bugs/bug-042-checkout-success-silent-validation-failure.md
+- BUG-043 · Checkout Success Route Not Public (Stripe Return) · Resolved · 2026-02-02 · docs/_archive/bugs/bug-043-checkout-success-not-public-route.md
+- BUG-044 · Checkout Success Page Serving Stale Code · Resolved · 2026-02-02 · docs/_archive/bugs/bug-044-checkout-success-stale-cache.md
+- BUG-045 · Checkout Success Validation Fails — missing_current_period_end · Resolved · 2026-02-02 · docs/_archive/bugs/bug-045-checkout-missing-current-period-end.md
+- BUG-046 · Review Page SQL Error — Ambiguous Column Reference · Resolved · 2026-02-02 · docs/_archive/bugs/bug-046-review-page-ambiguous-column.md
+- BUG-047 · Multiple Subscriptions Created Per User · Resolved · 2026-02-02 · docs/_archive/bugs/bug-047-multiple-subscriptions-per-user.md
+- BUG-048 · Webhook Rate Limiter Failures Fail Open · Resolved · 2026-02-02 · docs/_archive/bugs/bug-048-webhook-rate-limiter-fails-open.md
+- BUG-049 · Silent Pruning Failures in Stripe Webhook Controller · Resolved · 2026-02-03 · docs/_archive/bugs/bug-049-silent-pruning-failures-stripe-webhook.md
+- BUG-050 · Stripe Webhook Skips Events Missing `metadata.user_id` · Resolved · 2026-02-03 · docs/_archive/bugs/bug-050-stripe-webhook-missing-user-id-metadata.md
+- BUG-051 · Checkout Success Redirects with Non-Entitled Status · Resolved · 2026-02-03 · docs/_archive/bugs/bug-051-checkout-success-redirects-with-non-entitled-status.md
+- BUG-052 · Non-Entitled Subscriptions Could Start New Checkout Sessions · Resolved · 2026-02-03 · docs/_archive/bugs/bug-052-non-entitled-subscriptions-could-start-new-checkout.md
+- BUG-053 · Checkout Success Accepts Missing `metadata.user_id` · Resolved · 2026-02-03 · docs/_archive/bugs/bug-053-checkout-success-missing-user-id-metadata.md
+- BUG-054 · Async State Updates After Component Unmount in Page Logic · Resolved · 2026-02-03 · docs/_archive/bugs/bug-054-async-state-updates-after-unmount-in-page-logic.md
+- BUG-055 · Authenticated Subscribers Redirected to Landing Page After Sign-In · Resolved · 2026-02-04 · docs/_archive/bugs/bug-055-post-login-redirects-to-landing-page.md
+- BUG-056 · Shuffled Choice Labels Display Out of Order · Resolved · 2026-02-05 · docs/_archive/bugs/bug-056-shuffled-choice-labels-out-of-order.md
+- BUG-057 · Choice Label Badges Render Clipped · Resolved · 2026-02-05 · docs/_archive/bugs/bug-057-choice-label-badges-render-clipped.md
+- BUG-058 · Theme Toggle Does Not Work Without ThemeProvider · Resolved · 2026-02-05 · docs/_archive/bugs/bug-058-theme-toggle-does-not-work-without-themeprovider.md
+- BUG-059 · Marketing Homepage Low Contrast in Light Mode · Resolved · 2026-02-05 · docs/_archive/bugs/bug-059-marketing-homepage-low-contrast-in-light-mode.md
+- BUG-060 · Question Reattempt Submit Not Disabled While Loading · Resolved · 2026-02-05 · docs/_archive/bugs/bug-060-question-reattempt-submit-not-disabled-while-loading.md
+- BUG-061 · Debt Index Claims No Active Items While Listing DEBT-102 · Resolved · 2026-02-05 · docs/_archive/bugs/bug-061-debt-index-claims-no-active-items-while-listing-debt-102.md
+- BUG-062 · Practice Session Modes (Tutor/Exam) Not Working · Resolved · 2026-02-05 · docs/_archive/bugs/bug-062-practice-session-modes-not-working.md
+- BUG-063 · CSP Blocks Clerk Blob Workers · Resolved · 2026-02-05 · docs/_archive/bugs/bug-063-csp-blocks-clerk-blob-workers.md
+- BUG-064 · Clerk Key Mismatch Warning in Dev Server · Won't fix · 2026-02-05 · docs/_archive/bugs/bug-064-clerk-key-mismatch-warning.md
+- BUG-065 · Exam Mode Shows Feedback When It Shouldn't · Resolved · 2026-02-05 · docs/_archive/bugs/bug-065-explanation-not-available-some-questions.md
+- BUG-066 · Clerk Development Keys Used in Production · Resolved · 2026-02-05 · docs/_archive/bugs/bug-066-clerk-development-keys-in-production.md
+- BUG-067 · Clerk Sign-in Shows "NTX University" Instead of "Addiction Boards" · Resolved · 2026-02-05 · docs/_archive/bugs/bug-067-clerk-shows-ntx-university-name.md
+- BUG-068 · Reattempt Page UX Confusion - Buttons After Submit · Resolved · 2026-02-05 · docs/_archive/bugs/bug-068-reattempt-page-ux-confusion.md
+- BUG-069 · Stripe Checkout Fails for New Users (Lost `this` Binding) · Resolved · 2026-02-05 · docs/_archive/bugs/bug-069-stripe-checkout-fails-localhost.md
+- BUG-070 · E2E Test User Checkout Failed (Stripe `this` Binding Bug) · Resolved · 2026-02-05 · docs/_archive/bugs/bug-070-e2e-test-user-checkout-fails.md
+- BUG-071 · Preview Deployment Renders Blank Page After CSP Tightening · Resolved · 2026-02-05 · docs/_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md
+- BUG-072 · No Question Navigation in Practice Sessions (Both Modes) · Resolved · 2026-02-06 · docs/_archive/bugs/bug-072-no-question-navigation-in-practice-sessions.md
+- BUG-073 · Tutor Mode Missing Per-Question Session Summary at End · Resolved · 2026-02-06 · docs/_archive/bugs/bug-073-tutor-mode-missing-session-summary-detail.md
+- BUG-074 · Missed Questions Can Be Misclassified on `answered_at` Timestamp Ties · Resolved · 2026-02-06 · docs/_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md
+- BUG-075 · Pricing CTA Mismatch for Recoverable Subscription States · Resolved · 2026-02-06 · docs/_archive/bugs/bug-075-checkout-guard-entitlement-mismatch.md
+- BUG-077 · Payment Processing Users See Wrong Error Message · Resolved · 2026-02-06 · docs/_archive/bugs/bug-077-payment-processing-confusing-redirect.md
+- BUG-078 · Clerk Production Sign-In Broken (Google OAuth Not Configured + Domain Lock) · Resolved · 2026-02-06 · docs/_archive/bugs/bug-078-clerk-production-google-oauth-not-configured.md
+- BUG-079 · Preview/Dev Environment Verification Failures · Resolved · 2026-02-06 · docs/_archive/bugs/bug-079-preview-dev-environment-verification-failures.md
+- BUG-080 · Vercel Environment Variable & Deployment Protection Issues · Resolved · 2026-02-06 · docs/_archive/bugs/bug-080-vercel-env-var-deployment-issues.md
+- BUG-081 · Bookmark Message Timeout Fires After Component Unmount · Resolved · 2026-02-06 · docs/_archive/bugs/bug-081-bookmark-timeout-race-condition.md
+- BUG-082 · Void Promises Silently Swallow Errors in Practice Page · Resolved · 2026-02-06 · docs/_archive/bugs/bug-082-void-promises-swallow-errors.md
+- BUG-083 · Stale Closure Risk in usePracticeSessionMarkForReview · Resolved · 2026-02-06 · docs/_archive/bugs/bug-083-stale-closure-mark-for-review.md
+- BUG-084 · Webhook Error Response Leaks Implementation Details · Resolved · 2026-02-06 · docs/_archive/bugs/bug-084-webhook-error-message-leaks-context.md
+- BUG-085 · Out-of-Order Question Loads Can Overwrite Current State · Resolved · 2026-02-07 · docs/_archive/bugs/bug-085-out-of-order-question-load-overwrites-current-state.md
+- BUG-086 · Session History Drill-Down Race Can Show Wrong Session Details · Resolved · 2026-02-07 · docs/_archive/bugs/bug-086-session-history-drilldown-race-overwrites-selected-session.md
+- BUG-087 · Practice Tag Load Throw Leaves Page Stuck in Loading · Resolved · 2026-02-07 · docs/_archive/bugs/bug-087-practice-tag-load-throw-stalls-page.md
+- BUG-088 · Clerk Webhook Invalid-Payload Response Leaks Internal Error Message · Resolved · 2026-02-07 · docs/_archive/bugs/bug-088-clerk-webhook-invalid-payload-message-leak.md
+- BUG-089 · Bookmark Loading Effect Missing Loading State · Resolved · 2026-02-07 · docs/_archive/bugs/bug-089-bookmark-loading-effect-missing-loading-state.md
+- BUG-090 · Practice Error State Has No Escape Hatch · Resolved · 2026-02-07 · docs/_archive/bugs/bug-090-practice-error-state-missing-escape-hatch.md
+- BUG-091 · `endPracticeSession` Missing Idempotency Key · Resolved · 2026-02-07 · docs/_archive/bugs/bug-091-end-practice-session-missing-idempotency-key.md
+- BUG-092 · Circular Module Dependency in Practice Page Decomposition · Resolved · 2026-02-07 · docs/_archive/bugs/bug-092-circular-module-dependency-practice-page-decomposition.md
+- BUG-093 · Hard-Coded Route in Practice View Navigation · Reclassified · 2026-02-07 · docs/_archive/bugs/bug-093-hard-coded-route-practice-view-navigation.md
+- BUG-094 · Exam Review Error State — Misleading "Try Again" Ends Session · Resolved · 2026-02-07 · docs/_archive/bugs/bug-094-exam-review-error-misleading-try-again.md
+- BUG-095 · `setPracticeSessionQuestionMark` Missing Idempotency Key · Resolved · 2026-02-07 · docs/_archive/bugs/bug-095-set-question-mark-missing-idempotency-key.md
+- BUG-096 · `toggleBookmark` Missing Idempotency Key · Resolved · 2026-02-07 · docs/_archive/bugs/bug-096-toggle-bookmark-missing-idempotency-key.md
+- BUG-097 · Widespread Hard-Coded Route Strings Across Codebase · Resolved · 2026-02-07 · docs/_archive/bugs/bug-097-widespread-hard-coded-route-strings.md
+- BUG-098 · submitAnswer Accepts Questions Not in Session · Resolved · 2026-02-07 · docs/_archive/bugs/bug-098-submit-answer-accepts-questions-not-in-session.md
+- BUG-099 · Checkout Success Race with Concurrent Webhook CONFLICT · Resolved · 2026-02-07 · docs/_archive/bugs/bug-099-checkout-success-race-concurrent-webhook-conflict.md
+- BUG-100 · Nested `<main>` Landmarks Across Root and Segment Layouts · Resolved · 2026-02-07 · docs/_archive/bugs/bug-100-nested-main-landmarks-in-layouts.md
+- BUG-101 · Stripe Checkout Can Create Duplicate Subscriptions if DB State Drifts · Resolved · 2026-02-07 · docs/_archive/bugs/bug-101-stripe-checkout-allows-duplicate-subscriptions-when-db-stale.md
+- BUG-102 · Rate Limits Table Unbounded Growth · Resolved · 2026-02-07 · docs/_archive/bugs/bug-102-rate-limits-table-unbounded-growth.md
+- BUG-103 · Idempotency Key Pruning Never Wired to Production · Resolved · 2026-02-07 · docs/_archive/bugs/bug-103-idempotency-key-pruning-never-wired.md
+- BUG-104 · Double Pruning — Webhook Controller and Hot Paths Both Prune · Resolved · 2026-02-07 · docs/_archive/bugs/bug-104-double-pruning-webhook-and-hot-paths.md
+- BUG-105 · Concurrent Answer Submission Can Create Duplicate Attempts · Resolved · 2026-02-08 · docs/_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md
+- BUG-106 · Stripe Customer Search Query Uses String Interpolation · Resolved · 2026-02-08 · docs/_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md
+- BUG-107 · Hardcoded Route Path in Incomplete Session Card · Resolved · 2026-02-08 · docs/_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md
+- BUG-108 · submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer · Resolved · 2026-02-08 · docs/_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md
+- BUG-109 · Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) · Resolved · 2026-02-08 · docs/_archive/bugs/bug-109-cron-route-limit-mismatch.md
+- BUG-110 · ChoiceButton aria-label Overrides Full Answer Text · Resolved · 2026-02-08 · docs/_archive/bugs/bug-110-choice-button-aria-label-overrides-answer-text.md
+- BUG-111 · Bookmark Toggle Silently Swallows Errors · Resolved · 2026-02-08 · docs/_archive/bugs/bug-111-bookmark-toggle-silent-error-swallowing.md
+- BUG-112 · Navigator Fetch Silently Swallows Errors with No Error State · Resolved · 2026-02-08 · docs/_archive/bugs/bug-112-navigator-fetch-silent-error-swallowing.md
+- BUG-113 · Orphaned Attempt Persisted When Submitting to Ended Session · Resolved · 2026-02-08 · docs/_archive/bugs/bug-113-orphaned-attempt-on-ended-session.md
+- BUG-114 · Subscribe Action Exposes Internal Error Codes in URL Params · Resolved · 2026-02-08 · docs/_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md
+- BUG-115 · DEBT-160 CRON_SECRET Startup Validation Crashes Production Build · Resolved · 2026-02-08 · docs/_archive/bugs/bug-115-cron-secret-validation-crashes-production-build.md
+- BUG-116 · Cron Reconcile Route Blocked by Clerk Middleware · Resolved · 2026-02-08 · docs/_archive/bugs/bug-116-cron-route-blocked-by-clerk-middleware.md
+- BUG-117 · Stripe Customer Creation Non-Idempotent Path Missing Retry Wrapper · Resolved · 2026-02-08 · docs/_archive/bugs/bug-117-stripe-customer-create-missing-retry.md
+- BUG-118 · Question Page Missing Shared Practice-Page Guards · Resolved · 2026-02-08 · docs/_archive/bugs/bug-118-question-page-missing-shared-guards.md
+- BUG-119 · Stripe 'ended' Subscription Status Missing from DB Enum · Resolved · 2026-02-08 · docs/_archive/bugs/bug-119-stripe-ended-status-missing-from-db-enum.md
+- BUG-120 · Reconciliation Job Missing Authoritative Conflict Strategy · Resolved · 2026-02-08 · docs/_archive/bugs/bug-120-reconciliation-missing-authoritative-conflict-strategy.md
+- BUG-121 · Session Start Button Never Shows Loading State · Resolved · 2026-02-09 · docs/_archive/bugs/bug-121-session-start-button-missing-loading-state.md
+- BUG-122 · Choices Still Clickable After Exam Mode Submit · Resolved · 2026-02-09 · docs/_archive/bugs/bug-122-exam-choices-clickable-after-submit.md
+- BUG-123 · Server Returns `correctChoiceId` to Client in Exam Mode · Resolved · 2026-02-09 · docs/_archive/bugs/bug-123-exam-mode-correctchoiceid-leak.md
+- BUG-124 · Exam Review Data Stale After Changing Answer from Review · Resolved · 2026-02-09 · docs/_archive/bugs/bug-124-exam-review-stale-after-review-answer.md
+- BUG-125 · "No More Questions" Dead-End — No Action Buttons · Resolved · 2026-02-09 · docs/_archive/bugs/bug-125-no-more-questions-dead-end.md
+- BUG-126 · End Session Blocked During Bookmark Operations · Reclassified · 2026-02-09 · docs/_archive/bugs/bug-126-end-session-blocked-by-bookmark-pending.md
+- BUG-127 · Double-Click "Submit Exam" Race in Review · Resolved · 2026-02-09 · docs/_archive/bugs/bug-127-double-click-submit-exam-race.md
+- BUG-128 · sessionInfo Cleared on Null Question — Exam Defaults to Tutor, Navigator Drops · Resolved · 2026-02-09 · docs/_archive/bugs/bug-128-sessioninfo-cleared-on-null-question.md
+- BUG-129 · E2E Choice Radio Selector Cannot Find Question Choices · Resolved · 2026-02-10 · docs/_archive/bugs/bug-129-e2e-choice-radio-selector-mismatch.md
+- BUG-130 · E2E Session Start Selectors Don't Match Current UI · Resolved · 2026-02-10 · docs/_archive/bugs/bug-130-e2e-session-start-selector-mismatch.md
+- BUG-131 · E2E Bookmarks Empty State Assertion Fails After Remove · Resolved · 2026-02-10 · docs/_archive/bugs/bug-131-e2e-bookmarks-empty-state-assertion-failure.md
+- BUG-132 · Duplicate Nav Links — "Pricing" and "Dashboard" Appear Twice in Header · Resolved · 2026-02-13 · docs/_archive/bugs/bug-132-duplicate-nav-links-pricing-dashboard.md
+- BUG-133 · Stale Closure in Practice Session onSubmit After Async Await · Resolved · 2026-02-16 · docs/_archive/bugs/bug-133-stale-closure-practice-session-onsubmit.md
+- BUG-134 · Mark-for-Review Race Can Update the Wrong Question UI State · Resolved · 2026-02-16 · docs/_archive/bugs/bug-134-mark-for-review-race-updates-wrong-question.md
+- BUG-136 · Logger Uses Unreliable Inlined NODE_ENV for Log Level Selection · Resolved · 2026-02-17 · docs/_archive/bugs/bug-136-logger-uses-inlined-node-env-for-level.md
+- BUG-137 · Entitlement Check Off-by-One at Period End Boundary · Reclassified · 2026-02-17 · docs/_archive/bugs/bug-137-entitlement-off-by-one-period-end-boundary.md
+- BUG-139 · GetPreviousAttemptUseCase Silently Returns Null on Data Integrity Mismatch · Resolved · 2026-02-17 · docs/_archive/bugs/bug-139-get-previous-attempt-silent-null-on-data-mismatch.md
+- BUG-143 · Sentry Environment Tag Uses Inlined NODE_ENV — Preview Errors Report as Production · Resolved · 2026-02-17 · docs/_archive/bugs/bug-143-sentry-environment-tag-uses-inlined-node-env.md
+- BUG-144 · MarketingLayout Nests `<main>` Landmarks (Regression of BUG-100) · Fixed · 2026-02-17 · docs/_archive/bugs/bug-144-marketing-layout-nests-main-landmarks.md
+- BUG-145 · Frontend SSOT Docs Are Out of Sync with Current Question View Implementation · Fixed · 2026-02-17 · docs/_archive/bugs/bug-145-frontend-ssot-docs-out-of-sync-with-question-view.md
+- BUG-146 · Marketing Footer “Sign in/up” Casing Is Inconsistent with the Rest of the App · Fixed · 2026-02-17 · docs/_archive/bugs/bug-146-marketing-footer-sign-in-up-casing-inconsistent.md
+- BUG-147 · User Upsert Fails on Email Uniqueness Conflict When Clerk User ID Changes · Resolved · 2026-02-21 · docs/_archive/bugs/bug-147-user-upsert-unhandled-email-uniqueness-conflict.md
+- BUG-148 · Stripe Checkout Idempotency Key Fallback Uses randomUUID() · Resolved · 2026-02-22 · docs/_archive/bugs/bug-148-stripe-checkout-idempotency-key-fallback-random.md
+- BUG-149 · Idempotency Null Result Is Indistinguishable from Pending State · Resolved · 2026-02-23 · docs/_archive/bugs/bug-149-idempotency-null-result-indistinguishable-from-pending.md
+- BUG-150 · Proxy Default Export Named `middleware` — Recurring False-Positive Audit Noise · Resolved · 2026-02-23 · docs/_archive/bugs/bug-150-proxy-function-named-middleware.md
+- BUG-151 · Card/Row Affordance Inconsistency — Misleading Hover, Missing Focus Rings, Pattern Asymmetry · Resolved · 2026-02-24 · docs/_archive/bugs/bug-151-card-row-affordance-inconsistency.md
+- BUG-152 · History Questions Tab Navigator Mismatch — Ad-Hoc Questions Grouped Into Fake Session · Fixed · 2026-02-26 · docs/_archive/bugs/bug-152-history-questions-tab-navigator-mismatch.md
+- BUG-153 · "Try Again" Label Shown for Correct Answers on Dashboard and Bookmarks Review · Fixed · 2026-02-26 · docs/_archive/bugs/bug-153-reattempt-label-incorrect-dashboard-bookmarks.md
+- BUG-154 · Markdown Prose Spacing — Question Stem and Explanation Paragraphs Run Together · Fixed · 2026-02-26 · docs/_archive/bugs/bug-154-markdown-prose-spacing.md
+- BUG-155 · Feedback Card Visual Overhaul — Verdict Badge, Correct Answer Display, Wrong-Answer Cards, Accessibility · Fixed · 2026-02-26 · docs/_archive/bugs/bug-155-feedback-card-visual-overhaul.md
+- BUG-156 · Practice View Post-Submit UX — Button Promotion and Auto-Scroll to Feedback · Fixed · 2026-02-26 · docs/_archive/bugs/bug-156-practice-view-post-submit-ux.md
+- BUG-157 · Question Card and Choice Button Visual Polish — Text Size, Spacing, Contrast, Post-Submit Indicators · Fixed · 2026-02-26 · docs/_archive/bugs/bug-157-question-card-choice-button-visual-polish.md
+- BUG-158 · Quick Practice Page UX Polish — Back Link Arrow and Filter Tab Affordance · Fixed · 2026-02-26 · docs/_archive/bugs/bug-158-quick-practice-page-ux-polish.md
+- BUG-159 · Review-Mode Hydration Flicker — Transient Submit UI Shown in Review Route · Fixed · 2026-02-26 · docs/_archive/bugs/bug-159-review-mode-hydration-flicker.md
+- BUG-160 · Dashboard "Recent Sessions" Cards All Link to Generic History Page · Fixed · 2026-02-27 · docs/_archive/bugs/bug-160-dashboard-session-cards-link-to-generic-history.md
+- BUG-161 · Stripe `incomplete_expired` Routes to Misleading `payment_processing` Messaging · Fixed · 2026-02-27 · docs/_archive/bugs/bug-161-incomplete-expired-maps-to-misleading-payment-failed.md
+- BUG-162 · Review Controller Pagination Offset Missing Upper Bound Validation · Fixed · 2026-02-27 · docs/_archive/bugs/bug-162-review-controller-offset-missing-upper-bound.md
+- BUG-163 · Dashboard Session Fraction Denominator Mismatches Accuracy Calculation · Fixed · 2026-02-27 · docs/_archive/bugs/bug-163-dashboard-session-fraction-denominator-mismatches-accuracy.md
+- BUG-164 · Tutor Accuracy Denominator Inconsistent Across Session Summary vs History/Dashboard · Fixed · 2026-02-27 · docs/_archive/bugs/bug-164-tutor-accuracy-denominator-inconsistent-across-summary-vs-history.md
+- BUG-165 · App Billing Manage-Billing Action Missing `unauthenticated` Redirect · Resolved · 2026-02-27 · docs/_archive/bugs/bug-165-app-billing-missing-unauthenticated-redirect.md
+- BUG-166 · manage-billing-core Catch Block Swallows Errors Without Logging · Resolved · 2026-02-27 · docs/_archive/bugs/bug-166-manage-billing-core-swallows-errors-silently.md
+- BUG-180 · Active Exam Answer Leak via Review Hydration · Resolved · 2026-03-02 · docs/_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md
+- BUG-181 · Session-Review Retry Allows Active Exam Answer Reveal · Resolved · 2026-03-02 · docs/_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md
+- BUG-182 · History Questions Crashes on Repeated `tag` Query Param · Resolved · 2026-03-02 · docs/_archive/bugs/bug-182-history-questions-tag-array-query-crash.md
+- BUG-183 · Stripe Webhook Failure State Is Rolled Back · Resolved · 2026-03-02 · docs/_archive/bugs/bug-183-stripe-webhook-failure-state-rolled-back.md
+- BUG-184 · Attempted Questions Count/Page Divergence Can Drop Real Rows · Resolved · 2026-03-02 · docs/_archive/bugs/bug-184-attempted-questions-count-page-divergence-drops-rows.md
+- BUG-185 · Dashboard Recent Activity Reveals Active Exam Correctness · Resolved · 2026-03-02 · docs/_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md
+- BUG-186 · Active Exam Review Projection Leaks Correctness · Fixed · 2026-03-03 · docs/_archive/bugs/bug-186-active-exam-review-projection-leaks-correctness.md
+- BUG-187 · Dashboard Accuracy Includes Active Exam Attempts · Fixed · 2026-03-03 · docs/_archive/bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md
+- BUG-188 · Legacy Session CAS JSON Shape Mismatch Breaks Updates · Fixed · 2026-03-03 · docs/_archive/bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md
+- BUG-189 · Question Review Cross-Slug Async State Corruption · Fixed · 2026-03-03 · docs/_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md
+- BUG-190 · History Session Reopen Race Applies Stale Result · Fixed · 2026-03-03 · docs/_archive/bugs/bug-190-history-session-reopen-race-applies-stale-result.md
+- BUG-191 · GetNextQuestion Returns latestIsCorrect for Active Exams · Fixed · 2026-03-03 · docs/_archive/bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md
+- BUG-192 · History Page Exposes Active Exam Attempt Correctness · Fixed · 2026-03-03 · docs/_archive/bugs/bug-192-history-page-exposes-active-exam-correctness.md
+- BUG-193 · SubmitAnswer Returns isCorrect for Active Exams · Fixed · 2026-03-03 · docs/_archive/bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md
+- BUG-194 · Practice Submit Flow Missing Stale-Request Guard · Fixed · 2026-03-03 · docs/_archive/bugs/bug-194-practice-submit-flow-missing-stale-request-guard.md
+- BUG-195 · Question Candidate Status Filter Leaks Active Exam Correctness via Inference · Fixed · 2026-03-03 · docs/_archive/bugs/bug-195-question-candidate-status-filter-leaks-active-exam-correctness.md
+- BUG-196 · Practice Session Review Stage loadReview Double-Call Race · Fixed · 2026-03-03 · docs/_archive/bugs/bug-196-review-stage-load-review-double-call-race.md
+- BUG-197 · SubmitAnswer Two-Phase Write Without Transaction · Fixed · 2026-03-03 · docs/_archive/bugs/bug-197-submit-answer-two-phase-write-without-transaction.md
+- BUG-198 · Idempotency Key Zombie on Server Crash · Fixed · 2026-03-03 · docs/_archive/bugs/bug-198-idempotency-key-zombie-on-server-crash.md
+- BUG-199 · ~~BUG-199~~ → INVALIDATED: Stripe Subscription Items Are Already Validated Upstream · Invalidated · 2026-03-08 · docs/_archive/bugs/bug-199-unsafe-array-index-access.md
+- BUG-200 · ~~BUG-200~~ → RECLASSIFIED as DEBT-286 · Reclassified · 2026-03-08 · docs/_archive/bugs/bug-200-production-error-observability-gaps.md
+- BUG-201 · Clerk Webhook Route Uses an Unnecessary Output Cast · Resolved · 2026-03-08 · docs/_archive/bugs/bug-201-clerk-webhook-double-cast.md
+- BUG-202 · Redundant Condition After `.find()` · Resolved · 2026-03-08 · docs/_archive/bugs/bug-202-redundant-condition-after-find.md
+- BUG-203 · ~~BUG-203~~ → INVALIDATED: `whsec_dummy` Fallback Is Not Used by Clerk Webhook Verification · Invalidated · 2026-03-10 · docs/_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md
+- BUG-204 · Billing Portal Session Creation Lacks Abuse Controls · Resolved · 2026-03-10 · docs/_archive/bugs/bug-204-billing-portal-missing-abuse-controls.md
+- BUG-205 · Reconciliation Prefers Stale Local Subscription Over Canonical Stripe State · Resolved · 2026-03-11 · docs/_archive/bugs/bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md
+- BUG-206 · Raw DB Errors Escape Adapter Layer via `throw error` Fallback · Resolved · 2026-03-14 · docs/_archive/bugs/bug-206-raw-db-errors-escape-adapter-layer.md
+- BUG-207 · Cron Route Leaks Internal Configuration State to Unauthenticated Callers · Resolved · 2026-03-14 · docs/_archive/bugs/bug-207-cron-route-leaks-config-state.md
+- BUG-208 · Clerk Webhook User Deletion Is Not Transactional · Resolved · 2026-03-14 · docs/_archive/bugs/bug-208-clerk-webhook-deletion-not-transactional.md
+- BUG-209 · Clerk Webhook Replay Gap Can Recreate Deleted Users · Resolved · 2026-03-14 · docs/_archive/bugs/bug-209-clerk-webhook-lacks-idempotency.md
+- BUG-210 · Hard-Wired `Date.now()` in Stripe Checkout Session Inactivity Check · Resolved · 2026-03-14 · docs/_archive/bugs/bug-210-non-injectable-date-now-in-checkout-session.md
+- BUG-211 · `row?.count ?? 0` Fallback Silently Masks Query Failures · Invalidated · 2026-03-14 · docs/_archive/bugs/bug-211-count-query-fallback-masks-failures.md
+- BUG-212 · Bookmark Toggle Drops Failure Context at the Hook Boundary · Resolved · 2026-03-14 · docs/_archive/bugs/bug-212-bookmark-toggle-swallows-errors.md
+- BUG-213 · Session Start Thrown Errors Are Not Reported Client-Side · Resolved · 2026-03-14 · docs/_archive/bugs/bug-213-session-start-error-not-logged.md
+- BUG-214 · `runTransitionedAsyncAction` Dev-Only Error Logging · Resolved · 2026-03-14 · docs/_archive/bugs/bug-214-production-errors-silenced-in-transition-action.md
+- BUG-215 · Checkout Success Assertions Import `db/schema` Types Directly · Resolved · 2026-03-14 · docs/_archive/bugs/bug-215-checkout-success-business-logic-in-app-layer.md
+- BUG-216 · Health Handler Directly Imports `drizzle-orm` in App Layer · Invalidated · 2026-03-14 · docs/_archive/bugs/bug-216-health-handler-imports-drizzle-orm.md
+- BUG-217 · `getPreviousAttempt` Accepts Non-UUID `questionId` Values · Resolved · 2026-03-14 · docs/_archive/bugs/bug-217-questionid-validation-inconsistency.md
+- BUG-218 · Cached Idempotency Parse Failures Drop Their Original Cause · Resolved · 2026-03-14 · docs/_archive/bugs/bug-218-idempotency-parse-error-loses-cause.md
+- BUG-219 · Unused `SkipAuthGateway` Dead Code; `DropdownMenu` Is Spec-Mandated · Resolved · 2026-03-14 · docs/_archive/bugs/bug-219-dead-code-dropdown-menu-skip-auth-gateway.md
+- BUG-220 · Two Tests Still Assert Existence Instead of Behavior · Resolved · 2026-03-14 · docs/_archive/bugs/bug-220-weak-test-assertions.md
+- BUG-221 · Checkout Success Rejects Repeated `session_id` Query Params · Resolved · 2026-03-15 · docs/_archive/bugs/bug-221-checkout-success-repeated-session-id-breaks-sync.md
+- BUG-222 · Pricing Page Ignores Repeated `checkout` / `reason` Query Params · Resolved · 2026-03-15 · docs/_archive/bugs/bug-222-pricing-page-array-query-banners.md
+- BUG-223 · Bookmarks Page Drops Repeated `error` / `toast` Query Params · Resolved · 2026-03-15 · docs/_archive/bugs/bug-223-bookmarks-page-array-query-feedback-loss.md
+- BUG-224 · Practice Session Page Drops Repeated Session-Start Toast Params · Resolved · 2026-03-15 · docs/_archive/bugs/bug-224-practice-session-array-toast-loss.md
+- BUG-225 · Question Review Page Drops Repeated Review-Context Query Params · Resolved · 2026-03-15 · docs/_archive/bugs/bug-225-question-review-array-context-loss.md
+- BUG-226 · Completed Session "Next" Button Can Dead-End Into "No More Questions" · Resolved · 2026-03-15 · docs/_archive/bugs/bug-226-tutor-session-next-button-no-questions-after-completion.md
+- BUG-227 · Header Brand Uses Body Font; App Nav Wraps Immediately Above `sm` · Resolved · 2026-03-16 · docs/_archive/bugs/bug-227-header-brand-font-mismatch-and-nav-wrapping.md
+- BUG-228 · Client Sentry Ingest Is Blocked by Clerk-Owned CSP · Resolved · 2026-03-18 · docs/_archive/bugs/bug-228-client-sentry-ingest-blocked-by-csp.md
+- BUG-229 · Marketing Footer Year Uses Local Runtime Time Instead of UTC · Resolved · 2026-03-21 · docs/_archive/bugs/bug-229-marketing-footer-year-uses-local-time.md
+- BUG-230 · Post-Exam Review Retry Race Can Reapply Stale Error or Stale Success · Resolved · 2026-03-23 · docs/_archive/bugs/bug-230-post-exam-review-retry-race.md
+- BUG-231 · Remove Bookmark Form Action Is Not Idempotent and Can Re-Add the Bookmark · Resolved · 2026-04-06 · docs/_archive/bugs/bug-231-remove-bookmark-action-missing-idempotency.md
+- BUG-232 · Manage Billing Form Actions Still Drop Portal Idempotency Keys · Resolved · 2026-04-06 · docs/_archive/bugs/bug-232-manage-billing-actions-drop-portal-idempotency.md
+- BUG-233 · Practice Session Start Can Commit a Stale Response After Config Changes · Resolved · 2026-04-06 · docs/_archive/bugs/bug-233-practice-session-start-stale-response-after-config-change.md
+- BUG-234 · AuthNav Can Render Clerk UserButton Without an Active ClerkProvider · Resolved · 2026-04-09 · docs/_archive/bugs/bug-234-auth-nav-user-button-missing-clerk-provider.md
+- BUG-235 · Attempted-Question History Drops Prior Visible Attempt During Active Exam · Resolved · 2026-04-25 · docs/_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md
+- BUG-236 · Dashboard Current Streak Includes Active-Exam Attempts · Resolved · 2026-04-25 · docs/_archive/bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md
+- BUG-237 · submitAnswer Allows Final Attempt Writes During Active Exam Sessions · Resolved · 2026-04-25 · docs/_archive/bugs/bug-237-submit-answer-allows-active-exam-session-writes.md
+- BUG-238 · Active Exam Draft Save Allows Unbounded cumulativeMs · Resolved · 2026-04-25 · docs/_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md
+- BUG-239 · Active-Exam Latest-Attempt Readers Drop Older Visible Attempts · Resolved · 2026-04-27 · docs/_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md
+- BUG-240 · SPEC-041 Question Feedback Is Dead End-to-End — Migrations 0019/0020 Never Applied to Dev/Prod DB · Resolved · 2026-06-03 · docs/_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md
+- BUG-241 · Deploy Pipeline Has No Migration Step — Schema PRs Ship Code Without Applying Migrations (Green CI, Broken Runtime) · Resolved · 2026-06-16 · docs/_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md
+- BUG-242 · Late Webhook From a Superseded Subscription Overwrites the Active Subscription Row (userId-Keyed Last-Write-Wins Upsert Has No Identity/Recency Guard) · Resolved · 2026-06-12 · docs/_archive/bugs/bug-242-stale-subscription-webhook-overwrites-active-row.md
+- BUG-243 · Revisiting a Stale `/checkout/success` URL Overwrites the Newer Active Subscription With the Old Canceled One (Eager Sync Writes Before It Checks) · Resolved · 2026-06-12 · docs/_archive/bugs/bug-243-checkout-success-replay-overwrites-active-subscription.md
+- BUG-244 · The Stripe Reconciliation Safety Net Never Runs — No Scheduler Invokes the Cron Route · Resolved · 2026-06-12 · docs/_archive/bugs/bug-244-reconciliation-cron-never-scheduled.md
+- BUG-245 · Concurrent Two-Tab Checkout Defeats Every Duplicate-Subscription Guard — Two Live Subscriptions, One Customer · Resolved · 2026-06-13 · docs/_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md
+- BUG-246 · Deleted-Account Stripe Cancellation Has No Drain Beyond Svix Retries — Cascade-Deleted Local Rows Make the Leak Invisible · Resolved · 2026-06-12 · docs/_archive/bugs/bug-246-deleted-account-stripe-cancellation-no-drain.md
+- BUG-247 · Pricing-Page "Manage Billing" Portal Failures Show Checkout-Failure Copy ("Checkout failed. Please try again.") · Resolved · 2026-06-13 · docs/_archive/bugs/bug-247-pricing-portal-failure-shows-checkout-error-copy.md
+- BUG-248 · Public Main Branch Has No GitHub Merge Gate · Resolved · 2026-06-14 · docs/_archive/bugs/bug-248-main-branch-has-no-github-merge-gate.md
+- BUG-249 · Dependency Security Automation Is Disabled · Resolved · 2026-06-14 · docs/_archive/bugs/bug-249-dependency-security-automation-disabled.md
+- BUG-250 · Feedback Comment CSV Export Allows Spreadsheet Formula Injection · Resolved · 2026-06-17 · docs/_archive/bugs/bug-250-question-feedback-csv-formula-injection.md
+- BUG-251 · Active Exam Abandon Completes Without Finalization · Resolved · 2026-06-19 · docs/_archive/bugs/bug-251-active-exam-abandon-bypasses-finalization.md
+- BUG-252 · Unanswered Exam Question Time Is Not Persisted Before Finalization · Resolved · 2026-06-19 · docs/_archive/bugs/bug-252-unanswered-exam-time-not-persisted.md
+- BUG-254 · Active Exam Expiry Can Finalize a Locally Selected Answer as Omitted · Resolved · 2026-06-21 · docs/_archive/bugs/bug-254-active-exam-expiry-loses-local-selection.md
+- BUG-255 · Review & Submit Screen Stops the Active Exam Timer · Resolved · 2026-06-22 · docs/_archive/bugs/bug-255-review-submit-screen-stops-exam-timer.md
+- BUG-256 · Resuming an Expired Exam Can Show "No More Questions" Instead of Results · Resolved · 2026-06-22 · docs/_archive/bugs/bug-256-expired-exam-resume-shows-empty-question-state.md
+- BUG-257 · Active Exam Finalization Depends on Current Question Publication State · Resolved · 2026-06-23 · docs/_archive/bugs/bug-257-active-session-finalization-depends-on-current-published-question.md
+- BUG-258 · Server-Expired Draft Save Can Drop the Final Exam Selection When the Browser Clock Lags · Resolved · 2026-06-23 · docs/_archive/bugs/bug-258-server-expired-draft-save-client-clock-skew-omits-selection.md
+- BUG-259 · In-Place Answer, Bookmark, and Feedback Rate-Limit Errors Are Cached Under Idempotency Keys · Resolved · 2026-06-24 · docs/_archive/bugs/bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md
+- BUG-260 · Question Feedback Trusts Client-Supplied Attempt and Session Context IDs · Resolved · 2026-06-25 · docs/_archive/bugs/bug-260-question-feedback-trusts-client-context-ids.md
+- BUG-261 · Out-of-Range Session History Pages Show a False Empty-State Message · Resolved · 2026-06-23 · docs/_archive/bugs/bug-261-history-sessions-out-of-range-offset-shows-empty-state.md
+- BUG-262 · First-Page Reconcile Failure Starves the Deleted-Account Stripe-Cancellation Drain · Resolved · 2026-06-25 · docs/_archive/bugs/bug-262-reconcile-page0-failure-starves-cancellation-drain.md
+- BUG-263 · Billing Canonicalization Can Prefer a Non-Entitled Duplicate Subscription Over an Active Paid Subscription · Resolved · 2026-06-29 · docs/_archive/bugs/bug-263-billing-canonicalization-prefers-non-entitled-duplicate-subscription.md
+- BUG-264 · Stale Remove-Bookmark Surfaces Can Re-Add the Bookmark · Resolved · 2026-06-29 · docs/_archive/bugs/bug-264-bookmark-remove-intent-can-readd-from-stale-surfaces.md
+- BUG-265 · practice_session_question_states CHECK constraints weaker than db/schema.ts declares · Resolved · 2026-07-02 · docs/_archive/bugs/bug-265-practice-session-question-states-checks-weaker-than-schema.md
+- BUG-266 · New choice FKs break content sync (`pnpm db:seed`) for practice-session state references · Resolved · 2026-07-02 · docs/_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md
+- BUG-267 · Nested `inRepeatableRead` silently drops isolation level · Resolved · 2026-07-02 · docs/_archive/bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md
+- BUG-268 · CAS retry loop in `updatePracticeSessionQuestionState` doesn't catch Postgres serialization failures once the write transaction runs REPEATABLE READ · Resolved · 2026-07-02 · docs/_archive/bugs/bug-268-cas-retry-loop-ignores-repeatable-read-serialization-failure.md
+- BUG-269 · `FinalizeExamAnswersUseCase` stale-snapshot clobber claim · Invalidated · 2026-07-02 · docs/_archive/bugs/bug-269-finalize-exam-stale-snapshot-clobbers-concurrent-draft-save.md
+- BUG-270 · Ordinary choice-label content edit can crash `pnpm db:seed` mid-batch via the `(question_id, sort_order)` unique index, aborting every subsequent question file in the same run · Resolved · 2026-07-02 · docs/_archive/bugs/bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md
+- BUG-271 · No Focus Management When Reaching Session Summary · Resolved · 2026-07-08 · docs/_archive/bugs/bug-271-no-focus-management-on-session-summary-transition.md
+- BUG-272 · Exam-Timer Milestone Announcements Can Be Silently Skipped Across a Backgrounded Tab · Resolved · 2026-07-08 · docs/_archive/bugs/bug-272-exam-timer-milestone-announcements-can-skip.md
+- BUG-273 · `app/not-found.tsx` Is the Only Page Missing Per-Page Metadata · Resolved · 2026-07-08 · docs/_archive/bugs/bug-273-not-found-missing-page-metadata.md
+- BUG-274 · Arrow-Key Navigation Between Answer Choices Auto-Submits and Locks an Unintended Choice · Resolved · 2026-07-08 · docs/_archive/bugs/bug-274-radio-choice-arrow-key-auto-commits-answer.md
+- BUG-275 · Pricing "Subscribe" CTA Drops Return Destination and Plan Selection for Signed-Out Visitors · Resolved · 2026-07-08 · docs/_archive/bugs/bug-275-pricing-cta-drops-redirect-context-unauthenticated.md
+- BUG-276 · Quick Practice Status-Count Badges Go Stale After a Single Answer or Bookmark · Resolved · 2026-07-08 · docs/_archive/bugs/bug-276-quick-practice-status-counts-go-stale.md
+- BUG-277 · Exam-Expiry Finalize Carrying a Stale Draft Flush Aborts the Entire Finalization With a Reason-less CONFLICT · Resolved · 2026-07-06 · docs/_archive/bugs/bug-277-exam-expiry-finalize-stale-flush-aborts-finalization.md
+- BUG-278 · End/Discard Idempotency Caches Transient Errors Under a Never-Rotating Key, Bricking Session Abandonment for 24 Hours · Resolved · 2026-07-06 · docs/_archive/bugs/bug-278-end-discard-idempotency-caches-transient-errors-under-fixed-key.md
+- BUG-279 · Idempotency Wrapper Conflates a Failed Outcome-Write With a Failed Execution, Caching an Error for a Request That Succeeded · Resolved · 2026-07-06 · docs/_archive/bugs/bug-279-idempotency-wrapper-caches-error-after-committed-success.md
+- BUG-280 · Double-Finalize Race Surfaces as a Reason-less "Already Answered" CONFLICT That Gets Cached Under the Loser's Idempotency Key · Resolved · 2026-07-06 · docs/_archive/bugs/bug-280-double-finalize-race-maps-to-reasonless-conflict.md
+- BUG-281 · Seed Re-Import Silently Rewrites `choices.is_correct` Under Graded History, Making Stored Grades Contradict the Displayed Answer Key · Resolved · 2026-07-08 · docs/_archive/bugs/bug-281-seed-reimport-rewrites-answer-key-under-graded-history.md
+- BUG-282 · Tutor Session Ended in Another Tab Leaves the Losing Tab in a Reason-less CONFLICT Dead-End Loop · Resolved · 2026-07-06 · docs/_archive/bugs/bug-282-tutor-two-tab-ended-session-dead-end-loop.md
+- BUG-283 · Clerk Webhook Email-Reclaim Fallback Is Dead Inside the Webhook Transaction (25P02 → Deterministic 500s) · Resolved · 2026-07-11 · docs/_archive/bugs/bug-283-clerk-webhook-email-reclaim-dead-in-transaction.md
+- BUG-284 · User Upsert Email-Conflict Fallback Treats Email as Identity — Cross-Identity Row Takeover and Sign-In Lockout · Resolved · 2026-07-11 · docs/_archive/bugs/bug-284-user-upsert-email-reclaim-cross-identity-takeover.md
+- BUG-285 · Stripe Webhook `markFailed` Runs on the Already-Aborted Transaction — Failure State Never Persists and the Top-Level Error Is Replaced · Resolved · 2026-07-11 · docs/_archive/bugs/bug-285-stripe-webhook-markfailed-on-aborted-transaction.md
+- BUG-286 · Reconcile Phase 4 Inverts the Subscription-Writer Lock Order and Enables an AB-BA Deadlock (40P01) · Resolved · 2026-07-11 · docs/_archive/bugs/bug-286-webhook-vs-reconcile-lock-order-deadlock.md
+- BUG-287 · Reconcile Cron Can Revert a Newer Webhook-Applied Subscription State to Its Stale Phase-1 Snapshot (No Recency Fence) · Resolved · 2026-07-14 · docs/_archive/bugs/bug-287-reconcile-cron-stale-snapshot-overwrites-newer-webhook-state.md
+- BUG-288 · Checkout Can Complete After Clerk Account Deletion and Create an Untracked Stripe Subscription · Resolved · 2026-07-14 · docs/_archive/bugs/bug-288-checkout-completes-after-account-deletion-orphan-billing.md
+- BUG-289 · Default Idempotency Policy Caches Transient Errors on Billing/Bookmark/Feedback Actions Whose Client Keys Do Not Rotate on Failure · Resolved · 2026-07-14 · docs/_archive/bugs/bug-289-idempotency-caches-transient-errors-billing-bookmark-feedback.md
+- BUG-290 · State-Write Idempotency Policy Caches Transient INTERNAL_ERROR — Submit Re-Click and Mark Toggle Replay the Stale Failure · Resolved · 2026-07-14 · docs/_archive/bugs/bug-290-state-write-idempotency-caches-transient-internal-error.md
+- BUG-291 · Session Start Rotates Its Idempotency Key on Client Timeout, Turning a Committed Start Into an Incomplete-Session CONFLICT Dead-End · Resolved · 2026-07-14 · docs/_archive/bugs/bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md
+- BUG-292 · `discard()` Owns a REPEATABLE READ Transaction With No Serialization-Failure Retry or Mapping · Resolved · 2026-07-11 · docs/_archive/bugs/bug-292-discard-unowned-serialization-failure-internal-error.md
+- BUG-293 · Standalone `end()` Splits Its Pre-Reads Across Autocommit Statements — Concurrent Account Deletion Yields a False Corruption Error · Resolved · 2026-07-11 · docs/_archive/bugs/bug-293-end-split-prereads-phantom-corruption-error.md
+- BUG-294 · The User-Deletion `ON DELETE CASCADE` Is a Fourth Subscription Writer Hard-Wired to the Inverse Lock Order (40P01) · Resolved · 2026-07-14 · docs/_archive/bugs/bug-294-user-deletion-cascade-inverts-subscription-lock-order.md
+- BUG-295 · Preserved Idempotency Keys Replay Committed Outcomes Across Changed Request Intent · Resolved · 2026-07-14 · docs/_archive/bugs/bug-295-preserved-idempotency-keys-replay-across-changed-intent.md
+- BUG-296 · Post-Deletion Subscription Webhooks — Including Our Own `customers.del` Cancellations — Fail the Users FK as Generic `INTERNAL_ERROR` 500s Through the Provider Retry Window · Resolved · 2026-07-14 · docs/_archive/bugs/bug-296-post-deletion-subscription-webhooks-fail-users-fk.md
+- BUG-297 · Checkout-Success Sync Surfaces an Uncaught Observation-Version CONFLICT to a Just-Paid User When the Post-Checkout Webhook Burst Exhausts Its CAS Retries · Resolved · 2026-07-14 · docs/_archive/bugs/bug-297-checkout-success-version-cas-exhaustion-uncaught-conflict.md
+- BUG-298 · Preserved Idempotency Keys Remain Unbound to Request Identity on Submit-Answer, Mark-for-Review, and Bookmark — and the Feedback Replay Guard Ignores Attempt/Session Context · Resolved · 2026-07-14 · docs/_archive/bugs/bug-298-preserved-keys-unbound-on-submit-mark-bookmark-surfaces.md
+- BUG-299 · Recovery-Panel Resolutions Outside the Local Abandon-Success Arm Neither Refresh the Panel Nor Retire the Poisoned Start Key · Resolved · 2026-07-14 · docs/_archive/bugs/bug-299-recovery-panel-external-resolution-stale-state-dead-ends.md
+- BUG-300 · Concurrent Start Refresh Can Retire the Only Key for a Still-Running Request · Resolved · 2026-07-16 · docs/_archive/bugs/bug-300-concurrent-start-refresh-retires-pending-key.md
+- BUG-301 · A Stale Feedback Completion Can Clobber a Newer Preserved Request Key and Re-execute an Append-Only Write · Resolved · 2026-07-16 · docs/_archive/bugs/bug-301-stale-feedback-completion-clobbers-newer-request-key.md
+- BUG-302 · A Stale Report Completion Closes and Resets a Newer Report Dialog · Resolved · 2026-07-18 · docs/_archive/bugs/bug-302-stale-report-completion-closes-newer-dialog.md
+- BUG-303 · Abandoning a Refreshed Session Can Retire the Key for a Different Still-Running Start · Resolved · 2026-07-18 · docs/_archive/bugs/bug-303-concurrent-start-abandon-retires-still-running-key.md
+- BUG-304 · Practice Session Start Can Click Without Navigation or Error · Resolved · 2026-10-01 · docs/_archive/bugs/bug-304-practice-session-start-no-navigation.md
+- BUG-305 · Clerk Dev-Browser Credential Appears in Public CI Logs · Resolved · 2026-08-28 · docs/_archive/bugs/bug-305-clerk-dev-browser-credential-in-ci-logs.md
+- BUG-306 · Required E2E Can Lose Clerk Session and Accumulates Sessions · Resolved · 2026-08-28 · docs/_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md
+- BUG-307 · Public Playwright Artifacts Expose TEST Session Credentials · Resolved · 2026-08-28 · docs/_archive/bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md
+- BUG-308 · The Trial Banner Asks for a Card After One Is Saved · Resolved · 2026-09-28 · docs/_archive/bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md
+- BUG-309 · Dark-Theme Small Text Fails WCAG AA Contrast (Destructive Text; Muted Text on Tonal Rows) · Resolved · 2026-09-29 · docs/_archive/bugs/bug-309-dark-theme-small-text-contrast.md
+- BUG-310 · Trial Add-Card Checkout Offers Payment Methods That Are Not Cards · Resolved · 2026-10-03 · docs/_archive/bugs/bug-310-trial-add-card-offers-non-card-methods.md
+- BUG-311 · The Playwright Install Retry Fails on a Lock Held by the Timed-Out apt-get · Resolved · 2026-09-30 · docs/_archive/bugs/bug-311-playwright-install-retry-blocked-by-orphaned-apt.md
+- BUG-312 · E2E Helpers' Clerk Calls Do Not Retry a Transient Failure · Resolved · 2026-09-30 · docs/_archive/bugs/bug-312-e2e-clerk-calls-do-not-retry-transient-failures.md
+- BUG-313 · The App's Clerk Retry Never Retries a Dropped Connection · Resolved · 2026-09-30 · docs/_archive/bugs/bug-313-app-clerk-retry-misses-dropped-connections.md
+- BUG-314 · Content Writers Do Not Share One Serialization Boundary · Resolved · 2026-10-02 · docs/_archive/bugs/bug-314-content-hold-withdrawal-deadlock.md
+- BUG-315 · Placeholder Archival Removes Authored Prefix Matches · Resolved · 2026-10-02 · docs/_archive/bugs/bug-315-placeholder-prefix-archives-authored-content.md
+- BUG-316 · Content Release Test Failures Leak or Block Resources · Resolved · 2026-10-02 · docs/_archive/bugs/bug-316-content-release-test-resource-cleanup.md
+- BUG-317 · Content Release Guidance Overstates Isolation and Clinical Behaviour · Resolved · 2026-10-02 · docs/_archive/bugs/bug-317-content-release-documentation-overclaims.md
+- BUG-318 · Sentry Receives Credentials on Every Server Error Event · Resolved · 2026-10-05 · docs/_archive/bugs/bug-318-sentry-sends-credentials-on-server-error-events.md
+- BUG-322 · A Checkout Error Is Hidden Behind the Consent Dialog That Reopens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md
+- BUG-324 · Exported Server Actions Accept Caller-Supplied Dependencies · Resolved · 2026-10-06 · docs/_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md
+- BUG-326 · Error Pages Send Learners and Payers to the Public GitHub Issue Tracker · Resolved · 2026-10-06 · docs/_archive/bugs/bug-326-error-pages-send-people-to-public-issue-tracker.md
+- BUG-328 · Public Playwright Reports Still Carry Clerk Development-Instance Tokens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md
+- BUG-330 · Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires · Resolved · 2026-10-10 · docs/_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md
+- BUG-335 · The Merge Guard Mistakes a Merged-In `main` Commit for the Approved Head · Resolved · 2026-10-10 · docs/_archive/bugs/bug-335-merge-guard-mistakes-a-merged-in-main-commit-for-the-approved-head.md
+
+## Debt
+
+- DEBT-001 · Foundation Drift vs SSOT (Missing Composition/Observability Primitives) · Resolved · 2026-02-01 · docs/_archive/debt/debt-001-foundation-drift-vs-spec.md
+- DEBT-002 · Missing Integration Tests for Repositories · Resolved · 2026-02-01 · docs/_archive/debt/debt-002-missing-integration-tests.md
+- DEBT-003 · SubscriptionRepository Missing update() Method · Resolved · 2026-02-01 · docs/_archive/debt/debt-003-missing-subscription-update-method.md
+- DEBT-004 · Magic Numbers in Practice Session Validation · Resolved · 2026-02-01 · docs/_archive/debt/debt-004-magic-numbers-practice-session-validation.md
+- DEBT-005 · Gateway Adapters Not Implemented (Architecture Boundary Violation) · Resolved · 2026-02-01 · docs/_archive/debt/debt-005-gateway-adapters-missing.md
+- DEBT-006 · Grading Service Stricter Than Spec · Resolved · 2026-02-01 · docs/_archive/debt/debt-006-grading-service-spec-drift.md
+- DEBT-007 · Fake Repositories Don't Validate Input · Resolved · 2026-02-01 · docs/_archive/debt/debt-007-fake-repos-no-validation.md
+- DEBT-008 · Duplicated Validation Logic in DrizzleAttemptRepository · Resolved · 2026-02-01 · docs/_archive/debt/debt-008-duplicated-validation-logic.md
+- DEBT-009 · Duplicated Choice Mapping Logic in GetNextQuestionUseCase · Resolved · 2026-02-01 · docs/_archive/debt/debt-009-duplicated-choice-mapping.md
+- DEBT-010 · Trivial Entity Tests Provide False Confidence · Resolved · 2026-02-01 · docs/_archive/debt/debt-010-trivial-entity-tests.md
+- DEBT-011 · GetNextQuestionUseCase Violates Single Responsibility Principle · Resolved · 2026-02-01 · docs/_archive/debt/debt-011-get-next-question-srp-violation.md
+- DEBT-012 · Validation Logic in Adapter Layer Instead of Application Layer · Resolved · 2026-02-01 · docs/_archive/debt/debt-012-validation-in-wrong-layer.md
+- DEBT-013 · Time Spent Tracking Deferred (MVP Uses `time_spent_seconds = 0`) · Resolved · 2026-02-01 · docs/_archive/debt/debt-013-time-spent-tracking-post-mvp.md
+- DEBT-014 · lib/ Layer Throws Plain Error Instead of ApplicationError · Resolved · 2026-02-01 · docs/_archive/debt/debt-014-lib-throws-plain-error.md
+- DEBT-015 · Complex Fallback Logic in DrizzleStripeCustomerRepository.insert() · Resolved · 2026-02-01 · docs/_archive/debt/debt-015-stripe-customer-race-condition.md
+- DEBT-016 · Duplicated Upsert Pattern Across Repositories · Resolved · 2026-02-01 · docs/_archive/debt/debt-016-duplicated-upsert-pattern.md
+- DEBT-017 · Undocumented 1-to-1 Stripe Customer Constraint · Resolved · 2026-02-01 · docs/_archive/debt/debt-017-undocumented-stripe-customer-constraint.md
+- DEBT-018 · Missing Next.js Error Boundaries · Resolved · 2026-02-01 · docs/_archive/debt/debt-018-missing-error-boundaries.md
+- DEBT-019 · Stripe Webhook Idempotency/Locking Not Implementable With Current `StripeEventRepository` Port · Resolved · 2026-02-01 · docs/_archive/debt/debt-019-stripe-events-idempotency-port-mismatch.md
+- DEBT-020 · Duplicated Postgres Unique-Violation Detection Helper · Resolved · 2026-02-01 · docs/_archive/debt/debt-020-duplicate-postgres-unique-violation-helper.md
+- DEBT-021 · Choice Ordering Is Duplicated (Repository + Use Case) · Resolved · 2026-02-01 · docs/_archive/debt/debt-021-duplicate-choice-ordering.md
+- DEBT-022 · `Attempt.selectedChoiceId` Nullability Mismatch (DB allows null, Domain forbids it) · Resolved · 2026-02-01 · docs/_archive/debt/debt-022-attempt-selected-choice-nullability.md
+- DEBT-023 · `lib/subscription.ts` Is Unused and Duplicates Application Entitlement Logic · Resolved · 2026-02-01 · docs/_archive/debt/debt-023-unused-lib-subscription.md
+- DEBT-024 · Shuffle Seed Generation Spec Drift · Resolved · 2026-02-01 · docs/_archive/debt/debt-024-shuffle-seed-spec-drift.md
+- DEBT-025 · Untested Stripe Event Repository (Critical Payment Infrastructure) · Resolved · 2026-02-01 · docs/_archive/debt/debt-025-untested-stripe-event-repository.md
+- DEBT-026 · Duplicated Db Type Definition Across All Repositories · Resolved · 2026-02-01 · docs/_archive/debt/debt-026-duplicated-db-type-definition.md
+- DEBT-027 · Repositories Hardcode `new Date()` Instead of Injecting Time Dependency · Resolved · 2026-02-01 · docs/_archive/debt/debt-027-repositories-hardcode-new-date.md
+- DEBT-028 · ClerkAuthGateway Violates Single Responsibility Principle · Resolved · 2026-02-01 · docs/_archive/debt/debt-028-clerk-auth-gateway-srp-violation.md
+- DEBT-029 · Untested Stripe Prices Config Module · Resolved · 2026-02-01 · docs/_archive/debt/debt-029-untested-stripe-prices-config.md
+- DEBT-030 · Untested Tag Repository · Resolved · 2026-02-01 · docs/_archive/debt/debt-030-untested-tag-repository.md
+- DEBT-031 · StripePaymentGateway Uses `unknown[]` Args (Type Safety Loss) · Resolved · 2026-02-01 · docs/_archive/debt/debt-031-stripe-payment-gateway-unknown-args.md
+- DEBT-032 · Incomplete Composition Root (Missing Use Case Factories) · Resolved · 2026-02-01 · docs/_archive/debt/debt-032-incomplete-composition-root.md
+- DEBT-033 · Flat Repository Structure (No Aggregate Organization) · Resolved · 2026-02-01 · docs/_archive/debt/debt-033-flat-repository-structure.md
+- DEBT-034 · Test Coverage Gap — Must Stabilize Before New Features · Resolved · 2026-02-01 · docs/_archive/debt/debt-034-test-coverage-gap-critical.md
+- DEBT-035 · Inconsistent Repository Tests Use Inline Mocks Instead of Fakes · Resolved · 2026-02-01 · docs/_archive/debt/debt-035-inconsistent-repo-test-mocking.md
+- DEBT-036 · Specs Register and Ports Docs Drift (Status + Interface Mismatch) · Resolved · 2026-02-01 · docs/_archive/debt/debt-036-specs-register-and-ports-doc-drift.md
+- DEBT-037 · Unnecessary Null Checks in Attempt Repository · Resolved · 2026-02-01 · docs/_archive/debt/debt-037-attempt-repo-unnecessary-null-checks.md
+- DEBT-038 · Misleading Type Assertion in Question Repository · Resolved · 2026-02-01 · docs/_archive/debt/debt-038-question-repo-type-assertion.md
+- DEBT-039 · Error Context Loss in Stripe Webhook Failures · Resolved · 2026-02-01 · docs/_archive/debt/debt-039-webhook-error-context-loss.md
+- DEBT-040 · Missing Standalone Index on Attempts by Session · Resolved · 2026-02-01 · docs/_archive/debt/debt-040-missing-session-id-index.md
+- DEBT-041 · SKIP_CLERK Production Safety Gap · Resolved · 2026-02-01 · docs/_archive/debt/debt-041-skip-clerk-production-safety.md
+- DEBT-042 · Race Condition in Stripe Customer Concurrent Upsert · Resolved · 2026-02-01 · docs/_archive/debt/debt-042-stripe-customer-concurrent-upsert.md
+- DEBT-043 · Unused Schema Wildcard Import · Resolved · 2026-02-01 · docs/_archive/debt/debt-043-unused-schema-wildcard-import.md
+- DEBT-044 · SPEC-005 Status Incorrectly Marked as Implemented · Resolved · 2026-02-01 · docs/_archive/debt/debt-044-spec-005-status-drift.md
+- DEBT-045 · CLAUDE.md Documentation Drift · Resolved · 2026-02-01 · docs/_archive/debt/debt-045-claude-md-documentation-drift.md
+- DEBT-046 · Question Selection Algorithm in Wrong Layer · Resolved · 2026-02-01 · docs/_archive/debt/debt-046-question-selection-in-wrong-layer.md
+- DEBT-047 · SPEC-010 Missing stripe-webhook-controller Documentation · Resolved · 2026-02-01 · docs/_archive/debt/debt-047-spec-010-missing-webhook-controller.md
+- DEBT-048 · Hard-Coded URL Paths in Billing Controller · Resolved · 2026-02-02 · docs/_archive/debt/debt-048-hardcoded-url-paths-billing.md
+- DEBT-049 · Hard-Coded Limits Not Centralized Across Controllers · Resolved · 2026-02-02 · docs/_archive/debt/debt-049-hardcoded-limits-not-centralized.md
+- DEBT-050 · Missing Fake Implementations for 5 Repositories · Resolved · 2026-02-02 · docs/_archive/debt/debt-050-missing-fake-implementations.md
+- DEBT-051 · Controller Tests Use vi.fn() Instead of Fakes · Resolved · 2026-02-02 · docs/_archive/debt/debt-051-controller-tests-use-mocks-not-fakes.md
+- DEBT-052 · Unused Domain Service — computeSessionProgress · Resolved · 2026-02-02 · docs/_archive/debt/debt-052-unused-domain-service-compute-session-progress.md
+- DEBT-053 · Unused TagRepository — Wired But Never Called · Resolved · 2026-02-02 · docs/_archive/debt/debt-053-unused-tag-repository.md
+- DEBT-054 · Unused Domain Error Codes — Defined But Never Thrown · Resolved · 2026-02-02 · docs/_archive/debt/debt-054-unused-domain-error-codes.md
+- DEBT-055 · Magic Numbers in Stats Controller Lack Documentation · Resolved · 2026-02-02 · docs/_archive/debt/debt-055-magic-numbers-stats-undocumented.md
+- DEBT-056 · Repeated getDeps Pattern Across 6 Controllers · Resolved · 2026-02-02 · docs/_archive/debt/debt-056-repeated-getdeps-pattern.md
+- DEBT-057 · Webhook Error Stack Trace Lost in Database · Resolved · 2026-02-02 · docs/_archive/debt/debt-057-webhook-error-stack-trace-lost.md
+- DEBT-058 · cancelAtPeriodEnd Stored But Never Displayed in UI · Resolved · 2026-02-02 · docs/_archive/debt/debt-058-cancel-at-period-end-not-displayed.md
+- DEBT-059 · Stripe API Version Hardcoded Without Documentation · Resolved · 2026-02-02 · docs/_archive/debt/debt-059-stripe-api-version-undocumented.md
+- DEBT-060 · No Rollback Migrations · Resolved · 2026-02-02 · docs/_archive/debt/debt-060-no-rollback-migrations.md
+- DEBT-061 · Timezone Not Explicitly Enforced at Application Level · Resolved · 2026-02-02 · docs/_archive/debt/debt-061-timezone-not-explicitly-enforced.md
+- DEBT-062 · Confusing Redirect Control Flow Relied on `redirect()` Throwing · Resolved · 2026-02-02 · docs/_archive/debt/debt-062-confusing-redirect-control-flow.md
+- DEBT-063 · Missing ARIA Labels on Choice Buttons · Resolved · 2026-02-02 · docs/_archive/debt/debt-063-missing-aria-labels-choice-buttons.md
+- DEBT-064 · Missing Focus Indicators on Error Page Buttons · Resolved · 2026-02-02 · docs/_archive/debt/debt-064-missing-focus-indicators-error-buttons.md
+- DEBT-065 · Touch Targets Too Small · Resolved · 2026-02-02 · docs/_archive/debt/debt-065-touch-targets-too-small.md
+- DEBT-066 · No Success Toast for Bookmark Action · Resolved · 2026-02-02 · docs/_archive/debt/debt-066-no-success-toast-bookmark.md
+- DEBT-067 · Generic Error Page Lacks Error Details · Resolved · 2026-02-02 · docs/_archive/debt/debt-067-generic-error-page-no-details.md
+- DEBT-068 · Missing error.tsx in Nested Routes · Resolved · 2026-02-02 · docs/_archive/debt/debt-068-missing-error-tsx-nested-routes.md
+- DEBT-069 · Document Stripe Eager Sync Pattern · Resolved · 2026-02-02 · docs/_archive/debt/debt-069-document-stripe-eager-sync-pattern.md
+- DEBT-070 · Checkout Failure Lacks Actionable Feedback · Resolved · 2026-02-02 · docs/_archive/debt/debt-070-checkout-failure-lacks-actionable-feedback.md
+- DEBT-071 · Missing WHY Comments on Non-Obvious Business Logic · Resolved · 2026-02-02 · docs/_archive/debt/debt-071-missing-why-comments.md
+- DEBT-072 · Drizzle Subquery Join Pattern Causes Ambiguous Columns · Resolved · 2026-02-02 · docs/_archive/debt/debt-072-drizzle-subquery-join-pattern.md
+- DEBT-073 · Pricing Page Shows Subscribe Buttons to Already-Subscribed Users · Resolved · 2026-02-02 · docs/_archive/debt/debt-073-pricing-page-shows-subscribe-to-subscribers.md
+- DEBT-074 · Missing Boundary Integration Tests (Uncle Bob's "Humble Object" Gap) · Resolved · 2026-02-02 · docs/_archive/debt/debt-074-missing-boundary-integration-tests.md
+- DEBT-075 · No VCR/Cassette Pattern for External API Testing · Resolved · 2026-02-02 · docs/_archive/debt/debt-075-no-vcr-cassettes-external-apis.md
+- DEBT-076 · No Schema Validation on Webhook Payloads · Resolved · 2026-02-02 · docs/_archive/debt/debt-076-no-webhook-input-validation.md
+- DEBT-077 · No Rate Limiting on Webhooks or Actions · Resolved · 2026-02-02 · docs/_archive/debt/debt-077-no-rate-limiting.md
+- DEBT-078 · No Idempotency Keys on State-Changing Actions · Resolved · 2026-02-02 · docs/_archive/debt/debt-078-no-idempotency-keys.md
+- DEBT-079 · No Retry/Backoff Logic for External API Calls · Resolved · 2026-02-02 · docs/_archive/debt/debt-079-no-retry-backoff-external-calls.md
+- DEBT-080 · Missing E2E Coverage for Core App Pages · Resolved · 2026-02-02 · docs/_archive/debt/debt-080-missing-e2e-coverage-core-pages.md
+- DEBT-081 · Next.js allowedDevOrigins Warning in E2E Runs · Resolved · 2026-02-02 · docs/_archive/debt/debt-081-nextjs-alloweddevorigins-warning.md
+- DEBT-082 · Unit Tests Emit Noisy Error Logs · Resolved · 2026-02-02 · docs/_archive/debt/debt-082-test-logs-too-noisy.md
+- DEBT-083 · AttemptRepository.findByUserId() Needs Pagination · Resolved · 2026-02-03 · docs/_archive/debt/debt-083-unused-attempt-repository-find-by-user-id.md
+- DEBT-084 · User Email Race Condition in Concurrent Webhook Handling · Resolved · 2026-02-04 · docs/_archive/debt/debt-084-user-email-race-condition.md
+- DEBT-085 · Union Return Type Pattern in requireEntitledUserId() · Resolved · 2026-02-03 · docs/_archive/debt/debt-085-union-return-type-code-smell.md
+- DEBT-086 · DRY Violation — Repeated Controller Boilerplate Pattern · Resolved · 2026-02-03 · docs/_archive/debt/debt-086-dry-violation-controller-boilerplate.md
+- DEBT-087 · Graceful Degradation Hides Data Loss from Users · Resolved · 2026-02-03 · docs/_archive/debt/debt-087-graceful-degradation-hides-data-loss.md
+- DEBT-088 · Optional Logger Pattern Hides Errors · Resolved · 2026-02-03 · docs/_archive/debt/debt-088-optional-logger-hides-errors.md
+- DEBT-089 · Logger Port Defined in Wrong Layer (Dependency Arrow Outward) · Resolved · 2026-02-03 · docs/_archive/debt/debt-089-logger-port-wrong-layer.md
+- DEBT-090 · Missing Application Use Cases (Business Logic Lives in Controllers) · Resolved · 2026-02-04 · docs/_archive/debt/debt-090-missing-use-cases-business-logic-in-controllers.md
+- DEBT-091 · AttemptRepository is “Fat” (Interface Segregation Pressure) · Resolved · 2026-02-04 · docs/_archive/debt/debt-091-attempt-repository-isp-violation.md
+- DEBT-092 · StripePaymentGateway is a God Class (SRP + Separation Pressure) · Resolved · 2026-02-04 · docs/_archive/debt/debt-092-stripe-payment-gateway-god-class.md
+- DEBT-093 · Clerk Webhook Route Contains Business Logic (Framework Layer Leakage) · Resolved · 2026-02-03 · docs/_archive/debt/debt-093-clerk-webhook-route-business-logic.md
+- DEBT-094 · Inline Server Action Inside Billing Page (Inconsistent Pattern) · Resolved · 2026-02-03 · docs/_archive/debt/debt-094-inline-server-action-billing-page.md
+- DEBT-095 · console.error Usage in Production Code (Bypasses Structured Logger) · Resolved · 2026-02-03 · docs/_archive/debt/debt-095-console-error-in-production.md
+- DEBT-096 · Repository Row→Domain Mapping Duplicated (DRY Violation) · Resolved · 2026-02-04 · docs/_archive/debt/debt-096-repository-mapper-duplication.md
+- DEBT-097 · V0 Premium Landing Page Components Deleted Instead of Integrated · Resolved · 2026-02-04 · docs/_archive/debt/debt-097-v0-premium-ui-components-not-integrated.md
+- DEBT-098 · Clerk UI Components Not Fully Themed for Achromatic Dark Mode · Resolved · 2026-02-04 · docs/_archive/debt/debt-098-clerk-ui-theming-incomplete.md
+- DEBT-099 · Interactive UI Tests Missing — Client Components Had Zero Interaction Coverage · Resolved · 2026-02-04 · docs/_archive/debt/debt-099-interactive-ui-tests-missing.md
+- DEBT-100 · Adversarial Codebase Audit Backlog (2026-02-04) · Resolved · 2026-02-04 · docs/_archive/debt/debt-100-adversarial-audit-2026-02-04.md
+- DEBT-101 · Add Sentry Error Tracking (Next.js, Free Tier) · Resolved · 2026-02-04 · docs/_archive/debt/debt-101-add-sentry-error-tracking.md
+- DEBT-102 · Question Content Pipeline Hardening (Tags, Publishing, and Prod Seeding) · Resolved · 2026-02-05 · docs/_archive/debt/debt-102-question-content-pipeline-hardening.md
+- DEBT-103 · Next.js Scroll Behavior Warning · Resolved · 2026-02-05 · docs/_archive/debt/debt-103-nextjs-scroll-behavior-warning.md
+- DEBT-104 · Missing E2E Test Credentials for Authenticated Flows · Accepted · 2026-02-05 · docs/_archive/debt/debt-104-missing-e2e-test-credentials.md
+- DEBT-105 · Missing Session Resume Functionality · Resolved · 2026-02-05 · docs/_archive/debt/debt-105-missing-session-resume-functionality.md
+- DEBT-106 · Exam Mode Missing "Mark for Review" Feature · Resolved · 2026-02-06 · docs/_archive/debt/debt-106-exam-mode-mark-for-review.md
+- DEBT-107 · Question Engine E2E Completeness and State Management · Accepted · 2026-02-05 · docs/_archive/debt/debt-107-question-engine-e2e-completeness.md
+- DEBT-108 · Hardcoded Zinc Colors Break Light/Dark Mode Toggle · Resolved · 2026-02-05 · docs/_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md
+- DEBT-109 · Inline vi.fn() Logger Mocks Violate Fakes-Over-Mocks Rule · Resolved · 2026-02-05 · docs/_archive/debt/debt-109-inline-vi-fn-logger-mocks.md
+- DEBT-110 · E2E Test Helper Anti-Patterns (isVisible Timeout + Stripe Duplication) · Resolved · 2026-02-05 · docs/_archive/debt/debt-110-e2e-helper-anti-patterns.md
+- DEBT-111 · Explanation Text References Original Choice Labels After Shuffle · Resolved · 2026-02-05 · docs/_archive/debt/debt-111-explanation-choice-label-mismatch.md
+- DEBT-112 · Raw Content-Pipeline Slugs Exposed to Users in Dashboard, Review, and Bookmarks · Resolved · 2026-02-06 · docs/_archive/debt/debt-112-raw-slugs-exposed-in-ui.md
+- DEBT-113 · Dashboard and Review Pages Lack Session Context · Resolved · 2026-02-06 · docs/_archive/debt/debt-113-dashboard-review-lack-session-context.md
+- DEBT-114 · No Session History Page · Resolved · 2026-02-06 · docs/_archive/debt/debt-114-no-session-history-page.md
+- DEBT-115 · Practice Page God Component (823 Lines) · Resolved · 2026-02-06 · docs/_archive/debt/debt-115-practice-page-god-component.md
+- DEBT-116 · Session Page Client God Component (670 Lines) · Resolved · 2026-02-06 · docs/_archive/debt/debt-116-session-page-god-component.md
+- DEBT-117 · Choice Shuffling Logic Duplicated Across Use Cases · Resolved · 2026-02-06 · docs/_archive/debt/debt-117-choice-shuffling-dry-violation.md
+- DEBT-118 · Graceful Degradation Pattern Duplicated in 3 Use Cases · Resolved · 2026-02-06 · docs/_archive/debt/debt-118-graceful-degradation-dry-violation.md
+- DEBT-119 · Ports File Is a God Module (353 Lines, 10 Interfaces) · Resolved · 2026-02-06 · docs/_archive/debt/debt-119-ports-file-god-module.md
+- DEBT-120 · Composition Root Growing Toward God File (407 Lines) · Resolved · 2026-02-06 · docs/_archive/debt/debt-120-composition-root-growing.md
+- DEBT-121 · Use Case Fakes Don't Implement Interfaces (No Compile-Time Safety) · Resolved · 2026-02-06 · docs/_archive/debt/debt-121-use-case-fakes-lack-interfaces.md
+- DEBT-122 · In-Run Question Navigation Gap (Tutor + Exam Answering Stage) · Resolved · 2026-02-06 · docs/_archive/debt/debt-122-in-run-question-navigation-gap.md
+- DEBT-123 · Session Summary Is Aggregate-Only (No Per-Question Breakdown) · Resolved · 2026-02-06 · docs/_archive/debt/debt-123-session-summary-missing-question-breakdown.md
+- DEBT-124 · E2E Question Existence Helper Can Produce False Negatives · Resolved · 2026-02-06 · docs/_archive/debt/debt-124-e2e-question-helper-false-negative.md
+- DEBT-125 · Billing System Audit — Webhook Ordering, Race Conditions, and Edge Cases · Resolved · 2026-02-06 · docs/_archive/debt/debt-125-billing-system-audit-2026-02-06.md
+- DEBT-126 · console.warn in Repository Bypasses Structured Logger · Resolved · 2026-02-06 · docs/_archive/debt/debt-126-console-warn-in-repository.md
+- DEBT-127 · Missing Index on practice_sessions (userId, endedAt) · Resolved · 2026-02-07 · docs/_archive/debt/debt-127-missing-practice-sessions-ended-at-index.md
+- DEBT-128 · Bookmark Load Failure Not Visible to User Until Interaction · Resolved · 2026-02-06 · docs/_archive/debt/debt-128-bookmark-load-failure-not-shown-to-user.md
+- DEBT-129 · NEXT_PUBLIC_SKIP_CLERK Has No Production Safety Guard · Resolved · 2026-02-06 · docs/_archive/debt/debt-129-skip-clerk-production-safety.md
+- DEBT-130 · Missing Suspense Boundary in App Layout · Resolved · 2026-02-07 · docs/_archive/debt/debt-130-missing-suspense-boundary-app-layout.md
+- DEBT-131 · Missing Error Path Tests for 6 Use Cases · Resolved · 2026-02-07 · docs/_archive/debt/debt-131-missing-use-case-error-path-tests.md
+- DEBT-132 · Missing Tests for 6 Extracted Practice Hooks (SPEC-020 Phase 1) · Resolved · 2026-02-07 · docs/_archive/debt/debt-132-missing-practice-hook-tests.md
+- DEBT-133 · Idempotency Polling Timeout Error Message Is Misleading · Resolved · 2026-02-06 · docs/_archive/debt/debt-133-idempotency-polling-timeout-message-misleading.md
+- DEBT-134 · Practice Hook Tests Are Contract-Only (Behavior Gaps) · Resolved · 2026-02-07 · docs/_archive/debt/debt-134-practice-hook-tests-are-contract-only.md
+- DEBT-135 · Rate-Limit Client IP Trust Boundary Is Not Explicitly Hardened · Resolved · 2026-02-07 · docs/_archive/debt/debt-135-rate-limit-client-ip-trust-boundary-hardening.md
+- DEBT-136 · Dunning Grace Period for Past-Due Subscribers · Resolved · 2026-02-07 · docs/_archive/debt/debt-136-dunning-grace-period-for-past-due-subscribers.md
+- DEBT-137 · Composition Root Type Cycles Between Container and Controllers · Invalidated · 2026-02-07 · docs/_archive/debt/debt-137-container-type-cycles.md
+- DEBT-138 · Dead Modules and Unused Dependencies After Refactors · Resolved · 2026-02-07 · docs/_archive/debt/debt-138-dead-modules-and-unused-dependencies.md
+- DEBT-139 · Production Files Exceed 300-Line Guardrail · Invalidated · 2026-02-07 · docs/_archive/debt/debt-139-production-files-exceed-size-guardrail.md
+- DEBT-140 · Request Correlation Is Defined but Not Wired Into Runtime Logs · Resolved · 2026-02-07 · docs/_archive/debt/debt-140-request-correlation-not-wired-into-runtime-logs.md
+- DEBT-141 · Migrate Practice Hook Tests from renderLiveHook to Browser Mode · Resolved · 2026-02-07 · docs/_archive/debt/debt-141-practice-hook-tests-emit-react-act-warnings.md
+- DEBT-142 · SPEC-020 Line-Cap Regression in Practice Page Logic · Resolved · 2026-02-07 · docs/_archive/debt/debt-142-spec-020-practice-file-line-cap-regression.md
+- DEBT-143 · Practice UI Components Missing Browser Specs · Resolved · 2026-02-07 · docs/_archive/debt/debt-143-practice-ui-components-missing-browser-specs.md
+- DEBT-144 · Hardcoded Colors Bypass Design System Tokens · Resolved · 2026-02-07 · docs/_archive/debt/debt-144-hardcoded-colors-bypass-design-system.md
+- DEBT-145 · Shadcn Card Adoption Is Incomplete Across App Pages · Resolved · 2026-02-07 · docs/_archive/debt/debt-145-shadcn-card-input-components-never-used.md
+- DEBT-146 · Missing Semantic Success/Warning Color Tokens · Resolved · 2026-02-07 · docs/_archive/debt/debt-146-missing-semantic-success-warning-tokens.md
+- DEBT-147 · Error State UI Duplicated Across 9+ Pages · Resolved · 2026-02-07 · docs/_archive/debt/debt-147-error-state-ui-duplicated-across-pages.md
+- DEBT-148 · Minimal ARIA Accessibility in App Pages · Resolved · 2026-02-07 · docs/_archive/debt/debt-148-minimal-aria-accessibility-app-pages.md
+- DEBT-149 · Heading Typography System Inconsistent · Resolved · 2026-02-07 · docs/_archive/debt/debt-149-heading-typography-system-inconsistent.md
+- DEBT-150 · Navigation Links Missing Transitions and Hover States · Resolved · 2026-02-07 · docs/_archive/debt/debt-150-navigation-links-missing-transitions-hover.md
+- DEBT-151 · No Toast/Notification System · Resolved · 2026-02-07 · docs/_archive/debt/debt-151-no-toast-notification-system.md
+- DEBT-152 · Home Route Literals Remain Outside `ROUTES` Constants · Resolved · 2026-02-07 · docs/_archive/debt/debt-152-home-route-literals-remain-outside-routes-constants.md
+- DEBT-153 · Brittle CSS Class String Assertions in renderToStaticMarkup Tests · Resolved · 2026-02-07 · docs/_archive/debt/debt-153-brittle-css-class-string-assertions.md
+- DEBT-154 · Custom NotificationProvider vs shadcn/sonner · Accepted · 2026-02-07 · docs/_archive/debt/debt-154-custom-notification-provider-vs-shadcn-sonner.md
+- DEBT-155 · Stripe Legacy Duplicate Subscription Reconciliation · Resolved · 2026-02-07 · docs/_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md
+- DEBT-156 · Stripe Payment-Critical Adapter Test Gaps · Resolved · 2026-02-07 · docs/_archive/debt/debt-156-stripe-payment-critical-adapter-test-gaps.md
+- DEBT-157 · Hot-Path Prune Failures Are Not Observable · Resolved · 2026-02-07 · docs/_archive/debt/debt-157-hot-path-prune-failures-are-not-observable.md
+- DEBT-158 · Missing Tests for Idempotency Key Repository · Resolved · 2026-02-08 · docs/_archive/debt/debt-158-missing-idempotency-key-repository-tests.md
+- DEBT-159 · Practice Session Review Silently Backfills Missing Question States · Resolved · 2026-02-08 · docs/_archive/debt/debt-159-practice-session-review-missing-state-corruption-warning.md
+- DEBT-160 · CRON_SECRET Not Enforced as Required in Production · Resolved · 2026-02-08 · docs/_archive/debt/debt-160-cron-secret-not-required-in-production.md
+- DEBT-161 · Incomplete CSP Headers (Missing script-src, style-src, default-src) · Invalidated · 2026-02-08 · docs/_archive/debt/debt-161-incomplete-csp-headers.md
+- DEBT-162 · Stripe Portal Session Creation Has Inconsistent Retry Behavior · Resolved · 2026-02-08 · docs/_archive/debt/debt-162-stripe-portal-missing-retry-consistency.md
+- DEBT-163 · Test Fakes Split Into Modules (Was ~1,500 LOC) · Resolved · 2026-02-08 · docs/_archive/debt/debt-163-fakes-file-approaching-split-threshold.md
+- DEBT-164 · Missing Suspense Boundary for Practice Session History Panel · Invalidated · 2026-02-08 · docs/_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md
+- DEBT-165 · Stripe Gateway Modules Bypass Barrel File Pattern · Resolved · 2026-02-08 · docs/_archive/debt/debt-165-stripe-gateway-barrel-file-inconsistency.md
+- DEBT-166 · Practice View Missing Focus Management After Error Recovery · Resolved · 2026-02-08 · docs/_archive/debt/debt-166-practice-view-missing-focus-management-after-error.md
+- DEBT-167 · Idempotency Key Prune Uses Non-Atomic SELECT→DELETE · Resolved · 2026-02-08 · docs/_archive/debt/debt-167-idempotency-key-prune-select-delete-race.md
+- DEBT-168 · Stripe Events Table Missing CHECK Constraint on processedAt/error State · Invalidated · 2026-02-08 · docs/_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md
+- DEBT-169 · Shared Application Utilities Missing Unit Tests · Resolved · 2026-02-08 · docs/_archive/debt/debt-169-shared-utilities-missing-unit-tests.md
+- DEBT-170 · FakeRateLimiter Always-Success Default Masks Rejection Paths · Resolved · 2026-02-08 · docs/_archive/debt/debt-170-fake-rate-limiter-always-success-default.md
+- DEBT-171 · Drizzle Subscription Repository and Postgres Error Helpers Missing Tests · Resolved · 2026-02-08 · docs/_archive/debt/debt-171-subscription-repo-and-postgres-errors-missing-tests.md
+- DEBT-172 · Duplicate Zod Schema Definitions Across Controllers · Resolved · 2026-02-08 · docs/_archive/debt/debt-172-duplicate-zod-schemas-across-controllers.md
+- DEBT-173 · Practice Hooks Are Multi-Concern State Machines · Resolved · 2026-02-08 · docs/_archive/debt/debt-173-practice-hooks-multi-concern-state-machines.md
+- DEBT-174 · Checkout Success Page Mixes Orchestration and Route Entrypoint · Resolved · 2026-02-08 · docs/_archive/debt/debt-174-checkout-success-page-mixes-orchestration-and-entrypoint.md
+- DEBT-175 · Pricing View Bypasses Button Primitive and Skips Heading Hierarchy · Resolved · 2026-02-08 · docs/_archive/debt/debt-175-pricing-view-design-system-and-heading-hierarchy-drift.md
+- DEBT-176 · Theme and Nav Modules Missing Direct Unit Tests · Resolved · 2026-02-08 · docs/_archive/debt/debt-176-theme-and-nav-modules-missing-direct-unit-tests.md
+- DEBT-177 · Duplicated Question Flow Logic Across Practice Modules · Resolved · 2026-02-08 · docs/_archive/debt/debt-177-duplicated-question-flow-logic-practice-modules.md
+- DEBT-178 · Duplicated LoadState Types Across Page Logic Modules · Resolved · 2026-02-08 · docs/_archive/debt/debt-178-duplicated-loadstate-types-across-page-logic.md
+- DEBT-179 · `global-error.tsx` Missing `<head>` and `suppressHydrationWarning` · Resolved · 2026-02-08 · docs/_archive/debt/debt-179-global-error-missing-head-and-hydration-warning.md
+- DEBT-180 · Duplicated Manage-Billing Files Across Pricing and Billing Routes · Resolved · 2026-02-08 · docs/_archive/debt/debt-180-duplicated-manage-billing-files.md
+- DEBT-181 · Hardcoded Pricing Data Duplicated in Marketing and Pricing Views · Resolved · 2026-02-08 · docs/_archive/debt/debt-181-hardcoded-pricing-data-duplicated.md
+- DEBT-182 · Missing `font-heading` on Error Boundary, Not-Found, and Pricing Headings · Resolved · 2026-02-08 · docs/_archive/debt/debt-182-missing-font-heading-on-headings.md
+- DEBT-183 · Bare `console.error` in Client Hooks (Not Observable) · Resolved · 2026-02-08 · docs/_archive/debt/debt-183-bare-console-error-in-client-hooks.md
+- DEBT-184 · Loading Message Misleading During Answer Submission · Resolved · 2026-02-08 · docs/_archive/debt/debt-184-loading-message-misleading-during-submit.md
+- DEBT-185 · Duplicated Session Stats Calculation Across Use Cases · Resolved · 2026-02-08 · docs/_archive/debt/debt-185-duplicated-session-stats-calculation.md
+- DEBT-186 · Duplicated Session Duration Calculation · Resolved · 2026-02-08 · docs/_archive/debt/debt-186-duplicated-session-duration-calculation.md
+- DEBT-187 · Duplicated Default PracticeSessionQuestionState Creation · Resolved · 2026-02-08 · docs/_archive/debt/debt-187-duplicated-default-question-state.md
+- DEBT-188 · Duplicated Count Query Pattern in Attempt Repository · Resolved · 2026-02-08 · docs/_archive/debt/debt-188-duplicated-count-query-attempt-repository.md
+- DEBT-189 · DAY_MS Constant Defined in Three Separate Files · Resolved · 2026-02-08 · docs/_archive/debt/debt-189-day-ms-constant-triplicated.md
+- DEBT-190 · SubmitAnswerUseCase Rollback Error Handling Lacks Logger · Resolved · 2026-02-08 · docs/_archive/debt/debt-190-submit-answer-rollback-lacks-logger.md
+- DEBT-191 · Missing Runtime Validation in GetNextQuestion Discriminated Union · Resolved · 2026-02-08 · docs/_archive/debt/debt-191-get-next-question-missing-runtime-validation.md
+- DEBT-192 · Source-Reading Regression Tests Are Fragile · Resolved · 2026-02-08 · docs/_archive/debt/debt-192-source-reading-regression-tests-fragile.md
+- DEBT-193 · Backend Production Files Exceed 300-Line Guideline · Resolved · 2026-02-08 · docs/_archive/debt/debt-193-backend-production-files-over-300-lines.md
+- DEBT-194 · Default console.error in Utility Function Parameters · Resolved · 2026-02-08 · docs/_archive/debt/debt-194-console-error-default-in-utility-functions.md
+- DEBT-195 · Domain Service Defensive Programming Gaps · Resolved · 2026-02-08 · docs/_archive/debt/debt-195-domain-service-defensive-gaps.md
+- DEBT-196 · Cron Endpoint Lacks Rate Limiting · Resolved · 2026-02-08 · docs/_archive/debt/debt-196-cron-endpoint-lacks-rate-limiting.md
+- DEBT-197 · SKIP_CLERK Middleware Check Uses NODE_ENV Inconsistently · Resolved · 2026-02-08 · docs/_archive/debt/debt-197-skip-clerk-node-env-inconsistency.md
+- DEBT-198 · Missing Baseline Content-Security-Policy Header · Invalidated · 2026-02-08 · docs/_archive/debt/debt-198-missing-baseline-csp-header.md
+- DEBT-199 · Button Component Missing Default `type="button"` · Resolved · 2026-02-08 · docs/_archive/debt/debt-199-button-missing-default-type.md
+- DEBT-200 · Subscription Repository Upsert Discards Original Error Details · Resolved · 2026-02-08 · docs/_archive/debt/debt-200-subscription-upsert-discards-error-details.md
+- DEBT-201 · Practice Session end() Returns Pre-Read Data Instead of Fresh DB Row · Resolved · 2026-02-08 · docs/_archive/debt/debt-201-practice-session-end-returns-stale-data.md
+- DEBT-202 · Missing Drizzle Migration 0008 Snapshot File · Resolved · 2026-02-08 · docs/_archive/debt/debt-202-missing-migration-0008-snapshot.md
+- DEBT-203 · Fragile Date Display Using String Slicing · Resolved · 2026-02-08 · docs/_archive/debt/debt-203-fragile-date-display-string-slicing.md
+- DEBT-204 · Stripe Payment Gateway Test God File (Was 2,468 Lines) · Resolved · 2026-02-09 · docs/_archive/debt/debt-204-stripe-payment-gateway-test-god-file.md
+- DEBT-205 · E2E Test Selectors Drifted from UI Refactors · Resolved · 2026-02-10 · docs/_archive/debt/debt-205-e2e-selector-drift-from-ui-refactors.md
+- DEBT-206 · Client-Side Difficulty/Tag Filters Cause Inaccurate Pagination on History Questions Tab · Resolved · 2026-02-15 · docs/_archive/debt/debt-206-client-side-difficulty-tag-filters-history.md
+- DEBT-207 · No Warning When Practice Session Has Fewer Questions Than Requested · Resolved · 2026-02-14 · docs/_archive/debt/debt-207-missing-session-question-count-warning.md
+- DEBT-208 · Missing E2E Tests for Cross-Page Navigation Flows · Resolved · 2026-02-15 · docs/_archive/debt/debt-208-e2e-cross-page-navigation-tests.md
+- DEBT-210 · Dead `ROUTES.APP_REVIEW` Constant in Route Definitions · Resolved · 2026-02-14 · docs/_archive/debt/debt-210-dead-routes-app-review-constant.md
+- DEBT-211 · Spec Index Status Drift — SPEC-021 and SPEC-022 Had Incorrect Status · Resolved · 2026-02-11 · docs/_archive/debt/debt-211-spec-index-status-drift.md
+- DEBT-212 · Duplicate `sleep()` Utility in Adapter Shared Modules · Resolved · 2026-02-15 · docs/_archive/debt/debt-212-duplicate-sleep-utility-adapter-shared.md
+- DEBT-213 · useEffect Derived-State Sync Anti-Patterns in Practice Hooks · Resolved · 2026-02-15 · docs/_archive/debt/debt-213-useeffect-derived-state-sync-antipatterns.md
+- DEBT-214 · Drizzle Query Duplication in Attempt Repository (Conditional JOINs via Copy-Paste) · Resolved · 2026-02-14 · docs/_archive/debt/debt-214-drizzle-query-duplication-attempt-repository.md
+- DEBT-215 · Backwards Compatibility Shims in a Greenfield Codebase · Resolved · 2026-02-14 · docs/_archive/debt/debt-215-backwards-compatibility-shims-cleanup.md
+- DEBT-216 · Remaining Drizzle Repository Violations · Resolved · 2026-02-14 · docs/_archive/debt/debt-216-remaining-drizzle-dry-violations.md
+- DEBT-217 · History Back Link Loses Tab and Filter State · Resolved · 2026-02-15 · docs/_archive/debt/debt-217-history-back-link-loses-tab-and-filter-state.md
+- DEBT-218 · Server Component Pages Missing maxDuration + Dead Code in practice-logic.ts · Resolved · 2026-02-15 · docs/_archive/debt/debt-218-server-component-pages-missing-maxduration.md
+- DEBT-219 · Sequential Stripe API Calls in Reconciliation Cron Job · Resolved · 2026-02-16 · docs/_archive/debt/debt-219-sequential-stripe-api-reconciliation.md
+- DEBT-220 · Duplicated enrichWithQuestion Boilerplate Across 4 Use Cases · Resolved · 2026-02-16 · docs/_archive/debt/debt-220-duplicated-enrich-with-question-boilerplate.md
+- DEBT-221 · `computeAccuracy()` Conflates "No Attempts" With "0% Accuracy" · Resolved · 2026-02-16 · docs/_archive/debt/debt-221-compute-accuracy-conflates-zero-with-no-attempts.md
+- DEBT-222 · Bookmark Idempotency Key Should Use `useRef` Instead of `useState` · Resolved · 2026-02-16 · docs/_archive/debt/debt-222-bookmark-retry-state-should-be-refs.md
+- DEBT-223 · Verbose Set+Array Dedup Pattern in get-user-stats.ts · Resolved · 2026-02-16 · docs/_archive/debt/debt-223-verbose-set-array-dedup-pattern.md
+- DEBT-224 · File Size Audit - Production and Test Files Exceeding Guidelines · Resolved · 2026-02-19 · docs/_archive/debt/debt-224-file-size-audit-production-and-test.md
+- DEBT-225 · Vitest Cold-Import Timeout Flakes · Resolved · 2026-02-18 · docs/_archive/debt/debt-225-vitest-cold-import-timeout-flakes.md
+- DEBT-226 · Playwright E2E Timeout Policy and Import Convention Are Undocumented · Resolved · 2026-02-18 · docs/_archive/debt/debt-226-playwright-e2e-timeout-and-import-convention.md
+- DEBT-227 · Split fake-repositories.ts Into Individual Files · Resolved · 2026-02-19 · docs/_archive/debt/debt-227-split-fake-repositories-into-individual-files.md
+- DEBT-228 · DRY fake-use-cases.ts With Generic Base Class · Resolved · 2026-02-19 · docs/_archive/debt/debt-228-dry-fake-use-cases-with-generic-base.md
+- DEBT-229 · Extract Server Action and Error Handling From bookmarks/page.tsx · Resolved · 2026-02-19 · docs/_archive/debt/debt-229-extract-bookmarks-server-action-and-errors.md
+- DEBT-230 · Decompose seed.ts Into Focused Modules · Resolved · 2026-02-19 · docs/_archive/debt/debt-230-decompose-seed-script-into-modules.md
+- DEBT-231 · Reduce Browser Spec Probe Component Duplication · Resolved · 2026-02-19 · docs/_archive/debt/debt-231-reduce-browser-spec-probe-duplication.md
+- DEBT-232 · Reduce get-next-question.test.ts Test Inflation · Resolved · 2026-02-19 · docs/_archive/debt/debt-232-reduce-get-next-question-test-inflation.md
+- DEBT-233 · Add WHY Comments to Justified Large Files · Resolved · 2026-02-19 · docs/_archive/debt/debt-233-add-why-comments-to-justified-large-files.md
+- DEBT-234 · Add max-lines Check to Prevent File Size Regression · Resolved · 2026-02-19 · docs/_archive/debt/debt-234-add-max-lines-lint-rule.md
+- DEBT-235 · Split migrate-tag-taxonomy.ts Into Focused Modules · Resolved · 2026-02-19 · docs/_archive/debt/debt-235-split-migrate-tag-taxonomy-script.md
+- DEBT-236 · Extract Concurrency Utility and Document Reconciliation Algorithm · Resolved · 2026-02-19 · docs/_archive/debt/debt-236-extract-reconciliation-concurrency-utility.md
+- DEBT-237 · Extract Reconciliation Test Factory to Reduce Boilerplate · Resolved · 2026-02-19 · docs/_archive/debt/debt-237-extract-reconciliation-test-factory.md
+- DEBT-238 · Orphaned `from=review` Test Artifact From DEBT-215 Cleanup · Resolved · 2026-02-19 · docs/_archive/debt/debt-238-orphaned-from-review-test-artifact.md
+- DEBT-239 · .env.local Stripe Account Mismatch, E2E Credential Gaps, and Audit Test Infrastructure · Resolved · 2026-02-22 · docs/_archive/debt/debt-239-env-local-stripe-account-mismatch.md
+- DEBT-240 · Local Dev DATABASE_URL Points to Production Neon Branch · Resolved · 2026-02-22 · docs/_archive/debt/debt-240-local-dev-database-url-points-to-production.md
+- DEBT-241 · Sentry DSN Missing From All Vercel Environments · Resolved · 2026-02-22 · docs/_archive/debt/debt-241-sentry-dsn-missing-from-vercel-environments.md
+- DEBT-242 · CRON_SECRET Missing From Vercel Development Environment · Resolved · 2026-02-22 · docs/_archive/debt/debt-242-cron-secret-missing-from-vercel-development.md
+- DEBT-243 · E2E Credential Drift and Silent Failure (Resolved) · Resolved · 2026-02-24 · docs/_archive/debt/debt-243-e2e-credential-drift-silent-failure.md
+- DEBT-244 · Test Reliability Drift (Schema + Stateful E2E Data + Spec Drift) (Resolved) · Resolved · 2026-02-24 · docs/_archive/debt/debt-244-test-reliability-schema-and-state-drift.md
+- DEBT-245 · E2E Pyramid Drift and Data-Dependent Skip Governance (Resolved) · Resolved · 2026-02-24 · docs/_archive/debt/debt-245-e2e-pyramid-drift-and-skip-governance.md
+- DEBT-246 · Targeted E2E Coverage Gaps and Visual/CSS Testing Layer Policy · Resolved · 2026-02-24 · docs/_archive/debt/debt-246-e2e-coverage-gaps-visual-testing-strategy.md
+- DEBT-247 · Test Helper Structure Cleanup · Resolved · 2026-02-24 · docs/_archive/debt/debt-247-test-helper-structure-cleanup.md
+- DEBT-248 · Post-PR-134 CodeRabbit Follow-Ups (E2E Helpers) · Resolved · 2026-02-24 · docs/_archive/debt/debt-248-e2e-helper-robustness.md
+- DEBT-249 · Checkout Success Auth Boundary Hardening (Stripe Return + Clerk Redirect) · Resolved · 2026-03-12 · docs/_archive/debt/debt-249-checkout-success-auth-boundary-hardening.md
+- DEBT-250 · Frontend Visual Divergence Compliance Plan · Resolved · 2026-03-01 · docs/_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md
+- DEBT-251 · Choice Button Compliance · Resolved · 2026-02-28 · docs/_archive/debt/debt-251-choice-button-compliance.md
+- DEBT-252 · History Sessions Compliance · Resolved · 2026-02-28 · docs/_archive/debt/debt-252-history-sessions-compliance.md
+- DEBT-253 · Scattered Phase 1 Fixes · Resolved · 2026-02-28 · docs/_archive/debt/debt-253-scattered-phase1-fixes.md
+- DEBT-254 · Headings + ErrorCard Compliance · Resolved · 2026-02-28 · docs/_archive/debt/debt-254-headings-errorcard-compliance.md
+- DEBT-255 · Mobile Nav Hover · Resolved · 2026-02-28 · docs/_archive/debt/debt-255-mobile-nav-hover.md
+- DEBT-256 · Expanded Breakdown Visual Hierarchy · Resolved · 2026-02-28 · docs/_archive/debt/debt-256-expanded-breakdown-hierarchy.md
+- DEBT-257 · Choice Button Selected State · Resolved · 2026-02-28 · docs/_archive/debt/debt-257-choice-selected-state.md
+- DEBT-258 · Marketing Alignment · Resolved · 2026-02-28 · docs/_archive/debt/debt-258-marketing-alignment.md
+- DEBT-259 · Shared Constants Extraction · Resolved · 2026-03-01 · docs/_archive/debt/debt-259-shared-constants-extraction.md
+- DEBT-260 · UX Seams · Resolved · 2026-03-01 · docs/_archive/debt/debt-260-ux-seams.md
+- DEBT-261 · Touch Targets · Resolved · 2026-03-01 · docs/_archive/debt/debt-261-touch-targets.md
+- DEBT-262 · Light-Mode Opacity Scale · Resolved · 2026-03-01 · docs/_archive/debt/debt-262-light-mode-opacity.md
+- DEBT-263 · Text Contrast · Resolved · 2026-03-01 · docs/_archive/debt/debt-263-text-contrast.md
+- DEBT-264 · Documentation Sync · Resolved · 2026-03-01 · docs/_archive/debt/debt-264-documentation-sync.md
+- DEBT-265 · Retry Lineage and Review/Practice Unification · Resolved · 2026-03-01 · docs/_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md
+- DEBT-266 · Retry Observability and Session-Review Marker Persistence · Resolved · 2026-03-01 · docs/_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md
+- DEBT-267 · GetPreviousAttempt Identifier Contract Hardening · Resolved · 2026-03-01 · docs/_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md
+- DEBT-268 · Quick Practice Ordering Policy Alignment · Resolved · 2026-03-03 · docs/_archive/debt/debt-268-quick-practice-ordering-policy-alignment.md
+- DEBT-269 · History Breakdown UX Redesign (BS-036 Implementation) · Resolved · 2026-03-02 · docs/_archive/debt/debt-269-history-breakdown-ux-redesign.md
+- DEBT-270 · Integration Test God File Split · Resolved · 2026-03-03 · docs/_archive/debt/debt-270-integration-test-god-file-split.md
+- DEBT-271 · Structural/AST-Coupled Test Brittleness · Resolved · 2026-03-03 · docs/_archive/debt/debt-271-structural-ast-test-brittleness.md
+- DEBT-272 · Fakes Test God File Split · Resolved · 2026-03-03 · docs/_archive/debt/debt-272-fakes-test-god-file-split.md
+- DEBT-273 · Choice Button Surface Hierarchy Fix · Resolved · 2026-03-04 · docs/_archive/debt/debt-273-choice-button-surface-hierarchy-fix.md
+- DEBT-274 · Incorrect Answer Feedback Flow Reorder · Resolved · 2026-03-04 · docs/_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md
+- DEBT-275 · BS-033 Residual Open Items · Decomposed · 2026-03-28 · docs/_archive/debt/debt-275-bs033-residual-open-items.md
+- DEBT-276 · Feedback Section Card Containment · Resolved · 2026-03-04 · docs/_archive/debt/debt-276-feedback-section-card-containment.md
+- DEBT-277 · Clinical Pearl Styled Callout · Resolved · 2026-03-04 · docs/_archive/debt/debt-277-clinical-pearl-styled-callout.md
+- DEBT-278 · Verdict Badge Solid Compact Pill · Resolved · 2026-03-07 · docs/_archive/debt/debt-278-verdict-badge-solid-pill-styling.md
+- DEBT-279 · WCAG AA Contrast Remediation Plan (BS-042) · Resolved · 2026-03-06 · docs/_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md
+- DEBT-280 · Choice Button and Segmented Control Dark Mode Surface Refinement · Resolved · 2026-03-06 · docs/_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md
+- DEBT-281 · E2E Bookmark Test Flakiness · Resolved · 2026-03-06 · docs/_archive/debt/debt-281-e2e-bookmark-test-flakiness.md
+- DEBT-282 · Feedback Visual Unification with Choice Buttons · Resolved · 2026-03-07 · docs/_archive/debt/debt-282-feedback-visual-unification.md
+- DEBT-283 · Hardcoded UI Typography Explicit Sizing Alignment · Resolved · 2026-03-07 · docs/_archive/debt/debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md
+- DEBT-284 · Feedback Visual Polish Phase 2 — Badge Coloring, Explanation Consistency, Type Scale · Resolved · 2026-03-07 · docs/_archive/debt/debt-284-feedback-visual-polish-phase-2.md
+- DEBT-285 · Feedback Explanation Dark Mode Readability · Resolved · 2026-03-07 · docs/_archive/debt/debt-285-feedback-explanation-dark-mode-readability.md
+- DEBT-286 · Client-Side Caught Error Reporting — Complete SPEC-016 Rollout · Resolved · 2026-03-15 · docs/_archive/debt/debt-286-client-side-error-reporting.md
+- DEBT-287 · Clinical Pearl Label Dark Mode Prominence · Resolved · 2026-03-07 · docs/_archive/debt/debt-287-clinical-pearl-label-dark-mode-prominence.md
+- DEBT-288 · Feedback Redundant Section Labels · Resolved · 2026-03-08 · docs/_archive/debt/debt-288-feedback-redundant-section-labels.md
+- DEBT-289 · Dashboard Nested Card Surface Strategy · Resolved · 2026-03-08 · docs/_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md
+- DEBT-290 · Practice Filter Container Tonal Fill Elevation · Resolved · 2026-03-09 · docs/_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md
+- DEBT-291 · FilterChip Light Mode Border Contrast · Resolved · 2026-03-09 · docs/_archive/debt/debt-291-filter-chip-light-mode-border-contrast.md
+- DEBT-292 · Filter Section Disclosure Indicator · Resolved · 2026-03-09 · docs/_archive/debt/debt-292-filter-section-disclosure-indicator.md
+- DEBT-293 · E2E Shared-State Structural Flakiness · Resolved · 2026-03-09 · docs/_archive/debt/debt-293-e2e-shared-state-structural-flakiness.md
+- DEBT-294 · Filter Chip Fill Depth, Cursor, and Summary Hover Removal · Resolved · 2026-03-09 · docs/_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md
+- DEBT-295 · Filter Chip Unselected Text Weight · Resolved · 2026-03-09 · docs/_archive/debt/debt-295-filter-chip-unselected-text-weight.md
+- DEBT-296 · Filter Section Summary Text Hierarchy Swap · Resolved · 2026-03-10 · docs/_archive/debt/debt-296-filter-section-summary-hierarchy-swap.md
+- DEBT-297 · Practice Session Starter — UI Polish (Summary Text, Input Border, Number Input UX, Title Hierarchy, Spinners) · Resolved · 2026-03-10 · docs/_archive/debt/debt-297-practice-starter-ui-polish.md
+- DEBT-298 · UI Structural Consistency Audit · Resolved · 2026-03-12 · docs/_archive/debt/debt-298-ui-structural-consistency.md
+- DEBT-299 · Dashboard Recent Activity — Remove Redundant "Answered" Label from Date · Resolved · 2026-03-10 · docs/_archive/debt/debt-299-dashboard-recent-activity-date-label.md
+- DEBT-300 · History Questions Tab — Align Source Scope With Dashboard Recent Activity · Resolved · 2026-03-11 · docs/_archive/debt/debt-300-history-questions-all-sources.md
+- DEBT-301 · History Page Visual Unification · Resolved · 2026-03-10 · docs/_archive/debt/debt-301-history-page-visual-unification.md
+- DEBT-302 · History Row Fill Depth and Affordance Cleanup · Resolved · 2026-03-10 · docs/_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md
+- DEBT-303 · Reconciliation Cancel Loop — Handle Already-Canceled Subscriptions Idempotently · Resolved · 2026-03-11 · docs/_archive/debt/debt-303-reconciliation-cancel-idempotency.md
+- DEBT-304 · Clerk `user.deleted` Stripe Cancel Loop — Handle Already-Canceled Subscriptions Idempotently · Resolved · 2026-03-12 · docs/_archive/debt/debt-304-clerk-user-deleted-cancel-idempotency.md
+- DEBT-305 · Checkout Session Reuse/Expire Flow — Treat Already-Terminal Sessions Idempotently and Revalidate Reuse · Resolved · 2026-03-11 · docs/_archive/debt/debt-305-checkout-session-reuse-expire-race.md
+- DEBT-306 · Stripe Customer Search/Create Race — Concurrent or Late-Visible Customers Can Violate the 1:1 Mapping · Resolved · 2026-03-11 · docs/_archive/debt/debt-306-stripe-customer-search-create-race.md
+- DEBT-307 · Bookmarks Row Visual Unification and Affordance Cleanup · Resolved · 2026-03-12 · docs/_archive/debt/debt-307-bookmarks-row-visual-unification.md
+- DEBT-308 · E2E Bookmark Review Selector Drift After DEBT-307 · Resolved · 2026-03-12 · docs/_archive/debt/debt-308-e2e-review-mode-selector-regression.md
+- DEBT-309 · FilterChip Hover Affordance — Border Brightening + Fill Lift on Hover · Resolved · 2026-03-13 · docs/_archive/debt/debt-309-filter-chip-hover-border-affordance.md
+- DEBT-310 · Production Neon `main` Contains Non-Production Stripe Subscription Rows · Resolved · 2026-03-13 · docs/_archive/debt/debt-310-stripe-stale-price-id-in-production-db.md
+- DEBT-311 · Practice Page — Mode/Questions Row Vertical Misalignment · Resolved · 2026-03-13 · docs/_archive/debt/debt-311-practice-mode-questions-alignment.md
+- DEBT-312 · Choice Button Neutral-State Surface Alignment · Resolved · 2026-03-15 · docs/_archive/debt/debt-312-choice-button-neutral-state-surface-alignment.md
+- DEBT-313 · Choice Button Dark Surface & Badge Visibility · Resolved · 2026-03-15 · docs/_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md
+- DEBT-314 · Feedback Section Label Chip Consistency · Resolved · 2026-03-15 · docs/_archive/debt/debt-314-feedback-section-label-chip-consistency.md
+- DEBT-315 · Feedback Chip Semantic Color & Casing Polish · Resolved · 2026-03-15 · docs/_archive/debt/debt-315-feedback-chip-semantic-color-and-casing.md
+- DEBT-316 · Exam Post-Submit Review Flow · Resolved · 2026-03-16 · docs/_archive/debt/debt-316-exam-post-submit-review-flow.md
+- DEBT-317 · Practice "Questions" Block Centers Itself on Narrow Screens · Resolved · 2026-03-16 · docs/_archive/debt/debt-317-practice-questions-centering-on-narrow-screens.md
+- DEBT-318 · Bookmark visible before feedback in tutor mode and quick practice · Resolved · 2026-03-23 · docs/_archive/debt/debt-318-tutor-bookmark-before-answer.md
+- DEBT-319 · Lucide icon size shorthand drift in disclosure chevrons · Resolved · 2026-03-17 · docs/_archive/debt/debt-319-icon-size-shorthand-drift.md
+- DEBT-320 · useEffect Audit — Problematic Patterns and Missing Data-Fetching Abstraction · Resolved · 2026-03-17 · docs/_archive/debt/debt-320-useeffect-audit.md
+- DEBT-321 · BS-055 Exam Interaction Model Overhaul · Resolved · 2026-03-18 · docs/_archive/debt/debt-321-bs055-exam-interaction-model-overhaul.md
+- DEBT-322 · Exam action bar UX polish — implementation spec · Resolved · 2026-03-19 · docs/_archive/debt/debt-322-exam-action-bar-ux-polish.md
+- DEBT-323 · Agent-Browser Ref-Click Failures with React Components · Resolved · 2026-03-18 · docs/_archive/debt/debt-323-agent-browser-react-click-failures.md
+- DEBT-324 · Remove Misleading "Practice Missed Questions" CTA From Exam Summary (Resolved) · Resolved · 2026-03-20 · docs/_archive/debt/debt-324-session-scoped-practice-missed-questions.md
+- DEBT-325 · Post-Exam Review Unanswered Question Display · Resolved · 2026-03-20 · docs/_archive/debt/debt-325-post-exam-review-unanswered-display.md
+- DEBT-326 · Post-Exam Review Focus Management on Question Navigation · Resolved · 2026-03-20 · docs/_archive/debt/debt-326-post-exam-review-focus-management.md
+- DEBT-327 · Interaction Contracts Doc — Mixed Current/Proposed Status Cleanup (Resolved) · Resolved · 2026-03-19 · docs/_archive/debt/debt-327-interaction-contracts-status-cleanup.md
+- DEBT-328 · Bookmark Surface Policy — Stale Summary-Review Origin Wording (Resolved) · Resolved · 2026-03-19 · docs/_archive/debt/debt-328-bookmark-surface-policy-stale-origin.md
+- DEBT-329 · Question Navigator Colorblind Accessibility · Resolved · 2026-03-23 · docs/_archive/debt/debt-329-navigator-colorblind-accessibility.md
+- DEBT-330 · Post-Exam Review Action Bar — Bookmark Button Placement · Resolved · 2026-03-21 · docs/_archive/debt/debt-330-review-action-bar-bookmark-placement.md
+- DEBT-331 · "Session Started" Toast Overlaps Navigation Bar · Resolved · 2026-03-21 · docs/_archive/debt/debt-331-session-started-toast-overlap.md
+- DEBT-332 · Security Posture Audit — CSP Findings, Health Endpoint Disclosure, Hardening Opportunities · Resolved · 2026-06-15 · docs/_archive/debt/debt-332-security-posture-audit.md
+- DEBT-333 · Browser Test Flakiness — Deferred-Pattern Audit and Hardening Plan · Resolved · 2026-03-21 · docs/_archive/debt/debt-333-browser-test-flakiness-audit.md
+- DEBT-334 · Practice Session Bootstrap Summary Bypasses Client Timeout Guard · Resolved · 2026-03-22 · docs/_archive/debt/debt-334-practice-session-bootstrap-timeout-guard.md
+- DEBT-335 · Remove All-or-Nothing Wrong-Answer Display Guard · Resolved · 2026-03-24 · docs/_archive/debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md
+- DEBT-336 · Content Markdown Quality Pass — RESOLVED (Tabled) · Resolved · 2026-03-29 · docs/_archive/debt/debt-336-content-markdown-quality-pass.md
+- DEBT-337 · Future Feedback & Practice Session Enhancements · Deferred · 2026-09-18 · docs/_archive/debt/debt-337-future-feedback-enhancements.md
+- DEBT-338 · DEBT-338 Phase 2: Implementation Spec — App Repo Pipeline Changes · Implemented · 2026-03-28 · docs/_archive/debt/debt-338-phase2-implementation-spec.md
+- DEBT-338 · Seed Parser Silently Accepts Malformed Wrong-Answer Sections · Resolved · 2026-03-28 · docs/_archive/debt/debt-338-seed-parser-silent-wrong-answer-section-corruption.md
+- DEBT-339 · Consolidate Question Instruction Files · Resolved · 2026-03-27 · docs/_archive/debt/debt-339-consolidate-question-instruction-files.md
+- DEBT-340 · Clerk v7 (Core 3) + Next.js 16.2.1 Upgrade · Implemented · 2026-03-28 · docs/_archive/debt/debt-340-clerk-v7-nextjs-upgrade.md
+- DEBT-341 · Post-Migration Legacy Path Removal · Resolved · 2026-03-28 · docs/_archive/debt/debt-341-post-migration-legacy-path-removal.md
+- DEBT-342 · Idempotency Backward-Compat Guard Cleanup · Resolved · 2026-03-28 · docs/_archive/debt/debt-342-idempotency-backward-compat-guard.md
+- DEBT-343 · Scripts Directory Cleanup · Resolved · 2026-04-02 · docs/_archive/debt/debt-343-scripts-cleanup.md
+- DEBT-344 · Request-Scoped Auth/Entitlement Dedup + Static Read Caching · Resolved · 2026-04-03 · docs/_archive/debt/debt-344-request-scoped-caching.md
+- DEBT-345 · Circuit Breaker for External Services (Stripe First) · Resolved · 2026-04-03 · docs/_archive/debt/debt-345-circuit-breaker-external-services.md
+- DEBT-346 · Lazy Initialization of Stripe SDK in Container · Resolved · 2026-04-02 · docs/_archive/debt/debt-346-lazy-stripe-sdk-initialization.md
+- DEBT-347 · Parallel Fetch Opportunities in Layout, Pricing, and Billing · Resolved · 2026-04-02 · docs/_archive/debt/debt-347-parallel-fetch-opportunities.md
+- DEBT-348 · Cache Components for Public Marketing Shell · Resolved · 2026-04-04 · docs/_archive/debt/debt-348-cache-components-public-marketing-shell.md
+- DEBT-349 · Cross-Request Published Content Caching · Deferred · 2026-06-15 · docs/_archive/debt/debt-349-cross-request-published-content-caching.md
+- DEBT-350 · Exam Results Continuity — Keep Summary Review Inside the Session Orchestrator · Resolved · 2026-04-08 · docs/_archive/debt/debt-350-exam-results-session-continuity.md
+- DEBT-351 · Review & Submit Affordance Cleanup — Whole-Card Rows, No Default “Not Marked” Noise · Resolved · 2026-04-08 · docs/_archive/debt/debt-351-exam-review-submit-affordance-cleanup.md
+- DEBT-352 · Post-Exam Review Focus-Ring Flash — Remove Forced Visible Ring Without Losing Focus Management · Resolved · 2026-04-10 · docs/_archive/debt/debt-352-post-exam-review-focus-ring-flash.md
+- DEBT-353 · Practice Session Results Orchestrator Decomposition — Split DEBT-350 Continuity Logic Into Focused Hook/View Units · Resolved · 2026-04-09 · docs/_archive/debt/debt-353-practice-session-results-orchestrator-decomposition.md
+- DEBT-354 · God-File and Clean-Code Audit · Resolved · 2026-04-09 · docs/_archive/debt/debt-354-god-file-and-clean-code-audit.md
+- DEBT-355 · Cross-Feature Question-Flow Coupling · Resolved · 2026-04-10 · docs/_archive/debt/debt-355-cross-feature-question-flow-coupling.md
+- DEBT-356 · Duplicate Question-Surface Renderers · Resolved · 2026-04-11 · docs/_archive/debt/debt-356-duplicate-question-surface-renderers.md
+- DEBT-357 · Test Double Discipline Drift · Resolved · 2026-04-10 · docs/_archive/debt/debt-357-test-double-discipline-drift.md
+- DEBT-358 · Exam Review Question Navigation Stranded — Clicking a Question From Review & Submit Disables the Question Navigator · Resolved · 2026-04-09 · docs/_archive/debt/debt-358-exam-review-question-navigation-stranded.md
+- DEBT-359 · Session Summary CTA Label Clarity · Resolved · 2026-04-11 · docs/_archive/debt/debt-359-session-summary-cta-labels.md
+- DEBT-360 · Action Bar Below Fold on Exam and Post-Exam Review Screens · Resolved · 2026-04-12 · docs/_archive/debt/debt-360-action-bar-below-fold.md
+- DEBT-361 · Exam Last Question `Next` Label Does Not Match The Action · Resolved · 2026-04-12 · docs/_archive/debt/debt-361-exam-last-question-next-label.md
+- DEBT-362 · Review & Submit Screen Return Affordance Gap · Resolved · 2026-04-13 · docs/_archive/debt/debt-362-review-submit-screen-affordances.md
+- DEBT-363 · Exam shell scroll model + dual-CTA disambiguation · Resolved · 2026-04-21 · docs/_archive/debt/debt-363-exam-shell-scroll-model-and-dual-cta.md
+- DEBT-364 · Post-exam review re-entry cursor persistence · Resolved · 2026-04-21 · docs/_archive/debt/debt-364-post-exam-review-reentry-cursor-persistence.md
+- DEBT-365 · Exam flow affordance and label consistency pass · Resolved · 2026-04-23 · docs/_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md
+- DEBT-366 · Active-Exam Visibility Predicate Duplicated Across Repositories · Fixed · 2026-04-26 · docs/_archive/debt/debt-366-active-exam-visibility-predicate-duplication.md
+- DEBT-367 · FakeAttemptRepository Does Not Apply Active-Exam Visibility · Fixed · 2026-04-27 · docs/_archive/debt/debt-367-fake-attempt-repository-missing-active-exam-visibility.md
+- DEBT-368 · Browser-Mode `vi.mock()` Missing `{ spy: true }` in Multiple Specs · Resolved · 2026-04-29 · docs/_archive/debt/debt-368-browser-spec-vi-mock-missing-spy-true.md
+- DEBT-369 · Brittle Presentational-Token Assertions in `Feedback.test.tsx` · Fixed · 2026-04-28 · docs/_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md
+- DEBT-370 · Oversized Test Files Hide Multiple Concerns; No Enforced Size Guardrail · Resolved · 2026-04-30 · docs/_archive/debt/debt-370-oversized-test-files-without-enforced-size-rule.md
+- DEBT-371 · Idempotency Wrapper Boilerplate Repeated Across Server-Action Controllers · Fixed · 2026-04-28 · docs/_archive/debt/debt-371-idempotency-wrapper-boilerplate-across-controllers.md
+- DEBT-372 · Post-Exam Review Has Two Buttons With Different Labels For The Same Action · Resolved · 2026-05-01 · docs/_archive/debt/debt-372-post-exam-review-summary-button-label-divergence.md
+- DEBT-373 · Post-Exam Review Score Banner Uses App-H1 Pattern Instead Of Stat-Number Pattern · Resolved · 2026-05-01 · docs/_archive/debt/debt-373-post-exam-review-score-banner-uses-app-h1-pattern-instead-of-stat-number-pattern.md
+- DEBT-374 · Session Summary "View in History" Button Is Redundant With Top-Nav History And Should Be Removed · Resolved · 2026-05-01 · docs/_archive/debt/debt-374-session-summary-view-in-history-button-is-redundant-cruft.md
+- DEBT-375 · Tutor Session Action Bar Has No Terminal CTA On Last Question · Resolved · 2026-05-02 · docs/_archive/debt/debt-375-tutor-session-action-bar-no-terminal-cta-on-last-question.md
+- DEBT-376 · Active Exam Empty-State Button Labeled "Finish Exam" Does Not Finish The Exam · Resolved · 2026-05-03 · docs/_archive/debt/debt-376-active-exam-finish-exam-label-lies-about-its-action.md
+- DEBT-377 · Practice starter: chip chrome dominance + shape mismatch · Resolved · 2026-05-03 · docs/_archive/debt/debt-377-practice-starter-chip-emphasis-and-hierarchy.md
+- DEBT-378 · Drop Submit Button In Tutor Mode — Choice Click Commits The Answer · Resolved · 2026-05-05 · docs/_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md
+- DEBT-379 · Exam Action Bar — Promote Primary CTA To Right Slot, Reposition Mark For Review · Resolved · 2026-05-06 · docs/_archive/debt/debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md
+- DEBT-380 · Exam Footer — Cluster Previous + Primary CTA Together, Mirror Tutor's Left-Cluster Pattern · Resolved · 2026-05-07 · docs/_archive/debt/debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md
+- DEBT-381 · Question Content Typography Audit And Optional Preference Path · Resolved · 2026-06-15 · docs/_archive/debt/debt-381-question-content-typography-audit-and-preference-path.md
+- DEBT-382 · Landing Page Content Refresh — Question Count And Author Credibility · Resolved · 2026-05-20 · docs/_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md
+- DEBT-383 · Canceled Subscription Recovery Trap · Resolved · 2026-05-15 · docs/_archive/debt/debt-383-canceled-subscription-recovery-trap.md
+- DEBT-384 · Stripe Webhook Delivery Error-Rate Investigation · Resolved · 2026-05-15 · docs/_archive/debt/debt-384-stripe-webhook-error-rate-investigation.md
+- DEBT-385 · Stripe Invoice Event Subscription Reference Schema Drift · Resolved · 2026-05-20 · docs/_archive/debt/debt-385-stripe-invoice-event-subscription-ref-schema-drift.md
+- DEBT-386 · E2E Stripe Customer Ownership Drift Causes Webhook 500s · Resolved · 2026-05-16 · docs/_archive/debt/debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md
+- DEBT-387 · Features Card Understates Study Modes — "Tutor + Exam Modes" Contradicts the "3 Study Modes" Stat · Resolved · 2026-05-21 · docs/_archive/debt/debt-387-features-card-understates-study-modes.md
+- DEBT-388 · Hero Credibility Line — Concise Wording, Reposition Below the CTAs, and Cleaner Hero Wrapping · Resolved · 2026-05-21 · docs/_archive/debt/debt-388-hero-credibility-line-concision-and-reposition.md
+- DEBT-389 · Footer Layout — Collapse the Unbalanced 3-Column Grid into a Brand-Left / Links-Right Footer · Resolved · 2026-05-21 · docs/_archive/debt/debt-389-footer-layout-brand-left-links-right.md
+- DEBT-390 · Omitted Exam Questions Are Recorded As Unattempted, Not Incorrect · Resolved · 2026-05-23 · docs/_archive/debt/debt-390-omitted-exam-questions-recorded-as-unattempted-not-incorrect.md
+- DEBT-391 · Local E2E Needs a Full Schema-Drift Preflight · Resolved · 2026-06-07 · docs/_archive/debt/debt-391-local-e2e-schema-drift-preflight.md
+- DEBT-392 · Dependency Hygiene Audit (security, actions, lockfile, automation, runtime) · Resolved · 2026-05-25 · docs/_archive/debt/debt-392-dependency-hygiene-audit.md
+- DEBT-393 · Dependabot Triage and Config Hardening · Resolved · 2026-05-25 · docs/_archive/debt/debt-393-dependabot-triage-and-config-hardening.md
+- DEBT-394 · Supply-Chain Hardening (pnpm maturity gates + strict build policy) · Resolved · 2026-05-26 · docs/_archive/debt/debt-394-supply-chain-hardening.md
+- DEBT-395 · Test Environment Isolation Hardening · Resolved · 2026-05-28 · docs/_archive/debt/debt-395-test-environment-isolation-hardening.md
+- DEBT-396 · Brittle CSS Selector Remediation · Resolved · 2026-05-28 · docs/_archive/debt/debt-396-brittle-css-selector-remediation.md
+- DEBT-397 · Datetime Boundary Type Normalization · Resolved · 2026-06-01 · docs/_archive/debt/debt-397-datetime-boundary-type-normalization.md
+- DEBT-398 · Design System Enforcement Gap · Resolved · 2026-05-28 · docs/_archive/debt/debt-398-design-system-enforcement-gap.md
+- DEBT-399 · Component-System Bypass Cleanup · Resolved · 2026-05-28 · docs/_archive/debt/debt-399-component-system-bypass-cleanup.md
+- DEBT-400 · Test Fixture Integrity (Zod Boundary Class) · Resolved · 2026-05-31 · docs/_archive/debt/debt-400-test-fixture-integrity-zod-boundary.md
+- DEBT-401 · AuthNav Test Module-Cache Order Dependency · Resolved · 2026-05-28 · docs/_archive/debt/debt-401-auth-nav-test-module-cache-order-dependency.md
+- DEBT-402 · Mocked DTO Type Assertion Drift · Resolved · 2026-06-01 · docs/_archive/debt/debt-402-mocked-dto-type-assertion-drift.md
+- DEBT-403 · Biome 2.4.15 lint-rule conformance · Resolved · 2026-06-04 · docs/_archive/debt/debt-403-biome-245-lint-conformance.md
+- DEBT-404 · Stripe SDK 22.2.0 + API-version advance to 2026-05-27.dahlia · Resolved · 2026-06-04 · docs/_archive/debt/debt-404-stripe-22.2-apiversion-advance.md
+- DEBT-405 · Question Rating Control Placement — Move to a Post-Action Footer · Resolved · 2026-06-05 · docs/_archive/debt/debt-405-question-rating-control-placement.md
+- DEBT-406 · Stripe live webhook endpoint API-version reconciliation · Resolved · 2026-06-04 · docs/_archive/debt/debt-406-stripe-live-endpoint-version-reconciliation.md
+- DEBT-407 · Vite 8 + @vitejs/plugin-react 6 Coupled Test-Infra Upgrade · Resolved · 2026-06-05 · docs/_archive/debt/debt-407-vite-8-plugin-react-6-upgrade.md
+- DEBT-408 · `@clerk/ui` Drags In the Solana + React-Native Subtree (`ws@7.5.11` / `utf-8-validate` Peer Mismatch) · Resolved · 2026-06-05 · docs/_archive/debt/debt-408-clerk-ui-solana-react-native-subtree.md
+- DEBT-409 · Tailwind Docs-Source Pollution Emits Clerk Structural CSS · Resolved · 2026-06-05 · docs/_archive/debt/debt-409-clerk-structural-css-pin-userbutton.md
+- DEBT-410 · Free-Trial Pathway + Pricing Access-Copy Correction · Resolved · 2026-06-11 · docs/_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md
+- DEBT-411 · Local E2E Flakiness — Per-Test Neon Resets + Masked Errors (Not Schema Drift, Not a Product Bug) · Resolved · 2026-06-08 · docs/_archive/debt/debt-411-local-e2e-flakiness-and-error-masking.md
+- DEBT-412 · Checkout Success Interstitial · Resolved · 2026-06-10 · docs/_archive/debt/debt-412-checkout-success-trial-copy-redirect-gap.md
+- DEBT-413 · Remove the `FREE_TRIAL_ENABLED` Flag (rollout scaffolding cleanup) · Resolved · 2026-06-11 · docs/_archive/debt/debt-413-remove-free-trial-enabled-flag.md
+- DEBT-415 · Align the E2E Suite With the Flag-On Free-Trial Reality · Resolved · 2026-06-10 · docs/_archive/debt/debt-415-e2e-suite-flag-on-alignment.md
+- DEBT-416 · Agent Skills Need Provenance Manifest and Refresh Mechanism · Resolved · 2026-06-12 · docs/_archive/debt/debt-416-agent-skills-provenance-and-refresh.md
+- DEBT-417 · Multi-Clone Local Test Infrastructure Is Not Isolated · Resolved · 2026-06-13 · docs/_archive/debt/debt-417-multi-clone-local-test-infrastructure-isolation.md
+- DEBT-418 · Enable Stricter Index and Optional Property Type Checks · Resolved · 2026-06-15 · docs/_archive/debt/debt-418-stricter-index-and-optional-property-types.md
+- DEBT-419 · esbuild Advisory Follow-Up After Maturity Gate Allows the Patch · Resolved · 2026-06-19 · docs/_archive/debt/debt-419-esbuild-advisory-maturity-gate-follow-up.md
+- DEBT-420 · CSP Enforcement Decision — Strict Nonce CSP Is Incompatible with Next 16 PPR / Cache Components · Decided · 2026-06-15 · docs/_archive/debt/debt-420-csp-enforcing-mode-flip.md
+- DEBT-421 · Light Mode Is Unfinished — Force Dark (kill switch) vs. Default Dark (soft default) · Resolved · 2026-06-15 · docs/_archive/debt/debt-421-light-mode-force-dark-vs-default-dark.md
+- DEBT-422 · Scheduled Stripe Reconciliation Only Scans the First Subscription Page · Resolved · 2026-06-16 · docs/_archive/debt/debt-422-reconciliation-cron-single-page-coverage.md
+- DEBT-423 · Brittle Raw-Markup & DOM-Order Assertions in `renderToStaticMarkup` Tests · Resolved · 2026-06-22 · docs/_archive/debt/debt-423-brittle-rendertostaticmarkup-structure-and-order-assertions.md
+- DEBT-424 · Rate-Limit Idempotent Server Actions on Cache-Miss Only (replay-before-limit) · Resolved · 2026-06-24 · docs/_archive/debt/debt-424-rate-limit-idempotent-actions-on-cache-miss-only.md
+- DEBT-425 · Legacy Compatibility Tolerances Audit and Hardening Plan · Resolved · 2026-07-02 · docs/_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md
+- DEBT-426 · Session-wide pessimistic lock in practice-session-question-state-updater defeats Track A's per-row concurrency goal · Resolved · 2026-07-03 · docs/_archive/debt/debt-426-session-wide-lock-defeats-row-concurrency.md
+- DEBT-427 · Migration 0021 enforces FKs before backfill runs; 0022/0023 silently null inconsistent rows with no audit trail · Resolved · 2026-07-04 · docs/_archive/debt/debt-427-migration-fk-ordering-and-unaudited-cleanup.md
+- DEBT-428 · questionIds validation narrowed to strict zUuid + count-match without auditing existing data · Resolved · 2026-07-04 · docs/_archive/debt/debt-428-question-ids-narrowed-unverified-against-legacy-data.md
+- DEBT-429 · Duplicated question-state mapper and test helpers across practice-session-question-state files · Resolved · 2026-07-04 · docs/_archive/debt/debt-429-duplicated-question-state-mapper-and-test-helpers.md
+- DEBT-430 · Migrations 0021-0024 hold broad write-blocking locks for their entire combined transaction, including a non-concurrent unique index build · Resolved · 2026-07-04 · docs/_archive/debt/debt-430-migration-0021-0024-holds-broad-locks-across-live-tables.md
+- DEBT-431 · `practice_session_question_states` has no index on `question_id` or either choice-FK column, forcing sequential scans on every seed reference check and choice delete · Resolved · 2026-07-02 · docs/_archive/debt/debt-431-missing-fk-supporting-indexes-on-question-states.md
+- DEBT-432 · postgres-js `prepare: true` vs Neon pooler concern · Invalidated · 2026-07-02 · docs/_archive/debt/debt-432-postgres-js-prepared-statements-vs-neon-pooler-unconfirmed.md
+- DEBT-433 · The question-order invariant between `practice_sessions.params_json.questionIds` and `practice_session_question_states.position` is enforced only at read time, not by the database · Resolved · 2026-07-03 · docs/_archive/debt/debt-433-question-order-invariant-unenforced-at-db-level.md
+- DEBT-434 · Migration 0021's backfill copies `params_json.questionStates` into the new table but never strips the now-dead JSON copy, leaving diverging duplicate data on disk · Resolved · 2026-07-04 · docs/_archive/debt/debt-434-stale-legacy-question-states-json-left-on-disk.md
+- DEBT-435 · Practice-session conflict semantics and post-Track-A test hygiene follow-ups · Resolved · 2026-07-03 · docs/_archive/debt/debt-435-practice-session-conflict-and-test-hygiene-follow-ups.md
+- DEBT-436 · Master Spec Docs Claim the Clerk Webhook Handles `user.created`, Contradicting the Actual Lazy-Provisioning Design · Resolved · 2026-07-06 · docs/_archive/debt/debt-436-stale-spec-docs-claim-user-created-webhook-handling.md
+- DEBT-437 · Tutor Graded Submit vs Standalone `end()` Write-Skew Is Broader Than the Archived DEBT-426 Residual Claims · Resolved · 2026-07-09 · docs/_archive/debt/debt-437-tutor-submit-vs-end-write-skew-and-debt-426-residual-wording.md
+- DEBT-438 · Conflict-Reason Contract Coverage Gaps · Resolved · 2026-07-09 · docs/_archive/debt/debt-438-conflict-reason-client-coverage-gaps.md
+- DEBT-439 · `params_json` Has No DB-Level Shape Guard, and One Corrupt Row Takes Down the Whole Session-History Surface · Resolved · 2026-07-06 · docs/_archive/debt/debt-439-params-json-shape-guard-and-corrupt-row-blast-radius.md
+- DEBT-440 · `attempts.selected_choice_id` Missed the 0022 Composite-FK Upgrade — a Cross-Question Choice Is Still Representable in the Permanent Attempt Record · Resolved · 2026-07-06 · docs/_archive/debt/debt-440-attempts-selected-choice-composite-fk.md
+- DEBT-441 · The Question-State Updater's Inner Retry and Final Re-Read Are Dead Code in the REPEATABLE READ Paths — and Would Misreport If Ever Reached · Resolved · 2026-07-06 · docs/_archive/debt/debt-441-updater-dead-stale-retry-paths-under-rr.md
+- DEBT-442 · Applied Migrations Are Mutable and Ledger Verification Is Content-Blind · Resolved · 2026-07-08 · docs/_archive/debt/debt-442-applied-migration-ledger-content-blind.md
+- DEBT-443 · Idempotency Cache Durability and Evolution Gaps — Schema-Drift Replay Poisoning, Asymmetric Error Records, Production-Dead Lifecycle Cache Branch · Resolved · 2026-07-22 · docs/_archive/debt/debt-443-idempotency-cache-durability-and-evolution.md
+- DEBT-444 · Hot-Path Prune Transactions Can Contend Without SKIP LOCKED and Lack Direct Real-Postgres Coverage (`idempotency_keys` + `rate_limits`) · Resolved · 2026-07-22 · docs/_archive/debt/debt-444-hot-path-prune-contention-and-coverage.md
+- DEBT-445 · Build-Time Migration Pipeline Guardrails -- Shared-Preview Ledger Blast Radius, No Deploy-Time Ledger Check, Missing Expand/Contract and Restore-Loss Documentation · Resolved · 2026-07-23 · docs/_archive/debt/debt-445-migration-deploy-pipeline-guardrails.md
+- DEBT-446 · Bare `db:migrate`/`db:seed` Can Silently Target a Remote Database, and Production Seeding Lacks an Enforced Consent Gate · Resolved · 2026-07-21 · docs/_archive/debt/debt-446-local-db-script-target-guards.md
+- DEBT-447 · DB Connection/Session Policy Is Repo-Unspecified — Three Timeouts Unset, Runtime Pooler Host Unenforced, Vendor Doc Recommends Banned `push` · Resolved · 2026-07-21 · docs/_archive/debt/debt-447-db-connection-session-config-and-vendor-doc.md
+- DEBT-448 · Rate Limiter — Current 90-Day Retention, Target 24-Hour Horizon, Practice Admission Gaps, Health-Probe Diagnostic Masking · Resolved · 2026-07-22 · docs/_archive/debt/debt-448-rate-limiter-retention-scope-and-health-probe.md
+- DEBT-449 · Webhook Event-Ledger Lifecycle — Partial/Asymmetric Retention and Cron Completion-Bookkeeping Gap · Deferred · 2026-07-22 · docs/_archive/debt/debt-449-webhook-event-ledger-lifecycle.md
+- DEBT-450 · Hot-Path Query Efficiency — Finalize Statement Amplification, History/Bookmark Over-Hydration, Lifetime Counts, and Duplicate Window Ranking · Deferred · 2026-07-22 · docs/_archive/debt/debt-450-hot-path-query-efficiency.md
+- DEBT-451 · `attempts` Integrity — User-Session and Retry-Provenance Invariants Unenforced at the DB, Dual-Store Divergence Undetected, Constraint Backstop Untested Against Real Postgres · Resolved · 2026-07-21 · docs/_archive/debt/debt-451-attempts-integrity-enforcement-and-verification-gaps.md
+- DEBT-452 · DB Failure Observability — Cause-Dropping `INTERNAL_ERROR` Wrapping and Raw SQL/Params Reaching Logs Through Pino Serialization · Resolved · 2026-07-22 · docs/_archive/debt/debt-452-db-failure-observability.md
+- DEBT-453 · Duplicated Data Contracts — Difficulty Set Re-encoded Across 10 Production Files, Effective Selection Computed Four Times, Write/Read Schema Coupling, Dead `deleteById` Port Method · Resolved · 2026-07-21 · docs/_archive/debt/debt-453-duplicated-data-contracts.md
+- DEBT-454 · Undocumented Per-Context Seam Contracts and Mechanism Forks — `end()` Dead/Live Recovery Split, Convention-Only Lock Preconditions, Forked DB Retry Loop · Deferred · 2026-07-21 · docs/_archive/debt/debt-454-undocumented-seam-contracts-and-mechanism-forks.md
+- DEBT-455 · `FakeUserRepository` Diverges From Real Upsert Semantics — Ownership-Check Ordering and the Missing `updatedAt` Bump · Resolved · 2026-07-21 · docs/_archive/debt/debt-455-fake-user-repository-fidelity-divergences.md
+- DEBT-456 · Bare `code === 'CONFLICT'` Client Arms Misroute the New Email-Ownership Conflict Into Practice-Session Recovery UX · Resolved · 2026-07-21 · docs/_archive/debt/debt-456-client-conflict-reason-discrimination-gaps.md
+- DEBT-457 · Wave-2 Residues — End-Session Thrown-Arm Key Rotation, Version-Fence Double Stripe Retrieve, and a Vacuous Fake Snapshot/Restore Test · Resolved · 2026-07-21 · docs/_archive/debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md
+- DEBT-458 · Stripe Missing-User Acknowledgement Failures Are Replaced by the Earlier Processing Error · Resolved · 2026-07-21 · docs/_archive/debt/debt-458-stripe-webhook-acknowledgement-error-causality.md
+- DEBT-459 · The Button Mandate Is Ambiguous for Test-Only Probe Controls · Resolved · 2026-07-17 · docs/_archive/debt/debt-459-test-probe-button-rule-scope-ambiguity.md
+- DEBT-460 · Dependency Upgrade Train Residues (TS7 Dual-Compiler Seam, Clerk `createRouteMatcher` Deprecation, Biome Schema Pin Drift) · Deferred · 2026-07-23 · docs/_archive/debt/debt-460-dependency-train-residues.md
+- DEBT-461 · Practice-Client Idempotency/Determinacy Machinery Needs One Contract Before Any Consolidation · Resolved · 2026-07-23 · docs/_archive/debt/debt-461-practice-client-idempotency-machinery-consolidation.md
+- DEBT-462 · Observability Instrument Gap Prevents Mechanical Evaluation of Five Parked Register Triggers · Resolved · 2026-07-23 · docs/_archive/debt/debt-462-observability-instrument-gap-parked-triggers.md
+- DEBT-463 · Public legal-page readability and copy · Resolved · 2026-09-18 · docs/_archive/debt/debt-463-legal-page-redesign.md
+- DEBT-464 · Vercel Web Analytics activation with privacy-policy coherence · Deferred · 2026-09-18 · docs/_archive/debt/debt-464-web-analytics-activation.md
+- DEBT-465 · Advanced Test-Quality Practices Adoption (CRAP Report, Mutation Testing, Acceptance Tests, UI QA Procedures) · Resolved · 2026-10-08 · docs/_archive/debt/debt-465-test-quality-practices-adoption.md
+- DEBT-466 · Checkout Idempotency Replay-Chain Exhaustion (Subscription Recovery Bound Stops Traversal) · Resolved · 2026-09-18 · docs/_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md
+- DEBT-467 · Trial Setup Checkout Replays a Stale Terminal Session URL · Resolved · 2026-09-18 · docs/_archive/debt/debt-467-trial-setup-checkout-stale-session-url-replay.md
+- DEBT-468 · Test-Estate Coverage Gaps and Shared-Fixture Debt · Resolved · 2026-09-27 · docs/_archive/debt/debt-468-test-estate-coverage-and-fixture-debt.md
+- DEBT-469 · Toolchain Warning Debt — Restore the Abandoned Test-File-Size Policy and Gate on Zero Actionable Warnings · Resolved · 2026-09-26 · docs/_archive/debt/debt-469-toolchain-warning-debt.md
+- DEBT-470 · Checkout Replay Traversal Needs a Constant-Depth Tail Jump · Resolved · 2026-09-18 · docs/_archive/debt/debt-470-checkout-replay-tail-jump.md
+- DEBT-471 · E2E and CI Fail on Third-Party and Runner Changes Unrelated to the Diff · Resolved · 2026-09-18 · docs/_archive/debt/debt-471-e2e-ci-external-fragility.md
+- DEBT-472 · The Fakes-Over-Mocks Rule Sanctions Unverified Doubles at Every External Seam · Resolved · 2026-09-25 · docs/_archive/debt/debt-472-test-double-fidelity-and-contract-discipline.md
+- DEBT-473 · Test Lanes and CI Report Green Without the Requested Evidence · Resolved · 2026-09-21 · docs/_archive/debt/debt-473-green-without-evidence.md
+- DEBT-474 · CI Secrets Are Job-Scoped and Required Workflows Reference Mutable Action Tags · Resolved · 2026-09-22 · docs/_archive/debt/debt-474-ci-secret-scope-and-action-immutability.md
+- DEBT-475 · Toolchain Coherence — Scars, Scaffolding, and the Ruling That Went Stale · Resolved · 2026-09-21 · docs/_archive/debt/debt-475-toolchain-coherence.md
+- DEBT-476 · Dependabot Alert Triage — What #882/#886 Closed and the Four-Package Residue · Resolved · 2026-09-22 · docs/_archive/debt/debt-476-dependabot-alert-triage-2026-09.md
+- DEBT-477 · Landing Page Copy and Cohesion — Retire the Arrow CTA, Unify Signed-Out CTA Casing and Size, Keep Plan Cards Left-Aligned, and Split the Footer Link Row · Resolved · 2026-09-18 · docs/_archive/debt/debt-477-landing-page-copy-and-cohesion.md
+- DEBT-478 · Pricing Page Composition and Plan Consent Dialog — Narrow the Grid to the Landing Width and Move the Renewal Disclosure into the Confirmation Step · Resolved · 2026-09-18 · docs/_archive/debt/debt-478-pricing-plan-consent-dialog.md
+- DEBT-479 · Public Crawl/Sharing Metadata, Browser Field Measurement, and SPEC-016/017 Drift · Resolved · 2026-09-22 · docs/_archive/debt/debt-479-public-surface-discoverability-and-field-performance.md
+- DEBT-480 · The Published Security Contact Is Not Reachable Anonymously · Resolved · 2026-09-21 · docs/_archive/debt/debt-480-anonymous-security-contact-reachability.md
+- DEBT-481 · Master Spec Copies Still Prescribe Superseded Implementation Contracts · Resolved · 2026-09-22 · docs/_archive/debt/debt-481-master-spec-implementation-drift.md
+- DEBT-482 · Duplicate QIDs Collapse to One Output File · Resolved · 2026-09-20 · docs/_archive/debt/debt-482-duplicate-qid-output-collision.md
+- DEBT-483 · No Complete Content Withdrawal or Release Rollback · Resolved · 2026-10-02 · docs/_archive/debt/debt-483-content-withdrawal-and-release-rollback.md
+- DEBT-484 · Substantive Rewrites Can Reinterpret Historical Attempts · Resolved · 2026-09-30 · docs/_archive/debt/debt-484-question-rewrite-history-identity.md
+- DEBT-485 · Import Output Path Traversal · Resolved · 2026-09-20 · docs/_archive/debt/debt-485-import-output-path-traversal.md
+- DEBT-486 · Import and Seed Validation Disagreement · Resolved · 2026-09-21 · docs/_archive/debt/debt-486-import-seed-validation-disagreement.md
+- DEBT-487 · Frontmatter Order Can Silently Omit Questions · Resolved · 2026-09-20 · docs/_archive/debt/debt-487-draft-splitter-silent-omission.md
+- DEBT-488 · Documentation archive convention is unwritten and unenforced · Resolved · 2026-09-21 · docs/_archive/debt/debt-488-documentation-archive-convention.md
+- DEBT-489 · A Release Silently Removes Every Live Question Its Bundle Omits · Resolved · 2026-10-02 · docs/_archive/debt/debt-489-release-removes-omitted-questions.md
+- DEBT-490 · Release Removals and Activations Record No Reason or Authority · Resolved · 2026-10-02 · docs/_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md
+- DEBT-491 · The Reviewed-Merge Tool Lets `dev` Lose `main`'s Promotion History · Resolved · 2026-10-02 · docs/_archive/debt/debt-491-merge-tool-lets-dev-lose-main-promotion-history.md
+- DEBT-492 · Release Safety Gaps to Close Before the Production Bootstrap · Resolved · 2026-10-03 · docs/_archive/debt/debt-492-release-safety-before-production-bootstrap.md
+- DEBT-493 · Learner Scores and Labels Do Not Reflect Content Changes · Resolved · 2026-10-03 · docs/_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md
+- DEBT-494 · Past Scores Change After the Fact · Resolved · 2026-10-03 · docs/_archive/debt/debt-494-read-time-scores-owner-confirmation.md
+- DEBT-495 · braces Denial-of-Service Advisory With No Fixed Release · Accepted · 2026-10-03 · docs/_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md
+- DEBT-496 · Content-Change Notices Have No Route-Level Proof · Resolved · 2026-10-05 · docs/_archive/debt/debt-496-content-change-notices-route-level-proof.md
+- DEBT-497 · A Codecov Outage Blocks Every Merge Behind Green CI · Resolved · 2026-10-05 · docs/_archive/debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md
+- DEBT-498 · Reviews Grade Items Whose Content Is in Doubt · Resolved · 2026-10-07 · docs/_archive/debt/debt-498-reviews-grade-items-whose-content-is-in-doubt.md
+- DEBT-499 · Nothing Pins What We Send to Sentry, and a Green Major Would Change It · Resolved · 2026-10-05 · docs/_archive/debt/debt-499-sentry-major-widens-data-collection.md
+- DEBT-506 · Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes · Resolved · 2026-10-09 · docs/_archive/debt/debt-506-dependabot-alert-triage-2026-10.md
+- DEBT-513 · Error Text Reaches Sentry as Written · Resolved · 2026-10-10 · docs/_archive/debt/debt-513-error-text-reaches-sentry-as-written.md
+
+## Frontend (FE prefix, retired)
+
+- FE-054 · Hardcoded `text-emerald-500` Bypasses Design System Tokens · Resolved · 2026-02-16 · docs/_archive/debt/fe-054-hardcoded-emerald-color-bypasses-design-tokens.md
+- FE-055 · FE-055 Follow-up: QuestionNavigator `aria-controls` Wiring · Resolved · 2026-03-01 · docs/_archive/debt/fe-055-aria-controls-wiring.md
+- FE-055 · Practice Session Question Navigator Missing Navigation Landmark + `aria-current` · Resolved · 2026-02-16 · docs/_archive/debt/fe-055-exam-navigator-missing-nav-landmark.md
+
+## Specs (register retired)
+
+- SPEC-001 · Domain Entities · Implemented · 2026-02-11 · docs/_archive/specs/spec-001-domain-entities.md
+- SPEC-002 · Value Objects · Implemented · 2026-02-11 · docs/_archive/specs/spec-002-value-objects.md
+- SPEC-003 · Domain Services · Implemented · 2026-02-11 · docs/_archive/specs/spec-003-domain-services.md
+- SPEC-004 · Application Ports (Interfaces) · Implemented · 2026-02-11 · docs/_archive/specs/spec-004-application-ports.md
+- SPEC-005 · Core Use Cases (Interactors) · Implemented · 2026-02-11 · docs/_archive/specs/spec-005-core-use-cases.md
+- SPEC-006 · Drizzle Schema · Implemented · 2026-02-11 · docs/_archive/specs/spec-006-drizzle-schema.md
+- SPEC-007 · Repository Implementations (Drizzle) · Implemented · 2026-02-11 · docs/_archive/specs/spec-007-repository-implementations.md
+- SPEC-008 · Auth Gateway (Clerk) · Implemented · 2026-02-11 · docs/_archive/specs/spec-008-auth-gateway.md
+- SPEC-009 · Payment Gateway (Stripe) · Implemented · 2026-02-11 · docs/_archive/specs/spec-009-payment-gateway.md
+- SPEC-010 · Server Actions (Controllers) · Implemented · 2026-02-11 · docs/_archive/specs/spec-010-server-actions.md
+- SPEC-011 · Paywall (Stripe Subscriptions) · Implemented · 2026-02-11 · docs/_archive/specs/spec-011-paywall.md
+- SPEC-012 · Core Question Loop · Implemented · 2026-02-11 · docs/_archive/specs/spec-012-core-question-loop.md
+- SPEC-013 · Practice Sessions · Implemented · 2026-02-11 · docs/_archive/specs/spec-013-practice-sessions.md
+- SPEC-014 · Review + Bookmarks · Implemented · 2026-02-11 · docs/_archive/specs/spec-014-review-bookmarks.md
+- SPEC-015 · Dashboard · Implemented · 2026-02-11 · docs/_archive/specs/spec-015-dashboard.md
+- SPEC-016 · Observability (Logging, Error Tracking, Monitoring) · Resolved · 2026-09-21 · docs/_archive/specs/spec-016-observability.md
+- SPEC-017 · Rate Limiting · Resolved · 2026-09-21 · docs/_archive/specs/spec-017-rate-limiting.md
+- SPEC-018 · UI Integration (v0 Templates) · Implemented · 2026-02-11 · docs/_archive/specs/spec-018-ui-integration.md
+- SPEC-019 · Practice & Navigation UX Redesign · Implemented · 2026-02-11 · docs/_archive/specs/spec-019-practice-ux-redesign.md
+- SPEC-020 · Practice Engine Completion · Implemented · 2026-02-11 · docs/_archive/specs/spec-020-practice-engine-completion.md
+- SPEC-021 · History Page Restructure · Implemented · 2026-02-11 · docs/_archive/specs/spec-021-history-page-restructure.md
+- SPEC-022 · Question Log (Quick Practice History Gap) · Implemented · 2026-02-11 · docs/_archive/specs/spec-022-question-log.md
+- SPEC-023 · Question Review Mode · Implemented · 2026-02-12 · docs/_archive/specs/spec-023-question-review-mode.md
+- SPEC-024 · Question Status Filter for Practice & Quick Practice · Implemented · 2026-02-12 · docs/_archive/specs/spec-024-question-status-filter.md
+- SPEC-025 · Choice Label Desync Fix (Standalone Question Page) · Implemented · 2026-02-12 · docs/_archive/specs/spec-025-choice-label-desync-fix.md
+- SPEC-026 · History Tab — Review-Only Question Links · Implemented · 2026-02-13 · docs/_archive/specs/spec-026-history-review-only.md
+- SPEC-027 · Session Review Navigation (Sequential Nav + Attempt Identity) · Implemented · 2026-02-13 · docs/_archive/specs/spec-027-session-review-navigation.md
+- SPEC-028 · Review Question Navigator (Color-Coded Grid) · Implemented · 2026-02-16 · docs/_archive/specs/spec-028-review-question-navigator.md
+- SPEC-028 · Status & Difficulty Filter — Segmented Control Redesign · Implemented · 2026-02-13 · docs/_archive/specs/spec-028-status-filter-segmented-control.md
+- SPEC-029 · Dev Environment Resilience — Client-Side Timeouts, Platform Limits, and Observable Failures · Implemented · 2026-02-16 · docs/_archive/specs/spec-029-dev-environment-resilience.md
+- SPEC-030 · Question View UX Unification — State Persistence, Navigation, and Action Bar Consistency · Implemented · 2026-02-17 · docs/_archive/specs/spec-030-question-view-ux-unification.md
+- SPEC-031 · Unified Visual Front — Card Contrast + Shell Parity · Implemented · 2026-02-17 · docs/_archive/specs/spec-031-unified-visual-front.md
+- SPEC-032 · Action Bar Standardization · Implemented · 2026-02-17 · docs/_archive/specs/spec-032-action-bar-standardization.md
+- SPEC-033 · Tag Taxonomy Migration · Implemented · 2026-02-20 · docs/_archive/specs/spec-033-tag-taxonomy-migration.md
+- SPEC-034 · Review Mode Read-Only Behavior & Try Again Scoping · Implemented · 2026-02-20 · docs/_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md
+- SPEC-035 · Reference Field & Content Import Pipeline · Implemented · 2026-02-20 · docs/_archive/specs/spec-035-reference-field-and-content-import.md
+- SPEC-036 · Bookmark Review Mode Alignment · Implemented · 2026-02-20 · docs/_archive/specs/spec-036-bookmark-review-mode-alignment.md
+- SPEC-037 · Tab Switch Visual Unification — Shared Style Constants for SegmentedControl and HistoryTabBar · Implemented · 2026-02-22 · docs/_archive/specs/spec-037-tab-switch-visual-unification.md
+- SPEC-038 · History UX Remediation (BS-028 Re-Validated Findings) · Implemented · 2026-02-23 · docs/_archive/specs/spec-038-history-ux-remediation.md
+- SPEC-039 · Exam Mode Timer · Implemented · 2026-06-03 · docs/_archive/specs/spec-039-exam-mode-timer.md
+- SPEC-040 · Omitted Exam Answer Scoring · Implemented · 2026-06-03 · docs/_archive/specs/spec-040-omitted-exam-answer-scoring.md
+- SPEC-041 · Question Feedback (Per-Question Ratings & Problem Reports) · Implemented · 2026-06-03 · docs/_archive/specs/spec-041-question-feedback.md
+
+## Brainstorming (register retired)
+
+- BS-001 · Practice UX Audit & Brainstorming · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-001-practice-ux-audit.md
+- BS-002 · Practice Engine State Management Audit · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-002-practice-engine-state-audit.md
+- BS-003 · Active Session View Layout Audit · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-003-session-view-layout-audit.md
+- BS-004 · UI/UX Assessment: Review Functionality Distribution · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-004-review-page-flow-audit.md
+- BS-005 · Practice "Recent Sessions" Panel — Iteration 2 · Superseded · 2026-02-11 · docs/_archive/brainstorming/bs-005-practice-recent-sessions-v2.md
+- BS-006 · Cross-Page Review Consistency Audit · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-006-review-consistency-audit.md
+- BS-007 · Quick Practice History Gap — Brainstorming · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-007-quick-practice-history-gap.md
+- BS-008 · Question Review Mode Gap — Brainstorming · Resolved · 2026-02-11 · docs/_archive/brainstorming/bs-008-question-review-mode-gap.md
+- BS-009 · Session Review Navigation Gap — Brainstorming · Resolved · 2026-02-13 · docs/_archive/brainstorming/bs-009-session-review-navigation-gap.md
+- BS-010 · Review Mode Attempt Identity Gap — Brainstorming · Resolved · 2026-02-13 · docs/_archive/brainstorming/bs-010-review-mode-attempt-identity-gap.md
+- BS-011 · History Review Wiring Bug & Choice Label Randomization Desync · Resolved · 2026-02-13 · docs/_archive/brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md
+- BS-012 · Question Status Filter for Practice & Quick Practice · Resolved · 2026-02-13 · docs/_archive/brainstorming/bs-012-question-status-filter.md
+- BS-013 · Status Filter UX Confusion (Multi-Select OR Logic Is Not Obvious) · Resolved · 2026-02-13 · docs/_archive/brainstorming/bs-013-status-filter-ux-confusion.md
+- BS-014 · Practice Starter — Question Count UX Polish · Deferred · 2026-03-18 · docs/_archive/brainstorming/bs-014-practice-starter-question-count-ux.md
+- BS-015 · Practice Starter — Show Available Question Count Before Session Start · Resolved · 2026-02-16 · docs/_archive/brainstorming/bs-015-practice-starter-available-count-display.md
+- BS-016 · Color-Coded Question Navigator in Review Mode · Resolved · 2026-02-16 · docs/_archive/brainstorming/bs-016-review-mode-question-navigator.md
+- BS-017 · Dev Environment Resilience — Server Action Hangs and Observable Failure Gaps · Resolved · 2026-02-16 · docs/_archive/brainstorming/bs-017-dev-environment-resilience.md
+- BS-018 · Question View UX Unification — Navigation, State, and Action Bar Consistency · Resolved · 2026-02-17 · docs/_archive/brainstorming/bs-018-question-view-ux-unification.md
+- BS-019 · Action Bar Label and Ordering Consistency · Resolved · 2026-02-17 · docs/_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md
+- BS-020 · Card Contrast and Hover Consistency — Landing Page vs App · Resolved · 2026-02-17 · docs/_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md
+- BS-021 · Marketing/App Shell Divergence and Accessibility Parity · Resolved · 2026-02-17 · docs/_archive/brainstorming/bs-021-marketing-app-shell-divergence-and-accessibility-parity.md
+- BS-022 · Unanswered Question Review Handling · Resolved · 2026-02-20 · docs/_archive/brainstorming/bs-022-unanswered-question-review-handling.md
+- BS-023 · Try Again — State Consistency and Business Logic Gaps · Resolved · 2026-02-20 · docs/_archive/brainstorming/bs-023-try-again-state-consistency.md
+- BS-024 · Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift · Resolved · 2026-02-18 · docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md
+- BS-025 · Reference Section Pipeline Support · Implemented · 2026-02-20 · docs/_archive/brainstorming/BS-025-reference-section-pipeline-support.md
+- BS-026 · Bookmark Reattempt vs Review Mode Consistency · Resolved · 2026-02-20 · docs/_archive/brainstorming/bs-026-bookmark-reattempt-review-mode-consistency.md
+- BS-027 · History Tab Bar Visual Inconsistency - Verified Audit and Fix Direction · Resolved · 2026-02-22 · docs/_archive/brainstorming/bs-027-history-tab-bar-visual-inconsistency.md
+- BS-028 · History Page UX Audit — Scoring, Navigation, and Interaction Gaps · Resolved · 2026-02-23 · docs/_archive/brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md
+- BS-029 · Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint · Resolved · 2026-02-21 · docs/_archive/brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md
+- BS-030 · Proxy/Middleware Layer — First-Principles Architecture Analysis · Resolved · 2026-02-23 · docs/_archive/brainstorming/bs-030-proxy-middleware-layer-analysis.md
+- BS-031 · Card/Row Affordance Consistency Audit · Resolved · 2026-02-24 · docs/_archive/brainstorming/bs-031-card-row-affordance-consistency.md
+- BS-032 · Stripe Checkout → Clerk Session Friction — Post-Payment Auth Bounce · Resolved · 2026-02-25 · docs/_archive/brainstorming/bs-032-stripe-checkout-clerk-session-friction.md
+- BS-033 · Question Display Formatting and Feedback UX · Resolved · 2026-03-04 · docs/_archive/brainstorming/bs-033-question-display-formatting-and-feedback-ux.md
+- BS-034 · History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator · Resolved · 2026-02-26 · docs/_archive/brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md
+- BS-035 · Card Hover and Gray Consistency Audit · Resolved · 2026-03-01 · docs/_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md
+- BS-036 · History Page Breakdown UX Redesign · Resolved · 2026-03-01 · docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md
+- BS-037 · Navigation Button UX Audit — Arrows, Visibility, and Contextual Hiding · Resolved · 2026-03-02 · docs/_archive/brainstorming/bs-037-navigation-button-ux-audit.md
+- BS-038 · Practice Engine Question Ordering Audit and Simplification Plan · Resolved · 2026-03-02 · docs/_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md
+- BS-039 · Choice Button Surface Hierarchy and Hover UX · Resolved · 2026-03-04 · docs/_archive/brainstorming/bs-039-choice-button-surface-hierarchy-and-hover-ux.md
+- BS-040 · Incorrect Answer Feedback Flow Redesign · Resolved · 2026-03-04 · docs/_archive/brainstorming/bs-040-incorrect-answer-feedback-flow-redesign.md
+- BS-041 · Feedback Display — Content vs Code Separation · Deferred · 2026-03-04 · docs/_archive/brainstorming/bs-041-feedback-display-content-vs-code-separation.md
+- BS-042 · Contrast Consistency and WCAG Compliance Audit · Archived · 2026-03-06 · docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md
+- BS-043 · Question Flow Typography and Feedback Visual Unification · Resolved · 2026-03-07 · docs/_archive/brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md
+- BS-044 · Dark Mode Border Weight Tiering — Elegance vs. Compliance · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-044-dark-mode-border-weight-tiering.md
+- BS-045 · Choice Button Dark Mode Fill and Border Refinement · Resolved · 2026-03-06 · docs/_archive/brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md
+- BS-046 · Filter Chip Fill Depth + Summary Hover Removal · Resolved · 2026-03-09 · docs/_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md
+- BS-047 · History Page — Visual Unification with Dashboard & Practice · Resolved · 2026-03-10 · docs/_archive/brainstorming/bs-047-history-sessions-tab-visual-unification.md
+- BS-048 · History Row Fill Depth, Hover Policy, and Affordance Cleanup · Resolved · 2026-03-10 · docs/_archive/brainstorming/bs-048-history-row-fill-depth-and-hover-policy.md
+- BS-049 · Bookmarks Card Visual Unification · Resolved · 2026-03-12 · docs/_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md
+- BS-050 · Practice Page Chip Hover Affordance — Border Highlight + Contrast Lift · Resolved · 2026-03-15 · docs/_archive/brainstorming/bs-050-practice-chip-hover-affordance.md
+- BS-051 · Bookmark Pill Hover Pattern Investigation — Remove Button Border Affordance · Decided · 2026-03-15 · docs/_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md
+- BS-052 · Bookmark Icon Toggle — Replace Text Pills with Filled/Unfilled Bookmark Graphic · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-052-bookmark-icon-toggle-replacement.md
+- BS-053 · Bookmark vs Mark-for-Review Collision in Exam Mode · Implemented · 2026-03-18 · docs/_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md
+- BS-054 · Session End UX -- Button Simplification and Ended-Session Reopen Bugs · Resolved · 2026-03-17 · docs/_archive/brainstorming/bs-054-session-end-ux-simplification.md
+- BS-055 · Exam Session Interaction Model — Submit Redundancy and Button Bar Inconsistency · Resolved · 2026-03-19 · docs/_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md
+- BS-056 · Magic Numbers, Hard-Coded Literals, and Constant Duplication Audit · Resolved · 2026-03-17 · docs/_archive/brainstorming/bs-056-magic-numbers-and-hardcoded-literals-audit.md
+- BS-057 · Agent-Browser Clerk Authentication Reliability · Resolved · 2026-03-18 · docs/_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md
+- BS-058 · Exam Post-Submit Flow Reorder · Implemented · 2026-03-20 · docs/_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md
+- BS-059 · Session Review Question Page Action Bar — Button Arrangement and Grouping · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-059-practice-session-action-bar-button-arrangement.md
+- BS-060 · Sentry Error Triage and Environment Hygiene · Implemented · 2026-03-24 · docs/_archive/brainstorming/bs-060-sentry-error-triage-and-environment-hygiene.md
+- BS-061 · Review Surface Divergence Audit — Three Different "Review Your Answers" Experiences · Decomposed · 2026-04-17 · docs/_archive/brainstorming/bs-061-review-surface-divergence-audit.md
+- BS-062 · Sentry Seven-Issue Triage — Report-Only CSP Telemetry vs Real Clerk Render Bug · Complete · 2026-04-09 · docs/_archive/brainstorming/bs-062-sentry-seven-issue-triage-2026-04-09.md
+- BS-063 · Exam Review Re-Entry State Confusion · Decomposed · 2026-04-17 · docs/_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md
+- BS-064 · Radio Choice Modality Split · Resolved · 2026-09-21 · docs/_archive/brainstorming/bs-064-radio-choice-modality-split.md
+
+## Audits (register retired)
+
+- AUDIT-001 · Foundation Audit Report · Resolved · 2026-02-11 · docs/_archive/audits/audit-001-foundation-report.md
+- AUDIT-002 · Foundation Audit Report #2 · Resolved · 2026-02-11 · docs/_archive/audits/audit-002-foundation-report-2.md
+- AUDIT-003 · External Integrations Review · Resolved · 2026-02-11 · docs/_archive/audits/audit-003-external-integrations.md
+- AUDIT-004 · Spec Alignment Audit (2026-02-06) · Resolved · 2026-02-11 · docs/_archive/audits/audit-004-spec-alignment.md
+- AUDIT-005 · Six-Axis Codebase Bug Sweep · Resolved · 2026-02-22 · docs/audits/index.md (row only; no file)
+- AUDIT-006 · Full-Stack Bug Sweep with 5 Parallel Agents · Resolved · 2026-02-25 · docs/audits/index.md (row only; no file)
+- AUDIT-007 · Deep Sweep for First-Principles, Silent-Drop, and Relative Bugs · Resolved · 2026-02-27 · docs/audits/index.md (row only; no file)
+- AUDIT-008 · Bug Audit #8 — Deep Codebase Sweep (Verified) · Resolved · 2026-03-02 · docs/_archive/audits/audit-008-deep-codebase-sweep.md
+- AUDIT-009 · Bug Audit #9 — Stripe Integration & Full Codebase Sweep · Resolved · 2026-03-10 · docs/_archive/audits/audit-009-stripe-and-codebase-sweep.md
+- AUDIT-010 · Exam Secrecy and Cross-Layer Invariant Sweep · Resolved · 2026-03-19 · docs/audits/index.md (row only; no file)
+- AUDIT-011 · Error Observability & Defensive Coding Sweep · Resolved · 2026-03-19 · docs/_archive/audits/audit-011-error-observability-defensive-coding.md
+- AUDIT-012 · Repository Organization, Dev Tooling, and Agent Documentation · Resolved · 2026-06-14 · docs/_archive/audits/audit-012-repo-org-devx.md
+- AUDIT-013 · Security Review of Recent Work · Resolved · 2026-10-06 · docs/_archive/audits/audit-013-security-review-2026-10-05.md
+- AUDIT-014 · External Audit of Bug and Debt Records · Resolved · 2026-10-06 · docs/_archive/audits/audit-014-external-record-audit-2026-10-06.md
+- AUDIT-015 · Bug and Debt Registers, Audited by Root Cause · Closed · 2026-10-11 · docs/audits/audit-015-register-audit-by-root-cause-2026-10-08.md

@@ -1,6 +1,5 @@
 # DEBT-515: CodeRabbit Learns Lasting Rules From Agents Speaking as the Owner
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Verifying — after promotion, the first weekly learnings issue opens and new learnings wait for approval; due 2026-10-23
 **Priority:** P2
@@ -21,7 +20,7 @@ CodeRabbit turns a chat reply into a **learning**, a rule it applies to every la
 - **Applied at once.** `.coderabbit.yaml` set no `knowledge_base.learnings.approval_delay`, and the default of 0 applies a learning immediately. `scope: auto` keeps this public repository's learnings to this repository.
 - **One asked for by the PR under review.** On #1438, an agent asked CodeRabbit to "record a learning" that removing post-closure notes from archived records restores their frozen text ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#issuecomment-6086302277)). That widened what CodeRabbit lets through in frozen history, across every later review.
 - **One stale and contradicting the code.** On #1430, an early learning ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1430#discussion_r4221572828)) says errors, DOM nodes and class instances "are intentionally left to Sentry's own serialisation". A later learning on the same PR, and `redactStrings` in `lib/sentry-data-collection.ts`, do the opposite: such values become type strings, because Sentry's serialisation can expose credentials. A reviewer holding the early rule could accept a regression to the leaky behaviour.
-- **Owner decisions encoded as reviewer rules.** Two learnings tell CodeRabbit that the owner accepts a risk: the Vercel Hobby plan until the first sale ([DEBT-512](./debt-512-production-hosting-plan-forbids-commercial-use.md); [reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1437#discussion_r4228100527)), and the stored-address fallback for legal notices ([DEBT-511](./debt-511-legal-notices-use-a-stored-email-clerk-may-have-changed.md); [reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1426#discussion_r4215878560)). Both decisions are recorded in their records. As learnings, they stop CodeRabbit from ever raising those risks again.
+- **Owner decisions encoded as reviewer rules.** Two learnings tell CodeRabbit that the owner accepts a risk: the Vercel Hobby plan until the first sale (DEBT-512; [reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1437#discussion_r4228100527)), and the stored-address fallback for legal notices (DEBT-511; [reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1426#discussion_r4215878560)). Both decisions are recorded in their records. As learnings, they stop CodeRabbit from ever raising those risks again.
 - **The rest.** The other learnings state code facts or add caution, for example that E2E runs share one Clerk user and that a release-health test must set a release. They are accurate and keep.
 
 ## Impact
@@ -48,7 +47,7 @@ No defect is known to have shipped because of a learning. The cost is assurance.
   4. #1430: "…Errors, DOM nodes, and class instances are intentionally left to Sentry's own serialisation…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1430#discussion_r4221572828)). It is stale and contradicts the code.
 - **Prune, found 2026-10-10.** A learning from #285 (2026-04-25), on `docs/bugs/bug-236-…`, says a bug record keeps `Status: Open` with a `Resolution State` field until after merge, and that a fixing PR must never set its record's status or archive it. AGENTS.md's record lifecycle says the opposite. CodeRabbit still listed it under "Learnings used" on #1456 ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1456#discussion_r4238713688)), and it shaped one finding in a round that also caught a stale summary. It predates the 30-day hold, so nothing listed it.
   - **For the owner:** delete it at app.coderabbit.ai/learnings. Search for "Resolution State".
-  - **In the repository:** `.coderabbit.yaml` now gives `docs/bugs/**` and `docs/debt/**` path instructions that cite AGENTS.md's record sections and override any stored learning. AGENTS.md's CodeRabbit Learnings section says what to do with the next learning that contradicts it.
+  - **In the repository:** `.coderabbit.yaml` now gives `docs/records/**` path instructions that cite the records rules and override any stored learning. AGENTS.md's CodeRabbit Learnings section says what to do with the next learning that contradicts it.
   - **The pattern.** Stale backlog learnings are the risk the hold cannot reach. This is a second one, after #1430's, so it strengthens the case for triaging the backlog's 72 flagged learnings, or resetting the knowledge base.
 - **Backlog, the owner's call.** The 250 learnings recorded before the hold applied at once. The owner either triages the 72 flagged ones in CodeRabbit's app, or resets the knowledge base: `knowledge_base.opt_out: true` deletes every stored learning, and turning it off again starts a clean, held one. A reset also loses the accurate learnings that keep CodeRabbit from repeating false positives, so triage comes first.
 - **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. The register's Now stanza lists it among the owner's decisions; it moves to the Deferred table when this record is archived.
@@ -65,5 +64,5 @@ No defect is known to have shipped because of a learning. The cost is assurance.
 ## Related
 
 - [CodeRabbit's configuration reference](https://docs.coderabbit.ai/reference/configuration): `knowledge_base.learnings`.
-- [DEBT-508](./debt-508-concurrent-e2e-runs-share-clerk-budget-and-stripe-customer.md): the shared Clerk user, one of the learnings that stay.
+- DEBT-508: the shared Clerk user, one of the learnings that stay.
 - [AGENTS.md — How to Check](../../AGENTS.md#how-to-check): the merge command.

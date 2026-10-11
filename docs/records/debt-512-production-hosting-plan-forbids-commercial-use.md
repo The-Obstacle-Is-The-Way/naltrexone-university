@@ -1,6 +1,5 @@
 # DEBT-512: Production Runs on a Hosting Plan Whose Terms Forbid Commercial Use
 
-> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Open — the owner keeps Hobby until the first live sale (decided 2026-10-09), then moves production to Vercel Pro
 **Priority:** P2
@@ -41,4 +40,4 @@ The plan also sets several limits the records work around:
 
 ## Related
 
-- [AUDIT-015](../audits/audit-015-register-audit-by-root-cause-2026-10-08.md): the audit that found it.
+- AUDIT-015: the audit that found it.
