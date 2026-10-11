@@ -59,5 +59,5 @@ When upgrading any vendor:
 
 ## See Also
 
-- `docs/bugs/` — Bug reports (may reference vendor issues)
+- `docs/records/` — Bug and debt records (may reference vendor issues)
 - `docs/adr/` — Architecture decisions (may affect vendor choices)

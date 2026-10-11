@@ -68,7 +68,8 @@ export default defineConfig({
     },
     {
       // DEBT-468: re-runs the @mobile-smoke journeys, plus the layout probe,
-      // at the 375×667 width QA-002 checks by hand.
+      // at a 375×667 phone viewport. The billing QA procedure checks 390×844
+      // by hand (docs/guides/qa/billing-and-entitlement.md).
       name: 'mobile-smoke',
       use: { ...devices['Pixel 5'], viewport: { width: 375, height: 667 } },
       dependencies: ['setup'],

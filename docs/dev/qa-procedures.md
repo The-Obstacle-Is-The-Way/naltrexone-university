@@ -6,9 +6,9 @@ Scripted, repeatable test procedures that exercise the system **at the UI** — 
 
 1. **Unit tests** (TDD, colocated) prevent regressions in logic.
 2. **The rule-to-test register** (`docs/dev/acceptance-testing.md`; it replaces the Gherkin acceptance tests, not adopted on 2026-10-03) names each business rule and the tests that prove it below the UI.
-3. **QA procedures** (this doc + the `docs/qa/` register) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
+3. **QA procedures** (this doc and [the procedures in `docs/guides/qa/`](../guides/qa/README.md)) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
 
-A QA procedure is a numbered, versioned markdown script (`docs/qa/qa-NNN-slug.md`) that a human, an agent, or a Playwright-assisted run can execute against a running app, with explicit expected results and evidence capture.
+A QA procedure is a Markdown script (`docs/guides/qa/<subject>.md`) that a human, an agent, or a Playwright-assisted run can execute against a running app, with explicit expected results and evidence capture.
 
 ---
 
@@ -25,22 +25,22 @@ Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verificat
 
 ---
 
-## The register
+## Where they live
 
-- **Index:** `docs/qa/index.md` — procedure table, statuses, and the `**Next QA ID:**` allocator (same register mechanics as `docs/debt/` and `docs/bugs/`).
-- **Procedures:** `docs/qa/qa-NNN-short-slug.md`, IDs zero-padded to 3 digits, allocated at doc-creation time by bumping the allocator.
-- **Evidence assets:** representative WebP/PNG screenshots go in `docs/qa/assets/qa-NNN/` (mirroring `docs/debt/assets/debt-NNN/`). Working screenshots stay in the gitignored `audit-screenshots/`.
+- **Index:** `docs/guides/qa/README.md` lists the procedures, their statuses, the surfaces not yet covered, and the template.
+- **Procedures:** `docs/guides/qa/<subject>.md`, named by what they cover; there are no QA IDs.
+- **Evidence:** attach representative screenshots to the pull request or the run's report, not the repository. Working screenshots stay in the gitignored `audit-screenshots/`.
 
 ## Procedure format
 
-Every procedure uses this skeleton (copy from `docs/qa/index.md` → Template):
+Every procedure uses this skeleton (copy it from `docs/guides/qa/README.md` → Template):
 
 - **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
 - **Steps table:** `| # | Action | Expected |` — one operator checkpoint per row, with explicit actions and verifiable expectations. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
 - **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/frontend/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
 - **Viewports:** default to the established audit pair — **1600×1000 desktop** and **390×844 mobile** — unless the procedure states otherwise.
 - **Evidence:** which steps require screenshots, and where they land.
-- **On failure:** file a `BUG-NNN` in `docs/bugs/index.md` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the procedure links the finding.
+- **On failure:** file a bug record in `docs/records/` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the procedure links the finding.
 
 ## Execution modes
 

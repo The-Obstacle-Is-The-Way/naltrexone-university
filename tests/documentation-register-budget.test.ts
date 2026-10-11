@@ -16,14 +16,12 @@ const now = '**Now** — current\n\n';
 describe('documentation register size budget', () => {
   // An index is a list of open records and the current position, not a
   // history; its budget keeps it that way.
-  it.each(['docs/debt/index.md', 'docs/qa/index.md'])(
-    'reports %s over its 32 KiB budget, counted in bytes',
-    (file) => {
-      expect(audit({ [file]: `${now}${'€'.repeat(23_000)}` })).toMatchObject({
-        oversized: [file],
-      });
-    },
-  );
+  it('reports the records index over its 32 KiB budget, counted in bytes', () => {
+    const file = 'docs/records/README.md';
+    expect(audit({ [file]: `${now}${'€'.repeat(23_000)}` })).toMatchObject({
+      oversized: [file],
+    });
+  });
 
   // Frozen register history is parsed whole by the link audit, so its size
   // bounds that audit's cost.
@@ -41,10 +39,10 @@ describe('documentation register size budget', () => {
     const archiveAtBudget = 'a'.repeat(REGISTER_ARCHIVE_BUDGET_BYTES);
     expect(
       audit({
-        'docs/debt/index.md': indexAtBudget,
+        'docs/records/README.md': indexAtBudget,
         'docs/_archive/debt/register-history-2026-09.md': archiveAtBudget,
         'docs/_archive/debt/register-frozen-2026-10-05.md': archiveAtBudget,
-        'docs/debt/debt-001-large-record.md': `**Status:** Active\n\n${archiveAtBudget}`,
+        'docs/records/debt-001-large-record.md': `**Status:** Active\n\n${archiveAtBudget}`,
         'docs/guide.md': `${archiveAtBudget}a`,
       }),
     ).toMatchObject({ oversized: [] });

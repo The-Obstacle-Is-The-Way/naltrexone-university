@@ -23,7 +23,7 @@ Dates labeled **Register date** are copied from the actual date cell, not a date
 | D7 ruleset | Confirmed: API readback of ruleset 17666822 targets main/dev, enforces merge-only, strict Actions `test`, thread resolution and deletion/non-fast-forward protection, with zero approvals and no bypass actors. [GitHub's reference](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#additional-approval-for-unattributed-copilot-pull-requests) says the Copilot-only extra-approval flag has no effect with zero approvals. AGENTS.md now separates this enforcement from review/provenance process checks. |
 | D8 guard | Confirmed on the baseline: synthetic live `Status: ✅ RESOLVED` and `Resolution State: Fixed` records both returned an empty `closedLive`; archived dispositions and Latest multiplicity are not checked. This PR changes no scanner or test. The bounded guard follow-up remains pending. |
 
-The WIP branch is remote-only at `9446b459`, 83 commits behind dev with one unique commit. The [September 21 inventory](../inventory-2026-09-21/verification.md#published-rate-limiter-wip--adapt-do-not-land-in-this-pass) already records 14 passing, mutation-proven cases; that is not proof on the current base. The WIP is unchanged by this PR.
+The WIP branch is remote-only at `9446b459`, 83 commits behind dev with one unique commit. The [September 21 inventory](../../../records/assets/inventory-2026-09-21/verification.md#published-rate-limiter-wip--adapt-do-not-land-in-this-pass) already records 14 passing, mutation-proven cases; that is not proof on the current base. The WIP is unchanged by this PR.
 
 ## Debt backfill sample
 
