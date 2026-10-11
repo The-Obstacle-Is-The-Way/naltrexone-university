@@ -2,10 +2,12 @@
 // against that key alone, so a key that is not Clerk's would sign every
 // visitor out. This compares it with the keys Clerk publishes for the
 // instance, at its Frontend API's `/.well-known/jwks.json`, and fails the
-// build on a mismatch. It runs before next build (package.json), which covers
-// every Vercel deploy. Without the key it passes and reads nothing.
+// deploy on a mismatch. It is the first step of vercel.json's buildCommand, so
+// a wrong key stops a deploy before the migrations change the database.
+// Without the key it passes and reads nothing.
 import { pathToFileURL } from 'node:url';
 import {
+  isPublishedKeySet,
   matchesPublishedClerkKeys,
   parseClerkJwtKey,
 } from '../lib/clerk-jwt-key';
@@ -15,7 +17,7 @@ const READ_TIMEOUT_MS = 10_000;
 export type ClerkJwtKeyCheck = {
   env: Record<string, string | undefined>;
   readJson: (url: string) => Promise<unknown>;
-  output: Pick<Console, 'log' | 'error'>;
+  output: Pick<Console, 'log' | 'warn' | 'error'>;
 };
 
 // The Frontend API host a publishable key names: base64 of the host and `$`.
@@ -28,6 +30,22 @@ function frontendApiHost(publishableKey: string | undefined): string | null {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+// Only a key set without the key is evidence the key is wrong. A failed read
+// is not, and the key changes only when someone edits it, so refusing would
+// let a Clerk outage block every production deploy, a fix for that outage
+// included. A wrong key would still raise clerk_session_tokens_rejected within
+// a minute of signed-in traffic.
+function unchecked(
+  output: ClerkJwtKeyCheck['output'],
+  host: string,
+  reason: string,
+): number {
+  output.warn(
+    `could not read the keys Clerk publishes for ${host} (${reason}), so this build uses CLERK_JWT_KEY unchecked`,
+  );
+  return 0;
 }
 
 export async function checkClerkJwtKey({
@@ -57,10 +75,10 @@ export async function checkClerkJwtKey({
   try {
     published = await readJson(`https://${host}/.well-known/jwks.json`);
   } catch (error) {
-    output.error(
-      `could not read the keys Clerk publishes for ${host}: ${messageOf(error)}`,
-    );
-    return 1;
+    return unchecked(output, host, messageOf(error));
+  }
+  if (!isPublishedKeySet(published)) {
+    return unchecked(output, host, 'the answer is not a key set');
   }
   if (!matchesPublishedClerkKeys(key, published)) {
     output.error(`CLERK_JWT_KEY is not a key Clerk publishes for ${host}`);
@@ -85,7 +103,7 @@ export async function readPublishedKeys(
 /** The command line's run: the real environment, console and Clerk. */
 export function runFromCommandLine(
   env: Record<string, string | undefined> = process.env,
-  output: Pick<Console, 'log' | 'error'> = console,
+  output: Pick<Console, 'log' | 'warn' | 'error'> = console,
   readJson: (url: string) => Promise<unknown> = readPublishedKeys,
 ): Promise<number> {
   return checkClerkJwtKey({ env, readJson, output });
