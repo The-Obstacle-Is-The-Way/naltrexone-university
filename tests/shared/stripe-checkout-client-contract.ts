@@ -592,10 +592,12 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       // An id Stripe does not hold is refused with a 404 resource_missing,
       // which the webhook reads as no owner evidence.
       const missingId = `cus_debt472missing${randomUUID().replaceAll('-', '')}`;
-      const caught = await harness.customers.retrieve(missingId).then(
-        () => undefined,
-        (error: unknown) => error,
-      );
+      let caught: unknown;
+      try {
+        await harness.customers.retrieve(missingId);
+      } catch (error) {
+        caught = error;
+      }
       expect(readErrorField(caught, 'type')).toBe('StripeInvalidRequestError');
       expect(readErrorField(caught, 'rawType')).toBe('invalid_request_error');
       expect(readErrorField(caught, 'code')).toBe('resource_missing');
