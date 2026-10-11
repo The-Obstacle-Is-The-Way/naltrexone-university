@@ -31,6 +31,7 @@ function run(
     },
     output: {
       log: (line: string) => lines.push(`log ${line}`),
+      warn: (line: string) => lines.push(`warn ${line}`),
       error: (line: string) => lines.push(`error ${line}`),
     },
   });
@@ -63,20 +64,26 @@ describe('checkClerkJwtKey', () => {
     expect(read).toEqual(['https://clerk.example.com/.well-known/jwks.json']);
   });
 
-  it('fails a key Clerk does not publish', async () => {
-    const { done, lines } = run(
-      {
-        CLERK_JWT_KEY: rsaKey().pem,
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
-      },
-      async () => ({ keys: [rsaKey().jwk] }),
-    );
+  it.each([
+    ['another key', () => ({ keys: [rsaKey().jwk] })],
+    ['no key at all', () => ({ keys: [] })],
+  ])(
+    'fails a key Clerk does not publish, when Clerk publishes %s',
+    async (_label, published) => {
+      const { done, lines } = run(
+        {
+          CLERK_JWT_KEY: rsaKey().pem,
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+        },
+        async () => published(),
+      );
 
-    expect(await done).toBe(1);
-    expect(lines).toEqual([
-      'error CLERK_JWT_KEY is not a key Clerk publishes for clerk.example.com',
-    ]);
-  });
+      expect(await done).toBe(1);
+      expect(lines).toEqual([
+        'error CLERK_JWT_KEY is not a key Clerk publishes for clerk.example.com',
+      ]);
+    },
+  );
 
   it('fails an unreadable key', async () => {
     const { done, lines } = run({
@@ -90,24 +97,47 @@ describe('checkClerkJwtKey', () => {
     ]);
   });
 
-  // A failed build leaves the live deployment serving, so the check fails
-  // closed rather than deploy a key it could not compare.
-  it("fails when Clerk's published keys cannot be read", async () => {
-    const { done, lines } = run(
-      {
-        CLERK_JWT_KEY: rsaKey().pem,
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
-      },
+  // A read that fails, or an answer that is not a key set, is no evidence the
+  // key is wrong, and the key changes only when someone edits it. Refusing
+  // would let a Clerk outage block every production deploy, a fix for that
+  // outage included, so the build goes on and says so. A wrong key would still
+  // raise clerk_session_tokens_rejected within a minute of signed-in traffic.
+  it.each([
+    [
+      'Clerk does not answer',
       async () => {
         throw new Error('HTTP 503');
       },
-    );
+      'HTTP 503',
+    ],
+    [
+      'the read fails without an Error',
+      async () => Promise.reject('socket hang up'),
+      'socket hang up',
+    ],
+    [
+      'Clerk answers with something other than a key set',
+      async () => ({ errors: [{ code: 'internal' }] }),
+      'the answer is not a key set',
+    ],
+    ['Clerk answers null', async () => null, 'the answer is not a key set'],
+  ])(
+    'builds with the key unchecked when %s',
+    async (_label, published, reason) => {
+      const { done, lines } = run(
+        {
+          CLERK_JWT_KEY: rsaKey().pem,
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+        },
+        published,
+      );
 
-    expect(await done).toBe(1);
-    expect(lines).toEqual([
-      'error could not read the keys Clerk publishes for clerk.example.com: HTTP 503',
-    ]);
-  });
+      expect(await done).toBe(0);
+      expect(lines).toEqual([
+        `warn could not read the keys Clerk publishes for clerk.example.com (${reason}), so this build uses CLERK_JWT_KEY unchecked`,
+      ]);
+    },
+  );
 
   it.each([
     ['not a publishable key', 'not-a-key'],
@@ -127,21 +157,6 @@ describe('checkClerkJwtKey', () => {
     ]);
   });
 
-  it('reports a read that fails without an Error', async () => {
-    const { done, lines } = run(
-      {
-        CLERK_JWT_KEY: rsaKey().pem,
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
-      },
-      async () => Promise.reject('socket hang up'),
-    );
-
-    expect(await done).toBe(1);
-    expect(lines).toEqual([
-      'error could not read the keys Clerk publishes for clerk.example.com: socket hang up',
-    ]);
-  });
-
   it('fails without a publishable key naming the instance', async () => {
     const { done, lines } = run({ CLERK_JWT_KEY: rsaKey().pem });
 
@@ -152,15 +167,18 @@ describe('checkClerkJwtKey', () => {
   });
 });
 
-describe('the build', () => {
-  it('runs this check before next build, so no deploy is built with a wrong key', () => {
-    const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
-    const steps: string[] = scripts.build.split(' && ');
+describe('the deploy', () => {
+  it('runs this check first, so a wrong key stops it before the migrations change the database', () => {
+    const { buildCommand } = JSON.parse(readFileSync('vercel.json', 'utf8'));
+    const steps: string[] = buildCommand.split(' && ');
 
-    expect(steps.slice(0, steps.indexOf('next build') + 1)).toEqual([
-      'tsx scripts/check-clerk-jwt-key.ts',
-      'next build',
-    ]);
+    expect(steps[0]).toBe('pnpm exec tsx scripts/check-clerk-jwt-key.ts');
+  });
+
+  it('is not run again by pnpm build, which every deploy reaches last', () => {
+    const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+
+    expect(scripts.build).not.toContain('check-clerk-jwt-key');
   });
 });
 
@@ -201,6 +219,7 @@ describe('runFromCommandLine', () => {
     return {
       lines,
       log: (line: string) => lines.push(`log ${line}`),
+      warn: (line: string) => lines.push(`warn ${line}`),
       error: (line: string) => lines.push(`error ${line}`),
     };
   }

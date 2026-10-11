@@ -55,21 +55,32 @@ export function parseClerkJwtKey(raw: string | undefined): string | undefined {
   return pem;
 }
 
+/** A JSON Web Key Set, as Clerk's Frontend API serves it. */
+export type PublishedKeySet = { keys: unknown[] };
+
+/**
+ * Whether an answer is a key set at all. Only a key set can show that the
+ * configured key is wrong; any other answer says nothing about it.
+ */
+export function isPublishedKeySet(value: unknown): value is PublishedKeySet {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'keys' in value &&
+    Array.isArray(value.keys)
+  );
+}
+
 /**
  * Whether the configured key is one Clerk publishes for the instance, in the
  * JSON Web Key Set its Frontend API serves at `/.well-known/jwks.json`.
  */
 export function matchesPublishedClerkKeys(
   pem: string,
-  published: unknown,
+  published: PublishedKeySet,
 ): boolean {
-  const keys =
-    published && typeof published === 'object' && 'keys' in published
-      ? published.keys
-      : undefined;
-  if (!Array.isArray(keys)) return false;
   const { n, e } = createPublicKey(pem).export({ format: 'jwk' });
-  return keys.some(
+  return published.keys.some(
     (key: unknown) =>
       typeof key === 'object' &&
       key !== null &&

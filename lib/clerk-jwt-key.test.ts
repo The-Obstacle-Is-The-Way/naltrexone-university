@@ -1,6 +1,10 @@
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { matchesPublishedClerkKeys, parseClerkJwtKey } from './clerk-jwt-key';
+import {
+  isPublishedKeySet,
+  matchesPublishedClerkKeys,
+  parseClerkJwtKey,
+} from './clerk-jwt-key';
 
 function rsaKeys(modulusLength = 2048) {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
@@ -86,8 +90,27 @@ describe('matchesPublishedClerkKeys', () => {
     ).toBe(false);
   });
 
-  it('does not match an answer without keys', () => {
-    expect(matchesPublishedClerkKeys(rsaKeys().pem, {})).toBe(false);
-    expect(matchesPublishedClerkKeys(rsaKeys().pem, null)).toBe(false);
+  it('does not match an empty key set', () => {
+    expect(matchesPublishedClerkKeys(rsaKeys().pem, { keys: [] })).toBe(false);
+  });
+});
+
+// Only a key set can show the configured key is wrong; any other answer says
+// nothing about it (scripts/check-clerk-jwt-key.ts).
+describe('isPublishedKeySet', () => {
+  it.each([
+    ['an empty key set', { keys: [] }],
+    ['a key set', { keys: [{ kty: 'RSA' }] }],
+  ])('accepts %s', (_label, answer) => {
+    expect(isPublishedKeySet(answer)).toBe(true);
+  });
+
+  it.each([
+    ['null', null],
+    ['text', 'maintenance'],
+    ['an object without keys', { errors: [{ code: 'internal' }] }],
+    ['keys that are not a list', { keys: { kty: 'RSA' } }],
+  ])('refuses %s', (_label, answer) => {
+    expect(isPublishedKeySet(answer)).toBe(false);
   });
 });
