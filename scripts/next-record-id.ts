@@ -51,15 +51,32 @@ export function repositoryNextRecordId(
   return nextRecordId(prefix, files, readFileSync(ledger, 'utf8'));
 }
 
+export function runNextRecordIdCommand(
+  args: readonly string[],
+  root: string,
+  output: Pick<Console, 'log' | 'error'>,
+): number {
+  const prefix = args[0];
+  if (prefix !== 'bug' && prefix !== 'debt') {
+    output.error('Usage: tsx scripts/next-record-id.ts bug|debt');
+    return 2;
+  }
+  try {
+    output.log(repositoryNextRecordId(prefix, root));
+    return 0;
+  } catch (error) {
+    output.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  const prefix = process.argv[2];
-  if (prefix !== 'bug' && prefix !== 'debt') {
-    console.error('Usage: tsx scripts/next-record-id.ts bug|debt');
-    process.exitCode = 2;
-  } else {
-    console.log(repositoryNextRecordId(prefix));
-  }
+  process.exitCode = runNextRecordIdCommand(
+    process.argv.slice(2),
+    process.cwd(),
+    console,
+  );
 }

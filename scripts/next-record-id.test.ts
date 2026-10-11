@@ -2,7 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { nextRecordId, repositoryNextRecordId } from './next-record-id';
+import {
+  nextRecordId,
+  repositoryNextRecordId,
+  runNextRecordIdCommand,
+} from './next-record-id';
 
 describe('nextRecordId', () => {
   it('takes one past the highest ID among open records, the ledger and the archive', () => {
@@ -58,5 +62,57 @@ describe('repositoryNextRecordId', () => {
       writeFileSync(path.join(root, file), contents);
     }
     expect(repositoryNextRecordId('bug', root)).toBe('BUG-015');
+  });
+});
+
+describe('runNextRecordIdCommand', () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true });
+  });
+
+  function repository(): string {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'next-record-id-cli-'));
+    roots.push(root);
+    mkdirSync(path.join(root, 'docs/records'), { recursive: true });
+    writeFileSync(
+      path.join(root, 'docs/records/closed.md'),
+      '- DEBT-007 · Closed · Resolved · 2026-10-11 · a.md',
+    );
+    return root;
+  }
+
+  function capture() {
+    const lines: string[] = [];
+    const errors: string[] = [];
+    return {
+      lines,
+      errors,
+      output: {
+        log: (line: string) => lines.push(line),
+        error: (line: string) => errors.push(line),
+      },
+    };
+  }
+
+  it('prints the next ID for a prefix', () => {
+    const { lines, output } = capture();
+    expect(runNextRecordIdCommand(['debt'], repository(), output)).toBe(0);
+    expect(lines).toEqual(['DEBT-008']);
+  });
+
+  it('rejects anything but bug or debt, with usage', () => {
+    const { errors, output } = capture();
+    expect(runNextRecordIdCommand(['spec'], repository(), output)).toBe(2);
+    expect(errors).toEqual(['Usage: tsx scripts/next-record-id.ts bug|debt']);
+  });
+
+  it('fails without the ledger rather than guess', () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'next-record-id-cli-'));
+    roots.push(root);
+    const { lines, errors, output } = capture();
+    expect(runNextRecordIdCommand(['bug'], root, output)).toBe(1);
+    expect(lines).toEqual([]);
+    expect(errors[0]).toContain('docs/records/closed.md');
   });
 });
