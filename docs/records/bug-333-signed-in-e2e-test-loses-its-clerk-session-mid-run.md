@@ -101,6 +101,8 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 
 **Decided:** option 1, done; option 8, built. Option 5, reporting the race to Clerk, is the owner's call, and would let option 8 go once Clerk fixes it. A quiet period does not close this record: it would not show whether the cause went away or only did not fire, since 1,150 attempts passed before the first loss.
 
+*Corrected 2026-10-11: BUG-337 shows a mid-run sign-out after the echo drop. A server action was answered `signed-out`, `dev-browser-missing`, in CI twice and locally once, so this record's check is in doubt. The two are being fixed together.*
+
 ## Verification
 
 - [x] A loss prints an `[E2E_CLERK_AUTH_TRACE]` trail, recorded here. *2026-10-10: a local gate's hosted lane, above; a CI one would show whether the earlier losses share it.*
