@@ -50,7 +50,10 @@ async function verifyWith(jwtKey: string, token: string) {
   const now = Math.floor(Date.now() / 1000);
   const request = new NextRequest('https://example.com/app/dashboard', {
     headers: {
-      cookie: `__session=${token}; __client_uat=${now - 10}`,
+      // Well before the token's issue time: a client signed in later than its
+      // token was issued gets a handshake, so a second boundary crossed
+      // between the two clock reads would otherwise fail the test.
+      cookie: `__session=${token}; __client_uat=${now - 600}`,
       accept: 'text/html',
       'sec-fetch-dest': 'document',
     },

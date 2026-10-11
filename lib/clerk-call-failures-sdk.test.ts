@@ -95,7 +95,10 @@ async function clerkAnswerTo(
 
 function signedInCookies(token: string) {
   const now = Math.floor(Date.now() / 1000);
-  return `__session=${token}; __client_uat=${now - 120}; ${REFRESH_COOKIE}=refresh_sdk`;
+  // Well before the token's issue time: a client signed in later than its
+  // token was issued gets a handshake, so a second boundary crossed between
+  // the two clock reads would otherwise change the answer.
+  return `__session=${token}; __client_uat=${now - 600}; ${REFRESH_COOKIE}=refresh_sdk`;
 }
 
 // DEBT-503 item 3, against the installed SDK: each failure is read from the
