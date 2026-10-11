@@ -821,6 +821,22 @@ export type WatchOutcome = RaiseOutcome & {
   unwatched: string[];
 };
 
+// A read that fails for any reason but a missing repository or the rate limit
+// is tried once more, as a package manifest is, so a passing GitHub error
+// (a 502 failed the scheduled run of 2026-10-11) does not fail the run.
+async function readAdvisories(
+  list: (repository: string) => Promise<UpstreamAdvisory[]>,
+  repository: string,
+): Promise<UpstreamAdvisory[]> {
+  try {
+    return await list(repository);
+  } catch (error) {
+    if (error instanceof RateLimited || error instanceof RepositoryNotFound)
+      throw error;
+    return list(repository);
+  }
+}
+
 // One unreadable repository (archived or briefly failing) must not stop
 // alerts from the others; the run still fails afterwards, so it is seen.
 export async function watchUpstreamAdvisories(
@@ -844,7 +860,7 @@ export async function watchUpstreamAdvisories(
   ];
   for (const { repository, direct } of sources) {
     try {
-      const listed = await list(repository);
+      const listed = await readAdvisories(list, repository);
       advisories.push(
         ...(direct
           ? listed

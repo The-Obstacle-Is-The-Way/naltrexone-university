@@ -2,7 +2,7 @@
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Open — rule decided; the watcher now covers every repository behind `pnpm-lock.yaml`; waiting for a scheduled run that reads them, `vite` 8.3.3 and the two pending Next.js fixes
+**Status:** Open — rule decided; the watcher covers every repository behind `pnpm-lock.yaml`, and its scheduled runs read them; waiting for `vite` 8.3.3 and the two pending Next.js fixes
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -65,7 +65,7 @@ For the two pending Next.js fixes:
 
 - **What it watches.** The repository of every direct dependency, listed in the script's `DEPENDENCY_REPOSITORIES` map from each package's npm `repository` field: 41 repositories for 54 dependencies. Only `server-only`, a marker package, names none. A test fails CI when `package.json` and the map disagree, so a new dependency cannot go unwatched. Since 2026-10-08 it also watches the repositories behind every other package in `pnpm-lock.yaml`, resolved when it runs; see below.
 - **What it opens.** One issue per advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.
-- **Failure handling.** Only advisories published since the start are validated, so one malformed historical entry cannot fail every run. One unreadable repository, or one issue that cannot be opened, does not block the others: the run raises what it can, then fails and names what it could not. Only a failure to list existing issues fails the run outright, because without that list nothing can be deduplicated, and so does a read refused for the API rate limit, since every later request would be refused too. A package manifest that cannot be read is tried once more before it counts as unreadable, so a passing registry error does not fail a run.
+- **Failure handling.** Only advisories published since the start are validated, so one malformed historical entry cannot fail every run. One unreadable repository, or one issue that cannot be opened, does not block the others: the run raises what it can, then fails and names what it could not. Only a failure to list existing issues fails the run outright, because without that list nothing can be deduplicated, and so does a read refused for the API rate limit, since every later request would be refused too. A package manifest that cannot be read is tried once more before it counts as unreadable, so a passing registry error does not fail a run. So is a repository's advisory read that fails for any reason but a missing repository or the rate limit, since 2026-10-11, when one GitHub 502 among 392 reads failed a scheduled run (below).
 - **Who it notifies.** An issue alone notifies only people watching the repository, which a repository owner can turn off. Critical and high advisories are therefore assigned to the repository owner, because GitHub notifies an assignee whatever their watch setting. Medium and low advisories open unassigned. The volume makes this split matter: in the 12 months to 2026-10-07 the watched repositories published 81 advisories, 45 of them critical or high, about one a week. 45 of the 81 were Next.js's.
 
 **Why every dependency, not a list.** The first version watched only Next.js. On 2026-10-07 a reviewer asked whether Clerk should be added. Measuring every dependency repository answered it: Clerk's 5 published advisories had all reached GitHub's database, but Sentry and Vite each had advisories that had not. That makes a hand-picked list the wrong shape, and the map plus its test the right one. The measurement is in the playbook's table.
@@ -84,6 +84,11 @@ For the two pending Next.js fixes:
 
 **Local dry run with indirect dependencies (2026-10-08).** Real registry, advisory and issue reads, with issue creation replaced by a recorder, resolved all 976 locked packages in 12 seconds. The run read 464 of the 465 repositories in 170 seconds and would open no issue: the Vite issues already exist, and no indirect repository has published a critical or high advisory since 2026-10-01. Not watched: `client-only` and `eyes`, which name no repository, and `commondir`'s deleted `substack/node-commondir`.
 
+**Scheduled runs with indirect dependencies (2026-10-10 and 11).**
+- **Two succeeded.** Runs 38089084777 (21:49:26Z, on `10ffea8c`, which carries #1436) and 38116327874 (05:54:53Z, on `23ea4bbe`) each read 392 repositories, in 1m54s and 2m43s against the 15-minute timeout. Each raised nothing. Neither was refused for the rate limit, which would have stopped it. Not watched: `client-only@0.0.1`, which names no repository, and the deleted `substack/node-commondir`.
+- **One failed on a passing error.** Run 38141339848 (12:58:48Z) read 391. GitHub answered the read of `sindresorhus/has-flag` with HTTP 502, and the run named it unreadable and failed. Manifest reads were already tried twice; repository reads were not, so one bad answer failed the run.
+- **Fixed 2026-10-11, test-first.** A repository read that fails for any reason but a missing repository or the rate limit is now tried once more. It counts as unreadable, and fails the run, only when the second read fails too. A missing repository and a rate-limit refusal are still read once.
+
 ## Exit
 
 Close when the watcher has a successful scheduled run that reads the indirect dependencies' repositories, the Vite fix has landed, and both pending Next.js advisories are published, assessed, and either fixed in production or recorded here as not applying.
@@ -97,7 +102,7 @@ Close when the watcher has a successful scheduled run that reads the indirect de
 - [x] The three Vite advisories triaged as not urgent, and their issues closed (2026-10-08).
 - [x] Indirect dependencies watched, implemented test-first, with a local dry run that read 464 of 465 repositories (2026-10-08).
 - [x] Issues that GitHub's review rules out close themselves, implemented test-first and checked against the 95 advisories of 2026-06-14 to 2026-10-08 with no wrong closure (2026-10-08).
-- [ ] A scheduled run on `main` succeeds after the indirect change, within the 15-minute timeout and the token's 1,000 requests an hour.
+- [x] A scheduled run on `main` succeeds after the indirect change, within the 15-minute timeout and the token's 1,000 requests an hour: run 38089084777, 392 repositories in 1m54s, not refused (2026-10-10).
 - [ ] The first issue closed after GitHub's review carries correct evidence.
 - [ ] The first critical or high issue confirms the owner receives the assignment notification.
 - [ ] `vite` 8.3.3 or later lands after 2026-10-13T04:10:19Z.

@@ -254,6 +254,63 @@ describe('watching several repositories', () => {
     expect(issues.issues).toHaveLength(1);
   });
 
+  // A read that fails for any other reason, such as the passing 502 that
+  // failed the scheduled run of 2026-10-11 12:58Z, is tried once more, as a
+  // package manifest is, so one bad answer among ~390 reads does not fail it.
+  it('reads a repository once more after a failed read, and fails nothing when that read works', async () => {
+    const issues = new MemoryIssues();
+    const read: string[] = [];
+    const outcome = await watchUpstreamAdvisories(
+      { direct: [], indirect: ['nodejs/undici'] },
+      manifest,
+      issues,
+      async (repository) => {
+        read.push(repository);
+        if (read.length === 1) throw new Error('gh: Server Error (HTTP 502)');
+        return [advisory()];
+      },
+      unreviewed,
+    );
+    expect(read).toEqual(['nodejs/undici', 'nodejs/undici']);
+    expect(outcome).toMatchObject({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      read: 1,
+      unreadable: [],
+    });
+  });
+
+  it('names a repository unreadable when its second read fails too', async () => {
+    const read: string[] = [];
+    const outcome = await watchUpstreamAdvisories(
+      { direct: ['broken/repo'], indirect: [] },
+      manifest,
+      new MemoryIssues(),
+      async (repository) => {
+        read.push(repository);
+        throw new Error('gh: Server Error (HTTP 502)');
+      },
+      unreviewed,
+    );
+    expect(read).toEqual(['broken/repo', 'broken/repo']);
+    expect(outcome).toMatchObject({ read: 0, unreadable: ['broken/repo'] });
+  });
+
+  // A missing repository stays missing, so it is not asked for twice.
+  it('reads a missing repository only once', async () => {
+    const read: string[] = [];
+    await watchUpstreamAdvisories(
+      { direct: ['gone/direct'], indirect: ['substack/node-commondir'] },
+      manifest,
+      new MemoryIssues(),
+      async (repository) => {
+        read.push(repository);
+        throw new RepositoryNotFound(repository);
+      },
+      unreviewed,
+    );
+    expect(read).toEqual(['gone/direct', 'substack/node-commondir']);
+  });
+
   // Medium and low advisories from those repositories reach Dependabot in
   // time (106 of 109 in the year to 2026-10-08), so only the ones the
   // same-day rule acts on are raised early. An unknown severity is raised.
