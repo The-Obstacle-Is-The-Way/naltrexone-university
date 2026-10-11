@@ -15,4 +15,4 @@ Vendored skills that Claude Code and Codex load: `.claude/skills/*` and `.codex/
 
 ## Removing a Skill
 
-Delete its folder, both symlinks and its manifest entry, and lower the count in `skills.manifest.schema.json`, all in one change. A skill that contradicts the repository goes. For example, `using-drizzle-queries` imported the database directly, `neon-drizzle-setup` targeted a driver this repository does not use, and `stripe-subscriptions` chained recipes for a dependency it does not have.
+Removing substantive skill content needs the owner’s agreement. After that decision, delete its folder, both symlinks and its manifest entry, and lower the count in `skills.manifest.schema.json`, all in one change. Until then, preserve the source and apply the repository’s precedence rule above. The generic `using-drizzle-queries`, `neon-drizzle-setup` and `stripe-subscriptions` recipes need review: their direct database imports, driver choices and dependency assumptions must not override this repository’s injected database and billing patterns. Their removal is proposed, not authorized by a documentation move.
