@@ -5,8 +5,8 @@ name: CodeRabbit learnings review
 # a rule nobody reviewed. `.coderabbit.yaml` holds each new learning for 30
 # days, then applies it unless the owner rejects it, and CodeRabbit sends no
 # notice. This weekly job keeps one issue listing the week's learnings, those
-# that tell CodeRabbit to stop raising something first. See AGENTS.md,
-# CodeRabbit Learnings, and DEBT-515.
+# that tell CodeRabbit to stop raising something first. See
+# docs/guides/release/review-and-merge.md (Reading Findings) and DEBT-515.
 on:
   schedule:
     - cron: '29 13 * * 1'

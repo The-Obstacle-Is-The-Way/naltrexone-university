@@ -40,6 +40,8 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
 | [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03) | 2026-10-03 |
 | [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted | 2026-10-11 |
+| [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted | 2026-10-11 |
+| [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
 
 ## ADR Statuses
 

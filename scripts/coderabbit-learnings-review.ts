@@ -126,7 +126,7 @@ function describeLearnings(replies: LearningReply[]): string {
     '**Review first.** These tell CodeRabbit to stop raising something:\n\n';
   const restHeading = '**Also recorded:**\n\n';
   const outro =
-    'This issue is rewritten weekly and closes itself in a week with no new learning. Procedure: AGENTS.md, "CodeRabbit Learnings".\n';
+    'This issue is rewritten weekly and closes itself in a week with no new learning. Procedure: docs/guides/release/review-and-merge.md, "Reading Findings".\n';
   // Room for the fixed text, the count line and the cursor.
   const budget =
     BODY_LIMIT -

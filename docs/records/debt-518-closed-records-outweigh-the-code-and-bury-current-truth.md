@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — step 0's layout (ADR-023) and the records move are in review; the agent instructions, the layout and the archive's removal follow
+**Status:** In Progress — the records step and the agent instructions are done; the layout moves, the layout content and the archive's removal follow
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -204,17 +204,21 @@ Each pull request stands alone, with no reservations or waits on other sessions.
    - `scripts/next-record-id.ts` computes IDs.
    - `AGENTS.md`'s records sections become a pointer.
    - ADR-023 lands here.
-2. **Agent instructions:**
-   - `AGENTS.md` at most 16 KiB, with its runbooks moved to their guide paths, and the "editing X, read Y" table;
-   - `CLAUDE.md` imports it, and `.claude/rules/` is cleaned;
-   - CodeRabbit `applyTo` mappings, with the tests for glob agreement, the byte budget and the absence of IDs;
-   - the front-door `README.md`, the skills pruned, and Tailwind's `@source not` entries.
+2. **Agent instructions** (this record's third pull request):
+   - `AGENTS.md` drops from 66 KB to about 11 KB, inside Codex's default 32 KiB read. It has no record IDs or dates. Its runbooks move to [Review and Merge](../guides/release/review-and-merge.md) and the deployment procedure's new promotion section. Its owner rulings move to ADR-024 (review, merge and promotion) and ADR-025 (test doubles).
+   - `CLAUDE.md` imports it with `@AGENTS.md`, so Claude Code reads it too, and keeps only Claude-specific notes. `.claude/rules/git-workflow.md`, a copy of `AGENTS.md`'s process sections, is deleted.
+   - Each path-scoped rule maps to its paths for CodeRabbit with `applyTo`. Until now every rule applied only to its own folder.
+   - `tests/agent-instructions.test.ts` enforces the 16 KiB budget, the import, and no IDs or dates in instruction files. It also checks that each rule is named in `AGENTS.md` and mapped for CodeRabbit to the same paths Claude Code loads it for.
+   - Also in this step:
+     - the front-door `README.md`, whose setup no longer worked;
+     - the three skills that contradict the repository, pruned;
+     - Tailwind kept from scanning instruction files for classes.
 3. **Layout moves.** Pure renames into the layout, plus every path that code, tests, workflows, configuration and open issues name, and `docs/README.md`.
 4. **Layout content:**
    - the `master_spec` split;
    - merges and rewrites;
    - the stale snapshots deleted, and the contradictions fixed;
-   - the ADR README, the amendments, and ADR-024 to ADR-027.
+   - the ADR README, the amendments, and ADR-026 (Sentry) and ADR-027 (the free trial and renewal notices).
 5. **Archive removal.**
    - Permanent links replace the remaining live links into the archive; most are gone with their files by then.
    - `docs/_archive/` is deleted, along with the asset folders only it links.

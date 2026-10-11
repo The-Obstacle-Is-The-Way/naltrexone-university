@@ -14,7 +14,7 @@
 
 ## Implementation authority
 
-Use [AGENTS.md](../../AGENTS.md#the-rule) for the local gate, the [CI workflow](../../.github/workflows/ci.yml) for executable CI, and the [deployment procedure](../dev/deployment-procedure.md) for the production gate and receipts. Toolchain versions and secret scope must not be copied into a second YAML recipe.
+Use [AGENTS.md](../../AGENTS.md#non-negotiables) for the local gate, the [CI workflow](../../.github/workflows/ci.yml) for executable CI, and the [deployment procedure](../dev/deployment-procedure.md) for the production gate and receipts. Toolchain versions and secret scope must not be copied into a second YAML recipe.
 
 ## Other parts
 

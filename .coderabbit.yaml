@@ -25,14 +25,14 @@ reviews:
     base_branches:
       - '.*'
     drafts: false
-    # Review only what can merge (AGENTS.md, owner, 2026-10-06): the included
+    # Review only what can merge (ADR-024, owner, 2026-10-06): the included
     # allowance is per developer identity, which every agent session shares,
     # and only the final head's approval counts. A PR is reviewed when it opens
     # or a draft is marked ready, and later on `@coderabbitai full review`.
     auto_incremental_review: false
     # Promotions (dev → main) carry only source PRs already approved on their
-    # exact heads, and need no review of their own (AGENTS.md, Reviewed-Source
-    # Promotions; owner, 2026-09-22 and 2026-10-04). Every promotion title
+    # exact heads, and need no review of their own (ADR-024; owner, 2026-09-22
+    # and 2026-10-04). Every promotion title
     # begins "Promote #". Matching is a case-insensitive substring.
     ignore_title_keywords:
       - 'Promote #'
@@ -204,16 +204,32 @@ knowledge_base:
     enabled: true
   code_guidelines:
     enabled: true
+    # A guideline file applies only to its own folder unless `applyTo` maps
+    # it (docs.coderabbit.ai/knowledge-base/code-guidelines), so each
+    # path-scoped rule maps to the globs in its `paths:` front matter, and a
+    # rule with none to every file. tests/agent-instructions.test.ts keeps the
+    # two in step. Root AGENTS.md and CLAUDE.md are defaults.
     filePatterns:
-      - "**/AGENTS.md"
-      - "**/CLAUDE.md"
-      - ".claude/rules/**"
+      - files: ".claude/rules/testing.md"
+        applyTo: "**/*"
+      - files: ".claude/rules/architecture.md"
+        applyTo: "src/**"
+      - files: ".claude/rules/domain-layer.md"
+        applyTo: "src/domain/**"
+      - files: ".claude/rules/frontend.md"
+        applyTo: "{app/**,components/**}"
+      - files: ".claude/rules/testing-react19.md"
+        applyTo: "**/*.test.tsx"
+      - files: ".claude/rules/testing-browser.md"
+        applyTo: "**/*.browser.spec.tsx"
+      - files: ".claude/rules/test-isolation.md"
+        applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**}"
+      - files: ".claude/rules/fixture-integrity.md"
+        applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**,src/**/test-helpers/**,**/*-test-helpers.ts,**/*-test-helpers.tsx,**/*.fixtures.ts}"
+      - files: "docs/frontend/standards.md"
+        applyTo: "{app/**,components/**}"
       # The records rules govern docs/records/**, the folder this file is in.
       - "docs/records/README.md"
-      - "docs/specs/master_spec.md"
-      - "docs/frontend/standards.md"
-      - "docs/frontend/design-principles.md"
-      - "docs/dev/react-vitest-testing.md"
   # DEBT-515: agents comment as the owner, so a learning drawn from their chat
   # would apply to every later review as if the owner had ruled. Each new
   # learning waits up to 30 days (the maximum) for the owner to approve or

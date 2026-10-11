@@ -4,7 +4,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 
 **Now** — 2026-10-11.
 - **Verifying, by due date.** BUG-333 10-17; BUG-319 and BUG-323 10-19; BUG-320, BUG-325 and BUG-327 10-20; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; DEBT-517 10-25; BUG-336 10-26; DEBT-505 11-05. Each record names its check.
-- **In progress.** DEBT-518, the documentation revamp: these records and the ledger first, then the agent instructions, the layout, and the archive's removal last.
+- **In progress.** DEBT-518, the documentation revamp: the records and the agent instructions are done; the layout and the archive's removal follow.
 - **Next.** DEBT-503 item 4, due 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22). Then counsel's Q1–Q6 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it.
 - **Held.** DEBT-514 holds lint-staged at 17.5.1.
@@ -44,7 +44,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [DEBT-517](./debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md) | Alerts #77 and #81 wait on fixes that are not coming | P3 | Verifying — `braces` and `sprintf-js` are out of the lockfile; after promotion, Dependabot marks alerts #77 and #81 fixed on `main`; due 2026-10-25 |
 | [DEBT-519](./debt-519-fake-contract-register-misses-adapter-owned-fakes.md) | The fake-contract register misses adapter-owned fakes | P3 | Open — make the register scan discover adapter-owned fakes, red first, then add `FakeStripePortalConfigurations` |
 | [DEBT-520](./debt-520-repository-layout-trigger-has-fired.md) | ADR-013's repository-layout trigger has fired without a decision | P4 | Open — decide whether the repositories stay flat or move into aggregate folders, and record it as an ADR |
-| [DEBT-518](./debt-518-closed-records-outweigh-the-code-and-bury-current-truth.md) | Closed records outweigh the code and bury current truth | P2 | In Progress — step 0's layout and the records move are in review; the agent instructions, the layout and the archive's removal follow |
+| [DEBT-518](./debt-518-closed-records-outweigh-the-code-and-bury-current-truth.md) | Closed records outweigh the code and bury current truth | P2 | In Progress — the records step and the agent instructions are done; the layout moves, the layout content and the archive's removal follow |
 
 ## Waiting
 

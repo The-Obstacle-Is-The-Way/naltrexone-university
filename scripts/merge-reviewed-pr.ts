@@ -74,8 +74,8 @@ type CheckNodes = z.infer<typeof checks>['nodes'];
 // alone does not prove CodeRabbit reviewed that head. GitHub Actions creates a
 // head's check suite when the head is pushed, and re-running CI keeps it, so
 // the earliest suite dates the push. Suites belong to the commit, so one made
-// earlier for the same commit elsewhere dates the push earlier (AGENTS.md, How
-// to Check).
+// earlier for the same commit elsewhere dates the push earlier
+// (docs/guides/release/review-and-merge.md, The Merge Guard).
 const headCheckSuitesSchema = z.object({
   commits: z.object({
     nodes: z.tuple([
@@ -471,7 +471,7 @@ export function linkedLearningReplies(input: unknown): string[] {
   );
   if (unlinked.length > 0) {
     throw new Error(
-      `CodeRabbit recorded a learning the PR description does not link: ${unlinked.join(', ')}. Link each reply from the description so the owner can keep or delete it (AGENTS.md, CodeRabbit Learnings)`,
+      `CodeRabbit recorded a learning the PR description does not link: ${unlinked.join(', ')}. Link each reply from the description so the owner can keep or delete it (docs/guides/release/review-and-merge.md, Reading Findings)`,
     );
   }
   return replies;
@@ -513,7 +513,7 @@ export function exactHeadApproval(
   }
   if (Date.parse(approval.submitted_at) < Date.parse(pushedAt)) {
     throw new Error(
-      'The CodeRabbit approval predates the push of the head, so GitHub carried it forward from an earlier head. Dismiss it and request `@coderabbitai full review` (AGENTS.md, The Rule, item 7)',
+      'The CodeRabbit approval predates the push of the head, so GitHub carried it forward from an earlier head. Dismiss it and request `@coderabbitai full review` (docs/guides/release/review-and-merge.md, The Merge Guard)',
     );
   }
   return { id: approval.id, submitted_at: approval.submitted_at };
@@ -740,7 +740,7 @@ export function runMergeReviewedPr(
   };
   write(JSON.stringify(verified));
   if (args[1] === '--merge') {
-    // AGENTS.md keeps this receipt with the PR; posting it first puts it on
+    // The receipt stays with the PR (ADR-024); posting it first puts it on
     // GitHub before the merge it justifies.
     gh(
       ['pr', 'comment', number, '--repo', REPOSITORY, '--body-file', '-'],

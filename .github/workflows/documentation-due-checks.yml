@@ -3,7 +3,7 @@ name: Documentation due checks
 # A record whose fix shipped but whose final check can only happen in
 # production stays live as Verifying, with a due date. Pull-request CI never
 # fails on a calendar date; this weekly job opens one issue when any such
-# check is overdue, so it reaches the owner. See AGENTS.md, Documentation.
+# check is overdue, so it reaches the owner. See docs/records/README.md.
 on:
   schedule:
     - cron: '17 13 * * 1'

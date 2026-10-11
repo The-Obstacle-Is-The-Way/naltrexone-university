@@ -1,6 +1,13 @@
 @import "tailwindcss";
 /* DEBT-409: Tailwind v4 auto-detects sources; docs snippets must not ship CSS. */
 @source not "../docs";
+/* Agent instructions name example classes, forbidden ones included; keep
+   them out of the CSS bundle. */
+@source not "../AGENTS.md";
+@source not "../CLAUDE.md";
+@source not "../.claude";
+@source not "../.agents";
+@source not "../content/drafts";
 /*
   ---break---
 */
