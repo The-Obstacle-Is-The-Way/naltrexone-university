@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
+import { isE2EOwnerMismatchEvent } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { processStripeWebhookEvent } from './stripe-webhook-processor';
@@ -223,6 +224,79 @@ describe('expired trial payment-method setup webhook', () => {
     ).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_PAYLOAD',
       message: 'Invalid expired trial payment-method setup state signature',
+    });
+  });
+
+  // GitHub #883: a webhook with an E2E owner shares its Stripe test account
+  // with other environments, whose add-card Sessions are signed with their own
+  // consent-state secrets. Those are skipped like another owner's subscription
+  // events. Nothing is written either way.
+  it('skips an expired setup Session signed in another environment when this webhook has an E2E owner', async () => {
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {
+            ...signedSetupMetadata(),
+            consent_state_signature: '0'.repeat(64),
+          },
+        },
+      },
+    });
+
+    const error = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      consentStateSecret,
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger: new FakeLogger(),
+      resolveCheckoutDisclosure: () => null,
+      sha256Hasher: new NobleSha256Hasher(),
+      webhookE2EOwner: 'preview-owner',
+    }).catch((caught: unknown) => caught);
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['foreign_environment'] },
+    });
+    expect(stripe.subscriptions.retrieveCalls).toEqual([]);
+  });
+
+  it('normalizes its own signed setup Session when this webhook has an E2E owner', async () => {
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: signedSetupMetadata(),
+        },
+      },
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        consentStateSecret,
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+        resolveCheckoutDisclosure: () => null,
+        sha256Hasher: new NobleSha256Hasher(),
+        webhookE2EOwner: 'preview-owner',
+      }),
+    ).resolves.toMatchObject({
+      trialPaymentMethodSetupExpiration: { sessionId: 'cs_setup_123' },
     });
   });
 });

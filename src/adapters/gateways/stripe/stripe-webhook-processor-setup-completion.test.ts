@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
+import { isE2EOwnerMismatchEvent } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeSetupIntent } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { processStripeWebhookEvent } from './stripe-webhook-processor';
@@ -31,13 +32,20 @@ function createStripe(event: WebhookEvent): FakeStripeCheckoutClient {
 
 function processEvent(
   stripe: FakeStripeCheckoutClient,
-  overrides: { logger?: FakeLogger; consentStateSecret?: string } = {},
+  overrides: {
+    logger?: FakeLogger;
+    consentStateSecret?: string;
+    webhookE2EOwner?: string;
+  } = {},
 ) {
   return processStripeWebhookEvent({
     stripe,
     webhookSecret: 'whsec_test',
     ...(overrides.consentStateSecret
       ? { consentStateSecret: overrides.consentStateSecret }
+      : {}),
+    ...(overrides.webhookE2EOwner
+      ? { webhookE2EOwner: overrides.webhookE2EOwner }
       : {}),
     rawBody: '{}',
     signature: 'sig_test',
@@ -177,6 +185,47 @@ describe('trial payment-method setup completion webhook', () => {
       processEvent(stripe, { consentStateSecret }),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
     expect(stripe.setupIntents.retrieveCalls).toEqual([]);
+  });
+
+  // GitHub #883: a webhook with an E2E owner shares its Stripe test account
+  // with other environments, whose add-card Sessions are signed with their own
+  // consent-state secrets. Those are skipped like another owner's subscription
+  // events, before any payment method is resolved.
+  it('skips setup metadata signed in another environment when this webhook has an E2E owner', async () => {
+    const stripe = createStripe(
+      setupCompletionEvent(
+        createCompletedSetupSession({ signature: '0'.repeat(64) }),
+      ),
+    );
+    stripe.seedSetupIntent(savedCard);
+
+    const error = await processEvent(stripe, {
+      consentStateSecret,
+      webhookE2EOwner: 'preview-owner',
+    }).catch((caught: unknown) => caught);
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['foreign_environment'] },
+    });
+    expect(stripe.setupIntents.retrieveCalls).toEqual([]);
+  });
+
+  it('resolves its own signed setup completion when this webhook has an E2E owner', async () => {
+    const stripe = createStripe(
+      setupCompletionEvent(createCompletedSetupSession(), 1_775_649_600),
+    );
+    stripe.seedSetupIntent(savedCard);
+
+    await expect(
+      processEvent(stripe, {
+        consentStateSecret,
+        webhookE2EOwner: 'preview-owner',
+      }),
+    ).resolves.toMatchObject({
+      trialPaymentMethodSetupCompletion: { sessionId: 'cs_setup_123' },
+    });
+    expect(stripe.setupIntents.retrieveCalls).toEqual(['seti_123']);
   });
 
   // BUG-310: only a card that Stripe saved becomes the trial's renewal

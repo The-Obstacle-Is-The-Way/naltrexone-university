@@ -11,6 +11,7 @@ import {
   stripeTrialPaymentMethodSetupSessionSchema,
   subscriptionEventTypes,
 } from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
+import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
@@ -195,11 +196,34 @@ function getInitialSubscriptionConsent(input: {
   };
 }
 
+// GitHub #883: a webhook with an E2E owner (only the dev preview has one)
+// shares its Stripe test account with other environments, whose add-card
+// Sessions carry consent state signed with their own secrets. Skip those as
+// another owner's subscription events are skipped. Either way nothing is
+// written; production has no E2E owner and still rejects the Session.
+function unverifiedSetupStateError(
+  message: string,
+  webhookE2EOwner: string | undefined,
+): ApplicationError {
+  if (webhookE2EOwner) {
+    return new ApplicationError(
+      'STRIPE_ERROR',
+      'Trial setup consent state was signed in another environment',
+      {
+        [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
+        consent_state_signature: ['foreign_environment'],
+      },
+    );
+  }
+  return new ApplicationError('INVALID_WEBHOOK_PAYLOAD', message);
+}
+
 async function getTrialPaymentMethodSetupCompletion(input: {
   stripe: StripeClient;
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   stateSecret: string;
   logger: Logger;
+  webhookE2EOwner?: string | undefined;
 }): Promise<
   NonNullable<WebhookEventResult['trialPaymentMethodSetupCompletion']>
 > {
@@ -230,9 +254,9 @@ async function getTrialPaymentMethodSetupCompletion(input: {
       input.stateSecret,
     )
   ) {
-    throw new ApplicationError(
-      'INVALID_WEBHOOK_PAYLOAD',
+    throw unverifiedSetupStateError(
       'Invalid trial payment-method setup state signature',
+      input.webhookE2EOwner,
     );
   }
 
@@ -282,6 +306,7 @@ function getTrialPaymentMethodSetupExpiration(input: {
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   stateSecret: string;
   logger: Logger;
+  webhookE2EOwner?: string | undefined;
 }): NonNullable<WebhookEventResult['trialPaymentMethodSetupExpiration']> {
   const parsed = stripeExpiredTrialPaymentMethodSetupSessionSchema.safeParse(
     input.event.data.object,
@@ -310,9 +335,9 @@ function getTrialPaymentMethodSetupExpiration(input: {
       input.stateSecret,
     )
   ) {
-    throw new ApplicationError(
-      'INVALID_WEBHOOK_PAYLOAD',
+    throw unverifiedSetupStateError(
       'Invalid expired trial payment-method setup state signature',
+      input.webhookE2EOwner,
     );
   }
 
@@ -439,6 +464,7 @@ export async function processStripeWebhookEvent({
         event,
         stateSecret: consentStateSecret,
         logger,
+        webhookE2EOwner,
       });
     return { ...result, trialPaymentMethodSetupCompletion };
   }
@@ -459,6 +485,7 @@ export async function processStripeWebhookEvent({
         event,
         stateSecret: consentStateSecret,
         logger,
+        webhookE2EOwner,
       }),
     };
   }

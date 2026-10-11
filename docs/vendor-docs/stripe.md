@@ -139,7 +139,7 @@ Stripe renders each event payload at the receiving endpoint's API version. An en
 |---------|-------------|----------|
 | Code client pin | `2026-08-26.dahlia` | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`) |
 | Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Enabled; created 2026-06-04 by [DEBT-406](../_archive/debt/debt-406-stripe-live-endpoint-version-reconciliation.md); the only live endpoint |
-| Test endpoint `we_1T19r…` (the `dev` branch preview alias) | `null`, so the account default | Enabled; created 2026-02-15; the only test endpoint |
+| Test endpoint (the `dev` branch preview alias) | Found `null`, so the account default; now `2026-05-27.dahlia`, explicit | `we_1T19r…` (created 2026-02-15) had no version. It was replaced on 2026-10-11 by `we_1UPPK…`, see [Test endpoint rotation](#test-endpoint-rotation-2026-10-11). The only test endpoint |
 | Account default, live and test | `2026-01-28.clover` | `api_version` on the latest events in both modes |
 
 At the census, both endpoints subscribed to the same seven events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.trial_will_end`, `invoice.payment_succeeded` and `invoice.payment_failed`.
@@ -155,7 +155,7 @@ Endpoints follow the code pin's **major release** (Dahlia, Endive, …), not eac
 
 - **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. The live endpoint therefore stays at `2026-05-27.dahlia` while the client is at `2026-08-26.dahlia`. Recreating it each month would rotate production's signing secret and redeploy, now under live trial traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable across Dahlia and passes the rest through.
 - **At a major release, the endpoints move,** following [Major-release migration](#major-release-migration). The test endpoint goes first.
-- **Known divergence, accepted until the next major-release migration.** The test endpoint has no explicit version, so Preview receives Clover payloads while production receives Dahlia ones. The Clover-to-Dahlia breaking changes touch no field the parser reads (DEBT-406). The next migration recreates the test endpoint with an explicit version as its first step, so this is fixed once rather than twice. Do not fix it by upgrading the account default. That also changes how the Events API renders events, and every other caller that relies on the default.
+- **The test endpoint mirrors the live endpoint's version, explicitly.** Preview then receives production's payload shape. An endpoint without a version follows the account default (`2026-01-28.clover`, before Dahlia), which is how Preview came to receive Clover payloads while production received Dahlia ones. Do not align them by upgrading the account default. That also changes how the Events API renders events, and every other caller that relies on the default.
 
 ### Event-set gap: handled but not subscribed
 
@@ -165,7 +165,7 @@ The code handles 13 event types ([Webhooks We Handle](#webhooks-we-handle)); at 
 
 Fix status (endpoint configuration only; the version and signing secret are unchanged):
 
-- **Test: 12 of 13, by design, 2026-10-11.** With all 13 subscribed, a probe subscription-mode Checkout session, created and expired through the API at 15:01:40Z, produced a `checkout.session.expired` event with `pending_webhooks: 0`, so the `dev` preview acknowledged it. Setup-mode sessions from other test runs then arrived (15:04:26Z, 15:05:15Z), and the preview answered 400 `Stripe webhook validation failed`. Its consent-state secret cannot verify a session signed in another environment, and every E2E run that exercises add-card creates and expires such a session. `checkout.session.expired` was therefore removed from the shared test endpoint the same day. It can return once setup-mode sessions from another owner are skipped, as subscription events already are (`e2e_owner_mismatch`, DEBT-386).
+- **Test: 12 of 13 until this change reaches the `dev` preview.** With all 13 subscribed, a probe subscription-mode Checkout session, created and expired through the API at 15:01:40Z, produced a `checkout.session.expired` event with `pending_webhooks: 0`. Setup-mode sessions from other test runs then arrived (15:04:26Z, 15:05:15Z), and the preview answered 400 `Stripe webhook validation failed`: its consent-state secret cannot verify a session signed in another environment, and every E2E run that exercises add-card creates and expires one. `checkout.session.expired` was removed from the test endpoint that day. The webhook now skips such sessions when it has an E2E owner (`unverifiedSetupStateError` in `stripe-webhook-processor.ts`), as it skips another owner's subscription events (`e2e_owner_mismatch`, DEBT-386). Nothing is written either way, and production, which has no E2E owner, still answers 400. Once this change reaches the `dev` preview, the event goes back on the test endpoint.
 - **Live: done 2026-10-11.** The live endpoint now subscribes to all 13 handled events, with `api_version` still `2026-05-27.dahlia`. A probe subscription-mode Checkout session, created through the API with the minimum 30-minute expiry, expired at 15:39:33Z. Its `checkout.session.expired` event shows `pending_webhooks: 0`, so production acknowledged it.
 
 ### Major-release migration
@@ -173,9 +173,21 @@ Fix status (endpoint configuration only; the version and signing secret are unch
 `stripe@23.0.0` (Dependabot #1447) pins `2026-09-30.endive`, the first version of a new major release. Merging it is a major-release boundary, not a monthly advance. Before the pin crosses one:
 
 1. Read the new release's breaking changes against [Fields We Depend On](#fields-we-depend-on) and the schemas in `stripe-webhook-schemas.ts`. During the overlap, payloads from both versions must parse.
-2. Recreate the test endpoint with an explicit `api_version` and the handled event set, apart from the test exception in [Event-set gap](#event-set-gap-handled-but-not-subscribed). Exercise those events against Preview.
+2. Recreate the test endpoint at the new version, as in [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and exercise the handled events against Preview.
 3. For live, follow [Stripe's procedure](https://docs.stripe.com/webhooks/versioning): a second endpoint at the new version, distinguished by a query parameter, with only one of the two processed at a time. The route verifies a single `STRIPE_WEBHOOK_SECRET`, so overlapping endpoints need either verification of both secrets or a deliberate swap that relies on Stripe retrying failed deliveries and on the `stripe_events` claim for idempotency. DEBT-406's direct swap was safe because the endpoint had no traffic. It now has live trial traffic, so choose one approach and record it before changing anything live.
 4. Retire the old endpoint only after deliveries to the new one show `pending_webhooks: 0`.
+
+### Test endpoint rotation (2026-10-11)
+
+Stripe fixes an endpoint's version at creation, so the test endpoint was recreated rather than edited. The same recreate-and-swap is step 2 of a major-release migration:
+
+1. Created `we_1UPPK…` at `2026-05-27.dahlia`, with the old endpoint's URL and events.
+2. Set `STRIPE_WEBHOOK_SECRET` in Vercel Preview and Development to its signing secret, piped from a private file and confirmed by hash, never printed.
+3. Redeployed the `dev` preview, so the branch alias serves a build with the new secret.
+4. Probed with a test-mode trial subscription tagged with another `e2e_owner`. The new endpoint's deliveries returned 200 (`e2e_owner_mismatch` skip). The old endpoint's returned 400 `Webhook signature verification failed`, as expected once its secret was retired.
+5. Deleted the old endpoint `we_1T19r…` and the probe customer.
+
+Each event reaches both endpoints while they overlap, and the `stripe_events` claim makes processing idempotent, so the swap loses no event.
 
 ### Census commands
 
