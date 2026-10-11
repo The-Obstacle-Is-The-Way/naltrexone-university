@@ -56,6 +56,7 @@ export type DocumentationAudit = {
   strayRegisterFiles: string[];
   retiredRegisterFiles: string[];
   duplicateLedgerIds: string[];
+  malformedLedgerLines: string[];
   unnamedVerifying: string[];
   invalidVerifying: string[];
   longStatus: string[];
@@ -103,9 +104,15 @@ function registerFileBudget(file: string): number | undefined {
 }
 
 // Beside the records index only open records and the ledger belong: change
-// history lives in git, and a closed record is a ledger line.
+// history lives in git, and a closed record is a ledger line. Records get no
+// asset folders; DEBT-414's predate that rule and go when it closes.
+const LEGACY_RECORD_ASSETS =
+  /^docs\/records\/assets\/(?:debt-414|inventory-2026-09-21|active-audit-2026-09-21)\//;
+
 function isStrayRecordsFile(file: string): boolean {
-  if (path.posix.dirname(file) !== RECORDS.directory) return false;
+  if (!file.startsWith(`${RECORDS.directory}/`)) return false;
+  if (path.posix.dirname(file) !== RECORDS.directory)
+    return !LEGACY_RECORD_ASSETS.test(file);
   return (
     file !== RECORDS.index &&
     file !== RECORDS.ledger &&
@@ -113,19 +120,33 @@ function isStrayRecordsFile(file: string): boolean {
   );
 }
 
-// An index or numbered record in an old register folder is one that missed the
-// move to docs/records. Living documents there, such as the master spec, stay.
+// Markdown left in an old register folder missed the move to docs/records.
+// Living documents in docs/specs, such as the master spec, stay, and asset
+// folders stay until the archive that links them is deleted.
 function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
   if (docs !== 'docs' || rest.length > 0 || name === undefined) return false;
   if (!isRegister(register)) return false;
+  if (register !== 'specs') return true;
   return name === 'index.md' || REGISTERS[register].test(name);
 }
 
-const LEDGER_ENTRY = /^- ([A-Z]+-\d+[a-z]?)\b/gim;
-// IDs given to two records before anything checked; each ledger line names its
-// own file. No new collision is allowed.
+// A ledger line: ID · title · disposition · date · path, then optionally the
+// closing PR and the commit of the record's last version.
+const LEDGER_ENTRY =
+  /^- ([A-Z]+-\d+[a-z]?) · [^·\n]+ · [^·\n]+ · \d{4}-\d{2}-\d{2} · \S[^\n]*$/;
+const LIST_ITEM = /^\s*[-*+] /;
+// IDs given to two records each before anything checked; each ledger line
+// names its own file. No third, and no new collision, is allowed.
 const HISTORICAL_ID_COLLISIONS = new Set(['DEBT-338', 'FE-055', 'SPEC-028']);
+
+// IDs compare by prefix and number, so `bug-05` and `BUG-005` are the same.
+function canonicalId(value: string): string | undefined {
+  const match = value.match(/^([a-z]+)-0*(\d+)([a-z]?)(?![a-z0-9])/i);
+  if (!match) return undefined;
+  const [, prefix = '', digits = '0', letter = ''] = match;
+  return `${prefix.toUpperCase()}-${Number(digits)}${letter.toLowerCase()}`;
+}
 
 type ArchiveLinkRepair = DocumentationLink & {
   replacementTarget: string;
@@ -210,8 +231,13 @@ type StanzaLabel = { text: string; start: number; end: number };
 function scanMarkdown(
   file: string,
   contents: string,
-): { links: DocumentationLink[]; labels: StanzaLabel[] } {
+): {
+  links: DocumentationLink[];
+  absoluteLinks: DocumentationLink[];
+  labels: StanzaLabel[];
+} {
   const links: DocumentationLink[] = [];
+  const absoluteLinks: DocumentationLink[] = [];
   const labels: StanzaLabel[] = [];
   // Use the installed first-party application Markdown seam, including GFM
   // tables. Code examples are not links; definitions cover reference links.
@@ -283,6 +309,22 @@ function scanMarkdown(
               start,
               end,
             });
+          } else if (
+            ['link', 'image', 'definition'].includes(node.type) &&
+            node.url &&
+            /^(?:[a-z][a-z0-9+.-]*:|\/)/i.test(node.url)
+          ) {
+            // Web and site-root links are not resolved, but a link to a
+            // record by either still breaks when the record closes.
+            absoluteLinks.push({
+              file,
+              line: node.position?.start.line ?? 1,
+              url: node.url,
+              target: node.url,
+              inTable: table,
+              start: node.position?.start.offset ?? 0,
+              end: node.position?.end.offset ?? 0,
+            });
           }
           for (const child of node.children ?? [])
             visit(child, table, identity);
@@ -291,7 +333,7 @@ function scanMarkdown(
       },
     ],
   });
-  return { links, labels };
+  return { links, absoluteLinks, labels };
 }
 
 function recordStatus(file: string, contents: string): string {
@@ -377,6 +419,7 @@ export function auditRecordLifecycle(
     strayRegisterFiles: [],
     retiredRegisterFiles: [],
     duplicateLedgerIds: [],
+    malformedLedgerLines: [],
     unnamedVerifying: [],
     invalidVerifying: [],
     longStatus: [],
@@ -421,24 +464,29 @@ export function auditRecordLifecycle(
         path.posix.dirname(file) === directory &&
         pattern.test(path.posix.basename(file)),
     );
-  const ledgerIds = [
-    ...(files.get(RECORDS.ledger) ?? '').matchAll(LEDGER_ENTRY),
-  ].map((match) => (match[1] ?? '').toUpperCase());
-  const seen = new Set<string>();
+  const ledgerIds: string[] = [];
+  (files.get(RECORDS.ledger) ?? '').split('\n').forEach((line, index) => {
+    if (!LIST_ITEM.test(line)) return;
+    const id = line.match(LEDGER_ENTRY)?.[1];
+    if (id) ledgerIds.push(id.toUpperCase());
+    else result.malformedLedgerLines.push(`${RECORDS.ledger}:${index + 1}`);
+  });
+  const ledgerCounts = new Map<string, number>();
   for (const id of ledgerIds) {
-    if (
-      seen.has(id) &&
-      !HISTORICAL_ID_COLLISIONS.has(id) &&
-      !result.duplicateLedgerIds.includes(id)
-    )
+    const count = (ledgerCounts.get(id) ?? 0) + 1;
+    ledgerCounts.set(id, count);
+    const allowed = HISTORICAL_ID_COLLISIONS.has(id) ? 2 : 1;
+    if (count > allowed && !result.duplicateLedgerIds.includes(id))
       result.duplicateLedgerIds.push(id);
-    seen.add(id);
   }
-  const closedIds = new Set(ledgerIds.map((id) => id.toLowerCase()));
+  const closedIds = new Set(
+    ledgerIds.map((id) => canonicalId(id) ?? id.toUpperCase()),
+  );
+  const idOf = (file: string) => canonicalId(path.posix.basename(file)) ?? file;
   for (const [register, pattern] of Object.entries(REGISTERS)) {
     const archived = inFolder(`docs/_archive/${register}`, pattern);
     for (const record of archived) {
-      closedIds.add(recordId(record) ?? record);
+      closedIds.add(idOf(record));
       const status = recordStatus(record, files.get(record) ?? '');
       if (!CLOSED_STATUS.test(status) && !HISTORICAL_DISPOSITION.test(status))
         result.missingArchiveDispositions.push(record);
@@ -459,10 +507,12 @@ export function auditRecordLifecycle(
   const openIds = new Set<string>();
   for (const record of live) {
     const status = recordStatus(record, files.get(record) ?? '');
-    const id = recordId(record) ?? record;
+    const id = idOf(record);
     if (closedIds.has(id) || openIds.has(id)) result.duplicates.push(record);
     openIds.add(id);
-    if (CLOSED_STATUS.test(status)) result.closedLive.push(record);
+    // An open record carries no closed disposition: closing deletes it.
+    if (CLOSED_STATUS.test(status) || HISTORICAL_DISPOSITION.test(status))
+      result.closedLive.push(record);
     if (!registered.has(record)) result.missingLiveRows.push(record);
     if (
       status.length > STATUS_MAX_CHARACTERS ||
@@ -512,25 +562,29 @@ export function brokenDocumentationLinks(
 }
 
 // A closed record is deleted, so only the index links records; everywhere else
-// a record is cited by its ID, which the ledger resolves. Owner-adopted policy
-// text keeps its links until the owner revises it.
-const RECORD_LINK_EXEMPT = /^docs\/(?:legal|security)\//;
+// a record is cited by its ID, which the ledger resolves. An absolute link
+// breaks the same way, unless it pins a commit.
+const ABSOLUTE_RECORD_LINK =
+  /docs\/records\/(?:bug|debt)-\d+[^/?#]*\.md(?:[?#]|$)/i;
+const PINNED_COMMIT = /\/blob\/[0-9a-f]{40}\//i;
 
 export function recordLinks(
   file: string,
   contents: string,
 ): DocumentationLink[] {
-  if (
-    file === RECORDS.index ||
-    file.startsWith('docs/_archive/') ||
-    RECORD_LINK_EXEMPT.test(file)
-  )
-    return [];
-  return documentationLinks(file, contents).filter(
-    (link) =>
-      path.posix.dirname(link.target) === RECORDS.directory &&
-      RECORDS.pattern.test(path.posix.basename(link.target)),
-  );
+  if (file === RECORDS.index || file.startsWith('docs/_archive/')) return [];
+  const { links, absoluteLinks } = scanMarkdown(file, contents);
+  return [
+    ...links.filter(
+      (link) =>
+        path.posix.dirname(link.target) === RECORDS.directory &&
+        RECORDS.pattern.test(path.posix.basename(link.target)),
+    ),
+    ...absoluteLinks.filter(
+      (link) =>
+        ABSOLUTE_RECORD_LINK.test(link.url) && !PINNED_COMMIT.test(link.url),
+    ),
+  ].sort((a, b) => a.start - b.start);
 }
 
 export function auditDocumentation(
@@ -645,6 +699,7 @@ export function runDocumentationCommand(
     result.strayRegisterFiles,
     result.retiredRegisterFiles,
     result.duplicateLedgerIds,
+    result.malformedLedgerLines,
     result.unnamedVerifying,
     result.invalidVerifying,
     result.longStatus,

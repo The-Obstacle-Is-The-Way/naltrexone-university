@@ -36,6 +36,14 @@ describe('repositoryNextRecordId', () => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true });
   });
 
+  it('refuses to guess outside a repository with a ledger', () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'next-record-id-'));
+    roots.push(root);
+    expect(() => repositoryNextRecordId('bug', root)).toThrow(
+      'docs/records/closed.md',
+    );
+  });
+
   it('reads the records folder, the ledger and the archive', () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'next-record-id-'));
     roots.push(root);

@@ -44,11 +44,11 @@ export function repositoryNextRecordId(
       : [],
   );
   const ledger = path.join(root, 'docs/records/closed.md');
-  return nextRecordId(
-    prefix,
-    files,
-    existsSync(ledger) ? readFileSync(ledger, 'utf8') : '',
-  );
+  // Without the ledger this is not the repository root, and a guess would
+  // reuse a closed ID.
+  if (!existsSync(ledger))
+    throw new Error(`Missing docs/records/closed.md under ${root}`);
+  return nextRecordId(prefix, files, readFileSync(ledger, 'utf8'));
 }
 
 if (
