@@ -7,8 +7,8 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 
 **Related:**
 - [Frontend Standards](./standards.md) — Component APIs, accessibility rules, hook architecture, file naming
-- [Design Principles](./design-principles.md) — Navigation zones, action bar composition, state persistence
-- [Contrast Policy](./contrast-policy.md) — WCAG AA contrast targets and required-boundary rules
+- [Design Principles](./layout.md) — Navigation zones, action bar composition, state persistence
+- [Contrast Policy](./contrast.md) — WCAG AA contrast targets and required-boundary rules
 - [BS-035](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Audit that identified current divergences from this registry
 - [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan and resolution history for frontend divergences
 
@@ -20,7 +20,7 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 2. **Pattern doesn't exist?** Add it here first with a rationale, then implement.
 3. **Divergence found?** File it against this doc and fix the code — the registry is the source of truth.
 4. **Modifying a pattern?** Update this doc first, then update all consumers.
-5. **Any new/changed pattern MUST meet contrast targets** (or explicitly document a temporary exception). See `docs/frontend/contrast-policy.md`.
+5. **Any new/changed pattern MUST meet contrast targets** (or explicitly document a temporary exception). See `docs/design-system/contrast.md`.
 
 Every pattern has an **ID** (e.g., `I-1`, `L-2`) for easy cross-referencing in code reviews, specs, and debt tickets.
 
@@ -292,7 +292,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Used in:** Dashboard session rows, dashboard activity rows
 
-**Design rationale:** When a parent surface or surrounding layout already establishes hierarchy, bordered inner rows create visual noise. Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast-policy.md) — row identification comes from text content, cursor, hover fill, and focus ring.
+**Design rationale:** When a parent surface or surrounding layout already establishes hierarchy, bordered inner rows create visual noise. Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast.md) — row identification comes from text content, cursor, hover fill, and focus ring.
 
 **History sessions note:** History sessions reuse the same borderless tonal-fill family, but because they sit directly on `bg-background` and are disclosure-primary, the page-background adaptation is `rounded-xl bg-foreground/[0.08] p-3` with no row-level hover or `transition-colors`. The chevron, `cursor-pointer`, nested review Link, and focus ring communicate interaction while the raised rest fill supplies the hierarchy. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md).
 
@@ -348,7 +348,7 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 **Disabled (no correctness):** `cursor-not-allowed opacity-50`
 **Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
 
-**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast-policy.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
+**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
 
 **Behavior:** In tutor mode and Quick Practice, pointer activation on a choice commits the answer immediately by invoking the submit flow. Keyboard/AT radio selection (arrow keys, Space, or an activation synthesized without `pointerdown`) only selects the choice and exposes the action-bar `Submit` affordance; `Enter` in the choice fieldset commits that selected-uncommitted choice. In exam mode, selecting a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive reports pointer vs non-pointer origin, while mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` ([BS-064](../_archive/brainstorming/bs-064-radio-choice-modality-split.md)).
 

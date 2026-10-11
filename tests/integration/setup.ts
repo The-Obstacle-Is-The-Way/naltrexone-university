@@ -58,7 +58,7 @@ try {
     [
       'Invalid DATABASE_URL for integration tests.',
       '',
-      'Docs: docs/dev/integration-tests.md',
+      'Docs: docs/guides/testing/integration-tests.md',
     ].join('\n'),
   );
 }
@@ -88,7 +88,7 @@ try {
     '',
     `Then migrate: DATABASE_URL=${suggestedDatabaseUrl} pnpm db:migrate`,
     '',
-    'Docs: docs/dev/integration-tests.md',
+    'Docs: docs/guides/testing/integration-tests.md',
   ].join('\n');
   throw new Error(message, { cause: error });
 } finally {

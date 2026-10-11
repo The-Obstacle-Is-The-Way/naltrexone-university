@@ -65,14 +65,14 @@ While the image could not be pulled, every pull request's required `test` check 
   - The same pull request:
     - widens `tests/ci-service-images.test.ts` to every image a workflow declares: service images, job containers and `docker://` steps. It also fails on a Postgres service container, and on a job using a local database that does not start Postgres this way before its first `pnpm` step and print its log last;
     - pins `docker-compose.yml` to the same digest, and that test keeps the two equal;
-    - adds the digest refresh below to the [dependency update protocol](../dev/dependency-update-protocol.md#cis-postgres-image).
+    - adds the digest refresh below to the [dependency update protocol](../guides/dependencies/updating-dependencies.md#cis-postgres-image).
   - Option 4 is not adopted, because its authenticated path is what failed. Option 5 adds a package and a write credential for one image. Option 6 drops the pin.
 - **If every registry refuses,** the step fails with `No registry served postgres@<digest>`. If the pulls say `manifest unknown`, the digest is gone: refresh it as below. Otherwise check the three registries' status pages and re-run once one recovers.
 - **Freshness.**
   - Resolve a new digest only from Docker Hub's `postgres:16` tag, never from a mirror's copy of the tag. Then confirm that every registry in the list serves it.
   - Refresh on each PostgreSQL 16 minor release, or on an advisory against the image. The [roadmap](https://www.postgresql.org/developer/roadmap/) names 2026-11-12 as the earliest date for the next release.
   - A rebuild that changes only the Debian base needs no refresh.
-  - The protocol's [CI's Postgres Image](../dev/dependency-update-protocol.md#cis-postgres-image) section now holds this duty and its commands.
+  - The protocol's [CI's Postgres Image](../guides/dependencies/updating-dependencies.md#cis-postgres-image) section now holds this duty and its commands.
 
 ## Verification
 
@@ -85,4 +85,4 @@ While the image could not be pulled, every pull request's required `test` check 
 
 - [DEBT-471](../_archive/debt/debt-471-e2e-ci-external-fragility.md): E2E and CI external fragility, which introduced the digest pin.
 - BUG-327: pinned every workflow's container images by digest.
-- [Dependency update protocol](../dev/dependency-update-protocol.md): where option 3's pull request adds the digest refresh.
+- [Dependency update protocol](../guides/dependencies/updating-dependencies.md): where option 3's pull request adds the digest refresh.

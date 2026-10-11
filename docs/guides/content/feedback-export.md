@@ -11,7 +11,7 @@ DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --format json
 The command does not load `.env.local` or `.env`: `DATABASE_URL` must be supplied explicitly.
 Local targets need no acknowledgement. A remote target is refused until `DB_TARGET_ACK` exactly
 matches the value-free JSON named by the first refusal; use the same workflow documented in
-[Deployment Procedure](./deployment-procedure.md). The redacted `Database target:` receipt and
+[Deployment Procedure](../release/promote-to-production.md). The redacted `Database target:` receipt and
 privacy warnings go to stderr, while CSV or JSON remains on stdout.
 
 Default exports redact `user_id` and exclude free-text comments. Raw user identifiers and comment

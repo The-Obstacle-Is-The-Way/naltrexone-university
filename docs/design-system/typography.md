@@ -7,7 +7,7 @@ Canonical reference for how text sizing is controlled across the application. Th
 **See also:**
 - [Frontend Standards](./standards.md) — Component patterns, spacing, accessibility
 - [Pattern Registry](./pattern-registry.md) — Visual pattern decision trees
-- [Contrast Policy](./contrast-policy.md) — WCAG AA contrast targets
+- [Contrast Policy](./contrast.md) — WCAG AA contrast targets
 
 ---
 

@@ -128,10 +128,10 @@ When building or modifying a question-viewing context, verify:
 - [ ] "Question X of Y" is a status label in Zone 1, not a clickable element
 - [ ] Action bar follows the ordering convention (sequential → primary → secondary → navigation)
 - [ ] State persistence matches the mode's expectations (§3)
-- [ ] Active exam contexts do not expose correctness/explanations before session end (see [Exam Answer Secrecy Policy](../practice-engine/exam-answer-secrecy-policy.md))
+- [ ] Active exam contexts do not expose correctness/explanations before session end (see [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md))
 - [ ] Shared components (`QuestionCard`, `Feedback`) are used — don't rebuild them
 - [ ] Disclosure panels avoid duplicate primary CTAs when the parent row/header already performs the same navigation
-- [ ] The context is documented in [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md)
+- [ ] The context is documented in [Question Rendering Architecture](../architecture/question-rendering.md)
 
 ---
 
@@ -139,7 +139,7 @@ When building or modifying a question-viewing context, verify:
 
 - [Frontend Standards](./standards.md) — Design tokens, component standards, accessibility, typography
 - [Pattern Registry](./pattern-registry.md) — Every visual pattern with canonical classes, token scales, and decision trees
-- [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md) — All 6 viewing contexts, component inventory, state flows
-- [Exam Answer Secrecy Policy](../practice-engine/exam-answer-secrecy-policy.md) — Canonical correctness/explanation exposure timing rules
+- [Question Rendering Architecture](../architecture/question-rendering.md) — All 6 viewing contexts, component inventory, state flows
+- [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) — Canonical correctness/explanation exposure timing rules
 - [Practice Engine Frontend Layer](../practice-engine/frontend-layer.md) — Routes, hook architecture, data flow
 - [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Spec that established the navigation zone model (Implemented)

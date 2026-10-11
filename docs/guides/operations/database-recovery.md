@@ -3,7 +3,7 @@
 This project uses Drizzle Kit migrations (`db/migrations/*.sql`). These migrations are **forward-only**.
 
 Before authoring or reviewing a schema change, apply the N-1 and expand/contract
-rules in [Migration Authoring → Deployed-Code Compatibility](./migration-authoring.md#deployed-code-compatibility).
+rules in [Migration Authoring → Deployed-Code Compatibility](../database/migrations.md#deployed-code-compatibility).
 
 ## Why There Are No “Down” Migrations
 

@@ -1,9 +1,9 @@
 # Practice Engine: Architecture Layers
 
-> **Parent:** [Practice Engine Index](./index.md)
+> **Parent:** [Practice Engine Index](../practice-engine/index.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
 > **Last Verified:** 2026-04-25
-> **Status:** Current shipped layer boundaries and use cases. Active exam mode uses draft-save plus finalization; see [Interaction Contracts](./interaction-contracts.md) for the UI contract.
+> **Status:** Current shipped layer boundaries and use cases. Active exam mode uses draft-save plus finalization; see [Interaction Contracts](../product/practice/interaction-contracts.md) for the UI contract.
 
 ---
 
@@ -82,7 +82,7 @@ All use cases follow the pattern: constructor injection of port interfaces, sing
 | `SaveExamDraftAnswer` | `{ userId, sessionId, questionId, selectedChoiceId, cumulativeMs }` | Updated `PracticeSessionQuestionState` draft fields | `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT` |
 | `FinalizeExamAnswers` | `{ userId, sessionId }` | `PracticeSessionSummary` | `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, `INTERNAL_ERROR` |
 
-Answer-key exposure in active exam contexts is governed by the [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
+Answer-key exposure in active exam contexts is governed by the [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md).
 
 #### Practice Sessions
 

@@ -1,6 +1,6 @@
 # Practice Engine: Practice Modes
 
-> **Parent:** [Practice Engine Index](./index.md)
+> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
 > **Last Verified:** 2026-07-07
 
@@ -47,7 +47,7 @@ EndPracticeSession / FinalizeExamAnswers → computes totals from questionStates
 - **Mark for review:** Users can flag questions during the session. `SetPracticeSessionQuestionMark` persists the flag. Only available in exam mode.
 - **Review stage:** Before finalizing, users enter a review checklist with answered/unanswered/marked counts and can jump back into any exam question. Entry is via the footer `Review & Submit` action on the last exam question.
 - **Post-exam review stage:** After `Submit exam`, the user stays on the session route and enters an ephemeral post-exam review stage with a score banner, correctness-colored navigator, inline feedback, and a `View Summary` escape hatch.
-- **Deferred explanations (policy):** Correctness/explanations remain hidden while the exam session is active, then become visible only after `Submit exam` finalizes the session. See [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) for the canonical enforcement contract and regression scope.
+- **Deferred explanations (policy):** Correctness/explanations remain hidden while the exam session is active, then become visible only after `Submit exam` finalizes the session. See [Exam Answer Secrecy Policy](./exam-answer-secrecy.md) for the canonical enforcement contract and regression scope.
 
 ---
 

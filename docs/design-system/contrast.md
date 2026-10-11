@@ -86,8 +86,8 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 
 ### 3.3 Pattern Workflows
 
-- When adding or changing a visual pattern in `docs/frontend/pattern-registry.md`, verify it against the targets above in both light and dark mode.
-- If a pattern cannot meet targets without violating the product’s intended hierarchy, explicitly document the exception in `docs/frontend/standards.md` "Known Violations" and link the rationale + evidence (typically BS-042). Exceptions must be temporary and tracked as debt.
+- When adding or changing a visual pattern in `docs/design-system/pattern-registry.md`, verify it against the targets above in both light and dark mode.
+- If a pattern cannot meet targets without violating the product’s intended hierarchy, explicitly document the exception in `docs/design-system/standards.md` "Known Violations" and link the rationale + evidence (typically BS-042). Exceptions must be temporary and tracked as debt.
 
 ---
 

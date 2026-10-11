@@ -23,7 +23,7 @@
 5. **`vi.mock()` only for modules that cannot be injected,** such as `@clerk/nextjs`, `next/link` and `server-only`, and for Browser Mode's sealed boundaries with `{ spy: true }`.
 6. **A ratchet keeps violations from growing.** `pnpm lint:doubles` counts own-code module mocks, unknown double casts and hand-rolled doubles for ports with maintained fakes. Each file's floor equals its live count, so a removed site cannot return. When a file with a floor is next edited, its sites move onto the fake.
 
-The rule's text lives in `.claude/rules/testing.md`. The evidence that each fake matches its adapter is in `docs/dev/test-double-contract-register.md`, which a test parses.
+The rule's text lives in `.claude/rules/testing.md`. The evidence that each fake matches its adapter is in `docs/guides/testing/fake-contracts.md`, which a test parses.
 
 ## Consequences
 
@@ -44,5 +44,5 @@ The rule's text lives in `.claude/rules/testing.md`. The evidence that each fake
 ## Related
 
 - [`.claude/rules/testing.md`](../../.claude/rules/testing.md): the rule.
-- [The fake-contract register](../dev/test-double-contract-register.md): the fake↔real evidence.
+- [The fake-contract register](../guides/testing/fake-contracts.md): the fake↔real evidence.
 - [ADR-003](./adr-003-testing-strategy.md) and [ADR-019](./adr-019-test-quality-practices.md): the testing strategy and quality practices.

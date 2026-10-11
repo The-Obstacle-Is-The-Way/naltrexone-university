@@ -7,7 +7,7 @@ import ts from '@typescript/typescript6';
 // cannot silently orphan a rule. A malformed register line is reported too,
 // so a rule cannot drop out of the check unseen.
 
-export const RULE_REGISTER_PATH = 'docs/dev/acceptance-testing.md';
+export const RULE_REGISTER_PATH = 'docs/product/business-rules.md';
 
 export type RuleProof = { readonly file: string; readonly title: string };
 

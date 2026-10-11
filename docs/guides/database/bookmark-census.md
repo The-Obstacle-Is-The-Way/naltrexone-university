@@ -3,7 +3,7 @@
 **Last Updated:** 2026-07-22
 
 This read-only monthly census supplies the cardinality limb of the parked
-[DEBT-450 Part 3b](../_archive/debt/debt-450-hot-path-query-efficiency.md)
+[DEBT-450 Part 3b](../../_archive/debt/debt-450-hot-path-query-efficiency.md)
 bookmark-pagination trigger. It reports aggregate counts only and must never
 emit user or bookmark identifiers.
 

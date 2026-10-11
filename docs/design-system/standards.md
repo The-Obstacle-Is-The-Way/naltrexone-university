@@ -6,9 +6,9 @@ Canonical reference for all frontend patterns, component usage, accessibility, a
 
 **See also:**
 - [Pattern Registry](./pattern-registry.md) — Single source of truth for every visual pattern: hover opacities, link strategies, surface hierarchy, token scales, decision trees
-- [Design Principles](./design-principles.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
-- [Contrast Policy](./contrast-policy.md) — Canonical WCAG AA contrast targets and rules
-- [Bookmark Surface Policy](./bookmark-surface-policy.md) — Where bookmark appears/doesn't and why (decision tree for new surfaces)
+- [Design Principles](./layout.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
+- [Contrast Policy](./contrast.md) — Canonical WCAG AA contrast targets and rules
+- [Bookmark Surface Policy](./bookmark-surfaces.md) — Where bookmark appears/doesn't and why (decision tree for new surfaces)
 
 ## For AI Agents (Claude Code, Cursor, Codex, etc.)
 
@@ -274,7 +274,7 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 
 ## 4. Typography
 
-**Canonical policy:** [Typography Policy](./typography-policy.md) — Three-pipeline model (hardcoded UI text, question content, and public legal documents), content tier system, and Markdown renderer rules.
+**Canonical policy:** [Typography Policy](./typography.md) — Three-pipeline model (hardcoded UI text, question content, and public legal documents), content tier system, and Markdown renderer rules.
 
 This section covers **hardcoded UI text** sizing. For content text (question stems, choices, explanations, references), see the Typography Policy.
 
@@ -336,7 +336,7 @@ Use `text-3xl font-bold font-display text-foreground` for prominent statistics. 
 | Page/section supporting copy | `text-base text-muted-foreground` |
 | Card headings | `text-sm font-medium text-foreground` |
 | Error details (digest) | `text-xs text-muted-foreground` |
-| Content text (Markdown) | See [Typography Policy](./typography-policy.md) — three-tier system (primary `text-base`, secondary `text-sm`, tertiary `text-xs`) |
+| Content text (Markdown) | See [Typography Policy](./typography.md) — three-tier system (primary `text-base`, secondary `text-sm`, tertiary `text-xs`) |
 
 Do not rely on inherited browser `1rem` for page/section subtitles or helper copy. If the intent is 16px supporting copy, say `text-base` explicitly.
 
@@ -615,7 +615,7 @@ After error recovery ("Try again"), focus SHOULD move to the result (the new con
 
 ### Contrast (WCAG AA)
 
-**Canonical rules:** `docs/frontend/contrast-policy.md`
+**Canonical rules:** `docs/design-system/contrast.md`
 
 All UI must meet WCAG AA contrast targets for:
 - SC 1.4.3 (text): 4.5:1 for normal text, 3.0:1 for large text
@@ -782,7 +782,7 @@ ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode r
 
 Before adding or changing any question-review link (`mode=review`, `attemptId`, `sessionId`), verify the destination cannot expose active-exam correctness/explanations.
 
-- Canonical source: `docs/practice-engine/exam-answer-secrecy-policy.md`
+- Canonical source: `docs/product/practice/exam-answer-secrecy.md`
 - Do not ship route/link changes that bypass that policy via alternate identifier paths.
 
 ### App Shell Header
@@ -894,13 +894,13 @@ Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageMode
 | `usePracticeSessionQuestionFlow` | 449 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 290 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
-Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/frontend/contrast-policy.md`.
+Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/design-system/contrast.md`.
 
 ### P3 — Fix as encountered
 
 | ID | Summary | File(s) |
 |----|---------|---------|
-| — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
+| — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/design-system/pattern-registry.md` |
 | — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 

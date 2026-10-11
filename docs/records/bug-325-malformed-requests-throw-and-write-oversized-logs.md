@@ -96,7 +96,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   - limits each signed-in user to ten visits a minute (`CHECKOUT_SUCCESS_RATE_LIMIT`), keyed by the session's Clerk user, before the user lookup and Stripe;
   - treats Stripe's `resource_missing` as a quiet `invalid_session_id` at info, with only the ID's length. A session that exists in the other Stripe mode is logged at error.
 - **Item 4** is not filtered, for the reason and with the trigger above.
-- **Item 5.** The response plan is in `docs/dev/logging.md`.
+- **Item 5.** The response plan is in `docs/architecture/observability.md`.
 - **Item 6.**
   - The question page caps the slug and origin in its telemetry line at 100 characters.
   - Every failed webhook signature check logs at warn: the three routes, and Stripe's processor, which keeps Stripe's reason. A Stripe payload failure behind a valid signature stays an error.
@@ -123,7 +123,7 @@ This is likely the report the owner remembered, that "a user with certain parame
 - [x] Item 2: a refused subscribe never logs the raw key, and a refused input is a warning.
 - [x] Item 3: a malformed session ID, or one Stripe lacks, redirects with `invalid_session_id`, logged at info, with nothing thrown. Each signed-in user is limited before Clerk and Stripe, and a session from the other Stripe mode stays an error.
 - [x] Item 4: decided with a trigger; production Sentry had none of these errors in 14 days.
-- [x] Item 5: the response plan is in the logging guide, `docs/dev/logging.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
+- [x] Item 5: the response plan is in the logging guide, `docs/architecture/observability.md` ("Sentry flood or quota exhaustion"). A flood is a monitoring outage, not a breach, so it links to the breach procedure instead of living in it.
 - [x] Item 6: each decided change shipped; `CLERK_JWT_KEY` moved to DEBT-503 item 5 on 2026-10-10.
 - [ ] Engineering, by 2026-10-20: search Sentry through its API for unhandled errors from the fixed paths since production assignment (2026-10-06T11:46:31.925Z, promotion #1399, `af02fe0a`). Record the query, time range, event count and whether ingestion was healthy. Developer retains 30 days, so this window is observable. Zero events is supporting evidence, not proof of every malformed input. Caught pino log lines are not in Sentry; unit assertions cover their content and level, and no production log capture has been made. *Corrected 2026-10-06 (#1410 review): no one-hour Vercel capture exists.* The original 14-day historical search remains an operator receipt.
 

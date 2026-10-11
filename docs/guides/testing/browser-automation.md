@@ -55,7 +55,7 @@ If Clerk redirects to sign-in, the profile session has expired — redo the head
 | `--state` / storageState | `agent-browser --state` silently fails to restore cookies/localStorage, even for non-Clerk sites. Upstream bug. |
 | Direct CLI fill | Clerk's anti-automation blocks it |
 
-Full auth investigation: [BS-057](../_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md)
+Full auth investigation: [BS-057](../../_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md)
 
 ### Loading `.env.local` values
 
@@ -91,7 +91,7 @@ EMAIL=$(node -e "require('dotenv').config({path:'.env.local', quiet:true});requi
 
 agent-browser's accessibility-tree-based click does not produce the event sequence React 19's root-level event delegation expects. Radix toggle groups listen for `pointerdown` specifically — neither agent-browser refs nor programmatic `dispatchEvent` produces a trusted pointer event that Radix accepts.
 
-Full test matrix: [DEBT-323](../_archive/debt/debt-323-agent-browser-react-click-failures.md)
+Full test matrix: [DEBT-323](../../_archive/debt/debt-323-agent-browser-react-click-failures.md)
 
 ---
 

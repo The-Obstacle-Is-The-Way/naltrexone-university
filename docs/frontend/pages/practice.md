@@ -276,7 +276,7 @@ type PracticeFilters = {
 | Part | Token | Computed (dark) | Notes |
 |------|-------|----------------|-------|
 | Container bg | `bg-muted` | #1C1C1C | Slightly lighter than card |
-| Container border | `border-border` | #262626 | Decorative — active pill provides identification (see [contrast-policy.md](../contrast-policy.md) §2) |
+| Container border | `border-border` | #262626 | Decorative — active pill provides identification (see [contrast-policy.md](../../design-system/contrast.md) §2) |
 | Active pill bg | `bg-primary` | #EDEDED | High contrast |
 | Active pill text | `text-primary-foreground` | #090909 | Dark on light |
 | Inactive text | `text-muted-foreground` | #8C8C8C | 5.07:1 on muted. It was 4.495:1 as rendered (#838383), just below AA, until BUG-309 |
@@ -331,9 +331,9 @@ Elements **not** changing: SegmentedControl (all three instances), Input, Card c
 
 ## Related Documentation
 
-- [Frontend Standards](../standards.md) — Design tokens, Card component standard
-- [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-4 (Filter Chip), I-5 (Segmented Control)
-- [Contrast Policy](../contrast-policy.md) — WCAG AA targets
+- [Frontend Standards](../../design-system/standards.md) — Design tokens, Card component standard
+- [Pattern Registry](../../design-system/pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-4 (Filter Chip), I-5 (Segmented Control)
+- [Contrast Policy](../../design-system/contrast.md) — WCAG AA targets
 - [Quick Practice Audit](./quick-practice.md) — Dark mode audit of the question-answering view (separate page)
 - [DEBT-290](../../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md) — Practice filter container tonal fill elevation
 - [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) — Dashboard tonal fill elevation (precedent)

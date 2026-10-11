@@ -1,6 +1,6 @@
 # Practice Engine: Question and Choice Ordering Policy
 
-> **Parent:** [Practice Engine Index](./index.md)
+> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
 > **Scope:** Canonical ordering rules for question selection and choice display across all practice paths
 > **Last Verified:** 2026-03-17
 
@@ -169,8 +169,8 @@ The fix for all of these is the same: **shuffle before selecting**. Repositories
 
 | Document | Relevance |
 |----------|-----------|
-| [Practice Modes](./practice-modes.md) | Session lifecycle, question selection overview |
-| [Architecture Layers](./architecture-layers.md) | Domain service inventory including shuffle and selection |
-| [Content Pipeline](./content-pipeline.md) | How content batch structure creates DB insertion order |
-| [Retry Logic](./retry-logic.md) | Reattempt semantics (ordering is independent of retry provenance) |
-| [BS-038](../_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md) | Original audit that identified the ordering gap |
+| [Practice Modes](./modes.md) | Session lifecycle, question selection overview |
+| [Architecture Layers](../../architecture/practice-engine.md) | Domain service inventory including shuffle and selection |
+| [Content Pipeline](../../architecture/content-pipeline.md) | How content batch structure creates DB insertion order |
+| [Retry Logic](./retries.md) | Reattempt semantics (ordering is independent of retry provenance) |
+| [BS-038](../../_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md) | Original audit that identified the ordering gap |

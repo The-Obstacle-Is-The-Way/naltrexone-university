@@ -186,6 +186,6 @@ describe('fake contract and divergence register', () => {
       'utf8',
     );
 
-    expect(testingRule).toContain('docs/dev/test-double-contract-register.md');
+    expect(testingRule).toContain('docs/guides/testing/fake-contracts.md');
   });
 });

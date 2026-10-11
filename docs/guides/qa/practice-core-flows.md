@@ -9,7 +9,7 @@
 **Promotion gate:** yes
 **Promoted to:** — (overlaps `practice.spec.ts`, `session-continuation.spec.ts`; this procedure keeps the judgment checks and the not-yet-automated edges)
 
-This procedure is written to absorb Flows A–C of the Core Flow Verification section in `docs/dev/stabilization-checklist.md` once it is Active (that section remains in place until then). Behavior contracts cited below live in `docs/practice-engine/interaction-contracts.md` and `docs/practice-engine/exam-answer-secrecy-policy.md`.
+This procedure is written to absorb Flows A–C of the Core Flow Verification section in `docs/dev/stabilization-checklist.md` once it is Active (that section remains in place until then). Behavior contracts cited below live in `docs/product/practice/interaction-contracts.md` and `docs/product/practice/exam-answer-secrecy.md`.
 
 ---
 
@@ -21,7 +21,7 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 | 2 | ⚠ Narrow filters (e.g. one tag + "Unanswered") | Availability output updates to match the narrowed pool |
 | 3 | Restore or widen filters until at least 5 questions are available; with mode = Tutor and count = 5, press **Start session** | URL becomes `/app/practice/<sessionId>`; question 1 of 5 renders; **no timer is shown** (tutor has no clock) |
 | 4 | Activate a choice; if using keyboard/AT or the agent label-click fallback, press **Submit** when it appears | Verdict pill (`data-testid="verdict-pill"`) and the explanation render **immediately** after pointer activation or Submit — tutor mode always shows feedback on commit |
-| 5 | Check the question footer | Bookmark control **is present** (tutor = YES in `docs/frontend/bookmark-surface-policy.md`); rating footer (helpful / not helpful) present |
+| 5 | Check the question footer | Bookmark control **is present** (tutor = YES in `docs/design-system/bookmark-surfaces.md`); rating footer (helpful / not helpful) present |
 | 6 | Press **Next**, answer one more, then navigate away (e.g. Dashboard) mid-session | The question progress indicator advances; no error on leaving |
 | 7 | Return to `/app/practice` | **Continue session** card shows the session with its mode label and progress, with **Resume session** and abandon actions |
 | 8 | Press **Resume session** | Returns to the exact `/app/practice/<sessionId>` URL at the next unanswered question |
@@ -52,11 +52,11 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 ## Visual checks
 
 - [ ] Entire flow renders forced-dark; no light-mode leakage anywhere (DEBT-421 invariant)
-- [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/frontend/pattern-registry.md` I-3 / `docs/frontend/pages/quick-practice.md`
-- [ ] Action bar stays reachable on long questions (sticky bottom bar; whole-page scroll) — `docs/frontend/design-principles.md`
-- [ ] Focus rings on all interactive controls are the canonical ring — `docs/frontend/standards.md` §3
-- [ ] Question stem and choices render at the Primary content tier (`text-base`, 16px); the post-submit explanation is promoted to Primary per the Feedback Context Override — `docs/frontend/typography-policy.md` § Content Tier System
-- [ ] Bookmark presence matches the per-surface registry on every surface touched — `docs/frontend/bookmark-surface-policy.md`
+- [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/design-system/pattern-registry.md` I-3 / `docs/frontend/pages/quick-practice.md`
+- [ ] Action bar stays reachable on long questions (sticky bottom bar; whole-page scroll) — `docs/design-system/layout.md`
+- [ ] Focus rings on all interactive controls are the canonical ring — `docs/design-system/standards.md` §3
+- [ ] Question stem and choices render at the Primary content tier (`text-base`, 16px); the post-submit explanation is promoted to Primary per the Feedback Context Override — `docs/design-system/typography.md` § Content Tier System
+- [ ] Bookmark presence matches the per-surface registry on every surface touched — `docs/design-system/bookmark-surfaces.md`
 - [ ] At 390×844: starter, question card, and summary have no horizontal overflow; action bar usable
 
 ## Evidence
@@ -65,4 +65,4 @@ Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feed
 
 ## On failure
 
-Behavioral defect → file a bug record in `docs/records/`, citing the step number and the governing contract doc. Visual drift → check `docs/frontend/` policy first; undocumented pattern = Discoverability Rule finding, not a pass.
+Behavioral defect → file a bug record in `docs/records/`, citing the step number and the governing contract doc. Visual drift → check the `docs/design-system/` policy first; undocumented pattern = Discoverability Rule finding, not a pass.

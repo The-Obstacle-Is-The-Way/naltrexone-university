@@ -1,6 +1,6 @@
 # Practice Engine: Content Pipeline (Authored Content → Rendered UI)
 
-> **Parent:** [Practice Engine Index](./index.md)
+> **Parent:** [Practice Engine Index](../practice-engine/index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
 > **Last Verified:** 2026-03-17
 > **Import workflow updated:** 2026-09-20 — clean staging; other architectural/format sections retain their earlier verification scope.
@@ -99,7 +99,7 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 ### Sources of Truth
 
 - **Draft question format:** `docs/content/question-format-spec.md` — single source of truth for authoring
-- **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/content/tag-taxonomy-golden-spec.md` (reference)
+- **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/product/content-taxonomy.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parse-mdx-question.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
 
@@ -556,7 +556,7 @@ SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 pnpm dev
 ```
 
-The test DB host port is per-clone (resolved by `scripts/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/dev/integration-tests.md`.
+The test DB host port is per-clone (resolved by `scripts/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/guides/testing/integration-tests.md`.
 
 ---
 
@@ -591,7 +591,7 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 | **After switching Neon branches** | Different branches may have different data states. |
 | **After `pnpm db:test:reset`** | Test DB is wiped; seed restores content. |
 
-**Important:** The seed is **not** automatically run against a deployed database by Vercel, CI or `pnpm db:migrate`. CI seeds only its own throwaway database. It is always a manual operator step. See `docs/dev/deployment-procedure.md` for the full deployment flow.
+**Important:** The seed is **not** automatically run against a deployed database by Vercel, CI or `pnpm db:migrate`. CI seeds only its own throwaway database. It is always a manual operator step. See `docs/guides/release/promote-to-production.md` for the full deployment flow.
 
 ---
 

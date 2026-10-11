@@ -1,13 +1,13 @@
 # Deployment Procedure
 
-> **Parent:** [Deployment Environments](./deployment-environments.md)
+> **Parent:** [Deployment Environments](../../architecture/environments.md)
 > **Last Updated:** 2026-10-05 (a promotion with no production deployment; the 2026-09-19 production release gate and other procedures retain their existing scope)
 
 ---
 
 ## 1. Migration Contract: Build-Command Migration
 
-[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
+[BUG-241](../../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
 
 ```bash
 pnpm exec tsx scripts/verify-migration-ledger.ts pre \
@@ -25,7 +25,7 @@ on `main`. Any failed check or migration fails the build closed, so the
 currently-serving deployment stays up.
 
 Migration authors must also answer the N-1 compatibility question in
-[Migration Authoring → Deployed-Code Compatibility](./migration-authoring.md#deployed-code-compatibility):
+[Migration Authoring → Deployed-Code Compatibility](../database/migrations.md#deployed-code-compatibility):
 the currently serving code must remain compatible with the migrated schema
 until promotion.
 
@@ -114,7 +114,7 @@ The deleted `deploy` job only echoed a message. Its success never proved that pr
 On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
 
 **No production deployment at all.** Twice, Vercel created no deployment for a promotion's merge commit:
-- promotion #509 on 2026-06-24 ([BUG-259](../_archive/bugs/bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md));
+- promotion #509 on 2026-06-24 ([BUG-259](../../_archive/bugs/bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md));
 - promotion #1367 on 2026-10-05.
 
 In each case, the commit had no Vercel status on GitHub, no deployment was listed for its SHA, and its tree matched a `dev` preview that had just built. Not every such promotion is skipped (#1365 deployed), so the trigger is not known on our side. Production keeps serving the previous release. That is harmless when the promotion changes no application code, but otherwise production silently lags `main`.
@@ -124,7 +124,7 @@ The release watch must therefore find a deployment for the exact merge SHA, not 
 2. With the owner's approval, deploy that exact commit from a clean checkout as a production deployment with domain assignment skipped (`vercel deploy --prod --skip-domain`). The Deployment Check is not shown to hold a CLI-created deployment's alias.
 3. Only after `main`'s `test` check has passed on that exact commit, promote the staged deployment (`vercel promote <deployment>`). That is a normal promotion of a checked commit, not **Force Promote**. #509 used `vercel deploy --prod`, which assigns the domains at once.
 
-**Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. [DEBT-445 Part 3](../_archive/debt/debt-445-migration-deploy-pipeline-guardrails.md) already established the [deployed-code compatibility contract](./migration-authoring.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
+**Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. [DEBT-445 Part 3](../../_archive/debt/debt-445-migration-deploy-pipeline-guardrails.md) already established the [deployed-code compatibility contract](../database/migrations.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
 
 For a manual Preview or Production reseed, export the verified target, run the
 guard once without an acknowledgement, and confirm it refuses before opening
@@ -173,7 +173,7 @@ DATABASE_URL="<target>" pnpm db:seed
 
 **For additive-only migrations** (new columns, new tables, new enum values), `pnpm db:migrate` alone is sufficient — no reseed needed unless the seed populates the new columns.
 
-For authoring rules before a migration PR merges — pre-flight data proof, cleanup row-count notices, operation ordering, and lock-scope review — see [Migration Authoring](./migration-authoring.md).
+For authoring rules before a migration PR merges — pre-flight data proof, cleanup row-count notices, operation ordering, and lock-scope review — see [Migration Authoring](../database/migrations.md).
 
 ---
 
@@ -230,7 +230,7 @@ Before merging to `main` (production deploy):
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
-- [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
+- [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](../../architecture/environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
 
 ---
@@ -253,13 +253,13 @@ Read back ruleset `17666822` (`main-and-dev-protection`) and each branch's rules
 
 The ruleset is one shared policy for explicit `refs/heads/main` and `refs/heads/dev`, avoiding two independently maintained copies. Before activation, PR #926 into `dev` reported `test=success` from `github-actions`; the workflow/script inventory contained no direct `dev` pusher. The old direct-push runbook above was the incompatible instruction, not an automation requirement. The read-only 11-property assertion failed for dev coverage, thread resolution and strict checks before activation, then passed all 11 after; both branch rule endpoints were checked independently.
 
-Feature PRs require CodeRabbit exact-head **APPROVED** through the [checked-in merge command](../guides/release/review-and-merge.md#the-merge-guard). Promotions instead verify the source PRs through the [reviewed-source procedure](#8-promoting-dev-to-main) (ADR-024). These and merge-commit use are operator/process requirements. The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, no CODEOWNERS/last-push approval requirement, and the platform's allowed merge methods (`merge`, `squash`, `rebase`); repository policy still selects `merge`. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require refreshed verification.
+Feature PRs require CodeRabbit exact-head **APPROVED** through the [checked-in merge command](./review-and-merge.md#the-merge-guard). Promotions instead verify the source PRs through the [reviewed-source procedure](#8-promoting-dev-to-main) (ADR-024). These and merge-commit use are operator/process requirements. The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, no CODEOWNERS/last-push approval requirement, and the platform's allowed merge methods (`merge`, `squash`, `rebase`); repository policy still selects `merge`. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require refreshed verification.
 
 ---
 
 ## 7. Seeding from Multiple Clones
 
-The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotency and Multi-Clone Safety](../practice-engine/content-pipeline.md#16-seed-idempotency-and-multi-clone-safety) for the full explanation.
+The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotency and Multi-Clone Safety](../../architecture/content-pipeline.md#16-seed-idempotency-and-multi-clone-safety) for the full explanation.
 
 **Key points:**
 - The `slug` field is the stable identity key — same slug = same question across any clone or DB
@@ -278,7 +278,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
    - a same-repository `dev` → `main` PR, with up-to-date ancestry;
    - every first-parent merge's source PR, and the actual second-parent head;
-   - each source's formal approval predating its merge: exact-head, or carried as the [merge guard](../guides/release/review-and-merge.md#the-merge-guard) allows, with each source diff taken against the merge's first parent;
+   - each source's formal approval predating its merge: exact-head, or carried as the [merge guard](./review-and-merge.md#the-merge-guard) allows, with each source diff taken against the merge's first parent;
    - zero unresolved source or promotion threads;
    - successful `test` and `codecov/patch` checks on the promotion.
 
@@ -296,7 +296,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 
 ## Related
 
-- [Deployment Environments](./deployment-environments.md) — Env var scoping, Clerk/Stripe/Neon config
-- [License Baseline](./license-baseline.md) — Production dependency license distribution and review-worthy exceptions
-- [Content Pipeline](../practice-engine/content-pipeline.md) — MDX → seed → DB flow
-- [SPEC-033 §14](../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure
+- [Deployment Environments](../../architecture/environments.md) — Env var scoping, Clerk/Stripe/Neon config
+- [License Baseline](../../dev/license-baseline.md) — Production dependency license distribution and review-worthy exceptions
+- [Content Pipeline](../../architecture/content-pipeline.md) — MDX → seed → DB flow
+- [SPEC-033 §14](../../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure

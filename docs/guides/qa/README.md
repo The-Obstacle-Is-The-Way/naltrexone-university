@@ -1,6 +1,6 @@
 # UI QA Procedures
 
-Scripts that test the app **at the UI**, run by a person, by an agent (Chrome MCP or `agent-browser`), or with Playwright's help. They cover what needs judgement or is not yet automated; deterministic regressions belong in `tests/e2e/`. The method, execution modes, environments and promotion rules are in [`docs/dev/qa-procedures.md`](../../dev/qa-procedures.md).
+Scripts that test the app **at the UI**, run by a person, by an agent (Chrome MCP or `agent-browser`), or with Playwright's help. They cover what needs judgement or is not yet automated; deterministic regressions belong in `tests/e2e/`. The method, execution modes, environments and promotion rules are in [`docs/guides/qa/method.md`](./method.md).
 
 ## Procedures
 
@@ -25,7 +25,7 @@ From the 2026-08-13 UI-coverage audit. Write a procedure when one is needed.
 | Error, 404 and loading states | Error boundaries, `not-found.tsx` and loading files have unit-render coverage except the quick-practice loading file; forced route-level boundary states are uncovered | Agent |
 | History filters and pagination | Browser-component coverage clicks the Source filter and session disclosure; route-level tabs, `result`/`difficulty`/`tag`/`sort`, and Previous/Next remain uncovered | Playwright-assisted (chips are toggles) |
 | Mobile sweep | One 375×667 practice E2E and one browser-component case exist; a 390×844 app-shell and practice sweep remains uncovered | Agent screenshots and a person's review |
-| Accessibility and focus rings | The canonical focus ring, keyboard navigation, and contrast per [the contrast policy](../../frontend/contrast-policy.md) | Person and agent |
+| Accessibility and focus rings | The canonical focus ring, keyboard navigation, and contrast per [the contrast policy](../../design-system/contrast.md) | Person and agent |
 | Feedback and report dialog | The controls have browser-component coverage, but no route-level rating or report interaction | Agent (dialog buttons work) |
 | Account deletion | Clerk `<UserButton>` → delete → the `user.deleted` webhook's consequences; **a disposable account is required** | Person |
 | Rendered legal and marketing pages | `/privacy` and `/terms` have unit-render tests and E2E HTTP checks, but no real-browser pass over typography, anchors and footer links | Agent screenshots and a person's review |
@@ -51,7 +51,7 @@ From the 2026-08-13 UI-coverage audit. Write a procedure when one is needed.
 
 ## Visual checks
 
-- [ ] check — governing doc (docs/frontend/…)
+- [ ] check — governing doc (docs/design-system/…)
 
 ## Evidence
 

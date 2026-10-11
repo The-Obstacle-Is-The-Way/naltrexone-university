@@ -18,7 +18,7 @@
 | `/app/bookmarks` | Server Component | Bookmarked questions (consumer of `getBookmarks`) | Implemented |
 | `/app/questions/[slug]` | Server → Client | Individual question page (attempt + review mode) | Implemented |
 
-Route-level correctness/explanation exposure rules are centralized in the [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md).
+Route-level correctness/explanation exposure rules are centralized in the [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md).
 
 ---
 

@@ -2,8 +2,8 @@
 
 **Last Updated:** 2026-08-29
 
-This guide is the durable review checklist for Drizzle migration files. It
-complements [Deployment Procedure](./deployment-procedure.md), which describes
+This guide is the durable review checklist for Drizzle migration files. It was `docs/dev/migration-authoring.md` until 2026-10-11, and two applied migrations, `0027` and `0028`, still cite that path; applied migrations never change. It
+complements [Deployment Procedure](../release/promote-to-production.md), which describes
 when migrations run. This file describes how to write migrations so data cleanup,
 constraints, and lock scope are explicit before a PR merges.
 

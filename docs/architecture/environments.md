@@ -36,9 +36,9 @@ Do not hard-code branch hostnames, account ids, passwords, or connection strings
 
 ### Production Release Gate
 
-Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](./deployment-procedure.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
+Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](../guides/release/promote-to-production.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
 
-Production database migrations run during the build, **before** the release gate. They must remain compatible with the live application under the existing [expand/contract authoring contract](./migration-authoring.md#deployed-code-compatibility), even if the check fails and the old release keeps serving.
+Production database migrations run during the build, **before** the release gate. They must remain compatible with the live application under the existing [expand/contract authoring contract](../guides/database/migrations.md#deployed-code-compatibility), even if the check fails and the old release keeps serving.
 
 ### CI Secret Standard
 
@@ -47,7 +47,7 @@ Owner ruling 2026-09-19, recorded 2026-09-20:
 - Keep secrets on their consuming steps, never at workflow/job scope. Required and hosted-checkout Build steps use real compiled public values (or documented credential-free fallbacks) and shape-valid server-only placeholders. Real TEST-mode provider/E2E credentials belong only on E2E; the scheduled provider-contract runner receives only its required Stripe inputs. Codecov gets only its upload token.
 - Typecheck, lint, unit, database migrate/seed, integration and browser steps receive no provider credential. Public values are not authentication secrets. Step scoping does not isolate a secret from dependency code executing within the authorized step.
 - SHA-pin every action, and pin every container image by digest; `tests/ci-workflow.test.ts` checks the images in every workflow (BUG-327). Four workflows currently exist: `tests/ci-workflow.test.ts` enumerates permitted secret consumers and verifies pins in CI and both Stripe workflows; `scripts/security-txt-renewal.test.ts` separately verifies the renewal workflow's pins and least-privilege permissions. Every added workflow needs the corresponding contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
-- Keep the Dependabot secret store empty and retain its E2E actor guard. Vercel does not build `dependabot/**` branches (`vercel.json`, BUG-327), so Preview secrets never reach unreviewed dependency code either. Do not run bot heads locally with shared credentials. Re-author a reviewed owner PR when PR-time E2E is needed. Revisit only after separate Stripe Sandbox and Clerk-instance isolation at the paying-customer/second-engineer trigger; see [Dependency Update Protocol](./dependency-update-protocol.md#dependabot-prs-and-secrets).
+- Keep the Dependabot secret store empty and retain its E2E actor guard. Vercel does not build `dependabot/**` branches (`vercel.json`, BUG-327), so Preview secrets never reach unreviewed dependency code either. Do not run bot heads locally with shared credentials. Re-author a reviewed owner PR when PR-time E2E is needed. Revisit only after separate Stripe Sandbox and Clerk-instance isolation at the paying-customer/second-engineer trigger; see [Dependency Update Protocol](../guides/dependencies/updating-dependencies.md#dependabot-prs-and-secrets).
 - GitHub Actions has no consumer for `CRON_SECRET`. Its unused copy was deleted on 2026-09-20; API readback found zero matching secrets. This does not attest to Vercel rotation. Cron authentication validates the value actually consumed at request time, without making application startup depend on it.
 
 ### Deploy Migration Contract
@@ -266,9 +266,9 @@ When changing environment configuration, verify all of the following:
 
 ## Related
 
-- [deployment-procedure.md](./deployment-procedure.md)
-- [database-rollbacks.md](./database-rollbacks.md)
-- [license-baseline.md](./license-baseline.md)
+- [deployment-procedure.md](../guides/release/promote-to-production.md)
+- [database-rollbacks.md](../guides/operations/database-recovery.md)
+- [license-baseline.md](../dev/license-baseline.md)
 - [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
 - [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
 - [proxy.ts](../../proxy.ts)

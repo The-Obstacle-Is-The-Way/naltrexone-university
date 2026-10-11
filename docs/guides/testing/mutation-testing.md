@@ -20,7 +20,7 @@ Coverage says a line was *executed*; mutation tests whether selected behavior ch
 
 ## 2. Scope policy — mutate only what the unit lane pins
 
-Stryker runs the **unit config** (`vitest.config.mts`). Therefore only files whose behavior is pinned by unit-lane tests produce meaningful scores. The Gherkin acceptance suite once planned here was not adopted; the rule-to-test register in `docs/dev/acceptance-testing.md` names the tests that prove each business rule instead. A file covered only by browser or integration tests will report surviving or `NoCoverage` mutants that mean "tested in the wrong lane for this pilot," not "badly tested" — keep such files out of `mutate` until that changes.
+Stryker runs the **unit config** (`vitest.config.mts`). Therefore only files whose behavior is pinned by unit-lane tests produce meaningful scores. The Gherkin acceptance suite once planned here was not adopted; the rule-to-test register in `docs/product/business-rules.md` names the tests that prove each business rule instead. A file covered only by browser or integration tests will report surviving or `NoCoverage` mutants that mean "tested in the wrong lane for this pilot," not "badly tested" — keep such files out of `mutate` until that changes.
 
 Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/application/ports/**` (port contracts), barrels.
 
@@ -65,7 +65,7 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
 }
 ```
 
-- **`"break": null` is policy, not an oversight.** Coverage-adjacent metrics are observational in this repo (`docs/dev/react-vitest-testing.md`); `high`/`low` only color the report. Introducing a breaking gate requires an ADR amending ADR-019 with measured baselines.
+- **`"break": null` is policy, not an oversight.** Coverage-adjacent metrics are observational in this repo (`docs/guides/testing/react-component-tests.md`); `high`/`low` only color the report. Introducing a breaking gate requires an ADR amending ADR-019 with measured baselines.
 - `incremental: true` reuses unchanged mutant results, but the initial related-test coverage run still executes on every re-run. It is for local focused loops only: Stryker 9.6.1 does not invalidate a result when an unmutated file the mutant's module imports changes, so an incremental score can be stale. Every recorded score and the weekly workflow use `--force` (#1160 review).
 - **Record scores from a run without `.stryker-incremental.json`**, as the weekly workflow does. Even with `--force`, Stryker merges cached results for mutants outside the run into its report, and a cached kill can hide a survivor. On 2026-10-01, a run with the cache present missed one equivalent mutant that wave 4a's record had counted as killed.
 - `.gitignore` covers `.stryker-tmp/`, `.stryker-incremental.json` and `reports/`. The incremental file lives at the repo root deliberately: Stryker cleans `tempDirName` between runs, so state stored inside `.stryker-tmp/` would be destroyed.
@@ -104,7 +104,7 @@ Work the HTML report per file; classify every survivor and `NoCoverage` mutant:
    Suppressions without a stated reason are review-rejectable. A comment names a mutator, not one replacement, so it also silences that mutator's other replacements on the line: prove those are killed with a run that omits the comment, and record it with the triage.
 3. **Dead code** → delete the code, not the mutant.
 4. **Wrong-lane pin** (behavior is actually pinned by a browser/integration test) → remove the file from `mutate`, or move/duplicate the pinning test into the unit lane if it belongs there.
-5. **`NoCoverage` mutants** → those locations are not exercised by the selected unit tests; cross-check the CRAP report (`docs/dev/code-quality-metrics.md`) and decide test-or-descope explicitly.
+5. **`NoCoverage` mutants** → those locations are not exercised by the selected unit tests; cross-check the CRAP report (`docs/guides/testing/crap-report.md`) and decide test-or-descope explicitly.
 
 Timeouts count as detected. **Do not chase 100%** — equivalent mutants exist and suppression-spam is worse than an honest sub-100 score. The goal is a per-module ratchet: record the baseline, never regress it, raise it when you touch the module.
 

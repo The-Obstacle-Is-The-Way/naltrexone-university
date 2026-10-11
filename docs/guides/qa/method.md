@@ -5,8 +5,8 @@
 Scripted, repeatable test procedures that exercise the system **at the UI** — the third leg of the test triad this repo is adopting (see `docs/adr/adr-019-test-quality-practices.md`):
 
 1. **Unit tests** (TDD, colocated) prevent regressions in logic.
-2. **The rule-to-test register** (`docs/dev/acceptance-testing.md`; it replaces the Gherkin acceptance tests, not adopted on 2026-10-03) names each business rule and the tests that prove it below the UI.
-3. **QA procedures** (this doc and [the procedures in `docs/guides/qa/`](../guides/qa/README.md)) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
+2. **The rule-to-test register** (`docs/product/business-rules.md`; it replaces the Gherkin acceptance tests, not adopted on 2026-10-03) names each business rule and the tests that prove it below the UI.
+3. **QA procedures** (this doc and [the procedures in `docs/guides/qa/`](./README.md)) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
 
 A QA procedure is a Markdown script (`docs/guides/qa/<subject>.md`) that a human, an agent, or a Playwright-assisted run can execute against a running app, with explicit expected results and evidence capture.
 
@@ -16,12 +16,12 @@ A QA procedure is a Markdown script (`docs/guides/qa/<subject>.md`) that a human
 
 The Playwright suite (`tests/e2e/`, 17 specs) is deterministic regression coverage for critical journeys. QA procedures cover what it structurally leaves out:
 
-- **Judgment-bearing checks** — "does this layout look broken?", copy tone, visual hierarchy, dark-mode token drift. Assertions can't encode taste; the design docs in `docs/frontend/` + a pair of eyes (or a vision-capable agent pass over screenshots) can.
+- **Judgment-bearing checks** — "does this layout look broken?", copy tone, visual hierarchy, dark-mode token drift. Assertions can't encode taste; the design docs in `docs/design-system/` + a pair of eyes (or a vision-capable agent pass over screenshots) can.
 - **Surfaces without route-level UI automation.** The 2026-08-14 audit found these gaps: rendered Clerk `/sign-in` and `/sign-up` forms (E2E proves the pricing-to-sign-up handoff but signs in programmatically via `@clerk/testing`); real-browser `/privacy`–`/terms` routes (rich unit-render tests and E2E HTTP checks exist); forced route-level `error.tsx`/`not-found.tsx`/`loading.tsx` states (the components have unit-render coverage — the quick-practice error boundary included, via `app/(app)/app/practice/quick/error.test.tsx`; only the quick-practice loading file lacks a direct render test); billing-portal round-trip; paid (card) checkout + real-browser `?checkout=cancel|error|rate_limited` banners; the route-level entitlement redirect gate (`/app/*` → `/pricing?reason=…`, unit-covered); a real-browser `PastDueBanner` state (unit-covered); account deletion via the rendered Clerk `<UserButton>`; nondefault practice-starter filters at the route level (browser-component-covered); the quick-practice status switch at the route level (browser-component-covered); history tab, non-Source filters, and pagination at the route level (the Source filter and session disclosure are browser-component-covered); feedback rating + report dialog end-to-end; exam-timer expiry at the route level (browser hook/page-model and integration coverage exist); and an **app-wide mobile sweep** (one 375×667 practice E2E and one 375×667 browser-component case exist, while the Playwright project remains Desktop Chrome).
 - **Deployed-target verification.** Playwright boots its own local server (`reuseExistingServer: false`); it does not point at Vercel previews or production. QA procedures do.
 - **Pre-automation staging.** A flow becomes a procedure first; once its steps are stable and mechanizable, it is *promoted* to a Playwright spec and the procedure records the handoff (see Lifecycle).
 
-Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. QA-002 supplies the draft procedure that can give `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
+Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. QA-002 supplies the draft procedure that can give `docs/architecture/environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
 
 ---
 
@@ -37,14 +37,14 @@ Every procedure uses this skeleton (copy it from `docs/guides/qa/README.md` → 
 
 - **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
 - **Steps table:** `| # | Action | Expected |` — one operator checkpoint per row, with explicit actions and verifiable expectations. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
-- **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/frontend/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
+- **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/design-system/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
 - **Viewports:** default to the established audit pair — **1600×1000 desktop** and **390×844 mobile** — unless the procedure states otherwise.
 - **Evidence:** which steps require screenshots, and where they land.
 - **On failure:** file a bug record in `docs/records/` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the procedure links the finding.
 
 ## Execution modes
 
-Declare per procedure which modes can execute it. The constraint table below is the distilled reality of `docs/tooling/agent-browser.md` (DEBT-323) — do not relearn it per session.
+Declare per procedure which modes can execute it. The constraint table below is the distilled reality of `docs/guides/testing/browser-automation.md` (DEBT-323) — do not relearn it per session.
 
 | Mode | Auth | Can do | Cannot do |
 |---|---|---|---|
@@ -64,13 +64,13 @@ Rules of engagement (restating the standing mandates):
 | Target | Use for | Cautions |
 |---|---|---|
 | Local dev (`pnpm dev`, `NEXT_PUBLIC_APP_URL`) | Default for per-PR runs | Host exactness for Clerk cookies (`localhost` ≠ `127.0.0.1`) |
-| Vercel preview (`*.vercel.app`, any non-`main` branch) | Gated runs; anything involving Stripe test mode + webhooks | Clerk dev-mode quirk: the redirect back from Stripe Checkout can land on sign-in — environment behavior, not a bug (`docs/dev/deployment-environments.md`) |
+| Vercel preview (`*.vercel.app`, any non-`main` branch) | Gated runs; anything involving Stripe test mode + webhooks | Clerk dev-mode quirk: the redirect back from Stripe Checkout can land on sign-in — environment behavior, not a bug (`docs/architecture/environments.md`) |
 | Production (`https://addictionboards.com`) | Post-deploy smoke only | **Signed-out/read-only checks by default.** Mutating flows use live Stripe and the real user base — production mutation is owner-initiated only |
 
 ## When procedures run
 
 1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR (this operationalizes the existing "Add screenshots/GIFs for UI changes" rule in `AGENTS.md`).
-2. **Gated runs:** the procedures marked `Promotion gate: yes` in the register, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
+2. **Gated runs:** the procedures marked `Promotion gate: yes` in the register, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
 3. **Post-deploy smoke:** the production-safe subset, against `addictionboards.com`.
 
 ## Lifecycle and promotion

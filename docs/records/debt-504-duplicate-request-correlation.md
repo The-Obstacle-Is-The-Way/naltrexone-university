@@ -91,4 +91,4 @@ from the Drains API (#1410 review).*
 ## Related
 
 - [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md).
-- [Logging](../dev/logging.md).
+- [Logging](../architecture/observability.md).

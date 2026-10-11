@@ -1,6 +1,6 @@
 # Practice Engine: Retry and Reattempt Logic
 
-> **Parent:** [Practice Engine Index](./index.md)
+> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
 > **Scope:** Current retry/reattempt behavior, provenance rules, and cross-mode consistency
 > **Last Verified:** 2026-04-25
 
@@ -216,16 +216,16 @@ Retry lineage is structurally in place and the secrecy contract is now enforced,
 - [x] Server telemetry for mixed-id normalization + hydration outcomes is in place.
 - [x] Session-review retry marker persistence policy is explicitly defined (visit-scoped).
 - [x] `GetPreviousAttempt` mixed-id contract is hardened beyond boundary normalization.
-- [x] Active-exam secrecy gates are enforced across all correctness-bearing verified surfaces; BUG-239 tracks a remaining implicit latest-reader fallback consistency gap (see [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)).
+- [x] Active-exam secrecy gates are enforced across all correctness-bearing verified surfaces; BUG-239 tracks a remaining implicit latest-reader fallback consistency gap (see [Exam Answer Secrecy Policy](./exam-answer-secrecy.md)).
 
 ---
 
 ## 11. Related
 
-- [DEBT-265](../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md)
-- [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
-- [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
-- [Question Rendering Architecture](./question-rendering-architecture.md)
-- [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)
-- [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
-- [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md)
+- [DEBT-265](../../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md)
+- [DEBT-266](../../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
+- [DEBT-267](../../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
+- [Question Rendering Architecture](../../architecture/question-rendering.md)
+- [Exam Answer Secrecy Policy](./exam-answer-secrecy.md)
+- [SPEC-034](../../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
+- [SPEC-036](../../_archive/specs/spec-036-bookmark-review-mode-alignment.md)

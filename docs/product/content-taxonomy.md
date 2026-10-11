@@ -1,8 +1,8 @@
 # Tag Taxonomy — Golden Spec
 
 > **Status:** Implemented (2026-02-18 via SPEC-033; re-verified 2026-03-17)
-> **Companion docs:** [tag-taxonomy-pipeline.md](./tag-taxonomy-pipeline.md),
-> [question-format-spec.md](./question-format-spec.md)
+> **Companion docs:** [tag-taxonomy-pipeline.md](../content/tag-taxonomy-pipeline.md),
+> [question-format-spec.md](../content/question-format-spec.md)
 >
 > This is the canonical taxonomy reference. Runtime implementation is aligned;
 > use this doc for slugs, display names, ordering, and migration intent.
@@ -197,7 +197,7 @@ Use dated census reports for coverage analysis instead of relying on old
 migration-era expectations.
 
 Latest verified report:
-[tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
+[tag-census-2026-03-17.md](../content/reports/tag-census-2026-03-17.md)
 
 As of 2026-03-17:
 
@@ -205,7 +205,7 @@ As of 2026-03-17:
 - Low-count canonical slugs at the default `<= 3` threshold: none
 
 Historical snapshot:
-[tag-census-2026-02-18.md](./reports/tag-census-2026-02-18.md)
+[tag-census-2026-02-18.md](../content/reports/tag-census-2026-02-18.md)
 
 ---
 

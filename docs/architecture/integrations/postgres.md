@@ -6,17 +6,17 @@ copy connection configuration or dependency versions that can drift.
 
 ## Sources of Truth
 
-- [`lib/db.ts`](../../lib/db.ts) owns the application connection singleton,
+- [`lib/db.ts`](../../../lib/db.ts) owns the application connection singleton,
   postgres.js pool options, and Drizzle wiring.
-- [`lib/db-connection-options.ts`](../../lib/db-connection-options.ts) owns the
+- [`lib/db-connection-options.ts`](../../../lib/db-connection-options.ts) owns the
   PostgreSQL startup/session parameters used by application connections.
-- [`package.json`](../../package.json) owns the supported `db:*` command entry
+- [`package.json`](../../../package.json) owns the supported `db:*` command entry
   points and their target-safety wrappers.
-- [Migration Authoring](../dev/migration-authoring.md) owns migration file,
+- [Migration Authoring](../../guides/database/migrations.md) owns migration file,
   lock-scope, N-1 compatibility, and never-`push` rules.
-- [Deployment Procedure](../dev/deployment-procedure.md) owns the deploy-time
+- [Deployment Procedure](../../guides/release/promote-to-production.md) owns the deploy-time
   pre-check, migration, exact post-check, and build sequence.
-- [Database Rollbacks](../dev/database-rollbacks.md) owns fix-forward, restore,
+- [Database Rollbacks](../../guides/operations/database-recovery.md) owns fix-forward, restore,
   recovery-point-loss, and reconciliation procedures.
 
 Dependency versions are recorded only in `package.json` and the lockfile. Read
@@ -58,8 +58,8 @@ target guard. Checked-in CI, Vercel, E2E, and resolver wrappers use the internal
 managed boundary rather than a caller-selectable flag or environment bypass.
 
 For local disposable Postgres, resolve the clone-specific target through
-[`scripts/resolve-local-test-target.ts`](../../scripts/resolve-local-test-target.ts)
-and follow [Integration Tests](../dev/integration-tests.md). Never hardcode a
+[`scripts/resolve-local-test-target.ts`](../../../scripts/resolve-local-test-target.ts)
+and follow [Integration Tests](../../guides/testing/integration-tests.md). Never hardcode a
 shared local port.
 
 ## Primary Vendor References

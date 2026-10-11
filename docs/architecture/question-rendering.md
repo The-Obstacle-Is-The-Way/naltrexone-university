@@ -3,7 +3,7 @@
 > **Type:** Current-Implementation Reference
 > **Last Verified:** 2026-04-25
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
-> **Important:** [Interaction Contracts](./interaction-contracts.md) remains the canonical click-by-click UI contract when surface details conflict.
+> **Important:** [Interaction Contracts](../product/practice/interaction-contracts.md) remains the canonical click-by-click UI contract when surface details conflict.
 
 ---
 
@@ -516,11 +516,11 @@ The remaining inline action bars on the question-review route are still separate
 
 | Document | Relevance |
 |----------|-----------|
-| [Frontend Layer](./frontend-layer.md) | Routes, hook architecture, data flow |
-| [Practice Modes](./practice-modes.md) | Tutor vs Exam behavior differences |
-| [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Canonical correctness/explanation exposure timing contract |
-| [Retry Logic](./retry-logic.md) | Retry/reattempt SSOT including provenance, hydration states, and inline session-review retry contract |
-| [Frontend Standards](../frontend/standards.md) | Component inventory (Appendix) |
+| [Frontend Layer](../practice-engine/frontend-layer.md) | Routes, hook architecture, data flow |
+| [Practice Modes](../product/practice/modes.md) | Tutor vs Exam behavior differences |
+| [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) | Canonical correctness/explanation exposure timing contract |
+| [Retry Logic](../product/practice/retries.md) | Retry/reattempt SSOT including provenance, hydration states, and inline session-review retry contract |
+| [Frontend Standards](../design-system/standards.md) | Component inventory (Appendix) |
 | [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session review navigation (implemented) |
 | [SPEC-028 Status Filter](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status filter segmented control (implemented) |
 | [SPEC-028 Review Navigator](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (implemented) |

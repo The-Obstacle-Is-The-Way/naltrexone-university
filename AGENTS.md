@@ -17,7 +17,7 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
    pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
    ```
 
-   - When the E2E credentials are present (the list is in [the E2E guide](docs/dev/testing-infrastructure.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode.
+   - When the E2E credentials are present (the list is in [the E2E guide](./docs/guides/testing/e2e-tests.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode.
    - The pre-push hook runs only `pnpm typecheck && pnpm test --run`; it does not build, and only the build catches prerender errors.
    - If `pnpm test:browser` exits in about a second with `no tests / 1 error`, retry that lane once and say so; a second failure blocks the push. After the retry, still run the lanes after it.
 3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, `git stash -m "<why>"` and ask. Several agents share these clones.
@@ -57,14 +57,14 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Vitest, never Jest.** Unit tests sit beside their source as `*.test.ts(x)`. Integration tests: `tests/integration/*.integration.test.ts`. E2E: `tests/e2e/*.spec.ts`.
 - **React 19:** a `*.test.tsx` starts with `// @vitest-environment jsdom` and renders with `renderToStaticMarkup`. Async or interactive UI goes in `*.browser.spec.tsx` with `vitest-browser-react` (`pnpm test:browser`). Never `@testing-library/react`, `react-test-renderer` or `react-dom/test-utils`.
 - **Test doubles:** fakes over mocks. The rule, its vocabulary and its exceptions are in [`.claude/rules/testing.md`](.claude/rules/testing.md), and `pnpm lint:doubles` stops new violations ([ADR-025](docs/adr/adr-025-test-doubles-by-shape-or-behaviour.md)).
-- **Business rules:** each product rule in plain language, with the tests that prove it, is in [`docs/dev/acceptance-testing.md`](docs/dev/acceptance-testing.md). A new rule adds its entry, and renaming a proving test updates its line in the same change; `tests/rule-to-test-register.test.ts` fails otherwise.
+- **Business rules:** each product rule in plain language, with the tests that prove it, is in [`docs/product/business-rules.md`](./docs/product/business-rules.md). A new rule adds its entry, and renaming a proving test updates its line in the same change; `tests/rule-to-test-register.test.ts` fails otherwise.
 - **Integration database:**
 
   ```bash
   TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
   ```
 
-- **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Use relative imports for helpers inside `tests/e2e/`. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](docs/dev/testing-infrastructure.md).
+- **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Use relative imports for helpers inside `tests/e2e/`. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).
 
 ## Rules for Particular Files
 
@@ -95,7 +95,7 @@ Read the matching rule before editing. Claude Code loads these by path, and Code
 
 7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`.
 
-Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, and link ADR or record changes. How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](docs/dev/deployment-procedure.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
+Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, and link ADR or record changes. How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](./docs/guides/release/promote-to-production.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
 ## Records
 
@@ -125,7 +125,7 @@ pnpm quality:crap | test:mutation                      # observational quality r
 - [`docs/records/README.md`](docs/records/README.md): open records, and how records work.
 - [`docs/adr/`](docs/adr/index.md): decisions.
 - [`docs/specs/master_spec.md`](docs/specs/master_spec.md): product behaviour; the code owns schemas and types.
-- [`docs/frontend/`](docs/frontend/index.md): the design system. [`docs/dev/`](docs/dev/index.md): engineering guides. [`docs/guides/`](docs/guides/release/review-and-merge.md): review, merge and UI QA.
-- [`docs/tooling/agent-browser.md`](docs/tooling/agent-browser.md): browser checks behind Clerk sign-in. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
+- [`docs/design-system/`](docs/design-system/README.md): the design system. [`docs/guides/`](docs/guides/release/review-and-merge.md): how to test, release, review and merge, and run UI QA. [`docs/architecture/`](docs/architecture/practice-engine.md): how the system is built. The map: [`docs/README.md`](docs/README.md).
+- [`docs/guides/testing/browser-automation.md`](./docs/guides/testing/browser-automation.md): browser checks behind Clerk sign-in. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
 - [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.
-- CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](docs/dev/deployment-environments.md#ci-secret-standard)).
+- CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](./docs/architecture/environments.md#ci-secret-standard)).

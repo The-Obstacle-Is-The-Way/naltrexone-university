@@ -143,7 +143,7 @@ reviews:
     # Migration SQL runs in the Vercel build before the new deployment serves.
     - path: "db/migrations/*.sql"
       instructions: |
-        Review against docs/dev/migration-authoring.md. Applied migrations are
+        Review against docs/guides/database/migrations.md. Applied migrations are
         immutable: flag any edit to an existing file. For a new file, check:
         every statement is safe while the previous (N-1) deployment still
         serves; data cleanup or backfill runs before the constraint that
@@ -226,7 +226,7 @@ knowledge_base:
         applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**}"
       - files: ".claude/rules/fixture-integrity.md"
         applyTo: "{**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,tests/**,src/**/test-helpers/**,**/*-test-helpers.ts,**/*-test-helpers.tsx,**/*.fixtures.ts}"
-      - files: "docs/frontend/standards.md"
+      - files: "docs/design-system/standards.md"
         applyTo: "{app/**,components/**}"
       # The records rules govern docs/records/**, the folder this file is in.
       - "docs/records/README.md"

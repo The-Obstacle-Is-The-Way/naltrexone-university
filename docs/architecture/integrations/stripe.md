@@ -72,7 +72,7 @@ A new widening in the SDK surfaces as `Type 'Stripe' is not assignable to type '
 
 ## Idempotent Requests
 
-Stripe saves the status code and response body from the first request made with an idempotency key, and later requests with the same key return that saved result. Stripe permits pruning only after a key is at least 24 hours old; it does not promise deletion at exactly 24 hours. Replayed create responses for short-lived resources therefore are not proof of current live state. The subscription Checkout adapter keeps deterministic provider keys for concurrency collapse and retrieves each created or replayed Session before deciding from its status and expiry. When that result is inactive, the adapter uses Stripe's newest-first Checkout Session list through a bounded full-metadata scan to seed the existing recovery key from one unique tail; an open tail is live-retrieved and reused only while active, while ambiguity or scan failure retains [DEBT-466](../_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md)'s bounded deterministic walk. [DEBT-470](../_archive/debt/debt-470-checkout-replay-tail-jump.md) records the provider-contract receipts and implementation bounds.
+Stripe saves the status code and response body from the first request made with an idempotency key, and later requests with the same key return that saved result. Stripe permits pruning only after a key is at least 24 hours old; it does not promise deletion at exactly 24 hours. Replayed create responses for short-lived resources therefore are not proof of current live state. The subscription Checkout adapter keeps deterministic provider keys for concurrency collapse and retrieves each created or replayed Session before deciding from its status and expiry. When that result is inactive, the adapter uses Stripe's newest-first Checkout Session list through a bounded full-metadata scan to seed the existing recovery key from one unique tail; an open tail is live-retrieved and reused only while active, while ambiguity or scan failure retains [DEBT-466](../../_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md)'s bounded deterministic walk. [DEBT-470](../../_archive/debt/debt-470-checkout-replay-tail-jump.md) records the provider-contract receipts and implementation bounds.
 
 **Docs:** https://docs.stripe.com/api/idempotent_requests
 
@@ -174,7 +174,7 @@ When upgrading Stripe SDK or API version:
 - [ ] Advance `lib/stripe-api-version.ts` in the same PR as the SDK bump; update the "Last reviewed" date in `lib/stripe.ts`
 - [ ] Run `pnpm typecheck` — a `Stripe` → `StripeClient` assignability error means a response enum widened; widen the matching response type in `src/adapters/shared/stripe-types.ts` (never the request filter) and extend `stripe-types.test.ts`
 - [ ] Run the full gate including `pnpm test:e2e` — the required Checkout contract proves real TEST-mode Sessions and the success-sync path. `tests/integration/webhook-signature-ingress.integration.test.ts` separately verifies signed webhook ingress through the route handlers; neither contract proves live delivery from Stripe to a deployed endpoint.
-- [ ] Update this doc and `docs/vendor-docs/index.md` with the new versions
+- [ ] Update this doc and `docs/architecture/integrations/README.md` with the new versions
 
 ---
 

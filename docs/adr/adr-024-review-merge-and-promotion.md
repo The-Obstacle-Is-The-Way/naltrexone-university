@@ -56,6 +56,6 @@ The repository is public, the owner is its only human, and AI agents write and r
 ## Related
 
 - [Review and Merge](../guides/release/review-and-merge.md): how the merge guard decides, and what to do in each failure.
-- [Deployment Procedure](../dev/deployment-procedure.md#8-promoting-dev-to-main): promotion and the production gate.
+- [Deployment Procedure](../guides/release/promote-to-production.md#8-promoting-dev-to-main): promotion and the production gate.
 - [ADR-020](./adr-020-coverage-patch-gate.md): when the `codecov/patch` status blocks a merge.
 - [ADR-023](./adr-023-documentation-organisation.md): why these decisions left `AGENTS.md`.
