@@ -76,7 +76,7 @@ Low. No alert is reachable by attacker input here. The cost of leaving them is a
   - A cold `pnpm install --frozen-lockfile` and the full gate, including authenticated sign-in E2E.
 - **No dismissals.** #77 and #81 stay open. A dismissed alert stops tracking its fix, and an open one makes Dependabot raise the fix PR (the DEBT-495 correction of 2026-10-04).
 
-  *Corrected 2026-10-11: neither fix is coming; [DEBT-517](../../debt/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md) removes both packages by replacing `fast-glob` and `gray-matter`, and the #81 Deferred row is gone.*
+  *Corrected 2026-10-11: no `braces` fix is coming, and a `sprintf-js` fix would ship as 1.1.x, outside `argparse` 1's `~1.0.2`; [DEBT-517](../../debt/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md) removes both packages by replacing `fast-glob` and `gray-matter`, and the #81 Deferred row is gone.*
 
 *Corrected 2026-10-08: the source-map-js override and the Clerk upgrade ship in one PR with Next.js 16.3.8, not in two separate PRs as first planned. All three are dependency changes behind the same gate, and the repository's one CodeRabbit review an hour, shared E2E accounts and promotions are the bottleneck; each change is its own commit, so any one can be reverted alone.*
 
