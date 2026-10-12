@@ -731,17 +731,27 @@ export function repairArchiveLinks(
 // exits 128, and the audit reads every file, which is the stricter choice.
 function gitIgnored(root: string, names: readonly string[]): string[] {
   if (names.length === 0) return [];
+  // Outside a work tree nothing is excluded. Asking first also keeps
+  // check-ignore from exiting before it reads a long list (EPIPE).
+  const tree = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (tree.error) throw tree.error;
+  if (tree.status !== 0) {
+    if (/not a git repository/i.test(tree.stderr)) return [];
+    throw new Error(
+      `git rev-parse failed with status ${tree.status}: ${tree.stderr.trim()}`,
+    );
+  }
   const result = spawnSync('git', ['check-ignore', '--stdin', '-z'], {
     cwd: root,
     input: names.join('\0'),
     encoding: 'utf8',
   });
-  // 1: nothing is ignored. 128 outside a work tree: nothing is excluded.
-  // Any other failure must not pass as "nothing ignored".
+  // Exit 1 means nothing is ignored; any other failure must not pass as that.
   if (result.error) throw result.error;
   if (result.status === 1) return [];
-  if (result.status === 128 && /not a git repository/i.test(result.stderr))
-    return [];
   if (result.status !== 0)
     throw new Error(
       `git check-ignore failed with status ${result.status}: ${result.stderr.trim()}`,

@@ -401,9 +401,20 @@ describe('records command', () => {
     ]);
   });
 
+  // Outside a work tree, git exits before reading a long file list, and
+  // writing the rest of the list then fails with EPIPE.
+  it('audits a large tree outside a Git work tree', () => {
+    const root = fixture();
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 2_000; i += 1)
+      files[`docs/many/${'x'.repeat(40)}-${i}.md`] = '# Page';
+    populate(root, files);
+    expect(readDocumentationFiles(root).size).toBeGreaterThan(2_000);
+  });
+
   // `git check-ignore` exits 1 when nothing is ignored, and 128 outside a
   // Git work tree; any other failure must not pass as "nothing ignored".
-  it('fails when git check-ignore fails for any other reason', () => {
+  it('fails when git fails for any reason but "not a git repository"', () => {
     const root = fixture();
     populate(root, { 'docs/guide.md': '# Guide' });
     const bin = fixture();
@@ -413,7 +424,9 @@ describe('records command', () => {
       { mode: 0o755 },
     );
     vi.stubEnv('PATH', bin);
-    expect(() => readDocumentationFiles(root)).toThrow(/git check-ignore/);
+    expect(() => readDocumentationFiles(root)).toThrow(
+      /git (?:rev-parse|check-ignore) failed/,
+    );
     vi.stubEnv('PATH', fixture());
     expect(() => readDocumentationFiles(root)).toThrow();
   });
