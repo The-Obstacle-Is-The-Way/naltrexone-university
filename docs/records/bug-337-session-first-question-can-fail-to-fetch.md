@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — caught on the server: a request lacked the suffixed dev-browser cookie; name the cookie write that removed it; due 2026-10-14
+**Status:** Open — cause found with BUG-333: Clerk JS rewrites the dev-browser cookies after every environment fetch; choose the fix with it; due 2026-10-14
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -28,7 +28,7 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - The `clerk-db-jwt` header Clerk JS's Frontend API calls echoed carried the **same** token as the cookie and the request URL. So the earlier lead, a different token passing BUG-333's filter, is ruled out.
   - The 307 request's recorded `Cookie` header carried both dev-browser cookies (`__clerk_db_jwt` and its suffixed copy) and both session cookies, identical to the request answered 200 fifty milliseconds earlier.
   - `@clerk/backend` 3.22.0, the version the app runs, returns `dev-browser-missing` only when neither the URL nor the cookies supply a dev-browser token. That contradicts the recorded header: either the server parsed a different header than the trace shows, or the decision came from elsewhere.
-  - Clerk JS 6.38.0 rewrites its cookies (removing both, then setting them) only when a response carries the echo header, or when the page URL carries the token. The filter strips the echo, so that gap should not open.
+  - Clerk JS 6.38.0 rewrites its cookies (removing both, then setting them) when a response carries the echo header, when the page URL carries the token, and after every environment fetch. The filter strips only the echo. *Corrected 2026-10-12: the first reading missed the environment fetch.*
 - **A second capture, from BUG-333 (2026-10-12, 04:00:38Z, another session's local E2E).** A page navigation, not a server action, shows the same contradiction. Its request carried both dev-browser cookies (31 characters, the same token as Clerk JS's echoed and dropped header) and both session copies, yet the app answered `handshake` with `dev-browser-missing`. Then the handshake signed the browser out and set a new dev-browser token. So two traces, on two request kinds, show the server failing to see a dev-browser cookie that the browser sent. `proxy.ts` passes the request to Clerk's middleware unchanged.
 - **The server's view, logged (2026-10-12, 05:15–05:39Z).** A local-only branch, never pushed, logged one line for every request that Clerk's middleware did not mark signed in. Each line gave the reason, whether the URL carried the dev-browser token, and the names and lengths of the cookies, both raw and as Next.js parsed them. No values were logged.
   - **Five runs, 282 tests, no loss:** four runs on one clone (219 tests) and one full suite on another (63 tests).
@@ -39,13 +39,17 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - The handshake URL the server built carried no dev-browser token, although the one it built 1.9 s earlier did. So the server itself had no token; the reason is not mislabelled.
   - The echo filter worked: the page received Clerk's API responses without the echo header.
   - No CI run or other E2E run used the Clerk user then. Another clone's integration tests, which do not call Clerk, were running on the same machine, so it was loaded.
-- **Caught on the server (2026-10-12 11:12:03Z, the fourth of nine logged local runs, with unit tests running alongside for load).**
+- **Caught on the server (2026-10-12 11:12:03Z, the fourth logged local run, with unit tests running alongside for load).**
   - A server action from "practice page shows continue-session card and resumes session" reached the server with the unsuffixed `__clerk_db_jwt` but without its suffixed copy.
   - The suffixed session and client cookies were there, so Clerk reads the suffixed dev-browser cookie (`usesSuffixedCookies()` in `@clerk/backend`). It found none and answered `dev-browser-missing`. The raw and parsed headers matched: the server read what arrived.
   - So the browser did send an incomplete set. The cookie order shows that the unsuffixed dev-browser cookie was created after the session cookies, and that the client cookies were rewritten after it.
-  - Clerk JS 6.39.0, the version the CDN serves (the app loads `@6`, so the version floats), sets the suffixed copy before the unsuffixed one. A request caught inside that setter would carry only the suffixed copy. This one carried only the unsuffixed copy, so another write removed the suffixed copy. That write is not yet named.
+  - Clerk JS 6.39.0, the version the CDN serves (the app loads `@6`, so the version floats), removes the suffixed copy first, then the unsuffixed one, then sets both. A request between the two removals carries only the unsuffixed copy, as this one did. *Corrected 2026-10-12: first read as the setter's order, which pointed at another writer.*
   - The test passed, because the action ran in the background as the test moved on.
   - Five more runs, with browser traces kept, caught nothing before the lane was needed.
+- **Caught with both views (2026-10-12 12:03:15Z, the eleventh logged run).** `practice.spec.ts`, "resets the active question viewport after next and previous navigation", failed with `startSession lost Clerk authentication`.
+  - The server received the navigation to the session page with no dev-browser cookie at all, and answered `handshake` with `dev-browser-missing`.
+  - Playwright's trace recorded both dev-browser cookies on the same request. But those were its provisional headers (no `host` or `sec-fetch-*`), and its `Cookie` header was 105 bytes longer than the server's: exactly the two cookies. So the earlier traces' "both cookies sent" was the trace's view, not the wire.
+  - The request left about 70 ms after Clerk JS's `/v1/environment` call answered. Clerk JS answers each environment fetch with `devBrowser.refreshCookies()`, which removes both cookies and sets them again. Every capture fits that window.
 - **In CI too (2026-10-12, about 09:58Z, #1472's second attempt).** In `review-mode-audit.spec.ts`, "history questions: correct and incorrect open review mode", a `page.goto` to a question page landed on Clerk's sign-in page. CI keeps no trace and no server log, so this one shows only that the loss happens there as well.
 
 ## Impact
@@ -66,21 +70,16 @@ The first is now shown; the others are ruled out for the traced failure.
 
 ## Resolution (decided)
 
-Not yet decided. The failing request is identified, so the next step is a fix that holds for server actions, decided with BUG-333. Candidates:
-- drop every dev-browser echo in tests, not only those that repeat the sent token;
-- wait in the sign-in helper for Clerk JS's first client sync before the test acts;
-- run E2E against a Clerk instance configured like production.
+Not yet decided. The cause is found, and it is BUG-333's race with a second trigger: Clerk JS rewrites the dev-browser cookies after every environment fetch, which BUG-333's echo drop does not stop. A request that leaves inside the rewrite reaches the server without them. A server action is then answered with a redirect to Clerk, which the browser reports as "Failed to fetch"; a navigation lands on sign-in.
 
-The trace answered the first question (the echo was the same token). Server-side logging then caught a loss: the request arrived without the suffixed dev-browser cookie, so the cause is on the browser side, not in Clerk's middleware.
+Next, by 2026-10-14: choose the fix with BUG-333 (its options 5, 7 and 9), then build it test-first. Pinning Clerk JS would not help: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
 
-Next, by 2026-10-14: catch one loss with both the browser trace and the server log, to name the write that removes the suffixed copy. Then choose among the candidates above, adding one:
-- pin the Clerk JS version the app loads, so a CDN release cannot change cookie handling between deploys.
-
-The logging records names and lengths only, never values. It is diagnostic, and it never ships.
+The diagnostic logging records names and lengths only, never values. It stays on a local branch and never ships.
 
 ## Verification
 
 - [x] The failing request is identified, with its trace (2026-10-11): a server action answered 307, signed out with `dev-browser-missing`.
+- [x] The cause is named (2026-10-12): requests caught on the server inside Clerk JS's dev-browser cookie rewrite, which follows every environment fetch.
 - [ ] A fix with a red test, or a reasoned no-fix with evidence.
 
 ## Related

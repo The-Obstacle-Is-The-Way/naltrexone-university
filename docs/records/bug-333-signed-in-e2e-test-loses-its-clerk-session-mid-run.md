@@ -1,6 +1,6 @@
 # BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
-**Status:** Open — a loss on 2026-10-12, with the echo dropped and no cookie rewrite in flight, names another cause; investigated with BUG-337; due 2026-10-14
+**Status:** Open — Clerk JS also rewrites the dev-browser cookies after every environment fetch, which the echo drop does not stop; choose the fix; due 2026-10-14
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -90,6 +90,7 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 4. **Pin Clerk JS's version.** Rejected: the cookie setter is the same in every version since at least 6.37.0.
 5. **Report the race to Clerk.** Ask that the dev-browser setter overwrite in place, or skip an unchanged token. That is the root fix, in Clerk's code, and filing it publicly is the owner's call.
 6. **Let tests navigate only once Clerk JS has stored its answers.** A navigation helper waits until no Frontend API request is pending on the page before it moves. That narrows the window but cannot close it: token refreshes answer at any time.
+9. **Make the rewrite one overwrite in tests** (proposed 2026-10-12). A context init script drops Clerk JS's deletion of the two dev-browser cookies when a write of the same cookie follows at once, so the write replaces the value in place and no request sees a gap. It changes only cookie timing in tests, whichever event triggers the rewrite.
 8. **Drop Clerk's echo in tests** (decided 2026-10-10).
    - **The evidence.** In the traced capture, every Frontend API answer's `Clerk-Db-Jwt` header carried the same token as the request's `__clerk_db_jwt` (compared by hash, never value). So each rewrite set identical cookies: a no-op that opens the race.
    - **The change.** A context route (`tests/e2e/helpers/clerk-dev-browser-echo.ts`) passes Clerk JS's own Frontend API calls through and removes that header only when it equals the token the request sent. A different token still passes, so a real rotation is kept. Navigations, such as the handshake, are not intercepted.
@@ -103,6 +104,12 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 
 *Corrected 2026-10-11: BUG-337 shows a mid-run sign-out after the echo drop. A server action was answered `signed-out`, `dev-browser-missing`, in CI twice and locally once, so this record's check is in doubt. The two are being fixed together.*
 
+*Corrected 2026-10-12: the echo is not the only trigger.*
+- **The second trigger.** Clerk JS 6.38.0 and 6.39.0 also rewrite both dev-browser cookies, with the unchanged token, after every environment fetch. Each full page load fetches the environment, which emits `environment:update`, and the cookie service answers it with `devBrowser.refreshCookies()`.
+- **Two requests caught inside that rewrite.** BUG-337's server logging caught two requests that arrived about 70 ms after `/v1/environment` answered: one with only the unsuffixed copy, one with neither. The setter removes the suffixed copy, then the unsuffixed one, then sets both.
+- **The trace's cookie header is not what was sent.** For the second request, Playwright's trace recorded both cookies. But its headers were the provisional set (no `host` or `sec-fetch-*`), and its `Cookie` header was 105 bytes longer than the one the server received: exactly the two cookies. So the contradiction this record and BUG-337 reported came from the trace, not the server.
+- **What is left.** Option 8 removed one trigger, and the other remains. Next, by 2026-10-14: choose among options 5, 7 and 9 (option 6 cannot cover the app's own requests during the load) and build it test-first, with BUG-337.
+
 ## Verification
 
 - [x] A loss prints an `[E2E_CLERK_AUTH_TRACE]` trail, recorded here. *2026-10-10: a local gate's hosted lane, above; a CI one would show whether the earlier losses share it.*
@@ -110,3 +117,4 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 - [x] A fix against that cause, test-first, or an explained acceptance. *2026-10-10: option 8, unit-tested. In #1452's pull request: three local E2E runs and two stripe-hosted runs, then CI, without a loss. Another session's synced run and promotion #1455's CI also ran without one. That day's rate before it was about one loss in two runs.*
 - [ ] No mid-run Clerk session loss in CI for a week with the echo dropped, due 2026-10-17. A loss with a trace that names another cause reopens the investigation.
   - *Reopened 2026-10-12.* Another session's local E2E lost its session at `practice.spec.ts:307` (04:00:38Z), and its trace was kept. The echo had been dropped as designed. The navigation's request carried both dev-browser cookies, unchanged, and both session copies, yet the server answered `dev-browser-missing`, which `@clerk/backend` 3.22 returns only when it finds no dev-browser token. That is the contradiction BUG-337's trace shows for a server action. The rewrite mechanism above does not explain it. BUG-337 owns the next step, which is to log the server's own view of each signed-out request.
+  - *Explained the same day:* see the 2026-10-12 correction under Resolution.
