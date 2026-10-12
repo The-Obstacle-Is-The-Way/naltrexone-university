@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — cause found with BUG-333: Clerk JS rewrites the dev-browser cookies after every environment fetch; choose the fix with it; due 2026-10-14
+**Status:** Verifying — fixed with BUG-333's option 9; a week of CI after the merge without "Failed to fetch" or a sign-in loss; due 2026-10-21
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -70,9 +70,9 @@ The first is now shown; the others are ruled out for the traced failure.
 
 ## Resolution (decided)
 
-Not yet decided. The cause is found, and it is BUG-333's race with a second trigger: Clerk JS rewrites the dev-browser cookies after every environment fetch, which BUG-333's echo drop does not stop. A request that leaves inside the rewrite reaches the server without them. A server action is then answered with a redirect to Clerk, which the browser reports as "Failed to fetch"; a navigation lands on sign-in.
+Fixed with BUG-333's option 9 (2026-10-12). The cause is BUG-333's race with a second trigger: Clerk JS rewrites the dev-browser cookies after every environment fetch, which BUG-333's echo drop did not stop. A request that left inside the rewrite reached the server without the cookies. A server action was then answered with a redirect to Clerk, which the browser reports as "Failed to fetch", and a navigation landed on sign-in.
 
-Next, by 2026-10-14: choose the fix with BUG-333 (its options 5, 7 and 9), then build it test-first. Pinning Clerk JS would not help: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
+In every E2E page, a script now skips Clerk JS's removals of the two cookies, so its write replaces them in place. BUG-333 records the tests and the experiment. Pinning Clerk JS would not have helped: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
 
 The diagnostic logging records names and lengths only, never values. It stays on a local branch and never ships.
 
@@ -80,7 +80,8 @@ The diagnostic logging records names and lengths only, never values. It stays on
 
 - [x] The failing request is identified, with its trace (2026-10-11): a server action answered 307, signed out with `dev-browser-missing`.
 - [x] The cause is named (2026-10-12): requests caught on the server inside Clerk JS's dev-browser cookie rewrite, which follows every environment fetch.
-- [ ] A fix with a red test, or a reasoned no-fix with evidence.
+- [x] A fix with a red test: BUG-333's option 9 (2026-10-12).
+- [ ] A week of CI after the merge without "Failed to fetch" or a sign-in loss, due 2026-10-21.
 
 ## Related
 

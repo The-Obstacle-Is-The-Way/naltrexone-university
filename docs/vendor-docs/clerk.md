@@ -150,6 +150,12 @@ Because `app/api/webhooks/clerk/route.ts` always calls `verifyWebhook()`, any en
 
 Clerk added support for session token version 2. If using custom JWT claims, verify they still work after SDK upgrades.
 
+### Clerk JS Loads Unpinned From Clerk's CDN
+
+The browser half of sign-in is not part of the app's build. `<ClerkProvider>` loads Clerk JS and its UI bundle from Clerk's servers at the latest 6.x and 1.x, because `NEXT_PUBLIC_CLERK_JS_VERSION` and `NEXT_PUBLIC_CLERK_UI_VERSION` are unset. A Clerk release therefore reaches every visitor without a deploy of the app.
+
+**If sign-in breaks and the app was not deployed, check Clerk's recent releases first** (the changelog above, and the `@clerk/clerk-js` versions on npm). Rolling back the app's deployment does not change the version visitors load. Whether to pin the versions is DEBT-521.
+
 ### SAML/SSO Changes
 
 For sign-ins matching a SAML connection, API now returns `needs_first_factor` status instead of `needs_identifier`. Only affects enterprise SSO implementations (we don't use this).
