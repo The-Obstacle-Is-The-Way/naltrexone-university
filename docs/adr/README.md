@@ -40,6 +40,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
 | [ADR-026](./adr-026-error-monitoring-with-sentry.md) | Error Monitoring with Sentry | Accepted | 2026-10-12 |
+| [ADR-027](./adr-027-free-trial-renewal-consent-and-notices.md) | Free Trial, Renewal Consent and Renewal Notices | Proposed (until counsel review, issue #902) | 2026-10-12 |
 
 ## ADR Statuses
 
@@ -224,6 +225,10 @@ One vocabulary (fake, stub, spy, mock, contract test). A test that needs only a 
 ### ADR-026: Error Monitoring with Sentry
 
 Sentry is the error and alert channel, with a browser project on the public key and a server project on a sensitive key that no browser receives. Every runtime sets what Sentry may collect explicitly, server breadcrumbs and trace propagation are off, and privacy is proven by tests through the real SDK. Failures the owner must act on are sent as tagged operational alerts that email the owner, with a monthly drill.
+
+### ADR-027: Free Trial, Renewal Consent and Renewal Notices
+
+Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 35 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
 
 ---
 
