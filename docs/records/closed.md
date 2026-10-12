@@ -815,6 +815,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-499 · Nothing Pins What We Send to Sentry, and a Green Major Would Change It · Resolved · 2026-10-05 · docs/_archive/debt/debt-499-sentry-major-widens-data-collection.md
 - DEBT-506 · Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes · Resolved · 2026-10-09 · docs/_archive/debt/debt-506-dependabot-alert-triage-2026-10.md
 - DEBT-513 · Error Text Reaches Sentry as Written · Resolved · 2026-10-10 · docs/_archive/debt/debt-513-error-text-reaches-sentry-as-written.md
+- DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd619520a1f156675d390492ea097a
 
 ## Frontend (FE prefix, retired)
 
