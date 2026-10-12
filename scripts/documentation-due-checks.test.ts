@@ -225,6 +225,18 @@ describe('due checks in a repository', () => {
     expect(() => repositoryDueChecks(root)).toThrow('Queue review due');
   });
 
+  it('refuses a second queue review line, even one whose date cannot be read', () => {
+    const root = repository('Open', '2026-10-19');
+    const readme = path.join(root, 'docs/records/README.md');
+    writeFileSync(
+      readme,
+      `**Queue review due:** 2026-1-5\n\n${readFileSync(readme, 'utf8')}`,
+    );
+    expect(() => repositoryDueChecks(root, '2026-10-12')).toThrow(
+      'Queue review due',
+    );
+  });
+
   it('reports in a dry run without touching any issue', async () => {
     const root = repository('Verifying — check; due 2000-01-03');
     const lines: string[] = [];

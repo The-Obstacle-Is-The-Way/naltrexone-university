@@ -146,6 +146,9 @@ const LEDGER_ENTRY =
 const WORKING_RECORD_RECEIPT =
   / · docs\/records\/(?:bug|debt)-\d+[^\s/]*\.md · #[1-9]\d* · [0-9a-f]{40}$/;
 const LIST_ITEM = /^\s*[-*+] /;
+const RECEIPT_CUTOVER = '2026-10-11';
+const LEDGER_DATE = / · (\d{4}-\d{2}-\d{2}) · /;
+const CLOSURE_RECEIPT = / · \S+\.md · #[1-9]\d* · [0-9a-f]{40}$/;
 // IDs given to two records each before anything checked; each ledger line
 // names its own file. No third, and no new collision, is allowed.
 const HISTORICAL_ID_COLLISIONS = new Set(
@@ -485,9 +488,12 @@ export function auditRecordLifecycle(
   (files.get(RECORDS.ledger) ?? '').split('\n').forEach((line, index) => {
     if (!LIST_ITEM.test(line)) return;
     const id = line.match(LEDGER_ENTRY)?.[1];
+    const closed = line.match(LEDGER_DATE)?.[1] ?? '';
+    // From the cutover on, every closure names its PR and a commit that held
+    // the record; a deleted working record must also be one by its path.
     if (
-      line.includes(' · docs/records/') &&
-      !WORKING_RECORD_RECEIPT.test(line)
+      (closed >= RECEIPT_CUTOVER && !CLOSURE_RECEIPT.test(line)) ||
+      (line.includes(' · docs/records/') && !WORKING_RECORD_RECEIPT.test(line))
     ) {
       result.malformedLedgerLines.push(`${RECORDS.ledger}:${index + 1}`);
       return;

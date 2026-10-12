@@ -72,6 +72,21 @@ describe('records folder and ledger', () => {
     ).toEqual([]);
   });
 
+  // From the 2026-10-11 cutover on, every closure carries its receipt, so a
+  // mistyped path cannot pass as a historical entry.
+  it('requires a receipt for a closure from the cutover on, whatever its path', () => {
+    expect(
+      audit({
+        [RECORDS.ledger]: [
+          '- BUG-338 · Example · Resolved · 2026-10-12 · docs/record/bug-338-example.md',
+          '- BS-044 · Idea · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-044-x.md',
+          '- BUG-200 · Before the cutover · Resolved · 2026-10-10 · docs/_archive/bugs/bug-200-x.md',
+          '- BS-045 · Idea · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-045-x.md · #1467 · 0123456789abcdef0123456789abcdef01234567',
+        ].join('\n'),
+      }).malformedLedgerLines,
+    ).toEqual([`${RECORDS.ledger}:1`, `${RECORDS.ledger}:2`]);
+  });
+
   it('rejects a record recreated under a nested retired register path', () => {
     expect(
       audit({ 'docs/bugs/investigation/bug-338-x.md': '**Status:** Open' })

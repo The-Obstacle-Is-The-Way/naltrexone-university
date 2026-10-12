@@ -68,14 +68,16 @@ export function repositoryDueChecks(
     overdue: result.scheduledOverdue,
     farFuture: result.scheduledFarFuture,
   };
+  const index = files.get(RECORDS.index) ?? '';
+  // Every label counts, so a second line with an unreadable date cannot hide.
+  const labels = index.match(/^\*\*Queue review due:\*\*/gm) ?? [];
   const dates = [
-    ...(files.get(RECORDS.index) ?? '').matchAll(
-      /^\*\*Queue review due:\*\* (\d{4}-\d{2}-\d{2})$/gm,
-    ),
+    ...index.matchAll(/^\*\*Queue review due:\*\* (\d{4}-\d{2}-\d{2})$/gm),
   ];
   const due = dates[0]?.[1];
   const date = new Date(`${due}T00:00:00Z`);
   if (
+    labels.length !== 1 ||
     dates.length !== 1 ||
     !due ||
     Number.isNaN(date.getTime()) ||
