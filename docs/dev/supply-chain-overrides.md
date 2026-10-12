@@ -540,11 +540,12 @@ alerts close by upgrade rather than dismissal. Zero open alerts does not mean
 the installed package was removed. CI does not run `pnpm audit`, so such a
 case gets no `ignoreGhsas` entry.
 
-When no fix will reach the graph and the vulnerable package arrives through
-a direct dependency the repository can replace, prefer the replacement to
-a dismissal or an open-ended watcher. DEBT-517 replaced `fast-glob` with
-`tinyglobby` and `gray-matter` with `@11ty/gray-matter`, so `braces` and
-`sprintf-js` left the lockfile and Dependabot closed both alerts as fixed.
+One more route closes such an alert as fixed: replacing the direct
+dependency that brings the vulnerable package in. DEBT-517 is the worked
+precedent. Neither fix could reach the graph, so it replaced `fast-glob`
+with `tinyglobby` and `gray-matter` with `@11ty/gray-matter`, after proving
+both gave the same results. `braces` and `sprintf-js` left the lockfile,
+and Dependabot closed both alerts as fixed.
 
 ## Vercel deploy notes
 
