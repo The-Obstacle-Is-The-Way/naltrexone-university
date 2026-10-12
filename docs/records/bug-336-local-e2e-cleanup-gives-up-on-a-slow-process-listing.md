@@ -53,7 +53,7 @@ On a developer machine the same cut-off has a real consequence. The orchestrator
 - [x] The red test reproduces `spawnSync ps ETIMEDOUT` under the old limit (2026-10-11).
 - [x] Under the old limit, the detached descendant survives the interrupt (2026-10-11).
 - [x] Under the new limit the test passes, and the whole cleanup test file passed 8 of 8 runs beside 20 busy loops (2026-10-11).
-- [ ] Promoted to `main`.
+- [x] Promoted to `main` (2026-10-12).
 - [ ] No CI run fails with `spawnSync ps ETIMEDOUT` in the two weeks after the merge (due 2026-10-26).
 
 ## Related
