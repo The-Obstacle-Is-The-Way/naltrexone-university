@@ -1,6 +1,6 @@
 # BUG-336: Local E2E Cleanup Gives Up on a Slow Process Listing and Leaves Playwright's Web Server Running
 
-**Status:** Verifying — promotion to `main`, and two weeks of CI after the merge without `spawnSync ps ETIMEDOUT`; due 2026-10-26
+**Status:** Verifying — two weeks of CI after the merge without `spawnSync ps ETIMEDOUT`; due 2026-10-26
 **Priority:** P3
 **Date:** 2026-10-11
 **Resolved:** —

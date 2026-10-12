@@ -102,7 +102,7 @@ Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the 
 ## Records
 
 Open bug and debt records are in `docs/records/`, with one index. Its ["How Records Work"](docs/records/README.md#how-records-work) section holds the rules.
-- Read **Now** and the Waiting triggers relevant to your work at session start, and clear any overdue Verifying check before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
+- Read **Now** and the Waiting triggers relevant to your work at session start, and triage any overdue dated action, in any live status, before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
 - A new ID comes from `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
 - Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
 - Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.

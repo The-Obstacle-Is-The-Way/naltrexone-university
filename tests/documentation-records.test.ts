@@ -87,6 +87,36 @@ describe('records folder and ledger', () => {
     ).toEqual([`${RECORDS.ledger}:1`, `${RECORDS.ledger}:2`]);
   });
 
+  it('requires one readable queue-review date in the records index', () => {
+    const index = (queue: string) =>
+      `${queue}\n\n**Now** — none\n\n| ID | Title |\n| --- | --- |`;
+    const invalid = (text: string) =>
+      audit({ [RECORDS.index]: text }).invalidQueueReview;
+    expect(invalid(index('**Queue review due:** 2026-10-19'))).toEqual([]);
+    expect(invalid(index('**Queue review due:** 2026-10-19\r'))).toEqual([]);
+    expect(invalid(index('**Queue review due:** 2026-1-5'))).toEqual([
+      RECORDS.index,
+    ]);
+    expect(invalid(index(''))).toEqual([RECORDS.index]);
+    expect(
+      invalid(
+        index(
+          '**Queue review due:** 2026-10-19\n**Queue review due:** 2026-1-5',
+        ),
+      ),
+    ).toEqual([RECORDS.index]);
+  });
+
+  // Git can check Markdown out with CRLF endings (core.autocrlf).
+  it('reads ledger lines with CRLF endings', () => {
+    expect(
+      audit({
+        [RECORDS.ledger]:
+          '- BUG-338 · Example · Resolved · 2026-10-11 · docs/records/bug-338-example.md · #1468 · 0123456789abcdef0123456789abcdef01234567\r\n- BUG-200 · Old · Resolved · 2026-10-01 · docs/_archive/bugs/bug-200-x.md\r\n',
+      }).malformedLedgerLines,
+    ).toEqual([]);
+  });
+
   it('rejects a record recreated under a nested retired register path', () => {
     expect(
       audit({ 'docs/bugs/investigation/bug-338-x.md': '**Status:** Open' })
@@ -369,6 +399,36 @@ describe('records command', () => {
     expect(reports[0]?.brokenLive.map((link) => link.file)).toEqual([
       'docs/guides/new-guide.md',
     ]);
+  });
+
+  // Outside a work tree, git exits before reading a long file list, and
+  // writing the rest of the list then fails with EPIPE.
+  it('audits a large tree outside a Git work tree', () => {
+    const root = fixture();
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 2_000; i += 1)
+      files[`docs/many/${'x'.repeat(40)}-${i}.md`] = '# Page';
+    populate(root, files);
+    expect(readDocumentationFiles(root).size).toBeGreaterThan(2_000);
+  });
+
+  // `git check-ignore` exits 1 when nothing is ignored, and 128 outside a
+  // Git work tree; any other failure must not pass as "nothing ignored".
+  it('fails when git fails for any reason but "not a git repository"', () => {
+    const root = fixture();
+    populate(root, { 'docs/guide.md': '# Guide' });
+    const bin = fixture();
+    writeFileSync(
+      path.join(bin, 'git'),
+      '#!/bin/sh\necho "fatal: index file corrupt" >&2\nexit 128\n',
+      { mode: 0o755 },
+    );
+    vi.stubEnv('PATH', bin);
+    expect(() => readDocumentationFiles(root)).toThrow(
+      /git (?:rev-parse|check-ignore) failed/,
+    );
+    vi.stubEnv('PATH', fixture());
+    expect(() => readDocumentationFiles(root)).toThrow();
   });
 
   it('exits nonzero when a status typo hides a due check', () => {

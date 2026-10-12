@@ -158,6 +158,31 @@ describe('overdue production checks alert', () => {
     ).toBe(1);
     expect(lines.join('\n')).not.toContain('token rejected');
   });
+
+  // A broken queue-review line is the repository's own text, safe to print,
+  // and the one failure a reader can fix from the message alone.
+  it('names a broken queue-review line, which carries no credential', async () => {
+    const lines: string[] = [];
+    const output = {
+      log: (line: string) => lines.push(line),
+      error: (line: string) => lines.push(line),
+    };
+    const root = mkdtempSync(path.join(os.tmpdir(), 'due-checks-'));
+    mkdirSync(path.join(root, 'docs/records'), { recursive: true });
+    writeFileSync(path.join(root, 'docs/records/README.md'), '**Now** — none');
+    writeFileSync(
+      path.join(root, 'docs/records/closed.md'),
+      '# Closed Records',
+    );
+    expect(
+      await runDocumentationDueChecks(async () => {
+        repositoryDueChecks(root);
+        return 'unreachable';
+      }, output),
+    ).toBe(1);
+    rmSync(root, { recursive: true });
+    expect(lines.join('\n')).toContain('Queue review due');
+  });
 });
 
 describe('due checks in a repository', () => {
@@ -210,6 +235,24 @@ describe('due checks in a repository', () => {
       ]);
     },
   );
+
+  // The weekly job runs on Mondays, so a record due that day is raised then,
+  // not a week later.
+  it('raises a record on its due day', () => {
+    const root = repository('Verifying — check; due 2026-10-19', '2026-10-24');
+    expect(repositoryDueChecks(root, '2026-10-19').overdue).toEqual([
+      { file: 'docs/records/bug-001-x.md', due: '2026-10-19' },
+    ]);
+  });
+
+  // The queue review moves at most seven days at a time.
+  it('reports a queue review set more than seven days ahead', () => {
+    const root = repository('Open', '2026-10-28');
+    expect(repositoryDueChecks(root, '2026-10-19').farFuture).toEqual([
+      { file: 'docs/records/README.md', due: '2026-10-28' },
+    ]);
+    expect(repositoryDueChecks(root, '2026-10-21').farFuture).toEqual([]);
+  });
 
   it('raises the queue review on its due day even without overdue Verifying records', () => {
     const root = repository('Open — no dated action', '2026-10-19');
