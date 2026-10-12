@@ -29,6 +29,7 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - The 307 request's recorded `Cookie` header carried both dev-browser cookies (`__clerk_db_jwt` and its suffixed copy) and both session cookies, identical to the request answered 200 fifty milliseconds earlier.
   - `@clerk/backend` 3.22.0, the version the app runs, returns `dev-browser-missing` only when neither the URL nor the cookies supply a dev-browser token. That contradicts the recorded header: either the server parsed a different header than the trace shows, or the decision came from elsewhere.
   - Clerk JS 6.38.0 rewrites its cookies (removing both, then setting them) only when a response carries the echo header, or when the page URL carries the token. The filter strips the echo, so that gap should not open.
+- **A second capture, from BUG-333 (2026-10-12, 04:00:38Z, another session's local E2E).** A page navigation, not a server action, shows the same contradiction. Its request carried both dev-browser cookies (31 characters, the same token as Clerk JS's echoed and dropped header) and both session copies, yet the app answered `handshake` with `dev-browser-missing`. Then the handshake signed the browser out and set a new dev-browser token. So two traces, on two request kinds, show the server failing to see a dev-browser cookie that the browser sent. `proxy.ts` passes the request to Clerk's middleware unchanged.
 
 ## Impact
 

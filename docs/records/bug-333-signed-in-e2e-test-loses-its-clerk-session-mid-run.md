@@ -1,6 +1,6 @@
 # BUG-333: A Signed-In E2E Test Loses Its Clerk Session When It Navigates During Clerk JS's Cookie Rewrite
 
-**Status:** Verifying — no mid-run Clerk session loss in CI with the echo dropped; due 2026-10-17
+**Status:** Open — a loss on 2026-10-12, with the echo dropped and no cookie rewrite in flight, names another cause; investigated with BUG-337; due 2026-10-14
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -109,3 +109,4 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 - [x] The trail, with the server's output, names which of Clerk's four cases sent the page to sign-in, and why. *2026-10-10: case 2, after a `dev-browser-missing` handshake, caused by a navigation during Clerk JS's cookie rewrite.*
 - [x] A fix against that cause, test-first, or an explained acceptance. *2026-10-10: option 8, unit-tested. In #1452's pull request: three local E2E runs and two stripe-hosted runs, then CI, without a loss. Another session's synced run and promotion #1455's CI also ran without one. That day's rate before it was about one loss in two runs.*
 - [ ] No mid-run Clerk session loss in CI for a week with the echo dropped, due 2026-10-17. A loss with a trace that names another cause reopens the investigation.
+  - *Reopened 2026-10-12.* Another session's local E2E lost its session at `practice.spec.ts:307` (04:00:38Z), and its trace was kept. The echo had been dropped as designed. The navigation's request carried both dev-browser cookies, unchanged, and both session copies, yet the server answered `dev-browser-missing`, which `@clerk/backend` 3.22 returns only when it finds no dev-browser token. That is the contradiction BUG-337's trace shows for a server action. The rewrite mechanism above does not explain it. BUG-337 owns the next step, which is to log the server's own view of each signed-out request.
