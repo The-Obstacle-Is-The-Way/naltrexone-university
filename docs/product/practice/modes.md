@@ -56,7 +56,7 @@ EndPracticeSession / FinalizeExamAnswers → computes totals from questionStates
 For sessions, questions are selected at creation time:
 1. `listPublishedCandidateIds(filters)` — get all matching question IDs
 2. `shuffleWithSeed(candidates, createSeed(userId, now))` — deterministic shuffle
-3. Take first `count` questions → persist as `questionIds` in `paramsJson`
+3. Take first `count` questions → persist as `questionIds` in `paramsJson`, and insert one `practice_session_question_states` row per question at the same `position` (DEBT-433: the two orders must match, and a read fails loudly if they drift)
 
 For ad-hoc mode, `selectNextQuestionId()` prefers the **first unattempted** candidate (in candidate order). If all candidates have been attempted, it selects the question with the **oldest** last-attempt timestamp.
 
@@ -89,4 +89,4 @@ For the full click-by-click UI contract (buttons, persistence boundaries, lockin
 ## 7. Concurrency Protection
 
 - **Duplicate session answers:** Partial unique index `attempts(practiceSessionId, questionId)` prevents two concurrent finalized attempts for the same question in a session. Postgres error code `23505` is caught and mapped to `ApplicationError('CONFLICT')`.
-- **Session state updates:** CAS (compare-and-swap) pattern — read current `paramsJson`, compute update, write with `WHERE paramsJson = expectedValue`. Retries up to 3 times on conflict.
+- **Session state updates:** CAS (compare-and-swap) on each question's state row — read the `practice_session_question_states` row, compute the update, and write it `WHERE id = … AND version = expectedVersion` while the session is still the user's and not ended, incrementing `version`. Retries up to 3 times on conflict (`src/adapters/repositories/practice-session-question-state-updater.ts`).

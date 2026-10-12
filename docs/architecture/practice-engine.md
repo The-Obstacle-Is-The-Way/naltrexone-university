@@ -169,9 +169,10 @@ Practice-related tables in `db/schema.ts`:
 |-------|---------|-------|
 | `questions` | `slug` (unique), `status+difficulty`, `status+createdAt` | Published questions only served to users |
 | `choices` | `questionId`, `question+label` (unique), `question+sortOrder` (unique) | 2–5 choices per question (A–E) validated at seed time; most questions are 4 choices |
-| `tags` | `slug` (unique), `kind+slug` | 5 kinds: domain, topic, substance, treatment, diagnosis |
+| `tags` | `slug` (unique), `kind+slug` | 4 kinds: topic, substance, treatment, diagnosis (the legacy `domain` kind is gone; see [the content taxonomy](../product/content-taxonomy.md)) |
 | `question_tags` | Composite PK, `tagId`, `questionId` | Many-to-many |
-| `practice_sessions` | `user+startedAt`, `user+endedAt` | `paramsJson` stores questionIds + questionStates |
+| `practice_sessions` | `user+startedAt`, `user+endedAt` | `paramsJson` stores `count`, the `tagSlugs` and `difficulties` filters, and the ordered `questionIds`; `mode` is its own column |
+| `practice_session_question_states` | `(session, question)` unique, `(session, position)` unique, `questionId` | One row per session question: `position` mirrors `paramsJson.questionIds` (DEBT-433), mark-for-review, finalized `latest*` answer, exam `draft*` answer and `draftCumulativeMs`, the bound `questionRevisionId` (ADR-021), `fairChanceAtEnd` (ADR-022), and a `version` for compare-and-swap updates |
 | `attempts` | 8+ indexes covering query patterns | Partial unique on `(practiceSessionId, questionId)` prevents duplicate session answers; includes retry lineage fields (`retryOfAttemptId`, `retryOrigin`, `retrySessionId`) and retry-parent index |
 | `bookmarks` | Composite PK, `user+createdAt`, `questionId` | Idempotent add via `ON CONFLICT DO NOTHING` |
 
