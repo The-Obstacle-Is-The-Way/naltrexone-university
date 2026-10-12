@@ -1,6 +1,6 @@
 # ADR-012: Directory Structure and Module Organization
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-06 (browser-called actions, inline) and 2026-10-12 (corrections of fact; see [Amendment](#amendment--2026-10-12))
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers)
@@ -239,3 +239,10 @@ If starting with flat structure, migrate in this order:
 - ADR-007: Dependency Injection Strategy
 - Robert C. Martin, "Clean Architecture" (2017)
 - [Next.js Project Structure](https://nextjs.org/docs/app/getting-started/project-structure)
+
+## Amendment — 2026-10-12
+
+Corrections of fact, from the DEBT-518 documentation review. The decision is unchanged.
+
+- **Routes.** The entitled app has no `review/` route. Its folders under `app/(app)/app/` are `dashboard/`, `practice/` (with `[sessionId]/` and `quick/`), `history/`, `questions/`, `bookmarks/` and `billing/`. A session's questions are reviewed at `/app/questions/[slug]?mode=review&sessionId=…`, reached from History and from the session summary.
+- **Import examples.** Code that runs on the server, such as a page, may call a `*-controller.ts` export. Code that runs in the browser, and any action handed to a client component, uses the one-parameter `'use server'` wrapper in the matching `*-actions.ts` file (BUG-324, the 2026-10-06 change above). The examples that import `submitAnswer` from `question-controller` into a page predate that change; under it, the page passes `question-actions`' wrapper to its client components.
