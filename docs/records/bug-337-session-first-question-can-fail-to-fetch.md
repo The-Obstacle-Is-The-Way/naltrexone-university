@@ -34,6 +34,11 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - **Five runs, 282 tests, no loss:** four runs on one clone (219 tests) and one full suite on another (63 tests).
   - **Every `dev-browser-missing` came from a request with no `Cookie` header.** There were 291 of them, all for anonymous pages and the health check. No request carrying `__clerk_db_jwt` was read as missing.
   - These runs had no loss, so they cannot show what happens in one. They do show that Clerk read the cookie whenever the header carried it. The leading explanation for the losses is a request that reached the server without its `Cookie` header, although Playwright's trace records one. Only a captured loss can settle that.
+- **A third capture, without server logging (2026-10-12 08:48:59Z, another clone's local E2E).** `practice.spec.ts`, "reopens post-exam review at the first question…", was sent to sign-in.
+  - A page navigation, 33 ms after a server action that succeeded, carried both dev-browser cookies with the same token as every earlier request. The app answered `handshake` with `dev-browser-missing`.
+  - The handshake URL the server built carried no dev-browser token, although the one it built 1.9 s earlier did. So the server itself had no token; the reason is not mislabelled.
+  - The echo filter worked: the page received Clerk's API responses without the echo header.
+  - No CI run or other E2E run used the Clerk user then. Another clone's integration tests, which do not call Clerk, were running on the same machine, so it was loaded.
 
 ## Impact
 
