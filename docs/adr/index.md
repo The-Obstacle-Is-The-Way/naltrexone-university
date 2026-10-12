@@ -19,7 +19,7 @@ Architecture Decision Records document significant architectural decisions along
 |----|-------|--------|------|
 | [ADR-001](./adr-001-clean-architecture-layers.md) | Clean Architecture Layers | Accepted | 2026-01-31 |
 | [ADR-002](./adr-002-domain-model.md) | Domain Model | Accepted | 2026-01-31 |
-| [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted | 2026-01-31 |
+| [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted (amended 2026-10-12) | 2026-01-31 |
 | [ADR-004](./adr-004-authentication-boundary.md) | Authentication Boundary | Accepted | 2026-01-31 |
 | [ADR-005](./adr-005-payment-boundary.md) | Payment Boundary | Accepted | 2026-01-31 |
 | [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted | 2026-01-31 |
@@ -28,7 +28,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-009](./adr-009-security-hardening.md) | Security Hardening | Accepted | 2026-01-31 |
 | [ADR-010](./adr-010-caching-strategy.md) | Caching Strategy | Accepted | 2026-01-31 |
 | [ADR-011](./adr-011-api-design-principles.md) | API Design Principles | Accepted | 2026-01-31 |
-| [ADR-012](./adr-012-directory-structure.md) | Directory Structure | Accepted | 2026-01-31 |
+| [ADR-012](./adr-012-directory-structure.md) | Directory Structure | Accepted (amended 2026-10-06, 2026-10-12) | 2026-01-31 |
 | [ADR-013](./adr-013-repository-organization.md) | Repository Organization by Aggregate | Accepted | 2026-02-01 |
 | [ADR-014](./adr-014-stripe-eager-sync.md) | Stripe Eager Sync on Checkout Success | Accepted | 2026-02-02 |
 | [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted | 2026-02-07 |
@@ -42,6 +42,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted | 2026-10-11 |
 | [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
+| [ADR-026](./adr-026-error-monitoring-with-sentry.md) | Error Monitoring with Sentry | Accepted | 2026-10-12 |
 
 ## ADR Statuses
 

@@ -1,6 +1,6 @@
-# Logging
+# Observability
 
-**Last Updated:** 2026-10-06
+Logging, Sentry error monitoring and the operational alerts. [ADR-008](../adr/adr-008-logging-observability.md) and [ADR-026](../adr/adr-026-error-monitoring-with-sentry.md) record why it is built this way.
 
 ## Source of truth
 
