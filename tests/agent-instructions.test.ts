@@ -50,6 +50,25 @@ function guidelineMappings(): Map<string, string[]> {
   return mappings;
 }
 
+function codexMappings(): Map<string, string[]> {
+  const mappings = new Map<string, string[]>();
+  const table =
+    read('AGENTS.md')
+      .split('## Rules for Particular Files\n')[1]
+      ?.split('\n## ')[0] ?? '';
+  for (const row of table.split('\n').filter((line) => line.startsWith('|'))) {
+    const cells = row.split('|');
+    const patterns = [...(cells[1] ?? '').matchAll(/`([^`]+)`/g)].map(
+      (match) => match[1] ?? '',
+    );
+    const rules = [...(cells[2] ?? '').matchAll(/`([^`]+\.md)`/g)].map(
+      (match) => match[1] ?? '',
+    );
+    for (const rule of rules) mappings.set(rule, patterns.toSorted());
+  }
+  return mappings;
+}
+
 describe('agent instructions', () => {
   it('keeps AGENTS.md within half of Codex default read budget', () => {
     expect(Buffer.byteLength(read('AGENTS.md'), 'utf8')).toBeLessThanOrEqual(
@@ -73,6 +92,16 @@ describe('agent instructions', () => {
   it.each(ruleFiles)('names %s in AGENTS.md, for Codex', (file) => {
     expect(read('AGENTS.md')).toContain(file);
   });
+
+  it.each(ruleFiles)(
+    'routes Codex to %s for the same paths as Claude Code',
+    (file) => {
+      const paths = rulePaths(file);
+      expect(codexMappings().get(file)).toEqual(
+        paths.length > 0 ? paths.toSorted() : ['**/*'],
+      );
+    },
+  );
 
   it.each(ruleFiles)(
     'maps %s for CodeRabbit to the same paths Claude Code loads it for',

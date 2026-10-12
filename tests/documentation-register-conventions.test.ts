@@ -106,7 +106,7 @@ describe('documentation register conventions', () => {
           '**Now** — BUG-001\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
         'docs/records/bug-001-x.md': `**Status:** Verifying — check; ${due}`,
       }),
-    ).toMatchObject({ invalidVerifying: ['docs/records/bug-001-x.md'] });
+    ).toMatchObject({ invalidScheduledChecks: ['docs/records/bug-001-x.md'] });
   });
 
   it('requires the Now stanza to name each Verifying record', () => {
@@ -135,10 +135,10 @@ describe('documentation register conventions', () => {
     const exists = (file: string) => files.has(file);
 
     expect(
-      auditRecordLifecycle(files, exists, '2026-10-05').verifyingFarFuture,
+      auditRecordLifecycle(files, exists, '2026-10-05').scheduledFarFuture,
     ).toEqual([{ file: 'docs/records/bug-001-x.md', due: '2027-01-04' }]);
     expect(
-      auditRecordLifecycle(files, exists, '2026-10-06').verifyingFarFuture,
+      auditRecordLifecycle(files, exists, '2026-10-06').scheduledFarFuture,
     ).toEqual([]);
   });
 
@@ -150,7 +150,7 @@ describe('documentation register conventions', () => {
         'docs/records/bug-001-x.md':
           '**Status:** Verifying — stable IDs across two production builds',
       }),
-    ).toMatchObject({ invalidVerifying: ['docs/records/bug-001-x.md'] });
+    ).toMatchObject({ invalidScheduledChecks: ['docs/records/bug-001-x.md'] });
   });
 
   it('keeps a Verifying record with a due date live and valid', () => {
@@ -161,7 +161,7 @@ describe('documentation register conventions', () => {
         'docs/records/bug-001-x.md':
           '**Status:** Verifying — stable IDs across two production builds; due 2026-10-19',
       }),
-    ).toMatchObject({ invalidVerifying: [], closedLive: [] });
+    ).toMatchObject({ invalidScheduledChecks: [], closedLive: [] });
   });
 
   it('reports a Verifying record past its due date, as a notice', () => {
@@ -176,10 +176,10 @@ describe('documentation register conventions', () => {
     const exists = (file: string) => files.has(file);
 
     expect(
-      auditRecordLifecycle(files, exists, '2026-10-19').verifyingOverdue,
+      auditRecordLifecycle(files, exists, '2026-10-19').scheduledOverdue,
     ).toEqual([]);
     expect(
-      auditRecordLifecycle(files, exists, '2026-10-20').verifyingOverdue,
+      auditRecordLifecycle(files, exists, '2026-10-20').scheduledOverdue,
     ).toEqual([{ file: 'docs/records/bug-001-x.md', due: '2026-10-19' }]);
   });
 

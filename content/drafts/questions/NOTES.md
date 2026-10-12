@@ -791,7 +791,7 @@ These questions take research findings and ask how they apply to patient care.
 ## Parser Corruption Audit (March 24, 2026)
 
 **Auditor:** Claude (verified via automated scan of all 948 imported MDX files)
-**Tracker:** [DEBT-338](../../docs/debt/debt-338-seed-parser-silent-wrong-answer-section-corruption.md)
+**Tracker:** DEBT-338 (seed-parser corruption; the closed-record ledger distinguishes the historical ID collision).
 
 The seed parser (`parseChoiceExplanations()` in `scripts/seed-helpers.ts`) silently corrupts question data when the `## Explanation` section doesn't follow strict ordering rules. Two corruption patterns were found affecting 24 files total.
 

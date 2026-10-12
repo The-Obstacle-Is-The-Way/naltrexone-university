@@ -15,4 +15,14 @@ Vendored skills that Claude Code and Codex load: `.claude/skills/*` and `.codex/
 
 ## Removing a Skill
 
-Delete its folder, both symlinks and its manifest entry, and lower the count in `skills.manifest.schema.json`, all in one change. A skill that contradicts the repository goes. For example, `using-drizzle-queries` imported the database directly, `neon-drizzle-setup` targeted a driver this repository does not use, and `stripe-subscriptions` chained recipes for a dependency it does not have.
+Removing a skill needs the owner's agreement. Then delete its folder, both symlinks and its manifest entry, lower the count in `skills.manifest.schema.json`, and list it below, all in one change.
+
+### Removed
+
+On 2026-10-12 the owner agreed to remove three generic recipes from `andrelandgraf/fullstackrecipes` (MIT, upstream commit `4449331ed5ae`, vendored 2026-06-12). Their direct database imports, driver choices and billing assumptions contradict this repository's injected database and billing patterns, and an agent loads a skill by its description whatever a label says. Their upstream remains the source if one is ever wanted again.
+
+| Skill | Upstream | Vendored at |
+|---|---|---|
+| `neon-drizzle-setup` | live recipe `fullstackrecipes.com/api/recipes/neon-drizzle-setup` | `8829326e3b38` |
+| `stripe-subscriptions` | live cookbook `fullstackrecipes.com/api/recipes/stripe-subscriptions` | `8829326e3b38` |
+| `using-drizzle-queries` | `skills/drizzle-queries`, renamed locally | `c70f5bb1087f` |
