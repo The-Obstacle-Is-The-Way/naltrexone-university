@@ -45,7 +45,7 @@ export type StripeCheckoutClientContractHarness = {
   subscriptions: StripeSubscriptionsClient &
     Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel' | 'update'>>;
   paymentMethods: Required<StripePaymentMethodsClient>;
-  customers: Required<Pick<StripeCustomersClient, 'search'>>;
+  customers: Required<Pick<StripeCustomersClient, 'search' | 'retrieve'>>;
   portalConfigurations: StripeClient['billingPortal']['configurations'];
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
@@ -62,6 +62,9 @@ export type StripeCheckoutClientContractHarness = {
   // Creates one Customer whose metadata user_id is the given value; the real
   // half creates it in TEST mode, the fake seeds it.
   seedCustomer(userId: string): Promise<{ id: string }>;
+  // Deletes a Customer seedCustomer made; the real half deletes it in TEST
+  // mode, the fake marks it deleted.
+  deleteCustomer(customerId: string): Promise<void>;
   // Searches until a read returns at least `minimum` Customers and hands that
   // read back. A new Customer reaches Search after a delay, and in TEST mode a
   // later read can briefly miss one an earlier read returned, so the real half
@@ -573,6 +576,49 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
       expect(found).toHaveLength(1);
       expect(found[0]?.id === first.id).toBe(true);
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[10],
+    // GitHub #883: the webhook reads a Customer by id to decide whether an
+    // unverifiable add-card Session belongs to another environment: its
+    // Customer carries another e2e_owner, or is gone.
+    async run(harness) {
+      const userId = `debt472_retrieve_${randomUUID()}`;
+      const seeded = await harness.seedCustomer(userId);
+
+      const retrieved = await harness.customers.retrieve(seeded.id);
+
+      expect(retrieved.id).toBe(seeded.id);
+      expect(retrieved.deleted).toBeUndefined();
+      expect(retrieved.metadata?.user_id).toBe(userId);
+
+      // A deleted Customer is still answered by id, as deleted and without
+      // its metadata; the webhook reads it as gone.
+      await harness.deleteCustomer(seeded.id);
+      const deleted = await harness.customers.retrieve(seeded.id);
+
+      expect(deleted.id).toBe(seeded.id);
+      expect(deleted.deleted).toBe(true);
+      expect(deleted.metadata).toBeUndefined();
+
+      // An id Stripe does not hold is refused with a 404 resource_missing,
+      // which the webhook also reads as gone.
+      const missingId = `cus_debt472missing${randomUUID().replaceAll('-', '')}`;
+      let caught: unknown;
+      try {
+        await harness.customers.retrieve(missingId);
+      } catch (error) {
+        caught = error;
+      }
+      expect(readErrorField(caught, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(caught, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(caught, 'code')).toBe('resource_missing');
+      expect(readErrorField(caught, 'statusCode')).toBe(404);
+      expect(readErrorField(caught, 'param')).toBe('id');
+      expect(readErrorField(caught, 'message')).toBe(
+        `No such customer: '${missingId}'`,
+      );
     },
   },
 ];

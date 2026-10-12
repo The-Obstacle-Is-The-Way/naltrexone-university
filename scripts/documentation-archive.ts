@@ -60,6 +60,7 @@ export type DocumentationAudit = {
   malformedLedgerLines: string[];
   unnamedVerifying: string[];
   invalidScheduledChecks: string[];
+  invalidQueueReview: string[];
   invalidStatus: string[];
   longStatus: string[];
   scheduledOverdue: { file: string; due: string }[];
@@ -155,6 +156,9 @@ const LEDGER_ENTRY =
 const WORKING_RECORD_RECEIPT =
   / · docs\/records\/(?:bug|debt)-\d+[^\s/]*\.md · #[1-9]\d* · [0-9a-f]{40}$/;
 const LIST_ITEM = /^\s*[-*+] /;
+const RECEIPT_CUTOVER = '2026-10-11';
+const LEDGER_DATE = / · (\d{4}-\d{2}-\d{2}) · /;
+const CLOSURE_RECEIPT = / · \S+\.md · #[1-9]\d* · [0-9a-f]{40}$/;
 // IDs given to two records each before anything checked; each ledger line
 // names its own file. No third, and no new collision, is allowed.
 const HISTORICAL_ID_COLLISIONS = new Set(
@@ -406,6 +410,8 @@ const HISTORICAL_DISPOSITION =
   /^(?:accepted|invalidated|decomposed|deferred|decided|won['’]t fix|reclassified|superseded|parked)\b/i;
 
 const VERIFYING_STATUS = /^verifying\b/i;
+const LIVE_STATUS_WORD = /^(?:open|in progress|blocked|verifying)\b/i;
+const SCHEDULING_ATTEMPT = /\bdue \d/i;
 const OPEN_STATUS =
   /^(?:open|in progress|blocked|verifying)(?:$|\s+[—–-]\s+.+)/i;
 const DUE_DATE = /\bdue (\d{4}-\d{2}-\d{2})\b/gi;
@@ -421,10 +427,24 @@ function isCalendarDate(value: string): boolean {
   );
 }
 
-function addDays(day: string, days: number): string {
+export function addDays(day: string, days: number): string {
   const date = new Date(`${day}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+// The index schedules the weekly human review on one line. Every label
+// counts, so a second line with an unreadable date cannot hide.
+export function queueReviewDue(index: string): string | undefined {
+  const text = index.replace(/\r\n/g, '\n');
+  const labels = text.match(/^\*\*Queue review due:\*\*/gm) ?? [];
+  const dates = [
+    ...text.matchAll(/^\*\*Queue review due:\*\* (\d{4}-\d{2}-\d{2})$/gm),
+  ];
+  const due = dates[0]?.[1];
+  return labels.length === 1 && dates.length === 1 && due && isCalendarDate(due)
+    ? due
+    : undefined;
 }
 
 export function auditRecordLifecycle(
@@ -445,6 +465,7 @@ export function auditRecordLifecycle(
     malformedLedgerLines: [],
     unnamedVerifying: [],
     invalidScheduledChecks: [],
+    invalidQueueReview: [],
     invalidStatus: [],
     longStatus: [],
     scheduledOverdue: [],
@@ -460,6 +481,8 @@ export function auditRecordLifecycle(
   };
   const index = files.get(RECORDS.index) ?? '';
   const scan = scanMarkdown(RECORDS.index, index);
+  if (files.has(RECORDS.index) && !queueReviewDue(index))
+    result.invalidQueueReview.push(RECORDS.index);
   for (const [file, contents] of files) {
     const budget = registerFileBudget(file);
     if (budget !== undefined && Buffer.byteLength(contents, 'utf8') > budget)
@@ -489,12 +512,15 @@ export function auditRecordLifecycle(
         pattern.test(path.posix.basename(file)),
     );
   const ledgerIds: string[] = [];
-  (files.get(RECORDS.ledger) ?? '').split('\n').forEach((line, index) => {
+  (files.get(RECORDS.ledger) ?? '').split(/\r?\n/).forEach((line, index) => {
     if (!LIST_ITEM.test(line)) return;
     const id = line.match(LEDGER_ENTRY)?.[1];
+    const closed = line.match(LEDGER_DATE)?.[1] ?? '';
+    // From the cutover on, every closure names its PR and a commit that held
+    // the record; a deleted working record must also be one by its path.
     if (
-      line.includes(' · docs/records/') &&
-      !WORKING_RECORD_RECEIPT.test(line)
+      (closed >= RECEIPT_CUTOVER && !CLOSURE_RECEIPT.test(line)) ||
+      (line.includes(' · docs/records/') && !WORKING_RECORD_RECEIPT.test(line))
     ) {
       result.malformedLedgerLines.push(`${RECORDS.ledger}:${index + 1}`);
       return;
@@ -557,14 +583,18 @@ export function auditRecordLifecycle(
       result.longStatus.push(record);
     // A record whose fix shipped but whose check can only happen in
     // production stays live, as Verifying, until that check is done.
-    if (VERIFYING_STATUS.test(status) || /\bdue \d/i.test(status)) {
+    // "due" followed by a digit is an attempt to schedule: there must be one,
+    // a calendar date, and the status must name the action it schedules.
+    if (VERIFYING_STATUS.test(status) || SCHEDULING_ATTEMPT.test(status)) {
+      const attempts = status.match(new RegExp(SCHEDULING_ATTEMPT, 'gi')) ?? [];
       const dues = [...status.matchAll(DUE_DATE)].map((match) => match[1]);
       const due = dues[0];
       const check = status
-        .replace(VERIFYING_STATUS, '')
+        .replace(LIVE_STATUS_WORD, '')
         .replace(DUE_DATE, '')
         .replace(/^[\s—–-]+|[\s;]+$/g, '');
       if (
+        attempts.length !== 1 ||
         dues.length !== 1 ||
         !due ||
         !isCalendarDate(due) ||
@@ -710,12 +740,31 @@ export function repairArchiveLinks(
 // exits 128, and the audit reads every file, which is the stricter choice.
 function gitIgnored(root: string, names: readonly string[]): string[] {
   if (names.length === 0) return [];
+  // Outside a work tree nothing is excluded. Asking first also keeps
+  // check-ignore from exiting before it reads a long list (EPIPE).
+  const tree = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  if (tree.error) throw tree.error;
+  if (tree.status !== 0) {
+    if (/not a git repository/i.test(tree.stderr)) return [];
+    throw new Error(
+      `git rev-parse failed with status ${tree.status}: ${tree.stderr.trim()}`,
+    );
+  }
   const result = spawnSync('git', ['check-ignore', '--stdin', '-z'], {
     cwd: root,
     input: names.join('\0'),
     encoding: 'utf8',
   });
-  if (result.status !== 0) return [];
+  // Exit 1 means nothing is ignored; any other failure must not pass as that.
+  if (result.error) throw result.error;
+  if (result.status === 1) return [];
+  if (result.status !== 0)
+    throw new Error(
+      `git check-ignore failed with status ${result.status}: ${result.stderr.trim()}`,
+    );
   return result.stdout.split('\0').filter(Boolean);
 }
 
@@ -780,6 +829,7 @@ export function runDocumentationCommand(
     result.malformedLedgerLines,
     result.unnamedVerifying,
     result.invalidScheduledChecks,
+    result.invalidQueueReview,
     result.invalidStatus,
     result.longStatus,
     result.missingLiveRows,

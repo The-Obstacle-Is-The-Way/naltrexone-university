@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
+import { isE2EOwnerMismatchEvent } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { processStripeWebhookEvent } from './stripe-webhook-processor';
@@ -224,5 +225,168 @@ describe('expired trial payment-method setup webhook', () => {
       code: 'INVALID_WEBHOOK_PAYLOAD',
       message: 'Invalid expired trial payment-method setup state signature',
     });
+  });
+
+  // GitHub #883: a webhook with an E2E owner shares its Stripe test account
+  // with other environments, whose add-card Sessions are signed with their own
+  // consent-state secrets. Such a Session is skipped like another owner's
+  // subscription event when its Customer carries another e2e_owner, or is gone:
+  // E2E teardown deletes its Customers, and with the Customer gone nothing here
+  // is left to act on. A live Customer without that evidence keeps it an
+  // invalid payload, so a misconfigured secret on this deployment is still
+  // reported. Nothing is written either way.
+  function unverifiableSession(customerMetadata: Record<string, string>) {
+    const stripe = new FakeStripeCheckoutClient();
+    const customerId = stripe.seedCustomer(customerMetadata);
+    stripe.setWebhookEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {
+            ...signedSetupMetadata(),
+            consent_customer_id: customerId,
+            consent_state_signature: '0'.repeat(64),
+          },
+        },
+      },
+    });
+    return { stripe, customerId };
+  }
+
+  function processWithOwner(stripe: FakeStripeCheckoutClient) {
+    return processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      consentStateSecret,
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger: new FakeLogger(),
+      resolveCheckoutDisclosure: () => null,
+      sha256Hasher: new NobleSha256Hasher(),
+      webhookE2EOwner: 'preview-owner',
+    });
+  }
+
+  it('skips an unverifiable expired setup Session whose Customer belongs to another E2E owner', async () => {
+    const { stripe, customerId } = unverifiableSession({
+      e2e_owner: 'other-owner',
+    });
+
+    const error = await processWithOwner(stripe).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['foreign_environment'] },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([customerId]);
+    expect(stripe.subscriptions.retrieveCalls).toEqual([]);
+  });
+
+  it.each([
+    ["this webhook's E2E owner", { e2e_owner: 'preview-owner' }],
+    ['no E2E owner', {}],
+  ])(
+    'rejects an unverifiable expired setup Session as an invalid payload when its Customer carries %s',
+    async (_label, customerMetadata) => {
+      const { stripe } = unverifiableSession(customerMetadata);
+
+      await expect(processWithOwner(stripe)).rejects.toMatchObject({
+        code: 'INVALID_WEBHOOK_PAYLOAD',
+        message: 'Invalid expired trial payment-method setup state signature',
+      });
+    },
+  );
+
+  it('skips an unverifiable expired setup Session whose Customer was deleted', async () => {
+    const { stripe, customerId } = unverifiableSession({});
+    stripe.deleteCustomer(customerId);
+
+    const error = await processWithOwner(stripe).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['customer_gone'] },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([customerId]);
+  });
+
+  it('skips an unverifiable expired setup Session when Stripe holds no such Customer', async () => {
+    const { stripe } = unverifiableSession({ e2e_owner: 'other-owner' });
+    stripe.setWebhookEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {
+            ...signedSetupMetadata(),
+            consent_customer_id: 'cus_unknown',
+            consent_state_signature: '0'.repeat(64),
+          },
+        },
+      },
+    });
+
+    const error = await processWithOwner(stripe).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['customer_gone'] },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual(['cus_unknown']);
+  });
+
+  it('lets a transient Customer read failure propagate so Stripe retries the delivery', async () => {
+    const { stripe } = unverifiableSession({ e2e_owner: 'other-owner' });
+    const fault = new Error('Stripe connection reset');
+    stripe.setCustomerRetrieveFault(fault);
+
+    await expect(processWithOwner(stripe)).rejects.toBe(fault);
+  });
+
+  it('normalizes its own signed setup Session when this webhook has an E2E owner', async () => {
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: signedSetupMetadata(),
+        },
+      },
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        consentStateSecret,
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+        resolveCheckoutDisclosure: () => null,
+        sha256Hasher: new NobleSha256Hasher(),
+        webhookE2EOwner: 'preview-owner',
+      }),
+    ).resolves.toMatchObject({
+      trialPaymentMethodSetupExpiration: { sessionId: 'cs_setup_123' },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([]);
   });
 });

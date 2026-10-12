@@ -2,7 +2,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
+  addDays,
   auditRecordLifecycle,
+  queueReviewDue,
   RECORDS,
   readDocumentationFiles,
 } from './documentation-archive';
@@ -20,6 +22,9 @@ export const DUE_CHECKS_ISSUE_TITLE =
   'Overdue production checks on Verifying records';
 
 export type DueCheck = { file: string; due: string };
+
+// The repository's own text, so its message is safe to print.
+export class QueueReviewError extends Error {}
 export type DueChecksReport = { overdue: DueCheck[]; farFuture: DueCheck[] };
 
 function describeReport({ overdue, farFuture }: DueChecksReport): string {
@@ -27,9 +32,7 @@ function describeReport({ overdue, farFuture }: DueChecksReport): string {
     checks.map(({ file, due }) => `- \`${file}\` (due ${due})\n`).join('');
   return (
     'These records have scheduled actions or checks. The README entry is the weekly human review of Waiting triggers and pending owner decisions; it is not a production verification.\n\n' +
-    (overdue.length > 0
-      ? `**Past their due date:**\n\n${list(overdue)}\n`
-      : '') +
+    (overdue.length > 0 ? `**Due or overdue:**\n\n${list(overdue)}\n` : '') +
     (farFuture.length > 0
       ? `**Due more than 90 days out**, so the check may never happen:\n\n${list(farFuture)}\n`
       : '') +
@@ -61,37 +64,26 @@ export function repositoryDueChecks(
   today = new Date().toISOString().slice(0, 10),
 ): DueChecksReport {
   const files = readDocumentationFiles(root);
+  // The job runs weekly, so it raises a record on its due day too.
   const result = auditRecordLifecycle(
     files,
     (file) => existsSync(path.resolve(root, file)),
-    today,
+    addDays(today, 1),
   );
   const report = {
     overdue: result.scheduledOverdue,
     farFuture: result.scheduledFarFuture,
   };
-  const dates = [
-    ...(files.get(RECORDS.index) ?? '').matchAll(
-      /^\*\*Queue review due:\*\* (\d{4}-\d{2}-\d{2})$/gm,
-    ),
-  ];
-  const due = dates[0]?.[1];
-  const date = new Date(`${due}T00:00:00Z`);
-  if (
-    dates.length !== 1 ||
-    !due ||
-    Number.isNaN(date.getTime()) ||
-    date.toISOString().slice(0, 10) !== due
-  ) {
-    throw new Error(
+  const due = queueReviewDue(files.get(RECORDS.index) ?? '');
+  if (!due) {
+    throw new QueueReviewError(
       'Queue review due must name one valid calendar date in docs/records/README.md',
     );
   }
-  const horizon = new Date(`${today}T00:00:00Z`);
-  const horizonDays = 90;
-  horizon.setUTCDate(horizon.getUTCDate() + horizonDays);
+  // The queue review moves at most seven days at a time.
   if (due <= today) report.overdue.push({ file: RECORDS.index, due });
-  else if (date > horizon) report.farFuture.push({ file: RECORDS.index, due });
+  else if (due > addDays(today, 7))
+    report.farFuture.push({ file: RECORDS.index, due });
   return report;
 }
 
@@ -102,9 +94,13 @@ export async function runDocumentationDueChecks(
   try {
     output.log(`Overdue production checks: ${await check()}`);
     return 0;
-  } catch {
+  } catch (error) {
+    // Other failures can carry a GitHub credential, so only the repository's
+    // own message is printed.
     output.error(
-      'Overdue production check failed; inspect the records and GitHub issue access.',
+      error instanceof QueueReviewError
+        ? `Overdue production check failed: ${error.message}.`
+        : 'Overdue production check failed; inspect the records and GitHub issue access.',
     );
     return 1;
   }

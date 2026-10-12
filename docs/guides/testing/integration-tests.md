@@ -160,7 +160,7 @@ The test setup checks database connectivity before running any tests. If you see
 
 **Migrations "fail" with no message**
 
-A wrong database port fails silently: `drizzle-kit` swallows the connection error and exits 1 without a message, and `pnpm test:integration` then fails en masse on missing tables. Never hardcode a port: pass the resolved target, as in the setup command above, and check it with `pnpm local:test:target`.
+A wrong database port fails without saying why: `drizzle-kit` prints no connection error, and `pnpm db:migrate` reports only `Database command failed (exit code 1).` Its first line, `Database target: LOCAL <host>:<port>/<database>`, names the target it used, so check that. Otherwise `pnpm test:integration` then fails en masse on missing tables. Never hardcode a port: pass the resolved target, as in the setup command above, and check it with `pnpm local:test:target`.
 
 **Stale containers on wrong ports/projects**
 

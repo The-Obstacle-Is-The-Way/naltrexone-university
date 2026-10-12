@@ -21,7 +21,7 @@
 3. **Adapter behaviour is tested against real infrastructure.** That means Postgres integration tests and provider contract tests. An adapter unit test covers only error translation that real infrastructure cannot force.
 4. **A call-chain object is a stub, not a fake** (2026-09-24). DEBT-444 governs over DEBT-035. The one sanctioned repository unit pattern is the real query builder over `drizzle.mock({ schema })` with a spied `execute`, limited to driver failures.
 5. **`vi.mock()` only for modules that cannot be injected,** such as `@clerk/nextjs`, `next/link` and `server-only`, and for Browser Mode's sealed boundaries with `{ spy: true }`.
-6. **A ratchet keeps violations from growing.** `pnpm lint:doubles` counts own-code module mocks, unknown double casts and hand-rolled doubles for ports with maintained fakes. Each file's floor equals its live count, so a removed site cannot return. When a file with a floor is next edited, its sites move onto the fake.
+6. **A ratchet keeps violations from growing.** `pnpm lint:doubles` counts own-code module mocks, unknown double casts and hand-rolled doubles for ports with maintained fakes. Each file's floor equals its live count, so a removed site cannot return. When a file with a floor is next edited, its sites move onto a maintained fake or a narrow seam.
 
 The rule's text lives in `.claude/rules/testing.md`. The evidence that each fake matches its adapter is in `docs/guides/testing/fake-contracts.md`, which a test parses.
 

@@ -51,6 +51,16 @@ function sleep(ms: number): Promise<void> {
 const CUSTOMER_SEARCH_VISIBILITY_BOUND_MS = 60_000;
 const CUSTOMER_SEARCH_POLL_INTERVAL_MS = 1_000;
 
+// Stripe delivers these Subscriptions' events to the shared TEST webhook,
+// which serves the dev preview. That webhook skips another E2E owner's
+// Subscription events, so these carry their own owner. Without it, each event
+// reached the database with a user_id no row can have and failed, and Stripe
+// retried it for days.
+const CONTRACT_SUBSCRIPTION_METADATA = {
+  user_id: 'debt472_contract_user',
+  e2e_owner: 'stripe-provider-contract',
+};
+
 runStripeCheckoutClientContract(
   `real Stripe TEST mode${providerGate.mode === 'skip' ? ` (skipped: ${providerGate.reason})` : ''}`,
   async () => {
@@ -119,7 +129,10 @@ runStripeCheckoutClientContract(
 
     const customers = {
       search: (params, options) => stripe.customers.search(params, options),
-    } satisfies Required<Pick<StripeClient['customers'], 'search'>>;
+      retrieve: (customerId) => stripe.customers.retrieve(customerId),
+    } satisfies Required<
+      Pick<StripeClient['customers'], 'search' | 'retrieve'>
+    >;
 
     // Stripe cannot delete a portal configuration; cleanup deactivates each
     // one this case created.
@@ -159,6 +172,11 @@ runStripeCheckoutClientContract(
         createdCustomerIds.add(seeded.id);
         return { id: seeded.id };
       },
+      deleteCustomer: async (customerId) => {
+        await stripe.customers.del(customerId);
+        // Deleted here, so cleanup must not delete it again.
+        createdCustomerIds.delete(customerId);
+      },
       searchUntil: async (params, minimum) => {
         searchDeadline ??= Date.now() + CUSTOMER_SEARCH_VISIBILITY_BOUND_MS;
         for (;;) {
@@ -177,7 +195,7 @@ runStripeCheckoutClientContract(
         const subscription = await stripe.subscriptions.create({
           customer: customer.id,
           items: [{ price: stripePriceId }],
-          metadata: { user_id: 'debt472_contract_user' },
+          metadata: CONTRACT_SUBSCRIPTION_METADATA,
         });
         createdSubscriptionIds.add(subscription.id);
         return { id: subscription.id, customer: customer.id };
@@ -187,7 +205,7 @@ runStripeCheckoutClientContract(
         const subscription = await stripe.subscriptions.create({
           customer: customer.id,
           items: [{ price: stripePriceId }],
-          metadata: { user_id: 'debt472_contract_user' },
+          metadata: CONTRACT_SUBSCRIPTION_METADATA,
         });
         // Tracked until the cancel succeeds, so cleanup can still cancel it
         // if this call fails.

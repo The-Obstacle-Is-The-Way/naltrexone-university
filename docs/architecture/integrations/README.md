@@ -25,6 +25,8 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 | Postgres | `postgres` in `package.json` | None (driver) |
 | Drizzle | `drizzle-orm` and `drizzle-kit` in `package.json` | None |
 
+Stripe's pin covers outbound requests only: each Stripe webhook endpoint has its own version. The live endpoint is at `2026-05-27.dahlia`. The test endpoint inherited the account default `2026-01-28.clover` until its 2026-10-11 rotation, and now uses `2026-05-27.dahlia` explicitly ([census and decision](./stripe.md#webhook-endpoint-api-versions)).
+
 ---
 
 ## Vendor Index

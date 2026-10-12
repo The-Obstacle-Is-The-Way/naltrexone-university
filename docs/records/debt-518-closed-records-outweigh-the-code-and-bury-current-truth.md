@@ -207,7 +207,7 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
    - `AGENTS.md`'s records sections become a pointer.
    - ADR-023 lands here.
 2. **Agent instructions** (this record's third pull request):
-   - `AGENTS.md` drops from 66 KB to about 11 KB, inside Codex's default 32 KiB read. It has no record IDs or dates. Its runbooks move to [Review and Merge](../guides/release/review-and-merge.md) and the deployment procedure's new promotion section. Its owner rulings move to ADR-024 (review, merge and promotion) and ADR-025 (test doubles).
+   - `AGENTS.md` drops from 58 KB (66 KB before the records step) to about 12 KB, inside Codex's default 32 KiB read. It has no record IDs or dates. Its runbooks move to [Review and Merge](../guides/release/review-and-merge.md) and the deployment procedure's new promotion section. Its owner rulings move to ADR-024 (review, merge and promotion) and ADR-025 (test doubles).
    - `CLAUDE.md` imports it with `@AGENTS.md`, so Claude Code reads it too, and keeps only Claude-specific notes. `.claude/rules/git-workflow.md`, a copy of `AGENTS.md`'s process sections, is deleted.
    - Each path-scoped rule maps to its paths for CodeRabbit with `applyTo`. Until now every rule applied only to its own folder.
    - `tests/agent-instructions.test.ts` enforces the 16 KiB budget, the import, and no IDs or dates in instruction files. It also checks that each rule is named in `AGENTS.md` and mapped for CodeRabbit to the same paths Claude Code loads it for.
@@ -248,7 +248,7 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - [ ] The ledger is complete: every archived record has a line, and every record ID cited in code resolves.
 - [ ] Every Deferred row is self-contained, and no live link points into `docs/_archive/`.
 - [ ] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted.
-- [ ] `AGENTS.md`, `CLAUDE.md` and the guard describe and enforce delete-on-close.
+- [x] The records index describes delete-on-close, `AGENTS.md` and `CLAUDE.md` point to it, and the guard enforces it: no closed record stays live, and every closure from the cutover carries its receipt (#1467 and #1471).
 - [ ] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location.
 - [ ] Three records are closed under the model, and the reviewing agent reports no lost knowledge.
 - [ ] A month later, these are re-measured against this record's table: the share of documentation-only PRs, the search-noise ratios, and the record lines in the tree.
