@@ -1,6 +1,6 @@
 # BUG-338: The Published Security Contact Leads Nowhere
 
-**Status:** Blocked — the owner must turn on private vulnerability reporting in the repository's settings; SECURITY.md ships with this record
+**Status:** Verifying — private reporting is on; SECURITY.md must reach `main`, where GitHub reads it; due 2026-10-26
 **Priority:** P2
 **Date:** 2026-10-12
 **Resolved:** —
@@ -40,14 +40,14 @@ A good-faith report has nowhere private to go, so it may be dropped or posted pu
 
 Option 1, with email as a second channel inside the policy:
 - `SECURITY.md` names both the reporting form and the support address, and says what to include and what not to do. `tests/security-txt.test.ts` now fails without it.
-- The owner turns on private vulnerability reporting (Settings → Security → Private vulnerability reporting), or approves the equivalent API call.
+- The owner approved turning on private vulnerability reporting, and it was turned on through the API on 2026-10-12 at 02:00 UTC.
 - After that, the monthly `security-txt-renewal` job should also read the setting and open an issue if it is ever off. That needs a token allowed to read repository security settings; decide when the setting is on.
 
 ## Verification
 
-- The Policy URL shows this repository's `SECURITY.md`.
-- `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/private-vulnerability-reporting` answers `{"enabled":true}`.
-- A signed-in account other than the owner's reaches a working report form.
+- [ ] The Policy URL shows this repository's `SECURITY.md`, once a promotion carries it to `main`.
+- [x] `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/private-vulnerability-reporting` answers `{"enabled":true}` (2026-10-12, 02:00 UTC).
+- [ ] A signed-in account other than the owner's reaches a working report form.
 
 ## Related
 
