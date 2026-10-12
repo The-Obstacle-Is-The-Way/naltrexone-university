@@ -21,7 +21,7 @@ The Playwright suite (`tests/e2e/`, 17 specs) is deterministic regression covera
 - **Deployed-target verification.** Playwright boots its own local server (`reuseExistingServer: false`); it does not point at Vercel previews or production. QA procedures do.
 - **Pre-automation staging.** A flow becomes a procedure first; once its steps are stable and mechanizable, it is *promoted* to a Playwright spec and the procedure records the handoff (see Lifecycle).
 
-Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. QA-002 supplies the draft procedure that can give `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
+Once the practice procedure is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. The billing procedure supplies the draft procedure that can give `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
 
 ---
 
@@ -35,7 +35,7 @@ Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verificat
 
 Every procedure uses this skeleton (copy it from `docs/guides/qa/README.md` → Template):
 
-- **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
+- **Header block:** a title naming what the procedure covers (the former `QA-001` and `QA-002` IDs appear only in history), `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
 - **Steps table:** `| # | Action | Expected |` — one operator checkpoint per row, with explicit actions and verifiable expectations. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
 - **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/frontend/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
 - **Viewports:** default to the established audit pair — **1600×1000 desktop** and **390×844 mobile** — unless the procedure states otherwise.

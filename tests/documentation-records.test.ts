@@ -55,6 +55,15 @@ describe('records folder and ledger', () => {
     ).toEqual(['DEBT-007']);
   });
 
+  it('reports an ID listed twice with different zero-padding', () => {
+    expect(
+      audit({
+        'docs/records/closed.md':
+          '- BUG-05 · One · Resolved · 2026-10-01 · #1 · a.md\n- BUG-005 · Again · Resolved · 2026-10-02 · #2 · b.md',
+      }).duplicateLedgerIds,
+    ).toEqual(['BUG-05']);
+  });
+
   it('allows only the three ID collisions made before IDs were checked', () => {
     expect(
       audit({
