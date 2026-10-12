@@ -12,7 +12,7 @@
 - Session flow is implemented per current SSOT (`SLICE-3`): start, answer, exam review stage, finalize summary.
 - BUG-072 and BUG-073 were reclassified as debt (UX/product gaps, not SSOT violations).
 - BUG-074 was resolved and archived: [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md).
-- Architecture/product debt is tracked in `docs/debt/index.md` (source of truth for active `DEBT-*` and `FE-*` items; do not assume the active set from this checklist text).
+- Architecture/product debt is tracked in `docs/records/README.md` (source of truth for open `DEBT-*` items; do not assume the active set from this checklist text).
 
 ---
 
@@ -91,7 +91,6 @@
 ## Related
 
 - `docs/specs/master_spec.md`
-- `docs/bugs/index.md`
-- `docs/debt/index.md`
+- `docs/records/README.md`
 - `docs/practice-engine/exam-answer-secrecy-policy.md`
 - [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md)

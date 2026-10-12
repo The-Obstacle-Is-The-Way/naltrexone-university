@@ -10,8 +10,8 @@ const QUESTION_SLUG = 'placeholder-01-naltrexone-mechanism';
 
 const PUBLIC_PATHS = ['/', '/pricing', '/privacy', '/terms'];
 
-// 375 is the project viewport QA-002 checks by hand; 360 is the narrowest
-// common Android width. A page wider than the viewport scrolls sideways on a
+// 375 is the mobile-smoke project's viewport (the billing QA procedure checks
+// 390 by hand); 360 is the narrowest common Android width. A page wider than the viewport scrolls sideways on a
 // phone; wide content such as legal tables must scroll inside its own box.
 const PHONE_WIDTHS = [375, 360];
 

@@ -6,9 +6,9 @@ Scripted, repeatable test procedures that exercise the system **at the UI** — 
 
 1. **Unit tests** (TDD, colocated) prevent regressions in logic.
 2. **The rule-to-test register** (`docs/dev/acceptance-testing.md`; it replaces the Gherkin acceptance tests, not adopted on 2026-10-03) names each business rule and the tests that prove it below the UI.
-3. **QA procedures** (this doc + the `docs/qa/` register) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
+3. **QA procedures** (this doc and [the procedures in `docs/guides/qa/`](../guides/qa/README.md)) catch the failure mode the other two structurally cannot: *software that works at the API but not at the UI*.
 
-A QA procedure is a numbered, versioned markdown script (`docs/qa/qa-NNN-slug.md`) that a human, an agent, or a Playwright-assisted run can execute against a running app, with explicit expected results and evidence capture.
+A QA procedure is a Markdown script (`docs/guides/qa/<subject>.md`) that a human, an agent, or a Playwright-assisted run can execute against a running app, with explicit expected results and evidence capture.
 
 ---
 
@@ -21,26 +21,26 @@ The Playwright suite (`tests/e2e/`, 17 specs) is deterministic regression covera
 - **Deployed-target verification.** Playwright boots its own local server (`reuseExistingServer: false`); it does not point at Vercel previews or production. QA procedures do.
 - **Pre-automation staging.** A flow becomes a procedure first; once its steps are stable and mechanizable, it is *promoted* to a Playwright spec and the procedure records the handoff (see Lifecycle).
 
-Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. QA-002 supplies the draft procedure that can give `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
+Once the practice procedure is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. The billing procedure supplies the draft procedure that can give `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
 
 ---
 
-## The register
+## Where they live
 
-- **Index:** `docs/qa/index.md` — procedure table, statuses, and the `**Next QA ID:**` allocator (same register mechanics as `docs/debt/` and `docs/bugs/`).
-- **Procedures:** `docs/qa/qa-NNN-short-slug.md`, IDs zero-padded to 3 digits, allocated at doc-creation time by bumping the allocator.
-- **Evidence assets:** representative WebP/PNG screenshots go in `docs/qa/assets/qa-NNN/` (mirroring `docs/debt/assets/debt-NNN/`). Working screenshots stay in the gitignored `audit-screenshots/`.
+- **Index:** `docs/guides/qa/README.md` lists the procedures, their statuses, the surfaces not yet covered, and the template.
+- **Procedures:** `docs/guides/qa/<subject>.md`, named by what they cover; there are no QA IDs.
+- **Evidence:** attach representative screenshots to the pull request or the run's report, not the repository. Working screenshots stay in the gitignored `audit-screenshots/`.
 
 ## Procedure format
 
-Every procedure uses this skeleton (copy from `docs/qa/index.md` → Template):
+Every procedure uses this skeleton (copy it from `docs/guides/qa/README.md` → Template):
 
-- **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
+- **Header block:** a title naming what the procedure covers (the former `QA-001` and `QA-002` IDs appear only in history), `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (a gated run when `yes`; see [When procedures run](#when-procedures-run)), `Promoted to` (E2E spec path once promoted, else `—`).
 - **Steps table:** `| # | Action | Expected |` — one operator checkpoint per row, with explicit actions and verifiable expectations. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
 - **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/frontend/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
 - **Viewports:** default to the established audit pair — **1600×1000 desktop** and **390×844 mobile** — unless the procedure states otherwise.
 - **Evidence:** which steps require screenshots, and where they land.
-- **On failure:** file a `BUG-NNN` in `docs/bugs/index.md` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the procedure links the finding.
+- **On failure:** file a bug record in `docs/records/` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the procedure links the finding.
 
 ## Execution modes
 
@@ -70,12 +70,12 @@ Rules of engagement (restating the standing mandates):
 ## When procedures run
 
 1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR (this operationalizes the existing "Add screenshots/GIFs for UI changes" rule in `AGENTS.md`).
-2. **Gated runs:** the procedures marked `Promotion gate: yes` in the register, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
+2. **Gated runs:** the procedures under `docs/guides/qa/` whose header says `Promotion gate: yes`, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
 3. **Post-deploy smoke:** the production-safe subset, against `addictionboards.com`.
 
 ## Lifecycle and promotion
 
-`Draft` → `Active` → `Superseded` (promoted or retired). A Draft becomes Active after two evidenced end-to-end runs without step edits. Its behavior flow is promotable when those behavior steps are mechanizable and it has then survived at least two Active runs without step edits; judgment-only visual checks remain manual. Promotion = write the Playwright spec in `tests/e2e/`, set the procedure's `Promoted to:` field, and keep the judgment-only visual checks behind as a slimmed procedure. The register row records both.
+`Draft` → `Active` → `Superseded` (promoted or retired). A Draft becomes Active after two evidenced end-to-end runs without step edits. Its behavior flow is promotable when those behavior steps are mechanizable and it has then survived at least two Active runs without step edits; judgment-only visual checks remain manual. Promotion = write the Playwright spec in `tests/e2e/`, set the procedure's `Promoted to:` field, and keep the judgment-only visual checks behind as a slimmed procedure. The procedure's header records both.
 
 ## Writing rules
 
