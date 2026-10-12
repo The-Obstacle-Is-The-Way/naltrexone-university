@@ -533,7 +533,7 @@ Current withdrawal and release gaps remain tracked in
 | Package | Version | Purpose |
 |---------|---------|---------|
 | `@11ty/gray-matter` | ^3.0.0 | YAML frontmatter parsing at seed time (js-yaml 5's safe `load`; JavaScript front matter is refused) |
-| `tinyglobby` | ^0.2.17 | File discovery at seed time |
+| `tinyglobby` | ^0.2.17 | File discovery at seed time. It skips a directory it cannot read without an error, where `fast-glob` threw `EACCES`; release staging still refuses a bundle that leaves out live questions |
 | `react-markdown` | ^10.1.0 | Client-side markdown → HTML at view time |
 | `remark-gfm` | ^4.0.1 | GitHub Flavored Markdown tables, strikethrough, etc. |
 | `rehype-sanitize` | ^6.0.0 | HTML sanitization (XSS prevention) |
