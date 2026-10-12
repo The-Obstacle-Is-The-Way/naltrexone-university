@@ -61,6 +61,21 @@ describe('overdue production checks alert', () => {
     );
   });
 
+  // The queue review is raised on its due day, so the heading cannot say
+  // "past" its due date.
+  it('lists the scheduled checks under a heading that fits one due today', async () => {
+    const issues = new MemoryIssues();
+    await reportDueChecks(
+      {
+        overdue: [{ file: 'docs/records/README.md', due: '2026-10-19' }],
+        farFuture: [],
+      },
+      issues,
+    );
+    expect(issues.issues[0]?.body).toContain('**Due or overdue:**');
+    expect(issues.issues[0]?.body).not.toContain('Past their due date');
+  });
+
   it('lists far-off due dates too, since a check is meant to happen soon', async () => {
     const issues = new MemoryIssues();
     await reportDueChecks(

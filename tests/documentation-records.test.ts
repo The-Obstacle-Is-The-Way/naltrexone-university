@@ -8,7 +8,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   auditDocumentation,
   auditRecordLifecycle,
@@ -294,6 +294,7 @@ describe('records folder and ledger', () => {
 describe('records command', () => {
   const roots: string[] = [];
   afterEach(() => {
+    vi.unstubAllEnvs();
     for (const root of roots.splice(0)) rmSync(root, { recursive: true });
   });
 
@@ -338,6 +339,9 @@ describe('records command', () => {
   });
 
   it('skips git-ignored local files, but not a new untracked document', () => {
+    // Only this repository's .gitignore counts, not the machine's git config.
+    vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
+    vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1');
     const root = fixture();
     execFileSync('git', ['init', '--quiet'], { cwd: root });
     populate(root, {
