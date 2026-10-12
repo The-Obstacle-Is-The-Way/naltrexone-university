@@ -362,8 +362,15 @@ describe('documentation archive command', () => {
     return root;
   }
 
+  // A records index names its weekly queue review on one line.
+  const QUEUE_REVIEW = '**Queue review due:** 2026-10-19\n\n';
+  const withQueueReview = (index: string) =>
+    index.includes('**Queue review due:**') ? index : `${QUEUE_REVIEW}${index}`;
+
   function populate(root: string, files: Record<string, string>): void {
-    files[RECORDS.index] ??= '# Records\n\n**Now** — fixture';
+    files[RECORDS.index] = withQueueReview(
+      files[RECORDS.index] ?? '# Records\n\n**Now** — fixture',
+    );
     files[RECORDS.ledger] ??= '# Closed records';
     for (const [file, contents] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
@@ -437,7 +444,10 @@ describe('documentation archive command', () => {
         brokenArchive: [],
         repairableArchive: [],
       });
-      writeFileSync(path.join(root, file), after);
+      writeFileSync(
+        path.join(root, file),
+        file === RECORDS.index ? withQueueReview(after) : after,
+      );
       expect(runDocumentationCommand(root, () => {})).toBe(0);
     },
   );
@@ -744,7 +754,7 @@ describe('repository documentation', () => {
   });
 
   it('gives every Verifying record a due date', () => {
-    expect(result.invalidVerifying).toEqual([]);
+    expect(result.invalidScheduledChecks).toEqual([]);
   });
 
   it('keeps every live record status to one line', () => {

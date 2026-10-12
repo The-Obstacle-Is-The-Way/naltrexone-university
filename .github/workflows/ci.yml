@@ -104,11 +104,11 @@ jobs:
       - name: Report a failed Codecov upload
         if: ${{ !cancelled() && steps.codecov.outcome == 'failure' }}
         run: |
-          echo "::warning title=Codecov upload failed::No coverage reached Codecov, so codecov/patch will not post on this head. scripts/merge-reviewed-pr.ts refuses until it does, unless every changed path is unmeasured (ADR-020). See the upload step's log and AGENTS.md (Codecov outages)."
+          echo "::warning title=Codecov upload failed::No coverage reached Codecov, so codecov/patch will not post on this head. scripts/merge-reviewed-pr.ts refuses until it does, unless every changed path is unmeasured (ADR-020). See the upload step's log and docs/guides/release/review-and-merge.md (When codecov/patch Is Missing)."
           {
             echo "### Codecov upload failed"
             echo ""
-            echo "No coverage reached Codecov, so \`codecov/patch\` will not post on this head. See the upload step's log and AGENTS.md (Codecov outages)."
+            echo "No coverage reached Codecov, so \`codecov/patch\` will not post on this head. See the upload step's log and docs/guides/release/review-and-merge.md (When codecov/patch Is Missing)."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build

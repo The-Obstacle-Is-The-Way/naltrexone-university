@@ -1,948 +1,133 @@
 # AGENTS.md
 
-Repository guidelines for AI coding agents (Codex CLI, Claude Code, Cursor, GitHub Copilot, etc.) working with this codebase.
+Rules for every coding agent in this repository: Codex, Claude Code, Cursor, Copilot. Claude Code loads this file through `CLAUDE.md`, and Codex reads it whole, so it stays under 16 KiB. Detail lives in the documents it links; [ADR-023](docs/adr/adr-023-documentation-organisation.md) explains where each kind of document lives.
 
-> **This is the single source of truth for all agents.** Claude Code also reads `CLAUDE.md` (slim, Claude-specific supplements) and `.claude/rules/` (path-scoped rules). Keep universal project rules here; keep Claude-only or path-scoped guidance in those Claude-specific files so instructions do not drift or conflict.
+## The Product
 
----
+Addiction Boards (Naltrexone University) is a subscription question bank for addiction psychiatry and addiction medicine board preparation: tutor and exam practice, review, bookmarks and progress, at $29 a month or $199 a year, with a free trial.
 
-## ⚠️ CRITICAL: React 19 + Vitest Testing Requirements
+Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle ORM, Tailwind CSS v4 with shadcn/ui, Biome, Vitest and Playwright, pnpm 11 on Node 24.
 
-**READ THIS FIRST. Tests will fail in git hooks/CI without these requirements.**
+## Non-Negotiables
 
-### For ALL `.test.tsx` files:
+1. **Test first.** Write a failing test, make it pass with the least code, then refactor. No production code without a red test first.
+2. **Run the full gate before every push,** follow-up fixes included:
 
-```typescript
-// @vitest-environment jsdom   ← MUST be first line
-import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
-
-let MyComponent: typeof import('./MyComponent').default;
-
-beforeAll(async () => {
-  MyComponent = (await import('./MyComponent')).default;
-});
-
-// Use renderToStaticMarkup for render-output tests
-describe('MyComponent', () => {
-  it('renders output', () => {
-    const html = renderToStaticMarkup(<MyComponent />);
-    expect(html).toContain('Expected text');
-  });
-});
-```
-
-### Why:
-
-- `@testing-library/react` has a [known bug](https://github.com/testing-library/react-testing-library/issues/1392) with React 19 + Vitest — **no fix coming**
-- Git hooks and CI load production builds where `act()` is undefined
-- `renderToStaticMarkup` is a stable first-party React API that works everywhere
-
-### Import placement + timeout policy (DEBT-225):
-
-- Keep dynamic imports, but load them in `beforeAll` (or `beforeEach` only when mock/module-reset order requires it)
-- Do **not** import heavy modules inside individual `it()` blocks
-- Do **not** add per-test timeout overrides (`it(..., 10_000)` or `{ timeout: 15_000 }`)
-- Global Vitest policy is configured in `vitest.config.mts`, `vitest.browser.config.mts`, and `vitest.integration.config.mts`
-
-### DO NOT USE for jsdom component tests:
-
-- `@testing-library/react` — broken, zombie maintenance
-- `react-test-renderer` — deprecated in React 19
-
-### Browser Mode for async hooks / interactive UI:
-
-- Use `vitest-browser-react` in `*.browser.spec.tsx`
-- Run with `pnpm test:browser`
-- This is the approved replacement for async hook/interaction tests (see DEBT-141 resolution)
-
-### Full details: `docs/dev/react-vitest-testing.md`
-
----
-
-## ⚠️ AGENT-SPECIFIC: Slot Protection — Understand Before Changing
-
-**BEFORE writing ANY code, you MUST study existing codebase patterns.**
-
-This codebase follows strict conventions (Clean Architecture, SOLID, TDD). Code that doesn't match existing patterns will be rejected. **Study first, code second.**
-
-### Mandatory Pre-Work (First-Time Agents)
-
-1. **Read 2-3 existing test files** to understand test structure:
    ```bash
-   cat src/adapters/gateways/clerk-auth-gateway.test.ts
-   cat src/adapters/repositories/drizzle-user-repository.test.ts
-   ```
-   - Follow the canonical test-double taxonomy and decision rule in `.claude/rules/testing.md`; do not invent local exceptions
-   - Arrange-Act-Assert pattern
-   - Descriptive test names: `it('returns X when Y')`
-
-2. **Read 2-3 source files** to understand code style:
-   ```bash
-   cat src/adapters/gateways/clerk-auth-gateway.ts
-   cat src/adapters/repositories/drizzle-user-repository.ts
-   ```
-   - Constructor dependency injection
-   - `ApplicationError` with typed codes
-   - No magic numbers — use constants/configs
-
-3. **Check for existing shared types** before creating new ones:
-   ```bash
-   ls src/adapters/shared/           # Shared adapter types
-   ls src/application/ports/         # Port interfaces
-   ls src/application/test-helpers/  # Fakes for testing
+   pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
    ```
 
-### Why This Matters
+   - When the E2E credentials are present (the list is in [the E2E guide](docs/dev/testing-infrastructure.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode.
+   - The pre-push hook runs only `pnpm typecheck && pnpm test --run`; it does not build, and only the build catches prerender errors.
+   - If `pnpm test:browser` exits in about a second with `no tests / 1 error`, capture the failing output, retry that lane once and say so; a second failure blocks the push. After the retry, still run the lanes after it.
+3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, `git stash -m "<why>"` and ask. Several agents share these clones.
+4. **Stay non-interactive.**
+   - Use `git --no-pager`, and `git commit -m "…"`.
+   - Never `pnpm -s <cmd>`: it runs `<cmd>` as a script or binary, which can open Vim and hang.
+5. **Never touch a remote database by accident.**
+   - Database commands need an explicit `DATABASE_URL`; remote targets also need `DB_TARGET_ACK`.
+   - Never `drizzle-kit push`.
+   - Local tests resolve a per-clone target: `pnpm exec tsx scripts/resolve-local-test-target.ts env`. Never hardcode its port, and never blanket-kill `:3000`; another clone may own it.
+6. **Never bypass review or protection.** No `--admin`, ruleset bypass, Force Promote, or direct push to `dev` or `main`.
 
-| Pattern | Wrong                          | Right                                         |
-|---------|--------------------------------|-----------------------------------------------|
-| Testing | `vi.mock('./my-repo')`         | `new FakeRepository()`                        |
-| DI      | `import { db } from './db'`    | `constructor(private db: DrizzleDb)`          |
-| Errors  | `throw new Error('oops')`      | `throw new ApplicationError('CODE', 'msg')`   |
-| Types   | Define locally in each file    | Import from `src/adapters/shared/`            |
+## Before Writing Code
 
----
+Read two or three nearby tests and sources first, and check `src/adapters/shared/`, `src/application/ports/` and `src/application/test-helpers/fakes/` for what already exists.
 
-## ⚠️ MANDATORY: Test-Driven Development (TDD)
-
-**ALL CODE MUST BE TEST-DRIVEN. NO EXCEPTIONS.**
-
-Before writing ANY implementation code:
-1. **Write the test first** (Red)
-2. **Write minimum code to pass** (Green)
-3. **Refactor if needed** (Refactor)
-
-If you find yourself writing code without a failing test, STOP. Write the test first.
-
-**Test locations:**
-- Domain/Application: Colocate tests (`*.test.ts`) next to source
-- Integration: `tests/integration/*.integration.test.ts`
-- E2E: `tests/e2e/*.spec.ts`
-
-See Robert C. Martin (Uncle Bob) - Clean Code, Clean Architecture, TDD principles.
-
----
-
-## ⚠️ MANDATORY: Verify EVERY Change Before Pushing
-
-**Run the full quality gate before EVERY push. NO EXCEPTIONS.**
-
-The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT sufficient. Many regressions (build-time prerender errors, browser test failures, integration bugs) are only caught by the full gate. If you push without running the build, you WILL break CI.
-
-### The Rule
-
-**Before every `git push`, run:**
-
-```bash
-pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
-```
-
-If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1 error`, capture the failing output and retry that lane once. A second failure blocks the push. This narrow, observed startup exception is tracked as DEBT-469 W5; it does not excuse ordinary browser-test failures. Because the `&&` chain stops at the failed lane, a passing retry has **not** run the later lanes — after the retry, still run `pnpm test:integration && pnpm build` (or rerun the full chain) before pushing.
-
-**If the local authenticated billing E2E environment is available, also run before every `git push`:**
-
-That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`. `pnpm test:e2e` gives each clone its own Stripe test customer owner, `local-clone-<instance>`, so `.env.local` no longer needs `E2E_STRIPE_OWNER` and a value there is ignored; only one exported in the shell overrides it (DEBT-508). `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the database-isolated local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="<target>" pnpm test:e2e`. The local database is isolated; the lane is not hermetic because it deliberately calls Clerk and Stripe test mode.
-
-```bash
-# Quick file check when you rely on .env.local (prints key names only, never values):
-rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local | cut -d= -f1
-
-# Local E2E is database-isolated by default: it starts a per-clone Docker
-# Postgres, migrates, seeds placeholder content, and runs Playwright against
-# the resolved local app/database target while still calling Clerk and Stripe.
-pnpm test:e2e
-```
-
-`pnpm test:e2e` selects the required `chromium` and `mobile-smoke` projects (`mobile-smoke` re-runs the `@mobile-smoke` journeys and the sideways-scroll probe at 375×667). Stripe-owned Checkout DOM journeys use the `stripe-hosted-*.spec.ts` prefix and run only through the scheduled/manual `pnpm test:e2e:stripe-hosted` compatibility lane; they are observational and are not part of the pre-push or merge gate. Required E2E may assert the redirect reached the `checkout.stripe.com` origin but must not act on or assert against Stripe-owned markup.
-
-Product and cleanup projects have zero retries; never override that to obtain a
-green run. Only bootstrap has bounded retries. Report and inspect any recovered
-setup failure rather than treating its project name as proof of a provider
-outage. See the canonical [Playwright retry policy](docs/dev/testing-infrastructure.md#playwright-retry-policy).
-
-Never run E2E migrations by relying on implicit `.env.local` resolution alone. Normal local E2E does not need remote migrations. For an intentional deploy-target E2E check, verify the host and use `E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="<target>" pnpm test:e2e`; migrate a remote target only when you deliberately mean to mutate it.
-
-This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
-
-### Why This Matters
-
-- `pnpm test --run` does NOT catch Next.js prerender errors — only `pnpm build` does
-- `pnpm typecheck` does NOT catch runtime `'use cache'` violations — only `pnpm build` does
-- Same-repo PR CI runs `pnpm test:e2e`; if the local authenticated billing E2E environment is available, skipping the local Docker-backed E2E run means you are deferring failures to CI
-- Pushing without `pnpm build` has caused repeated CI failures that waste human review time
-- The pre-push hook is intentionally lightweight for speed — **you** are responsible for the full gate
-
-### Red Flags (STOP if any apply)
-
-- Thinking "the pre-push hook passed, so it's fine" → **WRONG, run the full gate**
-- Thinking "this is just a small fix, doesn't need a build" → **WRONG, small fixes cause big regressions**
-- Thinking "I'll push now and fix CI later" → **STOP, that's the exact problem**
-
----
-
-## ⚠️ MANDATORY: Design System Discipline (UI Changes)
-
-Before writing or editing ANY UI code in `app/**` or `components/**`, you MUST consult these design-system docs as sources of truth:
-
-- `docs/frontend/standards.md` — semantic tokens (no raw `.tsx` colors except documented third-party API seams), Button component mandate, single canonical focus-ring pattern, spacing, typography, dark mode strategy
-- `docs/frontend/pattern-registry.md` — muted/layer-2 opacity scale (`/20`, `/40`, `/50`, `/60`), foreground-ramp tonal-row tokens (allowlisted in `I-1`/`I-2`/`I-3`/`I-4`/`M-4`), dark-mode override conventions
-- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and required-boundary rules
-- `docs/frontend/design-principles.md` — layout composition, navigation zones, action-bar conventions
-- `docs/frontend/typography-policy.md` — explicit text-size choices (no implicit inheritance)
-- `docs/frontend/bookmark-surface-policy.md` — bookmark appearance decision tree
-
-### Mandates (no exceptions without a registry entry + design review)
-
-- **Component-system** (`standards.md` § 2): All production UI interactive click targets MUST use the `<Button>` component. Raw `<button>` is allowed in production only inside `components/ui/` primitives and app-shell disclosure toggles per Pattern Registry I-6. The production raw-button lint rule intentionally excludes `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`; native semantic controls are allowed there only in test-only hook/state-machine probes, while tests whose subject is Button or design-system behavior must still use `<Button>`.
-- **Focus ring** (`standards.md` § 3): One canonical pattern — `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`. Never hand-roll variants.
-- **Semantic tokens** (`standards.md` § 1): Never use raw hex (`#fff`, `#121212`) or palette colors (`bg-zinc-400`, `text-slate-300`) in `.tsx` UI code except documented third-party API seams such as Clerk `appearance.variables`. Always use semantic tokens (`bg-primary`, `text-foreground`, `border-border`, etc.).
-- **Opacity scale** (`pattern-registry.md` § 1.2): Use the canonical muted/layer-2 scale (`/20`, `/40`, `/50`, `/60`) for `bg-muted`-class fills. Documented foreground-ramp arbitrary values are allowed ONLY in their documented Pattern Registry contexts. Undocumented arbitrary values (`/[0.03]`, `/[0.10]`, `/[13%]`) are forbidden — add the pattern to the registry first or choose an existing token.
-- **Dark mode** (`pattern-registry.md` § 1.3): Semantic tokens handle light/dark automatically. Component-specific `dark:` overrides are allowed ONLY when they appear in `pattern-registry.md` or `contrast-policy.md`. Duplicated dark overrides across 2+ components must promote to a shared primitive or `lib/shared-styles.ts` constant.
-
-### Discoverability Rule
-
-If you cannot find a pattern in the design docs above, do NOT invent one. Either (a) add it to `pattern-registry.md` with rationale and design review first, then implement, OR (b) file a debt doc proposing the addition.
-
-### Enforcement Status
-
-The formal enforcement layer is live: `.claude/rules/frontend.md` gateways UI work to the design docs, and Biome's `noRestrictedElements` blocks raw JSX `<button>` outside the existing production exceptions. `components/theme-token-regression.test.tsx` / `components/theme-token-regression-source-scan.ts` retain the mobile-nav exception's exact occurrence count, undocumented-opacity checks, and render contracts.
-
-See `docs/_archive/debt/debt-398-design-system-enforcement-gap.md` for the completed enforcement arc. See `docs/_archive/debt/debt-399-component-system-bypass-cleanup.md` for the completed cleanup of existing bypass sites; only the documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell disclosure exception remains.
-
----
-
-## Project Overview
-
-**Addiction Boards** (Naltrexone University) is a subscription-based SaaS question bank for Addiction Psychiatry and Addiction Medicine board exam preparation. Users subscribe ($29/mo or $199/yr), practice questions in tutor/exam modes, and track progress.
-
-**Technical source of truth:** `docs/specs/master_spec.md`
-
-## Setup
-
-```bash
-# Requirements: Node 24.x, pnpm >=11.0.0
-pnpm install                # Install dependencies
-cp .env.example .env.local  # Create env file (never commit .env.local)
-# Set DATABASE_URL, Clerk keys, and Stripe keys in .env.local
-```
-
-## Git Hooks (Husky)
-
-Git hooks are installed automatically on `pnpm install` (via the `prepare` script).
-
-- `pre-commit`: runs staged-file checks via `lint-staged` + Biome auto-fix
-- `pre-push`: runs `pnpm typecheck && pnpm test --run`
-- `pre-push` is intentionally fast and does **not** run browser/integration/build checks. **The hook passing does NOT mean your code is safe to push.** You MUST run the full quality gate yourself — see "Verify EVERY Change Before Pushing" above.
-
-## Refreshing agent skills
-
-Vendored skills live in `.agents/skills/**`; `.claude/skills/*` and `.codex/skills/*` are committed symlinks to those directories. Do not write to, delete, or recreate the symlinks during a refresh.
-
-Use `.agents/skills/skills.manifest.json` as the source of truth. Refresh one skill at a time with that skill's `refreshCommand`, review `git --no-pager diff -- .agents/skills/<skill>`, then commit the result with the upstream short SHA. Start from a clean skills tree:
-
-```bash
-git diff --quiet -- .agents/skills .claude/skills .codex/skills
-```
-
-Special cases: `agent-browser` is a first-party fork and must be manually merged while preserving Clerk auth, React click-failure / DEBT-323 guidance, and `docs/tooling/agent-browser.md`; `neon-drizzle-setup` and `stripe-subscriptions` are thin pointer skills, so verify their live recipe URLs and do not vendor the full recipe bodies. After refreshing, re-check the `.claude` / `.codex` symlink invariant and confirm there are 15 `SKILL.md` files. See `docs/_archive/debt/debt-416-agent-skills-provenance-and-refresh.md` for the detailed execution log and rationale.
-
-## Non-Interactive Safety (No Vim / No Pagers)
-
-This repo is frequently worked on in non-interactive shells (CI + AI agents). To avoid hard hangs:
-
-- Prefer non-interactive commands: `cat`, `sed -n`, `rg`, `git --no-pager …`.
-- Never rely on an editor opening implicitly: always commit with `git commit -m "…"`.
-- Avoid pager-triggering patterns: use `git --no-pager log`, `git --no-pager diff`, etc.
-- **pnpm gotcha:** Never prefix a pnpm command with `-s`. `pnpm -s <cmd>` runs `<cmd>` as a package script/binary (e.g. `view` → Vim) instead of the pnpm subcommand, which hard-hangs in non-TTY runs.
-- **Local test target isolation:** `pnpm test:e2e`, `pnpm test:integration`, and `pnpm db:test:*` resolve a per-clone local target through `scripts/resolve-local-test-target.ts`. Do not blanket-kill `:3000`; if you bypass the wrappers, set `PORT`, `NEXT_PUBLIC_APP_URL`, `DB_TEST_PORT`, `DATABASE_URL`, and `COMPOSE_PROJECT_NAME` from `pnpm exec tsx scripts/resolve-local-test-target.ts env`.
-
-## Commands
-
-Tip: keep commands non-interactive; see the safety notes above.
-
-```bash
-# Development
-pnpm dev                    # Start dev server (http://localhost:3000)
-pnpm build                  # Production build
-pnpm start                  # Run production build
-
-# Quality gates (run before committing)
-pnpm lint                   # Biome check + test-double fidelity ratchet
-pnpm lint:fix               # Auto-fix lint issues
-pnpm typecheck              # TypeScript type checking
-
-# Testing
-pnpm test                   # Unit tests (Vitest, watch mode)
-pnpm test --run             # Unit tests (single run, CI-style)
-pnpm test:browser           # Browser mode tests (vitest-browser-react, Chromium)
-pnpm test:integration       # Integration tests (uses .env.test, requires local DB)
-pnpm test:e2e               # E2E tests (Playwright)
-
-# Local Test Database (Docker)
-pnpm db:test:up             # Start local Postgres for integration tests
-pnpm db:test:down           # Stop local test database
-pnpm db:test:reset          # Wipe and restart test database
-
-# Database
-pnpm db:generate            # Generate migration from schema changes
-pnpm db:migrate             # Apply migrations to database
-pnpm db:seed                # Seed database with content (refused once a content release is active;
-                            # then stage-release.ts, see docs/practice-engine/content-pipeline.md)
-pnpm db:studio              # Open Drizzle Studio GUI
-```
+| Concern | Wrong | Right |
+|---|---|---|
+| Test doubles | `vi.mock('./my-repo')` | `new FakeRepository()` |
+| Dependencies | `import { db } from './db'` in a use case | constructor injection, wired in `lib/container.ts` |
+| Errors | `throw new Error('oops')` | `throw new ApplicationError('CODE', 'message')` |
+| Shared types | redefined in each file | imported from `src/adapters/shared/` |
 
 ## Architecture
 
-The project follows **Clean Architecture** (Robert C. Martin) with four layers. Dependencies point inward only.
-
-### Core Principles (Uncle Bob)
-
-All code in this repository MUST adhere to these principles:
-
-1. **Clean Architecture** - Strict layer boundaries with dependencies pointing inward only. Domain has ZERO external imports.
-
-2. **SOLID Principles**
-   - **S**ingle Responsibility: Each module has one reason to change
-   - **O**pen/Closed: Open for extension, closed for modification
-   - **L**iskov Substitution: Implementations are swappable
-   - **I**nterface Segregation: Small, specific interfaces
-   - **D**ependency Inversion: Depend on abstractions, not concretions
-
-3. **Test-Driven Development (TDD)** - Write tests first (Red → Green → Refactor). Specs define tests before implementation. Domain and application layers must be 100% unit testable without infrastructure.
-
-4. **DRY (Don't Repeat Yourself)** - Single source of truth for every concept. Extract common patterns into shared utilities.
-
-5. **Clean Code** - Meaningful names, small functions, minimal complexity, explicit error handling, no magic numbers.
-
-6. **Design Patterns** - Use appropriate patterns (Repository, Factory, Strategy, Composition Root) where they add clarity, not complexity.
-
-### Layer Structure (implemented, see ADR-012)
-
-```
-src/domain/        → Entities, value objects, pure business logic (zero dependencies)
-src/application/   → Use cases, port interfaces (depends only on domain)
-src/adapters/      → Repository/gateway implementations, server actions (depends on application)
-app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
-```
-
-### Current State
-
-All layers are implemented. Implemented numbered specs are closed (see `docs/records/closed.md`), and their unfinished tails are Waiting rows in `docs/records/README.md`.
-
-- **Domain:** entities, value objects, services, errors (`src/domain/**`)
-- **Application:** ports, core use cases, app errors (`src/application/**`)
-- **Adapters:** schema, repositories, gateways, controllers (`db/schema.ts`, `src/adapters/**`)
-- **Composition root:** runtime wiring lives in `lib/container.ts`, focused factories under `lib/container/**`, and controller dependency loaders in `lib/controller-helpers.ts`
-- **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine, history, observability (`app/**`, `components/**`)
-
-Glossary: `src/adapters/controllers/**` are server-side adapter controllers; client hooks that compose page state are page models (`use-*-page-model.ts`), not controllers.
-
-Framework code lives in:
-- `app/` - Next.js App Router pages, layouts, API routes
-- `lib/` - Core utilities (auth, Stripe, env, DB). Prefer importing via `@/...`
-- `db/schema.ts` - Drizzle ORM schema
-- `db/migrations/` - Generated migrations (drizzle-kit)
-- `components/` - React components; `components/ui/` has shadcn/ui primitives
-- `content/questions/` - MDX question content
-
-### Key Architectural Decisions
-
-1. **Domain entity purity** - Domain entities (User, Subscription, Question) have NO vendor identifiers. External IDs (Clerk user ID, Stripe subscription ID) exist only in the persistence layer.
-
-2. **Vendor-agnostic value objects** - Use `SubscriptionPlan` (monthly/annual) in domain, not Stripe price IDs. Mapping happens in adapters.
-
-3. **Fakes over mocks** - Tests use in-memory fake implementations, not jest.mock().
-
-4. **Composition root** - Dependencies are wired at entry points via `lib/container.ts`, `lib/container/**`, and `lib/controller-helpers.ts`, not ad hoc imports inside use cases.
-
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-023; `docs/adr/index.md` lists each status).
-
-## Tech Stack
-
-- **Framework:** Next.js 16 (App Router)
-- **Auth:** Clerk (`@clerk/nextjs`)
-- **Payments:** Stripe (subscriptions + webhooks)
-- **Database:** Postgres (Neon) via Drizzle ORM
-- **Styling:** Tailwind CSS v4 + shadcn/ui
-- **Linting:** Biome (no ESLint/Prettier)
-- **Testing:** Vitest (unit/integration), Playwright (E2E)
-- **Package manager:** pnpm
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `db/schema.ts` | Drizzle schema (tables, relations, types) |
-| `proxy.ts` | Clerk middleware (route protection) |
-| `lib/env.ts` | Zod-validated environment variables |
-| `lib/db.ts` | Drizzle client singleton |
-| `lib/container.ts` | Composition root; `createAuthGateway()` reads the signed-in user |
-| `lib/stripe.ts` | Stripe SDK initialization |
-| `biome.json` | Linter/formatter config |
-| `.env.example` | Required environment variables |
-
-## Coding Style
-
-Biome is the source of truth for style:
-- 2-space indents
-- Single quotes
-- Semicolons required
-- Trailing commas
-
-Rules:
-- TypeScript + React (Next.js). Keep modules small, prefer pure functions in `lib/`
-- Avoid non-null assertions (`!`) and unused imports/variables (Biome errors)
-- Prefer importing via `@/...` alias
-- For E2E-specific import/timeout conventions, see `Playwright E2E Conventions` below.
-
-### Error Handling and Bare Catch Policy
-
-Bare `catch {}` blocks are allowed only for intentionally suppressed secondary failures:
-- telemetry, reporting, or logging failures that must not mask the primary user outcome;
-- rollback or cleanup best effort when the original error is preserved and returned/thrown;
-- parse/decode fallback to a safe default.
-
-Add a short nearby comment when suppressing an error intentionally. Keep UI reporter helpers in `app/(app)/app/shared`; add a shared application/adapters logger-safety helper only after at least three sibling files need the same wrapper.
+- **Clean Architecture,** dependencies pointing inward only: `app/`, `lib/`, `db/` (framework and infrastructure) → `src/adapters/` (repositories, gateways, controllers) → `src/application/` (use cases and ports) → `src/domain/` (entities, value objects, pure logic, zero external imports).
+- **Composition root:** `lib/container.ts`, `lib/container/**` and `lib/controller-helpers.ts`.
+- **Key files:** `db/schema.ts` (the schema), `proxy.ts` (Clerk middleware and route protection), `lib/env.ts` (validated environment variables), `.env.example` (every variable).
+- **Names:** `src/adapters/controllers/**` are server-side controllers. A client hook that composes page state is a page model (`use-*-page-model.ts`), not a controller.
+- **Domain entities hold no vendor IDs.** Clerk and Stripe identifiers live in persistence and adapters, and plans are `SubscriptionPlan`, not price IDs.
+- **No magic numbers;** use named constants.
+- **A bare `catch {}`** is allowed only for a suppressed secondary failure (telemetry, best-effort cleanup that keeps the original error, a parse fallback), with a comment. UI error-reporting helpers live in `app/(app)/app/shared/`; add a shared logger-safety helper to `src/` only once three or more sibling files need the same wrapper.
+- **Decisions** are in [`docs/adr/`](docs/adr/index.md); read the relevant ADR before changing what it decided.
 
 ## Testing
 
-### Framework: Vitest (NOT Jest)
+- **Vitest, never Jest.** Unit tests sit beside their source as `*.test.ts(x)`. Integration tests: `tests/integration/*.integration.test.ts`. E2E: `tests/e2e/*.spec.ts`.
+- **React 19:** a `*.test.tsx` starts with `// @vitest-environment jsdom` and renders with `renderToStaticMarkup`. Async or interactive UI goes in `*.browser.spec.tsx` with `vitest-browser-react` (`pnpm test:browser`). Never `@testing-library/react`, `react-test-renderer` or `react-dom/test-utils`.
+- **Test doubles:** fakes over mocks. The rule, its vocabulary and its exceptions are in [`.claude/rules/testing.md`](.claude/rules/testing.md), and `pnpm lint:doubles` stops new violations ([ADR-025](docs/adr/adr-025-test-doubles-by-shape-or-behaviour.md)).
+- **Business rules:** each product rule in plain language, with the tests that prove it, is in [`docs/dev/acceptance-testing.md`](docs/dev/acceptance-testing.md). A new rule adds its entry, and renaming a proving test updates its line in the same change; `tests/rule-to-test-register.test.ts` fails otherwise.
+- **Integration database:**
 
-We use **Vitest** exclusively. Do NOT use Jest APIs or `jest.mock()`.
+  ```bash
+  TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
+  ```
 
-```typescript
-// Correct imports
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-```
+- **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Use relative imports for helpers inside `tests/e2e/`. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](docs/dev/testing-infrastructure.md).
 
-### Test Locations (Colocated)
+## Rules for Particular Files
 
-- **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
-- **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
-- **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
-- **Hosted-provider compatibility tests:** `tests/e2e/stripe-hosted-*.spec.ts` (scheduled/manual only; never required PR CI)
-- **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
-- **Shared test support:** in `src/**`, it lives in the layer's `test-helpers/` directory. `app/**` and `components/**` colocate `*-test-helpers.ts(x)`, `*.fixtures.ts` and `*.browser.probes.tsx` files beside their suites, since every folder under `app/` is a route segment. The full table is in `.claude/rules/testing.md` → Test Support Locations, and `tests/test-support-location-policy.test.ts` enforces the `src/` rule.
-- **Test-quality practices (ADR-019; DEBT-465, archived 2026-10-08, its QA runs deferred):** the CRAP report (`pnpm quality:crap` — `docs/dev/code-quality-metrics.md`) and mutation testing (`pnpm test:mutation`, plus the weekly Mutation workflow — `docs/dev/mutation-testing.md`) are in use. Gherkin acceptance tests are not adopted (ADR-019, amended 2026-10-03). The rule-to-test register in `docs/dev/acceptance-testing.md` replaces them: each business rule in plain language, with the tests that prove it. `tests/rule-to-test-register.test.ts` fails when a named test is renamed or deleted, so a new business rule adds its entry, and a renamed proving test updates its line, in the same change. UI QA procedures are in `docs/guides/qa/` (method in `docs/dev/qa-procedures.md`), as Draft until each has two evidenced runs. All metrics observational — no numeric gates without a new ADR.
+Read the matching rule before editing. Claude Code loads these by path, and CodeRabbit applies them to the same paths.
 
-### Playwright E2E Conventions
+| When editing (repository-relative globs) | Read |
+|---|---|
+| `src/**` | `.claude/rules/architecture.md` |
+| `src/domain/**` | `.claude/rules/domain-layer.md` |
+| `**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`, `tests/**`, `src/**/test-helpers/**`, `**/*-test-helpers.ts`, `**/*-test-helpers.tsx`, `**/*.fixtures.ts` | `.claude/rules/fixture-integrity.md` |
+| `app/**`, `components/**` | `.claude/rules/frontend.md` |
+| `**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`, `tests/**`, `src/**/test-helpers/**`, `**/*-test-helpers.ts`, `**/*-test-helpers.tsx`, `**/*.fixtures.ts` | `.claude/rules/test-isolation.md` |
+| `**/*.browser.spec.tsx` | `.claude/rules/testing-browser.md` |
+| `**/*.test.tsx` | `.claude/rules/testing-react19.md` |
+| `**/*` | `.claude/rules/testing.md` |
 
-- In `tests/e2e/**/*.spec.ts`, use relative imports for local helper modules (`./helpers/...`)
-- Keep `@/...` imports for app/runtime modules outside `tests/e2e/**`
-- Prefer Playwright defaults first; only use `test.setTimeout(...)` for full-flow budget increases
-- Prefer assertion/locator timeouts before increasing full test timeout
-- Any non-default `test.setTimeout(...)` must include a concise in-file rationale comment
-- Approved timeout bands: `120_000` (standard authenticated flows), `180_000` (multi-page audits), `300_000` (documented temporary outlier only)
+## Pull Requests and Review
 
-### Browser-Based Visual Verification (Auth Required)
+1. Branch from `dev`, carrying `main`'s latest promotion merge commit, and open the PR as a draft: `gh pr create --draft`.
+2. Pass the full gate on a branch synced with `dev`, and wait for CI's `test` to pass.
+3. Mark it ready (`gh pr ready`), which starts CodeRabbit's review. A later push starts none: push fixes together, then comment `@coderabbitai full review`.
+4. Read every finding. A finding is a claim, not an order: fix a valid one, or answer it with the receipt that disproves it. A suggestion against a guard or scanner needs a receipt tied to that guard's stated invariant before it widens the guard.
+5. Never ask CodeRabbit to record a learning. If it records one anyway ("Learnings added"), link that reply from the PR description.
+6. Merge only with the merge guard, never the button or `gh pr merge`:
 
-All app pages under `/app/*` are protected by Clerk auth. If you need to visually verify UI changes in a running browser (e.g., `pnpm dev` at `http://localhost:3000`), you **must** authenticate first. Do NOT just navigate to a protected URL and give up when it redirects to sign-in.
+   ```bash
+   pnpm exec tsx scripts/merge-reviewed-pr.ts <PR>          # read-only check
+   pnpm exec tsx scripts/merge-reviewed-pr.ts <PR> --merge  # verify and merge
+   ```
 
-**Quick start** (requires `pnpm dev` running first):
+7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`.
 
-```bash
-# Reuse existing profile (human must have logged in once via --headed):
-agent-browser close # if a daemon is already running with different options
-agent-browser --profile /tmp/clerk-profile open http://localhost:3000/app/dashboard
-agent-browser get url          # must show /app/dashboard, not Clerk sign-in
-```
+Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI. How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](docs/dev/deployment-procedure.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
-If no profile exists yet, a human must log in once: `agent-browser --profile /tmp/clerk-profile --headed open http://localhost:3000/sign-in` — then log in through the Chromium window that opens.
+## Records
 
-Do not use `agent-browser --state` or CDP bridge approaches — both are unreliable with Clerk. Full details: `docs/tooling/agent-browser.md`.
+Open bug and debt records are in `docs/records/`, with one index. Its ["How Records Work"](docs/records/README.md#how-records-work) section holds the rules.
+- Read **Now** and the Waiting triggers relevant to your work at session start, and triage any overdue dated action, in any live status, before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
+- A new ID comes from `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
+- Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
+- Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.
+- Only the index links records; elsewhere, cite the ID.
 
-Keep the host exact: `localhost` and `127.0.0.1` are not interchangeable for Clerk cookies.
-
-`agent-browser click @ref` is unreliable on practice-flow React components (DEBT-323). Do not rely on it for Submit/primary action buttons or toggle buttons. For answer choices, `agent-browser eval "document.querySelectorAll('label')[0].click()"` remains the safest fallback even though radio refs may work on some surfaces. Toggle buttons (Tutor/Exam mode) still have no working workaround — use Playwright for those flows.
-
-**If using Claude Code with Chrome MCP tools**, the user's browser is typically already authenticated — use `tabs_context_mcp` to check existing tabs before creating new ones.
-
-### Running Integration Tests Locally
-
-Integration tests require a local Postgres database with migrations **and** seed data. All three setup steps are required:
-
-```bash
-pnpm db:test:up
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
-DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
-pnpm test:integration
-pnpm db:test:down
-```
+## Commands
 
 ```bash
-# One-liner: local setup from scratch (matches CI order)
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
+pnpm dev | build | start
+pnpm lint            # Biome, plus the test-double ratchet (pnpm lint:doubles)
+pnpm typecheck
+pnpm test --run      # unit; pnpm test:browser; pnpm test:integration
+pnpm test:e2e        # required E2E; pnpm test:e2e:stripe-hosted is observational
+pnpm db:generate | db:migrate | db:seed | db:studio   # explicit DATABASE_URL
+pnpm db:test:up | db:test:down                         # local test database
+pnpm local:test:target                                 # this clone's local target
+pnpm quality:crap | test:mutation                      # observational quality reports
 ```
 
-- `.env.test` is committed and contains test database config (no secrets)
-- Integration tests auto-load `.env.test` via `tests/integration/setup.ts`
-- The local DB host port is per-clone by default. Use `pnpm exec tsx scripts/resolve-local-test-target.ts env` to inspect the resolved `DB_TEST_PORT`, `DATABASE_URL`, `PORT`, `NEXT_PUBLIC_APP_URL`, and `COMPOSE_PROJECT_NAME`.
-- Migrations require explicit `DATABASE_URL` (drizzle-kit reads `.env.local` first, which points to remote Neon)
-- **Never use `drizzle-kit push`** for the test DB — it skips migration files (missing `pgcrypto`, constraints)
-- **Seeding is required** — `tag-taxonomy-census` tests fail without it (`INTEGRATION_SEED_MISSING`)
-- CI also sets `SEED_INCLUDE_PLACEHOLDERS=true` when seeding; plain `pnpm db:seed` is enough for local integration tests, but the flag gives exact CI seed parity
-
-### React 19 Component Testing
-
-**For render-output tests** (checking HTML content), use `renderToStaticMarkup`:
-
-```typescript
-// @vitest-environment jsdom
-import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it } from 'vitest';
-
-let MyComponent: typeof import('./MyComponent').default;
-
-beforeAll(async () => {
-  MyComponent = (await import('./MyComponent')).default;
-});
-
-describe('MyComponent', () => {
-  it('renders correctly', () => {
-    const html = renderToStaticMarkup(<MyComponent />);
-    expect(html).toContain('Expected text');
-  });
-});
-```
-
-**For interactive / async tests** (clicking buttons, hooks with `useEffect`/`useState` transitions), use `vitest-browser-react` in `*.browser.spec.tsx`:
-
-```tsx
-import { render } from 'vitest-browser-react';
-import { expect, test } from 'vitest';
-
-test('updates state after async operation', async () => {
-  const screen = await render(<MyComponent />);
-  await expect.element(screen.getByText('Loaded')).toBeVisible();
-});
-```
-
-Run with: `pnpm test:browser` (real Chromium via Playwright — not jsdom).
-
-**DO NOT USE:**
-- `@testing-library/react` — broken with React 19 + Vitest, zombie maintenance
-- `react-test-renderer` — Deprecated in React 19
-- `react-dom/test-utils` — Removed in React 19
-- `environmentMatchGlobs` — Removed in Vitest 4
-
-See `docs/dev/react-vitest-testing.md` for full details.
-
-### TEST-DOUBLE FIDELITY — MANDATORY
-
-The single canonical taxonomy, shape-vs-behavior decision rule, adapter unit-test pattern, contract-test requirement, and `vi.mock()` exceptions live in **`.claude/rules/testing.md` → “Test-Double Fidelity: Shape vs. Behavior.”** Follow that section before creating any double; do not restate or weaken it locally.
-
-The maintained application-fake barrel remains `src/application/test-helpers/fakes/index.ts`. Stripe Checkout client behavior uses adapter-owned `FakeStripeCheckoutClient` at `src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts`. The executable growth ratchet runs through `pnpm lint:doubles`; its live runner is `tests/test-double-fidelity-live-scan.ts` and its per-file floors live in `tests/test-double-fidelity-ratchet-floors.ts`. Each floor must equal its live count, so a removed site lowers its floor in the same patch.
-
-### Test Quality Rules
-
-1. **Test behavior, not implementation** — If you refactor, tests should still pass
-2. **One concept per test** — Each `it()` verifies one thing
-3. **Arrange-Act-Assert pattern** — Setup, execute, verify
-4. **Use test factories** — `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
-5. **Descriptive names** — `it('returns isCorrect=false when incorrect choice selected')`
-
-Integration tests run against a real Postgres instance. In CI, the `Start Postgres` step (`scripts/ci/start-postgres.sh`) provides the database.
-
-## Commit & PR Guidelines
-
-**Commits:**
-- Use imperative style: `Add ...`, `Fix ...`, `Refactor ...`, `Enhance ...`
-- Use optional tags like `[BASELINE]` when applicable
-
-**Pull Requests:**
-- Include short problem/solution summary
-- Link any spec/ADR updates in `docs/`
-- Add screenshots/GIFs for UI changes
-
-Before opening a PR or pushing, run the canonical full quality gate in **"Verify EVERY Change Before Pushing"** above. Do not duplicate the command block here; keep that section as the single source of truth for the gate and E2E credential rules.
-
----
-
-## ⚠️ MANDATORY: Never Delete Uncommitted Work
-
-**If you see uncommitted files or changes you didn't create, DO NOT DELETE THEM.**
-
-This is a multi-agent environment. Another agent or the user may be working concurrently. Uncommitted work is **intentional** until proven otherwise.
-
-### The Rule
-
-- See files you didn't create? → **Commit them or leave them alone**
-- See edits you didn't make? → **Ask before reverting**
-- Unsure if something should exist? → **ASK, don't delete**
-- See a file that seems "redundant"? → **It's not your call to delete it**
-
-### Why This Matters
-
-Multiple agents work in parallel on this codebase. One agent creates a file, another sees it as "unexpected" and deletes it. This destroys hours of work and creates frustration.
-
-### Safe Approach
-
-```bash
-# If you see unexpected uncommitted work:
-git stash -m "Preserving work from another session"
-# Then ask the user what to do
-```
-
-**Never assume uncommitted work is garbage. It's almost always intentional.**
-
-**When in doubt:** `git stash` to preserve work, then ask the user.
-
----
-
-## ⚠️ MANDATORY: CodeRabbit Review Before Merge
-
-### GitHub Enforcement Versus Process
-
-The active `main-and-dev-protection` ruleset (17666822, reverified 2026-09-22)
-requires a PR, GitHub Actions' `test` check, an up-to-date branch, and resolved
-review threads on both `main` and `dev`. It blocks deletion and non-fast-forward
-updates, has no bypass actors, and requires zero approving reviews so the solo
-owner is not locked out (BUG-248). Since 2026-09-22 it also enforces
-`allowed_merge_methods: ["merge"]`; squash and rebase merges are not permitted.
-Its enabled `require_extra_approval_for_unattributed_changes` flag concerns
-unattributed Copilot-authored PRs, not ordinary agent commits. GitHub documents
-that it has no effect with zero required approvals ([ruleset reference](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#additional-approval-for-unattributed-copilot-pull-requests)).
-
-Feature PRs require CodeRabbit **APPROVED on the exact head**; promotions use
-the source-provenance rule below. Those approval/provenance requirements are
-process checks enforced by the repository merge tools; merge-only is also
-enforced by GitHub. GitHub's green `CodeRabbit` status is not that verdict;
-it can be green during a rate limit or with requested changes. Check actual
-reviews, all unresolved threads, and CI before merging. Never use `--admin`,
-Force Promote, or a ruleset bypass. Do not directly push synchronization commits
-to `dev`; use the [reviewed ancestry workflow](docs/dev/deployment-procedure.md#6-branch-ancestry-after-promotion).
-
-**NEVER merge a feature PR without exact-head CodeRabbit approval.** A
-`dev` → `main` promotion proves its source reviews instead of requesting another
-review of the same content.
-
-This is a **blocking requirement**. Violating this rule wastes human time fixing preventable issues.
-
-**Owner decision, 2026-10-06:** CodeRabbit reviews only what can merge.
-Its included allowance is metered per developer identity, and every agent
-session shares one. The hourly rate steps down with the past seven days' use,
-to one review an hour at 60 or more
-([rate limits](https://docs.coderabbit.ai/management/rate-limits)). Each push
-used to buy an automatic incremental review, though only the final head's
-approval counts: in the week before this decision, the heaviest PRs drew 4 to
-12 review runs each, counting only runs that posted a review.
-`.coderabbit.yaml` therefore sets `auto_incremental_review: false`, so a push
-starts no review. CodeRabbit still reviews by itself when a PR opens or a draft
-is marked ready; otherwise it reviews only when asked with
-`@coderabbitai full review`, so request one after any push rather than wait.
-Its FAQ still lists force-pushes and rebases as review events, so they may
-spend one: avoid them.
-Dependabot's PRs, rebases included, spend nothing: CodeRabbit skips bot
-authors ("Bot user detected") and reviews one only when asked.
-Open PRs as drafts until the full gate passes, since a PR opened ready spends a
-review at once. Fix findings in one push, and sync with `dev` before requesting
-a review. After the first review, request `@coderabbitai full review` rather
-than moving the PR back to draft and marking it ready again. A later sync costs
-no review when it leaves the PR's reviewable diff unchanged, because the merge
-command then carries the approval (item 7); a sync that changes that diff needs
-a fresh review.
-
-### The Rule
-
-For feature PRs into `dev`:
-
-1. **Create the PR as a draft** via `gh pr create --draft`, and pass the full
-   gate on a branch synced with `dev`. CodeRabbit skips drafts.
-2. **Mark it ready** with `gh pr ready`, which starts CodeRabbit's review, and
-   **WAIT** for CodeRabbit to comment (1-2 minutes, or until the next review
-   its allowance admits)
-3. **Read ALL CodeRabbit feedback** — do not skim or skip
-4. **Adjudicate every finding** before merging. A reviewer finding is a claim,
-   not an order:
-   - Valid, in-scope issue that weakens a required property → fix it, push the
-     fixes together, and request re-review with `@coderabbitai full review`;
-     CodeRabbit does not review a push by itself.
-   - Technically possible but outside the documented threat model or invariant
-     → reject it with a concrete receipt showing why no property is weakened.
-   - False positive → reply with the disproving receipt for the record.
-5. **If CodeRabbit reports a rate limit, STOP.** Do not merge based on a prior partial review, a green CodeRabbit status context, or inline acknowledgements. Wait for the full cooldown shown in the rate-limit message, then explicitly request or wait for a fresh CodeRabbit review on the latest PR head commit.
-6. **Only merge after** CodeRabbit has completed a non-rate-limited review of the latest PR head, or of an earlier head whose approval the merge command carries to it (item 7), AND all feedback is addressed
-7. **If a later push leaves the approval on an earlier head, refresh it rather
-   than merge on it**, unless the merge command carries it (below). CodeRabbit
-   does not review the push by itself and does not re-approve while its
-   earlier approval still stands, so the only APPROVED review stays on the
-   previous head, which the merge command rejects. Dismiss that stale approval
-   with a comment citing this rule (never dismiss an unaddressed finding), then post
-   `@coderabbitai full review`; the fresh approval lands on the exact head
-   (PR #1038, 2026-09-23). `@coderabbitai review` refuses with "Already reviewed
-   the last commit" in this state.
-
-   GitHub also carries an approval forward by itself. After a push that only
-   merges `dev` or `main` into the branch, it repoints the existing APPROVED
-   review to the new head
-   ([changelog, 2023-06-06](https://github.blog/changelog/2023-06-06-security-enhancements-to-required-approvals-on-pull-requests/)),
-   so the approval looks current though CodeRabbit never reviewed that head
-   (#1381, 2026-10-06). The merge command and the promotion proof date each
-   push from the head's earliest GitHub Actions check suite. They accept an
-   approval submitted before the head's push only as a carried approval (How
-   to Check below), which needs the PR's reviewable diff unchanged since the
-   approved head. A sync changes that diff when `dev` edited lines near the
-   PR's own changes, within a hunk's context or close enough to join two hunks.
-   A force-push after which GitHub repointed the approval carries only if a
-   commit still in the PR, pushed before the approval, has the same reviewable
-   diff; after a rebase none does. The refusal then asks for this refresh. Sync with `dev` before requesting a review when you can.
-
-### Guard and Scanner Review Discipline
-
-Before implementing a reviewer suggestion against an executable policy scanner,
-CI guard, or test guard, tie it to that guard's stated invariant and threat model
-with a failing or reachable receipt. Minor and Trivial suggestions do not justify
-scope expansion by themselves. If a candidate cannot be classified, fail closed
-by reporting a violation or configuration error; do not grow alias resolution,
-data-flow analysis, or special cases merely to give an already-failing input a
-more precise label. Broaden the resolver only when a governing requirement names
-that behavior or a current-tree false positive prevents legitimate work.
-
-### CodeRabbit Learnings (DEBT-515, 2026-10-09)
-
-CodeRabbit turns a chat reply into a **learning**, a rule it applies to every
-later review. Learnings live in CodeRabbit, not in this repository, so nobody
-reviews them. Agents comment as the owner, so CodeRabbit cannot tell an agent's
-argument from the owner's ruling. In the 30 days to 2026-10-09 it recorded 250,
-about eight a day. Roughly a third tell it to stop raising something, and one
-was stale, contradicting the code's credential-safe redaction.
-
-- **Never ask CodeRabbit to record a learning.** Answer a finding with its
-  receipt and stop there.
-- **Link every learning it records anyway.** Its reply then says "Learnings
-  added". Link that reply from the PR description, by URL or anchor. The merge
-  command refuses until each one is linked and lists them in its receipt.
-- **Put reviewer rules in the repository.** A rule CodeRabbit should apply
-  belongs in this file or `.coderabbit.yaml`, through a reviewed PR.
-- **The owner reviews the week's learnings.** `.coderabbit.yaml` holds each new
-  learning for 30 days, then applies it unless the owner rejects it, and
-  CodeRabbit sends no notice. A weekly job
-  (`.github/workflows/coderabbit-learnings-review.yml`) keeps one GitHub issue,
-  assigned to the owner, listing every learning since its last report, with
-  those that tell CodeRabbit to stop raising something first. The owner
-  rejects or deletes harmful ones at app.coderabbit.ai/learnings.
-- **A finding that rests on a learning contradicting this file** is declined
-  with the section it contradicts, quoting the "Learnings used" entry, in the
-  same reply. The rule it broke is then written into `.coderabbit.yaml`'s path
-  instructions, which outrank stored learnings, and the learning is added to
-  DEBT-515's prune list for the owner to delete. An old learning keeps
-  applying until someone deletes it.
-
-### Why This Matters
-
-- CodeRabbit catches bugs, security issues, and architectural problems
-- Premature merges bypass this safety net and create rework
-- The 1-2 minute wait prevents hours of debugging later
-- A rate-limit warning means CodeRabbit may not have reviewed the latest commit completely; acknowledgements or status checks do not substitute for a fresh post-cooldown review
-
-### Red Flags (STOP if any apply)
-
-These review-status checks apply to feature PRs. Promotions follow
-**Reviewed-Source Promotions** below.
-
-- PR was just created seconds ago → **WAIT**
-- No `coderabbitai[bot]` comment visible → **WAIT**
-- CodeRabbit posted `Rate limit exceeded` at any point on the PR after the latest review cycle began → **WAIT THE FULL COOLDOWN, REQUEST/WAIT FOR FRESH REVIEW, THEN RECHECK**
-- CodeRabbit status is green but the latest visible review was rate-limited, or predates the newest commit and the merge command does not carry it → **DO NOT MERGE**
-- Thinking "I'll merge now and fix later" → **STOP, that's wrong**
-- Thinking "This is just docs, doesn't need review" → **WRONG, everything needs review**
-
-### How to Check
-
-**Feature-PR merge command (2026-09-22):** use the checked-in guard for every
-feature PR into `dev`; do not substitute a badge, a hand-written session check,
-the merge button, or a bare `gh pr merge`. The first command is read-only; the
-second re-reads GitHub and merges only the verified head with a merge commit:
-
-```bash
-pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER>
-pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER> --merge
-```
-
-The command reads all review pages and requires the latest decisive CodeRabbit
-review on the current SHA to be APPROVED and submitted after that SHA was pushed.
-A carried approval may stand in for it: CodeRabbit's latest decisive review is an
-approval on an earlier head, or one GitHub repointed to the current head, whose
-approved head is then the PR head pushed most recently at or before the
-approval. GitHub's compare API must show every file except `pnpm-lock.yaml`
-itself, which CodeRabbit's path filters exclude, with the same status, rename
-source and hunks at both heads. Every changed and context line must match, and
-a hunk may sit elsewhere only by the lines `dev`'s own edits between the two
-merge bases added or removed above it, as a clean rebase moves it; a rename onto
-the lockfile path is compared like any other file. This covers a Dependabot
-rebase whose only new change is the lockfile, which CodeRabbit skips, and a sync
-that merges `dev` or `main` into the branch. The receipt then names the approved
-head as `carriedFrom`. Two residual risks remain. A push landing while
-CodeRabbit is still reviewing could be mistaken for the reviewed head; GitHub
-documents repointing only where no new changes are introduced, and #1381 showed
-no repoint across a push that changed content. A head's push is dated from its
-check suites anywhere in the repository, so a suite created earlier for the same
-commit elsewhere dates the push earlier and falls back to GitHub's own repoint,
-as before the 2026-10-06 fix. It also requires zero unresolved
-threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
-ADR-020, except on a complete changed-file list confined to paths coverage
-never measures: `package.json`, `pnpm-lock.yaml`, `.github/`, Markdown
-documentation, `.coderabbit.yaml` and `codecov.yml`; see its 2026-09-28 and
-2026-10-05 amendments), green checks, and a clean, mergeable,
-non-draft PR. Incomplete/truncated thread or check data fails closed. It also refuses a merge
-that would leave `dev` without `main`'s latest promotion merge commit: `main`'s head
-must be in the PR head or already in `dev` (DEBT-491). Base each branch made after a
-promotion on `origin/main`, or merge `origin/main` into it. This check is early
-detection, not a lock: `dev` can move between the check and the merge, and
-`--match-head-commit` pins only the PR head; `verify-promotion` remains the
-enforcement and fails closed. It refuses while a CodeRabbit reply recording
-"Learnings added" is not linked from the PR description, and lists those
-replies in the receipt as `learnings` (DEBT-515). The merge uses
-`--match-head-commit` so a subsequent push cannot substitute unreviewed code.
-With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
-This is mandatory operator tooling, not a claim that GitHub's zero-approval
-ruleset enforces CodeRabbit itself. Promotions use the following distinct proof.
-
-```bash
-# List comments on a PR
-gh pr view <PR_NUMBER> --comments
-
-# Look for coderabbitai[bot] in the output.
-# If not present, DO NOT MERGE.
-# If a rate-limit warning is present, DO NOT MERGE until after the cooldown
-# and a fresh CodeRabbit review has landed on the latest PR head commit.
-```
-
-**Codecov outages (DEBT-497, 2026-10-05).** When `codecov/patch` does not post,
-CI stays green, but the job carries a "Codecov upload failed" warning and
-summary.
-1. Confirm the cause from the upload step's log or from Codecov's hosts. On
-   2026-10-05, `*.codecov.io` served an expired certificate while its status
-   page reported no incident.
-2. Record the cause on the PR before any re-run.
-3. A change that touches measured code waits for Codecov. Do not bypass the
-   guard.
-4. A change confined to unmeasured paths merges under ADR-020's exemption.
-   The merge guard applies it without any override.
-5. After recovery, re-run CI once.
-
-**A dropped notification (DEBT-510, 2026-10-07)** is not an outage. The upload
-succeeded and Codecov's public API lists it as processed, yet no
-`codecov/patch` posted. CI's "Send Codecov notifications" step retries it near
-the end of the job. If the check is still missing about five minutes after
-the job, record that on the PR and re-run CI once.
-
-### Reviewed-Source Promotions
-
-**Owner decision, 2026-09-22:** `dev` → `main` promotions do not require their
-own CodeRabbit review or approval. Re-reviewing already-approved content cost
-hours during #984 without adding a new implementation boundary. Every feature
-PR still requires normal exact-head approval before entering `dev`.
-
-**Owner decision, 2026-10-04:** CodeRabbit skips promotions altogether
-(`.coderabbit.yaml`, `reviews.auto_review.ignore_title_keywords`), which keeps
-its review allowance for feature PRs. A promotion's title therefore begins
-`Promote #`, followed by the source PR numbers. A feature PR's title must not
-contain `Promote #`, or it would go unreviewed.
-
-For each promotion:
-
-1. Wait for promotion CI `test` to pass. The read-only proof is
-   `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER>` (fetch `origin`
-   first). It verifies same-repository `dev` → `main`, up-to-date ancestry,
-   every first-parent merge's source PR, the actual second-parent head, formal
-   approval predating the source merge (exact-head, or carried as in How to
-   Check, with each source diff taken against the merge's first parent), zero unresolved source/promotion
-   threads, and successful `test` and `codecov/patch` checks on the promotion. Direct commits, ambiguous PR associations, missing approvals or
-   incomplete evidence fail closed. Its complete output must be in the
-   promotion PR body before the merge.
-2. Source-thread counts are current API observations; GitHub cannot reconstruct
-   their historical count from that response. Preserve source merge receipts;
-   the enforced thread-resolution ruleset covers the merge-time requirement.
-3. Read and adjudicate any findings CodeRabbit nevertheless posts on the
-   promotion. Resolve threads with receipts. A stale requested-changes review
-   on an older promotion head may be dismissed with a comment citing this rule
-   and the current source proof; never dismiss an unaddressed finding. Do not
-   request another promotion review or wait for its CodeRabbit status alone.
-4. Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER> --merge`.
-   It fetches `origin`, re-runs the proof, writes the output into a marked
-   section of the PR body, confirms the body shows it, re-reads the PR and
-   refuses if its base or head moved, and only then merges the verified head
-   with `--match-head-commit`. GitHub cannot pin the base at merge time, so
-   the recorded base is the one observed immediately before the merge. GitHub's body-edit history
-   therefore shows the proof before the merge; ten 2026-09-25/26 promotions
-   recorded it after (adversarial review F3). If either branch moves, the
-   merge is refused; refresh CI and run it again. No `--admin` or ruleset
-   bypass. A feature/hotfix branch into `main` is not this exception.
-5. Verify main CI, production-domain assignment after main's `test`, matching
-   dev/main trees, and production health as required below.
-
-### Production Release Gate
-
-Follow the [CI Secret Standard](docs/dev/deployment-environments.md#ci-secret-standard):
-step-scoped credentials, SHA-pinned actions, no shared credentials for Dependabot,
-and owner-authored PRs when dependency changes require PR-time E2E. The built-in
-GitHub token is distinct from provider credentials. Main's E2E is pre-release
-evidence through the production gate below, not PR-time evidence for bot PRs.
-
-Promotion-PR E2E must pass before merging to `main`. Vercel then builds that
-commit, while main's GitHub Actions `test` job runs independently. Require that
-exact GitHub check through Vercel Deployment Checks for **production**: the build
-must not receive the production domains until `test` passes. Do not rename the
-job without updating the Vercel setting, reuse its name in another workflow, or
-use Force Promote to bypass the gate. An echo-only CI job is not deployment
-evidence; verify the actual production promotion separately.
-
-The Vercel build applies production database migrations **before** this gate.
-They must remain compatible with the currently serving release (expand/contract),
-including when CI fails and that release continues serving. See
-[Deployment Procedure](docs/dev/deployment-procedure.md#production-deployment-check)
-for configuration, failure handling, and timestamp receipts.
-
-## Documentation
-
-### Records
-
-Open bug and debt records live in `docs/records/`, one file each, with one index (`docs/records/README.md`). A closed record is deleted and leaves one line in the ledger, `docs/records/closed.md`. The index's "How Records Work" section holds the rules: when to file, IDs, statuses, closing, and the template. In short:
-
-- Read the index's **Now** stanza at the start of each session, and clear any overdue Verifying check before new work.
-- Take a new ID with `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
-- Write the record first, have a second agent challenge it on the pushed branch, and ship it with its fix.
-- Only the index links records; cite a record elsewhere by its ID.
-- To close a record, move its lasting knowledge home, delete it, and add its ledger line, in the next pull request that touches `docs/records/`.
-
-The guard, `scripts/documentation-archive.ts`, enforces it with `tests/documentation-*.test.ts`:
-- every relative link in live Markdown resolves;
-- one Now stanza, at most 2 KiB, naming each Verifying record and its single valid due date;
-- one-line statuses;
-- unique IDs across the records, the ledger and the archive;
-- no record links outside the index;
-- no file over 300 KiB.
-
-Leave a blank line before and after every heading in live Markdown (MD022). ADRs are superseded, never archived; living guides and policies stay live. `docs/_archive/` holds records closed before 2026-10-11, until DEBT-518 deletes it.
-
-**Key documents:**
-
-- `docs/specs/master_spec.md` — Complete technical specification (SSOT)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-023 accepted; ADR-019 and ADR-022 as amended 2026-10-03)
-- `docs/records/README.md` — Open bug and debt records, and how records work; `docs/records/closed.md` is the ledger of closed ones
-- `docs/guides/qa/README.md` — UI QA procedures (method in `docs/dev/qa-procedures.md`)
-- `docs/product/ideas.md` — Unscheduled product ideas
-- `docs/frontend/standards.md` — Canonical frontend standards (components, tokens, accessibility, dark mode)
-- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and rules
-- `docs/frontend/pattern-registry.md` — Every visual pattern: hover, border, surface, token scales
-- `docs/frontend/design-principles.md` — Layout composition, navigation zones, action bar conventions
-- `docs/frontend/pages/` — Per-page dark mode UI audits
-- `docs/tooling/agent-browser.md` — Browser automation, Clerk auth, and React click workarounds
-
----
-
-## ⚠️ AGENT-SPECIFIC: Quick Reference — Slot Protection Checklist
-
-Before writing ANY code, verify you can answer:
-
-- [ ] **Tests:** Have I read 2-3 existing test files? Do I understand the fakes pattern?
-- [ ] **Style:** Have I read 2-3 source files? Do I understand constructor injection?
-- [ ] **Shared Types:** Have I checked `src/adapters/shared/` for existing types?
-- [ ] **Ports:** Have I checked `src/application/ports/` for existing interfaces?
-- [ ] **Fakes:** Have I checked `src/application/test-helpers/fakes/` for existing fakes?
-- [ ] **Layer:** Do I know which Clean Architecture layer I'm working in?
-
-**If you can't check all boxes, study existing code before proceeding.**
+## Where Things Live
+
+- [`docs/records/README.md`](docs/records/README.md): open records, and how records work.
+- [`docs/adr/`](docs/adr/index.md): decisions.
+- [`docs/specs/master_spec.md`](docs/specs/master_spec.md): product behaviour; the code owns schemas and types.
+- [`docs/frontend/`](docs/frontend/index.md): the design system. [`docs/dev/`](docs/dev/index.md): engineering guides. [`docs/guides/`](docs/guides/release/review-and-merge.md): review, merge and UI QA.
+- [`docs/tooling/agent-browser.md`](docs/tooling/agent-browser.md): browser checks behind Clerk sign-in. Never skip a visual check because a page redirects to sign-in: sign in first. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
+- [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.
+- CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](docs/dev/deployment-environments.md#ci-secret-standard)).

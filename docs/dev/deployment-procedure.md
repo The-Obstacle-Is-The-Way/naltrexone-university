@@ -226,7 +226,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm test:integration` passes
 - [ ] `pnpm build` passes
 - [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on main pushes and non-Dependabot same-repository PRs)
-- [ ] The [reviewed-source promotion proof](../../AGENTS.md#reviewed-source-promotions) is in the PR body for the current base/head; every first-parent source PR had exact-head approval before merge, and source/promotion threads are resolved. No separate promotion CodeRabbit approval is required (owner decision, 2026-09-22).
+- [ ] The [reviewed-source promotion proof](#8-promoting-dev-to-main) is in the PR body for the current base/head; every first-parent source PR had CodeRabbit approval before merge, on its exact head or carried as the [merge guard](../guides/release/review-and-merge.md#the-merge-guard) allows, and source/promotion threads are resolved. No separate promotion CodeRabbit approval is required (owner decision, 2026-09-22).
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
@@ -241,7 +241,7 @@ Before merging to `main` (production deploy):
 
 After every promotion, fetch and compare `origin/main^{tree}` with `origin/dev^{tree}`. For the next change, start the feature branch from the latest `origin/dev`, then merge `origin/main` **into that feature branch** before editing. When the only difference is the promotion merge, that merge is a fast-forward. If either branch has gained content, inspect and resolve the actual divergence on the feature branch rather than assuming tree identity. Include the result in the normal fully gated/reviewed PR to `dev`.
 
-That next PR carries main's promotion ancestry into `dev`; the next `dev` → `main` promotion can satisfy strict up-to-date checks without direct protected-branch pushes or a repeating chain of empty synchronization PRs. If `main` advances while any PR is open, integrate its new ancestry/content before the final gate and review. A new feature head needs a new full gate and exact-head approval; a promotion needs refreshed CI and source-provenance proof.
+That next PR carries main's promotion ancestry into `dev`; the next `dev` → `main` promotion can satisfy strict up-to-date checks without direct protected-branch pushes or a repeating chain of empty synchronization PRs. If `main` advances while any PR is open, integrate its new ancestry/content before the final gate and review. A new feature head needs a new full gate and an approval, on that head or carried as ADR-024 item 2 allows; a promotion needs refreshed CI and source-provenance proof.
 
 ### Enforced Merge Bar
 
@@ -253,7 +253,7 @@ Read back ruleset `17666822` (`main-and-dev-protection`) and each branch's rules
 
 The ruleset is one shared policy for explicit `refs/heads/main` and `refs/heads/dev`, avoiding two independently maintained copies. Before activation, PR #926 into `dev` reported `test=success` from `github-actions`; the workflow/script inventory contained no direct `dev` pusher. The old direct-push runbook above was the incompatible instruction, not an automation requirement. The read-only 11-property assertion failed for dev coverage, thread resolution and strict checks before activation, then passed all 11 after; both branch rule endpoints were checked independently.
 
-Feature PRs require CodeRabbit exact-head **APPROVED** through the [checked-in merge command](../../AGENTS.md#how-to-check). As of the 2026-09-22 owner decision, promotions instead verify the source PRs through the [reviewed-source procedure](../../AGENTS.md#reviewed-source-promotions). These and merge-commit use are operator/process requirements. The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, no CODEOWNERS/last-push approval requirement, and the platform's allowed merge methods (`merge`, `squash`, `rebase`); repository policy still selects `merge`. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require refreshed verification.
+Feature PRs require CodeRabbit **APPROVED** through the [checked-in merge command](../guides/release/review-and-merge.md#the-merge-guard): on the exact head, or carried from an approved head whose reviewable diff, `pnpm-lock.yaml` aside, is unchanged (ADR-024). Promotions instead verify the source PRs through the [reviewed-source procedure](#8-promoting-dev-to-main) (ADR-024). These are operator/process requirements; the ruleset itself allows merge commits only (`allowed_merge_methods: ["merge"]`). The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, and no CODEOWNERS/last-push approval requirement. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require refreshed verification.
 
 ---
 
@@ -270,6 +270,29 @@ The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotenc
   - an older **status or tag set** changes in place with no revision, and a stale `draft` status hides a published question from new practice (the seed refuses to reactivate an archived one); the seed counts it under `updated` only
 
 ---
+
+## 8. Promoting `dev` to `main`
+
+A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followed by the source PR numbers. CodeRabbit skips such titles, so a feature PR's title must never contain `Promote #`. A promotion needs no review of its own: it proves its sources' reviews instead (ADR-024).
+
+1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
+   - a same-repository `dev` → `main` PR, with up-to-date ancestry;
+   - every first-parent merge's source PR, and the actual second-parent head;
+   - each source's formal approval predating its merge: exact-head, or carried as the [merge guard](../guides/release/review-and-merge.md#the-merge-guard) allows, with each source diff taken against the merge's first parent;
+   - zero unresolved source or promotion threads;
+   - successful `test` and `codecov/patch` checks on the promotion.
+
+   Direct commits, ambiguous PR associations, missing approvals and incomplete evidence fail closed.
+2. **Source-thread counts are current observations.** GitHub cannot reconstruct their historical count, so keep the source merge receipts; the thread-resolution ruleset covers the merge-time requirement.
+3. **Adjudicate any finding CodeRabbit posts on the promotion anyway.** Resolve threads with receipts. A stale requested-changes review on an older promotion head may be dismissed with a comment citing this procedure and the current source proof; never dismiss an unaddressed finding. Do not request a promotion review.
+4. **Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge`.** It:
+   - fetches `origin` and re-runs the proof;
+   - writes the output into a marked section of the PR body, and confirms the body shows it;
+   - re-reads the PR and refuses if its base or head moved;
+   - merges the verified head with `--match-head-commit`.
+
+   GitHub cannot pin the base at merge time, so the recorded base is the one observed just before the merge. If either branch moves, refresh CI and run it again. Never use `--admin` or a ruleset bypass. A feature or hotfix branch into `main` is not a promotion.
+5. **Verify the release.** Check `main`'s CI, the production-domain assignment after `main`'s `test` ([Production Deployment Check](#production-deployment-check)), matching `dev` and `main` trees, and production health.
 
 ## Related
 

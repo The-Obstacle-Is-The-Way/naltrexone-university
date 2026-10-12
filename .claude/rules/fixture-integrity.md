@@ -68,7 +68,7 @@ Capture generated IDs in assertions and error strings. Do not assert old determi
 
 Do not add `as any`, `as unknown as`, `@ts-ignore`, widened DTO types, or relaxed expectations to make a fixture fit.
 
-Use a production-shaped fixture instead. DEBT-402 tracks the separate mocked-DTO type-drift class where tests cast impossible output shapes.
+Use a production-shaped fixture instead; never cast an impossible output shape into a mocked DTO.
 
 ## Hoisting discipline
 

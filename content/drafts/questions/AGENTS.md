@@ -4,7 +4,7 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 
 ## Required Reading
 
-Read these in order:
+Read the local files below in order. The `generate-questions` skill and `CDEBT-02` registry named in items 5–6 are upstream authoring references, not files shipped in this app repository; their original paths are retained for identification. Do not resolve them relative to this imported directory or claim to have read them here. Use `SCHEMA.md` and the quality checklist below for local work; obtain the owning content repository when an upstream rule or provenance decision is needed. IDs in that upstream registry belong to that repository, not this app’s closed-record ledger.
 
 1. `AGENTS.md` - quick-start for agent sessions
 2. `SCHEMA.md` - complete active authoring contract, taxonomy, validation rules, and canonical quality checklist
@@ -13,7 +13,7 @@ Read these in order:
 5. `../.agents/skills/generate-questions/SKILL.md` - NBME standards, anti-patterns, rewrite workflow
 6. `../docs/content-debt/CDEBT-02-question-quality-anti-patterns.md` - anti-pattern registry with real examples
 
-If this file conflicts with `SCHEMA.md`, follow `SCHEMA.md` for format/schema rules. Follow the generate-questions skill for item-writing quality and rewrite workflow. Use CDEBT-02 when judging whether a question construction pattern is acceptable.
+If this file conflicts with `SCHEMA.md`, follow `SCHEMA.md` for format/schema rules. When working in the owning content repository, follow its generate-questions skill for item-writing quality and its CDEBT-02 registry for the detailed anti-pattern examples. Do not invent missing upstream guidance.
 
 ---
 
