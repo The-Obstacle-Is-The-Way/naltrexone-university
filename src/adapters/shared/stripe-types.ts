@@ -20,6 +20,14 @@ export type CustomerSearchParams = {
 
 export type StripeCustomerSearchResult = { data: StripeCustomer[] };
 
+// A Customer read by id. Stripe answers a deleted Customer with
+// `deleted: true` and no metadata; a live one has `deleted` absent.
+export type StripeRetrievedCustomer = {
+  id: string;
+  deleted?: unknown;
+  metadata?: Record<string, string>;
+};
+
 type CheckoutSessionCreateParamsBase = {
   success_url: string;
   cancel_url: string;
@@ -218,6 +226,7 @@ export type StripeClient = {
       params: CustomerSearchParams,
       options?: StripeRequestOptions,
     ) => Promise<StripeCustomerSearchResult>;
+    retrieve(customerId: string): Promise<StripeRetrievedCustomer>;
   };
   checkout: {
     sessions: {

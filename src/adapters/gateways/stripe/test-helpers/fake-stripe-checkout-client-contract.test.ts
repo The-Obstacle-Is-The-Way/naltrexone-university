@@ -22,6 +22,9 @@ runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
     seedCustomer: async (userId) => ({
       id: stripe.seedCustomer({ user_id: userId }),
     }),
+    deleteCustomer: async (customerId) => {
+      stripe.deleteCustomer(customerId);
+    },
     // Immediately consistent: the first read is the settled answer.
     searchUntil: (params) => stripe.customers.search(params),
     seedSubscription: async () => {
