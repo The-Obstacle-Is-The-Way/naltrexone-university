@@ -148,6 +148,7 @@ Delivery receipts:
 
 - **Live.** Every recent live event checked on 2026-10-11 has `pending_webhooks: 0`. The live endpoint is the only one, so production's `STRIPE_WEBHOOK_SECRET` verifies its signatures. No secret value was read.
 - **Test (at the census, before the rotation).** The `dev` preview deployment answered deliveries at the inherited Clover version with HTTP 200. Its 500s in the same hour failed with `Stripe subscription metadata.user_id is required`, on subscriptions that the provider-contract trial-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts`) creates without user metadata. That failure does not depend on the payload version.
+- **Test (2026-10-12).** The trial-clock smoke's subscriptions are now skipped with a 200 (`metadata_missing`). The remaining failures came from the Checkout client contract (`tests/integration/stripe-checkout-client-contract.integration.test.ts`). Its subscriptions carried `user_id: 'debt472_contract_user'` and no `e2e_owner`, so each event reached the database with a `user_id` that is not a UUID and failed with Postgres `22P02`, and Stripe retried it. Those subscriptions now carry `e2e_owner: 'stripe-provider-contract'`, and the `dev` preview skips them as another owner's. The 06:55Z provider-lane run had left 14 events undelivered. A run at 07:59Z, with the tag, left none. Events from earlier runs retry until Stripe's three-day retry window ends.
 
 ### Decision
 
