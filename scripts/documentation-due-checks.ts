@@ -27,9 +27,7 @@ function describeReport({ overdue, farFuture }: DueChecksReport): string {
     checks.map(({ file, due }) => `- \`${file}\` (due ${due})\n`).join('');
   return (
     'These records have scheduled actions or checks. The README entry is the weekly human review of Waiting triggers and pending owner decisions; it is not a production verification.\n\n' +
-    (overdue.length > 0
-      ? `**Past their due date:**\n\n${list(overdue)}\n`
-      : '') +
+    (overdue.length > 0 ? `**Due or overdue:**\n\n${list(overdue)}\n` : '') +
     (farFuture.length > 0
       ? `**Due more than 90 days out**, so the check may never happen:\n\n${list(farFuture)}\n`
       : '') +

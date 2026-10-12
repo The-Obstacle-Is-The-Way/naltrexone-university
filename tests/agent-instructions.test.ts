@@ -22,12 +22,15 @@ const ruleFiles = readdirSync(RULES_DIRECTORY)
   .map((name) => path.posix.join(RULES_DIRECTORY, name))
   .sort();
 
-function rulePaths(file: string): string[] {
-  const frontMatter = read(file).match(/^---\n([\s\S]*?)\n---\n/);
+function frontMatterPaths(markdown: string): string[] {
+  const frontMatter = markdown
+    .replace(/\r\n/g, '\n')
+    .match(/^---\n([\s\S]*?)\n---\n/);
   if (!frontMatter?.[1]) return [];
   const paths = (parse(frontMatter[1]) as { paths?: unknown }).paths;
   return Array.isArray(paths) ? paths.map(String) : [];
 }
+const rulePaths = (file: string) => frontMatterPaths(read(file));
 
 type GuidelinePattern = string | { files: string; applyTo?: string };
 
@@ -70,6 +73,14 @@ function codexMappings(): Map<string, string[]> {
 }
 
 describe('agent instructions', () => {
+  // Git can check Markdown out with CRLF endings (core.autocrlf), and a
+  // missed front matter would map a rule to every file.
+  it('reads rule paths from front matter with CRLF line endings', () => {
+    expect(
+      frontMatterPaths('---\r\npaths:\r\n  - "src/**"\r\n---\r\n# Rule\r\n'),
+    ).toEqual(['src/**']);
+  });
+
   it('keeps AGENTS.md within half of Codex default read budget', () => {
     expect(Buffer.byteLength(read('AGENTS.md'), 'utf8')).toBeLessThanOrEqual(
       AGENTS_BUDGET_BYTES,

@@ -109,6 +109,21 @@ describe('documentation register conventions', () => {
     ).toMatchObject({ invalidScheduledChecks: ['docs/records/bug-001-x.md'] });
   });
 
+  // "due" followed by a digit is an attempt to schedule, so a date the weekly
+  // check cannot read fails here instead of silently never coming due.
+  it.each([
+    ['Open — fix the parser; due 10-14'],
+    ['Blocked — owner decision; due 2026-1-5'],
+  ])('rejects the unreadable date in "%s"', (status) => {
+    expect(
+      audit({
+        'docs/records/README.md':
+          '**Now** — none\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
+        'docs/records/bug-001-x.md': `**Status:** ${status}`,
+      }),
+    ).toMatchObject({ invalidScheduledChecks: ['docs/records/bug-001-x.md'] });
+  });
+
   it('requires the Now stanza to name each Verifying record', () => {
     const files = (now: string) => ({
       'docs/records/README.md': `**Now** — ${now}\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |`,
