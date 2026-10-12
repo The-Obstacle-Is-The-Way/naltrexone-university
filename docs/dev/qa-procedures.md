@@ -70,12 +70,12 @@ Rules of engagement (restating the standing mandates):
 ## When procedures run
 
 1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR (this operationalizes the existing "Add screenshots/GIFs for UI changes" rule in `AGENTS.md`).
-2. **Gated runs:** the procedures marked `Promotion gate: yes` in the register, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
+2. **Gated runs:** the procedures under `docs/guides/qa/` whose header says `Promotion gate: yes`, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
 3. **Post-deploy smoke:** the production-safe subset, against `addictionboards.com`.
 
 ## Lifecycle and promotion
 
-`Draft` → `Active` → `Superseded` (promoted or retired). A Draft becomes Active after two evidenced end-to-end runs without step edits. Its behavior flow is promotable when those behavior steps are mechanizable and it has then survived at least two Active runs without step edits; judgment-only visual checks remain manual. Promotion = write the Playwright spec in `tests/e2e/`, set the procedure's `Promoted to:` field, and keep the judgment-only visual checks behind as a slimmed procedure. The register row records both.
+`Draft` → `Active` → `Superseded` (promoted or retired). A Draft becomes Active after two evidenced end-to-end runs without step edits. Its behavior flow is promotable when those behavior steps are mechanizable and it has then survived at least two Active runs without step edits; judgment-only visual checks remain manual. Promotion = write the Playwright spec in `tests/e2e/`, set the procedure's `Promoted to:` field, and keep the judgment-only visual checks behind as a slimmed procedure. The procedure's header records both.
 
 ## Writing rules
 

@@ -96,7 +96,7 @@ Unscheduled product ideas are in [the ideas list](../product/ideas.md).
 - **Assets.** Records get no asset folders: screenshots and receipts go on the pull request. DEBT-414's folders predate this rule and go when it closes.
 - **The archive.** `docs/_archive/` holds records closed before 2026-10-11 until DEBT-518 deletes it. It is not edited, apart from link maintenance.
 
-**Template.**
+**Template.** A bug record's heading is `# BUG-NNN: Short Title`; a debt record's is `# DEBT-NNN: Short Title`.
 
 ```markdown
 # BUG-NNN: Short Title

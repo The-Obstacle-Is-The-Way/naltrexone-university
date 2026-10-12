@@ -10,7 +10,7 @@
 
 ## Summary
 
-Dependabot alerts #77 (`braces`, high) and #81 (`sprintf-js`, moderate) were accepted risks. [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md) and [DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md) kept them open as watchers, so that Dependabot would raise the fix pull request when a fixed release shipped. No `braces` fix is coming, and no `sprintf-js` fix can reach this tree. Each package reached the lockfile through one direct dependency used only by operator scripts and test scans. This record replaces those two dependencies, so both packages leave the lockfile and the alerts close as fixed.
+Dependabot alerts #77 (`braces`, high) and #81 (`sprintf-js`, moderate) were accepted risks. DEBT-495 and DEBT-506 kept them open as watchers, so that Dependabot would raise the fix pull request when a fixed release shipped. No `braces` fix is coming, and no `sprintf-js` fix can reach this tree. Each package reached the lockfile through one direct dependency used only by operator scripts and test scans. This record replaces those two dependencies, so both packages leave the lockfile and the alerts close as fixed.
 
 Neither advisory was exploitable here, and this change does not alter that. What it removes is two alerts that would otherwise stay open for good beside real ones, 21 packages, and a path by which the seed parser ran `---js` front matter through `eval`.
 
@@ -69,6 +69,6 @@ Nothing reaches users or production: neither advisory is reachable. Leaving thin
 
 ## Related
 
-- [DEBT-495](../_archive/debt/debt-495-braces-dos-advisory-without-fixed-release.md): the `braces` risk acceptance this supersedes.
-- [DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md): the `sprintf-js` risk acceptance this supersedes.
-- [DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md): the `js-yaml` 3 override this removes.
+- DEBT-495: the `braces` risk acceptance this supersedes.
+- DEBT-506: the `sprintf-js` risk acceptance this supersedes.
+- DEBT-476: the `js-yaml` 3 override this removes.
