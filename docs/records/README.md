@@ -2,8 +2,8 @@
 
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
-**Now** — 2026-10-11.
-- **Verifying, by due date.** BUG-319 and BUG-323 10-19; BUG-320, BUG-325 and BUG-327 10-20; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; DEBT-517 10-25; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
+**Now** — 2026-10-12.
+- **Verifying, by due date.** BUG-319, BUG-323 and BUG-339 10-19; BUG-320, BUG-325 and BUG-327 10-20; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; DEBT-517 10-25; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
 - **In progress.** DEBT-518, the documentation revamp: the records and the agent instructions are done; the layout and the archive's removal follow.
 - **Next.** BUG-337's investigation, with BUG-333's reopened loss, due 2026-10-14. DEBT-503 item 4, due 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22). Then counsel's Q1–Q6 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it.
@@ -30,6 +30,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [BUG-336](./bug-336-local-e2e-cleanup-gives-up-on-a-slow-process-listing.md) | Local E2E cleanup gives up on a slow process listing and leaves Playwright's web server running | P3 | Verifying — promotion to `main`, and two weeks of CI after the merge without `spawnSync ps ETIMEDOUT`; due 2026-10-26 |
 | [BUG-337](./bug-337-session-first-question-can-fail-to-fetch.md) | A session's first question can fail to load with "Failed to fetch" | P3 | Open — in 282 logged tests, no request that carried the dev-browser cookie was read as missing; catch a loss with the logging on; due 2026-10-14 |
 | [BUG-338](./bug-338-the-published-security-contact-leads-nowhere.md) | The published security contact leads nowhere | P2 | Verifying — private reporting is on; SECURITY.md must reach `main`, where GitHub reads it; due 2026-10-26 |
+| [BUG-339](./bug-339-register-budget-test-can-time-out-in-ci.md) | The register budget test can time out in CI's coverage run | P3 | Verifying — promotion to `main`, where CI runs the faster test; due 2026-10-19 |
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Open — engineering has F21 and F22 left; the rest waits on the owner, counsel and a tax adviser |
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — the grouped Dependabot PR #1451 is the migration vehicle; resolution decided in the record |
 | [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items |
