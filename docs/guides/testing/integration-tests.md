@@ -158,6 +158,10 @@ The test setup checks database connectivity before running any tests. If you see
 4. If not, restart: `pnpm db:test:up`
 5. If the container exists but tables are missing: re-run migrations (see above)
 
+**Migrations "fail" with no message**
+
+A wrong database port fails silently: `drizzle-kit` swallows the connection error and exits 1 without a message, and `pnpm test:integration` then fails en masse on missing tables. Never hardcode a port: pass the resolved target, as in the setup command above, and check it with `pnpm local:test:target`.
+
 **Stale containers on wrong ports/projects**
 
 If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> docker compose down` or remove the specific container intentionally. Do not remove another clone's active project. Run `pnpm exec tsx scripts/resolve-local-test-target.ts env` to confirm the project for this clone, then `pnpm db:test:up`.
