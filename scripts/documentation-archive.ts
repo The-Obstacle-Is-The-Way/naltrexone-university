@@ -122,12 +122,25 @@ function isStrayRecordsFile(file: string): boolean {
   );
 }
 
-// Markdown left in an old register folder, at any depth, missed the move to
-// docs/records or docs/product. Asset folders stay until the archive that
-// links them is deleted.
+// Markdown left, at any depth, in an old register folder or a folder the
+// ADR-023 layout retired missed the move. A clean merge of a branch that added
+// a guide there does not relocate it. Register asset folders stay until the
+// archive that links them is deleted.
 function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
   if (docs !== 'docs' || name === undefined) return false;
+  if (
+    [
+      'dev',
+      'frontend',
+      'practice-engine',
+      'content',
+      'tooling',
+      'vendor-docs',
+      'specs',
+    ].includes(register ?? '')
+  )
+    return true;
   if (!isRegister(register)) return false;
   return !(name === 'assets' && rest.length > 0);
 }

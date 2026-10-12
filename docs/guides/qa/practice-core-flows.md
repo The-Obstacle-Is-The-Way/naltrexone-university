@@ -1,4 +1,4 @@
-# QA-001: Practice Core Flows (Tutor, Exam, Quick Practice)
+# Practice Core Flows (Tutor, Exam, Quick Practice)
 
 **Status:** Draft
 **Created:** 2026-08-13
@@ -75,3 +75,14 @@ Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feed
 ## On failure
 
 Behavioral defect → file a bug record in `docs/records/`, citing the step number and the governing contract doc. Visual drift → check the `docs/design-system/` policy first; undocumented pattern = Discoverability Rule finding, not a pass.
+
+## Correctness Hotspots
+
+The former stabilization checklist also required these checks; the UI flows above do not replace them:
+
+- latest-attempt timestamp ties preserve the missed-question result (BUG-074);
+- normalized question state persists correctly through concurrent updates;
+- session/question mutations preserve idempotency on retries;
+- exam secrecy holds across exact attempt/session IDs, latest-attempt hydration, retry provenance, session review, next-question reads and dashboard/history projections.
+
+Use the relevant automated regression suites for concurrency and data-state proof; a visual pass alone does not establish those invariants.

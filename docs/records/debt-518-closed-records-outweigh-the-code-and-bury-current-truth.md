@@ -192,7 +192,7 @@ The owner widened the plan from records to every document: the product spec, arc
 | Colocated Markdown: `app/(app)/app/practice/shared/idempotency-protocol-contract.md`, `app/fonts/README.md`, `content/questions/README.md`, `tests/shared/README.md`, `tests/test-helpers/README.md` | stay beside their code. The guard's link check widens to `app/**`, `content/**` and `tests/**`. The contract gets a link from `.claude/rules/frontend.md`, `tests/shared/README.md` its missing scope, and `content/questions/README.md` a format example that parses. |
 | Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (DEBT-414) | permalink, then delete with the purge; DEBT-414's own assets stay until it closes |
 | Open GitHub issues citing doc paths (#423, #772, #883, #902, #903) | a comment on each with the new path, in the PR that moves it |
-| Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; a guard test bans the string `docs/_archive/` and every retired folder path |
+| Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; the guard rejects unpinned live archive destinations and files recreated in retired folders, while preserving ledger retrieval paths, pinned history and immutable migration comments |
 
 ### Migration, in Pull Requests
 

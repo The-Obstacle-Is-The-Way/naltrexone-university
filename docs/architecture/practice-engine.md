@@ -270,7 +270,7 @@ View components import only **types** from controllers. Interactive client hooks
 
 ### Shared Route Helpers
 
-`app/(app)/app/shared/` holds client helpers that more than one route uses, such as `bookmark-toggle.ts` (the timeout, error handling and idempotency-key rotation for a bookmark change). Keeping them there means the question page never imports the practice route's module. Each route keeps its own page state in its page-model hook, rather than one hook owning both the practice set and the review page.
+`app/(app)/app/shared/` holds client helpers that more than one route uses, such as `bookmark-toggle.ts` (the timeout, error handling and idempotency-key rotation for a bookmark change). Keeping them there means the question page never imports the practice route's module, and the bookmark request's idempotency handling is fixed once for both callers. Each route keeps its own page state in its page-model hook, rather than one hook owning both the practice set and the review page. The review page reads one question's state with `getBookmarkStatus({ questionId })` (`use-question-page-bookmarks.ts`), which replaced filtering the whole `getBookmarks({})` list in the browser. Where bookmarks appear is the [surface policy](../design-system/bookmark-surfaces.md)'s decision.
 
 ---
 

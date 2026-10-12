@@ -120,7 +120,6 @@ describe('records folder and ledger', () => {
     'docs/debt/index.md',
     'docs/bugs/bug-003-example.md',
     'docs/specs/index.md',
-    'docs/specs/master_spec.md',
     'docs/brainstorming/bs-001-example.md',
     'docs/audits/audit-001-example.md',
     'docs/qa/qa-001-example.md',
@@ -132,6 +131,27 @@ describe('records folder and ledger', () => {
       ]);
     },
   );
+
+  it('rejects the old specification path after the layout move', () => {
+    expect(
+      audit({ 'docs/specs/master_spec.md': '# Living spec' })
+        .retiredRegisterFiles,
+    ).toEqual(['docs/specs/master_spec.md']);
+  });
+
+  it.each([
+    'dev',
+    'frontend',
+    'practice-engine',
+    'content',
+    'tooling',
+    'vendor-docs',
+  ])('rejects a concurrent guide added to retired docs/%s', (folder) => {
+    const file = `docs/${folder}/new-concurrent-guide.md`;
+    expect(audit({ [file]: '# New guide' }).retiredRegisterFiles).toEqual([
+      file,
+    ]);
+  });
 
   it('reports a link into a record from anywhere but the index', () => {
     const files = {

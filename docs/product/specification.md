@@ -1,6 +1,6 @@
 # Addiction Boards Question Bank SaaS — Technical Specification
 
-> **Status, 2026-10-12 (DEBT-518).** This specification moved here from `docs/specs/master_spec.md` and was corrected in place against the code, section by section; nothing was removed. It states the product's decisions and the contracts the code keeps. Where it and the code disagree on a schema, a type or a limit, the code is right: correct this document in the same change. The vertical slices in §7 and the checklist in §12 record the original build order.
+> **Status, 2026-10-12 (DEBT-518).** This specification moved here from `docs/specs/master_spec.md` and was corrected in place against the code, section by section; nothing was removed. It states the product's decisions and the contracts the code keeps: it owns the product overview and the API narratives, and the topic documents under `docs/product/practice/` own the detailed practice interactions, so a behaviour change updates the topic contract, its tests and this summary together. Where it and the code disagree on a schema, a type or a limit, the code is right: correct this document in the same change. The vertical slices in §7 and the checklist in §12 record the original build order.
 >
 > **History.** On 2026-09-20 the DEBT-481 audit found stale schema, action, limit, content, CI and timing examples here and in four split copies; on 2026-09-22 it corrected six contradictions and turned the copies into navigation pages, which DEBT-518 then deleted.
 
@@ -2238,7 +2238,8 @@ it('records attempt when answer submitted', async () => {
 
 **Stripe test mode:**
 
-* Use Stripe test card `4242 4242 4242 4242` with a future date (e.g., 12/34). ([Stripe Docs][6])
+* Required E2E proves the repository's own redirect and provider contract (`tests/e2e/checkout-redirect.spec.ts`, `checkout-success-provider.spec.ts`). It may check the `checkout.stripe.com` origin, but it never fills Stripe-owned pages.
+* Only the observational `stripe-hosted-*.spec.ts` journeys fill a Stripe test card such as `4242 4242 4242 4242` with a future expiry. ([Stripe Docs][6])
 
 ### 8.4 CI Pipeline (GitHub Actions)
 

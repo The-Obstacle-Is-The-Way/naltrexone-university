@@ -62,7 +62,7 @@ All previously open drift bugs have been resolved and archived:
 
 | Layer | Responsibility |
 |------|----------------|
-| **Application use cases** | Gate correctness payloads for active exams across `GetPreviousAttempt`, `GetPracticeSessionReview`, and `GetNextQuestion`; reject active-exam `SubmitAnswer` before attempt/session-answer writes |
+| **Application use cases** | Gate correctness payloads for active exams across `GetQuestionForView`, `GetPreviousAttempt`, `GetPracticeSessionReview`, and `GetNextQuestion`; reject active-exam `SubmitAnswer` before attempt/session-answer writes |
 | **Repository projections** | Exclude or redact active-exam correctness fields in user-facing aggregates (`GetUserStats`, attempted-question history feeds) |
 | **Controllers** | Preserve strict input contracts; do not allow alternate identifier paths to bypass application gates |
 | **Frontend rendering** | Never infer correctness from partial data; render only neutral state in active exam contexts |
@@ -83,7 +83,7 @@ function isActiveExamSession(session: {
 }
 ```
 
-Use this guard consistently at all answer-key disclosure points. Do not duplicate ad-hoc condition variants per feature.
+This pseudocode explains the policy; do not paste it into every feature. Application use cases enforce the rule at their own reveal boundary, while repository projections use `getActiveExamVisibilityCondition()` from `src/adapters/repositories/shared/active-exam-visibility.ts`. `GetQuestionForView` checks exact review provenance before returning an owned revision. Preserve these layer boundaries and use the shared repository predicate for SQL reads.
 
 ---
 
