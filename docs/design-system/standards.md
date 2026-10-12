@@ -24,7 +24,7 @@ When making a UI change:
    focus rings, spacing, typography, and component-system mandates.
 2. **Check `pattern-registry.md`** for opacity scales, foreground ramps,
    dark-mode rules.
-3. **Check `contrast-policy.md`** if your change involves foreground or
+3. **Check `contrast.md`** if your change involves foreground or
    background pair choices.
 4. **If the pattern you need does not exist here, add it to
    `pattern-registry.md` first** (with rationale and design review),

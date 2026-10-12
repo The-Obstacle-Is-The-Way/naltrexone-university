@@ -266,8 +266,8 @@ When changing environment configuration, verify all of the following:
 
 ## Related
 
-- [deployment-procedure.md](../guides/release/promote-to-production.md)
-- [database-rollbacks.md](../guides/operations/database-recovery.md)
+- [promote-to-production.md](../guides/release/promote-to-production.md)
+- [database-recovery.md](../guides/operations/database-recovery.md)
 - [Supply-chain policy: licences](../policies/supply-chain.md#licences)
 - [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
 - [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)

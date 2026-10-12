@@ -431,8 +431,8 @@ authoring responsibility.
 
 ## 13. Related Documents
 
-- [tag-taxonomy-golden-spec.md](../../product/content-taxonomy.md)
-- [tag-taxonomy-pipeline.md](../../architecture/tag-taxonomy.md)
+- [content-taxonomy.md](../../product/content-taxonomy.md)
+- [tag-taxonomy.md](../../architecture/tag-taxonomy.md)
 - [content-pipeline.md](../../architecture/content-pipeline.md)
 - `lib/content/draftTaxonomy.ts`
 - `lib/content/schemas.ts`

@@ -1,6 +1,6 @@
 # ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-**Status:** Accepted, as amended 2026-10-03 (Parts 1, 2 and 4; Part 3 not adopted)
+**Status:** Accepted, as amended 2026-10-03 (Parts 1, 2 and 4; Part 3 not adopted) and 2026-10-12 (where the QA procedures live)
 **Date:** 2026-08-13
 **Decision Makers:** Owner
 **Depends On:** ADR-003 (Testing Strategy), ADR-001 (Clean Architecture Layers)
@@ -71,6 +71,10 @@ Decided under the owner's 2026-10-03 delegation, after a review of what each par
   - It is replaced by a rule-to-test register: plain-language rules linked to the tests that prove them, with a documentation check. The register is in [`docs/product/business-rules.md`](../product/business-rules.md) and the check in `tests/rule-to-test-register.test.ts`, both since DEBT-465 Part 3 (2026-10-04).
 - **Part 4 (UI QA procedures) is adopted,** with the procedures run before the production bootstrap and before releases that change their flows, not before every promotion.
 - **The Compliance rule against numeric gates without a new ADR is unchanged.**
+
+## Amendment — 2026-10-12
+
+The UI QA register that Part 4 created at `docs/qa/` was retired by DEBT-518's records step (#1467). Its procedures now live in `docs/guides/qa/`, without QA-NNN IDs, and the method is `docs/guides/qa/method.md`. The text above keeps the register's original description. Part 4's decision is unchanged.
 
 ## References
 

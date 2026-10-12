@@ -63,7 +63,7 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
     5. **Checkout refuses a configured price whose Stripe amount or interval differs from `lib/pricing-data.ts`,** and alerts. The consent text can then never state a different charge from the one Stripe makes.
   - **Then a price change is routine.** Create a new Price under the same product, and update the amounts, the disclosures (a new disclosure version) and the Terms in one reviewed pull request. Deploy it, then switch the environment's price IDs. Existing subscribers keep their price and their own notices.
   - **When.** Before the first live sale, with the other pre-sale items. Until then, the runbook line stands.
-- **Runbook line done 2026-10-09 (quick-wins pull request):** [deployment-environments.md](../architecture/environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The recorded-price design remains.
+- **Runbook line done 2026-10-09 (quick-wins pull request):** [environments.md](../architecture/environments.md#stripe-price-id-rule) says never to change either price ID where there are subscribers, and why. The recorded-price design remains.
 - **Unknown-price alert moved here, 2026-10-10.** AUDIT-015's order placed it with item 1's alert. An unknown price, though, surfaces at five sites: the normalizer, the subscription read, the success sync, and the webhook and reconcile handlers that report the normalizer's error. The recorded-price design replaces that lookup with one resolver, which raises the alert on an unknown product or interval. So the alert is built with it, rather than as raises at five sites. Until then, the runbook line forbids the change that would trigger it.
 
 ### 3. A subscription created outside the app's Checkout is acknowledged and dropped (P3)
@@ -110,6 +110,17 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 - No live-mode purchase has been recorded working end to end. All hosted E2E tests run in test mode, and a paid monthly Checkout has none.
 - **Decided.** The owner makes one live purchase followed by a refund, under DEBT-465 Part 4's QA procedures, and records the live webhook's events (done 2026-10-11, below).
 - **Endpoint events recorded 2026-10-11 (GitHub #883).** The live endpoint subscribed to seven events and lacked `checkout.session.expired`, as did the test endpoint, so an abandoned add-card setup operation would have stayed `pending` and never been pruned. The census, the gap and its fix are in [the Stripe vendor doc](../architecture/integrations/stripe.md#event-set-gap-handled-but-not-subscribed). The live endpoint was fixed that day. No backfill was needed (checked 2026-10-11). The shared test endpoint gets `checkout.session.expired` back once GitHub #883's skip for setup sessions from another environment reaches the `dev` preview. The live Price IDs, the Checkout payment-method settings and the live purchase are still unrecorded.
+
+- **Link on Checkout (found 2026-10-12, with BUG-340).** Stripe's Checkout pre-ticks "Save my information with Link for faster checkout" in both of the app's flows. While the box is ticked, Stripe takes no payment and saves no card until the buyer gives a phone number. That was seen in test mode; the live page is expected to match, but that is not confirmed.
+  - **What it means for the app** (checked against Stripe's Link documentation):
+    - Subscription Checkout lists no payment methods, so the account's settings decide, and a Link payment is a `link` PaymentMethod.
+    - The trial add-card Session lists only `card`. A card saved through Link stays `type: card` (wallet `link`), which the webhook accepts. If Link funds it from a bank account, Stripe reports brand `link`, last 4 `0000` and expiry 12/2040.
+    - The app reads no card details, since the Stripe portal manages cards, so nothing breaks.
+  - **Open for the owner:**
+    - Keep Link, which Stripe says lifts conversion and lets returning Link users pay in one click, or turn it off in the Dashboard's payment-method settings (per configuration and per mode).
+    - If Link stays, the add-card consent says "card" while Link can fund renewals from a bank account. That goes to counsel with DEBT-414's questions.
+  - **Tests.** The hosted smoke always unticks the box, so no test pays through Link. If Link stays, add a hosted journey that does, with a disposable sandbox email rather than the shared E2E one.
+  - **Decided.** The owner decides when looking at the live Checkout page during this item's live purchase, before the first live sale.
 
 ### 8. The checkout guard reads only the customer's first 10 subscriptions (P3)
 

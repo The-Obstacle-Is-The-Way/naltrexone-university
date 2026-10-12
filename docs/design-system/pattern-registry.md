@@ -890,7 +890,7 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 **Rules:**
 - Semantic tokens only; no opacity-scale values at all (`bg-card` is a solid surface fill), so the banner adds nothing to the source-scan allowlist.
 - Light/dark handled entirely by `border-border` / `bg-card` / `text-muted-foreground` / `text-foreground`; no component `dark:` overrides.
-- Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and full `text-foreground` for the countdown phrase — both established app-wide pairings; no new color pair is introduced, so no new `contrast-policy.md` ledger entry is required.
+- Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and full `text-foreground` for the countdown phrase — both established app-wide pairings; no new color pair is introduced, so no new `contrast.md` ledger entry is required.
 - Renders in the same `AppLayoutShell` `banner` slot as the past-due banner (banner → header → main ordering); the two are mutually exclusive because `pastDue` and `inTrial` are distinct subscription statuses.
 - Server-rendered at page load; no live-region role needed (matches past-due banner precedent).
 
@@ -949,7 +949,7 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
 - A question that becomes unavailable while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back unavailable, shows this notice instead of an error.
 
 **Rules:**
-- Reuses the S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`) for neutral notices, and, for cautions, the warning-tinted inline status card the unanswered reveal already uses (`border-warning/50 bg-warning/5`, `text-foreground`). No new surface, token, opacity value or color pair, so no new `contrast-policy.md` ledger entry is required.
+- Reuses the S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`) for neutral notices, and, for cautions, the warning-tinted inline status card the unanswered reveal already uses (`border-warning/50 bg-warning/5`, `text-foreground`). No new surface, token, opacity value or color pair, so no new `contrast.md` ledger entry is required.
 - Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong. A learner-facing reason is not shown: a withdrawal's recorded reason is written for the clinical audit (ADR-022).
 - `role="status"` announces the notice politely; it is never focused automatically.
 
@@ -1004,7 +1004,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 
 **Rules:**
 - Reuses S-1 Status notice, F-11's caution card for a key correction, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
-- Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`, and `text-foreground` on the caution card). No new `contrast-policy.md` ledger entry is required.
+- Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`, and `text-foreground` on the caution card). No new `contrast.md` ledger entry is required.
 - `role="status"` announces the notice politely; it is never focused automatically.
 - A stored grade is never regraded ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)). An answer graded on a key corrected since leaves every score instead (F-13 names the reason), and the Incorrect practice filter offers its question again.
 

@@ -196,7 +196,7 @@ History question filters:
 
 ## 5) Operational Guardrails
 
-- Use [tag-taxonomy-golden-spec.md](../product/content-taxonomy.md) for the
+- Use [content-taxonomy.md](../product/content-taxonomy.md) for the
   canonical slug and display-name tables.
 - Use the importer's schema (`scripts/draft-question-import.ts`, `lib/content/schemas.ts`) for authoring and
   parser rules.
@@ -209,7 +209,7 @@ History question filters:
 
 ## 6) Related Files
 
-- [tag-taxonomy-golden-spec.md](../product/content-taxonomy.md)
+- [content-taxonomy.md](../product/content-taxonomy.md)
 - `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`
 - `docs/_archive/specs/spec-033-tag-taxonomy-migration.md`
 - `lib/content/draftTaxonomy.ts`

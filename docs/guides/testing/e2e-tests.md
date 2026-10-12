@@ -525,11 +525,11 @@ See [DEBT-293](../../_archive/debt/debt-293-e2e-shared-state-structural-flakines
 
 ## Related Documentation
 
-- [react-vitest-testing.md](./react-component-tests.md) — React 19 + Vitest component testing setup
+- [react-component-tests.md](./react-component-tests.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../../CLAUDE.md) — Testing mandate and test locations
 - [SPEC-010](../../_archive/specs/spec-010-server-actions.md) — Controller testing patterns
 - [Stripe vendor docs](../../architecture/integrations/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../../architecture/integrations/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
-- [agent-browser.md](./browser-automation.md) — Agent-browser quick reference, auth patterns, common pitfalls
+- [browser-automation.md](./browser-automation.md) — Agent-browser quick reference, auth patterns, common pitfalls
 - `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI full command reference
