@@ -2,7 +2,7 @@
 
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
-**Now** — 2026-10-11.
+**Now** — 2026-10-12.
 - **Verifying, by due date.** BUG-319 and BUG-323 10-19; BUG-320, BUG-325 and BUG-327 10-20; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; BUG-336 10-26; DEBT-505 11-05. Each record names its check.
 - **In progress.** DEBT-518, the documentation revamp: these records and the ledger first, then the agent instructions, the layout, and the archive's removal last.
 - **Next.** BUG-337's investigation, with BUG-333's reopened loss, due 2026-10-14. DEBT-503 item 4, due 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
