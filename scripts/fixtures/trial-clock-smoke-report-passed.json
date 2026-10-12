@@ -102,7 +102,7 @@
         },
         {
           "status": "passed",
-          "title": "retrieves a Customer by id with its metadata and refuses an unknown id as resource_missing"
+          "title": "retrieves a Customer by id with its metadata, answers a deleted one as deleted without metadata, and refuses an unknown id as resource_missing"
         }
       ],
       "status": "passed",

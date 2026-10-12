@@ -191,10 +191,11 @@ describe('trial payment-method setup completion webhook', () => {
   // GitHub #883: a webhook with an E2E owner shares its Stripe test account
   // with other environments, whose add-card Sessions are signed with their own
   // consent-state secrets. Such a Session is skipped like another owner's
-  // subscription event only when its Customer carries another e2e_owner;
-  // without that evidence it stays an invalid payload, so a misconfigured
-  // secret on this deployment is still reported. No payment method is resolved
-  // either way.
+  // subscription event when its Customer carries another e2e_owner, or is gone:
+  // E2E teardown deletes its Customers, and with the Customer gone nothing here
+  // is left to act on. A live Customer without that evidence keeps it an
+  // invalid payload, so a misconfigured secret on this deployment is still
+  // reported. No payment method is resolved either way.
   function unverifiableCompletion(customerMetadata: Record<string, string>) {
     const stripe = new FakeStripeCheckoutClient();
     const customerId = stripe.seedCustomer(customerMetadata);
@@ -243,7 +244,24 @@ describe('trial payment-method setup completion webhook', () => {
     },
   );
 
-  it('rejects an unverifiable setup completion as an invalid payload when Stripe holds no such Customer', async () => {
+  it('skips an unverifiable setup completion whose Customer was deleted', async () => {
+    const { stripe, customerId } = unverifiableCompletion({});
+    stripe.deleteCustomer(customerId);
+
+    const error = await processEvent(stripe, {
+      consentStateSecret,
+      webhookE2EOwner: 'preview-owner',
+    }).catch((caught: unknown) => caught);
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['customer_gone'] },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([customerId]);
+    expect(stripe.setupIntents.retrieveCalls).toEqual([]);
+  });
+
+  it('skips an unverifiable setup completion when Stripe holds no such Customer', async () => {
     const stripe = new FakeStripeCheckoutClient();
     stripe.setWebhookEvent(
       setupCompletionEvent(
@@ -255,12 +273,15 @@ describe('trial payment-method setup completion webhook', () => {
     );
     stripe.seedSetupIntent(savedCard);
 
-    await expect(
-      processEvent(stripe, {
-        consentStateSecret,
-        webhookE2EOwner: 'preview-owner',
-      }),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    const error = await processEvent(stripe, {
+      consentStateSecret,
+      webhookE2EOwner: 'preview-owner',
+    }).catch((caught: unknown) => caught);
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['customer_gone'] },
+    });
     expect(stripe.customers.retrieveCalls).toEqual(['cus_unknown']);
     expect(stripe.setupIntents.retrieveCalls).toEqual([]);
   });

@@ -162,6 +162,11 @@ runStripeCheckoutClientContract(
         createdCustomerIds.add(seeded.id);
         return { id: seeded.id };
       },
+      deleteCustomer: async (customerId) => {
+        await stripe.customers.del(customerId);
+        // Deleted here, so cleanup must not delete it again.
+        createdCustomerIds.delete(customerId);
+      },
       searchUntil: async (params, minimum) => {
         searchDeadline ??= Date.now() + CUSTOMER_SEARCH_VISIBILITY_BOUND_MS;
         for (;;) {

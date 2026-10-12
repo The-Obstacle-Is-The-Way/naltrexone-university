@@ -266,12 +266,15 @@ export class FakeStripeCheckoutClient implements StripeClient {
         .map((customer) => ({ id: customer.id }));
       return { data };
     },
-    // Serves a seeded Customer by id with its metadata, and refuses an id it
-    // does not hold with Stripe's 404 resource_missing. Deleted Customers are
-    // not modelled.
+    // Serves a seeded Customer by id with its metadata, a deleted one as
+    // deleted without metadata, and refuses an id it never held with Stripe's
+    // 404 resource_missing.
     retrieve: async (customerId) => {
       this.customers.retrieveCalls.push(customerId);
       if (this.customerRetrieveFault) throw this.customerRetrieveFault;
+      if (this.deletedCustomerIds.has(customerId)) {
+        return { id: customerId, deleted: true };
+      }
       const customer = this.customers.seeded.find(
         (candidate) => candidate.id === customerId,
       );
@@ -294,6 +297,23 @@ export class FakeStripeCheckoutClient implements StripeClient {
 
   setCustomerRetrieveFault(fault: Error | null): void {
     this.customerRetrieveFault = fault;
+  }
+
+  private readonly deletedCustomerIds = new Set<string>();
+
+  // Deletes a seeded Customer as Stripe does: Search no longer finds it, and
+  // a read by id answers it as deleted.
+  deleteCustomer(customerId: string): void {
+    const index = this.customers.seeded.findIndex(
+      (candidate) => candidate.id === customerId,
+    );
+    if (index === -1) {
+      throw new Error(
+        `FakeStripeCheckoutClient holds no Customer ${customerId}`,
+      );
+    }
+    this.customers.seeded.splice(index, 1);
+    this.deletedCustomerIds.add(customerId);
   }
 
   // Seeds a Customer that Search can find; returns its id.

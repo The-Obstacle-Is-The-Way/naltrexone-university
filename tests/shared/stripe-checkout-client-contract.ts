@@ -62,6 +62,9 @@ export type StripeCheckoutClientContractHarness = {
   // Creates one Customer whose metadata user_id is the given value; the real
   // half creates it in TEST mode, the fake seeds it.
   seedCustomer(userId: string): Promise<{ id: string }>;
+  // Deletes a Customer seedCustomer made; the real half deletes it in TEST
+  // mode, the fake marks it deleted.
+  deleteCustomer(customerId: string): Promise<void>;
   // Searches until a read returns at least `minimum` Customers and hands that
   // read back. A new Customer reaches Search after a delay, and in TEST mode a
   // later read can briefly miss one an earlier read returned, so the real half
@@ -577,8 +580,9 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
   },
   {
     name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[10],
-    // GitHub #883: the webhook reads a Customer's e2e_owner by id to decide
-    // whether an unverifiable add-card Session belongs to another environment.
+    // GitHub #883: the webhook reads a Customer by id to decide whether an
+    // unverifiable add-card Session belongs to another environment: its
+    // Customer carries another e2e_owner, or is gone.
     async run(harness) {
       const userId = `debt472_retrieve_${randomUUID()}`;
       const seeded = await harness.seedCustomer(userId);
@@ -589,8 +593,17 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       expect(retrieved.deleted).toBeUndefined();
       expect(retrieved.metadata?.user_id).toBe(userId);
 
+      // A deleted Customer is still answered by id, as deleted and without
+      // its metadata; the webhook reads it as gone.
+      await harness.deleteCustomer(seeded.id);
+      const deleted = await harness.customers.retrieve(seeded.id);
+
+      expect(deleted.id).toBe(seeded.id);
+      expect(deleted.deleted).toBe(true);
+      expect(deleted.metadata).toBeUndefined();
+
       // An id Stripe does not hold is refused with a 404 resource_missing,
-      // which the webhook reads as no owner evidence.
+      // which the webhook also reads as gone.
       const missingId = `cus_debt472missing${randomUUID().replaceAll('-', '')}`;
       let caught: unknown;
       try {

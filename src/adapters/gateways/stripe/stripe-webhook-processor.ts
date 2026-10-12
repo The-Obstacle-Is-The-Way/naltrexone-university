@@ -201,9 +201,12 @@ function getInitialSubscriptionConsent(input: {
 // shares its Stripe test account with other environments, whose add-card
 // Sessions carry consent state signed with their own secrets. A Session that
 // fails verification is skipped, as another owner's subscription events are,
-// only when its Customer carries another e2e_owner. Without that evidence it
-// stays an invalid payload, so a misconfigured secret here is still reported.
-// Nothing is written either way; production has no E2E owner and never looks.
+// when its Customer carries another e2e_owner, or is gone: E2E teardown
+// deletes its Customers, often before Stripe delivers the event, and with the
+// Customer gone nothing here is left to act on. A live Customer without that
+// evidence keeps it an invalid payload, so a misconfigured secret here is
+// still reported. Nothing is written either way; production has no E2E owner
+// and never looks.
 async function unverifiedSetupStateError(input: {
   stripe: StripeClient;
   customerId: string;
@@ -211,18 +214,25 @@ async function unverifiedSetupStateError(input: {
   message: string;
 }): Promise<ApplicationError> {
   if (input.webhookE2EOwner) {
-    // A Customer Stripe does not hold is no owner evidence; any other read
-    // failure propagates so Stripe retries the delivery.
+    // A Customer Stripe does not hold is gone; any other read failure
+    // propagates so Stripe retries the delivery.
     const customer = await input.stripe.customers
       .retrieve(input.customerId)
       .catch((error: unknown) => {
         if (isMissingStripeCustomerError(error)) return null;
         throw error;
       });
-    const customerE2EOwner =
-      customer === null || customer.deleted === true
-        ? undefined
-        : customer.metadata?.e2e_owner;
+    if (customer === null || customer.deleted === true) {
+      return new ApplicationError(
+        'STRIPE_ERROR',
+        'Trial setup consent state is unverifiable and its Customer is gone',
+        {
+          [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
+          consent_state_signature: ['customer_gone'],
+        },
+      );
+    }
+    const customerE2EOwner = customer.metadata?.e2e_owner;
     if (customerE2EOwner && customerE2EOwner !== input.webhookE2EOwner) {
       return new ApplicationError(
         'STRIPE_ERROR',

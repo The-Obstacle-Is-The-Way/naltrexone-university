@@ -230,9 +230,11 @@ describe('expired trial payment-method setup webhook', () => {
   // GitHub #883: a webhook with an E2E owner shares its Stripe test account
   // with other environments, whose add-card Sessions are signed with their own
   // consent-state secrets. Such a Session is skipped like another owner's
-  // subscription event only when its Customer carries another e2e_owner;
-  // without that evidence it stays an invalid payload, so a misconfigured
-  // secret on this deployment is still reported. Nothing is written either way.
+  // subscription event when its Customer carries another e2e_owner, or is gone:
+  // E2E teardown deletes its Customers, and with the Customer gone nothing here
+  // is left to act on. A live Customer without that evidence keeps it an
+  // invalid payload, so a misconfigured secret on this deployment is still
+  // reported. Nothing is written either way.
   function unverifiableSession(customerMetadata: Record<string, string>) {
     const stripe = new FakeStripeCheckoutClient();
     const customerId = stripe.seedCustomer(customerMetadata);
@@ -302,7 +304,22 @@ describe('expired trial payment-method setup webhook', () => {
     },
   );
 
-  it('rejects an unverifiable expired setup Session as an invalid payload when Stripe holds no such Customer', async () => {
+  it('skips an unverifiable expired setup Session whose Customer was deleted', async () => {
+    const { stripe, customerId } = unverifiableSession({});
+    stripe.deleteCustomer(customerId);
+
+    const error = await processWithOwner(stripe).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['customer_gone'] },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([customerId]);
+  });
+
+  it('skips an unverifiable expired setup Session when Stripe holds no such Customer', async () => {
     const { stripe } = unverifiableSession({ e2e_owner: 'other-owner' });
     stripe.setWebhookEvent({
       id: 'evt_setup_expired',
@@ -321,8 +338,13 @@ describe('expired trial payment-method setup webhook', () => {
       },
     });
 
-    await expect(processWithOwner(stripe)).rejects.toMatchObject({
-      code: 'INVALID_WEBHOOK_PAYLOAD',
+    const error = await processWithOwner(stripe).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(isE2EOwnerMismatchEvent(error)).toBe(true);
+    expect(error).toMatchObject({
+      fieldErrors: { consent_state_signature: ['customer_gone'] },
     });
     expect(stripe.customers.retrieveCalls).toEqual(['cus_unknown']);
   });

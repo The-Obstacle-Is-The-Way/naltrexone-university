@@ -108,9 +108,9 @@ The owner-requested adversarial hunt of the payment flows (2026-10-05) found no 
 
 ### 7. Stripe settings not recorded in the repository (P3, owner)
 
-- Not recorded: the live webhook endpoint's event list (last recorded in DEBT-406, before the add-card flow, so `checkout.session.expired` may be missing), the live Price IDs, and the live Checkout payment-method settings.
+- Not recorded: the live Price IDs and the live Checkout payment-method settings. The live webhook endpoint's event list, last recorded in DEBT-406 before the add-card flow, was recorded again on 2026-10-11 (below).
 - No live-mode purchase has been recorded working end to end. All hosted E2E tests run in test mode, and a paid monthly Checkout has none.
-- **Decided.** The owner makes one live purchase followed by a refund, under DEBT-465 Part 4's QA procedures, and records the live webhook's events.
+- **Decided.** The owner makes one live purchase followed by a refund, under DEBT-465 Part 4's QA procedures, and records the live webhook's events (done 2026-10-11, below).
 - **Endpoint events recorded 2026-10-11 (GitHub #883).** The live endpoint subscribed to seven events and lacked `checkout.session.expired`, as did the test endpoint, so an abandoned add-card setup operation would have stayed `pending` and never been pruned. The census, the gap and its fix are in [the Stripe vendor doc](../vendor-docs/stripe.md#event-set-gap-handled-but-not-subscribed). The live endpoint was fixed that day. No backfill was needed (checked 2026-10-11). The shared test endpoint gets `checkout.session.expired` back once GitHub #883's skip for setup sessions from another environment reaches the `dev` preview. The live Price IDs, the Checkout payment-method settings and the live purchase are still unrecorded.
 
 ### 8. The checkout guard reads only the customer's first 10 subscriptions (P3)
