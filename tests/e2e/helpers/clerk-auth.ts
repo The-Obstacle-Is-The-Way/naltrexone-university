@@ -15,7 +15,10 @@ import {
   describeFrontendApiAnswer,
   startClerkAuthTrace,
 } from './clerk-auth-trace';
-import { dropDevBrowserEchoes } from './clerk-dev-browser-echo';
+import {
+  dropDevBrowserEchoes,
+  keepDevBrowserCookiesInPlace,
+} from './clerk-dev-browser-echo';
 import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
 import {
   installE2ELogRedaction,
@@ -206,6 +209,7 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
   // BUG-333: Clerk's echo of the dev-browser token makes Clerk JS rewrite its
   // cookies, and a navigation during the rewrite is signed out.
   await dropDevBrowserEchoes(page.context());
+  await keepDevBrowserCookiesInPlace(page.context());
   // BUG-333: kept for the whole test, so a mid-run loss names its cause.
   await startClerkAuthTrace(page);
   const frontendApi = watchFrontendApi(page);
@@ -290,6 +294,7 @@ export async function createClerkE2EAuthState(page: Page): Promise<void> {
   // BUG-330: a new session clears an earlier run's failed restore.
   await rm(E2E_CLERK_RESTORE_FAILURE_PATH, { force: true });
   await dropDevBrowserEchoes(page.context());
+  await keepDevBrowserCookiesInPlace(page.context());
   await createClerkE2ESession({
     clerkDriver: playwrightClerkDriver,
     page,
