@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — in 282 logged tests, no request that carried the dev-browser cookie was read as missing; catch a loss with the logging on; due 2026-10-14
+**Status:** Open — caught on the server: a request lacked the suffixed dev-browser cookie; name the cookie write that removed it; due 2026-10-14
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -39,6 +39,14 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - The handshake URL the server built carried no dev-browser token, although the one it built 1.9 s earlier did. So the server itself had no token; the reason is not mislabelled.
   - The echo filter worked: the page received Clerk's API responses without the echo header.
   - No CI run or other E2E run used the Clerk user then. Another clone's integration tests, which do not call Clerk, were running on the same machine, so it was loaded.
+- **Caught on the server (2026-10-12 11:12:03Z, the fourth of nine logged local runs, with unit tests running alongside for load).**
+  - A server action from "practice page shows continue-session card and resumes session" reached the server with the unsuffixed `__clerk_db_jwt` but without its suffixed copy.
+  - The suffixed session and client cookies were there, so Clerk reads the suffixed dev-browser cookie (`usesSuffixedCookies()` in `@clerk/backend`). It found none and answered `dev-browser-missing`. The raw and parsed headers matched: the server read what arrived.
+  - So the browser did send an incomplete set. The cookie order shows that the unsuffixed dev-browser cookie was created after the session cookies, and that the client cookies were rewritten after it.
+  - Clerk JS 6.39.0, the version the CDN serves (the app loads `@6`, so the version floats), sets the suffixed copy before the unsuffixed one. A request caught inside that setter would carry only the suffixed copy. This one carried only the unsuffixed copy, so another write removed the suffixed copy. That write is not yet named.
+  - The test passed, because the action ran in the background as the test moved on.
+  - Five more runs, with browser traces kept, caught nothing before the lane was needed.
+- **In CI too (2026-10-12, about 09:58Z, #1472's second attempt).** In `review-mode-audit.spec.ts`, "history questions: correct and incorrect open review mode", a `page.goto` to a question page landed on Clerk's sign-in page. CI keeps no trace and no server log, so this one shows only that the loss happens there as well.
 
 ## Impact
 
@@ -63,11 +71,10 @@ Not yet decided. The failing request is identified, so the next step is a fix th
 - wait in the sign-in helper for Clerk JS's first client sync before the test acts;
 - run E2E against a Clerk instance configured like production.
 
-The trace answered the first question (the echo was the same token), and it left a contradiction that only the server can settle. Server-side logging then showed that, in runs without a loss, Clerk read the cookie whenever the header carried it (see Evidence).
+The trace answered the first question (the echo was the same token). Server-side logging then caught a loss: the request arrived without the suffixed dev-browser cookie, so the cause is on the browser side, not in Clerk's middleware.
 
-Next, by 2026-10-14: keep the logging on for extra local E2E runs until one catches a loss. The signed-out request's log line shows whether its `Cookie` header arrived:
-- if it did not, the fix is on the browser side (the candidates above);
-- if it did, Clerk's middleware is the cause, and the case goes to Clerk with that line.
+Next, by 2026-10-14: catch one loss with both the browser trace and the server log, to name the write that removes the suffixed copy. Then choose among the candidates above, adding one:
+- pin the Clerk JS version the app loads, so a CDN release cannot change cookie handling between deploys.
 
 The logging records names and lengths only, never values. It is diagnostic, and it never ships.
 
