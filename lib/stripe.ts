@@ -10,8 +10,10 @@ export function getStripe(): Stripe {
 
   stripeInstance = new Stripe(env.STRIPE_SECRET_KEY, {
     /**
-     * Pinned Stripe API version to keep webhook event shapes stable and prevent
-     * silent behavior changes across environments.
+     * Pinned Stripe API version for outbound requests, to prevent silent
+     * behavior changes across environments. It does not shape webhook
+     * payloads: each Stripe webhook endpoint has its own version
+     * (docs/architecture/integrations/stripe.md, "Webhook Endpoint API Versions").
      *
      * Update only after:
      * - Reviewing Stripe's API version changelog for breaking changes

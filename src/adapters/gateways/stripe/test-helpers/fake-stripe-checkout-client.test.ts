@@ -224,6 +224,65 @@ describe('FakeStripeCheckoutClient', () => {
     ).resolves.toEqual({ data: [] });
   });
 
+  it('retrieves a seeded Customer by id with its metadata and records the call', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const id = stripe.seedCustomer({ e2e_owner: 'owner-a' });
+
+    await expect(stripe.customers.retrieve(id)).resolves.toEqual({
+      id,
+      metadata: { e2e_owner: 'owner-a' },
+    });
+    expect(stripe.customers.retrieveCalls).toEqual([id]);
+  });
+
+  it("refuses a Customer it does not hold with Stripe's 404 resource_missing", async () => {
+    const stripe = new FakeStripeCheckoutClient();
+
+    await expect(
+      stripe.customers.retrieve('cus_missing'),
+    ).rejects.toMatchObject({
+      type: 'StripeInvalidRequestError',
+      rawType: 'invalid_request_error',
+      code: 'resource_missing',
+      statusCode: 404,
+      param: 'id',
+      message: "No such customer: 'cus_missing'",
+    });
+  });
+
+  it('answers a deleted Customer as deleted, without metadata, and Search no longer finds it', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const id = stripe.seedCustomer({ user_id: 'user_one' });
+
+    stripe.deleteCustomer(id);
+
+    await expect(stripe.customers.retrieve(id)).resolves.toEqual({
+      id,
+      deleted: true,
+    });
+    await expect(
+      stripe.customers.search({ query: "metadata['user_id']:'user_one'" }),
+    ).resolves.toEqual({ data: [] });
+  });
+
+  it('refuses to delete a Customer it does not hold', () => {
+    const stripe = new FakeStripeCheckoutClient();
+
+    expect(() => stripe.deleteCustomer('cus_missing')).toThrow(
+      'FakeStripeCheckoutClient holds no Customer cus_missing',
+    );
+  });
+
+  it('throws a caller-supplied fault from a Customer read after recording it', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const id = stripe.seedCustomer({ e2e_owner: 'owner-a' });
+    const fault = new Error('Stripe connection reset');
+    stripe.setCustomerRetrieveFault(fault);
+
+    await expect(stripe.customers.retrieve(id)).rejects.toBe(fault);
+    expect(stripe.customers.retrieveCalls).toEqual([id]);
+  });
+
   it('caps Search results at the limit, defaulting to ten', async () => {
     const stripe = new FakeStripeCheckoutClient();
     for (let index = 0; index < 11; index += 1) {
