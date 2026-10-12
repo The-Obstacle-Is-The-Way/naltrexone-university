@@ -31,6 +31,8 @@ In required E2E on CI, a practice session's page loaded, then its first question
 
 **Tests:** required E2E fails at random, three times in about two and a half hours on 2026-10-11 (twice in CI, once locally), each time in `review-mode-audit.spec.ts` right after sign-in.
 
+**A separate helper weakness, fixed here.** The first failure on 2026-10-11 left a second lead. `submitQuestionForOutcome` (`tests/e2e/helpers/question.ts`) read its outcome with a page-wide `getByText(outcome, { exact: true }).isVisible()` that did not wait, and it treated a throw as "not this outcome". A second exact "Correct" on the page makes Playwright's strict mode throw, so a correct answer was skipped and the helper moved on to the next choice. It now reads the verdict pill it has already waited for (`readVerdict`, with a red test in `question.test.ts`). This does not explain the traced "Failed to fetch", which is the Clerk race below.
+
 ## Options
 
 The first is now shown; the others are ruled out for the traced failure.

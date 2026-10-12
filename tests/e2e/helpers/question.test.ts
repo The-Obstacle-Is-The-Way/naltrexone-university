@@ -16,6 +16,7 @@ vi.mock('@playwright/test', () => ({
 
 import {
   expectVerdictPillVisible,
+  readVerdict,
   rethrowIfQuestionMissingCheckError,
   SeededQuestionMissingError,
 } from './question';
@@ -75,6 +76,32 @@ describe('expectVerdictPillVisible', () => {
         timeout: 10_000,
       },
     );
+    expect(playwrightExpectCalls.toHaveText).toHaveBeenCalledWith(
+      verdictPill,
+      /^(Correct|Incorrect)$/,
+    );
+  });
+});
+
+describe('readVerdict', () => {
+  it('reads the verdict from the pill when the same word also appears elsewhere', async () => {
+    const verdictPill = {
+      first: vi.fn(),
+      textContent: vi.fn(async () => 'Correct'),
+    };
+    verdictPill.first.mockReturnValue(verdictPill);
+    const page = {
+      getByTestId: vi.fn(() => verdictPill),
+      // A second exact "Correct" on the page: Playwright's strict mode makes a
+      // page-wide text check throw, which once read as "not this outcome".
+      getByText: vi.fn(() => ({
+        isVisible: async () => {
+          throw new Error('strict mode violation: resolved to 2 elements');
+        },
+      })),
+    };
+
+    await expect(readVerdict(page as never)).resolves.toBe('Correct');
     expect(playwrightExpectCalls.toHaveText).toHaveBeenCalledWith(
       verdictPill,
       /^(Correct|Incorrect)$/,
