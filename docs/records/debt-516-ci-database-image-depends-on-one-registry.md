@@ -31,7 +31,7 @@ The decided fix, option 3, now starts Postgres in a workflow step that pulls the
 - **The anonymous limit.** Docker's [pull limits](https://docs.docker.com/docker-hub/usage/pulls/) give 100 pulls per 6 hours per IPv4 address or IPv6 /64. On 2026-10-09 the live response headers reported `ratelimit-limit: 100;w=3600`, which is 100 per hour. Hosted runners share addresses.
 - **Retries.** The runner retries a service-image pull three times within seconds, and all three failed while the incident lasted. A re-run reuses the run's merge commit and workflow file. So after #1444 merged, each open pull request needed a `dev` merge and a push to pick it up.
 - **The pin.** The workflows pin `postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5`.
-  - It was introduced on 2026-08-20 in the hosted-checkout smoke workflow and its test ([DEBT-471](../_archive/debt/debt-471-e2e-ci-external-fragility.md)'s review fixes). BUG-327 copied it into `ci.yml` on 2026-10-06.
+  - It was introduced on 2026-08-20 in the hosted-checkout smoke workflow and its test (DEBT-471's review fixes). BUG-327 copied it into `ci.yml` on 2026-10-06.
   - `postgres:16` has been rebuilt since, and now names `sha256:ca0bd484…`, built 2026-10-06. Both images are PostgreSQL 16.15 (`PG_VERSION=16.15-1.pgdg13+2`), so CI has missed no Postgres patch. Only the Debian base layers differ.
   - Dependabot updates neither `services.*.image` nor `docker://` references, so nothing refreshes the pin.
 - **The mirror.** Google's [page on cached Docker Hub images](https://docs.cloud.google.com/artifact-registry/docs/pull-cached-dockerhub-images) says: "Only obtain cached images on mirror.gcr.io by configuring the Docker daemon". It also says "there is no guarantee that a particular image will remain cached for an extended period of time."
@@ -83,6 +83,6 @@ While the image could not be pulled, every pull request's required `test` check 
 
 ## Related
 
-- [DEBT-471](../_archive/debt/debt-471-e2e-ci-external-fragility.md): E2E and CI external fragility, which introduced the digest pin.
+- DEBT-471: E2E and CI external fragility, which introduced the digest pin.
 - BUG-327: pinned every workflow's container images by digest.
 - [Dependency update protocol](../guides/dependencies/updating-dependencies.md): where option 3's pull request adds the digest refresh.

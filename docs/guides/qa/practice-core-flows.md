@@ -1,4 +1,4 @@
-# QA-001: Practice Core Flows (Tutor, Exam, Quick Practice)
+# Practice Core Flows (Tutor, Exam, Quick Practice)
 
 **Status:** Draft
 **Created:** 2026-08-13

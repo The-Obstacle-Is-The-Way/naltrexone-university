@@ -3,9 +3,9 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-10-11.
-- **Verifying, by due date.** BUG-333 10-17; BUG-319 and BUG-323 10-19; BUG-320, BUG-325 and BUG-327 10-20; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; DEBT-517 10-25; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
+- **Verifying, by due date.** BUG-319 and BUG-323 10-19; BUG-320, BUG-325 and BUG-327 10-20; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; DEBT-517 10-25; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
 - **In progress.** DEBT-518, the documentation revamp: the records and the agent instructions are done; the layout and the archive's removal follow.
-- **Next.** BUG-337's investigation, due 2026-10-14. DEBT-503 item 4, due 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
+- **Next.** BUG-337's investigation, with BUG-333's reopened loss, due 2026-10-14. DEBT-503 item 4, due 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22). Then counsel's Q1–Q6 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it.
 - **Held.** DEBT-514 holds lint-staged at 17.5.1.
 - **Owner decisions pending.** Skew Protection (BUG-319); the server's 5% trace sample (BUG-331); a production check for E592 (BUG-334); reporting Clerk JS's cookie race (BUG-333); Clerk's verified-email setting (DEBT-502); DEBT-414's open items; the production content bootstrap (DEBT-483); the learnings backlog (DEBT-515).
@@ -25,10 +25,10 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [BUG-329](./bug-329-local-test-target-changes-in-child-commands.md) | Long clone names change the local test target in child commands | P4 | Open — canonicalize generated instance names before passing them to child commands |
 | [BUG-331](./bug-331-server-breadcrumbs-and-request-spans-carry-credentials.md) | Server breadcrumbs and request spans carry credentials the scrubbers miss | P2 | Verifying — a production server error shows no breadcrumbs, and a sampled request span shows its credential parameters filtered; due 2026-10-22 |
 | [BUG-332](./bug-332-concurrent-first-requests-can-deadlock-provisioning.md) | A new user's concurrent first requests can deadlock provisioning | P2 | Verifying — no "Failed to ensure user row" event in Sentry for two weeks after the deploy; due 2026-10-22 |
-| [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) | A signed-in E2E test loses its Clerk session when it navigates during Clerk JS's cookie rewrite | P3 | Verifying — no mid-run Clerk session loss in CI with the echo dropped; due 2026-10-17 |
+| [BUG-333](./bug-333-signed-in-e2e-test-loses-its-clerk-session-mid-run.md) | A signed-in E2E test loses its Clerk session when it navigates during Clerk JS's cookie rewrite | P3 | Open — a 2026-10-12 loss, with the echo dropped, names another cause; investigated with BUG-337; due 2026-10-14 |
 | [BUG-334](./bug-334-nextjs-logs-e592-when-e2e-opens-a-question.md) | Next.js logs invariant E592 when E2E opens a question | P3 | Open — upstream Next.js bug (vercel/next.js#99500); no failed request found; the owner's production check and the Next.js fix remain |
 | [BUG-336](./bug-336-local-e2e-cleanup-gives-up-on-a-slow-process-listing.md) | Local E2E cleanup gives up on a slow process listing and leaves Playwright's web server running | P3 | Verifying — promotion to `main`, and two weeks of CI after the merge without `spawnSync ps ETIMEDOUT`; due 2026-10-26 |
-| [BUG-337](./bug-337-session-first-question-can-fail-to-fetch.md) | A session's first question can fail to load with "Failed to fetch" | P2 | Open — reproduce under CI load with request traces, and find which request fails; due 2026-10-14 |
+| [BUG-337](./bug-337-session-first-question-can-fail-to-fetch.md) | A session's first question can fail to load with "Failed to fetch" | P3 | Open — a server action carrying the dev-browser cookie was signed out as dev-browser-missing; log the server's view to explain it; due 2026-10-14 |
 | [BUG-338](./bug-338-the-published-security-contact-leads-nowhere.md) | The published security contact leads nowhere | P2 | Verifying — private reporting is on; SECURITY.md must reach `main`, where GitHub reads it; due 2026-10-26 |
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Open — engineering has F21 and F22 left; the rest waits on the owner, counsel and a tax adviser |
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — the grouped Dependabot PR #1451 is the migration vehicle; resolution decided in the record |
@@ -100,7 +100,7 @@ Unscheduled product ideas are in [the ideas list](../product/ideas.md).
 - **Assets.** Records get no asset folders: screenshots and receipts go on the pull request. DEBT-414's folders predate this rule and go when it closes.
 - **The archive.** `docs/_archive/` holds records closed before 2026-10-11 until DEBT-518 deletes it. It is not edited, apart from link maintenance.
 
-**Template.**
+**Template.** A bug record's heading is `# BUG-NNN: Short Title`; a debt record's is `# DEBT-NNN: Short Title`.
 
 ```markdown
 # BUG-NNN: Short Title
