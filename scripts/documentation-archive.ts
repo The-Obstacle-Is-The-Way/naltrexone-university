@@ -60,6 +60,7 @@ export type DocumentationAudit = {
   malformedLedgerLines: string[];
   unnamedVerifying: string[];
   invalidScheduledChecks: string[];
+  invalidQueueReview: string[];
   invalidStatus: string[];
   longStatus: string[];
   scheduledOverdue: { file: string; due: string }[];
@@ -417,10 +418,24 @@ function isCalendarDate(value: string): boolean {
   );
 }
 
-function addDays(day: string, days: number): string {
+export function addDays(day: string, days: number): string {
   const date = new Date(`${day}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+// The index schedules the weekly human review on one line. Every label
+// counts, so a second line with an unreadable date cannot hide.
+export function queueReviewDue(index: string): string | undefined {
+  const text = index.replace(/\r\n/g, '\n');
+  const labels = text.match(/^\*\*Queue review due:\*\*/gm) ?? [];
+  const dates = [
+    ...text.matchAll(/^\*\*Queue review due:\*\* (\d{4}-\d{2}-\d{2})$/gm),
+  ];
+  const due = dates[0]?.[1];
+  return labels.length === 1 && dates.length === 1 && due && isCalendarDate(due)
+    ? due
+    : undefined;
 }
 
 export function auditRecordLifecycle(
@@ -441,6 +456,7 @@ export function auditRecordLifecycle(
     malformedLedgerLines: [],
     unnamedVerifying: [],
     invalidScheduledChecks: [],
+    invalidQueueReview: [],
     invalidStatus: [],
     longStatus: [],
     scheduledOverdue: [],
@@ -456,6 +472,8 @@ export function auditRecordLifecycle(
   };
   const index = files.get(RECORDS.index) ?? '';
   const scan = scanMarkdown(RECORDS.index, index);
+  if (files.has(RECORDS.index) && !queueReviewDue(index))
+    result.invalidQueueReview.push(RECORDS.index);
   for (const [file, contents] of files) {
     const budget = registerFileBudget(file);
     if (budget !== undefined && Buffer.byteLength(contents, 'utf8') > budget)
@@ -485,7 +503,7 @@ export function auditRecordLifecycle(
         pattern.test(path.posix.basename(file)),
     );
   const ledgerIds: string[] = [];
-  (files.get(RECORDS.ledger) ?? '').split('\n').forEach((line, index) => {
+  (files.get(RECORDS.ledger) ?? '').split(/\r?\n/).forEach((line, index) => {
     if (!LIST_ITEM.test(line)) return;
     const id = line.match(LEDGER_ENTRY)?.[1];
     const closed = line.match(LEDGER_DATE)?.[1] ?? '';
@@ -792,6 +810,7 @@ export function runDocumentationCommand(
     result.malformedLedgerLines,
     result.unnamedVerifying,
     result.invalidScheduledChecks,
+    result.invalidQueueReview,
     result.invalidStatus,
     result.longStatus,
     result.missingLiveRows,

@@ -79,7 +79,7 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 4. Use factories: `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
 5. Descriptive names: `it('returns isCorrect=false when incorrect choice selected')`
 6. Prefer semantic assertions over exact utility-class strings
-7. Load heavy or dynamic imports once in `beforeAll`, not inside each `it()`, and add no per-test timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`): the Vitest configs set the timeout policy
+7. In Vitest tests (unit, jsdom and Browser Mode), load heavy or dynamic imports once in `beforeAll`, not inside each `it()`, and add no per-test timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`): the Vitest configs set the timeout policy. Playwright E2E keeps its own policy in `docs/dev/testing-infrastructure.md`: assertion-level waits first, and every non-default timeout explained beside it.
 
 ### Styling Assertions
 

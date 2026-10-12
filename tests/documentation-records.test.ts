@@ -87,6 +87,36 @@ describe('records folder and ledger', () => {
     ).toEqual([`${RECORDS.ledger}:1`, `${RECORDS.ledger}:2`]);
   });
 
+  it('requires one readable queue-review date in the records index', () => {
+    const index = (queue: string) =>
+      `${queue}\n\n**Now** — none\n\n| ID | Title |\n| --- | --- |`;
+    const invalid = (text: string) =>
+      audit({ [RECORDS.index]: text }).invalidQueueReview;
+    expect(invalid(index('**Queue review due:** 2026-10-19'))).toEqual([]);
+    expect(invalid(index('**Queue review due:** 2026-10-19\r'))).toEqual([]);
+    expect(invalid(index('**Queue review due:** 2026-1-5'))).toEqual([
+      RECORDS.index,
+    ]);
+    expect(invalid(index(''))).toEqual([RECORDS.index]);
+    expect(
+      invalid(
+        index(
+          '**Queue review due:** 2026-10-19\n**Queue review due:** 2026-1-5',
+        ),
+      ),
+    ).toEqual([RECORDS.index]);
+  });
+
+  // Git can check Markdown out with CRLF endings (core.autocrlf).
+  it('reads ledger lines with CRLF endings', () => {
+    expect(
+      audit({
+        [RECORDS.ledger]:
+          '- BUG-338 · Example · Resolved · 2026-10-11 · docs/records/bug-338-example.md · #1468 · 0123456789abcdef0123456789abcdef01234567\r\n- BUG-200 · Old · Resolved · 2026-10-01 · docs/_archive/bugs/bug-200-x.md\r\n',
+      }).malformedLedgerLines,
+    ).toEqual([]);
+  });
+
   it('rejects a record recreated under a nested retired register path', () => {
     expect(
       audit({ 'docs/bugs/investigation/bug-338-x.md': '**Status:** Open' })

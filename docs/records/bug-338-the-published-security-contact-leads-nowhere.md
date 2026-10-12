@@ -41,7 +41,7 @@ A good-faith report has nowhere private to go, so it may be dropped or posted pu
 Option 1, with email as a second channel inside the policy:
 - `SECURITY.md` names both the reporting form and the support address, and says what to include and what not to do. `tests/security-txt.test.ts` now fails without it.
 - The owner approved turning on private vulnerability reporting, and it was turned on through the API on 2026-10-12 at 02:00 UTC.
-- After that, the monthly `security-txt-renewal` job should also read the setting and open an issue if it is ever off. That needs a token allowed to read repository security settings; decide when the setting is on.
+- After that, the monthly `security-txt-renewal` job should also read the setting and open an issue if it is ever off. That needs a token allowed to read repository security settings. Decide by 2026-10-26, with this record's Verifying check: add the check if the renewal job's read token can read the setting, or record why not.
 
 ## Verification
 
