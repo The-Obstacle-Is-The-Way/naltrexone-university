@@ -433,7 +433,7 @@ authoring responsibility.
 
 ## 13. Related Documents
 
-- [tag-taxonomy-golden-spec.md](../product/content-taxonomy.md)
+- [content-taxonomy.md](../product/content-taxonomy.md)
 - [tag-taxonomy-pipeline.md](./tag-taxonomy-pipeline.md)
 - [content-pipeline.md](../architecture/content-pipeline.md)
 - `lib/content/draftTaxonomy.ts`

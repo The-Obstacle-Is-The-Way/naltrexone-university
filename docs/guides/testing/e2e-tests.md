@@ -361,7 +361,7 @@ agent-browser close
 
 By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
 
-See [agent-browser.md](./browser-automation.md) for a focused quick reference and multiple auth options.
+See [browser-automation.md](./browser-automation.md) for a focused quick reference and multiple auth options.
 
 1) Create a temporary script that signs in via Clerk and saves `storageState`:
 
@@ -589,11 +589,11 @@ See [DEBT-293](../../_archive/debt/debt-293-e2e-shared-state-structural-flakines
 
 ## Related Documentation
 
-- [react-vitest-testing.md](./react-component-tests.md) — React 19 + Vitest component testing setup
+- [react-component-tests.md](./react-component-tests.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../../CLAUDE.md) — Testing mandate and test locations
 - [SPEC-010](../../_archive/specs/spec-010-server-actions.md) — Controller testing patterns
 - [Stripe vendor docs](../../architecture/integrations/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../../architecture/integrations/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
-- [agent-browser.md](./browser-automation.md) — Agent-browser quick reference, auth patterns, common pitfalls
+- [browser-automation.md](./browser-automation.md) — Agent-browser quick reference, auth patterns, common pitfalls
 - `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI full command reference

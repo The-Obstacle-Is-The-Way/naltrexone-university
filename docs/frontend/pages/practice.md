@@ -276,7 +276,7 @@ type PracticeFilters = {
 | Part | Token | Computed (dark) | Notes |
 |------|-------|----------------|-------|
 | Container bg | `bg-muted` | #1C1C1C | Slightly lighter than card |
-| Container border | `border-border` | #262626 | Decorative — active pill provides identification (see [contrast-policy.md](../../design-system/contrast.md) §2) |
+| Container border | `border-border` | #262626 | Decorative — active pill provides identification (see [contrast.md](../../design-system/contrast.md) §2) |
 | Active pill bg | `bg-primary` | #EDEDED | High contrast |
 | Active pill text | `text-primary-foreground` | #090909 | Dark on light |
 | Inactive text | `text-muted-foreground` | #8C8C8C | 5.07:1 on muted. It was 4.495:1 as rendered (#838383), just below AA, until BUG-309 |

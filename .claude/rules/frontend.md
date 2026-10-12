@@ -92,7 +92,7 @@ theme regression test because a file-level lint exception cannot bound it.
 
 Semantic tokens handle light/dark automatically. Component-specific
 `dark:` overrides are allowed ONLY when they appear in
-`pattern-registry.md` or `contrast-policy.md`. If the same dark
+`pattern-registry.md` or `contrast.md`. If the same dark
 override appears in 2+ components, promote it into a shared primitive
 or a constant in `lib/shared-styles.ts`.
 
