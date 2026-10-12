@@ -328,7 +328,7 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-All layers are implemented. See `docs/specs/index.md` for the full spec register; implemented numbered specs are archived and their unfinished tails remain in its Deferred table.
+All layers are implemented. Implemented numbered specs are closed (see `docs/records/closed.md`), and their unfinished tails are Waiting rows in `docs/records/README.md`.
 
 - **Domain:** entities, value objects, services, errors (`src/domain/**`)
 - **Application:** ports, core use cases, app errors (`src/application/**`)
@@ -356,7 +356,7 @@ Framework code lives in:
 
 4. **Composition root** - Dependencies are wired at entry points via `lib/container.ts`, `lib/container/**`, and `lib/controller-helpers.ts`, not ad hoc imports inside use cases.
 
-See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-022; `docs/adr/index.md` lists each status).
+See `docs/adr/` for all Architecture Decision Records (ADR-001 through ADR-023; `docs/adr/index.md` lists each status).
 
 ## Tech Stack
 
@@ -424,7 +424,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Hosted-provider compatibility tests:** `tests/e2e/stripe-hosted-*.spec.ts` (scheduled/manual only; never required PR CI)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
 - **Shared test support:** in `src/**`, it lives in the layer's `test-helpers/` directory. `app/**` and `components/**` colocate `*-test-helpers.ts(x)`, `*.fixtures.ts` and `*.browser.probes.tsx` files beside their suites, since every folder under `app/` is a route segment. The full table is in `.claude/rules/testing.md` → Test Support Locations, and `tests/test-support-location-policy.test.ts` enforces the `src/` rule.
-- **Test-quality practices (ADR-019; DEBT-465, archived 2026-10-08, its QA runs deferred):** the CRAP report (`pnpm quality:crap` — `docs/dev/code-quality-metrics.md`) and mutation testing (`pnpm test:mutation`, plus the weekly Mutation workflow — `docs/dev/mutation-testing.md`) are in use. Gherkin acceptance tests are not adopted (ADR-019, amended 2026-10-03). The rule-to-test register in `docs/dev/acceptance-testing.md` replaces them: each business rule in plain language, with the tests that prove it. `tests/rule-to-test-register.test.ts` fails when a named test is renamed or deleted, so a new business rule adds its entry, and a renamed proving test updates its line, in the same change. UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`) are planned. All metrics observational — no numeric gates without a new ADR.
+- **Test-quality practices (ADR-019; DEBT-465, archived 2026-10-08, its QA runs deferred):** the CRAP report (`pnpm quality:crap` — `docs/dev/code-quality-metrics.md`) and mutation testing (`pnpm test:mutation`, plus the weekly Mutation workflow — `docs/dev/mutation-testing.md`) are in use. Gherkin acceptance tests are not adopted (ADR-019, amended 2026-10-03). The rule-to-test register in `docs/dev/acceptance-testing.md` replaces them: each business rule in plain language, with the tests that prove it. `tests/rule-to-test-register.test.ts` fails when a named test is renamed or deleted, so a new business rule adds its entry, and a renamed proving test updates its line, in the same change. UI QA procedures are in `docs/guides/qa/` (method in `docs/dev/qa-procedures.md`), as Draft until each has two evidenced runs. All metrics observational — no numeric gates without a new ADR.
 
 ### Playwright E2E Conventions
 
@@ -898,183 +898,33 @@ for configuration, failure handling, and timestamp receipts.
 
 ## Documentation
 
-### Closing and Archiving Documentation Records
+### Records
 
-**Convention adopted 2026-09-21 (DEBT-488).** Applies to numbered records in
-`docs/debt/`, `docs/bugs/`, `docs/specs/`, `docs/brainstorming/`, `docs/audits/`
-and `docs/qa/`. These live folders are the open-record list.
+Open bug and debt records live in `docs/records/`, one file each, with one index (`docs/records/README.md`). A closed record is deleted and leaves one line in the ledger, `docs/records/closed.md`. The index's "How Records Work" section holds the rules: when to file, IDs, statuses, closing, and the template. In short:
 
-1. Close a record only when its scoped work is shipped and promoted to `main`,
-   with verification receipts. Do not infer completion from a status label or
-   a green PR alone. For a documentation-only record, its reviewed publication
-   and the checks it requires are its deliverable.
-2. Before moving it, put every unfinished tail in that register's **Deferred**
-   table, with an explicit revive trigger and a link to the record. Deferred
-   work is not resolved. Preserve existing historical dispositions such as
-   invalidated, superseded or accepted-risk; do not relabel them as shipped fixes.
-3. Set completed work's status to **Resolved**, with the date and receipts.
-   Use `git mv` to move the complete record to `docs/_archive/<register>/`.
-   Leave **no stub, pointer file or copy** in the live folder.
-4. In the same PR, rewrite **every inbound link** to the record and the
-   record's **own outbound links** for its new depth. Include links from other
-   archives. Preserve fragments and historical prose; changing a destination
-   is link maintenance, not rewriting history. Keep assets in place unless
-   moving them is necessary, and prove their links still resolve.
-5. In the bug and debt registers, remove the record's row from the live
-   index, and update its **Now** stanza in place. The archive folder holds
-   closed records, and also records whose remaining tail is deferred; those
-   tails stay listed in the index's Deferred table. The specs, brainstorming,
-   audits and QA registers still move the row to their Archived table.
-6. Run the documentation unit guard and the full pre-push gate. A move is not
-   complete until live links resolve, register rows resolve, and no live/archive
-   duplicate or terminal-status live record remains. Every archived numbered
-   record must carry an explicit disposition. Follow normal exact-head
-   review and promotion rules; record actual post-promotion evidence.
+- Read the index's **Now** stanza at the start of each session, and clear any overdue Verifying check before new work.
+- Take a new ID with `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
+- Write the record first, have a second agent challenge it on the pushed branch, and ship it with its fix.
+- Only the index links records; cite a record elsewhere by its ID.
+- To close a record, move its lasting knowledge home, delete it, and add its ledger line, in the next pull request that touches `docs/records/`.
 
-**Exemptions and scope:** ADRs are **superseded, not archived**. Living guides
-and policy documents (including `master_spec*.md`) stay live. Indexes,
-templates and asset folders are supporting material, not open numbered records.
-The guard checks repository-authored Markdown under `docs/`, root Markdown,
-`.claude/rules/` and `.github/`; vendored skill packages are upstream material.
-It checks relative file destinations, not web URLs, root-relative site routes
-(such as `/privacy`), or heading correctness. Historical missing targets inside
-the archive are reported separately; never invent a replacement for a deleted
-target merely to turn the guard green.
-
-Use Markdown link/image syntax (including reference definitions) for document
-destinations. Raw HTML `href`/`src` attributes are unsupported and fail closed
-with a location diagnostic; do not extend the guard into an HTML resolver.
-Fenced and inline code examples remain examples, not document links.
-
-**2026-09-22 metadata guard clarification:** The first conventional `Status` or
-`Resolution State` field is the current disposition; emoji and bold formatting
-do not change its meaning. Legacy completed labels (including Fixed and Fully
-Addressed) remain readable without rewriting history. Archived records must
-state a recognized completion or historical disposition (accepted-risk,
-invalidated, decomposed, deferred, decided, won't-fix, reclassified, superseded
-or parked); missing or unrecognized values fail closed. This is a metadata
-check, not proof that the work shipped or that its dates are true. Review the
-actual receipts before closing a record.
-
-If the first status-shaped field is inside a code block, the guard reports an
-ambiguous-metadata configuration error rather than searching for a later value.
-Put the actual record disposition before status examples. Unrelated earlier
-code blocks in historical records remain valid.
-
-### Register Indexes and Records (2026-10-05)
-
-**Why.** By 2026-10-05 the bug and debt indexes had grown to about 215 KB each,
-while their open-work tables were under 10 KB. Every change was written three
-times: in the record, in a prose register row, and in a Latest stanza that then
-moved to a monthly history file. Git and pull requests already held all of it.
-The indexes' earlier content is frozen, unchanged, in
-`docs/_archive/{bugs,debt}/register-frozen-2026-10-05.md`, beside the old
-`register-history-*.md` files.
-
-- **An index lists open work.** It holds:
-  - one `**Now**` stanza, rewritten in place, naming the Verifying records and
-    their due dates, what is next, and the owner's pending decisions;
-  - an **Active** table with one line per record: ID, title, priority and
-    status;
-  - the **Parked** and, for debt, **Deferred** tables.
-
-  It never holds closed records, prose history or a `**Latest**` changelog.
-  Each index stays within 32 KiB.
-- **A record states the current truth.** Its `**Status:**` is one line of at
-  most 200 characters; detail goes in the body. When understanding changes,
-  edit the text in place and add a one-line `Corrected YYYY-MM-DD: what
-  changed` note, instead of appending dated sections. A record's receipts are
-  short: the pull requests, the promotion, and the outcome of each
-  verification item (rules 3 and 6). Lane counts, CI run IDs and SHAs belong in
-  the pull-request descriptions, which the record links.
-- **Frozen history is not edited,** apart from link-destination maintenance and
-  a one-line `*Corrected YYYY-MM-DD: …*` note beside a statement later proved
-  wrong.
-- **Lifecycle.** A record moves from `Open` (or `Active`, `In Progress`) to
-  `Verifying — <the remaining check>; due YYYY-MM-DD` when its fix merges but
-  a check remains that only promotion or production can satisfy. The fixing
-  PR sets that status itself, effective when it merges, and ticks the
-  pre-merge checks it has passed. It stays
-  live, so the queue stays complete. Once the check is recorded, it is
-  archived in the next pull request that touches the register; closing needs
-  no pull request of its own. A documentation-only record closes on its
-  reviewed publication (rule 1).
-- **Nothing overdue goes unseen.** Pull-request CI never fails because a date
-  passed. Instead, `.github/workflows/documentation-due-checks.yml` runs
-  weekly and opens one GitHub issue listing every Verifying record past its
-  due date. Start each working session by reading both indexes' Now stanzas,
-  and clear any overdue check before new work.
-- **Audits.** A sweep files each confirmed finding as its own record. Its
-  method, coverage and dispositions go in an audit record (`audit-NNN-*.md`),
-  which closes on publication like any documentation-only record. Because
-  this repository is public, a security finding that an outsider could use is
-  filed with its fix, not before it ships.
-- **Tracking.** A bug found in shipped code stays open until its fix is
-  promoted and any production proof is recorded. A branch-local defect still
-  needs red-first proof, review, CI and promotion receipts, and its record
-  says it was branch-local, so readers infer no production incident. An
-  invalidated candidate may be archived when its record gives the
-  source-level reason it cannot happen.
-- **Evidence.** A resolution that deletes a pattern lands with the executable
-  guard that keeps it deleted. A guard lands with a red test for the exact
-  state it rejects. A scheduled-only proof is not claimed until a hosted run
-  has executed it.
-- **Priorities.** P0: the system is broken, data is lost, or a security hole is
-  open. P1: major functionality is broken. P2: degraded, with a workaround. P3:
-  minor. P4: trivial.
-- **Statuses.** Open, In Progress, Blocked (needs a manual action outside the
-  repository), Verifying, then a closed disposition: Resolved, Won't Fix,
-  Reclassified, Accepted, Deferred or Superseded.
-- **Template.** File `docs/{bugs,debt}/{bug,debt}-NNN-short-title.md` with the
-  register's Next ID, add its Active row, and bump the Next ID:
-
-  ```markdown
-  # BUG-NNN: Short Title
-
-  > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
-
-  **Status:** Open
-  **Priority:** P2
-  **Date:** YYYY-MM-DD
-  **Resolved:** —
-  **Verification receipts:** —
-
-  ---
-
-  ## Summary
-  ## Evidence
-  ## Impact
-  ## Options
-  ## Resolution (decided)
-  ## Verification
-  - [ ] …
-  ## Related
-  ```
-- **Files.** No file under `docs/` may exceed 300 KiB. Attach screenshots to
-  the pull request, or compress them. The files already over the budget are
-  listed in `scripts/documentation-asset-budget.ts`, and the list only shrinks.
-- **Headings.** Leave a blank line before and after every heading in live
-  Markdown, as CodeRabbit's markdownlint check (MD022) expects;
-  `tests/documentation-markdown-headings.test.ts` enforces it. Archived
-  records stay as written.
-
-The guard (`scripts/documentation-archive.ts`) enforces each of these:
-- one Now stanza, at most 2 KiB, and no Latest, Earlier or update-history label;
-- only open records beside the bug and debt indexes;
-- index (32 KiB) and frozen-history (256 KiB) budgets;
+The guard, `scripts/documentation-archive.ts`, enforces it with `tests/documentation-*.test.ts`:
+- every relative link in live Markdown resolves;
+- one Now stanza, at most 2 KiB, naming each Verifying record and its single valid due date;
 - one-line statuses;
-- a single valid due date on every Verifying record, which the Now stanza names;
-- the file budget (`tests/documentation-asset-budget.test.ts`).
+- unique IDs across the records, the ledger and the archive;
+- no record links outside the index;
+- no file over 300 KiB.
+
+Leave a blank line before and after every heading in live Markdown (MD022). ADRs are superseded, never archived; living guides and policies stay live. `docs/_archive/` holds records closed before 2026-10-11, until DEBT-518 deletes it.
 
 **Key documents:**
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
-- `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-022 accepted; ADR-019 and ADR-022 as amended 2026-10-03)
-- `docs/debt/index.md` — Technical debt register (open work)
-- `docs/bugs/index.md` — Bug register (open work)
-- `docs/qa/index.md` — UI QA procedure register (QA-NNN scripted UI verification; method in `docs/dev/qa-procedures.md`)
-- `docs/brainstorming/index.md` — UX audits and design explorations
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-023 accepted; ADR-019 and ADR-022 as amended 2026-10-03)
+- `docs/records/README.md` — Open bug and debt records, and how records work; `docs/records/closed.md` is the ledger of closed ones
+- `docs/guides/qa/README.md` — UI QA procedures (method in `docs/dev/qa-procedures.md`)
+- `docs/product/ideas.md` — Unscheduled product ideas
 - `docs/frontend/standards.md` — Canonical frontend standards (components, tokens, accessibility, dark mode)
 - `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and rules
 - `docs/frontend/pattern-registry.md` — Every visual pattern: hover, border, surface, token scales

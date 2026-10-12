@@ -34,7 +34,7 @@ afterEach(() => {
 const overdue: DueChecksReport = {
   overdue: [
     {
-      file: 'docs/bugs/bug-319-subscribe-actions-break-after-a-deploy.md',
+      file: 'docs/records/bug-319-subscribe-actions-break-after-a-deploy.md',
       due: '2026-10-19',
     },
   ],
@@ -57,7 +57,7 @@ describe('overdue production checks alert', () => {
     expect(issues.issues).toHaveLength(1);
     expect(issues.issues[0]?.title).toBe(DUE_CHECKS_ISSUE_TITLE);
     expect(issues.issues[0]?.body).toContain(
-      '`docs/bugs/bug-319-subscribe-actions-break-after-a-deploy.md` (due 2026-10-19)',
+      '`docs/records/bug-319-subscribe-actions-break-after-a-deploy.md` (due 2026-10-19)',
     );
   });
 
@@ -66,13 +66,13 @@ describe('overdue production checks alert', () => {
     await reportDueChecks(
       {
         overdue: [],
-        farFuture: [{ file: 'docs/debt/debt-001-x.md', due: '2027-06-01' }],
+        farFuture: [{ file: 'docs/records/debt-001-x.md', due: '2027-06-01' }],
       },
       issues,
     );
 
     expect(issues.issues[0]?.body).toContain(
-      '`docs/debt/debt-001-x.md` (due 2027-06-01)',
+      '`docs/records/debt-001-x.md` (due 2027-06-01)',
     );
   });
 
@@ -91,13 +91,13 @@ describe('overdue production checks alert', () => {
     const longer: DueChecksReport = {
       overdue: [
         ...overdue.overdue,
-        { file: 'docs/debt/debt-001-x.md', due: '2026-10-20' },
+        { file: 'docs/records/debt-001-x.md', due: '2026-10-20' },
       ],
       farFuture: [],
     };
 
     expect(await reportDueChecks(longer, issues)).toBe('updated');
-    expect(issues.issues[0]?.body).toContain('docs/debt/debt-001-x.md');
+    expect(issues.issues[0]?.body).toContain('docs/records/debt-001-x.md');
     expect(issues.comments).toHaveLength(1);
   });
 
@@ -158,14 +158,12 @@ describe('due checks in a repository', () => {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
       writeFileSync(path.join(root, file), contents);
     };
-    for (const register of ['specs', 'brainstorming', 'audits', 'qa'])
-      write(`docs/${register}/index.md`, '# Register');
-    write('docs/debt/index.md', '**Now** — current');
     write(
-      'docs/bugs/index.md',
+      'docs/records/README.md',
       '**Now** — BUG-001\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
     );
-    write('docs/bugs/bug-001-x.md', `**Status:** ${status}`);
+    write('docs/records/closed.md', '# Closed Records');
+    write('docs/records/bug-001-x.md', `**Status:** ${status}`);
     return root;
   }
 
@@ -173,12 +171,12 @@ describe('due checks in a repository', () => {
     const root = repository('Verifying — check; due 2026-10-19');
 
     expect(repositoryDueChecks(root, '2026-10-20')).toEqual({
-      overdue: [{ file: 'docs/bugs/bug-001-x.md', due: '2026-10-19' }],
+      overdue: [{ file: 'docs/records/bug-001-x.md', due: '2026-10-19' }],
       farFuture: [],
     });
     expect(repositoryDueChecks(root, '2026-07-01')).toEqual({
       overdue: [],
-      farFuture: [{ file: 'docs/bugs/bug-001-x.md', due: '2026-10-19' }],
+      farFuture: [{ file: 'docs/records/bug-001-x.md', due: '2026-10-19' }],
     });
   });
 

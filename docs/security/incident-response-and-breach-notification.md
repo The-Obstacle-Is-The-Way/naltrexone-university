@@ -111,7 +111,7 @@ Before adoption, run a tabletop using an exposed Clerk or operator credential an
 
 ## 2026-09-16 delivery-channel supplement
 
-**Non-lawyer correction, F09/F12 in the [DEBT-414 review](../debt/debt-414-public-legal-pages-privacy-terms.md#2026-09-16-non-lawyer-adversarial-pre-counsel-review).** The August 27 adoption and exercise are historical evidence; they do not establish that the following channel decision has been exercised. Repeat this part of the tabletop before relying on it.
+**Non-lawyer correction, F09/F12 in the [DEBT-414 review](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/63a8f220324b1b6b363913a4cf0865663c8dacc1/docs/debt/debt-414-public-legal-pages-privacy-terms.md#2026-09-16-non-lawyer-adversarial-pre-counsel-review).** The August 27 adoption and exercise are historical evidence; they do not establish that the following channel decision has been exercised. Repeat this part of the tabletop before relying on it.
 
 Under [N.Y. GBL § 899-aa(5)](https://www.nysenate.gov/legislation/laws/GBS/899-AA), select and document the legally permitted method before sending:
 

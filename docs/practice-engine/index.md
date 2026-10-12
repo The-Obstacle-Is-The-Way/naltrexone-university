@@ -138,7 +138,7 @@ These documents define cross-layer invariants and current shipped contracts. If 
 | [Frontend Standards](../frontend/standards.md) | UI/UX standards and known violations |
 | [Frontend Design Principles](../frontend/design-principles.md) | Navigation zones, action bar composition, state persistence expectations |
 | [BS-011](../_archive/brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md) | History review wiring + choice label desync (resolved; see SPEC-025, SPEC-026) |
-| [Debt Register](../debt/index.md) | All open technical debt |
+| [Debt Register](../records/README.md) | All open technical debt |
 
 ---
 

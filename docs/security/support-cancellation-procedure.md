@@ -51,5 +51,5 @@ Keep these notes for as long as renewal-consent evidence is kept (at least three
 
 ## Related
 
-- [DEBT-414 F04](../debt/debt-414-public-legal-pages-privacy-terms.md): completed-cancellation evidence for the Billing portal and this email path.
+- [DEBT-414 F04](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/63a8f220324b1b6b363913a4cf0865663c8dacc1/docs/debt/debt-414-public-legal-pages-privacy-terms.md): completed-cancellation evidence for the Billing portal and this email path.
 - [Terms of Service](../legal/terms-of-service.md) § 4.

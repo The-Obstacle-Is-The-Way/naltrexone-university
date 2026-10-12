@@ -33,8 +33,8 @@ function describeReport({ overdue, farFuture }: DueChecksReport): string {
     (farFuture.length > 0
       ? `**Due more than 90 days out**, so the check may never happen:\n\n${list(farFuture)}\n`
       : '') +
-    'For each one, do the check and record the result in the record, then archive it; or set a nearer due date with the reason. ' +
-    'This issue closes itself once none remain. Procedure: AGENTS.md, "Register Indexes and Records".\n'
+    'For each one, do the check and record the result in the record, then close it; or set a nearer due date with the reason. ' +
+    'This issue closes itself once none remain. Procedure: docs/records/README.md, "How Records Work".\n'
   );
 }
 

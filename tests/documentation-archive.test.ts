@@ -16,8 +16,8 @@ import {
   auditRecordLifecycle,
   brokenDocumentationLinks,
   type DocumentationAudit,
+  RECORDS,
   REGISTER_ARCHIVE_BUDGET_BYTES,
-  REGISTERS,
   readDocumentation,
   readDocumentationFiles,
   repairArchiveLinks,
@@ -47,20 +47,20 @@ describe('documentation archive convention', () => {
   it('reports a live/archive duplicate even when the live file is a pointer', () => {
     expect(
       audit({
-        'docs/debt/debt-001-example.md': '# Archived pointer',
+        'docs/records/debt-001-example.md': '# Archived pointer',
         'docs/_archive/debt/debt-001-example.md': '# Canonical record',
       }).duplicates,
-    ).toEqual(['docs/debt/debt-001-example.md']);
+    ).toEqual(['docs/records/debt-001-example.md']);
   });
 
   it('detects the same numbered record after its title changes', () => {
     expect(
       audit({
-        'docs/debt/debt-001-old-title.md': '# Active copy',
+        'docs/records/debt-001-old-title.md': '# Active copy',
         'docs/_archive/debt/debt-001-new-title.md': '# Archived copy',
-        'docs/debt/fe-001-unrelated.md': '# Different record',
+        'docs/records/bug-001-unrelated.md': '# Different record',
       }).duplicates,
-    ).toEqual(['docs/debt/debt-001-old-title.md']);
+    ).toEqual(['docs/records/debt-001-old-title.md']);
   });
 
   it('does not accept an extra parent segment just because a file exists outside the repository', () => {
@@ -77,16 +77,16 @@ describe('documentation archive convention', () => {
     (status) => {
       expect(
         audit({
-          'docs/specs/spec-001-example.md': `# Example\n\n> **Status:** ${status}`,
+          'docs/records/bug-001-example.md': `# Example\n\n> **Status:** ${status}`,
         }).closedLive,
-      ).toEqual(['docs/specs/spec-001-example.md']);
+      ).toEqual(['docs/records/bug-001-example.md']);
     },
   );
 
   it('does not confuse active status with a historical resolution in its explanation', () => {
     expect(
       audit({
-        'docs/debt/debt-001-example.md':
+        'docs/records/debt-001-example.md':
           '# Example\n\n**Status:** Active — earlier work resolved; tail open.',
       }).closedLive,
     ).toEqual([]);
@@ -95,7 +95,7 @@ describe('documentation archive convention', () => {
   it('keeps a proposed record open when its explanation says it is not implemented', () => {
     expect(
       audit({
-        'docs/specs/spec-001-example.md':
+        'docs/records/debt-001-example.md':
           '# Example\n\n**Status:** Proposed — not implemented',
       }).closedLive,
     ).toEqual([]);
@@ -109,8 +109,8 @@ describe('documentation archive convention', () => {
     '**Status:** Fully Addressed',
   ])('rejects a live record with the existing metadata form %s', (metadata) => {
     expect(
-      audit({ 'docs/debt/debt-001-example.md': metadata }).closedLive,
-    ).toEqual(['docs/debt/debt-001-example.md']);
+      audit({ 'docs/records/debt-001-example.md': metadata }).closedLive,
+    ).toEqual(['docs/records/debt-001-example.md']);
   });
 
   it.each(['Active', 'Open', 'Ready', 'In Progress', 'Unclassified', ''])(
@@ -183,14 +183,14 @@ describe('documentation archive convention', () => {
     ['a tab-indented block', 'Intro.\n\n\t**Status:** Resolved'],
     ['an indented block inside a block quote', '>     **Status:** Resolved'],
   ])('fails closed when the first status field is %s', (_form, example) => {
-    const file = 'docs/debt/debt-001-example.md';
+    const file = 'docs/records/debt-001-example.md';
     expect(() => audit({ [file]: `${example}\n\n**Status:** Open` })).toThrow(
       `Status metadata inside a code example: ${file}`,
     );
   });
 
   it.each([
-    'docs/debt/debt-001-example.md',
+    'docs/records/debt-001-example.md',
     'docs/_archive/debt/debt-001-example.md',
   ])(
     'fails closed when the first status field in %s is a fenced example',
@@ -217,38 +217,39 @@ describe('documentation archive convention', () => {
   it('reports a missing register-row destination', () => {
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-missing.md) | Missing |',
       }).missingRowTargets,
-    ).toEqual(['docs/bugs/index.md:3 -> docs/bugs/bug-001-missing.md']);
+    ).toEqual(['docs/records/README.md:3 -> docs/records/bug-001-missing.md']);
   });
 
   it('requires a live record to have a table row, not just a narrative mention', () => {
     expect(
       audit({
-        'docs/qa/qa-001-example.md': '# Example\n\n**Status:** Draft',
-        'docs/qa/index.md': '[QA-001](./qa-001-example.md) was filed.',
+        'docs/records/debt-001-example.md': '# Example\n\n**Status:** Open',
+        'docs/records/README.md':
+          '[DEBT-001](./debt-001-example.md) was filed.',
       }).missingLiveRows,
-    ).toEqual(['docs/qa/qa-001-example.md']);
+    ).toEqual(['docs/records/debt-001-example.md']);
   });
 
   it("does not count another record's related-link cell as the live record's own row", () => {
     expect(
       audit({
-        'docs/brainstorming/bs-044-open.md': '# Open\n\n**Status:** Active',
-        'docs/_archive/brainstorming/bs-042-closed.md': '# Closed',
-        'docs/brainstorming/index.md':
-          '## Archived\n\n| ID | Notes |\n| --- | --- |\n| [BS-042](../_archive/brainstorming/bs-042-closed.md) | Residual [BS-044](./bs-044-open.md) |',
+        'docs/records/debt-044-open.md': '# Open\n\n**Status:** Open',
+        'docs/_archive/debt/debt-042-closed.md': '# Closed',
+        'docs/records/README.md':
+          '## Waiting\n\n| ID | Notes |\n| --- | --- |\n| [DEBT-042](../_archive/debt/debt-042-closed.md) | Residual [DEBT-044](./debt-044-open.md) |',
       }).missingLiveRows,
-    ).toEqual(['docs/brainstorming/bs-044-open.md']);
+    ).toEqual(['docs/records/debt-044-open.md']);
   });
 
   it('accepts a record row with a plain ID and its file linked in the title column', () => {
     expect(
       audit({
-        'docs/audits/audit-001-open.md': '# Open\n\n**Status:** Active',
-        'docs/audits/index.md':
-          '| ID | Title |\n| --- | --- |\n| AUDIT-001 | [Audit](./audit-001-open.md) |',
+        'docs/records/debt-001-open.md': '# Open\n\n**Status:** Open',
+        'docs/records/README.md':
+          '| ID | Title |\n| --- | --- |\n| DEBT-001 | [Debt](./debt-001-open.md) |',
       }).missingLiveRows,
     ).toEqual([]);
   });
@@ -256,7 +257,7 @@ describe('documentation archive convention', () => {
   it('accepts a real row with a working archived destination', () => {
     expect(
       audit({
-        'docs/debt/index.md':
+        'docs/records/README.md':
           '| ID | Title |\n| --- | --- |\n| [DEBT-001](../_archive/debt/debt-001-example.md) | Done |',
         'docs/_archive/debt/debt-001-example.md': '# Example',
       }).missingRowTargets,
@@ -326,16 +327,17 @@ describe('documentation archive convention', () => {
   it('reports malformed encoding in a register row instead of crashing', () => {
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-100%.md) | Malformed |',
-        'docs/bugs/bug-001-100%.md': '# Open record',
+        'docs/records/bug-001-100%.md': '# Open record',
       }).missingRowTargets,
-    ).toEqual(['docs/bugs/index.md:3 -> docs/bugs/bug-001-100%.md']);
+    ).toEqual(['docs/records/README.md:3 -> docs/records/bug-001-100%.md']);
   });
 
   it('does not offer archive repair for a broken link in a live record', () => {
     const files = {
-      'docs/bugs/bug-001-example.md': '[Moved](../specs/spec-001-example.md)',
+      'docs/records/bug-001-example.md':
+        '[Moved](../specs/spec-001-example.md)',
       'docs/_archive/specs/spec-001-example.md': '# Archived target',
     };
     const result = audit(files);
@@ -361,11 +363,8 @@ describe('documentation archive command', () => {
   }
 
   function populate(root: string, files: Record<string, string>): void {
-    for (const register of Object.keys(REGISTERS)) {
-      files[`docs/${register}/index.md`] ??= ['debt', 'bugs'].includes(register)
-        ? '# Register\n\n**Now** — fixture'
-        : '# Register';
-    }
+    files[RECORDS.index] ??= '# Records\n\n**Now** — fixture';
+    files[RECORDS.ledger] ??= '# Closed records';
     for (const [file, contents] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
       writeFileSync(path.join(root, file), contents);
@@ -375,7 +374,7 @@ describe('documentation archive command', () => {
   it.each([
     [
       'closed live',
-      'docs/debt/debt-001-example.md',
+      'docs/records/debt-001-example.md',
       '**Status:** ✅ RESOLVED',
       '**Status:** Open',
     ],
@@ -393,26 +392,26 @@ describe('documentation archive command', () => {
     ],
     [
       'duplicate Now',
-      'docs/debt/index.md',
+      'docs/records/README.md',
       '**Now** — A\n\n**Now** — B',
       '**Now** — A',
     ],
-    ['missing Now', 'docs/debt/index.md', '# Register', '**Now** — current'],
+    ['missing Now', 'docs/records/README.md', '# Records', '**Now** — current'],
     [
       'a Latest changelog',
-      'docs/debt/index.md',
+      'docs/records/README.md',
       '**Now** — A\n\n**Latest** — B',
       '**Now** — A',
     ],
     [
       'a Verifying record without a due date',
-      'docs/debt/debt-001-example.md',
+      'docs/records/debt-001-example.md',
       '**Status:** Verifying — production check',
       '**Status:** Verifying — production check; due 2026-10-19',
     ],
     [
       'a long status',
-      'docs/debt/debt-001-example.md',
+      'docs/records/debt-001-example.md',
       `**Status:** Open — ${'x'.repeat(200)}`,
       '**Status:** Open — short',
     ],
@@ -421,9 +420,9 @@ describe('documentation archive command', () => {
     (_kind, file, before, after) => {
       const root = fixture();
       const files: Record<string, string> = { [file]: before };
-      if (!file.endsWith('/index.md')) {
-        files['docs/debt/index.md'] =
-          `**Now** — fixture, naming DEBT-001\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/debt', file)}) | Example |`;
+      if (file !== RECORDS.index) {
+        files[RECORDS.index] =
+          `**Now** — fixture, naming DEBT-001\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/records', file)}) | Example |`;
       }
       populate(root, files);
       const reports: DocumentationAudit[] = [];
@@ -650,9 +649,9 @@ describe('documentation archive command', () => {
     expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
   });
 
-  it('fails closed if the documentation walk has no registers', () => {
+  it('fails closed if the documentation walk has no records index or ledger', () => {
     expect(() => readDocumentation(fixture())).toThrow(
-      'Missing documentation register',
+      'Missing documentation records',
     );
   });
 
@@ -736,7 +735,7 @@ describe('repository documentation', () => {
     expect(result).toMatchObject({ invalidNow: [] });
   });
 
-  it('keeps only open records beside the bug and debt indexes', () => {
+  it('keeps only open records, the index and the ledger in docs/records', () => {
     expect(result.strayRegisterFiles).toEqual([]);
   });
 

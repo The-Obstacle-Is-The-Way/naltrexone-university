@@ -1,6 +1,6 @@
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -104,6 +104,42 @@ describe('local E2E command failures', () => {
       signals.emit('SIGTERM');
       expect(await result).toMatchObject({ code: 'ENOENT', path: 'ps' });
     });
+  });
+
+  // Process discovery's time limit only guards against a hang. On a loaded CI
+  // runner `ps` took over a second (BUG-336), and the old one-second limit fell
+  // back to the root group alone, leaving a detached descendant's group, such
+  // as Playwright's web server, running.
+  it('still signals a detached descendant when process discovery is slow', async () => {
+    const realPs = execFileSync('sh', ['-c', 'command -v ps'], {
+      encoding: 'utf8',
+    }).trim();
+    const slow = await mkdtemp(path.join(tmpdir(), 'e2e-slow-ps-'));
+    try {
+      await writeFile(
+        path.join(slow, 'ps'),
+        `#!/bin/sh\nsleep 1.5\nexec "${realPs}" "$@"\n`,
+        { mode: 0o755 },
+      );
+      await withRunningCommand(
+        async ({ signals, result, pids }) => {
+          const [, detachedPid] = pids;
+          if (detachedPid === undefined)
+            throw new Error('Expected the detached fixture PID.');
+          vi.stubEnv('PATH', `${slow}${path.delimiter}${process.env.PATH}`);
+          signals.emit('SIGTERM');
+          expect(await result).toMatchObject({
+            message: 'Local E2E interrupted by SIGTERM.',
+          });
+          await vi.waitFor(() => {
+            expect(() => process.kill(detachedPid, 0)).toThrow();
+          });
+        },
+        { detachedDescendant: true },
+      );
+    } finally {
+      await rm(slow, { recursive: true, force: true });
+    }
   });
 
   it('kills the known root group when process discovery fails', async () => {

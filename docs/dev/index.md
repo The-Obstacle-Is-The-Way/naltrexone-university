@@ -12,7 +12,7 @@ Use this index to route to the right developer runbook. Universal agent rules an
 - [Business Rules and Their Tests](./acceptance-testing.md): the rule-to-test register. Each business rule is stated in plain language with the tests that prove it, and `tests/rule-to-test-register.test.ts` checks every link on each test run. It replaces the Gherkin harness, which was not adopted on 2026-10-03 (ADR-019 / DEBT-465 Part 3).
 - [Mutation Testing (StrykerJS)](./mutation-testing.md) — Stryker vitest-runner setup, unit-lane scope policy, pilot targets, survivor triage, weekly CI cadence. (ADR-019 / DEBT-465 Part 2)
 - [Code Quality Metrics (CRAP)](./code-quality-metrics.md) — the `crap-report` script over merged coverage, observational interpretation policy, a-priori hotspots. (ADR-019 / DEBT-465 Part 1)
-- [UI QA Procedures](./qa-procedures.md) — method for the [`docs/qa/`](../qa/index.md) register: execution modes and agent constraints, environments, evidence, promotion to Playwright. (ADR-019 / DEBT-465 Part 4)
+- [UI QA Procedures](./qa-procedures.md) — method for [the QA procedures](../guides/qa/README.md): execution modes and agent constraints, environments, evidence, promotion to Playwright. (ADR-019 / DEBT-465 Part 4)
 
 ## Deployment And Operations
 
