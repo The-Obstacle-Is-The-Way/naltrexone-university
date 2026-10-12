@@ -81,7 +81,7 @@ To avoid drift, the canonical interfaces and implementation guidance live in:
 
 - `docs/_archive/specs/spec-004-application-ports.md` (`PaymentGateway`, repositories)
 - `docs/_archive/specs/spec-009-payment-gateway.md` (Stripe adapter rules)
-- `docs/specs/master_spec.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
+- `docs/product/specification.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
 
 This ADR records the boundary decision; specs above define the exact contracts and behaviors.
 

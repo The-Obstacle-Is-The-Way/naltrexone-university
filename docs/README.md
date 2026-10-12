@@ -6,7 +6,7 @@ Each folder holds one kind of document; [ADR-023](./adr/adr-023-documentation-or
 |---|---|---|
 | [`product/`](./product/business-rules.md) | What the product must do | Business rules and their tests, practice behaviour, the content taxonomy, [ideas](./product/ideas.md) |
 | [`architecture/`](./architecture/practice-engine.md) | How it is built, and why | The practice engine, question rendering, the content pipeline, environments, observability, [integrations](./architecture/integrations/README.md) |
-| [`adr/`](./adr/index.md) | Decisions | Numbered, accepted decisions. They are frozen once accepted, amended only by appended sections, or superseded |
+| [`adr/`](./adr/README.md) | Decisions | Numbered, accepted decisions. They are frozen once accepted, amended only by appended sections, or superseded |
 | [`guides/`](./guides/release/review-and-merge.md) | How to do a task | `testing/`, `release/`, `database/`, `operations/`, `dependencies/`, `content/`, `qa/` |
 | [`design-system/`](./design-system/README.md) | The UI standard | Standards, the pattern registry, typography, contrast, layout, bookmark surfaces |
 | [`policies/`](./policies/supply-chain.md) | Commitments the owner adopted | Supply chain, and in time legal and security |
@@ -31,7 +31,5 @@ Take the first match:
 ## Still Moving
 
 DEBT-518 is moving the rest:
-- `specs/` (the master spec, to split into `product/` and `architecture/`);
 - `legal/` and `security/` (to `policies/`, with the owner's consent);
-- the remnants of `dev/`, `frontend/pages/`, `practice-engine/` and `content/` (to merge, split or delete);
-- `_archive/` (to delete once the ledger covers it).
+- `_archive/` (to delete once the ledger covers it), and the asset folders under `audits/`, `bugs/` and `debt/` that only archived records link.

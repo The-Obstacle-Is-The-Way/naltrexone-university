@@ -50,7 +50,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Domain entities hold no vendor IDs.** Clerk and Stripe identifiers live in persistence and adapters, and plans are `SubscriptionPlan`, not price IDs.
 - **No magic numbers;** use named constants.
 - **A bare `catch {}`** is allowed only for a suppressed secondary failure (telemetry, best-effort cleanup that keeps the original error, a parse fallback), with a comment.
-- **Decisions** are in [`docs/adr/`](docs/adr/index.md); read the relevant ADR before changing what it decided.
+- **Decisions** are in [`docs/adr/`](docs/adr/README.md); read the relevant ADR before changing what it decided.
 
 ## Testing
 
@@ -123,8 +123,8 @@ pnpm quality:crap | test:mutation                      # observational quality r
 ## Where Things Live
 
 - [`docs/records/README.md`](docs/records/README.md): open records, and how records work.
-- [`docs/adr/`](docs/adr/index.md): decisions.
-- [`docs/specs/master_spec.md`](docs/specs/master_spec.md): product behaviour; the code owns schemas and types.
+- [`docs/adr/`](docs/adr/README.md): decisions.
+- [`docs/product/specification.md`](docs/product/specification.md): the product specification. Where it disagrees with the code on a schema or type, the code is right; correct the spec.
 - [`docs/design-system/`](docs/design-system/README.md): the design system. [`docs/guides/`](docs/guides/release/review-and-merge.md): how to test, release, review and merge, and run UI QA. [`docs/architecture/`](docs/architecture/practice-engine.md): how the system is built. The map: [`docs/README.md`](docs/README.md).
 - [`docs/guides/testing/browser-automation.md`](./docs/guides/testing/browser-automation.md): browser checks behind Clerk sign-in. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
 - [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.

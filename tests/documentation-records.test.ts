@@ -68,6 +68,7 @@ describe('records folder and ledger', () => {
     'docs/debt/index.md',
     'docs/bugs/bug-003-example.md',
     'docs/specs/index.md',
+    'docs/specs/master_spec.md',
     'docs/brainstorming/bs-001-example.md',
     'docs/audits/audit-001-example.md',
     'docs/qa/qa-001-example.md',
@@ -79,13 +80,6 @@ describe('records folder and ledger', () => {
       ]);
     },
   );
-
-  it('allows living documents in an old register folder', () => {
-    expect(
-      audit({ 'docs/specs/master_spec.md': '# Living spec' })
-        .retiredRegisterFiles,
-    ).toEqual([]);
-  });
 
   it('reports a link into a record from anywhere but the index', () => {
     const files = {

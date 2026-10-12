@@ -81,7 +81,7 @@ These are **intentionally separate concepts** and must never share the same visu
 | Aspect | Bookmark | Mark for Review |
 |--------|----------|-----------------|
 | **Scope** | Global — persists permanently | Session-scoped — dies with the exam |
-| **Storage** | `bookmarks` table | Session JSON `question_states` |
+| **Storage** | `bookmarks` table | `practice_session_question_states.marked_for_review` |
 | **Purpose** | "Study this later" | "Revisit before I submit" |
 | **Mental model** | Curation (learning) | Flagging (assessment) |
 | **Available in** | Reflection surfaces | Exam mode only |

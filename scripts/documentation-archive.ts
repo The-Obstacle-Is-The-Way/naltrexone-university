@@ -120,15 +120,13 @@ function isStrayRecordsFile(file: string): boolean {
   );
 }
 
-// Markdown left in an old register folder missed the move to docs/records.
-// Living documents in docs/specs, such as the master spec, stay, and asset
-// folders stay until the archive that links them is deleted.
+// Markdown left in an old register folder missed the move to docs/records or
+// docs/product. Asset folders stay until the archive that links them is
+// deleted.
 function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
   if (docs !== 'docs' || rest.length > 0 || name === undefined) return false;
-  if (!isRegister(register)) return false;
-  if (register !== 'specs') return true;
-  return name === 'index.md' || REGISTERS[register].test(name);
+  return isRegister(register);
 }
 
 // A ledger line: ID · title · disposition · date · path, then optionally the

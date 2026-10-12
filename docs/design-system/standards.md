@@ -189,7 +189,7 @@ Use the shared `components/ui/input.tsx` for text inputs. Raw `<input>` is accep
 ### Unused Components (0 current consumers)
 
 Current repo snapshot has one `components/ui/` primitive with 0 production imports:
-- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in `master_spec.md` SLICE-0 checklist. Needed for future progressive-disclosure filters and app-shell navigation patterns.
+- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in the SLICE-0 checklist of `docs/product/specification.md`. Needed for future progressive-disclosure filters and app-shell navigation patterns.
 
 `avatar.tsx`, `radio-group.tsx`, and `label.tsx` are no longer present in `components/ui/`.
 

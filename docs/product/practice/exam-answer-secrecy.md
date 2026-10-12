@@ -19,7 +19,7 @@ This is a cross-layer invariant, not a UI preference.
 
 The product contract is explicit: exam mode hides correctness and explanations until session end.
 
-- Master spec: [master_spec.md](../../specs/master_spec.md)
+- Product specification: [specification.md](../specification.md)
 - Active answering must remain neutral until the exam is ended.
 
 Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections.
@@ -136,10 +136,9 @@ This file is the canonical registry for exam-answer secrecy.
 
 When behavior changes, update this file first, then update dependent docs:
 
-- `docs/practice-engine/security-model.md`
+- `docs/architecture/security.md`
 - `docs/product/practice/modes.md`
 - `docs/product/practice/retries.md`
-- `docs/practice-engine/current-state.md`
-- `docs/practice-engine/spec-coverage-map.md`
+- `docs/architecture/practice-engine.md`
 - Frontend guardrails (`docs/design-system/layout.md`, `docs/design-system/standards.md`)
-- Validation checklists (`docs/dev/stabilization-checklist.md`)
+- Validation procedure (`docs/guides/qa/practice-core-flows.md`)

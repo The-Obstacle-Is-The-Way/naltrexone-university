@@ -1,8 +1,5 @@
 # Architecture Decision Records
 
-**Project:** Naltrexone University
-**Last Updated:** 2026-09-27
-
 ---
 
 ## What are ADRs?
@@ -198,7 +195,7 @@ Generic `retry()` with exponential backoff for transient external errors. Only r
 
 ### ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and a `docs/qa/` register of scripted UI QA procedures, run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/guides/testing/` and `docs/guides/qa/`.
+Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and scripted UI QA procedures (now in `docs/guides/qa/`), run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register, `docs/product/business-rules.md`, replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/guides/testing/` and `docs/guides/qa/`.
 
 ### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
 
@@ -212,6 +209,22 @@ Learner-visible question content lives in immutable revisions; attempts and sess
 
 A question a learner answered is in one of four states, derived at read time from its status, withdrawals and unlifted holds: available, withdrawn, under review or retired. Each has its own label, and each unavailable state has a clinical caution where its content may be wrong. Its content is shown only to a learner who answered it. One scoring rule applies everywhere, as amended 2026-10-03 (DEBT-494): an item counts when the learner had a fair chance at it, recorded when its session ends, and its content is not now in doubt. Withdrawn and under-review questions, and answered items whose graded key was since corrected, are in doubt; retiring a question changes no past score. A key correction is detected, disclosed and re-practiced, and stored grades are never rewritten. Decides DEBT-484's deferred scoring and regrade questions and BUG-317's label question; implemented by DEBT-493.
 
+### ADR-023: Documentation Organisation
+
+One kind of document per folder under `docs/`, chosen by a first-match placement test; lowercase kebab-case names, with IDs only on ADRs and records. Records are working files deleted on close, leaving one line in `docs/records/closed.md`. An accepted ADR is frozen, and changes only by an appended, dated amendment or a superseding ADR. Agent instructions hold only rules; decisions and their history live in ADRs.
+
+### ADR-024: Review, Merge and Promotion
+
+Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge, and agents never ask it to record a learning. Production waits for `main`'s CI through Vercel Deployment Checks.
+
+### ADR-025: Test Doubles by Shape or Behaviour
+
+One vocabulary (fake, stub, spy, mock, contract test). A test that needs only a collaborator's shape uses a narrowly typed stub; one that needs its behaviour uses a fake checked against the real implementation by a contract test. A Drizzle call-chain object is a stub, not a fake. `vi.mock()` is only for modules that cannot be injected, and `pnpm lint:doubles` keeps violations from growing.
+
+### ADR-026: Error Monitoring with Sentry
+
+Sentry is the error and alert channel, with a browser project on the public key and a server project on a sensitive key that no browser receives. Every runtime sets what Sentry may collect explicitly, server breadcrumbs and trace propagation are off, and privacy is proven by tests through the real SDK. Failures the owner must act on are sent as tagged operational alerts that email the owner, with a monthly drill.
+
 ---
 
 ## How to Propose a New ADR
@@ -221,6 +234,8 @@ A question a learner answered is in one of four states, derived at read time fro
 3. Submit PR for review
 4. Discuss in PR comments
 5. If accepted, merge and update status
+
+Once accepted, an ADR's text is frozen. Change it with a dated `## Amendment — YYYY-MM-DD` section appended at the end, updating its status line and this index, or with a new ADR that supersedes it ([ADR-023](./adr-023-documentation-organisation.md), section 5).
 
 ## ADR Template
 
@@ -266,5 +281,5 @@ How will we verify this decision is followed?
 
 ## Related Documentation
 
-- [Master Specification](../specs/master_spec.md)
-- [Implementation Specs](../specs/) (after ADRs are established)
+- [Product specification](../product/specification.md)
+- [Documentation map](../README.md)

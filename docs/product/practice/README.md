@@ -17,7 +17,7 @@ These documents state the invariants practice keeps. Where another document disa
 ## Routes and Behaviour
 
 - **Sessions run at `/app/practice/[sessionId]`.** Quick Practice runs at `/app/practice/quick`, which Next.js routes before the dynamic segment, and keeps no session.
-- **History is at `/app/history`,** with a Sessions tab and a Questions tab. The nav item is "History". The Questions tab is a filterable log of attempted questions: result and source filter on the server, difficulty and tag in the browser.
+- **History is at `/app/history`,** with a Sessions tab and a Questions tab. The nav item is "History". The Questions tab is a filterable log of attempted questions; its result, source, difficulty and tag filters and its sort all run on the server.
 - **Review links return to where they came from.** The session summary's review links carry `from=summary`, and History's session drill-down carries `from=history`.
 - **Retry belongs to the question page.** An ended session's question is retried at `/app/questions/[slug]?mode=review&sessionId=…`, while an active session stays in its runner.
 - **A retry never changes the session.** It is a standalone attempt, with no session ID, so a session's score and question states never change after it ends.

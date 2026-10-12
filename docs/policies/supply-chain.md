@@ -568,3 +568,16 @@ A dependency's licence is reviewed when it is added, and a list is generated on 
 2. A new licence bucket in that list is reviewed in the dependency PR that introduces it.
 3. A package that moves from a permissive licence to a restricted or unknown one is a dependency-hygiene finding, not a routine patch.
 4. No CI check enforces this; a licence allowlist check can be added if the list starts to move.
+
+Two licences are approved only within limits: `MPL-2.0` for the dependencies that already use it (a new direct dependency under it is reviewed), and `CC-BY-4.0` for data and metadata packages, not runtime code.
+
+### Accepted exceptions
+
+These transitive packages were reviewed and allowed in the production graph. A new direct dependency under the same licence, or wider use of one of these, is reviewed again.
+
+| Licence | Package | Why it is allowed |
+|---|---|---|
+| `FSL-1.1-Apache-2.0` | `sentry` | Sentry's CLI, pulled in by `@sentry/bundler-plugins` under `@sentry/nextjs` 11 (DEBT-499, reviewed 2026-10-05). The app never invokes it and has no `withSentryConfig` build step. FSL restricts only competing use and becomes Apache-2.0 after two years. |
+| `LGPL-3.0-only` | `rpc-websockets` | A transitive JSON-RPC and WebSocket package; review before any direct use. |
+| `LGPL-3.0-or-later` | `@img/sharp-libvips-*` | The prebuilt libvips that `sharp` loads for image processing. |
+| `Unknown` | `eyes`, `text-encoding-utf-8` | Transitive utilities (value inspection, a UTF-8 Encoding API polyfill). Replace either if it becomes direct or critical at runtime. |

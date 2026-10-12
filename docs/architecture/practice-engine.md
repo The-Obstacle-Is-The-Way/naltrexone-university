@@ -100,7 +100,9 @@ Answer-key exposure in active exam contexts is governed by the [Exam Answer Secr
 
 | Use Case | Input | Output | Error Codes |
 |----------|-------|--------|-------------|
-| `ToggleBookmark` | `{ userId, questionId }` | `{ bookmarked: boolean }` | `NOT_FOUND` |
+| `SetBookmark` | `{ userId, questionId, bookmarked }` | `{ bookmarked: boolean }` | `NOT_FOUND` when adding a question that is not published |
+| `GetBookmarkStatus` | `{ userId, questionId }` | `{ bookmarked: boolean }` | (propagates) |
+| `GetBookmarkQuestionIds` | `{ userId }` | `{ questionIds: string[] }` | (propagates) |
 | `GetBookmarks` | `{ userId }` | Bookmarked questions with availability | (graceful degradation) |
 | `GetAttemptedQuestions` | `{ userId, limit, offset, filters? }` | Paginated attempted questions with result/source filters | (graceful degradation) |
 | `GetPreviousAttempt` | `{ userId, questionId, attemptId?, sessionId? }` | `attempt` state, `session_unanswered` reveal state, or `null` | (propagates); returns `null` when no applicable prior state exists |
@@ -123,7 +125,7 @@ Ports define what the application layer needs from the outside world. The actual
 - `AttemptSingleQuestionReader` — most recent attempt for a specific question (review mode)
 - `AttemptMostRecentAnsweredAtReader` — for question selection ordering
 
-Other ports: `QuestionRepository` (5 methods), `PracticeSessionRepository` (9 methods with CAS concurrency), `BookmarkRepository` (4 methods), `TagRepository` (1 method).
+Other ports: `QuestionRepository` (8 methods), `PracticeSessionRepository` (11 methods; question-state writes use compare-and-swap), `BookmarkRepository` (6 methods), `TagRepository` (1 method).
 
 ### 2.3 Test Coverage
 
@@ -137,10 +139,10 @@ Every practice-engine use case has a colocated test file. All tests use fakes fr
 
 | Repository | Port Interface | Methods | Key Patterns |
 |-----------|---------------|---------|-------------|
-| `DrizzleQuestionRepository` | `QuestionRepository` | 5 | Relational loading with `with:` clause; tag-filtered candidate query uses `INNER JOIN + GROUP BY` |
-| `DrizzleAttemptRepository` | `AttemptRepository` (composite) | 15 | `row_number()` window function selects latest attempt per question (attempted-question summaries); partial unique index `(practiceSessionId, questionId)` prevents duplicate session answers |
-| `DrizzlePracticeSessionRepository` | `PracticeSessionRepository` | 9 | Optimistic concurrency (CAS) with 3 retries for `recordQuestionAnswer`, `saveDraftAnswer`, `finalizeDraftAnswer`, and `setQuestionMarkedForReview`; Zod validation on `paramsJson` read/write |
-| `DrizzleBookmarkRepository` | `BookmarkRepository` | 4 | `ON CONFLICT DO NOTHING` for idempotent add |
+| `DrizzleQuestionRepository` | `QuestionRepository` | 8 | Relational loading with `with:` clause; tag-filtered candidate query uses `INNER JOIN + GROUP BY` |
+| `DrizzleAttemptRepository` | `AttemptRepository` (composite) | 14 | `row_number()` window function selects latest attempt per question (attempted-question summaries); partial unique index `(practiceSessionId, questionId)` prevents duplicate session answers |
+| `DrizzlePracticeSessionRepository` | `PracticeSessionRepository` | 11 | Optimistic concurrency (CAS) with 3 retries for `recordQuestionAnswer`, `saveDraftAnswer`, `finalizeDraftAnswer`, and `setQuestionMarkedForReview`; Zod validation on `paramsJson` read/write |
+| `DrizzleBookmarkRepository` | `BookmarkRepository` | 6 | Idempotent add: `ON CONFLICT DO UPDATE` keeps the first `createdAt` and returns the row |
 | `DrizzleTagRepository` | `TagRepository` | 1 | `SELECT DISTINCT` with join to published questions only |
 
 ### 3.2 Controllers (Server Actions)
@@ -156,7 +158,7 @@ Every practice-related server action:
 | `question-controller` | `getNextQuestion`, `submitAnswer` | submitAnswer: yes | submitAnswer: yes |
 | `question-view-controller` | `getQuestionBySlug`, `getPreviousAttempt` | no | no |
 | `practice-controller` | `startPracticeSession`, `countAvailableQuestions`, `getIncompletePracticeSession`, `endPracticeSession`, `finalizeExamAnswers`, `saveExamDraftAnswer`, `getPracticeSessionReview`, `getSessionHistory`, `setPracticeSessionQuestionMark` | startPracticeSession: yes | start/end/finalize/mark: yes |
-| `bookmark-controller` | `toggleBookmark`, `getBookmarks` | toggleBookmark: yes | toggleBookmark: yes |
+| `bookmark-controller` | `setBookmark`, `getBookmarks`, `getBookmarkQuestionIds`, `getBookmarkStatus` | setBookmark: yes | setBookmark: yes |
 | `tag-controller` | `getTags` | no | no |
 | `review-controller` | `getAttemptedQuestions` | no | no |
 | `stats-controller` | `getUserStats` | no | no |
@@ -174,7 +176,7 @@ Practice-related tables in `db/schema.ts`:
 | `practice_sessions` | `user+startedAt`, `user+endedAt` | `paramsJson` stores `count`, the `tagSlugs` and `difficulties` filters, and the ordered `questionIds`; `mode` is its own column |
 | `practice_session_question_states` | `(session, question)` unique, `(session, position)` unique, `questionId` | One row per session question: `position` mirrors `paramsJson.questionIds` (DEBT-433), mark-for-review, finalized `latest*` answer, exam `draft*` answer and `draftCumulativeMs`, the bound `questionRevisionId` (ADR-021), `fairChanceAtEnd` (ADR-022), and a `version` for compare-and-swap updates |
 | `attempts` | 8+ indexes covering query patterns | Partial unique on `(practiceSessionId, questionId)` prevents duplicate session answers; includes retry lineage fields (`retryOfAttemptId`, `retryOrigin`, `retrySessionId`) and retry-parent index |
-| `bookmarks` | Composite PK, `user+createdAt`, `questionId` | Idempotent add via `ON CONFLICT DO NOTHING` |
+| `bookmarks` | Composite PK, `user+createdAt`, `questionId` | Idempotent add: `ON CONFLICT DO UPDATE` keeps the first `createdAt` |
 
 ### 3.4 Test Coverage
 
@@ -266,6 +268,12 @@ View components import only **types** from controllers. Interactive client hooks
 
 ---
 
+### Shared Route Helpers
+
+`app/(app)/app/shared/` holds client helpers that more than one route uses, such as `bookmark-toggle.ts` (the timeout, error handling and idempotency-key rotation for a bookmark change). Keeping them there means the question page never imports the practice route's module. Each route keeps its own page state in its page-model hook, rather than one hook owning both the practice set and the review page.
+
+---
+
 ### 6. Error Handling
 
 Interactive hooks typically wrap async calls in try/catch and check `ActionResult` for controller responses. Error display:
@@ -280,6 +288,8 @@ Interactive hooks typically wrap async calls in try/catch and check `ActionResul
 | Tag load failure | "Tags unavailable." static text | No action needed |
 | Session end failure | `ErrorCard` + idempotency key rotation | Retry |
 | Navigator load failure | `ErrorCard` + "Retry navigator" | Retry |
+| Dashboard stats failure | The whole dashboard shows "Unable to load stats." and an `ErrorCard` | "Go to Practice" |
+| Dashboard session history failure | Stats still render; only the recent-sessions panel shows an `ErrorCard` | Navigate or reload |
 | Uncaught error | Next.js error boundary (`error.tsx`) | "Try again" / "Back to Dashboard" / "Contact support" |
 
 Most failures surface via `ErrorCard`, inline error text, or notifications. Fire-and-forget UI actions report through `reportClientError()` via `fireAndForget`; they do not rely on raw `console` logging anymore.

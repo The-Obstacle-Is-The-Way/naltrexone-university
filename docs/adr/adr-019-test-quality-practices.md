@@ -14,7 +14,7 @@ The suite ADR-003 defined is mature: 556 test files (~151k lines) across four la
 1. **Nothing measures whether the tests actually constrain behavior.** Coverage says lines ran; it cannot say a mutated `<=` would be caught. The audit found both consequential thin spots (`grading.ts` — the product's core correctness function — carries 5 tests) and high-consequence code paths whose mutation resistance nothing audits (`subscription-write-guard.ts`, which decides whether a paying customer's subscription can be overwritten, carries 21 table-driven cases that have never been adversarially checked).
 2. **Nothing ranks under-tested complexity.** Triage of "where do tests or refactors pay off next" is currently manual sweeps.
 3. **Business rules have no UI-independent executable specification.** Rules live in use cases and their unit tests; nothing states them in business language, so nothing structurally prevents a rule from migrating into a component during agent iteration.
-4. **UI verification is tribal.** Manual flow scripts exist inside `docs/dev/stabilization-checklist.md`, the operator checklist demands smoke tests but does not yet link the Draft QA register, and an audit found a long list of route-level gaps — enumerated in `docs/guides/qa/method.md` (rendered Clerk auth forms, forced route-boundary states, billing portal round-trip, route-level entitlement redirect, app-wide mobile sweep…).
+4. **UI verification is tribal.** Manual flow scripts exist inside `docs/dev/stabilization-checklist.md` (since absorbed into `docs/guides/qa/practice-core-flows.md`), the operator checklist demands smoke tests but does not yet link the Draft QA register, and an audit found a long list of route-level gaps — enumerated in `docs/guides/qa/method.md` (rendered Clerk auth forms, forced route-boundary states, billing portal round-trip, route-level entitlement redirect, app-wide mobile sweep…).
 
 Standing constraint honored throughout: **coverage numbers are observational in this repo** (`docs/guides/testing/react-component-tests.md`) — TDD discipline and behavior assertions are the enforcement mechanism, not numeric gates.
 
@@ -57,7 +57,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 ## Compliance
 
 - DEBT-465 carries per-part Verification checklists (baselines recorded there: first CRAP top-25, first mutation scores, first two features landed, QA-001/002 first Active runs).
-- The four runbooks are canonical; `docs/dev/index.md` routes to them; the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) gain the `tests/acceptance/` row in the PR that lands the first feature.
+- The four runbooks are canonical; `docs/dev/index.md` routes to them (now `docs/README.md`); the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) gain the `tests/acceptance/` row in the PR that lands the first feature.
 - No numeric quality gate may be added to CI or configs without a new ADR referencing this section. Nonzero report-infrastructure exits remain required so missing evidence cannot be recorded as a successful baseline.
 - Standard PR review (CodeRabbit mandatory) applies to every adoption PR.
 

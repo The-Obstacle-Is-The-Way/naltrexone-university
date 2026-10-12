@@ -98,10 +98,20 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 
 ### Sources of Truth
 
-- **Draft question format:** `docs/content/question-format-spec.md` — single source of truth for authoring
+- **Draft question format:** `content/drafts/questions/SCHEMA.md`, mirrored from the content repository, where it is edited; the importer's schema (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts` decide what is accepted
 - **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/product/content-taxonomy.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parse-mdx-question.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
+
+### Rules the Importer Enforces Beyond SCHEMA.md
+
+The mirrored SCHEMA.md leaves these out, so they are recorded here until the content repository's copy says them:
+
+- `source` must be a kebab-case identifier, not just non-empty (`scripts/draft-question-import.ts`).
+- A QID may appear only once across the imported files; a duplicate stops the import (`scripts/import-draft-questions.ts`).
+- Every question except the synthetic seed fixtures needs a nonempty terminal Reference (`scripts/seed/question-parser.ts`).
+- Choice labels must be unique within a question, but their order is not enforced (`lib/content/schemas.ts`).
+- A diagnosis tag's display name is its slug in title case, for example `opioid-use-disorder` becomes "Opioid Use Disorder" (`diagnosisDisplayNameFromSlug`).
 
 ### Pipeline Scripts
 

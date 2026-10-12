@@ -7,3 +7,5 @@ Unscheduled ideas: worth keeping, not yet decided or planned. Each line gives th
 - **Regroup the question-review action bar**, so the bookmark no longer sits between the reattempt and navigation controls (BS-059).
 - **Practice and feedback enhancements:** a clinical pearl as a seed field, reference-section styling, a running score, collapsing the card after submit, difficulty and topic tags, and a direct-URL context mismatch (DEBT-337).
 - **Structured data for the public pages:** `Organization`, and a `Product` and `Offer` derived from the real price source. First prove that missing JSON-LD fails, and that a changed Offer amount fails the displayed-price test (DEBT-479 step 4).
+- **Practice Starter question-count polish:** four open decisions on how the starter presents the count when filters match fewer questions than asked; the core fix, an availability message before Start, shipped (BS-014).
+- **Bookmarks in History:** a bookmark-status filter and a bookmark marker on the Questions tab's rows, as Quick Practice's status filter already offers; today a bookmark is one click away on the review page.
