@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — a server action carrying the dev-browser cookie was signed out as dev-browser-missing; log the server's view to explain it; due 2026-10-14
+**Status:** Open — in 282 logged tests, no request that carried the dev-browser cookie was read as missing; catch a loss with the logging on; due 2026-10-14
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -30,6 +30,10 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - `@clerk/backend` 3.22.0, the version the app runs, returns `dev-browser-missing` only when neither the URL nor the cookies supply a dev-browser token. That contradicts the recorded header: either the server parsed a different header than the trace shows, or the decision came from elsewhere.
   - Clerk JS 6.38.0 rewrites its cookies (removing both, then setting them) only when a response carries the echo header, or when the page URL carries the token. The filter strips the echo, so that gap should not open.
 - **A second capture, from BUG-333 (2026-10-12, 04:00:38Z, another session's local E2E).** A page navigation, not a server action, shows the same contradiction. Its request carried both dev-browser cookies (31 characters, the same token as Clerk JS's echoed and dropped header) and both session copies, yet the app answered `handshake` with `dev-browser-missing`. Then the handshake signed the browser out and set a new dev-browser token. So two traces, on two request kinds, show the server failing to see a dev-browser cookie that the browser sent. `proxy.ts` passes the request to Clerk's middleware unchanged.
+- **The server's view, logged (2026-10-12, 05:15–05:39Z).** A local-only branch, never pushed, logged one line for every request that Clerk's middleware did not mark signed in. Each line gave the reason, whether the URL carried the dev-browser token, and the names and lengths of the cookies, both raw and as Next.js parsed them. No values were logged.
+  - **Five runs, 282 tests, no loss:** four runs on one clone (219 tests) and one full suite on another (63 tests).
+  - **Every `dev-browser-missing` came from a request with no `Cookie` header.** There were 291 of them, all for anonymous pages and the health check. No request carrying `__clerk_db_jwt` was read as missing.
+  - These runs had no loss, so they cannot show what happens in one. They do show that Clerk read the cookie whenever the header carried it. The leading explanation for the losses is a request that reached the server without its `Cookie` header, although Playwright's trace records one. Only a captured loss can settle that.
 
 ## Impact
 
@@ -54,7 +58,13 @@ Not yet decided. The failing request is identified, so the next step is a fix th
 - wait in the sign-in helper for Clerk JS's first client sync before the test acts;
 - run E2E against a Clerk instance configured like production.
 
-The trace answered the first question (the echo was the same token), and it left a contradiction that only the server can settle. Next, by 2026-10-14: reproduce under load with the local E2E server logging, for each request Clerk's middleware signs out, the dev-browser and session cookie names it received and the request state's reason. Log names and lengths only, never values. This is diagnostic, and it never ships.
+The trace answered the first question (the echo was the same token), and it left a contradiction that only the server can settle. Server-side logging then showed that, in runs without a loss, Clerk read the cookie whenever the header carried it (see Evidence).
+
+Next, by 2026-10-14: keep the logging on for extra local E2E runs until one catches a loss. The signed-out request's log line shows whether its `Cookie` header arrived:
+- if it did not, the fix is on the browser side (the candidates above);
+- if it did, Clerk's middleware is the cause, and the case goes to Clerk with that line.
+
+The logging records names and lengths only, never values. It is diagnostic, and it never ships.
 
 ## Verification
 
