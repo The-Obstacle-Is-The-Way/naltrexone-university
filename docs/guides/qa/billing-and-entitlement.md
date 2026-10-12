@@ -1,4 +1,4 @@
-# QA-002: Billing & Entitlement (Pricing States, Trial, Portal, Gate Redirects)
+# Billing & Entitlement (Pricing States, Trial, Portal, Gate Redirects)
 
 **Status:** Draft
 **Created:** 2026-08-13
@@ -65,4 +65,4 @@ Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellati
 
 ## On failure
 
-Entitlement-gate failures (steps 4–6) are **security findings** — file as `BUG-NNN` at elevated priority. Stripe-flow failures: capture the Stripe test-dashboard event log alongside the UI evidence before filing. A scheduled hosted-smoke failure is compatibility evidence to investigate, not permission to waive a genuinely required red check and not a veto on an unrelated pull request.
+Entitlement-gate failures (steps 4–6) are **security findings** — file a bug record in `docs/records/` as `BUG-NNN` at elevated priority. Stripe-flow failures: capture the Stripe test-dashboard event log alongside the UI evidence before filing. A scheduled hosted-smoke failure is compatibility evidence to investigate, not permission to waive a genuinely required red check and not a veto on an unrelated pull request.

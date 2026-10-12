@@ -78,4 +78,4 @@ ports through the existing script. This is a local workaround, not a shipped fix
 ## Related
 
 - [Testing infrastructure](../dev/testing-infrastructure.md).
-- [External audit](../_archive/audits/audit-014-external-record-audit-2026-10-06.md).
+- AUDIT-014, the external record audit.

@@ -27,7 +27,7 @@ This is likely the report the owner remembered, that "a user with certain parame
   - Any client can call a server action with arguments of its choosing. With a plain string, `formData.get` throws a `TypeError` before authentication. The error is unhandled, so `onRequestError` sends it to Sentry (`instrumentation.ts`).
   - The subscribe actions are on the public pricing page. Confirmed in source.
 - **Decided.** Each exported action checks `formData instanceof FormData` first, and otherwise does nothing and logs nothing.
-- **Shipped with [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) (2026-10-06).** Every form action returns at once for input that is not form data. `tests/server-action-input.test.ts` checks every exported action.
+- **Shipped with BUG-324 (2026-10-06).** Every form action returns at once for input that is not form data. `tests/server-action-input.test.ts` checks every exported action.
 
 ### 2. A refused subscribe logs the raw idempotency key at error level (P3)
 
@@ -129,5 +129,5 @@ This is likely the report the owner remembered, that "a user with certain parame
 
 ## Related
 
-- BUG-323, [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md): the same audit.
+- BUG-323, BUG-324: the same audit.
 - BUG-318 (archived): what Sentry may collect. This record covers how much can be sent.

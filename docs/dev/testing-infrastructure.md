@@ -70,7 +70,7 @@ webServer: {
 ```
 
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
-- Runs Chromium only, in two required projects: `chromium` (Desktop Chrome) and `mobile-smoke` (Pixel 5 touch and mobile rendering at 375×667, the width QA-002 checks by hand)
+- Runs Chromium only, in two required projects: `chromium` (Desktop Chrome) and `mobile-smoke` (Pixel 5 touch and mobile rendering at 375×667, the width the billing QA procedure checks by hand)
 - `pnpm test:e2e` selects both required projects and excludes every `stripe-hosted-*.spec.ts` file. `mobile-smoke` re-runs only the journeys tagged `@mobile-smoke` (public pages, the pricing CTA, a tutor session, quick practice and subscriber navigation) plus `mobile-layout.spec.ts`, which fails if a public (signed out and signed in) or subscriber page scrolls sideways at 375px or 360px; `chromium` ignores that probe
 - The isolated E2E server receives a test-only `CONSENT_STATE_SECRET` unless the environment sets one, so the trial banner's add-card action can sign its Checkout consent state; production and preview carry their own secret
 - The `stripe-hosted` project is an observational compatibility probe for Stripe-owned Checkout markup; it is scheduled/manual and never a pull-request or push check

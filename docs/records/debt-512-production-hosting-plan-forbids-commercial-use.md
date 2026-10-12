@@ -10,7 +10,7 @@
 
 ## Summary
 
-Production runs on Vercel's Hobby plan, which [Vercel's terms](https://vercel.com/legal/terms) limit to personal or non-commercial use. Under Vercel's [fair-use definition](https://vercel.com/docs/limits/fair-use-guidelines#commercial-usage), any method of requesting or processing payment from visitors is commercial, so the live pricing page and checkout already count. The owner accepted that risk on 2026-08-11 until the first real users ([DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md)). This record sets the deadline at the first live sale.
+Production runs on Vercel's Hobby plan, which [Vercel's terms](https://vercel.com/legal/terms) limit to personal or non-commercial use. Under Vercel's [fair-use definition](https://vercel.com/docs/limits/fair-use-guidelines#commercial-usage), any method of requesting or processing payment from visitors is commercial, so the live pricing page and checkout already count. The owner accepted that risk on 2026-08-11 until the first real users (DEBT-464). This record sets the deadline at the first live sale.
 
 The plan also sets several limits the records work around:
 - runtime logs kept for one hour (DEBT-505);
@@ -21,7 +21,7 @@ The plan also sets several limits the records work around:
 
 - **The plan.** Vercel's API reported the team's billing plan as `hobby`, active, on 2026-10-08.
 - **The terms.** Vercel's [Terms of Service](https://vercel.com/legal/terms) restrict Hobby to personal or non-commercial use. Its [fair-use guidelines](https://vercel.com/docs/limits/fair-use-guidelines#commercial-usage) count requesting or processing payment, and advertising the sale of a product or service, as commercial.
-- **Earlier ruling.** [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) recorded the same terms on 2026-08-10, and the owner's 2026-08-11 ruling accepted the Hobby risk until the first real users. No live record tracked the plan.
+- **Earlier ruling.** DEBT-464 recorded the same terms on 2026-08-10, and the owner's 2026-08-11 ruling accepted the Hobby risk until the first real users. No live record tracked the plan.
 
 ## Impact
 

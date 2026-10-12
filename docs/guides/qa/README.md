@@ -41,6 +41,8 @@ From the 2026-08-13 UI-coverage audit. Write a procedure when one is needed.
 **Preconditions:** environment, auth, seed state (executable, not aspirational)
 **Execution modes:** which modes run it fully; which steps need a person or Playwright
 **Estimated time:** N min
+**Promotion gate:** yes | no
+**Promoted to:** the E2E spec path once promoted, else `—`
 
 ---
 
