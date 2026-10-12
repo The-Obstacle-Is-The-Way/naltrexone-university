@@ -17,15 +17,16 @@ const RECORD_ID = /\b(?:BUG|DEBT|FE)-\d+\b/;
 const ISO_DATE = /\b20\d{2}-\d{2}-\d{2}\b/;
 
 const read = (file: string) => readFileSync(file, 'utf8');
+// Git can check Markdown out with CRLF endings (core.autocrlf). The parsers
+// read LF; the byte budget reads the file as stored.
+const lf = (text: string) => text.replace(/\r\n/g, '\n');
 const ruleFiles = readdirSync(RULES_DIRECTORY)
   .filter((name) => name.endsWith('.md'))
   .map((name) => path.posix.join(RULES_DIRECTORY, name))
   .sort();
 
 function frontMatterPaths(markdown: string): string[] {
-  const frontMatter = markdown
-    .replace(/\r\n/g, '\n')
-    .match(/^---\n([\s\S]*?)\n---\n/);
+  const frontMatter = lf(markdown).match(/^---\n([\s\S]*?)\n---\n/);
   if (!frontMatter?.[1]) return [];
   const paths = (parse(frontMatter[1]) as { paths?: unknown }).paths;
   return Array.isArray(paths) ? paths.map(String) : [];
@@ -53,12 +54,11 @@ function guidelineMappings(): Map<string, string[]> {
   return mappings;
 }
 
-function codexMappings(): Map<string, string[]> {
+function codexMappings(agents = read('AGENTS.md')): Map<string, string[]> {
   const mappings = new Map<string, string[]>();
   const table =
-    read('AGENTS.md')
-      .split('## Rules for Particular Files\n')[1]
-      ?.split('\n## ')[0] ?? '';
+    lf(agents).split('## Rules for Particular Files\n')[1]?.split('\n## ')[0] ??
+    '';
   for (const row of table.split('\n').filter((line) => line.startsWith('|'))) {
     const cells = row.split('|');
     const patterns = [...(cells[1] ?? '').matchAll(/`([^`]+)`/g)].map(
@@ -72,6 +72,9 @@ function codexMappings(): Map<string, string[]> {
   return mappings;
 }
 
+const importsAgents = (claude: string) =>
+  lf(claude).split('\n').includes('@AGENTS.md');
+
 describe('agent instructions', () => {
   // Git can check Markdown out with CRLF endings (core.autocrlf), and a
   // missed front matter would map a rule to every file.
@@ -81,6 +84,13 @@ describe('agent instructions', () => {
     ).toEqual(['src/**']);
   });
 
+  it('reads the Codex rule table and the Claude import with CRLF line endings', () => {
+    const crlf = (text: string) => text.replace(/\n/g, '\r\n');
+    expect(codexMappings().size).toBeGreaterThan(0);
+    expect(codexMappings(crlf(read('AGENTS.md')))).toEqual(codexMappings());
+    expect(importsAgents(crlf(read('CLAUDE.md')))).toBe(true);
+  });
+
   it('keeps AGENTS.md within half of Codex default read budget', () => {
     expect(Buffer.byteLength(read('AGENTS.md'), 'utf8')).toBeLessThanOrEqual(
       AGENTS_BUDGET_BYTES,
@@ -88,7 +98,7 @@ describe('agent instructions', () => {
   });
 
   it('imports AGENTS.md into every Claude Code session', () => {
-    expect(read('CLAUDE.md').split('\n')).toContain('@AGENTS.md');
+    expect(importsAgents(read('CLAUDE.md'))).toBe(true);
   });
 
   it.each(['AGENTS.md', 'CLAUDE.md', ...ruleFiles])(

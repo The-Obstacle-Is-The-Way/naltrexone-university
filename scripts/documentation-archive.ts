@@ -397,6 +397,8 @@ const HISTORICAL_DISPOSITION =
   /^(?:accepted|invalidated|decomposed|deferred|decided|won['’]t fix|reclassified|superseded|parked)\b/i;
 
 const VERIFYING_STATUS = /^verifying\b/i;
+const LIVE_STATUS_WORD = /^(?:open|in progress|blocked|verifying)\b/i;
+const SCHEDULING_ATTEMPT = /\bdue \d/i;
 const OPEN_STATUS =
   /^(?:open|in progress|blocked|verifying)(?:$|\s+[—–-]\s+.+)/i;
 const DUE_DATE = /\bdue (\d{4}-\d{2}-\d{2})\b/gi;
@@ -548,14 +550,18 @@ export function auditRecordLifecycle(
       result.longStatus.push(record);
     // A record whose fix shipped but whose check can only happen in
     // production stays live, as Verifying, until that check is done.
-    if (VERIFYING_STATUS.test(status) || /\bdue \d/i.test(status)) {
+    // "due" followed by a digit is an attempt to schedule: there must be one,
+    // a calendar date, and the status must name the action it schedules.
+    if (VERIFYING_STATUS.test(status) || SCHEDULING_ATTEMPT.test(status)) {
+      const attempts = status.match(new RegExp(SCHEDULING_ATTEMPT, 'gi')) ?? [];
       const dues = [...status.matchAll(DUE_DATE)].map((match) => match[1]);
       const due = dues[0];
       const check = status
-        .replace(VERIFYING_STATUS, '')
+        .replace(LIVE_STATUS_WORD, '')
         .replace(DUE_DATE, '')
         .replace(/^[\s—–-]+|[\s;]+$/g, '');
       if (
+        attempts.length !== 1 ||
         dues.length !== 1 ||
         !due ||
         !isCalendarDate(due) ||
