@@ -718,7 +718,16 @@ function gitIgnored(root: string, names: readonly string[]): string[] {
     input: names.join('\0'),
     encoding: 'utf8',
   });
-  if (result.status !== 0) return [];
+  // 1: nothing is ignored. 128 outside a work tree: nothing is excluded.
+  // Any other failure must not pass as "nothing ignored".
+  if (result.error) throw result.error;
+  if (result.status === 1) return [];
+  if (result.status === 128 && /not a git repository/i.test(result.stderr))
+    return [];
+  if (result.status !== 0)
+    throw new Error(
+      `git check-ignore failed with status ${result.status}: ${result.stderr.trim()}`,
+    );
   return result.stdout.split('\0').filter(Boolean);
 }
 

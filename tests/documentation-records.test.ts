@@ -371,6 +371,23 @@ describe('records command', () => {
     ]);
   });
 
+  // `git check-ignore` exits 1 when nothing is ignored, and 128 outside a
+  // Git work tree; any other failure must not pass as "nothing ignored".
+  it('fails when git check-ignore fails for any other reason', () => {
+    const root = fixture();
+    populate(root, { 'docs/guide.md': '# Guide' });
+    const bin = fixture();
+    writeFileSync(
+      path.join(bin, 'git'),
+      '#!/bin/sh\necho "fatal: index file corrupt" >&2\nexit 128\n',
+      { mode: 0o755 },
+    );
+    vi.stubEnv('PATH', bin);
+    expect(() => readDocumentationFiles(root)).toThrow(/git check-ignore/);
+    vi.stubEnv('PATH', fixture());
+    expect(() => readDocumentationFiles(root)).toThrow();
+  });
+
   it('exits nonzero when a status typo hides a due check', () => {
     const root = fixture();
     populate(root, {
