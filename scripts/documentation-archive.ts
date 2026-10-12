@@ -157,7 +157,9 @@ const WORKING_RECORD_RECEIPT =
 const LIST_ITEM = /^\s*[-*+] /;
 // IDs given to two records each before anything checked; each ledger line
 // names its own file. No third, and no new collision, is allowed.
-const HISTORICAL_ID_COLLISIONS = new Set(['DEBT-338', 'FE-055', 'SPEC-028']);
+const HISTORICAL_ID_COLLISIONS = new Set(
+  ['DEBT-338', 'FE-055', 'SPEC-028'].map((id) => canonicalId(id) ?? id),
+);
 
 // IDs compare by prefix and number, so `bug-05` and `BUG-005` are the same.
 function canonicalId(value: string): string | undefined {
@@ -500,14 +502,17 @@ export function auditRecordLifecycle(
     if (id) ledgerIds.push(id.toUpperCase());
     else result.malformedLedgerLines.push(`${RECORDS.ledger}:${index + 1}`);
   });
-  const ledgerCounts = new Map<string, number>();
+  // Counted by canonical ID, so padding cannot hide a duplicate; reported as
+  // the ledger first spelled it.
+  const ledgerCounts = new Map<string, { count: number; first: string }>();
   for (const id of ledgerIds) {
     const key = canonicalId(id) ?? id;
-    const count = (ledgerCounts.get(key) ?? 0) + 1;
-    ledgerCounts.set(key, count);
-    const allowed = HISTORICAL_ID_COLLISIONS.has(id) ? 2 : 1;
-    if (count > allowed && !result.duplicateLedgerIds.includes(id))
-      result.duplicateLedgerIds.push(id);
+    const seen = ledgerCounts.get(key) ?? { count: 0, first: id };
+    seen.count += 1;
+    ledgerCounts.set(key, seen);
+    const allowed = HISTORICAL_ID_COLLISIONS.has(key) ? 2 : 1;
+    if (seen.count > allowed && !result.duplicateLedgerIds.includes(seen.first))
+      result.duplicateLedgerIds.push(seen.first);
   }
   const closedIds = new Set(
     ledgerIds.map((id) => canonicalId(id) ?? id.toUpperCase()),

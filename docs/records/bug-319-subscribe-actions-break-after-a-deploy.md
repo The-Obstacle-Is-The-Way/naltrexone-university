@@ -60,7 +60,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 **Scope limit.**
 - **Where the reload fires.** Only for an action whose failure reaches a route error page: the form actions on pricing, add-card, billing and bookmarks.
 - **Where it does not.** The practice flows and the question page call their actions through `runTransitionedAsyncAction`, which catches errors, so a stale action there shows the flow's own error. The global error page does not reload either, since the root layout calls no actions.
-- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file, export or declared arguments change. [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) did that once, on purpose, for the 22 actions those pages call. So `UnrecognizedActionError` events from those pages just after its deploy are that move, not a failure of this fix.
+- **Why that is accepted.** Those pages still recover on a full page load. "Try again" starts one, and so does the next in-app navigation, because a refresh that finds a different build falls back to a full load (`router-reducer/fetch-server-response.js:175-177`). With a stable key, those IDs change only when the action's own file, export or declared arguments change. BUG-324 did that once, on purpose, for the 22 actions those pages call. So `UnrecognizedActionError` events from those pages just after its deploy are that move, not a failure of this fix.
 
 ## Progress
 
@@ -84,7 +84,7 @@ Options 2, 3 and 4 together, under the owner's 2026-09-28 delegation. Option 1 s
 
 Criteria to meet before closing.
 
-- [x] Two consecutive production builds give the same action IDs. Next.js derives each ID from the action encryption key, the module path and the export name (plus a byte recording whether it is a `'use cache'` function and how many of its first six parameters it declares, with one bit for a rest parameter or more than six; Next reads these from the signature, not from what the body uses), so editing an action's body leaves its ID unchanged and changing its parameter list can change it, as can a Next.js upgrade: three local production builds on 2026-10-06 gave 38 identical IDs with the same key, and different ones with another key. Production's key was created 2026-10-05T19:00Z and has not changed since (Vercel's environment metadata; no value read), and a Vercel build without it fails (`lib/env.test.ts`). So production builds keep the IDs of actions whose code did not change. [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md) changed the five app-level action IDs and moved the 22 browser-called controller actions, on purpose. *Corrected 2026-10-06: proven by deterministic builds and the key's metadata instead of a stale tab across a deploy.*
+- [x] Two consecutive production builds give the same action IDs. Next.js derives each ID from the action encryption key, the module path and the export name (plus a byte recording whether it is a `'use cache'` function and how many of its first six parameters it declares, with one bit for a rest parameter or more than six; Next reads these from the signature, not from what the body uses), so editing an action's body leaves its ID unchanged and changing its parameter list can change it, as can a Next.js upgrade: three local production builds on 2026-10-06 gave 38 identical IDs with the same key, and different ones with another key. Production's key was created 2026-10-05T19:00Z and has not changed since (Vercel's environment metadata; no value read), and a Vercel build without it fails (`lib/env.test.ts`). So production builds keep the IDs of actions whose code did not change. BUG-324 changed the five app-level action IDs and moved the 22 browser-called controller actions, on purpose. *Corrected 2026-10-06: proven by deterministic builds and the key's metadata instead of a stale tab across a deploy.*
 - [x] "Try again" calls `retry` on every route error page. A test pins it, red first.
 - [x] A stale action on a payment form reloads the page by itself, with a test of the guard.
 - [x] A missing key fails a production build.
@@ -95,6 +95,6 @@ Criteria to meet before closing.
 
 ## Related
 
-- BUG-320, BUG-321, [BUG-322](../_archive/bugs/bug-322-checkout-error-hidden-behind-dialog.md): the other findings of the same hunt.
+- BUG-320, BUG-321, BUG-322: the other findings of the same hunt.
 - DEBT-501, DEBT-502.
 - [Next.js: Failed to find Server Action](https://nextjs.org/docs/messages/failed-to-find-server-action); [Vercel: Skew Protection](https://vercel.com/docs/skew-protection).

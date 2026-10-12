@@ -10,7 +10,7 @@
 **Product:** Addiction Boards at `addictionboards.com`
 **Contact:** `support@addictionboards.com`
 **Branch baseline:** re-audited from `a9c17d90` on 2026-07-29; Stage 1 built, adversarially reviewed, and promoted 2026-08-05 (production merge `874f1599`); Stage 2 shipped through promo #747 on 2026-08-07 (CodeRabbit approval review `4882980598`; merge `19f8a31efb466aebe86ff40257824f5fd2854304`)
-**Related:** [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md), [Privacy Policy draft](../legal/privacy-policy.md), [Debt Index](./README.md)
+**Related:** DEBT-410, [Privacy Policy draft](../legal/privacy-policy.md), [Debt Index](./README.md)
 
 > This is a diligent non-lawyer implementation and evidence record, not legal advice. The owner has chosen in-house drafting while the product is pre-revenue with no active users and a focused legal review before paid user acquisition. “Lawyer review” below is limited to named clauses and evidentiary questions; it is not a substitute for finishing the engineering and operational work.
 
@@ -825,7 +825,7 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
     - replays Stripe's real completion event through the signed webhook route.
 
     It then asserts that the recorded consent equals the text the dialog showed, under `2026-09-28.2` with the Terms version and hash and three-year retention, and that the trial's Stripe subscription now renews on the saved card. It passed locally on 2026-09-28. Each run starts and ends with the first-timer reset, which detaches the card, then restores the shared paid subscription. The card-entry steps moved from the paid journey into a shared helper.
-  - **Found by that journey:** after the card was saved, the banner still asked the learner to add one. The defect predates F03b and is filed as [BUG-308](../_archive/bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md), to be fixed next.
+  - **Found by that journey:** after the card was saved, the banner still asked the learner to add one. The defect predates F03b and is filed as BUG-308, to be fixed next.
   - **Design-system guard:** the theme regression guard now renders `ConsentTerms` for both offers. Removing `accent-primary` fails both cases.
 - **Captures.** Taken of the local production build (dark, DPR 1) for both plans, at 1440×900, 390×844 and 390×667 ([measurements](./assets/debt-414/f03b-add-card-measurements.json)):
   - The dialog is 512 px wide at 1440×900, where it fits without scrolling. On a phone it is 358 px with 16 px gutters, and it scrolls: 893 px of monthly content in 810 px at 390×844, and in 633 px at 390×667.
@@ -839,7 +839,7 @@ The dated legal matrix and owner attestations are historical evidence, not a new
 
 ## Findings from AUDIT-013 (2026-10-05)
 
-The security review of recent work ([AUDIT-013](../_archive/audits/audit-013-security-review-2026-10-05.md)) found two renewal-evidence gaps that belong to this record. Neither is attacker-driven. Both were confirmed in code by an independent reviewer and again by the filer.
+The security review of recent work (AUDIT-013) found two renewal-evidence gaps that belong to this record. Neither is attacker-driven. Both were confirmed in code by an independent reviewer and again by the filer.
 
 **F21, an early bounce report can be lost (P4).**
 - **The gap.** Dispatch sends the notice first and stores Resend's email id only afterwards: `emailGateway.send`, then `persistOutcome` (`src/application/use-cases/dispatch-renewal-notice-delivery.ts:113-129`).

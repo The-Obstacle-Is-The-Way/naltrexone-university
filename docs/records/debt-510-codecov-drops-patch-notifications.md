@@ -27,7 +27,7 @@ CI uploads coverage, and Codecov processes it, but sometimes never posts `codeco
   - Nothing CI does re-triggers a notification: Codecov's webhook re-runs one only on `status` events.
   - `codecov.yml` sets only `ignore`.
 - **Codecov has reported this kind of failure before.** Its status page showed no incident on 2026-10-07. On 2026-07-26 it reported that a server out of memory "caused drop in PR notifications". Codecov's server logs are not available to us, so the server-side drop is the best-supported cause, not a proven one.
-- **The guard is right.** Treating a missing `codecov/patch` as passing would let a real coverage regression merge. [DEBT-497](../_archive/debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md) settled which paths may lack it.
+- **The guard is right.** Treating a missing `codecov/patch` as passing would let a real coverage regression merge. DEBT-497 settled which paths may lack it.
 
 ## Impact
 

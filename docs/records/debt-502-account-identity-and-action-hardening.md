@@ -48,7 +48,7 @@ The same hunt (2026-10-05) found account-lifecycle states that can lock a person
 ### 5. Exported payment server actions accept caller-supplied dependencies (moved to BUG-324 on 2026-10-05)
 
 - **Evidence.** `subscribeMonthlyAction(formData, deps?)` and `subscribeAnnualAction` (`app/pricing/subscribe-actions.ts:82-94`) take an optional `deps` used for test injection. A client calls a server action with arguments of its choosing. React decodes them only as data, or as references to registered server actions, never arbitrary code. So a crafted `deps` can only fail the caller's own request, or call actions the caller could call anyway.
-- **Decided.** Exported actions take only their form data and delegate to an internal function that tests inject into. Check the other `'use server'` modules for the same seam. *Moved 2026-10-05 to [BUG-324](../_archive/bugs/bug-324-server-actions-accept-caller-supplied-dependencies.md), at P1: the seam reaches every controller action, and one request can run many actions.*
+- **Decided.** Exported actions take only their form data and delegate to an internal function that tests inject into. Check the other `'use server'` modules for the same seam. *Moved 2026-10-05 to BUG-324, at P1: the seam reaches every controller action, and one request can run many actions.*
 
 ### 6. Smaller items (P3)
 
