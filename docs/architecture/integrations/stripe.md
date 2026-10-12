@@ -1,7 +1,7 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^22.6.1
-**API Version:** `2026-08-26.dahlia`
+**Package:** `stripe` (version: `package.json`)
+**API Version:** `2026-08-26.dahlia`, pinned in `lib/stripe-api-version.ts`
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
 **Changelog:** https://docs.stripe.com/changelog
