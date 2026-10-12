@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — server actions are signed out by a Clerk dev-instance token race; decide the E2E fix with BUG-333; due 2026-10-14
+**Status:** Open — a server action carrying the dev-browser cookie was signed out as dev-browser-missing; log the server's view to explain it; due 2026-10-14
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -24,6 +24,11 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - a `fetch` that follows a redirect to another origin fails as `Failed to fetch`;
   - 120 ms earlier, Clerk JS's `/v1/client` and `/v1/environment` responses carried a `clerk-db-jwt` header. BUG-333's echo filter drops that header only when it repeats the token the request sent; a different token passes by design.
 - **Not an overlap.** No CI run used the shared Clerk user then: #1465's CI E2E ran 23:16:08 to 23:19:39Z.
+- **The trace, examined further (2026-10-12).** Token values were compared by hash only.
+  - The `clerk-db-jwt` header Clerk JS's Frontend API calls echoed carried the **same** token as the cookie and the request URL. So the earlier lead, a different token passing BUG-333's filter, is ruled out.
+  - The 307 request's recorded `Cookie` header carried both dev-browser cookies (`__clerk_db_jwt` and its suffixed copy) and both session cookies, identical to the request answered 200 fifty milliseconds earlier.
+  - `@clerk/backend` 3.22.0, the version the app runs, returns `dev-browser-missing` only when neither the URL nor the cookies supply a dev-browser token. That contradicts the recorded header: either the server parsed a different header than the trace shows, or the decision came from elsewhere.
+  - Clerk JS 6.38.0 rewrites its cookies (removing both, then setting them) only when a response carries the echo header, or when the page URL carries the token. The filter strips the echo, so that gap should not open.
 
 ## Impact
 
@@ -48,7 +53,7 @@ Not yet decided. The failing request is identified, so the next step is a fix th
 - wait in the sign-in helper for Clerk JS's first client sync before the test acts;
 - run E2E against a Clerk instance configured like production.
 
-First confirm from the trace whether the echoed token differed from the cookie's.
+The trace answered the first question (the echo was the same token), and it left a contradiction that only the server can settle. Next, by 2026-10-14: reproduce under load with the local E2E server logging, for each request Clerk's middleware signs out, the dev-browser and session cookie names it received and the request state's reason. Log names and lengths only, never values. This is diagnostic, and it never ships.
 
 ## Verification
 
