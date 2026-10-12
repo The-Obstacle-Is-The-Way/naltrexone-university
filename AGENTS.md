@@ -20,7 +20,7 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
    - When the E2E credentials are present (the list is in [the E2E guide](./docs/guides/testing/e2e-tests.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode.
    - The pre-push hook runs only `pnpm typecheck && pnpm test --run`; it does not build, and only the build catches prerender errors.
    - If `pnpm test:browser` exits in about a second with `no tests / 1 error`, retry that lane once and say so; a second failure blocks the push. After the retry, still run the lanes after it.
-3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, `git stash -m "<why>"` and ask. Several agents share these clones.
+3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, use an isolated clone or worktree. Do not stash another session’s files: that changes its working tree. Several agents share these clones.
 4. **Stay non-interactive.**
    - Use `git --no-pager`, and `git commit -m "…"`.
    - Never `pnpm -s <cmd>`: it runs `<cmd>` as a script or binary, which can open Vim and hang.
@@ -43,7 +43,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 
 ## Architecture
 
-- **Clean Architecture,** dependencies pointing inward only: `src/domain/` (entities, value objects, pure logic, zero imports) → `src/application/` (use cases and ports) → `src/adapters/` (repositories, gateways, controllers) → `app/`, `lib/`, `db/` (framework and infrastructure).
+- **Clean Architecture,** dependencies pointing inward only: `app/`, `lib/`, `db/` (framework and infrastructure) → `src/adapters/` (repositories, gateways, controllers) → `src/application/` (use cases and ports) → `src/domain/` (entities, value objects, pure logic, zero external imports).
 - **Composition root:** `lib/container.ts`, `lib/container/**` and `lib/controller-helpers.ts`.
 - **Key files:** `db/schema.ts` (the schema), `proxy.ts` (Clerk middleware and route protection), `lib/env.ts` (validated environment variables), `.env.example` (every variable).
 - **Names:** `src/adapters/controllers/**` are server-side controllers. A client hook that composes page state is a page model (`use-*-page-model.ts`), not a controller.
@@ -70,14 +70,16 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 
 Read the matching rule before editing. Claude Code loads these by path, and CodeRabbit applies them to the same paths.
 
-| When editing | Read |
+| When editing (repository-relative globs) | Read |
 |---|---|
-| any test, `tests/**`, test helpers, fixtures | `.claude/rules/testing.md`, `.claude/rules/test-isolation.md`, `.claude/rules/fixture-integrity.md` |
-| `*.test.tsx` | `.claude/rules/testing-react19.md` |
-| `*.browser.spec.tsx` | `.claude/rules/testing-browser.md` |
 | `src/**` | `.claude/rules/architecture.md` |
 | `src/domain/**` | `.claude/rules/domain-layer.md` |
-| `app/**`, `components/**` | `.claude/rules/frontend.md` (the design-system mandates: `<Button>`, the one focus ring, semantic tokens, the opacity scale) |
+| `**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`, `tests/**`, `src/**/test-helpers/**`, `**/*-test-helpers.ts`, `**/*-test-helpers.tsx`, `**/*.fixtures.ts` | `.claude/rules/fixture-integrity.md` |
+| `app/**`, `components/**` | `.claude/rules/frontend.md` |
+| `**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`, `tests/**`, `src/**/test-helpers/**`, `**/*-test-helpers.ts`, `**/*-test-helpers.tsx`, `**/*.fixtures.ts` | `.claude/rules/test-isolation.md` |
+| `**/*.browser.spec.tsx` | `.claude/rules/testing-browser.md` |
+| `**/*.test.tsx` | `.claude/rules/testing-react19.md` |
+| `**/*` | `.claude/rules/testing.md` |
 
 ## Pull Requests and Review
 
@@ -100,10 +102,10 @@ Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the 
 ## Records
 
 Open bug and debt records are in `docs/records/`, with one index. Its ["How Records Work"](docs/records/README.md#how-records-work) section holds the rules.
-- Read its **Now** stanza at the start of each session, and clear any overdue Verifying check first.
+- Read **Now** and the Waiting triggers relevant to your work at session start. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
 - A new ID comes from `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
-- Write the record first, and have a second agent challenge it on the pushed branch.
-- Ship it with its fix.
+- Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
+- Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.
 - Only the index links records; elsewhere, cite the ID.
 
 ## Commands

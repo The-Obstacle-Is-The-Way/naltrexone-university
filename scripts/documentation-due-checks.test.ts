@@ -151,7 +151,7 @@ describe('due checks in a repository', () => {
     for (const root of roots.splice(0)) rmSync(root, { recursive: true });
   });
 
-  function repository(status: string): string {
+  function repository(status: string, queueDue?: string): string {
     const root = mkdtempSync(path.join(os.tmpdir(), 'due-checks-'));
     roots.push(root);
     const write = (file: string, contents: string) => {
@@ -160,7 +160,7 @@ describe('due checks in a repository', () => {
     };
     write(
       'docs/records/README.md',
-      '**Now** — BUG-001\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
+      `**Queue review due:** ${queueDue ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)}\n\n**Now** — BUG-001\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |`,
     );
     write('docs/records/closed.md', '# Closed Records');
     write('docs/records/bug-001-x.md', `**Status:** ${status}`);
@@ -168,7 +168,7 @@ describe('due checks in a repository', () => {
   }
 
   it('finds overdue and far-off Verifying records', () => {
-    const root = repository('Verifying — check; due 2026-10-19');
+    const root = repository('Verifying — check; due 2026-10-19', '2026-10-21');
 
     expect(repositoryDueChecks(root, '2026-10-20')).toEqual({
       overdue: [{ file: 'docs/records/bug-001-x.md', due: '2026-10-19' }],
@@ -176,8 +176,38 @@ describe('due checks in a repository', () => {
     });
     expect(repositoryDueChecks(root, '2026-07-01')).toEqual({
       overdue: [],
-      farFuture: [{ file: 'docs/records/bug-001-x.md', due: '2026-10-19' }],
+      farFuture: [
+        { file: 'docs/records/bug-001-x.md', due: '2026-10-19' },
+        { file: 'docs/records/README.md', due: '2026-10-21' },
+      ],
     });
+  });
+
+  it.each(['Open', 'In Progress', 'Blocked'])(
+    'reports a scheduled action while its record is %s',
+    (status) => {
+      const root = repository(
+        `${status} — owner decision; due 2026-10-19`,
+        '2026-10-21',
+      );
+      expect(repositoryDueChecks(root, '2026-10-20').overdue).toEqual([
+        { file: 'docs/records/bug-001-x.md', due: '2026-10-19' },
+      ]);
+    },
+  );
+
+  it('raises the queue review on its due day even without overdue Verifying records', () => {
+    const root = repository('Open — no dated action', '2026-10-19');
+    expect(repositoryDueChecks(root, '2026-10-19').overdue).toEqual([
+      { file: 'docs/records/README.md', due: '2026-10-19' },
+    ]);
+  });
+
+  it('refuses a missing or invalid queue review date instead of silently skipping Waiting', () => {
+    const root = repository('Open', '2026-02-30');
+    expect(() => repositoryDueChecks(root)).toThrow('Queue review due');
+    writeFileSync(path.join(root, 'docs/records/README.md'), '**Now** — none');
+    expect(() => repositoryDueChecks(root)).toThrow('Queue review due');
   });
 
   it('reports in a dry run without touching any issue', async () => {
