@@ -147,7 +147,7 @@ At the census, both endpoints subscribed to the same seven events: `checkout.ses
 Delivery receipts:
 
 - **Live.** Every recent live event checked on 2026-10-11 has `pending_webhooks: 0`. The live endpoint is the only one, so production's `STRIPE_WEBHOOK_SECRET` verifies its signatures. No secret value was read.
-- **Test.** The `dev` preview deployment answers deliveries at the inherited Clover version with HTTP 200. Its 500s in the same hour fail with `Stripe subscription metadata.user_id is required`, on subscriptions that the provider-contract trial-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts`) creates without user metadata. That failure does not depend on the payload version.
+- **Test (at the census, before the rotation).** The `dev` preview deployment answered deliveries at the inherited Clover version with HTTP 200. Its 500s in the same hour failed with `Stripe subscription metadata.user_id is required`, on subscriptions that the provider-contract trial-clock smoke (`tests/integration/stripe-trial-clock-smoke.integration.test.ts`) creates without user metadata. That failure does not depend on the payload version.
 
 ### Decision
 
