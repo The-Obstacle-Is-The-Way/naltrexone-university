@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -690,6 +691,20 @@ export function repairArchiveLinks(
     writeFileSync(path.join(root, file), contents);
 }
 
+// Files .gitignore excludes, such as local backups of question drafts, are not
+// repository documentation. Outside a Git work tree, nothing is excluded: git
+// exits 128, and the audit reads every file, which is the stricter choice.
+function gitIgnored(root: string, names: readonly string[]): string[] {
+  if (names.length === 0) return [];
+  const result = spawnSync('git', ['check-ignore', '--stdin', '-z'], {
+    cwd: root,
+    input: names.join('\0'),
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) return [];
+  return result.stdout.split('\0').filter(Boolean);
+}
+
 export function readDocumentationFiles(root: string): Map<string, string> {
   // Repository-authored documentation, not vendored skill packages or build
   // artifacts. Numbered records are direct children of their register folder;
@@ -712,6 +727,8 @@ export function readDocumentationFiles(root: string): Map<string, string> {
     ],
     { cwd: root },
   ).sort();
+  for (const file of gitIgnored(root, names))
+    names.splice(names.indexOf(file), 1);
   for (const file of [RECORDS.index, RECORDS.ledger]) {
     if (!names.includes(file))
       throw new Error(`Missing documentation records file: ${file}`);

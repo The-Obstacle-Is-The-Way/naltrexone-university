@@ -328,6 +328,21 @@ describe('records command', () => {
     );
   });
 
+  it('skips git-ignored local files, but not a new untracked document', () => {
+    const root = fixture();
+    execFileSync('git', ['init', '--quiet'], { cwd: root });
+    populate(root, {
+      '.gitignore': 'content/drafts/*\n',
+      'content/drafts/backup/old.md': '[Missing](missing.md)',
+      'docs/guides/new-guide.md': '[Missing](missing.md)',
+    });
+    const reports: DocumentationAudit[] = [];
+    runDocumentationCommand(root, (json) => reports.push(JSON.parse(json)));
+    expect(reports[0]?.brokenLive.map((link) => link.file)).toEqual([
+      'docs/guides/new-guide.md',
+    ]);
+  });
+
   it('exits nonzero when a status typo hides a due check', () => {
     const root = fixture();
     populate(root, {
