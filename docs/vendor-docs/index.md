@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for all external dependencies — API versions, breaking changes we've hit, fields we depend on, and migration paths.
 
-**Last Updated:** 2026-09-16
+**Last Updated:** 2026-10-11
 
 ---
 
@@ -29,8 +29,13 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 
 Package versions above were reconciled against `package.json` on 2026-09-16.
 Stripe's API version is pinned in `lib/stripe-api-version.ts` and read by
-`lib/stripe.ts`. Clerk's API version remains a tracked vendor setting rather
-than a local code constant.
+`lib/stripe.ts`. That pin covers outbound requests only: each Stripe webhook
+endpoint has its own version. The live endpoint is at `2026-05-27.dahlia`. The
+test endpoint inherited the account default `2026-01-28.clover` until its
+2026-10-11 rotation, and now uses `2026-05-27.dahlia` explicitly
+([census and decision](./stripe.md#webhook-endpoint-api-versions)).
+Clerk's API version remains a tracked vendor setting rather than a local code
+constant.
 
 ---
 
