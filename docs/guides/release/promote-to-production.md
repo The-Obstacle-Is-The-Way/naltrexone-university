@@ -226,7 +226,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm test:integration` passes
 - [ ] `pnpm build` passes
 - [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on main pushes and non-Dependabot same-repository PRs)
-- [ ] The [reviewed-source promotion proof](#8-promoting-dev-to-main) is in the PR body for the current base/head; every first-parent source PR had CodeRabbit approval before merge, on its exact head or carried as the [merge guard](../guides/release/review-and-merge.md#the-merge-guard) allows, and source/promotion threads are resolved. No separate promotion CodeRabbit approval is required (owner decision, 2026-09-22).
+- [ ] The [reviewed-source promotion proof](#8-promoting-dev-to-main) is in the PR body for the current base/head; every first-parent source PR had CodeRabbit approval before merge, on its exact head or carried as the [merge guard](./review-and-merge.md#the-merge-guard) allows, and source/promotion threads are resolved. No separate promotion CodeRabbit approval is required (owner decision, 2026-09-22).
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
