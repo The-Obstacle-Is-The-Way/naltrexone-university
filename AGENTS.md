@@ -19,8 +19,8 @@ Stack: Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle 
 
    - When the E2E credentials are present (the list is in [the E2E guide](docs/dev/testing-infrastructure.md#environment-variables-for-e2e)), also run `pnpm test:e2e`. It runs against a per-clone Docker database while calling Clerk and Stripe in test mode.
    - The pre-push hook runs only `pnpm typecheck && pnpm test --run`; it does not build, and only the build catches prerender errors.
-   - If `pnpm test:browser` exits in about a second with `no tests / 1 error`, retry that lane once and say so; a second failure blocks the push. After the retry, still run the lanes after it.
-3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, use an isolated clone or worktree. Do not stash another session’s files: that changes its working tree. Several agents share these clones.
+   - If `pnpm test:browser` exits in about a second with `no tests / 1 error`, capture the failing output, retry that lane once and say so; a second failure blocks the push. After the retry, still run the lanes after it.
+3. **Never delete work you did not make.** Leave others' uncommitted files and edits alone. If they are in your way, `git stash -m "<why>"` and ask. Several agents share these clones.
 4. **Stay non-interactive.**
    - Use `git --no-pager`, and `git commit -m "…"`.
    - Never `pnpm -s <cmd>`: it runs `<cmd>` as a script or binary, which can open Vim and hang.
@@ -49,7 +49,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Names:** `src/adapters/controllers/**` are server-side controllers. A client hook that composes page state is a page model (`use-*-page-model.ts`), not a controller.
 - **Domain entities hold no vendor IDs.** Clerk and Stripe identifiers live in persistence and adapters, and plans are `SubscriptionPlan`, not price IDs.
 - **No magic numbers;** use named constants.
-- **A bare `catch {}`** is allowed only for a suppressed secondary failure (telemetry, best-effort cleanup that keeps the original error, a parse fallback), with a comment.
+- **A bare `catch {}`** is allowed only for a suppressed secondary failure (telemetry, best-effort cleanup that keeps the original error, a parse fallback), with a comment. UI error-reporting helpers live in `app/(app)/app/shared/`; add a shared logger-safety helper to `src/` only once three or more sibling files need the same wrapper.
 - **Decisions** are in [`docs/adr/`](docs/adr/index.md); read the relevant ADR before changing what it decided.
 
 ## Testing
@@ -97,12 +97,12 @@ Read the matching rule before editing. Claude Code loads these by path, and Code
 
 7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`.
 
-Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, and link ADR or record changes. How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](docs/dev/deployment-procedure.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
+Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI. How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](docs/dev/deployment-procedure.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
 ## Records
 
 Open bug and debt records are in `docs/records/`, with one index. Its ["How Records Work"](docs/records/README.md#how-records-work) section holds the rules.
-- Read **Now** and the Waiting triggers relevant to your work at session start. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
+- Read **Now** and the Waiting triggers relevant to your work at session start, and clear any overdue Verifying check before new work. Follow the index’s due-check and weekly queue-review procedure; triage owner-only actions without assuming authority to perform them.
 - A new ID comes from `pnpm exec tsx scripts/next-record-id.ts bug` (or `debt`).
 - Write the record first and have a second agent challenge it. Before any push involving an exploitable security finding, apply the index’s private-review and disclosure exception; a public draft PR is not private.
 - Ship it with its fix. Specify new features in [`docs/product/`](docs/product/README.md); multi-PR duration alone is not debt.
@@ -128,6 +128,6 @@ pnpm quality:crap | test:mutation                      # observational quality r
 - [`docs/adr/`](docs/adr/index.md): decisions.
 - [`docs/specs/master_spec.md`](docs/specs/master_spec.md): product behaviour; the code owns schemas and types.
 - [`docs/frontend/`](docs/frontend/index.md): the design system. [`docs/dev/`](docs/dev/index.md): engineering guides. [`docs/guides/`](docs/guides/release/review-and-merge.md): review, merge and UI QA.
-- [`docs/tooling/agent-browser.md`](docs/tooling/agent-browser.md): browser checks behind Clerk sign-in. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
+- [`docs/tooling/agent-browser.md`](docs/tooling/agent-browser.md): browser checks behind Clerk sign-in. Never skip a visual check because a page redirects to sign-in: sign in first. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
 - [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.
 - CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](docs/dev/deployment-environments.md#ci-secret-standard)).
