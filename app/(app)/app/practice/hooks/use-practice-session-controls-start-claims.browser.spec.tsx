@@ -132,7 +132,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     const screen = await render(<StartClaimProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await screen.getByRole('button', { name: 'start-session' }).click();
@@ -150,17 +150,17 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     firstSettledResult.resolve(err('INTERNAL_ERROR', 'Recorded start failed'));
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -189,7 +189,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
 
     const refreshCountBeforeThirdSettlement =
       getIncompletePracticeSession.mock.calls.length;
@@ -202,7 +202,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('3');
+      .toMatchTextContent('3');
   });
 
   it('preserves the key when a settled failure proves absence while a later same-key invocation remains unsettled', async () => {
@@ -228,7 +228,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     const screen = await render(<StartClaimProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await screen.getByRole('button', { name: 'start-session' }).click();
@@ -254,7 +254,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -283,7 +283,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
 
     const refreshCountBeforeThirdSettlement =
       getIncompletePracticeSession.mock.calls.length;
@@ -296,7 +296,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('3');
+      .toMatchTextContent('3');
   });
 
   it('preserves the key when a later claim settles before an earlier invocation', async () => {
@@ -322,7 +322,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     const screen = await render(<StartClaimProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await screen.getByRole('button', { name: 'start-session' }).click();
@@ -350,7 +350,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -371,7 +371,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
       await Promise.all([retryResult.promise, earlierUnsettledResult.promise]);
       await expect
         .element(screen.getByTestId('settled-starts'))
-        .toHaveTextContent('3');
+        .toMatchTextContent('3');
       expect(getIncompletePracticeSession.mock.calls.length).toBe(
         refreshCountBeforeCleanup + 2,
       );
@@ -424,7 +424,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     const screen = await render(<StartClaimProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await screen.getByRole('button', { name: 'start-session' }).click();
@@ -442,7 +442,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     settledResult.resolve(err('INTERNAL_ERROR', 'Recorded start failed'));
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     staleConcurrentResult.resolve(
       err('CONFLICT', 'Request is still running', undefined, {
@@ -451,14 +451,14 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -466,7 +466,7 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('3');
+      .toMatchTextContent('3');
     const thirdStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       2,

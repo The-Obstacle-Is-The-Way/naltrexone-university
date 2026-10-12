@@ -268,21 +268,21 @@ test('clears derived selection state when the current question becomes null', as
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'mark-answered' }).click();
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 
   await screen.getByRole('button', { name: 'clear-question' }).click();
   await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(/^$/);
+    .toMatchTextContent(/^$/);
 });
 
 test('returns true from onSelectChoice when selection changes', async () => {
@@ -297,10 +297,10 @@ test('returns true from onSelectChoice when selection changes', async () => {
 
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('last-select-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 });
 
 test('returns false from onSelectChoice when selection is blocked', async () => {
@@ -311,7 +311,7 @@ test('returns false from onSelectChoice when selection is blocked', async () => 
     .click();
   await expect
     .element(screen.getByTestId('last-select-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 
   await screen
     .getByRole('button', { name: 'load-no-session', exact: true })
@@ -322,7 +322,7 @@ test('returns false from onSelectChoice when selection is blocked', async () => 
     .click();
   await expect
     .element(screen.getByTestId('last-select-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 
   await screen.getByRole('button', { name: 'load-no-session-q2' }).click();
   await screen.getByRole('button', { name: 'set-result-only' }).click();
@@ -331,13 +331,13 @@ test('returns false from onSelectChoice when selection is blocked', async () => 
     .click();
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
   await expect
     .element(screen.getByTestId('last-select-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('restores exam draft selections without locking the answer', async () => {
@@ -351,30 +351,30 @@ test('restores exam draft selections without locking the answer', async () => {
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 
   await screen.getByRole('button', { name: 'load-no-session-q2' }).click();
 
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice2Id);
+    .toMatchTextContent(fixtureChoice2Id);
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 
   await screen
     .getByRole('button', { name: 'load-no-session', exact: true })
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(/^$/);
+    .toMatchTextContent(/^$/);
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('preserves a newer local exam selection during same-question resync', async () => {
@@ -383,25 +383,25 @@ test('preserves a newer local exam selection during same-question resync', async
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice2Id);
+    .toMatchTextContent(fixtureChoice2Id);
 
   await screen
     .getByRole('button', { name: 'select-choice-1', exact: true })
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('preserves an unsaved exam selection on same-question ready resync', async () => {
@@ -415,15 +415,15 @@ test('preserves an unsaved exam selection on same-question ready resync', async 
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('preserves a freshly selected exam choice during same-tick ready resync', async () => {
@@ -434,7 +434,7 @@ test('preserves a freshly selected exam choice during same-tick ready resync', a
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(/^$/);
+    .toMatchTextContent(/^$/);
 
   await screen
     .getByRole('button', {
@@ -443,13 +443,13 @@ test('preserves a freshly selected exam choice during same-tick ready resync', a
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('resets answered state when entering loading state', async () => {
@@ -458,12 +458,12 @@ test('resets answered state when entering loading state', async () => {
   await screen.getByRole('button', { name: 'mark-answered' }).click();
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 
   await screen.getByRole('button', { name: 'set-loading' }).click();
   await expect
     .element(screen.getByTestId('is-answered'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('restores submitResult when previousSubmission exists in session data', async () => {
@@ -475,27 +475,27 @@ test('restores submitResult when previousSubmission exists in session data', asy
 
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
   await expect
     .element(screen.getByTestId('submit-result-is-correct'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
   await expect
     .element(screen.getByTestId('submit-result-correct-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('submit-result-explanation-md'))
-    .toHaveTextContent('Explanation');
+    .toMatchTextContent('Explanation');
   await expect
     .element(screen.getByTestId('submit-result-reference-md'))
-    .toHaveTextContent('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
+    .toMatchTextContent('Anton RF et al. JAMA. 2006;295(17):2003-2017.');
   await expect
     .element(screen.getByTestId('submit-result-choice-explanations-length'))
-    .toHaveTextContent('2');
+    .toMatchTextContent('2');
   await expect
     .element(
       screen.getByTestId('submit-result-choice-explanations-first-label'),
     )
-    .toHaveTextContent('A');
+    .toMatchTextContent('A');
 });
 
 test('clears submitResult when previousSubmission is not present or question is unanswered', async () => {
@@ -504,19 +504,19 @@ test('clears submitResult when previousSubmission is not present or question is 
   await screen.getByRole('button', { name: 'set-submit-result' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 
   await screen.getByRole('button', { name: 'load-with-exam-draft' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 
   await screen
     .getByRole('button', { name: 'load-no-session', exact: true })
     .click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('clears submitResult when it belongs to a different question than the current question', async () => {
@@ -525,17 +525,17 @@ test('clears submitResult when it belongs to a different question than the curre
   await screen.getByRole('button', { name: 'load-no-session-q2' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 
   await screen.getByRole('button', { name: 'set-stale-submit-result' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 
   await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('false');
+    .toMatchTextContent('false');
 });
 
 test('preserves the selected choice when a local submit result is resynchronized for the same question', async () => {
@@ -549,18 +549,18 @@ test('preserves the selected choice when a local submit result is resynchronized
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
 
   await screen.getByRole('button', { name: 'set-submit-result' }).click();
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 
   await screen.getByRole('button', { name: 'set-ready' }).click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent(fixtureChoice1Id);
+    .toMatchTextContent(fixtureChoice1Id);
   await expect
     .element(screen.getByTestId('has-submit-result'))
-    .toHaveTextContent('true');
+    .toMatchTextContent('true');
 });

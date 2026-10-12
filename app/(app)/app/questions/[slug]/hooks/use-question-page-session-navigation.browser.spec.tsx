@@ -122,16 +122,16 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     await expect
       .element(screen.getByTestId('session-nav-current-was-retried'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByTestId('mark-current-retried').click();
 
     await expect
       .element(screen.getByTestId('session-nav-current-was-retried'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('reuses cached session questions when slug changes within the same session', async () => {
@@ -199,14 +199,14 @@ describe('useQuestionPageSessionNavigation (browser)', () => {
 
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
     await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
 
     await screen.getByTestId('set-slug-q-2').click();
 
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
   });
 });

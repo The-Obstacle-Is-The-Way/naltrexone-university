@@ -110,16 +110,16 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('q_1');
+      .toMatchTextContent('q_1');
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('transitions to error state when question loading throws', async () => {
@@ -130,10 +130,10 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Network down');
+      .toMatchTextContent('Network down');
   });
 
   it('emits bookmark feedback for repeated identical success messages', async () => {
@@ -152,17 +152,17 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
     await expect
       .element(screen.getByTestId('bookmark-feedback-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
     await expect
       .element(screen.getByTestId('bookmark-feedback-count'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
   });
 
   it('uses transition pending state for answer submit without switching to loading status', async () => {
@@ -176,16 +176,16 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
 
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     deferred.resolve(
       ok({
@@ -200,6 +200,6 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 });

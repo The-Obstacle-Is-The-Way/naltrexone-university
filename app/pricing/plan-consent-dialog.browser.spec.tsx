@@ -304,7 +304,7 @@ for (const plan of ['monthly', 'annual'] as const) {
     const alert = dialog.getByRole('alert');
     await expect
       .element(alert)
-      .toHaveTextContent('Checkout failed. Please try again.');
+      .toMatchTextContent('Checkout failed. Please try again.');
     await expect.element(alert).toBeVisible();
     // Focus moves to the title on open, which can cut off the alert, so the
     // dialog's description also points at the error.

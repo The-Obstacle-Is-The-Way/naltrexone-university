@@ -143,13 +143,13 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
+      .toMatchTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
+      .toMatchTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent('attempt');
+      .toMatchTextContent('attempt');
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
@@ -209,10 +209,10 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByTestId('set-review-mode').click();
 
@@ -263,16 +263,16 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('reset-review-hydration-state').click();
 
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent('no_prior_attempt');
+      .toMatchTextContent('no_prior_attempt');
 
     deferred.resolve(
       ok({
@@ -294,12 +294,12 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent('no_prior_attempt');
+      .toMatchTextContent('no_prior_attempt');
   });
 });

@@ -93,14 +93,14 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'next-question' }).click();
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
     expect(saveExamDraftAnswerMock).toHaveBeenCalledWith({
       sessionId: BROWSER_SESSION_ID,
       questionId: BROWSER_QUESTION_1_ID,
@@ -154,21 +154,21 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_1_ID);
+      .toMatchTextContent(BROWSER_CHOICE_1_ID);
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     expect(submitAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({
         questionId: BROWSER_QUESTION_1_ID,
@@ -215,17 +215,17 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
 
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     deferred.resolve(
       ok({
@@ -240,7 +240,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not programmatically submit an active exam question before review', async () => {
@@ -310,10 +310,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
@@ -322,7 +322,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
   });
 
   it('restores draft selections when navigating away and back before submit', async () => {
@@ -403,18 +403,18 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_1_ID);
+      .toMatchTextContent(BROWSER_CHOICE_1_ID);
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByRole('button', { name: 'next-question' }).click();
     expect(getNextQuestionMock).toHaveBeenNthCalledWith(2, {
@@ -423,18 +423,18 @@ describe('usePracticeSessionPageModel (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
 
     await screen.getByRole('button', { name: 'navigate-question-1' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_1_ID);
+      .toMatchTextContent(BROWSER_CHOICE_1_ID);
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('restores submitResult when navigating away and back after submitting in tutor mode', async () => {
@@ -569,53 +569,53 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await expect
       .element(screen.getByTestId('has-submit-result'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_1_ID);
+      .toMatchTextContent(BROWSER_CHOICE_1_ID);
 
     await expect
       .element(screen.getByTestId('has-submit-result'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('submit-result-correct-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_2_ID);
+      .toMatchTextContent(BROWSER_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('submit-result-explanation-md'))
-      .toHaveTextContent('Because');
+      .toMatchTextContent('Because');
 
     await screen.getByRole('button', { name: 'next-question' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
     await expect
       .element(screen.getByTestId('has-submit-result'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'navigate-question-1' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_1_ID);
+      .toMatchTextContent(BROWSER_CHOICE_1_ID);
     await expect
       .element(screen.getByTestId('has-submit-result'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('submit-result-correct-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_2_ID);
+      .toMatchTextContent(BROWSER_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('submit-result-explanation-md'))
-      .toHaveTextContent('Because');
+      .toMatchTextContent('Because');
   });
 
   it('locks selection when loading a previously answered question', async () => {
@@ -655,18 +655,18 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_2_ID);
+      .toMatchTextContent(BROWSER_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(BROWSER_CHOICE_2_ID);
+      .toMatchTextContent(BROWSER_CHOICE_2_ID);
   });
 });

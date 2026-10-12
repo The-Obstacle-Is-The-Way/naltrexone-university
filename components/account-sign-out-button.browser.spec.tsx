@@ -49,7 +49,7 @@ describe('AccountSignOutButton (browser)', () => {
 
     await expect
       .element(screen.getByRole('alert'))
-      .toHaveTextContent(
+      .toMatchTextContent(
         'Sign-out did not finish. Try again, or use Contact support.',
       );
     await screen.getByRole('button', { name: 'Sign out' }).click();

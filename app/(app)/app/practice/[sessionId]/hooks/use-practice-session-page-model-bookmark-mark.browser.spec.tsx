@@ -59,17 +59,17 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
     await expect
       .element(screen.getByTestId('bookmark-feedback-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
     await expect
       .element(screen.getByTestId('bookmark-feedback-count'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
   });
 
   it('does not set transition pending state when toggling bookmarks', async () => {
@@ -112,15 +112,15 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     deferred.resolve(ok({ bookmarked: true }));
     await deferred.promise;
@@ -191,13 +191,13 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await expect
       .element(screen.getByTestId('marked-for-review'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen
       .getByRole('button', { name: 'toggle-mark-for-review' })
@@ -207,15 +207,15 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(1);
     await expect
       .element(screen.getByTestId('is-marking'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await screen.getByRole('button', { name: 'next-question' }).click();
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
     await expect
       .element(screen.getByTestId('marked-for-review'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     deferred.resolve(
       ok({ questionId: BROWSER_QUESTION_1_ID, markedForReview: true }),
@@ -223,13 +223,13 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
     await expect
       .element(screen.getByTestId('is-marking'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('marked-for-review'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not show an error on the wrong question when a mark-for-review request fails after navigating away', async () => {
@@ -297,10 +297,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen
       .getByRole('button', { name: 'toggle-mark-for-review' })
@@ -312,18 +312,18 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await screen.getByRole('button', { name: 'next-question' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
 
     deferred.reject(new Error('Network timeout'));
 
     await expect
       .element(screen.getByTestId('is-marking'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
   });
 });
