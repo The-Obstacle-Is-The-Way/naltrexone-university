@@ -1,5 +1,5 @@
 import path from 'node:path';
-import matter from 'gray-matter';
+import matter from '@11ty/gray-matter';
 import { describe, expect, it } from 'vitest';
 import { parseMdxQuestionBody } from '../lib/content/parse-mdx-question';
 import {

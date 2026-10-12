@@ -59,6 +59,20 @@ export async function expectVerdictPillVisible(
   return verdictPill;
 }
 
+// The verdict comes from the pill, which expectVerdictPillVisible has waited
+// for. A page-wide text search for "Correct" would not wait, and a second
+// match elsewhere makes Playwright's strict mode throw.
+export async function readVerdict(
+  target: Page | Locator,
+): Promise<'Correct' | 'Incorrect'> {
+  const verdictPill = await expectVerdictPillVisible(target);
+  const verdict = (await verdictPill.textContent())?.trim();
+  if (verdict !== 'Correct' && verdict !== 'Incorrect') {
+    throw new Error(`Unexpected verdict pill text: ${verdict ?? '(none)'}`);
+  }
+  return verdict;
+}
+
 function getQuestionLoadingIndicator(page: Page) {
   return page.getByText(QUESTION_LOADING_LABEL, { exact: true });
 }
@@ -99,13 +113,7 @@ export async function submitQuestionForOutcome(
 
     await selectChoiceByLabel(page, label);
     await page.getByRole('button', { name: 'Submit' }).click();
-    await expectVerdictPillVisible(page);
-
-    const matchedOutcome = await page
-      .getByText(outcome, { exact: true })
-      .isVisible()
-      .catch(() => false);
-    if (matchedOutcome) {
+    if ((await readVerdict(page)) === outcome) {
       return label;
     }
   }

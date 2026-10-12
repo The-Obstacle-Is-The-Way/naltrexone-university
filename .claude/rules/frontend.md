@@ -106,8 +106,8 @@ not invent one. Either:
 (a) Add it to `pattern-registry.md` with rationale and design review,
     THEN implement.
 
-(b) File a debt doc proposing the addition and link it from
-    `docs/debt/index.md`.
+(b) File a debt record in `docs/records/` proposing the addition, with a
+    row in `docs/records/README.md`.
 
 NEVER ship a one-off pattern that diverges from the documented system
 without a corresponding doc entry.

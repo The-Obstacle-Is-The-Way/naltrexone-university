@@ -6,7 +6,7 @@
 
 ## Maintenance
 
-- For numbered-record closeout, follow [Closing and Archiving Documentation Records](./AGENTS.md#closing-and-archiving-documentation-records); keep the procedure there, not in this supplement.
+- For bug and debt records, follow [How Records Work](./docs/records/README.md#how-records-work); keep the procedure there, not in this supplement.
 - Prefer concrete, verifiable instructions with exact commands or paths.
 - Keep most topic- or path-specific Claude guidance in `.claude/rules/`.
 - If this file grows beyond a quick-start supplement, split the extra Claude-only material into `.claude/rules/` or imported markdown files instead of copying `AGENTS.md`.

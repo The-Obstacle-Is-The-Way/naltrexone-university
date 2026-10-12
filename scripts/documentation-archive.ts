@@ -4,6 +4,18 @@ import { pathToFileURL } from 'node:url';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+// Open bug and debt records live in one folder, with one index. A closed
+// record is deleted and leaves a line in the ledger (DEBT-518).
+export const RECORDS = {
+  directory: 'docs/records',
+  index: 'docs/records/README.md',
+  ledger: 'docs/records/closed.md',
+  pattern: /^(?:bug|debt)-\d+.*\.md$/i,
+};
+
+// The registers that once kept their own folders. Their archived records keep
+// a disposition until the archive is deleted, and their old folders hold no
+// record or index any more.
 export const REGISTERS = {
   debt: /^(?:debt|fe)-\d+.*\.md$/i,
   bugs: /^bug-\d+.*\.md$/i,
@@ -42,6 +54,9 @@ export type DocumentationAudit = {
   missingArchiveDispositions: string[];
   invalidNow: string[];
   strayRegisterFiles: string[];
+  retiredRegisterFiles: string[];
+  duplicateLedgerIds: string[];
+  malformedLedgerLines: string[];
   unnamedVerifying: string[];
   invalidVerifying: string[];
   longStatus: string[];
@@ -50,6 +65,7 @@ export type DocumentationAudit = {
   missingLiveRows: string[];
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
+  recordLinks: DocumentationLink[];
   brokenArchive: DocumentationLink[];
   repairableArchive: ArchiveLinkRepair[];
   oversized: string[];
@@ -69,12 +85,13 @@ export const REGISTER_ARCHIVE_BUDGET_BYTES = 256 * 1024;
 // A live record's status is one line; its detail belongs in the record body.
 export const STATUS_MAX_CHARACTERS = 200;
 
+function isRegister(name?: string): name is keyof typeof REGISTERS {
+  return name !== undefined && Object.hasOwn(REGISTERS, name);
+}
+
 function registerFileBudget(file: string): number | undefined {
   const parts = file.split('/');
-  const isRegister = (name?: string) =>
-    name !== undefined && Object.hasOwn(REGISTERS, name);
-  if (parts.length === 3 && parts[0] === 'docs' && isRegister(parts[1]))
-    return parts[2] === 'index.md' ? REGISTER_INDEX_BUDGET_BYTES : undefined;
+  if (file === RECORDS.index) return REGISTER_INDEX_BUDGET_BYTES;
   if (
     parts.length === 4 &&
     parts[0] === 'docs' &&
@@ -86,17 +103,51 @@ function registerFileBudget(file: string): number | undefined {
   return undefined;
 }
 
-// Beside the bug and debt indexes only open records belong: change history
-// lives in git, and frozen register history lives in the archive.
-const RESTRUCTURED_REGISTERS = ['bugs', 'debt'] as const;
+// Beside the records index only open records and the ledger belong: change
+// history lives in git, and a closed record is a ledger line. Records get no
+// asset folders; DEBT-414's predate that rule and go when it closes.
+const LEGACY_RECORD_ASSETS =
+  /^docs\/records\/assets\/(?:debt-414|inventory-2026-09-21|active-audit-2026-09-21)\//;
 
-function isStrayRegisterFile(file: string): boolean {
+function isStrayRecordsFile(file: string): boolean {
+  if (!file.startsWith(`${RECORDS.directory}/`)) return false;
+  if (path.posix.dirname(file) !== RECORDS.directory)
+    return !LEGACY_RECORD_ASSETS.test(file);
+  return (
+    file !== RECORDS.index &&
+    file !== RECORDS.ledger &&
+    !RECORDS.pattern.test(path.posix.basename(file))
+  );
+}
+
+// Markdown left in an old register folder missed the move to docs/records.
+// Living documents in docs/specs, such as the master spec, stay, and asset
+// folders stay until the archive that links them is deleted.
+function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
   if (docs !== 'docs' || rest.length > 0 || name === undefined) return false;
-  if (!RESTRUCTURED_REGISTERS.some((entry) => entry === register)) return false;
-  const pattern =
-    REGISTERS[register as (typeof RESTRUCTURED_REGISTERS)[number]];
-  return name !== 'index.md' && !pattern.test(name);
+  if (!isRegister(register)) return false;
+  if (register !== 'specs') return true;
+  return name === 'index.md' || REGISTERS[register].test(name);
+}
+
+// A ledger line: ID · title · disposition · date · path, then optionally the
+// closing PR and the commit of the record's last version.
+const LEDGER_ENTRY =
+  /^- ([A-Z]+-\d+[a-z]?) · [^·\n]+ · [^·\n]+ · \d{4}-\d{2}-\d{2} · \S[^\n]*$/;
+const LIST_ITEM = /^\s*[-*+] /;
+// IDs given to two records each before anything checked; each ledger line
+// names its own file. No third, and no new collision, is allowed.
+const HISTORICAL_ID_COLLISIONS = new Set(
+  ['DEBT-338', 'FE-055', 'SPEC-028'].map((id) => canonicalId(id) ?? id),
+);
+
+// IDs compare by prefix and number, so `bug-05` and `BUG-005` are the same.
+function canonicalId(value: string): string | undefined {
+  const match = value.match(/^([a-z]+)-0*(\d+)([a-z]?)(?![a-z0-9])/i);
+  if (!match) return undefined;
+  const [, prefix = '', digits = '0', letter = ''] = match;
+  return `${prefix.toUpperCase()}-${Number(digits)}${letter.toLowerCase()}`;
 }
 
 type ArchiveLinkRepair = DocumentationLink & {
@@ -182,8 +233,13 @@ type StanzaLabel = { text: string; start: number; end: number };
 function scanMarkdown(
   file: string,
   contents: string,
-): { links: DocumentationLink[]; labels: StanzaLabel[] } {
+): {
+  links: DocumentationLink[];
+  absoluteLinks: DocumentationLink[];
+  labels: StanzaLabel[];
+} {
   const links: DocumentationLink[] = [];
+  const absoluteLinks: DocumentationLink[] = [];
   const labels: StanzaLabel[] = [];
   // Use the installed first-party application Markdown seam, including GFM
   // tables. Code examples are not links; definitions cover reference links.
@@ -255,6 +311,22 @@ function scanMarkdown(
               start,
               end,
             });
+          } else if (
+            ['link', 'image', 'definition'].includes(node.type) &&
+            node.url &&
+            /^(?:[a-z][a-z0-9+.-]*:|\/)/i.test(node.url)
+          ) {
+            // Web and site-root links are not resolved, but a link to a
+            // record by either still breaks when the record closes.
+            absoluteLinks.push({
+              file,
+              line: node.position?.start.line ?? 1,
+              url: node.url,
+              target: node.url,
+              inTable: table,
+              start: node.position?.start.offset ?? 0,
+              end: node.position?.end.offset ?? 0,
+            });
           }
           for (const child of node.children ?? [])
             visit(child, table, identity);
@@ -263,7 +335,7 @@ function scanMarkdown(
       },
     ],
   });
-  return { links, labels };
+  return { links, absoluteLinks, labels };
 }
 
 function recordStatus(file: string, contents: string): string {
@@ -347,6 +419,9 @@ export function auditRecordLifecycle(
     missingArchiveDispositions: [],
     invalidNow: [],
     strayRegisterFiles: [],
+    retiredRegisterFiles: [],
+    duplicateLedgerIds: [],
+    malformedLedgerLines: [],
     unnamedVerifying: [],
     invalidVerifying: [],
     longStatus: [],
@@ -355,116 +430,126 @@ export function auditRecordLifecycle(
     missingLiveRows: [],
     missingRowTargets: [],
     brokenLive: [],
+    recordLinks: [],
     brokenArchive: [],
     repairableArchive: [],
     oversized: [],
     counts: [],
   };
-  const scans = new Map(
-    Object.keys(REGISTERS).map((register) => {
-      const file = `docs/${register}/index.md`;
-      return [file, scanMarkdown(file, files.get(file) ?? '')];
-    }),
-  );
+  const index = files.get(RECORDS.index) ?? '';
+  const scan = scanMarkdown(RECORDS.index, index);
   for (const [file, contents] of files) {
     const budget = registerFileBudget(file);
     if (budget !== undefined && Buffer.byteLength(contents, 'utf8') > budget)
       result.oversized.push(file);
-    if (isStrayRegisterFile(file)) result.strayRegisterFiles.push(file);
+    if (isStrayRecordsFile(file)) result.strayRegisterFiles.push(file);
+    if (isRetiredRegisterFile(file)) result.retiredRegisterFiles.push(file);
   }
 
+  // The index states the current position in one Now stanza, replaced in
+  // place, and carries no changelog under any label.
+  const nowLabels = scan.labels.filter((label) => /^now\b/i.test(label.text));
+  const now = nowLabels[0];
+  const nowText = now ? index.slice(now.start, now.end) : '';
+  if (
+    nowLabels.length !== 1 ||
+    now?.text !== 'Now' ||
+    scan.labels.some((label) => HISTORY_LABEL.test(label.text)) ||
+    Buffer.byteLength(nowText, 'utf8') > NOW_STANZA_BUDGET_BYTES
+  )
+    result.invalidNow.push(RECORDS.index);
+
+  const recordId = (file: string) => recordIdentity(path.posix.basename(file));
+  const inFolder = (directory: string, pattern: RegExp) =>
+    [...files.keys()].filter(
+      (file) =>
+        path.posix.dirname(file) === directory &&
+        pattern.test(path.posix.basename(file)),
+    );
+  const ledgerIds: string[] = [];
+  (files.get(RECORDS.ledger) ?? '').split('\n').forEach((line, index) => {
+    if (!LIST_ITEM.test(line)) return;
+    const id = line.match(LEDGER_ENTRY)?.[1];
+    if (id) ledgerIds.push(id.toUpperCase());
+    else result.malformedLedgerLines.push(`${RECORDS.ledger}:${index + 1}`);
+  });
+  // Counted by canonical ID, so padding cannot hide a duplicate; reported as
+  // the ledger first spelled it.
+  const ledgerCounts = new Map<string, { count: number; first: string }>();
+  for (const id of ledgerIds) {
+    const key = canonicalId(id) ?? id;
+    const seen = ledgerCounts.get(key) ?? { count: 0, first: id };
+    seen.count += 1;
+    ledgerCounts.set(key, seen);
+    const allowed = HISTORICAL_ID_COLLISIONS.has(key) ? 2 : 1;
+    if (seen.count > allowed && !result.duplicateLedgerIds.includes(seen.first))
+      result.duplicateLedgerIds.push(seen.first);
+  }
+  const closedIds = new Set(
+    ledgerIds.map((id) => canonicalId(id) ?? id.toUpperCase()),
+  );
+  const idOf = (file: string) => canonicalId(path.posix.basename(file)) ?? file;
   for (const [register, pattern] of Object.entries(REGISTERS)) {
-    const liveDirectory = `docs/${register}`;
-    const archiveDirectory = `docs/_archive/${register}`;
-    const indexFile = `${liveDirectory}/index.md`;
-    const labels = scans.get(indexFile)?.labels ?? [];
-    const nowLabels = labels.filter((label) => /^now\b/i.test(label.text));
-    const now = nowLabels[0];
-    const nowText = now
-      ? (files.get(indexFile) ?? '').slice(now.start, now.end)
-      : '';
-    // Bug and debt indexes state their current position in one Now stanza,
-    // replaced in place, and carry no changelog under any label. Other
-    // registers need no Now stanza, but none keeps a Latest changelog.
-    const restructured = RESTRUCTURED_REGISTERS.some(
-      (entry) => entry === register,
-    );
-    if (
-      restructured
-        ? nowLabels.length !== 1 ||
-          now?.text !== 'Now' ||
-          labels.some((label) => HISTORY_LABEL.test(label.text)) ||
-          Buffer.byteLength(nowText, 'utf8') > NOW_STANZA_BUDGET_BYTES
-        : labels.filter((label) => label.text === 'Now').length > 1 ||
-          labels.some((label) => label.text === 'Latest')
-    )
-      result.invalidNow.push(indexFile);
-    const records = (directory: string) =>
-      [...files.keys()].filter(
-        (file) =>
-          path.posix.dirname(file) === directory &&
-          pattern.test(path.posix.basename(file)),
-      );
-    const live = records(liveDirectory);
-    const archived = records(archiveDirectory);
-    const recordId = (file: string) =>
-      recordIdentity(path.posix.basename(file));
-    const archivedIds = new Set(archived.map(recordId));
-    const rows = (scans.get(indexFile)?.links ?? []).filter(
-      (link) => link.inTable,
-    );
-    // A related link in another record's notes is not this record's own row.
-    const registered = new Set(
-      rows
-        .filter(
-          (link) =>
-            !link.invalidEncoding && link.rowId === recordId(link.target),
-        )
-        .map((link) => link.target),
-    );
-    for (const record of live) {
-      const status = recordStatus(record, files.get(record) ?? '');
-      if (archivedIds.has(recordId(record))) result.duplicates.push(record);
-      if (CLOSED_STATUS.test(status)) result.closedLive.push(record);
-      if (!registered.has(record)) result.missingLiveRows.push(record);
-      if (
-        status.length > STATUS_MAX_CHARACTERS ||
-        WRAPPED_STATUS.test(files.get(record) ?? '')
-      )
-        result.longStatus.push(record);
-      // A record whose fix shipped but whose check can only happen in
-      // production stays live, as Verifying, until that check is done.
-      if (VERIFYING_STATUS.test(status)) {
-        const dues = [...status.matchAll(DUE_DATE)].map((match) => match[1]);
-        const due = dues[0];
-        if (dues.length !== 1 || !due || !isCalendarDate(due))
-          result.invalidVerifying.push(record);
-        else if (due < today)
-          result.verifyingOverdue.push({ file: record, due });
-        else if (due > addDays(today, VERIFYING_HORIZON_DAYS))
-          result.verifyingFarFuture.push({ file: record, due });
-        if (!nowText.toLowerCase().includes(recordId(record) ?? record))
-          result.unnamedVerifying.push(record);
-      }
-    }
+    const archived = inFolder(`docs/_archive/${register}`, pattern);
     for (const record of archived) {
+      closedIds.add(idOf(record));
       const status = recordStatus(record, files.get(record) ?? '');
       if (!CLOSED_STATUS.test(status) && !HISTORICAL_DISPOSITION.test(status))
         result.missingArchiveDispositions.push(record);
     }
-    for (const row of rows) {
-      if (row.invalidEncoding || !targetExists(row.target))
-        result.missingRowTargets.push(
-          `${row.file}:${row.line} -> ${row.target}`,
-        );
-    }
-    result.counts.push({
-      register,
-      live: live.length,
-      archived: archived.length,
-    });
+    result.counts.push({ register, live: 0, archived: archived.length });
   }
+
+  const live = inFolder(RECORDS.directory, RECORDS.pattern);
+  const rows = scan.links.filter((link) => link.inTable);
+  // A related link in another record's notes is not this record's own row.
+  const registered = new Set(
+    rows
+      .filter(
+        (link) => !link.invalidEncoding && link.rowId === recordId(link.target),
+      )
+      .map((link) => link.target),
+  );
+  const openIds = new Set<string>();
+  for (const record of live) {
+    const status = recordStatus(record, files.get(record) ?? '');
+    const id = idOf(record);
+    if (closedIds.has(id) || openIds.has(id)) result.duplicates.push(record);
+    openIds.add(id);
+    // An open record carries no closed disposition: closing deletes it.
+    if (CLOSED_STATUS.test(status) || HISTORICAL_DISPOSITION.test(status))
+      result.closedLive.push(record);
+    if (!registered.has(record)) result.missingLiveRows.push(record);
+    if (
+      status.length > STATUS_MAX_CHARACTERS ||
+      WRAPPED_STATUS.test(files.get(record) ?? '')
+    )
+      result.longStatus.push(record);
+    // A record whose fix shipped but whose check can only happen in
+    // production stays live, as Verifying, until that check is done.
+    if (VERIFYING_STATUS.test(status)) {
+      const dues = [...status.matchAll(DUE_DATE)].map((match) => match[1]);
+      const due = dues[0];
+      if (dues.length !== 1 || !due || !isCalendarDate(due))
+        result.invalidVerifying.push(record);
+      else if (due < today) result.verifyingOverdue.push({ file: record, due });
+      else if (due > addDays(today, VERIFYING_HORIZON_DAYS))
+        result.verifyingFarFuture.push({ file: record, due });
+      if (!nowText.toLowerCase().includes(recordId(record) ?? record))
+        result.unnamedVerifying.push(record);
+    }
+  }
+  for (const row of rows) {
+    if (row.invalidEncoding || !targetExists(row.target))
+      result.missingRowTargets.push(`${row.file}:${row.line} -> ${row.target}`);
+  }
+  result.counts.push({
+    register: 'records',
+    live: live.length,
+    archived: ledgerIds.length,
+  });
   result.strayRegisterFiles.sort();
+  result.retiredRegisterFiles.sort();
   return result;
 }
 
@@ -482,12 +567,39 @@ export function brokenDocumentationLinks(
   );
 }
 
+// A closed record is deleted, so only the index links records; everywhere else
+// a record is cited by its ID, which the ledger resolves. An absolute link
+// breaks the same way, unless it pins a commit.
+const ABSOLUTE_RECORD_LINK =
+  /docs\/records\/(?:bug|debt)-\d+[^/?#]*\.md(?:[?#]|$)/i;
+const PINNED_COMMIT = /\/blob\/[0-9a-f]{40}\//i;
+
+export function recordLinks(
+  file: string,
+  contents: string,
+): DocumentationLink[] {
+  if (file === RECORDS.index || file.startsWith('docs/_archive/')) return [];
+  const { links, absoluteLinks } = scanMarkdown(file, contents);
+  return [
+    ...links.filter(
+      (link) =>
+        path.posix.dirname(link.target) === RECORDS.directory &&
+        RECORDS.pattern.test(path.posix.basename(link.target)),
+    ),
+    ...absoluteLinks.filter(
+      (link) =>
+        ABSOLUTE_RECORD_LINK.test(link.url) && !PINNED_COMMIT.test(link.url),
+    ),
+  ].sort((a, b) => a.start - b.start);
+}
+
 export function auditDocumentation(
   files: ReadonlyMap<string, string>,
   exists: (file: string) => boolean,
 ): DocumentationAudit {
   const result = auditRecordLifecycle(files, exists);
   for (const [file, contents] of files) {
+    result.recordLinks.push(...recordLinks(file, contents));
     for (const link of brokenDocumentationLinks(file, contents, exists)) {
       const list = link.file.startsWith('docs/_archive/')
         ? result.brokenArchive
@@ -559,9 +671,9 @@ export function readDocumentationFiles(root: string): Map<string, string> {
     ['docs/**/*.md', '*.md', '.claude/rules/**/*.md', '.github/**/*.md'],
     { cwd: root },
   ).sort();
-  for (const register of Object.keys(REGISTERS)) {
-    if (!names.includes(`docs/${register}/index.md`))
-      throw new Error(`Missing documentation register: ${register}`);
+  for (const file of [RECORDS.index, RECORDS.ledger]) {
+    if (!names.includes(file))
+      throw new Error(`Missing documentation records file: ${file}`);
   }
   return new Map(
     names.map((file) => [file, readFileSync(path.join(root, file), 'utf8')]),
@@ -591,12 +703,16 @@ export function runDocumentationCommand(
     result.missingArchiveDispositions,
     result.invalidNow,
     result.strayRegisterFiles,
+    result.retiredRegisterFiles,
+    result.duplicateLedgerIds,
+    result.malformedLedgerLines,
     result.unnamedVerifying,
     result.invalidVerifying,
     result.longStatus,
     result.missingLiveRows,
     result.missingRowTargets,
     result.brokenLive,
+    result.recordLinks,
     result.oversized,
     result.repairableArchive,
     result.brokenArchive.filter((link) => link.invalidEncoding),

@@ -10,54 +10,36 @@ function audit(files: Record<string, string>) {
   );
 }
 
-// An index is the list of open work and the current position. Closed records
-// live in the archive, and change history lives in git.
+// The records index is the list of open work and the current position. A
+// closed record is a ledger line, and change history lives in git.
 describe('documentation register conventions', () => {
-  it.each(['debt', 'bugs', 'specs', 'brainstorming', 'audits', 'qa'])(
-    'rejects duplicate Now stanzas in %s',
-    (register) => {
-      expect(
-        audit({
-          [`docs/${register}/index.md`]: '**Now** — new\n\n**Now** — old',
-        }),
-      ).toMatchObject({
-        invalidNow: expect.arrayContaining([`docs/${register}/index.md`]),
-      });
-    },
-  );
-
-  it.each(['debt', 'bugs'])('requires the Now stanza in %s', (register) => {
+  it('rejects duplicate Now stanzas in the records index', () => {
     expect(
-      audit({
-        [`docs/${register}/index.md`]: '# Register\n\n**Earlier** — old',
-      }),
-    ).toMatchObject({
-      invalidNow: expect.arrayContaining([`docs/${register}/index.md`]),
-    });
+      audit({ 'docs/records/README.md': '**Now** — new\n\n**Now** — old' }),
+    ).toMatchObject({ invalidNow: ['docs/records/README.md'] });
   });
 
-  // An index states the current position; its change history lives in git.
-  it.each(['debt', 'bugs', 'specs', 'brainstorming', 'audits', 'qa'])(
-    'rejects a Latest changelog stanza in %s',
-    (register) => {
-      expect(
-        audit({
-          [`docs/${register}/index.md`]:
-            '**Now** — current\n\n**Latest** — what changed',
-        }),
-      ).toMatchObject({
-        invalidNow: expect.arrayContaining([`docs/${register}/index.md`]),
-      });
-    },
-  );
+  it('requires the Now stanza in the records index', () => {
+    expect(
+      audit({ 'docs/records/README.md': '# Records\n\n**Earlier** — old' }),
+    ).toMatchObject({ invalidNow: ['docs/records/README.md'] });
+  });
+
+  // The index states the current position; its change history lives in git.
+  it('rejects a Latest changelog stanza in the records index', () => {
+    expect(
+      audit({
+        'docs/records/README.md':
+          '**Now** — current\n\n**Latest** — what changed',
+      }),
+    ).toMatchObject({ invalidNow: ['docs/records/README.md'] });
+  });
 
   it('ignores labels inside code examples', () => {
     expect(
       audit({
-        'docs/debt/index.md':
+        'docs/records/README.md':
           '**Now** — current\n\n```md\n**Now** — example\n**Latest** — example\n```\n\n`**Latest**`',
-        'docs/bugs/index.md': '**Now** — current',
-        'docs/specs/index.md': '# Register without a Now stanza',
       }),
     ).toMatchObject({ invalidNow: [] });
   });
@@ -76,39 +58,40 @@ describe('documentation register conventions', () => {
       '**Now** — current\n\n**Update history:** [2026-10](./x.md)',
     ],
     ['a Now stanza with another label', '**Now:** — current'],
-  ])('rejects %s in the bug and debt indexes', (_kind, index) => {
-    expect(audit({ 'docs/debt/index.md': index })).toMatchObject({
-      invalidNow: expect.arrayContaining(['docs/debt/index.md']),
+  ])('rejects %s in the records index', (_kind, index) => {
+    expect(audit({ 'docs/records/README.md': index })).toMatchObject({
+      invalidNow: ['docs/records/README.md'],
     });
   });
 
   it('caps the Now stanza, with its list, at 2 KiB', () => {
     const list = (bytes: number) => `- ${'a'.repeat(bytes)}`;
     const invalidNow = (index: string) =>
-      audit({ 'docs/bugs/index.md': index }).invalidNow;
+      audit({ 'docs/records/README.md': index }).invalidNow;
 
     expect(invalidNow(`**Now** — current\n${list(2048)}`)).toContain(
-      'docs/bugs/index.md',
+      'docs/records/README.md',
     );
     expect(invalidNow(`**Now** — current\n${list(1900)}`)).not.toContain(
-      'docs/bugs/index.md',
+      'docs/records/README.md',
     );
   });
 
-  // Beside a bug or debt index, only open records belong.
-  it('reports any other Markdown file beside the bug or debt index', () => {
+  // Beside the records index, only open records and the ledger belong.
+  it('reports any other Markdown file beside the records index', () => {
     expect(
       audit({
-        'docs/debt/index.md': '**Now** — current',
-        'docs/debt/register-history-2026-11.md': '**Earlier** — old',
-        'docs/bugs/notes.md': 'notes',
+        'docs/records/README.md': '**Now** — current',
+        'docs/records/closed.md': '# Closed',
+        'docs/records/register-history-2026-11.md': '**Earlier** — old',
+        'docs/records/notes.md': 'notes',
         'docs/_archive/debt/register-history-2026-09.md': '**Earlier** — old',
-        'docs/specs/notes.md': 'other registers are not restructured',
+        'docs/specs/notes.md': 'a living document elsewhere',
       }),
     ).toMatchObject({
       strayRegisterFiles: [
-        'docs/bugs/notes.md',
-        'docs/debt/register-history-2026-11.md',
+        'docs/records/notes.md',
+        'docs/records/register-history-2026-11.md',
       ],
     });
   });
@@ -119,20 +102,21 @@ describe('documentation register conventions', () => {
   ])('rejects a Verifying record with %s', (_kind, due) => {
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — BUG-001\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md': `**Status:** Verifying — check; ${due}`,
+        'docs/records/bug-001-x.md': `**Status:** Verifying — check; ${due}`,
       }),
-    ).toMatchObject({ invalidVerifying: ['docs/bugs/bug-001-x.md'] });
+    ).toMatchObject({ invalidVerifying: ['docs/records/bug-001-x.md'] });
   });
 
   it('requires the Now stanza to name each Verifying record', () => {
     const files = (now: string) => ({
-      'docs/bugs/index.md': `**Now** — ${now}\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |`,
-      'docs/bugs/bug-001-x.md': '**Status:** Verifying — check; due 2026-10-19',
+      'docs/records/README.md': `**Now** — ${now}\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |`,
+      'docs/records/bug-001-x.md':
+        '**Status:** Verifying — check; due 2026-10-19',
     });
     expect(audit(files('nothing to see'))).toMatchObject({
-      unnamedVerifying: ['docs/bugs/bug-001-x.md'],
+      unnamedVerifying: ['docs/records/bug-001-x.md'],
     });
     expect(audit(files('BUG-001 is verifying'))).toMatchObject({
       unnamedVerifying: [],
@@ -142,9 +126,9 @@ describe('documentation register conventions', () => {
   it('reports a due date more than 90 days out, as a notice', () => {
     const files = new Map(
       Object.entries({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — BUG-001\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md':
+        'docs/records/bug-001-x.md':
           '**Status:** Verifying — check; due 2027-01-04',
       }),
     );
@@ -152,7 +136,7 @@ describe('documentation register conventions', () => {
 
     expect(
       auditRecordLifecycle(files, exists, '2026-10-05').verifyingFarFuture,
-    ).toEqual([{ file: 'docs/bugs/bug-001-x.md', due: '2027-01-04' }]);
+    ).toEqual([{ file: 'docs/records/bug-001-x.md', due: '2027-01-04' }]);
     expect(
       auditRecordLifecycle(files, exists, '2026-10-06').verifyingFarFuture,
     ).toEqual([]);
@@ -161,20 +145,20 @@ describe('documentation register conventions', () => {
   it('requires a due date on a Verifying record', () => {
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — current\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md':
+        'docs/records/bug-001-x.md':
           '**Status:** Verifying — stable IDs across two production builds',
       }),
-    ).toMatchObject({ invalidVerifying: ['docs/bugs/bug-001-x.md'] });
+    ).toMatchObject({ invalidVerifying: ['docs/records/bug-001-x.md'] });
   });
 
   it('keeps a Verifying record with a due date live and valid', () => {
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — current\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md':
+        'docs/records/bug-001-x.md':
           '**Status:** Verifying — stable IDs across two production builds; due 2026-10-19',
       }),
     ).toMatchObject({ invalidVerifying: [], closedLive: [] });
@@ -183,9 +167,9 @@ describe('documentation register conventions', () => {
   it('reports a Verifying record past its due date, as a notice', () => {
     const files = new Map(
       Object.entries({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — current\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md':
+        'docs/records/bug-001-x.md':
           '**Status:** Verifying — stable IDs; due 2026-10-19',
       }),
     );
@@ -196,28 +180,28 @@ describe('documentation register conventions', () => {
     ).toEqual([]);
     expect(
       auditRecordLifecycle(files, exists, '2026-10-20').verifyingOverdue,
-    ).toEqual([{ file: 'docs/bugs/bug-001-x.md', due: '2026-10-19' }]);
+    ).toEqual([{ file: 'docs/records/bug-001-x.md', due: '2026-10-19' }]);
   });
 
   it('reports a status wrapped onto a second line', () => {
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — current\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md':
+        'docs/records/bug-001-x.md':
           '**Status:** Open — short\ncontinued on the next line\n**Priority:** P2',
       }),
-    ).toMatchObject({ longStatus: ['docs/bugs/bug-001-x.md'] });
+    ).toMatchObject({ longStatus: ['docs/records/bug-001-x.md'] });
   });
 
   it('reports a live record whose status runs past one line', () => {
     const status = `Open — ${'x'.repeat(200)}`;
     expect(
       audit({
-        'docs/bugs/index.md':
+        'docs/records/README.md':
           '**Now** — current\n\n| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-x.md) | X |',
-        'docs/bugs/bug-001-x.md': `**Status:** ${status}`,
+        'docs/records/bug-001-x.md': `**Status:** ${status}`,
       }),
-    ).toMatchObject({ longStatus: ['docs/bugs/bug-001-x.md'] });
+    ).toMatchObject({ longStatus: ['docs/records/bug-001-x.md'] });
   });
 });

@@ -168,13 +168,18 @@ type ParentSignals = {
   off(event: 'SIGINT' | 'SIGTERM', listener: () => void): unknown;
 };
 const INTERRUPT_GRACE_MS = 2_000;
+// Only a guard against a hung `ps`, which normally answers in tens of
+// milliseconds. One second was too tight for a loaded CI runner (BUG-336), and
+// a listing cut short leaves a detached group such as Playwright's web server
+// running.
+const PROCESS_DISCOVERY_TIMEOUT_MS = 5_000;
 
 // Playwright's webServer starts a detached group of its own. Snapshot only
 // this command's descendants before signalling, while ancestry still exists.
 function ownedProcessGroups(rootPid: number): number[] {
   const rows = execFileSync('ps', ['-eo', 'pid=,ppid=,pgid='], {
     encoding: 'utf8',
-    timeout: 1_000,
+    timeout: PROCESS_DISCOVERY_TIMEOUT_MS,
   })
     .trim()
     .split('\n')

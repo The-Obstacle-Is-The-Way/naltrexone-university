@@ -244,6 +244,8 @@ own advisory is the signal.
 > Historical snapshot: alert #46 later retargeted the patched v3 floor to
 > `3.15.1`, and alert #63 (CVE-2026-84375, DEBT-476) to `3.15.2`; the live
 > override now uses `3.15.2`, not the `3.15.0` shown below.
+>
+> *Corrected 2026-10-11: DEBT-517 replaced `gray-matter` with `@11ty/gray-matter`, which uses `js-yaml` 5, so no `js-yaml` 3 remains and the override is gone.*
 
 Dependabot alert #13 flagged `js-yaml` (medium): CVE-2026-53550 /
 GHSA-h67p-54hq-rp68, a quadratic-complexity denial-of-service in merge-key
