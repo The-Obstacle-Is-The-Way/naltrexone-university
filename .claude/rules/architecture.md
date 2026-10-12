@@ -42,7 +42,7 @@ const list = stripe.subscriptions?.list;
 const list = stripe.subscriptions?.list?.bind(stripe.subscriptions);
 ```
 
-Unit tests with `vi.fn()` mocks will NOT catch this — they have no `this` dependency. See BUG-069, BUG-070 for prior incidents.
+Unit tests with `vi.fn()` mocks will NOT catch this — they have no `this` dependency.
 
 ## Domain entity purity
 
@@ -57,4 +57,4 @@ Before creating new types, check:
 - `src/application/ports/` for port interfaces
 - `src/application/test-helpers/fakes/` for existing fakes
 
-## ADRs: `docs/adr/` (ADR-001 through ADR-022 accepted; ADR-019 and ADR-022 as amended 2026-10-03; `docs/adr/index.md` lists each status)
+## ADRs: `docs/adr/` (`docs/adr/index.md` lists each ADR and its status)

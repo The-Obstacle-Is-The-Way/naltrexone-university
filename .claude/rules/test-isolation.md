@@ -5,6 +5,10 @@ paths:
   - "**/*.spec.ts"
   - "**/*.spec.tsx"
   - "tests/**"
+  - "src/**/test-helpers/**"
+  - "**/*-test-helpers.ts"
+  - "**/*-test-helpers.tsx"
+  - "**/*.fixtures.ts"
 ---
 
 # Test Isolation Rules

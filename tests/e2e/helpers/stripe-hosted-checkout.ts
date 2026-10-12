@@ -85,15 +85,7 @@ export async function fillHostedCheckoutTestCard(page: Page): Promise<void> {
     await payWithCard.first().dispatchEvent('click');
   }
   await expect(cardNumber).toBeVisible({ timeout: 30_000 });
-  const saveInformation = page.getByRole('checkbox', {
-    name: 'Save my information for faster checkout',
-  });
-  if (
-    (await saveInformation.isVisible()) &&
-    (await saveInformation.isChecked())
-  ) {
-    await saveInformation.uncheck();
-  }
+  await declineSavingInformation(page);
   await cardNumber.fill('4242424242424242');
   await page.getByLabel(/expiration/i).fill('12/30');
   await page.getByRole('textbox', { name: /\bCVC(?:\/CVV)?$/i }).fill('123');
@@ -106,6 +98,25 @@ export async function fillHostedCheckoutTestCard(page: Page): Promise<void> {
   const postalCode = page.getByLabel(/zip|postal code/i);
   if (await postalCode.isVisible()) {
     await postalCode.fill('10001');
+  }
+  // Stripe can show the box only once a card is entered.
+  await declineSavingInformation(page);
+}
+
+// A ticked save-information box makes Stripe require a phone number, and
+// typing one would sign the shared E2E email up for Link. BUG-340: Stripe
+// renamed it from "Save my information for faster checkout" to "Save my
+// information with Link for faster checkout" on 2026-10-12.
+async function declineSavingInformation(page: Page): Promise<void> {
+  const saveInformation = page.getByRole('checkbox', {
+    name: /^save my information (?:with link )?for faster checkout$/i,
+  });
+  if (
+    (await saveInformation.isVisible()) &&
+    (await saveInformation.isChecked())
+  ) {
+    await saveInformation.uncheck();
+    await expect(saveInformation).not.toBeChecked();
   }
 }
 

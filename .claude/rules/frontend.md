@@ -83,7 +83,7 @@ per Pattern Registry I-6. The production Biome restriction intentionally exclude
 test-only hook/state-machine probes, while tests whose subject is Button
 or design-system behavior must still use `<Button>`.
 
-DEBT-399 completed the cleanup of existing bypass sites. Only the
+Only the
 documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell
 disclosure exception remains; its exact-one count stays enforced by the
 theme regression test because a file-level lint exception cannot bound it.
@@ -126,7 +126,6 @@ import { ROUTES } from '@/lib/routes';
 <Link href="/app/dashboard">Dashboard</Link>
 ```
 
-See BUG-097 for the systemic hard-coded route problem being addressed.
 
 ## Component patterns
 
@@ -154,4 +153,3 @@ See BUG-097 for the systemic hard-coded route problem being addressed.
 
 - Every error state MUST have an escape hatch (navigation away, not just "Try again")
 - Loading states must be shown for all async operations
-- See BUG-089 (loading gaps) and BUG-090 (error escape hatches) for patterns to avoid

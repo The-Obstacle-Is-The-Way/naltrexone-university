@@ -129,7 +129,7 @@ export function runVerifyPromotion(
   ].join('\n');
   write(receipt);
   if (merge) {
-    // AGENTS.md step 1 before step 4: the body shows the proof before the
+    // Deployment procedure §8, step 1 before step 4: the body shows the proof before the
     // merge, so GitHub alone can show the order.
     const readBody = () =>
       run('gh', [

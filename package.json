@@ -1,5 +1,6 @@
 {
   "private": true,
+  "license": "UNLICENSED",
   "packageManager": "pnpm@11.3.0",
   "engines": {
     "node": "24.x",

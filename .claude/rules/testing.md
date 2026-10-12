@@ -50,16 +50,16 @@ const userLookup: UserLookup = {
 
 Do not cast a larger call-chain object into the SDK/ORM type. When behavior matters, use the maintained fake plus its shared fake↔real contract scenario instead.
 
-**Drizzle call-chain adjudication (2026-09-24 UTC).** Two archived records answered the repository-unit question differently: [DEBT-035](../../docs/_archive/debt/debt-035-inconsistent-repo-test-mocking.md) ruled a hand-built Drizzle query-builder chain cast to `RepoDb` an acceptable fake, and [DEBT-444](../../docs/_archive/debt/debt-444-hot-path-prune-contention-and-coverage.md) named the same construct a call-chain double that stays green through SQL and predicate regressions. DEBT-444 governs and DEBT-035 is superseded: a call-chain object is a stub, chain-shape and query-behavior assertions belong in `tests/integration/` against real Postgres, and the one sanctioned repository unit pattern is the shared error-translation boundary in `tests/shared/drizzle-mock-transaction.ts` — the real query builder over `drizzle.mock({ schema })` with a spied `PostgresJsPreparedQuery.prototype.execute` (or `PgRelationalQuery.prototype.execute` for relational reads), cast-free and limited to driver failures real infrastructure cannot force. That boundary is the second accepted shape-only form beside the client-owned narrow seam above. DEBT-472 step 4 retired the last chain double on 2026-09-24; `pnpm lint:doubles` keeps it retired.
+**Drizzle call chains.** A hand-built query-builder chain is a stub, not a fake: it stays green through SQL and predicate regressions. Chain-shape and query-behavior assertions belong in `tests/integration/` against real Postgres. The one sanctioned repository unit pattern is the shared error-translation boundary in `tests/shared/drizzle-mock-transaction.ts`: the real query builder over `drizzle.mock({ schema })` with a spied `PostgresJsPreparedQuery.prototype.execute` (or `PgRelationalQuery.prototype.execute` for relational reads), cast-free and limited to driver failures real infrastructure cannot force. It is the second accepted shape-only form, beside the client-owned narrow seam above, and `pnpm lint:doubles` keeps call-chain doubles out. [ADR-025](../../docs/adr/adr-025-test-doubles-by-shape-or-behaviour.md) records why.
 
-Do not trust an inline SDK stub to model runtime binding. `.claude/rules/architecture.md:45` records BUG-069/070: detached SDK methods depend on `this`, which `vi.fn()` stubs cannot prove.
+Do not trust an inline SDK stub to model runtime binding: detached SDK methods depend on `this`, which `vi.fn()` stubs cannot prove (`.claude/rules/architecture.md`, SDK method extraction).
 
 **`vi.mock()` exceptions:**
 
 - External SDK/framework modules that cannot be injected, such as `@clerk/nextjs`, `next/link`, and `server-only`.
 - Browser Mode sealed ESM controller boundaries, using only `vi.mock(path, { spy: true })`; factory form replaces real exports and is not the repository pattern.
 
-The executable DEBT-472 ratchet runs through `pnpm lint:doubles` and blocks growth in own-code module mocks, unknown double casts, and hand-rolled doubles for ports with maintained fakes. It scans test files, `*-test-helpers` modules, every `test-helpers/` directory and every `tests/` subdirectory. Each per-file floor must equal its live count: a change that removes a site lowers or deletes its floor in the same patch, so the site cannot return. When you next edit a file that has a floor, move its sites onto the maintained fake or a narrow seam, and lower the floor. Local `pnpm lint` and required CI invoke it; it is deliberately not a Vitest `globalSetup` tax.
+The executable ratchet runs through `pnpm lint:doubles` and blocks growth in own-code module mocks, unknown double casts, and hand-rolled doubles for ports with maintained fakes. It scans test files, `*-test-helpers` modules, every `test-helpers/` directory and every `tests/` subdirectory. Each per-file floor must equal its live count: a change that removes a site lowers or deletes its floor in the same patch, so the site cannot return. When you next edit a file that has a floor, move its sites onto the maintained fake or a narrow seam, and lower the floor. Local `pnpm lint` and required CI invoke it; it is deliberately not a Vitest `globalSetup` tax.
 
 The live fake↔real evidence, dated waivers, and explicit known divergences are in `docs/dev/test-double-contract-register.md`. Update that register whenever a maintained fake or its corresponding adapter changes; a missing note is not equivalent to “no known divergence.”
 
@@ -79,6 +79,7 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 4. Use factories: `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
 5. Descriptive names: `it('returns isCorrect=false when incorrect choice selected')`
 6. Prefer semantic assertions over exact utility-class strings
+7. In Vitest tests (unit, jsdom and Browser Mode), load heavy or dynamic imports once in `beforeAll`, not inside each `it()`, and add no per-test timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`): the Vitest configs set the timeout policy. Playwright E2E keeps its own policy in `docs/dev/testing-infrastructure.md`: assertion-level waits first, and every non-default timeout explained beside it.
 
 ### Styling Assertions
 

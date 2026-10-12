@@ -1,6 +1,6 @@
 # Closed Records
 
-One line per closed record: `ID · title · disposition · date · path`. A record closed from 2026-10-11 on adds ` · #PR · commit`: the closing pull request, and the last commit that held the record. For a record closed earlier, the date is the day it moved to the archive (for the four audits with no file, the audit date).
+One line per closed record: `ID · title · disposition · date · path`. A record closed from 2026-10-11 on adds ` · #PR · commit`: the closing pull request, and a full 40-character, reachable commit that held the final record. Verify `git show <commit>:<path>` before deletion; a PR description is editable and is not the retrieval anchor. For a record closed earlier, the date is the day it moved to the archive (for the four audits with no file, the audit date).
 
 Every record closed before 2026-10-11 is readable at commit `63a8f220324b`, on GitHub at `https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/63a8f220324b1b6b363913a4cf0865663c8dacc1/<path>` or offline with `git show 63a8f220324b:<path>`.
 
@@ -815,7 +815,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-499 · Nothing Pins What We Send to Sentry, and a Green Major Would Change It · Resolved · 2026-10-05 · docs/_archive/debt/debt-499-sentry-major-widens-data-collection.md
 - DEBT-506 · Dependabot Alerts of 2026-10-06 — Six Fixed, Two Without Published Fixes · Resolved · 2026-10-09 · docs/_archive/debt/debt-506-dependabot-alert-triage-2026-10.md
 - DEBT-513 · Error Text Reaches Sentry as Written · Resolved · 2026-10-10 · docs/_archive/debt/debt-513-error-text-reaches-sentry-as-written.md
-- DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd
+- DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd619520a1f156675d390492ea097a
 
 ## Frontend (FE prefix, retired)
 
@@ -913,7 +913,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BS-041 · Feedback Display — Content vs Code Separation · Deferred · 2026-03-04 · docs/_archive/brainstorming/bs-041-feedback-display-content-vs-code-separation.md
 - BS-042 · Contrast Consistency and WCAG Compliance Audit · Archived · 2026-03-06 · docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md
 - BS-043 · Question Flow Typography and Feedback Visual Unification · Resolved · 2026-03-07 · docs/_archive/brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md
-- BS-044 · Dark Mode Border Weight Tiering — Elegance vs. Compliance · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-044-dark-mode-border-weight-tiering.md
+- BS-044 · Dark Mode Border Weight Tiering — Elegance vs. Compliance · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-044-dark-mode-border-weight-tiering.md · #1467 · 63a8f220324b1b6b363913a4cf0865663c8dacc1
 - BS-045 · Choice Button Dark Mode Fill and Border Refinement · Resolved · 2026-03-06 · docs/_archive/brainstorming/bs-045-choice-button-dark-mode-fill-and-border-refinement.md
 - BS-046 · Filter Chip Fill Depth + Summary Hover Removal · Resolved · 2026-03-09 · docs/_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md
 - BS-047 · History Page — Visual Unification with Dashboard & Practice · Resolved · 2026-03-10 · docs/_archive/brainstorming/bs-047-history-sessions-tab-visual-unification.md
@@ -921,14 +921,14 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BS-049 · Bookmarks Card Visual Unification · Resolved · 2026-03-12 · docs/_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md
 - BS-050 · Practice Page Chip Hover Affordance — Border Highlight + Contrast Lift · Resolved · 2026-03-15 · docs/_archive/brainstorming/bs-050-practice-chip-hover-affordance.md
 - BS-051 · Bookmark Pill Hover Pattern Investigation — Remove Button Border Affordance · Decided · 2026-03-15 · docs/_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md
-- BS-052 · Bookmark Icon Toggle — Replace Text Pills with Filled/Unfilled Bookmark Graphic · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-052-bookmark-icon-toggle-replacement.md
+- BS-052 · Bookmark Icon Toggle — Replace Text Pills with Filled/Unfilled Bookmark Graphic · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-052-bookmark-icon-toggle-replacement.md · #1467 · 63a8f220324b1b6b363913a4cf0865663c8dacc1
 - BS-053 · Bookmark vs Mark-for-Review Collision in Exam Mode · Implemented · 2026-03-18 · docs/_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md
 - BS-054 · Session End UX -- Button Simplification and Ended-Session Reopen Bugs · Resolved · 2026-03-17 · docs/_archive/brainstorming/bs-054-session-end-ux-simplification.md
 - BS-055 · Exam Session Interaction Model — Submit Redundancy and Button Bar Inconsistency · Resolved · 2026-03-19 · docs/_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md
 - BS-056 · Magic Numbers, Hard-Coded Literals, and Constant Duplication Audit · Resolved · 2026-03-17 · docs/_archive/brainstorming/bs-056-magic-numbers-and-hardcoded-literals-audit.md
 - BS-057 · Agent-Browser Clerk Authentication Reliability · Resolved · 2026-03-18 · docs/_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md
 - BS-058 · Exam Post-Submit Flow Reorder · Implemented · 2026-03-20 · docs/_archive/brainstorming/bs-058-exam-post-submit-flow-reorder.md
-- BS-059 · Session Review Question Page Action Bar — Button Arrangement and Grouping · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-059-practice-session-action-bar-button-arrangement.md
+- BS-059 · Session Review Question Page Action Bar — Button Arrangement and Grouping · Moved to product ideas · 2026-10-11 · docs/brainstorming/bs-059-practice-session-action-bar-button-arrangement.md · #1467 · 63a8f220324b1b6b363913a4cf0865663c8dacc1
 - BS-060 · Sentry Error Triage and Environment Hygiene · Implemented · 2026-03-24 · docs/_archive/brainstorming/bs-060-sentry-error-triage-and-environment-hygiene.md
 - BS-061 · Review Surface Divergence Audit — Three Different "Review Your Answers" Experiences · Decomposed · 2026-04-17 · docs/_archive/brainstorming/bs-061-review-surface-divergence-audit.md
 - BS-062 · Sentry Seven-Issue Triage — Report-Only CSP Telemetry vs Real Clerk Render Bug · Complete · 2026-04-09 · docs/_archive/brainstorming/bs-062-sentry-seven-issue-triage-2026-04-09.md
@@ -951,4 +951,4 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - AUDIT-012 · Repository Organization, Dev Tooling, and Agent Documentation · Resolved · 2026-06-14 · docs/_archive/audits/audit-012-repo-org-devx.md
 - AUDIT-013 · Security Review of Recent Work · Resolved · 2026-10-06 · docs/_archive/audits/audit-013-security-review-2026-10-05.md
 - AUDIT-014 · External Audit of Bug and Debt Records · Resolved · 2026-10-06 · docs/_archive/audits/audit-014-external-record-audit-2026-10-06.md
-- AUDIT-015 · Bug and Debt Registers, Audited by Root Cause · Closed · 2026-10-11 · docs/audits/audit-015-register-audit-by-root-cause-2026-10-08.md
+- AUDIT-015 · Bug and Debt Registers, Audited by Root Cause · Closed · 2026-10-11 · docs/audits/audit-015-register-audit-by-root-cause-2026-10-08.md · #1467 · 63a8f220324b1b6b363913a4cf0865663c8dacc1
