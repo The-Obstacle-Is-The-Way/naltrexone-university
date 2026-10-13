@@ -1,6 +1,6 @@
 # ADR-004: Authentication Boundary
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-07 (where identity and email come from, inline) and 2026-10-13 (email is not identity; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers)
@@ -68,4 +68,11 @@ Route protection is enforced at the request layer:
 - [ ] Domain `User` has no `clerkUserId` field
 - [ ] `users.clerk_user_id` exists only in persistence
 - [ ] Controllers use `AuthGateway` (not raw Clerk IDs)
+
+## Amendment — 2026-10-13
+
+Email is not identity. The decision is unchanged.
+
+- Never merge or reassign accounts by email alone (BUG-284). When an email is held by another Clerk user, Clerk reporting that user's ID as gone proves nothing: a deleted account whose email was reused looks the same as the same person recreating an account.
+- Provisioning therefore refuses with `user_email_owned_by_another_identity` and changes neither row, unless Clerk shows that the stored identity still exists under a different email. Then it moves that row to its current email and provisions the new identity separately (`src/adapters/gateways/clerk-user-provisioner.ts`). Clerk is called outside any database transaction, and the local state is checked again before the write.
 

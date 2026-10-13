@@ -1,6 +1,6 @@
 # ADR-015: Idempotency Strategy
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-13 (error caching, admission and claim fencing; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-006 (Error Handling Strategy), ADR-007 (Dependency Injection)
@@ -134,3 +134,11 @@ The 2026-08-17 DEBT-470 reconciliation removes retained-chain length from the no
 - ADR-006 (Error Handling Strategy) — Error code propagation through cached errors
 - Stripe Docs — Billing Portal sessions: https://docs.stripe.com/customer-management/integrate-customer-portal
 - Stripe Docs — Idempotent requests: https://docs.stripe.com/api/idempotent_requests
+
+## Amendment — 2026-10-13
+
+Corrections of fact. The claim-execute-store decision is unchanged.
+
+- **An error is cached only when the action's policy says so.** Without a `shouldCacheError` policy, `withIdempotency` caches every error `execute()` throws, transient ones included, and replays it for the rest of the key's 24 hours (BUG-289). Every keyed action therefore passes its policy from `src/adapters/controllers/shared/idempotency-error-policy.ts`: it caches a determinate outcome, which a retry would repeat, and aborts the claim on any other error so that a retry runs again. An outcome derived from state that can change, such as `ALREADY_SUBSCRIBED`, is not determinate; answer submission also caches an indeterminate `INTERNAL_ERROR`, as a fence against a duplicate attempt. This qualifies "on error → storeError()" in Section 2 and "Error replay" under Consequences.
+- **Rate limits run only on a fresh claim.** A keyed action passes its rate limit as the wrapper's `beforeExecute` hook, which runs only for the request that wins a fresh claim, so a replay returns the stored outcome whatever the caller's remaining quota (DEBT-424). A denial aborts that claim and is never stored under the key. A limiter inside `execute()` would cache `RATE_LIMITED` for the key's lifetime (BUG-259).
+- **Claims are fenced.** `claim` returns the claim's `claimedAt` token rather than a boolean, and `abortClaim`, `storeResult` and `storeError` act only on that still-pending claim, so a late or aborted execution cannot overwrite a newer claim's outcome.

@@ -34,6 +34,7 @@
    - Checkout requires Stripe's Terms checkbox (`consent_collection`). Both checkout and the trial add-card dialog add an unchecked native checkbox, labelled with the offer's renewal statement. The billing controller refuses a submission without `renewalOptIn: true`.
    - Each consent text quotes the Terms' cancellation and refund policy (`CANCELLATION_AND_REFUND_POLICY`, F15). Checkout texts are registered by version in `lib/checkout-disclosures.ts` and reach Stripe as a SHA-256. The webhook records consent only if the hash matches the registered text.
    - Reasons: F03 cites Vermont's separate opt-in, and one opt-in for every offer was judged simpler and stricter. F15 found that the policy was missing next to consent.
+   - A change to consent text or its version changes consent evidence, so it merges only on the owner's explicit instruction (DEBT-478).
 5. **Consent evidence is kept for three years, or one year after termination if that is later (2026-08-06, #743; in production 2026-08-07 through #747).**
    - Only the Stripe webhook writes `renewal_consent_records` (`db/schema.ts`, `RecordRenewalConsentUseCase`). A record holds a SHA-256 consumer reference; the Stripe customer, subscription and Session identifiers; the plan, amount, frequency, trial end, and cancellation deadline and method; the exact disclosure text and version; the Terms version and hash; and the source and acceptance time.
    - `computeRenewalConsentRetainUntil` takes the later of the two dates. The webhook and the daily reconcile start the termination clock.
@@ -48,6 +49,7 @@
    - The cron runs at 09:00 UTC (`vercel.json`). It selects active, renewing subscriptions 35 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
    - Each notice says the plan renews unless cancelled. It gives the cutoff in UTC, Eastern and Pacific time, and links cancellation (F06).
    - Reasons: F01 found the earlier 15–45-day window too early or too late for some states. The code records 30–40 days as the window every covered state shares. F02 cites Colorado and Connecticut for yearly reminders on monthly plans.
+   - Each notice kind has its own disclosure version (`ANNUAL_RENEWAL_NOTICE_VERSION` and `MONTHLY_ANNIVERSARY_NOTICE_VERSION` in `lib/pricing-data.ts`), separate from checkout's `disclosureVersion`. A scheduled notice is deduplicated on its version, so a shared bump would schedule a second notice for a renewal that already has one (DEBT-478).
 8. **Delivery is durable, is never repeated while the outcome is unknown, and is revalidated before sending (2026-08-07, #744; revalidation 2026-09-27; delivery evidence 2026-09-30, #1262).**
    - Resend sends the email (`src/adapters/gateways/resend-transactional-email-gateway.ts`). Without `RESEND_API_KEY`, rows stay queued.
    - Each row has an immutable payload, its hash, and a provider idempotency key derived from the row's ID. Dispatch claims the row before it sends.

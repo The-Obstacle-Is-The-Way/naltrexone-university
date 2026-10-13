@@ -619,6 +619,11 @@ async function expireSupersededCheckoutSession({
   }
 }
 
+// Two tabs can each create a Session, for different plans, before either sees
+// the other. After every create, keep the newest open Session and expire the
+// rest, so at most one stays completable. No database lock is held across
+// these Stripe calls, on purpose; Stripe's "limit customers to one
+// subscription" Checkout setting is the backstop at completion (BUG-245).
 async function reconcileOpenCheckoutSessionsAfterCreate({
   stripe,
   input,

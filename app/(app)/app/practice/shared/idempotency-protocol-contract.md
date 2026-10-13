@@ -69,5 +69,5 @@ Targeted conflict recovery is opt-in by an allowlisted machine-readable `details
   closed NO-GO on 2026-07-23 because no two live surfaces have identical
   complete transitions. The documented per-surface design is permanent unless
   a new owner direction ruling explicitly reopens that decision.
-- Server-side idempotency through `withIdempotency`/`executeIdempotent`, including [DEBT-424's cache-miss-only admission law](<../../../../../docs/_archive/debt/debt-424-rate-limit-idempotent-actions-on-cache-miss-only.md>), is a separate seam; this contract covers client keys, recovery, and continuation ownership.
+- Server-side idempotency through `withIdempotency`/`executeIdempotent`, including the cache-miss-only admission law in [ADR-015](<../../../../../docs/adr/adr-015-idempotency-strategy.md#amendment--2026-10-13>) (DEBT-424), is a separate seam; this contract covers client keys, recovery, and continuation ownership.
 - Phase A adds no executable characterization. Evidence gaps above are reported rather than filled here.

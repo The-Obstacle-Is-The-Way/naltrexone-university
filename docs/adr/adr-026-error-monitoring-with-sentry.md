@@ -1,6 +1,6 @@
 # ADR-026: Error Monitoring with Sentry
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-13 (error text; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-10-12, recording decisions of 2026-10-05 to 2026-10-08
 **Decision Makers:** The owner, who approved the BUG-318 fix on 2026-10-05 and the split into two Sentry projects on 2026-10-08. ADR-023 moved decisions out of records and agent instructions, so they are recorded here.
 **Depends On:** ADR-008 (Logging and Observability)
@@ -75,3 +75,10 @@
 - [Observability](../architecture/observability.md): logging, the alert kinds and the runbooks
 - `lib/sentry-data-collection.ts`, `instrumentation.ts`, `sentry.client.config.ts`
 - [Privacy policy](../legal/privacy-policy.md), whose Sentry row these settings stay within
+
+## Amendment — 2026-10-13
+
+Error text, which Decision 3 leaves out. The decision is unchanged.
+
+- `scrubEvent` also redacts credential query parameters in an event's own text: each exception value, linked causes included, the event's message, and every string of its extra data. Our code and libraries write that text, and it can quote a URL with its query (DEBT-513).
+- Internal and Stripe IDs in that text are deliberately not masked. They are pseudonymous, diagnosis needs them, and Sentry receives no user to join them to. That reasoning holds only while events carry no user.

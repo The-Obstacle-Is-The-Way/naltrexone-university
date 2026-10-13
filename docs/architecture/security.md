@@ -10,6 +10,7 @@
 | **Authentication** | Every action calls `authGateway.requireUser()` via `requireEntitledUserId()` |
 | **Authorization** | Every action checks subscription entitlement via `checkEntitlementUseCase` |
 | **User scoping** | All repository queries include `userId` in WHERE clauses — no cross-user data access |
+| **Row-level security** | None, by decision. No browser or third-party path reaches Postgres: the browser calls server actions, which reach the database only through repositories, so authorization is the auth gate plus `userId`-scoped WHERE clauses. Revisit if a direct database API (PostgREST, Hasura), a data path that bypasses the repositories, or a SOC 2 requirement appears (DEBT-332). |
 | **Input validation** | All controller inputs validated with strict Zod schemas (UUIDs, bounded pagination, mode enums) |
 | **Rate limiting** | Per-user limits on mutations: practice-session actions, `submitAnswer`, `setBookmark`, question ratings and reports, and billing setup and checkout (`src/adapters/controllers/`) |
 | **Idempotency** | Mutations accept optional idempotency keys; when provided, controllers wrap execution with `withIdempotency` to prevent duplicate operations |
