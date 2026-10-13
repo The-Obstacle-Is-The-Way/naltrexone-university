@@ -16,7 +16,12 @@ BUG-245 (2026-06-13) named Stripe's Dashboard setting "limit customers to one su
 
 In this race the second page is first loaded after the first purchase completed. A returning customer is therefore likely redirected, if the setting is on. A first checkout carries a 7-day trial, though, and a trialing subscription is not counted, so the first-time path is unguarded.
 
-No live-mode customer exists yet. The window is a few Stripe calls long.
+**Live customers already fall in the returning-customer group.** No sale has happened yet. But according to the owner (2026-10-13), real people have taken free trials in live mode, added no card, and seen them end.
+- A former trial user keeps a stored subscription row, so their next checkout carries no trial and charges at completion.
+- In this race, such a person's only guard against a second charge is Stripe's redirect, which is unverified.
+- Any of them returning would be the first live sale.
+
+The window is a few Stripe calls long.
 
 ## Evidence
 
@@ -137,6 +142,9 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
   - Stripe checks "`default_source` and `default_payment_method` on the subscription and customer" ([Stripe: free trials](https://docs.stripe.com/billing/subscriptions/trials/free-trials), in the page's section on pausing). So `missing_payment_method: 'cancel'` should end the hidden trial at its end, without a charge. That is an inference, not observed.
   - **It fails if a card becomes the customer's default.** The app's trial portal profile disables card updates on purpose (`payment_method_update: { enabled: profile === 'paid' }`, `stripe-portal-configurations.ts:31-33`). The Dashboard's no-code portal, which Stripe's login link opens, uses its own configuration, and DEBT-414 records a live portal configuration with payment-method updates enabled. A card added there could become the customer default and convert the hidden trial. That is unverified.
 - **A returning customer** is charged twice only if Stripe's redirect does not stop B: the setting is off, the portal login link is off, or A is not in a counted status.
+  - **This group already exists in live mode.** According to the owner (2026-10-13), real people have taken free trials, added no card, and seen them end. No sale has happened.
+  - Such a user keeps their stored subscription row: it is removed only when the user is deleted (`onDelete: 'cascade'`, `db/schema.ts:229-231`). So their next checkout carries no trial (`create-checkout-session.ts:132`) and charges at completion.
+  - Live data is not read for this record (agents use Stripe's test mode only), so the count and states rest on the owner's account.
   - Then the cron cancels one within a day, if it reaches the customer, without a refund.
   - Per Stripe's default, that cancel also stops collection of finalized invoices on the kept subscription.
   - The owner learns of it only from Stripe or the customer.
@@ -144,6 +152,7 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
   - A rejected write skips the initial consent and acknowledgment. That happens when a lower-ranked completion arrives after a higher-ranked one is stored: a monthly after an annual, or webhooks delivered out of order. For two trials completed in order, B is accepted, and both consents are recorded.
   - The hidden subscription's consent record is never marked terminated when it is cancelled. For a known user, the webhook marks termination only on a persisted write (`stripe-webhook-controller.ts:612-621`), and the reconcile only for the canonical subscription.
 - **Likelihood.** Low. A purchase must be completed in one tab while another tab's checkout request is still running. A trial page needs the terms checkbox and one click, and no payment details.
+- **Timing.** The product is pre-revenue, so no money has been at risk yet. The first exposure is the first paid checkout, which any returning former trial user could make at any time. The fix is therefore due before the product invites them back or takes its first sale, not at some later launch.
 
 ## Options
 
@@ -175,6 +184,8 @@ The proposal for review: options 2 to 6 together, each layer for the case the on
 
 - [ ] When a duplicate subscription is cancelled, refund any charge on it automatically? The proposal is yes: a full refund of the duplicate's charge, because the product never intends a second subscription.
 - [ ] Shorten Checkout Session lifetime (option 7)?
+- [ ] Until the fix ships, hold any campaign that invites former trial users back to checkout. They are the returning-customer case, and the redirect is their only guard.
+- [ ] Confirm in the live Dashboard that the former trials ended `canceled` with no payment method, and that no subscription is live today.
 - [ ] Confirm in the live Dashboard that "limit customers to one subscription" is on, and that the customer portal's login link is enabled. Check which portal configuration that login link uses, and whether a card added there becomes the customer's default and could convert a hidden trial.
 
 ## Verification
