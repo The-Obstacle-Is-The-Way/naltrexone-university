@@ -901,7 +901,7 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 |----|---------|---------|
 | — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/design-system/pattern-registry.md` |
 | — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
-| — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
+| — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/markdown.tsx` |
 
 ---
 

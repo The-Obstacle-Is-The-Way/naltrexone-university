@@ -263,7 +263,7 @@ View components import only **types** from controllers. Interactive client hooks
 | `ChoiceButton` | `components/question/choice-button.tsx` | Radio-style choice with correctness states |
 | `Feedback` | `components/question/feedback.tsx` | Correct/incorrect banner with explanation markdown |
 | `ErrorCard` | `components/error-card.tsx` | Styled error alert with `role="alert"` |
-| `Markdown` | `components/markdown/Markdown.tsx` | `react-markdown` + `remark-gfm` + `rehype-sanitize` |
+| `Markdown` | `components/markdown/markdown.tsx` | `react-markdown` + `remark-gfm` + `rehype-sanitize` |
 
 ---
 

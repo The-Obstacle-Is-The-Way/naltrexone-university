@@ -1,7 +1,5 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret and production release-gate sections reverified 2026-09-19.
-
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
 It intentionally avoids hard-coding private dashboard values that the repo cannot self-verify, such as exact account IDs, branch hostnames, webhook secrets, or live price IDs. Those belong in the providers themselves. This document records the contract the codebase expects.

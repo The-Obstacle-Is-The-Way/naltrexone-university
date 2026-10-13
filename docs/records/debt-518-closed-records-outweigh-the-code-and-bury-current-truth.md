@@ -110,7 +110,7 @@ The owner widened the plan from records to every document: the product spec, arc
 
 - **Inventory.** Four read-only censuses inventoried every document on 2026-10-11, and a second agent challenged the resulting plan. Their findings are in [ADR-023](../adr/adr-023-documentation-organisation.md)'s Context.
 - **The decision.** ADR-023 records the layout, the placement test, and the naming and content rules.
-- **The mapping.** Below, each document's disposition and target. Corrections from the challenge are applied:
+- **The mapping.** Below, each document's disposition and target, as built. Corrections from the challenge are applied:
   - no `reference/` folder;
   - CodeRabbit `applyTo` mappings;
   - only the index links records;
@@ -135,14 +135,14 @@ The owner widened the plan from records to every document: the product spec, arc
 |---|---|
 | `practice-engine/index.md` | delete (→ `product/practice/README.md`, `architecture/practice-engine.md`) |
 | `practice-engine/architecture-layers.md` + `frontend-layer.md` | `architecture/practice-engine.md` (fix `paramsJson` → `practice_session_question_states`) |
-| `practice-engine/question-rendering-architecture.md` | `architecture/question-rendering.md` (drop §9 file index, §12 changelog) |
-| `practice-engine/practice-modes.md` | `product/practice/modes.md` (§7 CAS → architecture) |
-| `practice-engine/interaction-contracts.md` | `product/practice/interaction-contracts.md` (drop §3 proposals; datetime section → `architecture/api-conventions.md`; update `tests/controller-output-datetime-source-scan.ts:52`) |
+| `practice-engine/question-rendering-architecture.md` | `architecture/question-rendering.md` (§9 file index and §12 changelog kept, under the owner's preserve-content ruling) |
+| `practice-engine/practice-modes.md` | `product/practice/modes.md` (§7 CAS corrected in place) |
+| `practice-engine/interaction-contracts.md` | `product/practice/interaction-contracts.md` (§3 rewritten as the shipped design; the datetime section stays here) |
 | `practice-engine/exam-answer-secrecy-policy.md` | `product/practice/exam-answer-secrecy.md` (reconcile §5 with the code; add `GetQuestionForView`) |
 | `practice-engine/ordering-policy.md` | `product/practice/question-ordering.md` |
-| `practice-engine/retry-logic.md` | `product/practice/retries.md` (drop §8–10) |
+| `practice-engine/retry-logic.md` | `product/practice/retries.md` (§8–10 kept, under the preserve-content ruling) |
 | `practice-engine/security-model.md` | merge → `architecture/security.md` |
-| `practice-engine/content-pipeline.md` | `architecture/content-pipeline.md` + `guides/content/{import-and-seed,release-and-withdraw,troubleshooting}.md` |
+| `practice-engine/content-pipeline.md` | `architecture/content-pipeline.md`, procedures included; the planned split into three content guides was not made |
 | `practice-engine/{current-state,spec-coverage-map,file-index}.md` | delete |
 | `docs/content/question-format-spec.md` | reconcile against `content/drafts/questions/SCHEMA.md` and the code; preserve unique operational guidance before removal, and obtain owner agreement for substantive deletion |
 | `docs/content/tag-taxonomy-pipeline.md` | merge → `architecture/content-pipeline.md` |
@@ -154,26 +154,26 @@ The owner widened the plan from records to every document: the product spec, arc
 | Old | New |
 |---|---|
 | `dev/code-quality-metrics.md` | `guides/testing/crap-report.md` |
-| `dev/integration-tests.md` | `guides/testing/integration-tests.md` (drop inventory) |
+| `dev/integration-tests.md` | `guides/testing/integration-tests.md` (stale inventory dropped) |
 | `dev/testing-infrastructure.md` | `guides/testing/e2e-tests.md` + `guides/testing/browser-automation.md` (delete `--state` advice) |
 | `tooling/agent-browser.md` | `guides/testing/browser-automation.md` |
-| `dev/react-vitest-testing.md` | `guides/testing/react-component-tests.md` (rationale only) |
-| `dev/mutation-testing.md` | `guides/testing/mutation-testing.md` (trim wave tables) |
+| `dev/react-vitest-testing.md` | `guides/testing/react-component-tests.md` (moved whole) |
+| `dev/mutation-testing.md` | `guides/testing/mutation-testing.md` (moved whole) |
 | `dev/qa-procedures.md` + `docs/qa/index.md` | `guides/qa/README.md` |
 | `docs/qa/qa-001-practice-core-flows.md` (+ stabilization flows) | `guides/qa/practice-core-flows.md` |
 | `docs/qa/qa-002-billing-entitlement.md` | `guides/qa/billing-and-entitlement.md` (fix the 375×667 comments) |
 | `dev/stabilization-checklist.md` | delete (Flow D → QA guide) |
-| `dev/deployment-procedure.md` | `guides/release/promote-to-production.md` + `guides/release/seed-content.md` + `guides/release/repository-settings.md` |
-| `dev/migration-authoring.md` | rules → `.claude/rules/migrations.md`; procedure → `guides/database/migrations.md` (the only copy of the build chain; "formerly" note for the two immutable migrations) |
+| `dev/deployment-procedure.md` | `guides/release/promote-to-production.md`; the planned seed-content and repository-settings guides were not split out |
+| `dev/migration-authoring.md` | `guides/database/migrations.md`, rules included (the only copy of the build chain; "formerly" note for the two immutable migrations); no separate rules file |
 | `dev/sanitized-explain-capture.md` | `guides/database/query-plan-capture.md` |
 | `dev/database-rollbacks.md` | `guides/operations/database-recovery.md` |
-| `dev/deployment-environments.md` | `architecture/environments.md` + `guides/operations/environment-troubleshooting.md` |
-| `dev/logging.md` | `architecture/observability.md` (logger, request context, Sentry) + `guides/operations/operational-alerts.md` (update watcher strings and test) |
+| `dev/deployment-environments.md` | `architecture/environments.md`, troubleshooting included |
+| `dev/logging.md` | `architecture/observability.md` (logger, request context, Sentry, and the operational-alert runbooks) |
 | `dev/dependency-update-protocol.md` | `guides/dependencies/updating-dependencies.md` (policy → `policies/supply-chain.md`) |
-| `dev/supply-chain-overrides.md` | `policies/supply-chain.md` + `guides/dependencies/supply-chain-exceptions.md` (keep the urgent-patch anchor: it is in opened issues) |
+| `dev/supply-chain-overrides.md` | `policies/supply-chain.md`, exceptions included (keep the urgent-patch anchor: it is in opened issues) |
 | `dev/license-baseline.md` | delete (rules → `policies/supply-chain.md`) |
 | `dev/question-feedback-analytics.md` | `guides/content/feedback-export.md` |
-| `dev/bookmark-cardinality-census.md` | fold into DEBT-450's Waiting row; delete |
+| `dev/bookmark-cardinality-census.md` | `guides/database/bookmark-census.md`, which DEBT-450's Waiting row links |
 | `dev/test-double-contract-register.md` | `guides/testing/fake-contracts.md` (update the scan constant and the `.claude/rules/testing.md` assertion) |
 | `dev/index.md` | delete (→ `docs/README.md`) |
 
@@ -185,7 +185,7 @@ The owner widened the plan from records to every document: the product spec, arc
 | `frontend/pages/*` | delete |
 | `docs/legal/*` (moved 2026-10-13 with the owner's OK) | `policies/legal/*` (**owner**; path-only; tests updated) |
 | `docs/security/*` (moved 2026-10-13 with the owner's OK) | `policies/security/*` (**owner**; path-only) |
-| `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
+| `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` (moved 2026-10-13) | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
 | `docs/{bugs,debt}/*` | `docs/records/` (flat); indexes merge into `records/README.md` |
 | `docs/audits/*` | AUDIT-015 closes: its order → records Now/Next, its trace-sample decision → BUG-331; the index is deleted |
 | `docs/_archive/**` + 20 archive-only asset folders | delete last, after the ledger and permalinks |

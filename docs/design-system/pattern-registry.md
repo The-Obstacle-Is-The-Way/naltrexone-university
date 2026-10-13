@@ -816,7 +816,7 @@ mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
 
 **Content:** Standard markdown paragraph content inside the callout.
 
-**Source:** `components/markdown/Markdown.tsx`
+**Source:** `components/markdown/markdown.tsx`
 
 ### F-8: Feedback Section Chips
 

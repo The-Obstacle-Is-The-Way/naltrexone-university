@@ -122,7 +122,7 @@ This feature is NOT currently implemented. The tier system defined above is the 
 
 ## The Markdown Component
 
-**File:** `components/markdown/Markdown.tsx`
+**File:** `components/markdown/markdown.tsx`
 
 The Markdown component is a thin wrapper around `react-markdown`. It provides:
 - GFM support (tables, strikethrough)
