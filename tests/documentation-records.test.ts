@@ -635,13 +635,14 @@ describe('repository records', () => {
     expect(result.duplicateLedgerIds).toEqual([]);
   });
 
-  it('points nowhere into the deleted archive except through a pinned commit', () => {
-    expect(
-      [...files].flatMap(([file, contents]) =>
-        archiveDestinations(file, contents),
-      ),
-    ).toEqual([]);
-  });
+  // One case per document, as for record links: a single case parsing every
+  // document ran past Vitest's 10 s limit under CI's coverage run.
+  it.each([...files.keys()])(
+    'points nowhere into the deleted archive except through a pinned commit in %s',
+    (file) => {
+      expect(archiveDestinations(file, files.get(file) ?? '')).toEqual([]);
+    },
+  );
 
   it.each([...files.keys()])(
     'cites records by ID rather than linking them in %s',
