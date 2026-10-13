@@ -452,7 +452,11 @@ describe('DrizzleUserRepository', () => {
   });
 
   it('keeps an outer transaction usable after classifying an email conflict', async () => {
-    const repo = new DrizzleUserRepository(db);
+    // Every write reads the same instant, as two writes in one millisecond
+    // would, so the conflict cannot depend on the clock moving (BUG-342).
+    const instant = new Date();
+    const clock = () => instant;
+    const repo = new DrizzleUserRepository(db, clock);
     const email = `it-${randomUUID()}@example.com`;
     const existingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
     const incomingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
@@ -463,13 +467,18 @@ describe('DrizzleUserRepository', () => {
     );
     cleanup.userIds.push(existing.id);
     cleanup.userIds.push(incoming.id);
+    expect(existing.updatedAt).toEqual(instant);
+    expect(incoming.updatedAt).toEqual(instant);
 
     await db.transaction(async (tx) => {
-      const txRepo = new DrizzleUserRepository(tx);
+      const txRepo = new DrizzleUserRepository(tx, clock);
       let caught: unknown;
 
       try {
-        await txRepo.upsertByClerkId(incomingClerkId, email);
+        // Only a strictly later write replaces the stored email.
+        await txRepo.upsertByClerkId(incomingClerkId, email, {
+          observedAt: new Date(incoming.updatedAt.getTime() + 1),
+        });
       } catch (error) {
         caught = error;
       }

@@ -1,6 +1,12 @@
 import type Stripe from 'stripe';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+  type BillingPortalConfigurationCreateParams,
+  type BillingPortalConfigurationListParams,
+  type BillingPortalSessionCreateParams,
+  type CheckoutSessionCreateParams,
+  type CustomerCreateParams,
+  type CustomerSearchParams,
   STRIPE_SUBSCRIPTION_STATUSES,
   type StripeCheckoutSession,
   type StripeCheckoutSessionListParams,
@@ -9,11 +15,36 @@ import {
   type StripeCheckoutSessionResponseStatus,
   type StripeCheckoutSessionStatus,
   type StripeClient,
+  type StripeSubscriptionListParams,
   type StripeSubscriptionResponseStatus,
   type StripeSubscriptionStatus,
 } from './stripe-types';
 
 type OtherString = string & Record<never, never>;
+
+// Stripe's types allow `Emptyable` request fields ('' clears a value).
+type Present<T> = Exclude<T, undefined | null | ''>;
+type ArrayItem<T> = T extends ReadonlyArray<infer Item> ? Item : T;
+
+// The dotted paths of request fields the port can send that the installed
+// SDK's request type lacks, or never when the SDK knows every one.
+type UnknownRequestFieldPaths<
+  Port,
+  Sdk,
+  Prefix extends string = '',
+> = Port extends unknown
+  ? {
+      [Key in keyof Port & string]-?: Key extends keyof Present<Sdk>
+        ? ArrayItem<Present<Port[Key]>> extends object
+          ? UnknownRequestFieldPaths<
+              ArrayItem<Present<Port[Key]>>,
+              ArrayItem<Present<Present<Sdk>[Key]>>,
+              `${Prefix}${Key}.`
+            >
+          : never
+        : `${Prefix}${Key}`;
+    }[keyof Port & string]
+  : never;
 
 describe('StripeSubscriptionStatus', () => {
   it('matches Stripe subscription status values', () => {
@@ -91,5 +122,87 @@ describe('StripeClient port', () => {
     expectTypeOf<Stripe.Checkout.Session['status']>().toExtend<
       StripeCheckoutSession['status']
     >();
+  });
+
+  it('sends only request fields the pinned API version accepts', () => {
+    // A major API release can remove a request field; Endive removed Checkout
+    // Session's `payment_method_types`, which Stripe then answers with a 400.
+    // The SDK release that pins the version drops the field from its request
+    // types, so this check names any field the port still sends. It compares
+    // field names only: the SDK types request enums open-ended.
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        CheckoutSessionCreateParams,
+        Stripe.Checkout.SessionCreateParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        StripeCheckoutSessionListParams,
+        Stripe.Checkout.SessionListParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        NonNullable<
+          Parameters<StripeClient['checkout']['sessions']['retrieve']>[1]
+        >,
+        Stripe.Checkout.SessionRetrieveParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        CustomerCreateParams,
+        Stripe.CustomerCreateParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        CustomerSearchParams,
+        Stripe.CustomerSearchParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        StripeSubscriptionListParams,
+        Stripe.SubscriptionListParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        Parameters<StripeClient['subscriptions']['update']>[1],
+        Stripe.SubscriptionUpdateParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        NonNullable<Parameters<StripeClient['setupIntents']['retrieve']>[1]>,
+        Stripe.SetupIntentRetrieveParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        Parameters<StripeClient['paymentMethods']['attach']>[1],
+        Stripe.PaymentMethodAttachParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        BillingPortalSessionCreateParams,
+        Stripe.BillingPortal.SessionCreateParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        BillingPortalConfigurationCreateParams,
+        Stripe.BillingPortal.ConfigurationCreateParams
+      >
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      UnknownRequestFieldPaths<
+        BillingPortalConfigurationListParams,
+        Stripe.BillingPortal.ConfigurationListParams
+      >
+    >().toEqualTypeOf<never>();
   });
 });

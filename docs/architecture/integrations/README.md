@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for all external dependencies — API versions, breaking changes we've hit, fields we depend on, and migration paths.
 
-**Last Updated:** 2026-10-11
+**Last Updated:** 2026-10-13
 
 ---
 
@@ -22,18 +22,19 @@ BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_peri
 
 | Vendor | Package | Our Version | API Version | Last Verified |
 |--------|---------|-------------|-------------|---------------|
-| Stripe | `stripe` | ^22.6.1 | `2026-08-26.dahlia` | 2026-09-16 |
+| Stripe | `stripe` | ^23.0.0 | `2026-09-30.endive` | 2026-10-13 |
 | Clerk | `@clerk/nextjs` | ^7.4.1 | `2024-10-01` | 2026-03-28 |
 | Postgres | `postgres` | ^3.4.8 | N/A (driver) | 2026-03-17 |
 | Drizzle | `drizzle-orm` | ^0.45.2 | N/A | 2026-03-17 |
 
-Package versions above were reconciled against `package.json` on 2026-09-16.
+Package versions above were reconciled against `package.json` on 2026-09-16,
+and Stripe's on 2026-10-13.
 Stripe's API version is pinned in `lib/stripe-api-version.ts` and read by
 `lib/stripe.ts`. That pin covers outbound requests only: each Stripe webhook
-endpoint has its own version. The live endpoint is at `2026-05-27.dahlia`. The
-test endpoint inherited the account default `2026-01-28.clover` until its
-2026-10-11 rotation, and now uses `2026-05-27.dahlia` explicitly
-([census and decision](./stripe.md#webhook-endpoint-api-versions)).
+endpoint has its own version. The test endpoint moved to `2026-09-30.endive` on
+2026-10-13. The live endpoint stays at `2026-05-27.dahlia` until the promotion
+that ships the Endive pin swaps it
+([census, decision and migration](./stripe.md#webhook-endpoint-api-versions)).
 Clerk's API version remains a tracked vendor setting rather than a local code
 constant.
 

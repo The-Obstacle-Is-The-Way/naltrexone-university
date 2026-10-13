@@ -34,6 +34,9 @@ import type { CheckoutDisclosureResolver } from './stripe/stripe-webhook-process
 export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
   webhookSecret: string;
+  // The next live endpoint's signing secret, set only while a major-release
+  // migration overlaps two endpoints.
+  nextWebhookSecret?: string | undefined;
   consentStateSecret?: string | undefined;
   priceIds: StripePriceIds;
   logger: Logger;
@@ -203,6 +206,7 @@ export class StripePaymentGateway implements PaymentGateway {
     return processStripeWebhookEvent({
       stripe: this.deps.stripe,
       webhookSecret: this.deps.webhookSecret,
+      nextWebhookSecret: this.deps.nextWebhookSecret,
       consentStateSecret: this.deps.consentStateSecret,
       rawBody,
       signature,

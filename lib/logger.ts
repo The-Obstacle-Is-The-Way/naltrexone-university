@@ -39,6 +39,7 @@ export const SECRET_ENV_NAMES: readonly string[] = [
   'SENTRY_WATCHER_TOKEN',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_WEBHOOK_SECRET_NEXT',
 ];
 
 export const LOGGER_REDACT_PATHS: readonly string[] = [

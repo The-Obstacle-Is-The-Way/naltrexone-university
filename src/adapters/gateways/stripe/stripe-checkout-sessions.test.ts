@@ -124,9 +124,9 @@ describe('createStripeCheckoutSession', () => {
 
     await createCheckout(stripe);
 
-    expect(stripe.createCalls[0]?.params).not.toHaveProperty(
-      'payment_method_types',
-    );
+    const params = stripe.createCalls[0]?.params;
+    expect(params).not.toHaveProperty('payment_method_types');
+    expect(params).not.toHaveProperty('allowed_payment_method_types');
   });
 
   // DEBT-414 F15: a consent text can exceed Stripe's 500-character metadata

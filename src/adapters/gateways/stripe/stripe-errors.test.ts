@@ -52,7 +52,7 @@ describe('isAlreadyCanceledError', () => {
   });
 });
 
-// DEBT-501 item 6: shaped as stripe-node 22 raises them (Error.js,
+// DEBT-501 item 6: shaped as stripe-node 23 raises them (Error.js,
 // RequestSender.js): each carries its class name as `type`.
 function stripeError(type: string, extra: Record<string, unknown> = {}) {
   return Object.assign(new Error(type), { type, ...extra });
@@ -66,11 +66,12 @@ describe('isStripeOutage', () => {
     ],
     ['a 5xx', stripeError('StripeAPIError', { statusCode: 503 })],
     ['a 429', stripeError('StripeRateLimitError', { statusCode: 429 })],
+    // A lost connection, a timeout, or a body cut off mid-stream.
     [
       'a lost connection, with no code or status',
       stripeError('StripeConnectionError'),
     ],
-    // A 5xx whose body is not JSON, or a body cut off mid-stream.
+    // A response whose body is not JSON, such as a proxy's 5xx page.
     ['an API error with no status', stripeError('StripeAPIError')],
     // Stripe can answer a rate limit as a 400 with code rate_limit.
     [
