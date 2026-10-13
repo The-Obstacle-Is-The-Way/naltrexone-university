@@ -435,7 +435,7 @@ test('does not steal focus when an already-mounted summary re-renders', async ()
 
   await expect
     .element(screen.getByTestId('summary-rerender-count'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
   await expect
     .element(screen.getByRole('button', { name: 'Keep focus here' }))
     .toHaveFocus();

@@ -190,7 +190,7 @@ export async function openExamReviewQuestion(
 ) {
   await expect
     .element(screen.getByTestId('question-id'))
-    .toHaveTextContent(BROWSER_QUESTION_3_ID);
+    .toMatchTextContent(BROWSER_QUESTION_3_ID);
   await screen.getByRole('button', { name: 'Review & Submit' }).click();
   await expect
     .element(screen.getByRole('heading', { name: 'Review & Submit' }))
@@ -202,7 +202,7 @@ export async function openExamReviewQuestion(
     .click();
   await expect
     .element(screen.getByTestId('question-id'))
-    .toHaveTextContent(BROWSER_QUESTION_2_ID);
+    .toMatchTextContent(BROWSER_QUESTION_2_ID);
 }
 
 export function setupPracticeSessionPageModelBrowserSpec() {

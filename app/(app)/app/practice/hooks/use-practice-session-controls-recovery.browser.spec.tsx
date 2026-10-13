@@ -125,12 +125,12 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     const firstStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -141,7 +141,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     expect(getIncompletePracticeSession).toHaveBeenCalledTimes(3);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
@@ -150,7 +150,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     const secondStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -192,7 +192,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -202,7 +202,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     const firstAbandonKey = getCallIdempotencyKey(
       endPracticeSession.mock.calls,
       0,
@@ -256,17 +256,17 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     expect(getIncompletePracticeSession).toHaveBeenCalledTimes(2);
     const firstAbandonKey = getCallIdempotencyKey(
       endPracticeSession.mock.calls,
@@ -308,12 +308,12 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     const firstStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -325,7 +325,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     const secondStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -374,12 +374,12 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     const firstStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -390,7 +390,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -398,7 +398,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     const secondStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -447,12 +447,12 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('session-start-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     const timedOutStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -461,14 +461,14 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     initialRefresh.resolve(ok(incompleteSession));
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -476,7 +476,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     const retriedStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -527,12 +527,12 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     const firstStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -551,7 +551,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -559,7 +559,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('3');
+      .toMatchTextContent('3');
     const thirdStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       2,
@@ -612,16 +612,16 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'change-start-intent' }).click();
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
     await expect
       .element(screen.getByTestId('session-start-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     const currentStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -639,17 +639,17 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('session-start-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -657,7 +657,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     const nextStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       2,
@@ -695,7 +695,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     const screen = await render(<RecoveryHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -709,7 +709,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('session-start-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
 
     abandonResult.resolve(
       ok({
@@ -728,14 +728,14 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     startResult.resolve(err('VALIDATION_ERROR', 'Start request is invalid'));
     await expect
       .element(screen.getByTestId('session-start-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
   });
 });

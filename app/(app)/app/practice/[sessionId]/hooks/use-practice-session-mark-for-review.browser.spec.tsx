@@ -328,13 +328,13 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       .toHaveAttribute('role', 'status');
     await expect
       .element(screen.getByTestId('app-toast'))
-      .toHaveTextContent(/changed in another tab/i);
+      .toMatchTextContent(/changed in another tab/i);
     await expect
       .element(screen.getByText('What is the next best step?'))
       .toBeVisible();
     await expect
       .element(screen.getByTestId('mark-state'))
-      .toHaveTextContent(/^unmarked$/);
+      .toMatchTextContent(/^unmarked$/);
     await expect
       .element(screen.getByRole('button', { name: 'Mark for review' }))
       .toHaveAttribute('aria-pressed', 'false');

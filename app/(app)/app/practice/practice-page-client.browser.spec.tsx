@@ -72,7 +72,7 @@ test('disables the real session starter while session start is loading', async (
 
   await expect
     .element(screen.getByRole('alert'))
-    .toHaveTextContent('Fixture rejected the start.');
+    .toMatchTextContent('Fixture rejected the start.');
   await expect
     .element(screen.getByRole('button', { name: 'Start session', exact: true }))
     .toBeEnabled();

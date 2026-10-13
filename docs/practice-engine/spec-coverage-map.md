@@ -35,7 +35,7 @@
 | Status Filter Segmented Control + Review Navigator | SPEC-028 | Implemented | Segmented control for status/difficulty filters; color-coded question navigator grid in review mode |
 | Dev Environment Resilience | SPEC-029 | Implemented | Client-side timeouts, observable failure states, `ErrorCard` recovery actions |
 | Question View UX Unification | SPEC-030 | Implemented | Tutor state persistence fix, Previous button in practice, review nav relocation to bottom bar |
-| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](./retry-logic.md) + DEBT-265 | Implemented | Provenance + validation + inline retry + observability + mixed-id hardening are complete. Active-exam secrecy gates are enforced; keep the archived bug family in the regression set. |
+| Retry Lineage + Session Review Inline Retry | [Retry Logic SSOT](../product/practice/retries.md) + DEBT-265 | Implemented | Provenance + validation + inline retry + observability + mixed-id hardening are complete. Active-exam secrecy gates are enforced; keep the archived bug family in the regression set. |
 
 ---
 

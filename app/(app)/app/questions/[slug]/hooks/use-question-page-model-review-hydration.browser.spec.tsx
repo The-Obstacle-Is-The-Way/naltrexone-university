@@ -57,14 +57,14 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
+      .toMatchTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
+      .toMatchTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
@@ -96,7 +96,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     expect(getQuestionBySlug).toHaveBeenCalledWith({
       slug: 'q-1',
       review: { attemptId: QUESTION_PAGE_ATTEMPT_1_ID },
@@ -123,7 +123,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     expect(getQuestionBySlug).toHaveBeenCalledWith({ slug: 'q-1' });
   });
 
@@ -166,10 +166,10 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     deferred.resolve(
       ok({
@@ -190,7 +190,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('shows review loading state on the first render after mode changes to review', async () => {
@@ -262,13 +262,13 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByTestId('set-review-mode').click();
 
@@ -365,7 +365,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     expect(getPreviousAttempt).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,

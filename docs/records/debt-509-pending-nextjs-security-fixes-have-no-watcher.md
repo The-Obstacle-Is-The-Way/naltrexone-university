@@ -45,7 +45,7 @@ No production surface is affected, so DEBT-506's follow-up PR takes 16.3.8 throu
 
 ## Response When the Pending Fixes Ship — Decided 2026-10-07
 
-The rule now lives in the supply-chain playbook, [When a fix is urgent](../dev/supply-chain-overrides.md#when-a-fix-is-urgent). In short: the 7-day gate defends against malicious publishes, which are usually pulled within hours to days, while a critical framework flaw can be exploited within hours of disclosure. So a critical or high fix that affects this app, or whose exposure cannot be ruled out, ships the same day under exact-version exceptions. Everything else waits for the gate.
+The rule now lives in the supply-chain playbook, [When a fix is urgent](../policies/supply-chain.md#when-a-fix-is-urgent). In short: the 7-day gate defends against malicious publishes, which are usually pulled within hours to days, while a critical framework flaw can be exploited within hours of disclosure. So a critical or high fix that affects this app, or whose exposure cannot be ruled out, ships the same day under exact-version exceptions. Everything else waits for the gate.
 
 For the two pending Next.js fixes:
 
@@ -59,7 +59,7 @@ For the two pending Next.js fixes:
 
 ## Watcher — Added 2026-10-07
 
-[Advisories Dependabot cannot see](../dev/supply-chain-overrides.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every three hours.
+[Advisories Dependabot cannot see](../policies/supply-chain.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every three hours.
 
 - **What it watches.** The repository of every direct dependency, listed in the script's `DEPENDENCY_REPOSITORIES` map from each package's npm `repository` field: 41 repositories for 54 dependencies. Only `server-only`, a marker package, names none. A test fails CI when `package.json` and the map disagree, so a new dependency cannot go unwatched. Since 2026-10-08 it also watches the repositories behind every other package in `pnpm-lock.yaml`, resolved when it runs; see below.
 - **What it opens.** One issue per advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.

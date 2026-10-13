@@ -169,18 +169,18 @@ test('rotates the session start idempotency key when changing status', async () 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
   const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
 
   await screen.getByTestId('set-incorrect').click();
   await expect
     .element(screen.getByTestId('status'))
-    .toHaveTextContent('incorrect');
+    .toMatchTextContent('incorrect');
 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('2');
+    .toMatchTextContent('2');
   const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
 
   expect(secondKey).not.toBe(firstKey);
@@ -212,7 +212,7 @@ test.each([
     await screen.getByTestId(`change-${control}-and-start`).click();
     await expect
       .element(screen.getByTestId('settled-starts'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     expect(startPracticeSession).toHaveBeenCalledTimes(1);
     expect(startPracticeSession.mock.calls[0]?.[0]).toMatchObject(expected);
@@ -230,7 +230,7 @@ test('reports thrown session start failures', async () => {
 
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
   expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
     component: 'UsePracticeSessionStart',
     action: 'startSession',
@@ -253,13 +253,13 @@ test('reuses the session start key after a timeout and reaches the recorded succ
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('session-start-status'))
-    .toHaveTextContent('error');
+    .toMatchTextContent('error');
   const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('2');
+    .toMatchTextContent('2');
   const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
 
   expect(secondKey).toBe(firstKey);
@@ -278,7 +278,7 @@ test('retires timeout uncertainty after a causally later retry proves absence', 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
   const timedOutKey = getIdempotencyKey(
     startPracticeSession.mock.calls[0]?.[0],
   );
@@ -286,7 +286,7 @@ test('retires timeout uncertainty after a causally later retry proves absence', 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('2');
+    .toMatchTextContent('2');
   const consumingRetryKey = getIdempotencyKey(
     startPracticeSession.mock.calls[1]?.[0],
   );
@@ -294,7 +294,7 @@ test('retires timeout uncertainty after a causally later retry proves absence', 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('3');
+    .toMatchTextContent('3');
   const nextKey = getIdempotencyKey(startPracticeSession.mock.calls[2]?.[0]);
 
   expect(consumingRetryKey).toBe(timedOutKey);
@@ -330,13 +330,13 @@ test('recovers a late concurrent start with the preserved key and renders the se
   await screen.getByTestId('recovery-start').click();
   await expect
     .element(screen.getByTestId('recovery-settled-starts'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
   const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
 
   await screen.getByTestId('recovery-start').click();
   await expect
     .element(screen.getByTestId('recovery-settled-starts'))
-    .toHaveTextContent('2');
+    .toMatchTextContent('2');
   const concurrentRetryKey = getIdempotencyKey(
     startPracticeSession.mock.calls[1]?.[0],
   );
@@ -350,7 +350,7 @@ test('recovers a late concurrent start with the preserved key and renders the se
   await screen.getByTestId('recovery-start').click();
   await expect
     .element(screen.getByTestId('recovery-settled-starts'))
-    .toHaveTextContent('3');
+    .toMatchTextContent('3');
   const recoveryRetryKey = getIdempotencyKey(
     startPracticeSession.mock.calls[2]?.[0],
   );
@@ -372,12 +372,12 @@ test('ignores stale successful session starts after config changes mid-flight', 
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('session-start-status'))
-    .toHaveTextContent('loading');
+    .toMatchTextContent('loading');
 
   await screen.getByTestId('set-incorrect').click();
   await expect
     .element(screen.getByTestId('status'))
-    .toHaveTextContent('incorrect');
+    .toMatchTextContent('incorrect');
 
   deferred.resolve(
     ok({ sessionId: fixtureSession1Id, requestedCount: 20, actualCount: 20 }),
@@ -388,12 +388,12 @@ test('ignores stale successful session starts after config changes mid-flight', 
   });
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
 
   expect(navigateToSpy).not.toHaveBeenCalled();
   await expect
     .element(screen.getByTestId('session-start-error'))
-    .toHaveTextContent(/^$/);
+    .toMatchTextContent(/^$/);
 });
 
 test('ignores stale thrown session start failures after config changes mid-flight', async () => {
@@ -405,25 +405,25 @@ test('ignores stale thrown session start failures after config changes mid-fligh
   await screen.getByTestId('start').click();
   await expect
     .element(screen.getByTestId('session-start-status'))
-    .toHaveTextContent('loading');
+    .toMatchTextContent('loading');
 
   await screen.getByTestId('set-incorrect').click();
   await expect
     .element(screen.getByTestId('status'))
-    .toHaveTextContent('incorrect');
+    .toMatchTextContent('incorrect');
 
   deferred.reject(new Error('Stale failure'));
   await expect(deferred.promise).rejects.toThrow('Stale failure');
   await expect
     .element(screen.getByTestId('settled-starts'))
-    .toHaveTextContent('1');
+    .toMatchTextContent('1');
 
   expect(navigateToSpy).not.toHaveBeenCalled();
   expect(reportClientErrorSpy).not.toHaveBeenCalled();
   await expect
     .element(screen.getByTestId('session-start-status'))
-    .toHaveTextContent('loading');
+    .toMatchTextContent('loading');
   await expect
     .element(screen.getByTestId('session-start-error'))
-    .toHaveTextContent(/^$/);
+    .toMatchTextContent(/^$/);
 });

@@ -247,10 +247,10 @@ describe('theme token regression', () => {
     ]);
 
     expect(issues).toEqual([
-      'components/example-card.tsx:1 undocumented opacity token "bg-foreground/[0.03]" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
-      'components/example-card.tsx:2 undocumented opacity token "bg-muted/[13%]" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
-      'components/example-card.tsx:3 undocumented opacity token "bg-muted/30" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
-      'components/example-card.tsx:3 undocumented opacity token "border-border/30" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.',
+      'components/example-card.tsx:1 undocumented opacity token "bg-foreground/[0.03]" is not in the Pattern Registry allowlist. Add the pattern to docs/design-system/pattern-registry.md before using it.',
+      'components/example-card.tsx:2 undocumented opacity token "bg-muted/[13%]" is not in the Pattern Registry allowlist. Add the pattern to docs/design-system/pattern-registry.md before using it.',
+      'components/example-card.tsx:3 undocumented opacity token "bg-muted/30" is not in the Pattern Registry allowlist. Add the pattern to docs/design-system/pattern-registry.md before using it.',
+      'components/example-card.tsx:3 undocumented opacity token "border-border/30" is not in the Pattern Registry allowlist. Add the pattern to docs/design-system/pattern-registry.md before using it.',
     ]);
   });
 

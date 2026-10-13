@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
  *
  * Uses renderToStaticMarkup (a stable first-party React API) instead of
  * @testing-library/react, which has a known act() bug with React 19.
- * See docs/dev/react-vitest-testing.md for rationale.
+ * See docs/guides/testing/react-component-tests.md for rationale.
  */
 export function renderHook<T>(useHook: () => T): T {
   let captured: T | undefined;

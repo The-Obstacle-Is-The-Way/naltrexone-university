@@ -91,4 +91,4 @@ from the Drains API (#1410 review).*
 ## Related
 
 - BUG-324.
-- [Logging](../dev/logging.md).
+- [Logging](../architecture/observability.md).

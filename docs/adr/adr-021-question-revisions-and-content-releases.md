@@ -21,7 +21,7 @@ Two P1 records describe the same missing structure.
 The content repository's SPEC-007 defines the cross-repository release interface: an immutable, hash-addressed manifest; staging and one atomic activation; explicit withdrawals and holds; a revocation overlay; rollback. It assigns *verification and activation* to the app. This record decides the app's side of that contract.
 
 Constraints:
-- Production migrations run in the Vercel build before the new deployment serves ([Migration Authoring](../dev/migration-authoring.md#deployed-code-compatibility)). Every step is therefore expand/contract, with an explicit N-1 answer.
+- Production migrations run in the Vercel build before the new deployment serves ([Migration Authoring](../guides/database/migrations.md#deployed-code-compatibility)). Every step is therefore expand/contract, with an explicit N-1 answer.
 - Attempts and session states reference choice rows through composite `(choice id, question id)` foreign keys with `ON DELETE RESTRICT`. Existing IDs must survive.
 
 ## Decision
@@ -158,5 +158,5 @@ No driver for it has been identified. The one benefit cited, telling held, remov
 ## Related
 
 - [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md), [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
-- [Migration Authoring](../dev/migration-authoring.md)
+- [Migration Authoring](../guides/database/migrations.md)
 - Content repository: SPEC-005, SPEC-007, ADR-001 (repository boundary)

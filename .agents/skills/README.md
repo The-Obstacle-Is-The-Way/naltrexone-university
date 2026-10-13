@@ -11,7 +11,7 @@ Vendored skills that Claude Code and Codex load: `.claude/skills/*` and `.codex/
 3. Commit it with the upstream's short SHA. Never write to, delete or recreate the symlinks while refreshing.
 4. Afterwards, check that every `.claude` and `.codex` symlink still resolves, and that the number of `SKILL.md` files matches the manifest and its schema's count.
 
-**Special case:** `agent-browser` is a first-party fork. Merge it by hand, keeping its Clerk sign-in guidance, its notes on React click failures, and its link to `docs/tooling/agent-browser.md`.
+**Special case:** `agent-browser` is a first-party fork. Merge it by hand, keeping its Clerk sign-in guidance, its notes on React click failures, and its link to `docs/guides/testing/browser-automation.md`.
 
 ## Removing a Skill
 

@@ -87,7 +87,7 @@
 }
 
 @layer utilities {
-  /* Canonical focus-ring primitives per docs/frontend/standards.md § 3.
+  /* Canonical focus-ring primitives per docs/design-system/standards.md § 3.
      DEBT-399 PR 1 extracts these so the 26 focus-visible + 1 focus-within
      inline copies have a single shared source. DEBT-399 PR 2 migrates
      every site to use these utilities. */
