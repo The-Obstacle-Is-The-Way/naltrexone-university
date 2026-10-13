@@ -397,7 +397,12 @@ describe('records command', () => {
     );
   });
 
-  it('skips git-ignored local files, but not a new untracked document', () => {
+  function auditIgnoredFixture(): string[] {
+    // A git hook exports GIT_DIR and friends, which would point these git
+    // commands at the repository running the hook instead of the fixture.
+    for (const name of Object.keys(process.env)) {
+      if (name.startsWith('GIT_')) vi.stubEnv(name, undefined);
+    }
     // Only this repository's .gitignore counts, not the machine's git config.
     vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
     vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1');
@@ -410,9 +415,48 @@ describe('records command', () => {
     });
     const reports: DocumentationAudit[] = [];
     runDocumentationCommand(root, (json) => reports.push(JSON.parse(json)));
-    expect(reports[0]?.brokenLive.map((link) => link.file)).toEqual([
-      'docs/guides/new-guide.md',
-    ]);
+    return reports[0]?.brokenLive.map((link) => link.file) ?? [];
+  }
+
+  it('skips git-ignored local files, but not a new untracked document', () => {
+    expect(auditIgnoredFixture()).toEqual(['docs/guides/new-guide.md']);
+  });
+
+  // A pre-push hook run from a linked worktree exports GIT_DIR, naming the
+  // shared repository's worktree directory. A `git init` that inherits it
+  // marks that repository bare, and every later command in the clone fails.
+  it("leaves the repository a hook's GIT_DIR names untouched", () => {
+    const outer = fixture();
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const name of Object.keys(env)) {
+      if (name.startsWith('GIT_')) delete env[name];
+    }
+    Object.assign(env, {
+      GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_CONFIG_NOSYSTEM: '1',
+    });
+    const git = (cwd: string, args: string[]) =>
+      execFileSync(
+        'git',
+        [
+          '-c',
+          'user.name=Fixture',
+          '-c',
+          'user.email=fixture@example.com',
+          ...args,
+        ],
+        { cwd, env, encoding: 'utf8' },
+      );
+    git(outer, ['init', '--quiet']);
+    git(outer, ['commit', '--allow-empty', '--quiet', '-m', 'base']);
+    const worktree = path.join(fixture(), 'linked');
+    git(outer, ['worktree', 'add', '--quiet', worktree]);
+    vi.stubEnv('GIT_DIR', path.join(outer, '.git', 'worktrees', 'linked'));
+
+    const brokenLive = auditIgnoredFixture();
+
+    expect(git(outer, ['config', '--get', 'core.bare']).trim()).toBe('false');
+    expect(brokenLive).toEqual(['docs/guides/new-guide.md']);
   });
 
   // Outside a work tree, git exits before reading a long file list, and

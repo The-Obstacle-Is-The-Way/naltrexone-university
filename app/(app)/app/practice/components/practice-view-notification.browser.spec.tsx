@@ -107,6 +107,6 @@ test('does not emit duplicate notifications when bookmark status changes without
   await expect.poll(() => notifySpy.mock.calls.length).toBe(1);
   await expect
     .element(screen.getByTestId('bookmark-status'))
-    .toHaveTextContent('idle');
+    .toMatchTextContent('idle');
   expect(notifySpy.mock.calls.length).toBe(1);
 });

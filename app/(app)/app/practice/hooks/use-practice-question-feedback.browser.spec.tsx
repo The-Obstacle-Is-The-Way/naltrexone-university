@@ -137,10 +137,10 @@ describe('usePracticeQuestionFeedback (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('helpful');
+      .toMatchTextContent('helpful');
     expect(getQuestionRating).toHaveBeenCalledWith({ questionId });
   });
 
@@ -154,7 +154,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     expect(reportClientError).toHaveBeenCalledWith(
       { code: 'INTERNAL_ERROR', message: 'Nope' },
       {
@@ -172,7 +172,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     expect(reportClientError).toHaveBeenCalledWith(error, {
       component: 'UsePracticeQuestionFeedback',
       action: 'loadQuestionRating',
@@ -186,10 +186,10 @@ describe('usePracticeQuestionFeedback (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('none');
+      .toMatchTextContent('none');
   });
 
   it('optimistically applies a rating before the write resolves', async () => {
@@ -199,21 +199,21 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'rate-helpful' }).click();
 
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('helpful');
+      .toMatchTextContent('helpful');
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('saving');
+      .toMatchTextContent('saving');
 
     deferred.resolve(ok({ rating: 'helpful' }));
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('saved');
+      .toMatchTextContent('saved');
     expect(rateQuestion).toHaveBeenCalledWith({
       questionId,
       attemptId,
@@ -234,7 +234,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'rate-helpful' }).click();
     await expect.poll(() => rateQuestion.mock.calls.length).toBe(1);
@@ -243,16 +243,16 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     await screen.getByRole('button', { name: 'reattempt' }).click();
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(reattemptId);
+      .toMatchTextContent(reattemptId);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'rate-helpful' }).click();
     await expect.poll(() => rateQuestion.mock.calls.length).toBe(2);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     const newerKey = requestKeyAt(rateQuestion.mock.calls, 1);
     expect(newerKey).toEqual(expect.any(String));
     expect(newerKey).not.toBe(firstKey);
@@ -276,16 +276,16 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('not_helpful');
+      .toMatchTextContent('not_helpful');
 
     await screen.getByRole('button', { name: 'retract' }).click();
 
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('not_helpful');
+      .toMatchTextContent('not_helpful');
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     expect(rateQuestion).toHaveBeenCalledWith({
       questionId,
       attemptId,
@@ -299,12 +299,12 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('is-report-open'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'open-report' }).click();
     await expect
       .element(screen.getByTestId('is-report-open'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByRole('button', { name: 'submit-report' }).click();
     await expect.poll(() => submitQuestionReport.mock.calls.length).toBe(1);
@@ -320,7 +320,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     await screen.getByRole('button', { name: 'close-report' }).click();
     await expect
       .element(screen.getByTestId('is-report-open'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('preserves a newer edited-report key after the stale dialog request completes', async () => {
@@ -334,7 +334,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'open-report' }).click();
     await screen.getByRole('button', { name: 'submit-report' }).click();
@@ -345,7 +345,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     await screen.getByRole('button', { name: 'edit-report' }).click();
     await expect
       .element(screen.getByTestId('report-comment'))
-      .toHaveTextContent(editedReportComment);
+      .toMatchTextContent(editedReportComment);
     await screen.getByRole('button', { name: 'open-report' }).click();
     await screen.getByRole('button', { name: 'submit-report' }).click();
     await expect.poll(() => submitQuestionReport.mock.calls.length).toBe(2);
@@ -379,13 +379,13 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'rate-helpful' }).click();
     await expect.poll(() => rateQuestion.mock.calls.length).toBe(2);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('saved');
+      .toMatchTextContent('saved');
 
     const initialKey = requestKeyAt(rateQuestion.mock.calls, 0);
     const retryKey = requestKeyAt(rateQuestion.mock.calls, 1);
@@ -409,7 +409,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'submit-report' }).click();
 
@@ -438,10 +438,10 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     await expect.poll(() => rateQuestion.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('none');
+      .toMatchTextContent('none');
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
   });
 
   it('resets rating state when leaving review mode', async () => {
@@ -450,23 +450,23 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('helpful');
+      .toMatchTextContent('helpful');
 
     await screen.getByRole('button', { name: 'leave-review' }).click();
 
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('none');
+      .toMatchTextContent('none');
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
   });
 
   it('ignores rate and report commands after leaving review mode', async () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'leave-review' }).click();
     await screen.getByRole('button', { name: 'rate-helpful' }).click();

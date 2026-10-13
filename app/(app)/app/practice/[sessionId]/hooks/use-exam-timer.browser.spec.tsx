@@ -59,20 +59,20 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('3');
+      .toMatchTextContent('3');
 
     await vi.advanceTimersByTimeAsync(1_000);
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
 
     await vi.advanceTimersByTimeAsync(2_000);
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
     await expect
       .element(screen.getByTestId('expired'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     expect(onExpire).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(2_000);
@@ -93,14 +93,14 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('300');
+      .toMatchTextContent('300');
 
     vi.setSystemTime(new Date('2026-05-22T12:06:00.000Z'));
     document.dispatchEvent(new Event('visibilitychange'));
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
     expect(onExpire).toHaveBeenCalledTimes(1);
 
     window.dispatchEvent(new Event('focus'));
@@ -121,17 +121,17 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     vi.setSystemTime(new Date('2026-05-22T12:00:31.000Z'));
     document.dispatchEvent(new Event('visibilitychange'));
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('289');
+      .toMatchTextContent('289');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('5 minutes remaining');
+      .toMatchTextContent('5 minutes remaining');
 
     // Tab return fires visibilitychange AND window focus back-to-back. The
     // second update must not wipe the announcement before assistive tech can
@@ -140,12 +140,12 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^5 minutes remaining$/);
+      .toMatchTextContent(/^5 minutes remaining$/);
 
     await vi.advanceTimersByTimeAsync(1_000);
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('announces only the lowest milestone crossed by one long update', async () => {
@@ -165,10 +165,10 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('20');
+      .toMatchTextContent('20');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^30 seconds remaining$/);
+      .toMatchTextContent(/^30 seconds remaining$/);
   });
 
   it('announces each milestone once during a normal second-by-second countdown', async () => {
@@ -186,41 +186,41 @@ describe('useExamTimer', () => {
     await vi.advanceTimersByTimeAsync(2_000);
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('300');
+      .toMatchTextContent('300');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('5 minutes remaining');
+      .toMatchTextContent('5 minutes remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await vi.advanceTimersByTimeAsync(239_000);
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('60');
+      .toMatchTextContent('60');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('1 minute remaining');
+      .toMatchTextContent('1 minute remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await vi.advanceTimersByTimeAsync(29_000);
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('30');
+      .toMatchTextContent('30');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('30 seconds remaining');
+      .toMatchTextContent('30 seconds remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('preserves a milestone crossed during hidden-tab ticks and announces it on return', async () => {
@@ -237,10 +237,10 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('310');
+      .toMatchTextContent('310');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -254,7 +254,7 @@ describe('useExamTimer', () => {
       await vi.advanceTimersByTimeAsync(1_000);
       await expect
         .element(screen.getByTestId('milestone'))
-        .toHaveTextContent(/^$/);
+        .toMatchTextContent(/^$/);
     } finally {
       Reflect.deleteProperty(document, 'visibilityState');
     }
@@ -263,7 +263,7 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('5 minutes remaining');
+      .toMatchTextContent('5 minutes remaining');
   });
 
   it('resets the milestone baseline when the deadline changes while hidden', async () => {
@@ -280,7 +280,7 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('310');
+      .toMatchTextContent('310');
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -298,7 +298,7 @@ describe('useExamTimer', () => {
       await vi.advanceTimersByTimeAsync(1_000);
       await expect
         .element(screen.getByTestId('milestone'))
-        .toHaveTextContent(/^$/);
+        .toMatchTextContent(/^$/);
     } finally {
       Reflect.deleteProperty(document, 'visibilityState');
     }
@@ -307,10 +307,10 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('289');
+      .toMatchTextContent('289');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('retries an expired deadline when onExpire reports that recovery failed', async () => {
@@ -396,7 +396,7 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
     expect(onExpire).toHaveBeenCalledTimes(1);
   });
 
@@ -411,7 +411,7 @@ describe('useExamTimer', () => {
 
     await expect
       .element(screen.getByTestId('remaining'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await vi.advanceTimersByTimeAsync(5_000);
     expect(onExpire).not.toHaveBeenCalled();

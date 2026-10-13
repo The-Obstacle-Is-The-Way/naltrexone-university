@@ -71,13 +71,13 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-mode'))
-      .toHaveTextContent('tutor');
+      .toMatchTextContent('tutor');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(BROWSER_SESSION_ID);
+      .toMatchTextContent(BROWSER_SESSION_ID);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
   });
 
@@ -118,10 +118,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-mode'))
-      .toHaveTextContent('exam');
+      .toMatchTextContent('exam');
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
   });
 
@@ -167,7 +167,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     deferredSummary.resolve(
       errorResult('CONFLICT', 'Practice session has not ended'),
@@ -175,10 +175,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     expect(callOrder).toEqual(['summary', 'question']);
   });
 
@@ -197,10 +197,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent(UserConflictMessages.EmailOwnedByAnotherIdentity);
+      .toMatchTextContent(UserConflictMessages.EmailOwnedByAnotherIdentity);
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
     expect(getNextQuestionMock).not.toHaveBeenCalled();
   });
@@ -248,16 +248,16 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-mode'))
-      .toHaveTextContent('exam');
+      .toMatchTextContent('exam');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(BROWSER_SESSION_ID);
+      .toMatchTextContent(BROWSER_SESSION_ID);
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('keeps the generic empty state when expired-exam recovery still reports an active session', async () => {
@@ -274,7 +274,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByText('No more questions found.'))
       .toBeVisible();
@@ -296,7 +296,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByText('No more questions found.'))
       .toBeVisible();
@@ -323,10 +323,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('summary-mode'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     screen.unmount();
     recoverySummary.resolve(
@@ -394,16 +394,16 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'next-question' }).click();
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(2);
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
   });
@@ -465,19 +465,19 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
 
     await screen.getByRole('button', { name: 'end-session' }).click();
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(BROWSER_SESSION_ID);
+      .toMatchTextContent(BROWSER_SESSION_ID);
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('retries summary bootstrap before loading questions after a bootstrap error', async () => {
@@ -517,10 +517,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Summary bootstrap failed');
+      .toMatchTextContent('Summary bootstrap failed');
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
     expect(getNextQuestionMock).not.toHaveBeenCalled();
 
@@ -532,7 +532,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
 
     deferredRetrySummary.resolve(
       errorResult('CONFLICT', 'Practice session has not ended'),
@@ -540,10 +540,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
   });
 
@@ -586,7 +586,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
       await expect
         .element(screen.getByTestId('load-status'))
-        .toHaveTextContent('loading');
+        .toMatchTextContent('loading');
       expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
       expect(getNextQuestionMock).not.toHaveBeenCalled();
 
@@ -594,10 +594,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
       await expect
         .element(screen.getByTestId('load-status'))
-        .toHaveTextContent('error');
+        .toMatchTextContent('error');
       await expect
         .element(screen.getByTestId('error-message'))
-        .toHaveTextContent('Request timed out. Please try again.');
+        .toMatchTextContent('Request timed out. Please try again.');
       expect(getNextQuestionMock).not.toHaveBeenCalled();
 
       await screen.getByRole('button', { name: 'try-again' }).click();
@@ -608,10 +608,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
       await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
       await expect
         .element(screen.getByTestId('load-status'))
-        .toHaveTextContent('ready');
+        .toMatchTextContent('ready');
       await expect
         .element(screen.getByTestId('question-id'))
-        .toHaveTextContent(BROWSER_QUESTION_1_ID);
+        .toMatchTextContent(BROWSER_QUESTION_1_ID);
     } finally {
       vi.useRealTimers();
     }
@@ -632,12 +632,12 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Question load failed');
+      .toMatchTextContent('Question load failed');
   });
 });

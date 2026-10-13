@@ -79,7 +79,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(fixtureQuestion1Id);
+      .toMatchTextContent(fixtureQuestion1Id);
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
@@ -92,12 +92,12 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
 
     await screen.getByRole('button', { name: 'set-question-2' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(fixtureQuestion2Id);
+      .toMatchTextContent(fixtureQuestion2Id);
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
@@ -125,7 +125,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     expect(getBookmarkQuestionIds).toHaveBeenCalledWith({});
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
@@ -138,7 +138,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('starts only one bookmark request per question when the toggle is invoked twice while pending', async () => {
@@ -156,6 +156,6 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
     expect(setBookmark).toHaveBeenCalledTimes(1);
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 });

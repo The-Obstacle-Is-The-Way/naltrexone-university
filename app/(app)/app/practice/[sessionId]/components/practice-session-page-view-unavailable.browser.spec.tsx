@@ -108,17 +108,17 @@ test.each([
 
     await expect
       .element(screen.getByRole('status'))
-      .toHaveTextContent(
+      .toMatchTextContent(
         'This question was retired from the bank after your session began.',
       );
     if (saysWontCount) {
       await expect
         .element(screen.getByRole('status'))
-        .toHaveTextContent("It won't count toward your score.");
+        .toMatchTextContent("It won't count toward your score.");
     } else {
       await expect
         .element(screen.getByRole('status'))
-        .not.toHaveTextContent('count toward your score');
+        .not.toMatchTextContent('count toward your score');
     }
   },
 );

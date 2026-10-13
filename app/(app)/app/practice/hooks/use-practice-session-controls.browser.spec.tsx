@@ -109,29 +109,29 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('available-count-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('available-count'))
-      .toHaveTextContent('42');
+      .toMatchTextContent('42');
     await expect
       .element(screen.getByTestId('tag-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('available-tags'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     await screen.getByRole('button', { name: 'set-mode-exam' }).click();
     await expect
       .element(screen.getByTestId('session-mode'))
-      .toHaveTextContent('exam');
+      .toMatchTextContent('exam');
 
     await screen.getByRole('button', { name: 'toggle-tag-opioids' }).click();
     await expect
       .element(screen.getByTestId('selected-tags'))
-      .toHaveTextContent('opioids');
+      .toMatchTextContent('opioids');
   });
 
   it('ignores unsupported session mode changes', async () => {
@@ -143,11 +143,11 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('tag-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await screen.getByRole('button', { name: 'set-mode-invalid' }).click();
     await expect
       .element(screen.getByTestId('session-mode'))
-      .toHaveTextContent('tutor');
+      .toMatchTextContent('tutor');
   });
 
   it('sets tag load status to error when getTags throws', async () => {
@@ -161,7 +161,7 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('tag-load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UsePracticeSessionTags',
       action: 'loadTags',
@@ -179,7 +179,7 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('available-count-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UsePracticeAvailableQuestionsCount',
       action: 'loadAvailableCount',
@@ -220,7 +220,7 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -272,14 +272,14 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     expect(getIncompletePracticeSession).toHaveBeenCalledTimes(2);
 
     const firstCallInput = endPracticeSession.mock.calls[0]?.[0] as
@@ -302,7 +302,7 @@ describe('usePracticeSessionControls (browser)', () => {
     expect(secondKey).toBe(firstKey);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
   });
 
   it('keeps the exam discard self-heal path unchanged', async () => {
@@ -325,7 +325,7 @@ describe('usePracticeSessionControls (browser)', () => {
 
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -341,7 +341,7 @@ describe('usePracticeSessionControls (browser)', () => {
     expect(endPracticeSession).not.toHaveBeenCalled();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     // An idempotent discard success is already authoritative; no recovery
     // refetch is needed to clear the local panel.
     expect(getIncompletePracticeSession).toHaveBeenCalledTimes(1);
@@ -390,19 +390,19 @@ describe('usePracticeSessionControls (browser)', () => {
     const screen = await render(<PracticeSessionControlsHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -464,7 +464,7 @@ describe('usePracticeSessionControls (browser)', () => {
     const screen = await render(<PracticeSessionControlsHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
 
     // Both clicks target the same session while the first request is still
     // in flight: they must share one key so the second lands on the first's
@@ -540,20 +540,20 @@ describe('usePracticeSessionControls (browser)', () => {
     const screen = await render(<PracticeSessionControlsHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionAId);
+      .toMatchTextContent(sessionAId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
       .click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     // A failed start surfaces the next incomplete session (B) on this mount.
     await screen.getByRole('button', { name: 'start-session' }).click();
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionBId);
+      .toMatchTextContent(sessionBId);
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -600,12 +600,12 @@ describe('usePracticeSessionControls (browser)', () => {
     const screen = await render(<PracticeSessionControlsHookProbe />);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
 
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
-      .toHaveTextContent(sessionId);
+      .toMatchTextContent(sessionId);
   });
 });

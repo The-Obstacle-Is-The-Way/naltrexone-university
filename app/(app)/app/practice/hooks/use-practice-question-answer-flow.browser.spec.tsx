@@ -136,10 +136,10 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('q_1');
+      .toMatchTextContent('q_1');
   });
 
   it('transitions to error state when question loading throws', async () => {
@@ -149,10 +149,10 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Network down');
+      .toMatchTextContent('Network down');
   });
 
   it('supports selecting, committing, and fetching the next question', async () => {
@@ -169,20 +169,20 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1', exact: true })
       .click();
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(fixtureChoice1Id);
+      .toMatchTextContent(fixtureChoice1Id);
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     submitDeferred.resolve(
       ok({
@@ -197,12 +197,12 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'next-question' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(fixtureQ2Id);
+      .toMatchTextContent(fixtureQ2Id);
   });
 
   it('commits the clicked choice without waiting for selectedChoiceId to re-render', async () => {
@@ -230,7 +230,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByRole('button', { name: 'select-choice-2' }).click();
 
@@ -242,7 +242,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not double-commit when two selections happen in the same event', async () => {
@@ -262,7 +262,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1-then-2' })
@@ -271,7 +271,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(fixtureChoice1Id);
+      .toMatchTextContent(fixtureChoice1Id);
     expect(submitAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({
         choiceId: fixtureChoice1Id,
@@ -289,7 +289,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not double-commit while a choice commit is pending', async () => {
@@ -310,14 +310,14 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1', exact: true })
       .click();
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
 
     await screen.getByRole('button', { name: 'select-choice-2' }).click();
@@ -335,7 +335,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not programmatically submit while a choice commit is pending', async () => {
@@ -356,7 +356,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1-then-submit' })
@@ -365,7 +365,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     expect(submitAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({ choiceId: fixtureChoice1Id }),
     );
@@ -387,7 +387,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not programmatically submit before a choice is selected', async () => {
@@ -397,10 +397,10 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen
       .getByRole('button', { name: 'submit-answer', exact: true })
@@ -409,7 +409,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     expect(submitAnswerMock).not.toHaveBeenCalled();
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('does not commit when a previous submit result has locked the question', async () => {
@@ -437,7 +437,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1', exact: true })
@@ -445,10 +445,10 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('selected-choice-id'))
-      .toHaveTextContent(fixtureChoice1Id);
+      .toMatchTextContent(fixtureChoice1Id);
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'select-choice-2' }).click();
 
@@ -471,7 +471,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1', exact: true })
@@ -479,10 +479,10 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     await expect.poll(() => submitAnswerMock.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen
       .getByRole('button', { name: 'submit-answer', exact: true })
@@ -511,7 +511,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen
       .getByRole('button', { name: 'select-choice-1', exact: true })
@@ -519,13 +519,13 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Submit exploded');
+      .toMatchTextContent('Submit exploded');
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByRole('button', { name: 'submit-answer-twice' }).click();
 
@@ -535,13 +535,13 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('is-pending'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('reports unexpected submit orchestration errors', async () => {
@@ -557,7 +557,7 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     const screen = await render(<PracticeQuestionAnswerFlowProbe />);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     isMountedMock.mockImplementation(() => {
       throw unhandledError;

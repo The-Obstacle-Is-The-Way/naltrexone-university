@@ -132,17 +132,17 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
 
     await vi.advanceTimersByTimeAsync(1_000);
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-answered-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
     expect(saveExamDraftAnswerMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -179,7 +179,7 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
 
     vi.setSystemTime(new Date('2026-05-22T12:00:20.000Z'));
@@ -187,10 +187,10 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-answered-count'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
       expect.not.objectContaining({
@@ -225,12 +225,12 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
 
     await vi.advanceTimersByTimeAsync(1_000);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -245,7 +245,7 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(2);
   });
 
@@ -264,7 +264,7 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     vi.setSystemTime(new Date('2026-05-22T12:00:02.000Z'));
 
@@ -272,7 +272,7 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
   });
@@ -292,17 +292,17 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
 
     await screen.getByRole('button', { name: 'review-answers' }).click();
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-answered-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
@@ -330,17 +330,17 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
 
     await screen.getByRole('button', { name: 'next-question' }).click();
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-answered-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
@@ -369,17 +369,17 @@ describe('usePracticeSessionPageModel timer expiry', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
 
     await screen.getByRole('button', { name: 'navigate-question-1' }).click();
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-answered-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledWith(

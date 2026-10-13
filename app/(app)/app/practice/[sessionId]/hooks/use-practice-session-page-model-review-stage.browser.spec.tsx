@@ -153,22 +153,22 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
 
     await screen.getByRole('button', { name: 'review-answers' }).click();
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('review');
+      .toMatchTextContent('review');
 
     await screen.getByRole('button', { name: 'finalize-review' }).click();
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('post-exam-review');
+      .toMatchTextContent('post-exam-review');
     await expect
       .element(screen.getByTestId('post-exam-current-question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(endPracticeSessionMock).not.toHaveBeenCalled();
 
@@ -176,10 +176,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(BROWSER_SESSION_ID);
+      .toMatchTextContent(BROWSER_SESSION_ID);
   });
 
   it('restores the navigator when opening an exam question from Review & Submit', async () => {
@@ -191,13 +191,13 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await expect
       .element(screen.getByTestId('navigator-load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('navigator-question-count'))
-      .toHaveTextContent('3');
+      .toMatchTextContent('3');
     await expect.element(screen.getByText('Question navigator')).toBeVisible();
     await expect
       .element(screen.getByRole('button', { name: 'Previous' }))
@@ -217,12 +217,12 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await screen.getByRole('button', { name: 'Previous' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'Next' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
   });
 
   it('returns to Review & Submit after navigating back out of a reopened exam question', async () => {
@@ -235,12 +235,12 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await screen.getByRole('button', { name: 'Next' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_3_ID);
+      .toMatchTextContent(BROWSER_QUESTION_3_ID);
 
     await screen.getByRole('button', { name: 'Review & Submit' }).click();
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('review');
+      .toMatchTextContent('review');
     await expect
       .element(screen.getByRole('heading', { name: 'Review & Submit' }))
       .toBeVisible();
@@ -309,42 +309,42 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByRole('button', { name: 'review-answers' }).click();
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('review');
+      .toMatchTextContent('review');
     await expect
       .element(screen.getByTestId('review-answered-count'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
 
     await screen
       .getByRole('button', { name: 'open-review-question-1' })
       .click();
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
     await expect
       .element(screen.getByTestId('has-submit-result'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByRole('button', { name: 'review-answers' }).click();
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('review');
+      .toMatchTextContent('review');
     await expect
       .element(screen.getByTestId('review-answered-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     await expect
       .element(screen.getByTestId('review-row-answered'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('does not auto-advance after submit when review stage becomes active before the submit resolves', async () => {
@@ -409,13 +409,13 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
 
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
@@ -423,10 +423,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await screen.getByRole('button', { name: 'review-answers' }).click();
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('review');
+      .toMatchTextContent('review');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     deferred.resolve(
       ok({
@@ -441,10 +441,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('review');
+      .toMatchTextContent('review');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
   });
 });

@@ -195,13 +195,13 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-mode'))
-      .toHaveTextContent('tutor');
+      .toMatchTextContent('tutor');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('keeps the generic load error when ended-session recovery still reports an active session', async () => {
@@ -218,13 +218,13 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent(PracticeSessionConflictMessages.AlreadyEnded);
+      .toMatchTextContent(PracticeSessionConflictMessages.AlreadyEnded);
   });
 
   it('keeps the generic load error when ended-session recovery summary re-read throws', async () => {
@@ -243,13 +243,13 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent(PracticeSessionConflictMessages.AlreadyEnded);
+      .toMatchTextContent(PracticeSessionConflictMessages.AlreadyEnded);
   });
 
   it('shows the summary when tutor answer submit reports an AlreadyEnded conflict', async () => {
@@ -266,7 +266,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
 
@@ -276,10 +276,10 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-answered-count'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
   });
 
   it('deduplicates concurrent ended-session summary recovery requests', async () => {
@@ -300,7 +300,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
     await screen.getByRole('button', { name: 'next-question' }).click();
@@ -315,7 +315,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(2);
   });
 
@@ -365,7 +365,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
     await expect
@@ -375,16 +375,16 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
     await screen.getByRole('button', { name: 'next-question' }).click();
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
 
     recoverySummary.resolve(mockTutorSummary());
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('question');
+      .toMatchTextContent('question');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+      .toMatchTextContent(BROWSER_QUESTION_2_ID);
   });
 
   it('does not let stale ended-session recovery overwrite a newer session summary', async () => {
@@ -420,7 +420,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
 
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+      .toMatchTextContent(BROWSER_QUESTION_1_ID);
     await screen.getByRole('button', { name: 'select-choice-1' }).click();
     await screen.getByRole('button', { name: 'submit-answer' }).click();
     await expect
@@ -430,15 +430,15 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
     await screen.getByRole('button', { name: 'switch-session' }).click();
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(BROWSER_SESSION_2_ID);
+      .toMatchTextContent(BROWSER_SESSION_2_ID);
 
     recoverySummary.resolve(mockTutorSummary(BROWSER_SESSION_ID));
 
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('summary');
+      .toMatchTextContent('summary');
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent(BROWSER_SESSION_2_ID);
+      .toMatchTextContent(BROWSER_SESSION_2_ID);
   });
 });

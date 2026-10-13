@@ -59,13 +59,13 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     expect(getBookmarkStatus).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
@@ -108,23 +108,23 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     deferred.resolve(ok({ bookmarked: true }));
     await deferred.promise;
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('toggles bookmark state for the current review question', async () => {
@@ -163,10 +163,10 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
@@ -178,13 +178,13 @@ describe('useQuestionPageModel (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('reports saving state while a bookmark toggle is in flight', async () => {
@@ -224,20 +224,20 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('saving');
+      .toMatchTextContent('saving');
 
     deferred.resolve(ok({ bookmarked: true }));
     await deferred.promise;
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
   });
 
   it('uses a different bookmark idempotency key after moving to a different review question following a failed toggle', async () => {
@@ -299,10 +299,10 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-slug'))
-      .toHaveTextContent('q-1');
+      .toMatchTextContent('q-1');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
@@ -315,15 +315,15 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
 
     await screen.getByTestId('set-slug-q-2').click();
     await expect
       .element(screen.getByTestId('question-slug'))
-      .toHaveTextContent('q-2');
+      .toMatchTextContent('q-2');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
