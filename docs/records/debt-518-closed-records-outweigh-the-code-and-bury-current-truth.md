@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step, the agent instructions and the layout are done, except `legal/` and `security/`, held for the owner; the archive's removal follows, with its own manifest
+**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, with its own manifest
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -183,8 +183,8 @@ The owner widened the plan from records to every document: the product spec, arc
 |---|---|
 | `frontend/{index,standards,pattern-registry,typography-policy,contrast-policy,design-principles,bookmark-surface-policy}.md` | `design-system/{README,standards,pattern-registry,typography,contrast,layout,bookmark-surfaces}.md` (rewrite `layout.md` §2; drop inventories) |
 | `frontend/pages/*` | delete |
-| `docs/legal/*` (held pending owner decision) | `policies/legal/*` (**owner**; path-only; tests updated) |
-| `docs/security/*` (held pending owner decision) | `policies/security/*` (**owner**; path-only) |
+| `docs/legal/*` (moved 2026-10-13 with the owner's OK) | `policies/legal/*` (**owner**; path-only; tests updated) |
+| `docs/security/*` (moved 2026-10-13 with the owner's OK) | `policies/security/*` (**owner**; path-only) |
 | `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
 | `docs/{bugs,debt}/*` | `docs/records/` (flat); indexes merge into `records/README.md` |
 | `docs/audits/*` | AUDIT-015 closes: its order → records Now/Next, its trace-sample decision → BUG-331; the index is deleted |

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { termsContent } from '@/app/(marketing)/terms/terms-content';
-import consentRuling from '@/docs/records/assets/debt-414/f03-consent-ruling-data.json';
+import consentRuling from '@/docs/policies/legal/consent-rulings/f03-consent-ruling-data.json';
 import {
   ANNUAL_RENEWAL_NOTICE_VERSION,
   CANCELLATION_METHOD,

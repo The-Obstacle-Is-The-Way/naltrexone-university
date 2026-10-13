@@ -33,7 +33,7 @@ The current inventory is:
 
 Control-plane systems (GitHub, DNS, and the provider dashboards above) are in scope for every access, secret-rotation, and incident review in this program — they can change production behaviour without touching application code. *(Rows added 2026-08-03 per promo #724 review: §§ 4–5's OPEN checks already referenced GitHub/DNS/CI access, but the inventory omitted them.)*
 
-The detailed field and retention inventory is maintained in `docs/legal/privacy-policy.md`. A provider, new field, analytics/advertising integration, outbound email provider, or new copy of production data cannot be added without updating both documents.
+The detailed field and retention inventory is maintained in `docs/policies/legal/privacy-policy.md`. A provider, new field, analytics/advertising integration, outbound email provider, or new copy of production data cannot be added without updating both documents.
 
 ## 3. Foreseeable risks
 

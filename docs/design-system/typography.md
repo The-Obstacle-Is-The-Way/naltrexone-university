@@ -56,7 +56,7 @@ Text in this application flows through three distinct pipelines. They have separ
 
 ### Pipeline 3: Public legal documents (Markdown)
 
-**What:** The public Privacy Policy and Terms of Service, authored in `docs/legal/` and mirrored byte-for-byte into typed content modules under `app/(marketing)/privacy/` and `app/(marketing)/terms/`.
+**What:** The public Privacy Policy and Terms of Service, authored in `docs/policies/legal/` and mirrored byte-for-byte into typed content modules under `app/(marketing)/privacy/` and `app/(marketing)/terms/`.
 
 **How it is sized:** `components/legal/legal-document.tsx` owns one fixed long-form reading tier: `text-base leading-7 text-foreground/80`, full-foreground emphasis and links, a `max-w-[72ch]` document measure, and the legal heading hierarchy registered in Pattern Registry § 12.5.
 
