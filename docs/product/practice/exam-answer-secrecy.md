@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice](./README.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate; BUG-235 aligns History latest-visible-attempt fallback semantics; BUG-239 aligns the remaining implicit latest-attempt readers; DEBT-367 aligns `FakeAttemptRepository` read fidelity with the production visibility predicate. This document remains the regression contract.
+> **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are closed as fixed; BUG-237 rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate; BUG-235 aligns History latest-visible-attempt fallback semantics; BUG-239 aligns the remaining implicit latest-attempt readers; DEBT-367 aligns `FakeAttemptRepository` read fidelity with the production visibility predicate. This document remains the regression contract.
 
 ---
 
@@ -23,12 +23,12 @@ The product contract is explicit: exam mode hides correctness and explanations u
 
 Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections.
 
-Initial drift family fixed and archived:
+Initial drift family fixed and closed:
 - BUG-180
 - BUG-181
 - BUG-185
 
-All previously open drift bugs have been resolved and archived:
+All previously open drift bugs have been resolved and closed:
 - BUG-186
 - BUG-187
 - BUG-191

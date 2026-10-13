@@ -22,7 +22,7 @@ These principles govern both modes. They are derived from BS-055 first-principle
 
 Controller action-output datetimes must be ISO 8601 strings. Schema-backed output fields in `src/adapters/controllers/` must use `z.string().datetime()` or its nullable equivalent; pass-through output fields without a controller output schema must still be ISO strings produced from `Date.toISOString()`. `z.date()` and date-like epoch `z.number()` fields are not allowed at the controller action-output boundary.
 
-**2026-09-21 scoped status correction:** DEBT-397 is resolved and archived. PR #378 migrated `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` to nullable ISO strings; `practice-controller.ts` serializes both with `toISOString()`. They are no longer current violations. The rest of this document's July verification date is unchanged.
+**2026-09-21 scoped status correction:** DEBT-397 is resolved and closed. PR #378 migrated `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` to nullable ISO strings; `practice-controller.ts` serializes both with `toISOString()`. They are no longer current violations. The rest of this document's July verification date is unchanged.
 
 Domain entities and application use cases may keep `Date` objects where date math belongs. The controller adapter is responsible for serializing those `Date` values to ISO strings before returning an action output. This keeps the boundary JSON-native and consistent with persisted practice-session JSON while avoiding per-field exceptions such as the `latestAnsweredAt` / `draftSavedAt` Date drift resolved by DEBT-397.
 

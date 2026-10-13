@@ -98,7 +98,7 @@ function isStrayRecordsFile(file: string): boolean {
 // ADR-023 layout retired missed the move. A clean merge of a branch that added
 // a guide there does not relocate it. The archive, and the register asset
 // folders only it linked, were deleted (DEBT-518): the ledger and pinned
-// commits keep that history, so nothing is recreated there.
+// commits keep that history, so Markdown recreated there is reported.
 const RETIRED_FOLDERS = [
   '_archive',
   'audits',
@@ -180,17 +180,16 @@ export function documentationLinks(
 
 type StanzaLabel = { text: string; start: number; end: number };
 type CodeSpan = { value: string; line: number };
-
-// One parse yields a file's links and its top-level labelled stanzas.
-function scanMarkdown(
-  file: string,
-  contents: string,
-): {
+type MarkdownScan = {
   links: DocumentationLink[];
   absoluteLinks: DocumentationLink[];
   codeSpans: CodeSpan[];
   labels: StanzaLabel[];
-} {
+};
+
+// One parse yields a file's links, its code spans and its top-level labelled
+// stanzas; the full audit parses each file once (BUG-339).
+function scanMarkdown(file: string, contents: string): MarkdownScan {
   const links: DocumentationLink[] = [];
   const absoluteLinks: DocumentationLink[] = [];
   const codeSpans: CodeSpan[] = [];
@@ -556,7 +555,14 @@ export function brokenDocumentationLinks(
   contents: string,
   exists: (file: string) => boolean,
 ): DocumentationLink[] {
-  return documentationLinks(file, contents).filter(
+  return brokenLinksIn(scanMarkdown(file, contents), exists);
+}
+
+function brokenLinksIn(
+  scan: MarkdownScan,
+  exists: (file: string) => boolean,
+): DocumentationLink[] {
+  return scan.links.filter(
     (link) =>
       link.invalidEncoding ||
       link.target === '..' ||
@@ -570,14 +576,22 @@ export function brokenDocumentationLinks(
 // breaks the same way, unless it pins a commit.
 const ABSOLUTE_RECORD_LINK =
   /docs\/records\/(?:bug|debt)-\d+[^/?#]*\.md(?:[?#]|$)/i;
-const PINNED_COMMIT = /\/blob\/[0-9a-f]{40}\//i;
+// A GitHub URL is pinned only when its own revision is a full commit.
+const PINNED_URL =
+  /^https:\/\/(?:github\.com\/[^/]+\/[^/]+\/(?:blob|tree|raw)|raw\.githubusercontent\.com\/[^/]+\/[^/]+)\/[0-9a-f]{40}\//i;
 
 export function recordLinks(
   file: string,
   contents: string,
 ): DocumentationLink[] {
+  return recordLinksIn(file, scanMarkdown(file, contents));
+}
+
+function recordLinksIn(
+  file: string,
+  { links, absoluteLinks }: MarkdownScan,
+): DocumentationLink[] {
   if (file === RECORDS.index) return [];
-  const { links, absoluteLinks } = scanMarkdown(file, contents);
   return [
     ...links.filter(
       (link) =>
@@ -586,7 +600,7 @@ export function recordLinks(
     ),
     ...absoluteLinks.filter(
       (link) =>
-        ABSOLUTE_RECORD_LINK.test(link.url) && !PINNED_COMMIT.test(link.url),
+        ABSOLUTE_RECORD_LINK.test(link.url) && !PINNED_URL.test(link.url),
     ),
   ].sort((a, b) => a.start - b.start);
 }
@@ -595,19 +609,36 @@ export function recordLinks(
 // that history through the ledger's IDs or a URL pinned to a commit, never a
 // path that a branch or a recreated file could answer. Only destinations are
 // checked: a link, or a file path in a code span. Prose may name the folders.
-const DELETED_FOLDER = /^docs\/(?:_archive|(?:bugs|debt|audits)\/assets)\//;
-const DELETED_FILE_IN_TEXT =
-  /(?<![\w/])docs\/(?:_archive\/[\w.-]+\/|(?:bugs|debt|audits)\/assets\/)[\w.-]/;
-const DELETED_FOLDER_IN_URL =
-  /\/docs\/(?:_archive|(?:bugs|debt|audits)\/assets)\//;
-const PINNED_IN_CODE = /\b[0-9a-f]{7,40}:docs\//;
+const DELETED_FOLDERS =
+  '(?:_archive|(?:bugs|debt|audits)/assets|records/assets/(?:inventory|active-audit)-2026-09-21)';
+const DELETED_FOLDER = new RegExp(`^docs/${DELETED_FOLDERS}/`);
+const DELETED_FOLDER_IN_URL = new RegExp(`/docs/${DELETED_FOLDERS}/`);
+// A file, not a folder name or a glob, under a deleted folder.
+const DELETED_FILE =
+  /(?<![\w-])docs\/(?:_archive\/[\w.-]+\/|(?:bugs|debt|audits)\/assets\/|records\/assets\/(?:inventory|active-audit)-2026-09-21\/)[\w.-]/g;
+// What pins a path in a code span: a commit URL's revision, or `<commit>:` as
+// `git show` takes it.
+const PINNED_BEFORE =
+  /(?:\/(?:blob|tree|raw)\/[0-9a-f]{40}\/|raw\.githubusercontent\.com\/[^/\s]+\/[^/\s]+\/[0-9a-f]{40}\/|\b[0-9a-f]{7,40}:)$/i;
+
+function namesUnpinnedDeletedFile(text: string): boolean {
+  return [...text.matchAll(DELETED_FILE)].some(
+    (match) => !PINNED_BEFORE.test(text.slice(0, match.index)),
+  );
+}
 
 export function archiveDestinations(
   file: string,
   contents: string,
 ): ArchiveDestination[] {
+  return archiveDestinationsIn(file, scanMarkdown(file, contents));
+}
+
+function archiveDestinationsIn(
+  file: string,
+  { links, absoluteLinks, codeSpans }: MarkdownScan,
+): ArchiveDestination[] {
   if (file === RECORDS.ledger) return [];
-  const { links, absoluteLinks, codeSpans } = scanMarkdown(file, contents);
   return [
     ...links
       .filter((link) => DELETED_FOLDER.test(link.target))
@@ -615,15 +646,11 @@ export function archiveDestinations(
     ...absoluteLinks
       .filter(
         (link) =>
-          DELETED_FOLDER_IN_URL.test(link.url) && !PINNED_COMMIT.test(link.url),
+          DELETED_FOLDER_IN_URL.test(link.url) && !PINNED_URL.test(link.url),
       )
       .map((link) => ({ file, line: link.line, reference: link.url })),
     ...codeSpans
-      .filter(
-        (span) =>
-          DELETED_FILE_IN_TEXT.test(span.value) &&
-          !PINNED_IN_CODE.test(span.value),
-      )
+      .filter((span) => namesUnpinnedDeletedFile(span.value))
       .map((span) => ({ file, line: span.line, reference: span.value })),
   ].sort((a, b) => a.line - b.line);
 }
@@ -634,9 +661,10 @@ export function auditDocumentation(
 ): DocumentationAudit {
   const result = auditRecordLifecycle(files, exists);
   for (const [file, contents] of files) {
-    result.recordLinks.push(...recordLinks(file, contents));
-    result.archiveDestinations.push(...archiveDestinations(file, contents));
-    result.brokenLive.push(...brokenDocumentationLinks(file, contents, exists));
+    const scan = scanMarkdown(file, contents);
+    result.recordLinks.push(...recordLinksIn(file, scan));
+    result.archiveDestinations.push(...archiveDestinationsIn(file, scan));
+    result.brokenLive.push(...brokenLinksIn(scan, exists));
   }
   return result;
 }
@@ -676,8 +704,8 @@ function gitIgnored(root: string, names: readonly string[]): string[] {
 
 export function readDocumentationFiles(root: string): Map<string, string> {
   // Repository-authored documentation, not vendored skill packages or build
-  // artifacts. Numbered records are direct children of their register folder;
-  // indexes, templates, assets, living guides and ADRs are not open records.
+  // artifacts. Open records are direct children of the records folder; its
+  // index, the ledger, assets, living guides and ADRs are not open records.
   const names = globSync(
     [
       'docs/**/*.md',

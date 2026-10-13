@@ -85,7 +85,6 @@ describe('documentation register conventions', () => {
         'docs/records/closed.md': '# Closed',
         'docs/records/register-history-2026-11.md': '**Earlier** — old',
         'docs/records/notes.md': 'notes',
-        'docs/_archive/debt/register-history-2026-09.md': '**Earlier** — old',
         'docs/specs/notes.md': 'a document in a retired folder',
       }),
     ).toMatchObject({

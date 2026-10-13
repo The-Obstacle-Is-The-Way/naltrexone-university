@@ -341,6 +341,34 @@ describe('records folder and ledger', () => {
     expect(archiveDestinations('docs/guides/example.md', contents)).toEqual([]);
   });
 
+  it('reports an unpinned URL or a second path inside a code span', () => {
+    const contents = [
+      'Fetch `https://github.com/o/r/blob/main/docs/_archive/debt/x.md`.',
+      `Run \`git show ${'a'.repeat(12)}:docs/_archive/debt/a.md && cat docs/_archive/debt/b.md\`.`,
+      '[Receipt](https://github.com/o/r/blob/dev/docs/records/assets/inventory-2026-09-21/verification.md)',
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/guides/example.md', contents).map(
+        ({ line }) => line,
+      ),
+    ).toEqual([1, 3, 5]);
+  });
+
+  it('accepts only a URL whose commit is its own revision', () => {
+    const sha = 'b'.repeat(40);
+    const contents = [
+      `[Tree](https://github.com/o/r/tree/${sha}/docs/_archive/debt)`,
+      `[Raw](https://raw.githubusercontent.com/o/r/${sha}/docs/_archive/debt/x.md)`,
+      `[Disguised](https://github.com/o/r/blob/main/docs/_archive/debt/x.md?x=/blob/${sha}/)`,
+      `[Redirect](https://example.com/?next=https://github.com/o/r/blob/${sha}/docs/_archive/debt/x.md)`,
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/guides/example.md', contents).map(
+        ({ line }) => line,
+      ),
+    ).toEqual([5, 7]);
+  });
+
   it('permits the ledger its retrieval paths', () => {
     expect(
       archiveDestinations(

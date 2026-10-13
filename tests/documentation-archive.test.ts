@@ -405,7 +405,7 @@ describe('repository documentation', () => {
     result = auditRecordLifecycle(files, exists);
   });
 
-  it('lists no open record as closed in the ledger', () => {
+  it('lists no record ID twice across open records and the ledger', () => {
     expect(result.duplicates).toEqual([]);
   });
 
