@@ -9,7 +9,7 @@
 
 ## Context
 
-[DEBT-468](../_archive/debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4 proposed per-lane Vitest `coverage.thresholds` just below the measured floors (unit statements 82 / branches 78; browser and integration pinned after a re-measure), plus `coverage.include` globs so unimported files are measured. The goal was regression-proofing, not target-chasing, and ADR-019 requires a new ADR before any numeric metric gates CI.
+DEBT-468 Part 4 proposed per-lane Vitest `coverage.thresholds` just below the measured floors (unit statements 82 / branches 78; browser and integration pinned after a re-measure), plus `coverage.include` globs so unimported files are measured. The goal was regression-proofing, not target-chasing, and ADR-019 requires a new ADR before any numeric metric gates CI.
 
 Three facts decide the question:
 
@@ -48,7 +48,7 @@ The revisit condition above occurred. Under the owner's 2026-09-19 ruling, Depen
 ## Amendment: documentation, configuration and Codecov outages (2026-10-05)
 
 Codecov's `*.codecov.io` certificate expired at 2026-10-04 23:59:59 UTC while its status page reported no incident. No coverage reached Codecov for about nine hours.
-- **What happened.** #1362 changed only documentation and `.coderabbit.yaml`. It waited about eight hours for a `codecov/patch` that would have measured nothing, while CI showed green ([DEBT-497](../_archive/debt/debt-497-codecov-outage-blocks-merges-behind-green-ci.md)).
+- **What happened.** #1362 changed only documentation and `.coderabbit.yaml`. It waited about eight hours for a `codecov/patch` that would have measured nothing, while CI showed green (DEBT-497).
 - **The rule.** The excused paths gain Markdown documentation (`*.md`) and repository-tool configuration (`.coderabbit.yaml`, `codecov.yml`). The reasoning is the 2026-09-28 amendment's: coverage measures none of these, so the invariant holds vacuously.
 - **Visibility.** CI's upload step now fails on an upload error without failing the job (`continue-on-error`), and the next step reports it as a job warning and summary. The guard, not CI, decides whether a missing status blocks.
 - **What it does not relax.**
@@ -59,6 +59,6 @@ Codecov's `*.codecov.io` certificate expired at 2026-10-04 23:59:59 UTC while it
 ## Related
 
 - [ADR-019](./adr-019-test-quality-practices.md), the binding observational posture this refines
-- [DEBT-468](../_archive/debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, closed by this record
-- [DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md), mutation testing as the measure of assertion strength
+- DEBT-468 Part 4, closed by this record
+- DEBT-465, mutation testing as the measure of assertion strength
 - `scripts/merge-reviewed-pr.ts`, `scripts/verify-promotion.ts` (`test` and `codecov/patch` required green by name)

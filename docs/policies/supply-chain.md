@@ -11,8 +11,7 @@ reviewable exceptions:
 - a dependency needs to be tested against the policy before a real PR;
 - pnpm audit needs a documented advisory exception.
 
-The DEBT-394 record is archived at
-`docs/_archive/debt/debt-394-supply-chain-hardening.md`.
+DEBT-394 is closed; the ledger in `docs/records/closed.md` says where to read it.
 
 The policy is intentionally strict:
 
@@ -500,7 +499,7 @@ There are no current entries. The last three were the Solana mobile-wallet
 packages under `@clerk/ui` that declared `react-native`; they left the graph
 when Clerk UI 1.38 dropped its Solana adapters, and the extensions were
 removed with them
-([DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)). Remove an
+(DEBT-506). Remove an
 entry when its declaring package leaves the graph or upstream marks the peer
 optional itself; keep the `NEVER_INSTALLED` guard.
 
@@ -529,13 +528,13 @@ owner explicitly approves the dismissal; the record alone does not
 authorize it, and until that approval the alert stays open with the
 record linked rather than left to drift. The worked precedent is
 `stream-json` in
-[DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md) § F: the
+DEBT-476 § F: the
 patched line is ESM-only with renamed entry points that the sole consumer
 cannot load, the vulnerable functions sit on no import path the
 application can take, and forcing that two-major upgrade is not supported.
 The precedent ended upstream: Clerk UI 1.38 replaced its Solana adapters
 with Wallet Standard, which removed jayson and stream-json from the graph
-([DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)), so the
+(DEBT-506), so the
 alerts close by upgrade rather than dismissal. Zero open alerts does not mean
 the installed package was removed. CI does not run `pnpm audit`, so such a
 case gets no `ignoreGhsas` entry.

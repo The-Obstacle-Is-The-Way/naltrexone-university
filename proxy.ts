@@ -253,7 +253,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
         // so enforcing blocks first-party /_next/static/chunks and breaks the app
         // (verified via live Sentry + a production-build experiment + Next/Clerk docs).
         // Real enforcement would require a separate non-nonce host-allowlist policy.
-        // See docs/_archive/debt/debt-420-csp-enforcing-mode-flip.md.
+        // See DEBT-420.
         reportOnly: true,
         ...(sentrySecurityHeaderEndpoint
           ? { reportTo: sentrySecurityHeaderEndpoint }

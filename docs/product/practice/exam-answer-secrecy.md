@@ -24,17 +24,17 @@ The product contract is explicit: exam mode hides correctness and explanations u
 Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections.
 
 Initial drift family fixed and archived:
-- [BUG-180](../../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md)
-- [BUG-181](../../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md)
-- [BUG-185](../../_archive/bugs/bug-185-dashboard-recent-activity-reveals-active-exam-correctness.md)
+- BUG-180
+- BUG-181
+- BUG-185
 
 All previously open drift bugs have been resolved and archived:
-- [BUG-186](../../_archive/bugs/bug-186-active-exam-review-projection-leaks-correctness.md)
-- [BUG-187](../../_archive/bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
-- [BUG-191](../../_archive/bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md)
-- [BUG-192](../../_archive/bugs/bug-192-history-page-exposes-active-exam-correctness.md)
-- [BUG-193](../../_archive/bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md)
-- [BUG-195](../../_archive/bugs/bug-195-question-candidate-status-filter-leaks-active-exam-correctness.md) (inference via count delta)
+- BUG-186
+- BUG-187
+- BUG-191
+- BUG-192
+- BUG-193
+- BUG-195 (inference via count delta)
 
 ---
 
@@ -93,14 +93,14 @@ These code paths enforce it:
 - `GetPreviousAttempt` returns `null` for active-exam attempts and only reveals `session_unanswered` answers after the exam session has ended.
 - `GetPracticeSessionReview` redacts per-question `isCorrect` while an exam session is still active.
 - `GetNextQuestion` redacts `session.latestIsCorrect` for active exams and only hydrates `previousSubmission` for answered tutor-session questions.
-- `SubmitAnswer` rejects active exam sessions with `VALIDATION_ERROR` before inserting an `attempts` row or calling `recordQuestionAnswer(...)`; active exam answers must use `SaveExamDraftAnswer` before `FinalizeExamAnswers` creates final attempts. See [BUG-237](../../_archive/bugs/bug-237-submit-answer-allows-active-exam-session-writes.md).
-- Active-exam draft `cumulativeMs` is bounded at `SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS` (24 hours) at ingress, clamped in `SaveExamDraftAnswerUseCase`, and capped again in `FinalizeExamAnswersUseCase` before writing `attempts.time_spent_seconds`. See [BUG-238](../../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md).
-- Repository attempt visibility is centralized in `getActiveExamVisibilityCondition()` at `src/adapters/repositories/shared/active-exam-visibility.ts`; both `DrizzleAttemptRepository` and `DrizzleQuestionRepository` use that helper so active-exam attempts stay hidden while tutor, ended-exam, and standalone attempts remain visible. See [DEBT-366](../../_archive/debt/debt-366-active-exam-visibility-predicate-duplication.md).
-- `DrizzleAttemptRepository` applies the shared active-exam visibility predicate to dashboard aggregate counts, recent activity, and `listAnsweredAtByUserIdSince(...)` streak timestamps; active-exam attempts are excluded until the session ends while tutor, ended-exam, and standalone attempts remain visible. See [BUG-236](../../_archive/bugs/bug-236-dashboard-current-streak-includes-active-exam-attempts.md).
-- `DrizzleAttemptRepository` also applies the shared active-exam visibility predicate inside the attempted-question latest-attempt subquery before `row_number()` ranking, so History excludes active-exam attempts without dropping older visible attempts for the same question. See [BUG-235](../../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md).
-- Implicit latest-attempt readers (`findLatestByUserAndQuestion(...)`, `findMostRecentAnsweredAtByQuestionIds(...)`) apply active-exam visibility before row selection / aggregation, so older visible attempts surface as the fallback when a newer active-exam attempt would be hidden. See [BUG-239](../../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md).
+- `SubmitAnswer` rejects active exam sessions with `VALIDATION_ERROR` before inserting an `attempts` row or calling `recordQuestionAnswer(...)`; active exam answers must use `SaveExamDraftAnswer` before `FinalizeExamAnswers` creates final attempts. See BUG-237.
+- Active-exam draft `cumulativeMs` is bounded at `SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS` (24 hours) at ingress, clamped in `SaveExamDraftAnswerUseCase`, and capped again in `FinalizeExamAnswersUseCase` before writing `attempts.time_spent_seconds`. See BUG-238.
+- Repository attempt visibility is centralized in `getActiveExamVisibilityCondition()` at `src/adapters/repositories/shared/active-exam-visibility.ts`; both `DrizzleAttemptRepository` and `DrizzleQuestionRepository` use that helper so active-exam attempts stay hidden while tutor, ended-exam, and standalone attempts remain visible. See DEBT-366.
+- `DrizzleAttemptRepository` applies the shared active-exam visibility predicate to dashboard aggregate counts, recent activity, and `listAnsweredAtByUserIdSince(...)` streak timestamps; active-exam attempts are excluded until the session ends while tutor, ended-exam, and standalone attempts remain visible. See BUG-236.
+- `DrizzleAttemptRepository` also applies the shared active-exam visibility predicate inside the attempted-question latest-attempt subquery before `row_number()` ranking, so History excludes active-exam attempts without dropping older visible attempts for the same question. See BUG-235.
+- Implicit latest-attempt readers (`findLatestByUserAndQuestion(...)`, `findMostRecentAnsweredAtByQuestionIds(...)`) apply active-exam visibility before row selection / aggregation, so older visible attempts surface as the fallback when a newer active-exam attempt would be hidden. See BUG-239.
 - `DrizzleQuestionRepository` excludes active-exam attempts from status-filter and user-history correctness projections via the shared active-exam visibility predicate.
-- `FakeAttemptRepository` mirrors production active-exam visibility for the ten read paths in the BUG-235/236/237/239 family, including filter-before-rank for attempted-question history and filter-before-aggregate for implicit latest-attempt timestamps. See [DEBT-367](../../_archive/debt/debt-367-fake-attempt-repository-missing-active-exam-visibility.md).
+- `FakeAttemptRepository` mirrors production active-exam visibility for the ten read paths in the BUG-235/236/237/239 family, including filter-before-rank for attempted-question history and filter-before-aggregate for implicit latest-attempt timestamps. See DEBT-367.
 
 ---
 

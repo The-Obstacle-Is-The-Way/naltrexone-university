@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice](./README.md)
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
-> **Related:** [Practice Modes](./modes.md) (lifecycle/data), [BS-055](../../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam decisions), [BS-064](../../_archive/brainstorming/bs-064-radio-choice-modality-split.md) (Tutor/Quick choice modality decision)
+> **Related:** [Practice Modes](./modes.md) (lifecycle/data), BS-055 (exam decisions), BS-064 (Tutor/Quick choice modality decision)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
 
 ---
@@ -22,7 +22,7 @@ These principles govern both modes. They are derived from BS-055 first-principle
 
 Controller action-output datetimes must be ISO 8601 strings. Schema-backed output fields in `src/adapters/controllers/` must use `z.string().datetime()` or its nullable equivalent; pass-through output fields without a controller output schema must still be ISO strings produced from `Date.toISOString()`. `z.date()` and date-like epoch `z.number()` fields are not allowed at the controller action-output boundary.
 
-**2026-09-21 scoped status correction:** [DEBT-397](../../_archive/debt/debt-397-datetime-boundary-type-normalization.md) is resolved and archived. PR #378 migrated `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` to nullable ISO strings; `practice-controller.ts` serializes both with `toISOString()`. They are no longer current violations. The rest of this document's July verification date is unchanged.
+**2026-09-21 scoped status correction:** DEBT-397 is resolved and archived. PR #378 migrated `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt` to nullable ISO strings; `practice-controller.ts` serializes both with `toISOString()`. They are no longer current violations. The rest of this document's July verification date is unchanged.
 
 Domain entities and application use cases may keep `Date` objects where date math belongs. The controller adapter is responsible for serializing those `Date` values to ISO strings before returning an action output. This keeps the boundary JSON-native and consistent with persisted practice-session JSON while avoiding per-field exceptions such as the `latestAnsweredAt` / `draftSavedAt` Date drift resolved by DEBT-397.
 
@@ -95,7 +95,7 @@ Question displayed
 
 ### Implementation note
 
-Tutor mode is unchanged by BS-055's exam overhaul, but its input contract was clarified by [BS-064](../../_archive/brainstorming/bs-064-radio-choice-modality-split.md) and BUG-274. `ChoiceButton` arms a transient pointer flag on wrapper primary-button `pointerdown` (secondary buttons never arm); the subsequent radio `change` consumes that flag to report pointer activation, while unarmed changes report non-pointer selection. Held pointer activations stay armed until `change`; stale arms are cleared by arrow/Space keydown, context menu, window blur, and pointer/click cleanup when no radio change follows. `usePracticeSessionQuestionFlow` selects either way, commits only pointer selections in Tutor, and keeps Exam's existing draft-only guard ahead of the commit path. Enter commits only when pressed on the radio inputs themselves — focusable content inside choice markdown (links) keeps its native Enter behavior. On commit, focus moves to the answer feedback region, since the activated control (Submit button or radio) is removed or disabled by the feedback state.
+Tutor mode is unchanged by BS-055's exam overhaul, but its input contract was clarified by BS-064 and BUG-274. `ChoiceButton` arms a transient pointer flag on wrapper primary-button `pointerdown` (secondary buttons never arm); the subsequent radio `change` consumes that flag to report pointer activation, while unarmed changes report non-pointer selection. Held pointer activations stay armed until `change`; stale arms are cleared by arrow/Space keydown, context menu, window blur, and pointer/click cleanup when no radio change follows. `usePracticeSessionQuestionFlow` selects either way, commits only pointer selections in Tutor, and keeps Exam's existing draft-only guard ahead of the commit path. Enter commits only when pressed on the radio inputs themselves — focusable content inside choice markdown (links) keeps its native Enter behavior. On commit, focus moves to the answer feedback region, since the activated control (Submit button or radio) is removed or disabled by the feedback state.
 
 **Known issue (AF-8, accepted):** a keyboard-reached selected-uncommitted choice is discarded by pre-feedback navigation (Previous, question navigator) — the selection was never persisted, so nothing is lost server-side, but the visible selection does not survive the round-trip. Tutor mode has no draft mechanism (drafts are exam-only by design); fixing this would require one. Accepted as a known limitation of the keyboard two-step, matching the pre-existing AF-5 class; revisit if tutor drafts ever exist.
 
@@ -317,7 +317,7 @@ The shared cursor resolver order remains: requested available question -> persis
 | Initial post-exam review | `Finish review` | `View Summary` |
 | Re-entry from summary | `Finish review` | `View Summary` |
 
-The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in [BS-063 (archived)](../../_archive/brainstorming/bs-063-exam-review-reentry-state-confusion.md), which was promoted to [DEBT-364](../../_archive/debt/debt-364-post-exam-review-reentry-cursor-persistence.md), and [DEBT-359](../../_archive/debt/debt-359-session-summary-cta-labels.md).
+The current implementation does not distinguish label copy by entry source. Possible product changes are discussed in BS-063, which was promoted to DEBT-364, and DEBT-359.
 
 ### Question review page (non-exam, standalone)
 
@@ -354,6 +354,6 @@ Both modes share rendering components but must have separate action contracts. T
 
 - [Practice Modes](./modes.md) — lifecycle, grading, concurrency (data layer)
 - [Exam Answer Secrecy Policy](./exam-answer-secrecy.md) — when correctness/explanations are exposed
-- [BS-055](../../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) — full exam interaction analysis, decisions, and audit findings
-- [BS-064](../../_archive/brainstorming/bs-064-radio-choice-modality-split.md) — Tutor/Quick pointer-vs-keyboard answer modality decision
+- BS-055 — full exam interaction analysis, decisions, and audit findings
+- BS-064 — Tutor/Quick pointer-vs-keyboard answer modality decision
 - [Bookmark Surface Policy](../../design-system/bookmark-surfaces.md) — where bookmark appears per surface

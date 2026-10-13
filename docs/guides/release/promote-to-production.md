@@ -109,7 +109,7 @@ The deleted `deploy` job only echoed a message. Its success never proved that pr
 On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
 
 **No production deployment at all.** Twice, Vercel created no deployment for a promotion's merge commit:
-- promotion #509 on 2026-06-24 ([BUG-259](../../_archive/bugs/bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md));
+- promotion #509 on 2026-06-24 (BUG-259);
 - promotion #1367 on 2026-10-05.
 
 In each case, the commit had no Vercel status on GitHub, no deployment was listed for its SHA, and its tree matched a `dev` preview that had just built. Not every such promotion is skipped (#1365 deployed), so the trigger is not known on our side. Production keeps serving the previous release. That is harmless when the promotion changes no application code, but otherwise production silently lags `main`.
@@ -119,7 +119,7 @@ The release watch must therefore find a deployment for the exact merge SHA, not 
 2. With the owner's approval, deploy that exact commit from a clean checkout as a production deployment with domain assignment skipped (`vercel deploy --prod --skip-domain`). The Deployment Check is not shown to hold a CLI-created deployment's alias.
 3. Only after `main`'s `test` check has passed on that exact commit, promote the staged deployment (`vercel promote <deployment>`). That is a normal promotion of a checked commit, not **Force Promote**. #509 used `vercel deploy --prod`, which assigns the domains at once.
 
-**Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. [DEBT-445 Part 3](../../_archive/debt/debt-445-migration-deploy-pipeline-guardrails.md) already established the [deployed-code compatibility contract](../database/migrations.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
+**Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. DEBT-445 Part 3 already established the [deployed-code compatibility contract](../database/migrations.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
 
 For a manual Preview or Production reseed, export the verified target, run the
 guard once without an acknowledgement, and confirm it refuses before opening
@@ -294,4 +294,4 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 - [Deployment Environments](../../architecture/environments.md) — Env var scoping, Clerk/Stripe/Neon config
 - [Supply-chain policy: licences](../../policies/supply-chain.md#licences) — how dependency licences are reviewed
 - [Content Pipeline](../../architecture/content-pipeline.md) — MDX → seed → DB flow
-- [SPEC-033 §14](../../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure
+- SPEC-033 §14 — Tag taxonomy DB sync procedure

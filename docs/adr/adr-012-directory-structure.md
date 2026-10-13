@@ -139,7 +139,7 @@ Server Actions are **controllers** in Clean Architecture terms.
 - They live in `src/adapters/controllers/`
 - Controllers are `server-only` modules (`*-controller.ts`) that server code and tests call with injected dependencies
 - The actions a browser calls are thin `'use server'` wrappers in `*-actions.ts` beside them, each taking only its input. A client chooses every argument of a server action, so a controller is never one itself (BUG-324, amended 2026-10-06)
-- They follow the controller conventions in `docs/_archive/specs/spec-010-server-actions.md`
+- They follow the controller conventions in SPEC-010 (server actions)
 
 **Why not `/app/(app)/app/_actions/`?**
 

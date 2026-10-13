@@ -221,10 +221,10 @@ Retry lineage is structurally in place and the secrecy contract is now enforced,
 
 ## 11. Related
 
-- [DEBT-265](../../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md)
-- [DEBT-266](../../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
-- [DEBT-267](../../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
+- DEBT-265
+- DEBT-266
+- DEBT-267
 - [Question Rendering Architecture](../../architecture/question-rendering.md)
 - [Exam Answer Secrecy Policy](./exam-answer-secrecy.md)
-- [SPEC-034](../../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
-- [SPEC-036](../../_archive/specs/spec-036-bookmark-review-mode-alignment.md)
+- SPEC-034
+- SPEC-036
