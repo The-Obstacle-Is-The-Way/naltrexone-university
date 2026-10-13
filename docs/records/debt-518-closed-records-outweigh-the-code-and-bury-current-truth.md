@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step and the agent instructions are done; the layout moves, the layout content and the archive's removal follow
+**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, with its own manifest
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
