@@ -200,7 +200,7 @@ last census's findings are below.
 The last census, on 2026-03-17, found:
 
 - Zero-count canonical slugs: substance `inhalants`
-- Low-count canonical slugs at the default `<= 3` threshold: none
+- Low-count canonical slugs, with one to three questions (the default threshold of 3): none
 
 ---
 
