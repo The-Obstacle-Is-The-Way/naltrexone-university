@@ -207,6 +207,15 @@ describe('records folder and ledger', () => {
     ]);
   });
 
+  it('reports only Markdown left in a retired or register folder', () => {
+    expect(
+      audit({
+        'docs/dev/script.ts': 'export {};',
+        'docs/bugs/notes.txt': 'notes',
+      }).retiredRegisterFiles,
+    ).toEqual([]);
+  });
+
   it('reports a link into a record from anywhere but the index', () => {
     const files = {
       'docs/records/README.md':

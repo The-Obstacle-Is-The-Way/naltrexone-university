@@ -55,7 +55,7 @@ Action bars are rendered inline per context, not through a shared component: the
 This page used to list each context's buttons, and the list went stale: it showed a pre-feedback **Next**, **Mark for review** in the exam footer, and a "Finish exam" label, none of which the app has. The buttons are specified elsewhere:
 
 - **Each mode's action bar and its states:** [Interaction contracts](../product/practice/interaction-contracts.md), tutor and exam.
-- **The exam action bar and the header rail,** where **Mark for review** and the bookmark live: [Pattern registry, Part 5](./pattern-registry.md#part-5-button-conventions).
+- **The exam action bar, which holds only navigation, and the header rail, where Mark for review lives** (active exams show no bookmark): [Pattern registry, Part 5](./pattern-registry.md#part-5-button-conventions).
 - **Every context's action bar, and the file that renders it:** [Question rendering §3.4](../architecture/question-rendering.md#34-action-bars-document-flow-context-specific-buttons).
 
 **Rules:**

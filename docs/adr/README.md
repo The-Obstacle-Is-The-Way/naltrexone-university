@@ -18,7 +18,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-002](./adr-002-domain-model.md) | Domain Model | Accepted | 2026-01-31 |
 | [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted (amended 2026-08-23, 2026-09-24 and 2026-10-12) | 2026-01-31 |
 | [ADR-004](./adr-004-authentication-boundary.md) | Authentication Boundary | Accepted | 2026-01-31 |
-| [ADR-005](./adr-005-payment-boundary.md) | Payment Boundary | Accepted | 2026-01-31 |
+| [ADR-005](./adr-005-payment-boundary.md) | Payment Boundary | Accepted (amended 2026-10-13) | 2026-01-31 |
 | [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted | 2026-01-31 |
 | [ADR-007](./adr-007-dependency-injection.md) | Dependency Injection | Accepted | 2026-01-31 |
 | [ADR-008](./adr-008-logging-observability.md) | Logging & Observability | Accepted | 2026-01-31 |

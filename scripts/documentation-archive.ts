@@ -139,7 +139,9 @@ const RETIRED_LAYOUT_FOLDERS = [
 
 function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
-  if (docs !== 'docs' || name === undefined) return false;
+  if (docs !== 'docs' || name === undefined || !file.endsWith('.md')) {
+    return false;
+  }
   if (RETIRED_LAYOUT_FOLDERS.includes(register ?? '')) return true;
   if (!isRegister(register)) return false;
   return !(name === 'assets' && rest.length > 0);

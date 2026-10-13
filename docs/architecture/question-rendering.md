@@ -159,9 +159,9 @@ Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 **Differences from Tutor:**
 - `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:277-279`) — no green/red highlighting during exam
 - Feedback hidden: `feedbackResult` is gated behind `!isExamMode` (`app/(app)/app/practice/components/practice-view.tsx:285-288`)
-- No per-question `Submit` button. The active exam footer is `[Previous] [Next] [Mark for review]` on non-terminal questions and `[Previous] [Review & Submit] [Mark for review]` on the last question.
+- No per-question `Submit` button. The active exam footer is `[Previous] [Next]` on non-terminal questions and `[Previous] [Review & Submit]` on the last question.
 - Draft answer state is persisted on navigation boundaries and when entering the review stage
-- "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:243-252`)
+- "Mark for review" button in the question header rail (`data-testid="question-header-actions"` in `app/(app)/app/practice/components/practice-view.tsx`)
 - Last exam question swaps the bottom-bar label to `Review & Submit`; that click saves any pending draft and enters the exam review stage
 - QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
 
