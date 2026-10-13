@@ -204,4 +204,46 @@ describe('container Stripe configuration', () => {
       WEBHOOK_SECRET,
     );
   });
+
+  // A major-release migration overlaps two live endpoints, and production
+  // verifies both through STRIPE_WEBHOOK_SECRET_NEXT
+  // (docs/architecture/integrations/stripe.md).
+  it("accepts the next endpoint's signature when STRIPE_WEBHOOK_SECRET_NEXT is set", async () => {
+    const nextSecret = 'whsec_container_next_endpoint';
+    const stripe = new Stripe('container-test-key', {
+      apiVersion: STRIPE_API_VERSION,
+      httpClient: Stripe.createFetchHttpClient(async () => {
+        throw new Error('Unexpected Stripe network request');
+      }),
+    });
+    const container = createContainer({
+      primitives: {
+        db,
+        env: {
+          ...env,
+          STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
+          STRIPE_WEBHOOK_SECRET_NEXT: nextSecret,
+        },
+        getStripe: () => stripe,
+      },
+    });
+    const payload = JSON.stringify({
+      ...subscriptionEvent,
+      type: 'invoice.updated',
+      data: { object: {} },
+    });
+
+    await expect(
+      container.createPaymentGateway().processWebhookEvent(
+        payload,
+        stripe.webhooks.generateTestHeaderString({
+          payload,
+          secret: nextSecret,
+        }),
+      ),
+    ).resolves.toEqual({
+      eventId: subscriptionEvent.id,
+      type: 'invoice.updated',
+    });
+  });
 });

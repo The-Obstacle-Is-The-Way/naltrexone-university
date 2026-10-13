@@ -1,7 +1,5 @@
 # Integration Tests
 
-**Last Updated:** 2026-09-24
-
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
 ---
@@ -124,25 +122,7 @@ Integration tests are part of every PR and every push to `main`.
 
 ## Test Files
 
-| File | Tests | What It Covers |
-|------|-------|----------------|
-| `tests/integration/db.integration.test.ts` | 4 | Schema constraints (pgcrypto, NOT NULL, foreign keys) |
-| `tests/integration/question-repository.integration.test.ts` | 13 | DrizzleQuestionRepository CRUD + candidate filters |
-| `tests/integration/session-attempt-repository.integration.test.ts` | 19 | DrizzlePracticeSessionRepository + DrizzleAttemptRepository lifecycle |
-| `tests/integration/bookmark-repository.integration.test.ts` | 1 | DrizzleBookmarkRepository idempotent add/remove |
-| `tests/integration/stripe-repositories.integration.test.ts` | 5 | Stripe customer, event, and subscription repos |
-| `tests/integration/user-repository.integration.test.ts` | 7 | DrizzleUserRepository upsert + clock-guard semantics |
-| `tests/integration/idempotency-key-repository.integration.test.ts` | 4 | DrizzleIdempotencyKeyRepository claim/store/reclaim |
-| `tests/integration/rate-limiter.integration.test.ts` | 1 | DrizzleRateLimiter sliding window |
-| `tests/integration/tag-repository.integration.test.ts` | 1 | DrizzleTagRepository ordered listing |
-| `tests/integration/bug-regression.integration.test.ts` | 10 | Bug regression tests (BUG-186, 187, 188, 192, 195) |
-| `tests/integration/controllers.integration.test.ts` | 4 | Question submission, exam finalization, and transactional rollback |
-| `tests/integration/controllers-history.integration.test.ts` | 3 | Stats aggregation and attempted-question review queries |
-| `tests/integration/controllers-webhooks.integration.test.ts` | 4 | Stripe subscription updates and Clerk deletion/idempotency cleanup |
-| `tests/integration/container-stripe-wiring.integration.test.ts` | 3 | Container price configuration through real SDK/signature handling and Postgres; injected SDK use. Canned HTTP input is wiring-only, not provider parity. |
-| `tests/integration/container-webhook-transaction.integration.test.ts` | 1 | Real repository overrides share the callback transaction; failed callbacks propagate their error and leave no event row. |
-| `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
-| `tests/integration/tag-taxonomy-census.integration.test.ts` | 4 | Tag taxonomy validation (requires seed data) |
+The suites are the `*.integration.test.ts` files in `tests/integration/`; each file's name, with its top-level `describe` or contract runner, says what it covers. Some, such as `tag-taxonomy-census.integration.test.ts`, need the seed data described above.
 
 ---
 

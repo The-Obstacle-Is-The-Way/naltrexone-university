@@ -5,11 +5,11 @@ Each folder holds one kind of document; [ADR-023](./adr/adr-023-documentation-or
 | Folder | Kind | What belongs |
 |---|---|---|
 | [`product/`](./product/README.md) | What the product must do | Business rules and their tests, practice behaviour, the content taxonomy, [ideas](./product/ideas.md) |
-| [`architecture/`](./architecture/practice-engine.md) | How it is built, and why | The practice engine, question rendering, the content pipeline, environments, observability, [integrations](./architecture/integrations/README.md) |
+| [`architecture/`](./architecture/README.md) | How it is built, and why | The practice engine, question rendering, the content pipeline, environments, observability, [integrations](./architecture/integrations/README.md) |
 | [`adr/`](./adr/README.md) | Decisions | Numbered, accepted decisions. They are frozen once accepted, amended only by appended sections, or superseded |
-| [`guides/`](./guides/release/review-and-merge.md) | How to do a task | `testing/`, `release/`, `database/`, `operations/`, `dependencies/`, `content/`, `qa/` |
+| [`guides/`](./guides/README.md) | How to do a task | `testing/`, `release/`, `database/`, `operations/`, `dependencies/`, `content/`, `qa/` |
 | [`design-system/`](./design-system/README.md) | The UI standard | Standards, the pattern registry, typography, contrast, layout, bookmark surfaces |
-| [`policies/`](./policies/supply-chain.md) | Commitments the owner adopted | Supply chain, and in time legal and security |
+| [`policies/`](./policies/README.md) | Commitments the owner adopted | Supply chain; the Privacy Policy and Terms of Service in `legal/`; the security program in `security/` |
 | [`records/`](./records/README.md) | Open work | Bug and debt records, one index, and [the ledger](./records/closed.md) of closed ones |
 
 ## Where a New Document Goes
@@ -30,6 +30,4 @@ Apply the test to the document’s primary purpose. Colocated READMEs/contracts 
 
 ## Still Moving
 
-DEBT-518 is moving the rest:
-- `legal/` and `security/` (to `policies/`, with the owner's consent);
-- `_archive/` (to delete once the ledger covers it), and the asset folders under `audits/`, `bugs/` and `debt/`, once their remaining live links (ADR-001, ADR-021 and the E2E guide) are repointed.
+DEBT-518 deletes the rest, with the owner's approval: `_archive/`, which the ledger covers, and the asset folders under `audits/`, `bugs/` and `debt/`, once their remaining live links (ADR-001, ADR-021 and the E2E guide) are repointed.

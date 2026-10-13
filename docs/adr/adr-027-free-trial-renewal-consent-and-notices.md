@@ -9,7 +9,7 @@
 
 ## Context
 
-- **The offer.** Pro Monthly costs $29 a month and Pro Annual $199 a year. Both renew automatically until cancelled ([Terms](../legal/terms-of-service.md) §4). Stripe hosted Checkout takes payment, and the Stripe billing portal handles cancellation (ADR-005).
+- **The offer.** Pro Monthly costs $29 a month and Pro Annual $199 a year. Both renew automatically until cancelled ([Terms](../policies/legal/terms-of-service.md) §4). Stripe hosted Checkout takes payment, and the Stripe billing portal handles cancellation (ADR-005).
 - **Automatic renewal is regulated.** DEBT-414's non-lawyer review (2026-09-16) cites ROSCA and state automatic-renewal statutes, among them California, New York, Vermont and Colorado. It lists their duties: disclosure before billing, express consent, a retainable acknowledgment, evidence retention, annual notices inside set windows, and simple online cancellation. That record states it is not legal advice.
 - **Stripe fixes some mechanics.** Hosted Checkout supports only legacy free trials (`subscription_data.trial_period_days` or `trial_end`), and this app uses the day count. Stripe's newer trial offers cannot be used with Checkout (DEBT-410, quoting Stripe's documentation). The portal schedules a cancellation by setting `cancel_at`, and leaves `cancel_at_period_end` false (DEBT-414 F04).
 - **A missed notice must reach a person.** The owner runs the product alone, and a log line reaches nobody (ADR-026).
@@ -117,6 +117,6 @@ DEBT-414 also leaves to counsel or the owner: the remedy for a missed statutory 
 ## References
 
 - [Business rules](../product/business-rules.md): R10, R11
-- [Terms of Service](../legal/terms-of-service.md) §4, and the [Privacy Policy](../legal/privacy-policy.md) retention table
+- [Terms of Service](../policies/legal/terms-of-service.md) §4, and the [Privacy Policy](../policies/legal/privacy-policy.md) retention table
 - [Observability](../architecture/observability.md#operational-alerts) and the [Stripe integration](../architecture/integrations/stripe.md)
 - `src/application/use-cases/` (checkout, trial setup, consent, acknowledgment and notice use cases), `src/adapters/jobs/send-due-renewal-notices.ts`, `db/schema.ts`

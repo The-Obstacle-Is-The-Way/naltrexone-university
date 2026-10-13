@@ -20,7 +20,7 @@ export function getStripe(): Stripe {
      * - Verifying webhooks + checkout flows in a staging environment
      *
      * Reference: https://stripe.com/docs/upgrades#api-versions
-     * Last reviewed: 2026-09-16
+     * Last reviewed: 2026-10-13
      */
     apiVersion: STRIPE_API_VERSION,
     typescript: true,

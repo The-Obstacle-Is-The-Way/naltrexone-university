@@ -200,6 +200,8 @@ describe('records folder and ledger', () => {
     'content',
     'tooling',
     'vendor-docs',
+    'legal',
+    'security',
   ])('rejects a concurrent guide added to retired docs/%s', (folder) => {
     const file = `docs/${folder}/new-concurrent-guide.md`;
     expect(audit({ [file]: '# New guide' }).retiredRegisterFiles).toEqual([
@@ -225,8 +227,8 @@ describe('records folder and ledger', () => {
         'See [DEBT-001](./debt-001-example.md).',
       'docs/dev/guide.md':
         'See [the record](../records/debt-001-example.md#why).',
-      'docs/legal/privacy-policy.md':
-        'Evidence: [DEBT-001](../records/debt-001-example.md).',
+      'docs/policies/legal/privacy-policy.md':
+        'Evidence: [DEBT-001](../../records/debt-001-example.md).',
       'docs/_archive/debt/debt-000-old.md':
         '[DEBT-001](../../records/debt-001-example.md)',
     };
@@ -237,7 +239,7 @@ describe('records folder and ledger', () => {
     ).toEqual([
       'docs/records/bug-002-example.md:./debt-001-example.md',
       'docs/dev/guide.md:../records/debt-001-example.md#why',
-      'docs/legal/privacy-policy.md:../records/debt-001-example.md',
+      'docs/policies/legal/privacy-policy.md:../../records/debt-001-example.md',
     ]);
     expect(audit(files).recordLinks).toHaveLength(3);
   });

@@ -74,7 +74,7 @@
 
 - [Observability](../architecture/observability.md): logging, the alert kinds and the runbooks
 - `lib/sentry-data-collection.ts`, `instrumentation.ts`, `sentry.client.config.ts`
-- [Privacy policy](../legal/privacy-policy.md), whose Sentry row these settings stay within
+- [Privacy policy](../policies/legal/privacy-policy.md), whose Sentry row these settings stay within
 
 ## Amendment — 2026-10-13
 

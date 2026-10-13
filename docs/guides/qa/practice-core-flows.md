@@ -56,7 +56,7 @@ This procedure absorbed the stabilization checklist's core flows, including revi
 | 22 | Go to `/app/history` | The Sessions and Questions tabs both render |
 | 23 | Go to `/app/bookmarks`; remove one bookmark | The list shows bookmarks, and the removed one disappears after confirming |
 | 24 | Go to `/app/dashboard` | Stats and recent activity render |
-| 25 | ⚠ Start a new exam session as in step 11 and select an answer on Q1. Without submitting, open the dashboard, History, and Q1's page (`/app/questions/<slug>`), then abandon the session as in step 18 | No surface reveals correctness or explanations before the exam ends ([exam answer secrecy](../../product/practice/exam-answer-secrecy.md)) |
+| 25 | ⚠ Start a new exam session as in step 11, select an answer on Q1, and press **Next** so the draft is saved. Without submitting, open the dashboard, History, and Q1's page (`/app/questions/<slug>`), then abandon the session as in step 18 | No surface reveals correctness or explanations before the exam ends ([exam answer secrecy](../../product/practice/exam-answer-secrecy.md)) |
 
 ## Visual checks
 

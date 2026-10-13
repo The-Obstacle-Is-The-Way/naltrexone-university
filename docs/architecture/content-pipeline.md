@@ -2,7 +2,6 @@
 
 > **Parent:** [Documentation map](../README.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Import workflow updated:** 2026-09-20 — clean staging; other architectural/format sections retain their earlier verification scope.
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -451,7 +450,7 @@ All four callers produce **shuffled** labels for their outputs. This was unified
 
 ## 8. Frontend Rendering
 
-**Markdown rendering:** `components/markdown/Markdown.tsx`
+**Markdown rendering:** `components/markdown/markdown.tsx`
 - Uses `react-markdown` with `remark-gfm` (GitHub Flavored Markdown) and `rehype-sanitize` (XSS protection)
 - Renders at view time on the client, not at build time
 - `skipHtml` flag prevents raw HTML from rendering

@@ -50,11 +50,13 @@ function createGateway(
     logger?: FakeLogger;
     consentStateSecret?: string;
     webhookE2EOwner?: string;
+    nextWebhookSecret?: string;
   },
 ) {
   return new StripePaymentGateway({
     stripe,
     webhookSecret: TEST_WEBHOOK_SECRET,
+    nextWebhookSecret: options?.nextWebhookSecret,
     consentStateSecret:
       options?.consentStateSecret ?? 'consent-state-secret-at-least-32-bytes',
     priceIds: TEST_PRICE_IDS,
@@ -473,6 +475,22 @@ describe('StripePaymentGateway', () => {
       { rawBody: 'raw_body', signature: 'sig_1', secret: 'whsec_1' },
     ]);
     expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
+  });
+
+  it("forwards the next endpoint's webhook secret during an endpoint migration", async () => {
+    // No event is injected, so the fake's verification throws for each secret.
+    const stripe = new FakeStripeCheckoutClient();
+
+    await expect(
+      createGateway(stripe, {
+        nextWebhookSecret: 'whsec_next',
+      }).processWebhookEvent('raw_body', 'sig_1'),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_SIGNATURE' });
+
+    expect(stripe.webhookCalls.map((call) => call.secret)).toEqual([
+      TEST_WEBHOOK_SECRET,
+      'whsec_next',
+    ]);
   });
 
   // BUG-325: anyone can send a bad signature, so it is a warning.

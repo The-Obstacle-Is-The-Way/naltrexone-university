@@ -51,4 +51,4 @@ Option 1, with email as a second channel inside the policy:
 
 ## Related
 
-DEBT-480 (anonymous reachability of `security.txt`). `docs/security/information-security-program.md`, whose settings checklist of 2026-08-13 did not include this setting.
+DEBT-480 (anonymous reachability of `security.txt`). `docs/policies/security/information-security-program.md`, whose settings checklist of 2026-08-13 did not include this setting.

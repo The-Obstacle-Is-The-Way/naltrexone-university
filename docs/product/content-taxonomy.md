@@ -1,6 +1,6 @@
 # Tag Taxonomy — Golden Spec
 
-> **Status:** Implemented (2026-02-18 via SPEC-033; re-verified 2026-03-17)
+> **Status:** Implemented (SPEC-033)
 > **Companion docs:** [the tag taxonomy's implementation](../architecture/tag-taxonomy.md).
 > The authoring format is owned by [the draft schema](../../content/drafts/questions/SCHEMA.md), the importer (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts`.
 >
@@ -151,7 +151,7 @@ Added treatment slugs:
 
 ---
 
-## Implementation Status (SPEC-033)
+## Implementation Status
 
 The migration defined by this doc is complete.
 
@@ -167,7 +167,7 @@ The migration defined by this doc is complete.
 
 ### Phase 2: Pipeline code
 
-- [x] `lib/content/draftTaxonomy.ts` aligned to canonical topic / substance /
+- [x] `lib/content/draft-taxonomy.ts` aligned to canonical topic / substance /
       treatment sets
 - [x] `scripts/import-draft-questions.ts` no longer assigns taxonomy from
       directory names

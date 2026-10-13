@@ -243,7 +243,7 @@ export type StripeWebhookResponse = { received: true };
 
 **Required Stripe verification:**
 
-* Must use `stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET)` (signature verification is mandatory).
+* Must use `stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET)` (signature verification is mandatory). While a Stripe major-release migration overlaps two webhook endpoints, a delivery may verify against `STRIPE_WEBHOOK_SECRET_NEXT` instead.
 
 **Idempotency:**
 
@@ -2323,6 +2323,7 @@ release. An echo-only deployment job is not a gate.
 | STRIPE_SECRET_KEY                   | Stripe secret key (server)                                                                                                  |               ✅ |            ✅ |                   ✅ |                ✅ |
 | NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  | Stripe publishable key (public). `lib/env.ts` requires it, but no app code reads it: Checkout and the portal are Stripe-hosted redirects. |               ✅ |            ✅ |                   ✅ |                ✅ |
 | STRIPE_WEBHOOK_SECRET               | Stripe webhook signing secret                                                                                               |               ✅ |            ✅ |                   ✅ |                ✅ |
+| STRIPE_WEBHOOK_SECRET_NEXT          | The next webhook endpoint's signing secret, set only while a major-release migration overlaps two endpoints                 |               — |            — |                   — |                — |
 | CONSENT_STATE_SECRET                | HMAC key (at least 32 characters) that signs the trial add-card consent state. `lib/env.ts` requires it on Vercel production and preview builds (`VERCEL_ENV`); locally it stays unset (add-card fails closed) and the E2E server gets a test-only value. |               — |            — |                   ✅ |                ✅ |
 | NEXT_PUBLIC_APP_URL                 | Canonical base URL (e.g., [http://localhost:3000](http://localhost:3000), [https://yourdomain.com](https://yourdomain.com)) |               ✅ |            ✅ |                   ✅ |                ✅ |
 | CRON_SECRET                         | Shared bearer secret for `/api/cron/reconcile-stripe-subscriptions` and `/api/cron/send-renewal-notices`. Not checked at startup (`lib/env.ts` leaves it optional): each cron route refuses every request (401) while it is unset or not header-safe. |               — |            — |                   — |                ✅ |

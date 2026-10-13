@@ -135,6 +135,8 @@ const RETIRED_LAYOUT_FOLDERS = [
   'tooling',
   'vendor-docs',
   'specs',
+  'legal',
+  'security',
 ];
 
 function isRetiredRegisterFile(file: string): boolean {

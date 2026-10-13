@@ -1,4 +1,4 @@
-# Practice Engine: Security Model
+# Security Model
 
 > **Parent:** [Documentation map](../README.md)
 > **Scope:** Authentication, authorization, rate limiting, idempotency, data isolation

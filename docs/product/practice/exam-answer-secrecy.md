@@ -88,7 +88,7 @@ This pseudocode explains the policy; do not paste it into every feature. Applica
 
 ## 6. Current Enforcement Status
 
-These code paths are current as of 2026-04-27:
+These code paths enforce it:
 
 - `GetPreviousAttempt` returns `null` for active-exam attempts and only reveals `session_unanswered` answers after the exam session has ended.
 - `GetPracticeSessionReview` redacts per-question `isCorrect` while an exam session is still active.

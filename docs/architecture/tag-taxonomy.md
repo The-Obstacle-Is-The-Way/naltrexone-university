@@ -95,6 +95,8 @@ Source: `lib/content/draft-taxonomy.ts`
   - diagnosis slugs must be kebab-case
   - non-empty `qid`; `source` a kebab-case identifier
   - `topics` and `substances` must be present and non-empty
+- Conversion then requires more: `qid` becomes the MDX `slug`, which
+  `QuestionFrontmatterSchema` requires to be kebab-case.
 
 ### Step B — Draft import (`pnpm content:import:drafts`)
 
