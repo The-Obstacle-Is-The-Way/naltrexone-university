@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, which the owner approved on 2026-10-13
+**Status:** In Progress — the records step, the agent instructions, the layout and the archive's removal are done; the four splits and the three-record pilot follow
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -12,7 +12,7 @@
 
 Every bug and debt item here is written up as a numbered Markdown record before it is fixed. A second agent challenges it, and once it ships it is moved to `docs/_archive/`. Writing first and challenging the write-up are the valuable part: on 2026-10-11 a reviewer's heads-up overturned a just-shipped design (DEBT-503 item 5), and a second agent's challenge corrected this record before review.
 
-Keeping every closed record in the working tree is not. The archive is now about twice the size of the production code, and it outnumbers the live documents in every search. Closing a record is a ceremony of its own, and record edits take review capacity that code needs.
+Keeping every closed record in the working tree is not. When this record was filed, the archive was about twice the size of the production code, and it outnumbered the live documents in every search. Closing a record is a ceremony of its own, and record edits take review capacity that code needs.
 
 This record measures the setup, sets out what each kind of document is for, compares the options, and plans a move to **records as working files**: written first, challenged on the branch, shipped with their fix, and deleted on close, leaving a one-line ledger entry. **The owner approved the plan on 2026-10-11, and widened it to every document in the repository,** with clean namespaces and names.
 
@@ -188,9 +188,9 @@ The owner widened the plan from records to every document: the product spec, arc
 | `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` (moved 2026-10-13) | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
 | `docs/{bugs,debt}/*` | `docs/records/` (flat); indexes merge into `records/README.md` |
 | `docs/audits/*` | AUDIT-015 closes: its order → records Now/Next, its trace-sample decision → BUG-331; the index is deleted |
-| `docs/_archive/**` + 20 archive-only asset folders | delete last, after the ledger and permalinks |
+| `docs/_archive/**` + 20 archive-only asset folders | deleted last (step 5), after the ledger and the lessons review |
 | Colocated Markdown: `app/(app)/app/practice/shared/idempotency-protocol-contract.md`, `app/fonts/README.md`, `content/questions/README.md`, `tests/shared/README.md`, `tests/test-helpers/README.md` | stay beside their code. The guard's link check widens to `app/**`, `content/**` and `tests/**`. The contract gets a link from `.claude/rules/frontend.md`, `tests/shared/README.md` its missing scope, and `content/questions/README.md` a format example that parses. |
-| Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (DEBT-414) | permalink, then delete with the purge; DEBT-414's own assets stay until it closes |
+| Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (DEBT-414) | permalinked, then deleted in step 5; DEBT-414's own assets stay until it closes |
 | Open GitHub issues citing doc paths (#423, #772, #883, #902, #903) | a comment on each with the new path, in the PR that moves it |
 | Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; the guard rejects files recreated in retired folders; step 5, the archive's removal, adds rejection of unpinned live links into the archive, while preserving ledger retrieval paths, pinned history and immutable migration comments |
 
@@ -252,8 +252,8 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - [x] The owner approves the model (2026-10-11).
 - [x] Step 0: every live document has a disposition and a target path, and a second agent has challenged them (2026-10-11; ADR-023 and the mapping above).
 - [x] The ledger is complete: every archived record has a line, and every record ID cited in code resolves (2026-10-13: all 920 archived records have a line whose path matches, every file is retrievable at its last commit, and the only unresolved cited ID is a test fixture's).
-- [ ] Every Deferred row is self-contained, and no live link points into `docs/_archive/`.
-- [ ] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted.
+- [x] Every Deferred row is self-contained, and no live link points into `docs/_archive/` (2026-10-13: the guard reports no archive destination, and DEBT-460's Waiting row names its consumers instead of its archived checklist).
+- [x] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted (2026-10-13: 1,468 files; the guard rejects recreated Markdown and unpinned destinations, tested red first).
 - [x] The records index describes delete-on-close, `AGENTS.md` and `CLAUDE.md` point to it, and the guard enforces it: no closed record stays live, and every closure from the cutover carries its receipt (#1467 and #1471).
 - [x] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location (2026-10-13: the guard reports no broken live link and no file in a retired folder; old paths remain only in history, applied migrations and fixtures).
 - [ ] Three records are closed under the model, and the reviewing agent reports no lost knowledge.
