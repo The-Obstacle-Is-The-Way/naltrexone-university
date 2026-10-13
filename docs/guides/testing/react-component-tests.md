@@ -245,6 +245,8 @@ test('hook updates state correctly', async () => {
 });
 ```
 
+Since Vitest 5, `toHaveTextContent` matches the element's whole text exactly. `toMatchTextContent` keeps the older partial match and accepts a RegExp; use it for `.not` checks too, where an exact-match negative would pass on any other text.
+
 ### What stays in jsdom
 
 The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMarkup` for synchronous hook capture and has zero act() warnings. Many colocated `.test.tsx` suites use it for initial-state-only hook coverage.

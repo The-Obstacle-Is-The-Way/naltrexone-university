@@ -47,7 +47,7 @@ test('validates category, submits selected feedback, closes, and returns focus',
 
   await expect
     .element(screen.getByRole('alert'))
-    .toHaveTextContent('Choose a category to send your feedback.');
+    .toMatchTextContent('Choose a category to send your feedback.');
   await expect
     .poll(() => document.activeElement?.getAttribute('value'))
     .toBe('incorrect_answer');

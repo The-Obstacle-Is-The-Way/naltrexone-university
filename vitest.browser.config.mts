@@ -41,6 +41,10 @@ export default defineConfig({
       enabled: true,
       provider: playwright(),
       instances: [{ browser: 'chromium' }],
+      // Vitest 5 made locators exact by default. Keep Vitest 4's
+      // case-insensitive substring matching, so the upgrade changes what no
+      // locator finds.
+      locators: { exact: false },
     },
     include: ['**/*.browser.spec.tsx'],
     coverage: {

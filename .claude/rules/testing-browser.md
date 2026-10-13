@@ -35,6 +35,7 @@ test('hook updates state correctly', async () => {
 
 - Runs in **real Chromium** via Playwright (not jsdom)
 - `expect.element()` has **built-in retry-ability** (no manual polling)
+- `toHaveTextContent` matches the whole text exactly (Vitest 5). For a partial or RegExp match, including `.not`, use `toMatchTextContent`
 - No `// @vitest-environment jsdom` directive needed
 - Config: `vitest.browser.config.mts`
 

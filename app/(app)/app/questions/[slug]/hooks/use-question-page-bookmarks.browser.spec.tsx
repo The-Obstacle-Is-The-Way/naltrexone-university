@@ -88,13 +88,13 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     expect(getBookmarkStatus).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
@@ -107,10 +107,10 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
@@ -122,10 +122,10 @@ describe('useQuestionPageBookmarks (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('starts only one bookmark request when the toggle is invoked twice while pending', async () => {
@@ -135,7 +135,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
     await screen.getByTestId('trigger-toggle-bookmark').click();
     await screen.getByTestId('trigger-toggle-bookmark').click();
     await expect.poll(() => setBookmark.mock.calls.length).toBeGreaterThan(0);
@@ -146,10 +146,10 @@ describe('useQuestionPageBookmarks (browser)', () => {
     expect(setBookmark).toHaveBeenCalledTimes(1);
     await expect
       .element(screen.getByTestId('bookmark-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('sends bookmarked=false when removing a hydrated bookmarked review question', async () => {
@@ -160,7 +160,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
@@ -172,6 +172,6 @@ describe('useQuestionPageBookmarks (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('is-bookmarked'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 });

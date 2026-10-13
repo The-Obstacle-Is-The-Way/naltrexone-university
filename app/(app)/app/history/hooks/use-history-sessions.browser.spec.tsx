@@ -93,19 +93,19 @@ describe('useHistorySessions (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByTestId('open-s1').click();
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('session-id'))
-      .toHaveTextContent('s1');
+      .toMatchTextContent('s1');
     await expect
       .element(screen.getByTestId('review-session-id'))
-      .toHaveTextContent('s1');
+      .toMatchTextContent('s1');
   });
 
   it('toggles the same session off on second click', async () => {
@@ -116,19 +116,19 @@ describe('useHistorySessions (browser)', () => {
     await screen.getByTestId('open-s1').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     // Click again to toggle off
     await screen.getByTestId('open-s1').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('review-session-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('transitions to error state when the action result is not ok', async () => {
@@ -144,10 +144,10 @@ describe('useHistorySessions (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Review load failed');
+      .toMatchTextContent('Review load failed');
     expect(reportClientErrorSpy).toHaveBeenCalledWith(errorResult.error, {
       component: 'UseHistorySessions',
       action: 'openSession',
@@ -164,10 +164,10 @@ describe('useHistorySessions (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('Network failure');
+      .toMatchTextContent('Network failure');
     expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
       component: 'UseHistorySessions',
       action: 'openSession',
@@ -190,28 +190,28 @@ describe('useHistorySessions (browser)', () => {
     await screen.getByTestId('open-s1').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
 
     // Close s1 (toggle off)
     await screen.getByTestId('open-s1').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     // Reopen s1 (request B starts loading)
     await screen.getByTestId('open-s1').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
 
     // Resolve B first with success
     deferredB.resolve(ok(makeReviewOutput('s1')));
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('review-session-id'))
-      .toHaveTextContent('s1');
+      .toMatchTextContent('s1');
 
     // Now resolve A with an error — should be discarded, not overwrite success
     deferredA.reject(new Error('Stale network error'));
@@ -220,10 +220,10 @@ describe('useHistorySessions (browser)', () => {
     // State should remain ready (not overwritten by stale error)
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('review-session-id'))
-      .toHaveTextContent('s1');
+      .toMatchTextContent('s1');
   });
 
   it('discards stale response when a different session is opened mid-flight', async () => {
@@ -242,13 +242,13 @@ describe('useHistorySessions (browser)', () => {
     await screen.getByTestId('open-s1').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('loading');
+      .toMatchTextContent('loading');
 
     // Open s2 before s1 resolves (race condition)
     await screen.getByTestId('open-s2').click();
     await expect
       .element(screen.getByTestId('session-id'))
-      .toHaveTextContent('s2');
+      .toMatchTextContent('s2');
 
     // Resolve s1 (stale — should be discarded)
     deferred1.resolve(ok(makeReviewOutput('s1')));
@@ -259,9 +259,9 @@ describe('useHistorySessions (browser)', () => {
     // Should show s2's review, not s1's
     await expect
       .element(screen.getByTestId('review-session-id'))
-      .toHaveTextContent('s2');
+      .toMatchTextContent('s2');
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
   });
 });
