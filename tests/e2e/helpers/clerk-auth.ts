@@ -15,10 +15,8 @@ import {
   describeFrontendApiAnswer,
   startClerkAuthTrace,
 } from './clerk-auth-trace';
-import {
-  dropDevBrowserEchoes,
-  keepDevBrowserCookiesInPlace,
-} from './clerk-dev-browser-echo';
+import { keepDevBrowserCookiesInPlace } from './clerk-dev-browser-cookies';
+import { dropDevBrowserEchoes } from './clerk-dev-browser-echo';
 import { CLERK_SESSION_DEADLINES } from './clerk-session-deadlines';
 import {
   installE2ELogRedaction,
