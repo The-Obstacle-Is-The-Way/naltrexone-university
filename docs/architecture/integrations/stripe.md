@@ -12,7 +12,7 @@
 
 | Date | API Version | Impact | Notes |
 |------|-------------|--------|-------|
-| 2026-09-30 | `2026-09-30.endive` | **BREAKING** | Endive cutover, pinned 2026-10-13 with SDK 23.0.0 (#1479). Checkout Session create no longer accepts `payment_method_types` and answers it with a 400, so the add-card session sends `allowed_payment_method_types: ['card']` instead. Every other Endive breaking change was checked against what the app sends and reads, and none applies. Endpoints moved per [Endive migration](#endive-migration-2026-10). |
+| 2026-09-30 | `2026-09-30.endive` | **BREAKING** | Endive cutover, pinned 2026-10-13 with SDK 23.0.0 (PR #1483, issue #1479). Checkout Session create no longer accepts `payment_method_types` and answers it with a 400, so the add-card session sends `allowed_payment_method_types: ['card']` instead. Every other Endive breaking change was checked against what the app sends and reads, and none applies. The test endpoint moved on 2026-10-13, and the live endpoint moves with the promotion that ships PR #1483, per [Endive migration](#endive-migration-2026-10). |
 | 2026-08-26 | `2026-08-26.dahlia` | Non-breaking | Pinned 2026-09-16 with SDK 22.6.1. Additive GA release: card funding-type restrictions in Checkout, Customer Session entitlement/portal components, Billie for invoices and subscriptions, standardized payment-method error codes. None of the added fields are read or sent by this app. |
 | 2026-07-29 | `2026-07-29.dahlia` | Non-breaking | Pinned 2026-08-08 (PR #758, SDK 22.4.0). That upgrade introduced the `known \| OtherString` response-enum modelling described below. |
 | 2026-06-24 | `2026-06-24.dahlia` | Non-breaking | Pinned 2026-07-02 (PR #551, SDK 22.3.0) |
@@ -35,7 +35,7 @@ git --no-pager show HEAD:lib/stripe-api-version.ts
 
 ## SDK Pin Coupling and Response-Enum Widening
 
-`stripe-node` types its `apiVersion` constructor option as the exact string the SDK release pins. A minor SDK bump that advances the pinned version fails `pnpm typecheck` with `Type '"<old>.dahlia"' is not assignable to type '"<new>.dahlia"'` at `lib/stripe.ts` until `lib/stripe-api-version.ts` is advanced with it. The two move together in one PR; never cast around the mismatch (DEBT-404, PR #758).
+`stripe-node` types its `apiVersion` constructor option as the exact string the SDK release pins. A minor SDK bump that advances the pinned version fails `pnpm typecheck` with `Type '"<old pin>"' is not assignable to type '"<new pin>"'` at `lib/stripe.ts` until `lib/stripe-api-version.ts` is advanced with it. The two move together in one PR; never cast around the mismatch (DEBT-404, PR #758).
 
 Since SDK 22.4.0 Stripe types response enums as `'known' | 'values' | OtherString` (`OtherString = string & Record<never, never>`) so integrations handle values that exist in the API before they exist in the SDK. The client-owned port in `src/adapters/shared/stripe-types.ts` mirrors that split:
 
@@ -45,7 +45,7 @@ Since SDK 22.4.0 Stripe types response enums as `'known' | 'values' | OtherStrin
 
 A new widening in the SDK surfaces as `Type 'Stripe' is not assignable to type 'StripeClient'` at the composition root. `src/adapters/shared/stripe-types.test.ts` pins the whole contract (`expectTypeOf<Stripe>().toExtend<StripeClient>()`) so the adapter boundary also reports the incompatibility. These `expectTypeOf` contracts are enforced by `pnpm typecheck`, not by Vitest's runtime execution.
 
-A major release can also remove a request field, and the SDK release that pins it drops the field from its request types. `stripe-types.test.ts` therefore also checks each request type in the port against the installed SDK's, at every depth ("sends only request fields the pinned API version accepts"). A field the port still sends, and the SDK no longer knows, fails `pnpm typecheck` at that request type's assertion, rather than as a 400 at runtime. Endive's removal of Checkout's `payment_method_types` is the case that prompted it (#1479): before this check, only E2E would have caught it.
+A major release can also remove a request field, and the SDK release that pins it drops the field from its request types. `stripe-types.test.ts` therefore also checks the field names of each request parameter type in the port against the installed SDK's, at every depth ("sends only request fields the pinned API version accepts"). A field the port still sends, and the SDK no longer knows, fails `pnpm typecheck` at that request type's assertion, rather than as a 400 at runtime. It checks names, not values: the SDK types request enums open-ended, so a removed enum value still needs the changelog read. Endive's removal of Checkout's `payment_method_types` is the case that prompted it (PR #1483): before this check, only E2E would have caught it.
 
 ---
 
@@ -180,13 +180,13 @@ Fix status (endpoint configuration only; the version and signing secret are unch
 
 ### Major-release migration
 
-A pin that moves to a new major release (Dahlia to Endive) crosses a major-release boundary, not a monthly advance. Before it does:
+A pin that moves to a new major release (Dahlia to Endive) crosses a major-release boundary, not a monthly advance. Steps 1 and 2 come before the pin merges, step 3 rides the promotion that ships it, and step 4 follows:
 
 1. Read the new release's breaking changes against [Fields We Depend On](#fields-we-depend-on) and the schemas in `stripe-webhook-schemas.ts`. During the overlap, payloads from both versions must parse.
 2. Recreate the test endpoint at the new version, as in [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and exercise the handled events against Preview.
-3. For live, make a **deliberate swap carried by the promotion that ships the pin** (decided 2026-10-13, #1479):
+3. For live, make a **deliberate swap carried by the promotion that ships the pin** (decided 2026-10-13, PR #1483):
    - **How.** Create a second live endpoint at the new version with the same URL and events, enabled. Just before the promotion merges, set production's `STRIPE_WEBHOOK_SECRET` to its signing secret. Production reads the secret when it deploys, so the promotion's deployment moves the pin and the secret together. Vercel's instant rollback to the previous deployment restores both, for as long as the old endpoint exists.
-   - **Why it loses no event.** While both endpoints exist, Stripe sends every event to each, and the route accepts exactly one secret. At any moment one endpoint's deliveries succeed, and Stripe retries the other's for up to three days in live mode. Every event is therefore acknowledged at least once. A second acknowledgement is a no-op, because the `stripe_events` claim inserts on conflict and locks the row.
+   - **Why it loses no event.** While both endpoints exist, Stripe sends every event to each, and the route accepts exactly one secret. At any moment one endpoint's deliveries succeed, and Stripe retries the other's for up to three days in live mode. Every event created after the second endpoint exists is therefore acknowledged at least once. An older event still being retried only to the old endpoint would fail after the swap, so the swap waits until none is outstanding. A second acknowledgement is a no-op, because the `stripe_events` claim inserts on conflict and locks the row.
    - **Why late deliveries do no harm.** Ordering cannot regress state: the processor takes only the subscription's ID from a subscription event and reads the current subscription from Stripe.
    - **What it costs.** Deliveries rejected in the cutover arrive late, by Stripe's retry interval, and Stripe may email that the endpoint is failing until the old endpoint is deleted.
    - **Rejected: verifying both secrets during the overlap.** [Stripe's procedure](https://docs.stripe.com/webhooks/versioning) protects a handler whose processing depends on the payload's version. It uses a disabled second endpoint behind a query parameter, and two deployments that first ignore and then process the new version. This handler reads only fields stable across versions and re-reads the subscription, so the overlap needs no version-aware code. Accepting both secrets would avoid the late deliveries, at the price of temporary code in the authentication path. Revisit that trade-off before a major release at which a late delivery would delay a paying customer's access.
@@ -207,7 +207,7 @@ Each event reaches both endpoints while they overlap, and the `stripe_events` cl
 
 ### Endive migration (2026-10)
 
-The [major-release migration](#major-release-migration) for `2026-09-30.endive` (#1479, superseding Dependabot's #1447).
+The [major-release migration](#major-release-migration) for `2026-09-30.endive` (issue #1479, PR #1483, superseding Dependabot's #1447).
 
 **Test side: done 2026-10-13.**
 
@@ -215,22 +215,22 @@ The [major-release migration](#major-release-migration) for `2026-09-30.endive` 
 2. Set `STRIPE_WEBHOOK_SECRET` in Vercel Preview and Development to its signing secret, from a private file. A pull of Preview matched it by hash; the secret was never printed.
 3. Redeployed the `dev` preview (`dpl_6nwyb…`, still `dev`'s Dahlia code), so it verified only the new endpoint.
 4. Probed at Endive with objects tagged `e2e_owner: endive-rotation-probe`: a trial subscription created, updated and canceled, and an add-card-shaped setup Session, expired.
-   - The new endpoint's five deliveries parsed, and the preview skipped each with a 200. They were `customer.subscription.created`, `.updated` and `.deleted`, `invoice.payment_succeeded` (all `e2e_owner_mismatch`) and `checkout.session.expired` (`foreign_environment`). Dahlia code therefore parses Endive payloads.
+   - The new endpoint's five deliveries parsed, and the preview skipped each with a 200. They were `customer.subscription.created`, `.updated` and `.deleted`, `invoice.payment_succeeded` (all `e2e_owner_mismatch`) and `checkout.session.expired` (`foreign_environment`). Dahlia code therefore parsed these five event types at Endive. The audit found no Endive change to a field that any handled event's schema reads.
    - The old endpoint's deliveries failed signature verification, as expected, so each event showed `pending_webhooks: 1`.
 5. Confirmed that no earlier event was still owed only to the old endpoint, then deleted `we_1UPPK…` and the probe Customer.
 
 The same probe confirmed Endive's Checkout change against the API itself. A setup Session sent with `payment_method_types` gets a 400 `invalid_request_error` that names the parameter. One sent as the adapter now sends it opens: `allowed_payment_method_types: ['card']`, `consent_collection`, `customer_email`, and no Customer. Its response still lists `payment_method_types: ['card']`, which the E2E consent helper reads.
 
-**Live side: with the promotion that ships #1479.** Every step that changes live state needs the owner's go-ahead.
+**Live side: with the promotion that ships PR #1483.** Every step that changes live state needs the owner's go-ahead.
 
-1. Take the census: on 2026-10-13 there was one live endpoint, `we_1Tejqg…`, enabled, at `2026-05-27.dahlia`, with all 13 handled events.
-2. Once the promotion PR is open and its CI has passed, create the live endpoint at `2026-09-30.endive`, with the same URL, description and 13 events.
-   - Save the response to a private file (`umask 077`), because it holds the signing secret. Never print it.
+1. Take the census: on 2026-10-13 there was one live endpoint, `we_1Tejqg…`, enabled, at `2026-05-27.dahlia`, with all 13 handled events. The live default payment-method configuration had card available and on, which `allowed_payment_method_types: ['card']` needs, because it filters the enabled methods rather than naming them.
+2. Once the promotion PR is open and its CI has passed, and no live event is still owed a delivery (`pending_webhooks: 0`), create the live endpoint at `2026-09-30.endive`, with the same URL, description and 13 events.
+   - The response holds the signing secret. Under `umask 077`, extract the `secret` field alone into a private file (`jq -j .secret`). Never print it.
    - Don't create the endpoint through a tool that prints its response into a transcript, such as the Stripe MCP write tool. Use the Stripe CLI with a live key, or the Dashboard.
-3. `vercel env update STRIPE_WEBHOOK_SECRET production --yes < <secret file>`. Production's variable is sensitive and cannot be pulled back to compare, so step 5's probe is the check.
-4. Merge the promotion with `scripts/verify-promotion.ts <PR> --merge`. Its production deployment carries both the pin and the secret, and Vercel holds the alias until `main`'s CI passes. Until then, the new endpoint's deliveries fail and Stripe retries them.
+3. `vercel env update STRIPE_WEBHOOK_SECRET production --yes < "$SECRET_FILE"`. Production's variable is sensitive and cannot be pulled back to compare, so step 5's probe is the check.
+4. After `git fetch`, merge the promotion with `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge`. Its production deployment carries both the pin and the secret, and Vercel holds the alias until `main`'s CI passes. Until then, the new endpoint's deliveries fail and Stripe retries them.
 5. Verify:
-   - The deployment is ready on the production domain, and `/api/health` answers 200.
+   - A production deployment of the promotion's merge commit is ready on the production domain, and `/api/health` answers 200.
    - A live probe event shows `pending_webhooks: 1`, and production's log shows the new endpoint's 200. As on 2026-10-11, the probe is a subscription-mode Checkout Session created and expired through the API.
    - Every live event since step 2 shows the new endpoint's acknowledgement in its Dashboard delivery log.
 6. Delete `we_1Tejqg…`. Until this step, rolling back is Vercel's instant rollback to the previous production deployment. After it, rolling back means creating a Dahlia endpoint again.
@@ -296,7 +296,7 @@ When upgrading Stripe SDK or API version:
 - [ ] Read the [changelog](https://docs.stripe.com/changelog) entry for the new API version and the [stripe-node release notes](https://github.com/stripe/stripe-node/releases); grep the codebase for every field or enum the notes mark `⚠️`
 - [ ] Search codebase for deprecated fields: `current_period_start`, `current_period_end` at subscription level
 - [ ] Advance `lib/stripe-api-version.ts` in the same PR as the SDK bump; update the "Last reviewed" date in `lib/stripe.ts`
-- [ ] Run `pnpm typecheck` — a `Stripe` → `StripeClient` assignability error means a response enum widened; widen the matching response type in `src/adapters/shared/stripe-types.ts` (never the request filter) and extend `stripe-types.test.ts`
+- [ ] Run `pnpm typecheck` — a `Stripe` → `StripeClient` assignability error means a response enum widened; widen the matching response type in `src/adapters/shared/stripe-types.ts` (never the request filter) and extend `stripe-types.test.ts`. A failure in "sends only request fields the pinned API version accepts" means the SDK removed a field the port sends; move the port to the replacement the changelog names
 - [ ] Run the full gate including `pnpm test:e2e` — the required Checkout contract proves real TEST-mode Sessions and the success-sync path. `tests/integration/webhook-signature-ingress.integration.test.ts` separately verifies signed webhook ingress through the route handlers; neither contract proves live delivery from Stripe to a deployed endpoint.
 - [ ] Run the read-only [webhook endpoint census](#census-commands) in live and test mode and put it in the PR: each endpoint's `api_version` (null means the account default), its enabled events against [Webhooks We Handle](#webhooks-we-handle), and `pending_webhooks` on recent events. An SDK or pin change never moves an endpoint, so this is the only check on the version payloads actually arrive at
 - [ ] If the new pin starts a new major release (its suffix changes, as Dahlia to Endive), complete the test side of the [major-release migration](#major-release-migration) before merging, and its live swap with the promotion that ships the pin. A monthly advance within the same major release leaves the endpoints where they are, per [the decision](#decision)
