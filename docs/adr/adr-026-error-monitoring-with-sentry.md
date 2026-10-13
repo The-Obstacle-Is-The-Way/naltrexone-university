@@ -57,6 +57,19 @@
 - The monthly drill and its watcher detect a broken alert path within one cycle.
 - Server logs keep the request-scoped detail that Sentry no longer receives.
 
+## Alternatives Rejected
+
+- **One project for the browser and the server.** Anyone holding the public browser key could post events into the project that raises operational alerts (2026-10-08).
+- **The SDK's default data collection.** It sent credentials and the visitor's IP, and Sentry's defaults change between majors (BUG-318, 2026-10-05).
+- **Logs as the only signal.** A failure that is only logged reaches nobody (DEBT-505).
+- **Testing the settings object.** CI stayed green while the SDK sent credentials, so only the SDK's output counts as evidence.
+
+## Compliance
+
+- `lib/sentry-data-collection-sdk.test.ts` and `lib/sentry-breadcrumbs-sdk.test.ts` run the installed SDK against a recording transport, and fail if a credential, IP or breadcrumb leaves the process.
+- `EVERY_CATEGORY_IS_SET` fails compilation when Sentry adds a data-collection category this setting leaves unset.
+- The monthly drill alert, and the watcher that expects it, show the alert path still reaches the owner.
+
 ## References
 
 - [Observability](../architecture/observability.md): logging, the alert kinds and the runbooks

@@ -169,7 +169,7 @@ export type ActionResult<T> =
 
 ### 4.4 Route Handlers (API Endpoints)
 
-#### 4.4.1 `POST /api/health`
+#### 4.4.1 `GET` or `POST /api/health`
 
 * **Path:** `/app/api/health/route.ts` (logic in `/app/api/health/handler.ts`)
 * **Method:** GET or POST (both run the same handler)

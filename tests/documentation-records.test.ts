@@ -541,7 +541,7 @@ describe('repository records', () => {
     expect(tracked.filter((file) => !files.has(file))).toEqual([]);
   });
 
-  it('keeps no record or index in a register folder that docs/records replaced', () => {
+  it('keeps no Markdown in a register folder docs/records replaced, or in a folder the layout retired', () => {
     expect(result.retiredRegisterFiles).toEqual([]);
   });
 

@@ -127,21 +127,20 @@ function isStrayRecordsFile(file: string): boolean {
 // ADR-023 layout retired missed the move. A clean merge of a branch that added
 // a guide there does not relocate it. Register asset folders stay until the
 // archive that links them is deleted.
+const RETIRED_LAYOUT_FOLDERS = [
+  'dev',
+  'frontend',
+  'practice-engine',
+  'content',
+  'tooling',
+  'vendor-docs',
+  'specs',
+];
+
 function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
   if (docs !== 'docs' || name === undefined) return false;
-  if (
-    [
-      'dev',
-      'frontend',
-      'practice-engine',
-      'content',
-      'tooling',
-      'vendor-docs',
-      'specs',
-    ].includes(register ?? '')
-  )
-    return true;
+  if (RETIRED_LAYOUT_FOLDERS.includes(register ?? '')) return true;
   if (!isRegister(register)) return false;
   return !(name === 'assets' && rest.length > 0);
 }

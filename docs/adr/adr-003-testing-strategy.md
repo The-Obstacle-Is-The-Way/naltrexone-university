@@ -1,6 +1,6 @@
 # ADR-003: Testing Strategy
 
-**Status:** Accepted, as amended 2026-10-12 (corrections of fact; see [Amendment](#amendment--2026-10-12))
+**Status:** Accepted, as amended 2026-08-23 and 2026-09-24 (DEBT-472, inline) and 2026-10-12 (corrections of fact; see [Amendment](#amendment--2026-10-12))
 **Date:** 2026-01-31
 **Amended:** 2026-08-23 (DEBT-472 Part A — adapter-unit and provider-contract categories)
 **Decision Makers:** Architecture Team
@@ -424,6 +424,6 @@ This ADR defines the **strategy and boundaries**; the files above define the **e
 
 Corrections of fact, from the DEBT-518 documentation review. The decision is unchanged.
 
-- **Mitigations.** E2E runs on every pull request and on every push to `main`, not only on `main` or when relevant files change; `.github/workflows/ci.yml` triggers on `pull_request` and `push: main`. CI is one sequential `test` job, not parallel jobs. Local integration and E2E runs use this clone's Docker Postgres container, resolved by `scripts/resolve-local-test-target.ts` (see `docs/guides/testing/integration-tests.md`).
+- **Mitigations.** E2E runs on every same-repository pull request except Dependabot's, and on every push to `main`, not only on `main` or when relevant files change; `.github/workflows/ci.yml` triggers on `pull_request` and `push: main`, and skips E2E for Dependabot and fork pull requests. CI is one sequential `test` job, not parallel jobs. Local integration and E2E runs use this clone's Docker Postgres container, resolved by `scripts/resolve-local-test-target.ts` (see `docs/guides/testing/integration-tests.md`).
 - **Example E2E test.** `tests/e2e/practice-flow.spec.ts` and `authenticateUser` were illustrations and never existed. Practice is covered by `tests/e2e/practice.spec.ts` and its neighbours, and Clerk sign-in helpers live in `tests/e2e/helpers/`.
 - **Two earlier amendments** (2026-08-23 and 2026-09-24, DEBT-472) were written inline in the adapter-unit paragraph before ADR-023 required appended sections. They stay where they are; `.claude/rules/testing.md` holds the test-double rule they introduced.

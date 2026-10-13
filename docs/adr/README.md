@@ -16,7 +16,7 @@ Architecture Decision Records document significant architectural decisions along
 |----|-------|--------|------|
 | [ADR-001](./adr-001-clean-architecture-layers.md) | Clean Architecture Layers | Accepted | 2026-01-31 |
 | [ADR-002](./adr-002-domain-model.md) | Domain Model | Accepted | 2026-01-31 |
-| [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted (amended 2026-10-12) | 2026-01-31 |
+| [ADR-003](./adr-003-testing-strategy.md) | Testing Strategy | Accepted (amended 2026-08-23, 2026-09-24 and 2026-10-12) | 2026-01-31 |
 | [ADR-004](./adr-004-authentication-boundary.md) | Authentication Boundary | Accepted | 2026-01-31 |
 | [ADR-005](./adr-005-payment-boundary.md) | Payment Boundary | Accepted | 2026-01-31 |
 | [ADR-006](./adr-006-error-handling-strategy.md) | Error Handling Strategy | Accepted | 2026-01-31 |
@@ -32,10 +32,10 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted | 2026-02-07 |
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted | 2026-02-07 |
 | [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
-| [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-12) | 2026-08-13 |
+| [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03 and 2026-10-12) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
-| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03) | 2026-10-03 |
+| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03 and 2026-10-05) | 2026-10-03 |
 | [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted (amended 2026-10-11) | 2026-10-11 |
 | [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |

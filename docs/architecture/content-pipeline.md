@@ -194,9 +194,10 @@ Required citation for the explanation.
 
 Draft question sets live under `content/drafts/questions/**` and are imported from files named `recall.md` and `vignettes.md` (the importer scans only these filenames). Each file contains multiple question blocks. Each block:
 
-- Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `answer`
+- Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `choices[]`
+  - `choices[]`: two to five, each with a unique `label` A–E, `text` and `correct`; exactly one is correct, and each wrong choice, and only a wrong one, carries an `explanation`
   - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
-- Uses headings in this order: `## Question` (or `## Stem`), `## Choices`, `## Explanation`
+- Uses headings in this order: `## Question` (or `## Stem`), then `## Explanation`; a `## Choices` heading is rejected, since the choices live in the frontmatter
 - Must begin with `---` then `qid:` on the next line (`splitDraftQuestionsFile()` looks for `^---\\nqid:`)
 
 Notes:

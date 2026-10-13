@@ -111,7 +111,7 @@ explore changes in alcohol-related mortality in the United States, 1999 to
 
 These are the only valid canonical values for topic, substance, and treatment.
 
-**Code source of truth:** `lib/content/draftTaxonomy.ts`
+**Code source of truth:** `lib/content/draft-taxonomy.ts`
 
 ### Topic (13 values)
 
@@ -296,7 +296,7 @@ Authoring implication: write the best answer at the letter you specify in
 Draft YAML                         Import                    MDX / Seed / UI
 ──────────                         ──────                    ───────────────
 topics: [screening-diagnosis]  ->  display names looked up  -> tags.kind = topic
-substances: [alcohol]          ->  from draftTaxonomy.ts    -> tags stored in DB
+substances: [alcohol]          ->  from draft-taxonomy.ts    -> tags stored in DB
 treatments: [naltrexone]                                    -> practice/history
 diagnoses: [aud]                                            -> hide diagnosis
 
@@ -434,7 +434,7 @@ authoring responsibility.
 - [content-taxonomy.md](../../product/content-taxonomy.md)
 - [tag-taxonomy.md](../../architecture/tag-taxonomy.md)
 - [content-pipeline.md](../../architecture/content-pipeline.md)
-- `lib/content/draftTaxonomy.ts`
+- `lib/content/draft-taxonomy.ts`
 - `lib/content/schemas.ts`
 - `scripts/draft-question-import.ts`
 - `scripts/import-draft-questions.ts`

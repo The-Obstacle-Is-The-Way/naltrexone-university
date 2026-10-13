@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, with its own manifest
+**Status:** In Progress — the records step, the agent instructions and the layout are done, except `legal/` and `security/`, held for the owner; the archive's removal follows, with its own manifest
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -40,7 +40,7 @@ Measured 2026-10-11 on `dev` after #1464.
 - **Lasting knowledge has better homes, each kept true by something:**
   - what the system does: the code and its tests, which run;
   - why the code has its shape: a comment where it happens;
-  - how we work: `AGENTS.md`, `.claude/rules/` and `docs/dev/`;
+  - how we work: `AGENTS.md`, `.claude/rules/` and `docs/guides/`;
   - what was decided, and what else was weighed: an ADR, which is not edited once accepted, only superseded ([Fowler, *Architecture Decision Record*](https://www.martinfowler.com/bliki/ArchitectureDecisionRecord.html));
   - what happened, with its receipts: reachable git commits for durable evidence, and pull-request descriptions for review context. PR descriptions can be edited; they are not immutable evidence.
 - **An archived record is none of these.** It is a second, frozen copy of the story of a problem that no longer exists, kept where searches and agents read it beside what is true now. A document that is no longer true but looks current is worse than none.
@@ -192,7 +192,7 @@ The owner widened the plan from records to every document: the product spec, arc
 | Colocated Markdown: `app/(app)/app/practice/shared/idempotency-protocol-contract.md`, `app/fonts/README.md`, `content/questions/README.md`, `tests/shared/README.md`, `tests/test-helpers/README.md` | stay beside their code. The guard's link check widens to `app/**`, `content/**` and `tests/**`. The contract gets a link from `.claude/rules/frontend.md`, `tests/shared/README.md` its missing scope, and `content/questions/README.md` a format example that parses. |
 | Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (DEBT-414) | permalink, then delete with the purge; DEBT-414's own assets stay until it closes |
 | Open GitHub issues citing doc paths (#423, #772, #883, #902, #903) | a comment on each with the new path, in the PR that moves it |
-| Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; the guard rejects unpinned live archive destinations and files recreated in retired folders, while preserving ledger retrieval paths, pinned history and immutable migration comments |
+| Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; the guard rejects files recreated in retired folders; step 5, the archive's removal, adds rejection of unpinned live links into the archive, while preserving ledger retrieval paths, pinned history and immutable migration comments |
 
 ### Migration, in Pull Requests
 

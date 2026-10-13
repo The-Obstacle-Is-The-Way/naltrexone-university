@@ -4,7 +4,7 @@
 > from draft authoring through import, seed, PostgreSQL, and the Practice /
 > History UI
 > **Last Verified:** 2026-03-17
-> **Runtime SSOT:** `lib/content/draftTaxonomy.ts`, `lib/content/schemas.ts`,
+> **Runtime SSOT:** `lib/content/draft-taxonomy.ts`, `lib/content/schemas.ts`,
 > `scripts/draft-question-import.ts`, `scripts/import-draft-questions.ts`,
 > `scripts/seed/question-parser.ts`
 
@@ -57,7 +57,7 @@ Notes:
 
 ## 3) Canonical Taxonomy (SSOT)
 
-Source: `lib/content/draftTaxonomy.ts`
+Source: `lib/content/draft-taxonomy.ts`
 
 ### Topic (13)
 
@@ -89,11 +89,12 @@ Source: `lib/content/draftTaxonomy.ts`
   `splitDraftQuestionsFile()` in `scripts/draft-question-import.ts`.
 - Draft frontmatter provides `substances[]`, `topics[]`, optional
   `treatments[]`, optional `diagnoses[]`, plus `qid`, `source`, `difficulty`,
-  `type`, and `answer`.
+  `type`, and `choices[]` (label, text, `correct`, and an explanation on each
+  wrong choice).
 - Validation at draft-parse time is strict:
   - canonical topic / substance / treatment slugs only
   - diagnosis slugs must be kebab-case
-  - non-empty `qid` and `source`
+  - non-empty `qid`; `source` a kebab-case identifier
   - `topics` and `substances` must be present and non-empty
 
 ### Step B — Draft import (`pnpm content:import:drafts`)
@@ -212,7 +213,7 @@ History question filters:
 - [content-taxonomy.md](../product/content-taxonomy.md)
 - `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`
 - `docs/_archive/specs/spec-033-tag-taxonomy-migration.md`
-- `lib/content/draftTaxonomy.ts`
+- `lib/content/draft-taxonomy.ts`
 - `lib/content/schemas.ts`
 - `scripts/draft-question-import.ts`
 - `scripts/import-draft-questions.ts`

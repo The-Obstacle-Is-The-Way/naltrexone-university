@@ -2,7 +2,7 @@
 
 > **Parent:** [Documentation map](../README.md)
 > **Scope:** Clean Architecture layers — Domain, Application, Adapters
-> **Last Verified:** 2026-04-25
+> **Last Verified:** 2026-10-12
 > **Status:** Current shipped layer boundaries and use cases. Active exam mode uses draft-save plus finalization; see [Interaction Contracts](../product/practice/interaction-contracts.md) for the UI contract.
 
 ---

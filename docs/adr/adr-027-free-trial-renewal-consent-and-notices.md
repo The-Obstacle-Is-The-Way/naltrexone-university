@@ -11,7 +11,7 @@
 
 - **The offer.** Pro Monthly costs $29 a month and Pro Annual $199 a year. Both renew automatically until cancelled ([Terms](../legal/terms-of-service.md) §4). Stripe hosted Checkout takes payment, and the Stripe billing portal handles cancellation (ADR-005).
 - **Automatic renewal is regulated.** DEBT-414's non-lawyer review (2026-09-16) cites ROSCA and state automatic-renewal statutes, among them California, New York, Vermont and Colorado. It lists their duties: disclosure before billing, express consent, a retainable acknowledgment, evidence retention, annual notices inside set windows, and simple online cancellation. That record states it is not legal advice.
-- **Stripe fixes some mechanics.** Hosted Checkout offers trials only through `subscription_data.trial_period_days`. Stripe's newer trial offers cannot be used with Checkout (DEBT-410, quoting Stripe's documentation). The portal schedules a cancellation by setting `cancel_at`, and leaves `cancel_at_period_end` false (DEBT-414 F04).
+- **Stripe fixes some mechanics.** Hosted Checkout supports only legacy free trials (`subscription_data.trial_period_days` or `trial_end`), and this app uses the day count. Stripe's newer trial offers cannot be used with Checkout (DEBT-410, quoting Stripe's documentation). The portal schedules a cancellation by setting `cancel_at`, and leaves `cancel_at_period_end` false (DEBT-414 F04).
 - **A missed notice must reach a person.** The owner runs the product alone, and a log line reaches nobody (ADR-026).
 
 ## Decision
@@ -45,7 +45,7 @@
    - Reason (DEBT-414 §7): a failure after consent must not leave consent without an acknowledgment, and a retry must not send it twice.
 7. **Renewal notices go out 35 to 30 days before renewal, for both plans (2026-09-27; monthly from 2026-09-28).**
    - An annual plan gets an `annual_reminder` and a `renewal_notice`. A monthly plan gets an `anniversary_reminder` before the renewal that carries service past each twelve-month mark (`nextAnniversaryRenewalAt`).
-   - The cron runs at 09:00 UTC (`vercel.json`). It selects active, renewing subscriptions 35 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`).
+   - The cron runs at 09:00 UTC (`vercel.json`). It selects active, renewing subscriptions 35 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
    - Each notice says the plan renews unless cancelled. It gives the cutoff in UTC, Eastern and Pacific time, and links cancellation (F06).
    - Reasons: F01 found the earlier 15–45-day window too early or too late for some states. The code records 30–40 days as the window every covered state shares. F02 cites Colorado and Connecticut for yearly reminders on monthly plans.
 8. **Delivery is durable, is never repeated while the outcome is unknown, and is revalidated before sending (2026-08-07, #744; revalidation 2026-09-27; delivery evidence 2026-09-30, #1262).**
@@ -96,6 +96,21 @@ Issue #902 holds DEBT-414's questions Q1–Q7 for licensed review. The review is
 7. **Sales tax:** the subscription's New York sales-tax classification. A tax adviser may answer this one.
 
 DEBT-414 also leaves to counsel or the owner: the remedy for a missed statutory deadline (F01, F07); which renewal is the yearly one for a monthly plan (F02); Massachusetts' 5–30-day notice, per-charge notices and notice medium (F19a, F19c, F19d); and whether an emailed cancellation takes effect when received (F04).
+
+## Alternatives Rejected
+
+- **A card to start a trial.** A card wall cuts trial starts, and the owner chose "try free, enter a card only to continue" (DEBT-410 D2, D4).
+- **Stripe's newer trial offers.** Hosted Checkout cannot use them (DEBT-410).
+- **The generic billing portal for a trial's first card.** DEBT-414 §5 rejected it as the consent step, and F05 found it let a trial convert to paid without a consent record.
+- **A setup Session that names the customer.** Stripe would attach the card before the app's checks run.
+- **A 15–45-day notice window.** F01 found it too early or too late for some states.
+- **Resending a notice whose outcome is unknown.** Resend keeps an idempotency key for only 24 hours, so a resend could deliver a second notice (DEBT-414 §7).
+
+## Compliance
+
+- R10 and R11 in [the business rules](../product/business-rules.md) name the tests that prove them, and `tests/rule-to-test-register.test.ts` fails when a named test is missing.
+- The webhook records consent only when the Session's disclosure hash matches the text registered for its version.
+- A missed notice deadline, a refused late notice or an unknown outcome raises an operational alert, and the daily job re-checks deadlines after every dispatch.
 
 ## References
 

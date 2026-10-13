@@ -589,4 +589,6 @@ These transitive packages were reviewed at the versions shown and allowed in the
 | `LGPL-3.0-or-later` | `@img/sharp-libvips-darwin-arm64` 1.2.4 | The prebuilt libvips that `sharp` loads for image processing on macOS ARM. |
 | `Unknown` | `eyes` 0.1.8, `text-encoding-utf-8` 1.0.2 | Transitive utilities (value inspection, a UTF-8 Encoding API polyfill). Replace either if it becomes direct or critical at runtime. |
 
+On 2026-10-13 the lockfile resolves `sentry` 0.45.0, still `FSL-1.1-Apache-2.0`, and `@img/sharp-libvips-darwin-arm64` 1.3.4, and it no longer contains `rpc-websockets`, `eyes` or `text-encoding-utf-8`.
+
 Generate a fresh list for any dependency decision. Do not commit the raw JSON: it contains machine-local `node_modules` paths.
