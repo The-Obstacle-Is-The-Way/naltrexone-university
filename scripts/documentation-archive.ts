@@ -123,18 +123,30 @@ function isStrayRecordsFile(file: string): boolean {
   );
 }
 
-// Markdown left in an old register folder missed the move to docs/records.
-// Living documents in docs/specs, such as the master spec, stay, and asset
-// folders stay until the archive that links them is deleted.
+// Markdown left, at any depth, in an old register folder or a folder the
+// ADR-023 layout retired missed the move. A clean merge of a branch that added
+// a guide there does not relocate it. Register asset folders stay until the
+// archive that links them is deleted.
+const RETIRED_LAYOUT_FOLDERS = [
+  'dev',
+  'frontend',
+  'practice-engine',
+  'content',
+  'tooling',
+  'vendor-docs',
+  'specs',
+  'legal',
+  'security',
+];
+
 function isRetiredRegisterFile(file: string): boolean {
   const [docs, register, name, ...rest] = file.split('/');
-  if (docs !== 'docs' || name === undefined) return false;
+  if (docs !== 'docs' || name === undefined || !file.endsWith('.md')) {
+    return false;
+  }
+  if (RETIRED_LAYOUT_FOLDERS.includes(register ?? '')) return true;
   if (!isRegister(register)) return false;
-  if (name === 'assets' && rest.length > 0) return false;
-  if (register !== 'specs') return true;
-  return (
-    name === 'index.md' || REGISTERS[register].test(path.posix.basename(file))
-  );
+  return !(name === 'assets' && rest.length > 0);
 }
 
 // A ledger line: ID · title · disposition · date · path, then optionally the

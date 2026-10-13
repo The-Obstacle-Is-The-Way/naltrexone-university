@@ -1,6 +1,6 @@
 # ADR-012: Directory Structure and Module Organization
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-06 (browser-called actions, inline) and 2026-10-12 (corrections of fact; see [Amendment](#amendment--2026-10-12))
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers)
@@ -91,9 +91,9 @@ We adopt a **hybrid structure** that places Clean Architecture layers under `src
 
 This ADR is authoritative at the **directory boundary** level. For file-level indexes that evolve with refactors, prefer:
 
-- `docs/specs/index.md` (spec index)
-- `docs/adr/index.md` (ADR index)
-- `docs/practice-engine/index.md` (practice-engine file index + status)
+- `docs/README.md` (documentation map; the former spec index is now `docs/records/closed.md`)
+- `docs/adr/README.md` (ADR index)
+- `docs/architecture/practice-engine.md` (practice-engine architecture; it replaced `docs/practice-engine/index.md`)
 
 ### Layer Mapping
 
@@ -239,3 +239,13 @@ If starting with flat structure, migrate in this order:
 - ADR-007: Dependency Injection Strategy
 - Robert C. Martin, "Clean Architecture" (2017)
 - [Next.js Project Structure](https://nextjs.org/docs/app/getting-started/project-structure)
+
+## Amendment — 2026-10-12
+
+Corrections of fact, from the DEBT-518 documentation review. The decision is unchanged.
+
+- **Routes.** The entitled app has no `review/` route. Its folders under `app/(app)/app/` are `dashboard/`, `practice/` (with `[sessionId]/` and `quick/`), `history/`, `questions/`, `bookmarks/` and `billing/`. A session's questions are reviewed at `/app/questions/[slug]?mode=review&sessionId=…`, reached from History and from the session summary.
+- **Tree.** The homepage is `app/page.tsx`, and `pricing/`, `sign-in/` and `sign-up/` sit at the root of `app/`, beside `(marketing)/`. Under `src/`, the tree also has `application/shared/`, `adapters/jobs/` and `adapters/config/`; gateways include Resend and GitHub as well as Clerk, Stripe and the rate limiter. `lib/controller-helpers.ts` belongs to the composition root with `lib/container.ts` and `lib/container/**`.
+- **Where actions live.** Besides the wrappers in `src/adapters/controllers/*-actions.ts`, form actions sit beside the route that renders their form, for example `app/pricing/subscribe-actions.ts` and `app/(app)/app/billing/manage-billing-actions.ts`. Both kinds are one-parameter `'use server'` wrappers over a `server-only` controller.
+- **Test placement.** Tests sit beside their source in every layer, not only in `domain/` and `application/`, and interactive UI tests are `*.browser.spec.tsx` beside the component (`AGENTS.md`, Testing).
+- **Import examples.** Code that runs on the server, such as a page, may call a `*-controller.ts` export. Code that runs in the browser, and any action handed to a client component, uses the one-parameter `'use server'` wrapper in the matching `*-actions.ts` file (BUG-324, the 2026-10-06 change above). The examples that import `submitAnswer` from `question-controller` into a page predate that change; under it, the page passes `question-actions`' wrapper to its client components.

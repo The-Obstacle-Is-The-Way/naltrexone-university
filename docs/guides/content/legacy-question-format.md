@@ -1,12 +1,9 @@
-# Question Format Spec — Single Source of Truth
+# Legacy Question Format
 
-> **Status:** Active
-> **Last Updated:** 2026-03-24
-> **Purpose:** Complete reference for authoring draft questions that pass
-> cleanly through the draft -> import -> MDX -> seed -> database -> UI
-> pipeline.
+> **Status:** Historical format, retained pending owner review; not valid for new drafts
+> **Purpose:** Preserve the previous authoring and operational guidance until its unique content has been reconciled. New drafts use [the active schema](../../../content/drafts/questions/SCHEMA.md) and [the importer](../../../scripts/draft-question-import.ts). The `answer:` field and `## Choices` examples below are historical and rejected by the active importer.
 >
-> This document is intentionally code-backed. When in doubt, verify against
+> This described the importer as of 2026-03-24; the current importer rejects this format. For today's rules, read
 > `scripts/draft-question-import.ts`, `lib/content/schemas.ts`,
 > `scripts/seed/question-parser.ts`, and `scripts/seed-helpers.ts`.
 
@@ -113,7 +110,7 @@ explore changes in alcohol-related mortality in the United States, 1999 to
 
 These are the only valid canonical values for topic, substance, and treatment.
 
-**Code source of truth:** `lib/content/draftTaxonomy.ts`
+**Code source of truth:** `lib/content/draft-taxonomy.ts`
 
 ### Topic (13 values)
 
@@ -298,7 +295,7 @@ Authoring implication: write the best answer at the letter you specify in
 Draft YAML                         Import                    MDX / Seed / UI
 ──────────                         ──────                    ───────────────
 topics: [screening-diagnosis]  ->  display names looked up  -> tags.kind = topic
-substances: [alcohol]          ->  from draftTaxonomy.ts    -> tags stored in DB
+substances: [alcohol]          ->  from draft-taxonomy.ts    -> tags stored in DB
 treatments: [naltrexone]                                    -> practice/history
 diagnoses: [aud]                                            -> hide diagnosis
 
@@ -433,10 +430,10 @@ authoring responsibility.
 
 ## 13. Related Documents
 
-- [content-taxonomy.md](../product/content-taxonomy.md)
-- [tag-taxonomy-pipeline.md](./tag-taxonomy-pipeline.md)
-- [content-pipeline.md](../architecture/content-pipeline.md)
-- `lib/content/draftTaxonomy.ts`
+- [content-taxonomy.md](../../product/content-taxonomy.md)
+- [tag-taxonomy.md](../../architecture/tag-taxonomy.md)
+- [content-pipeline.md](../../architecture/content-pipeline.md)
+- `lib/content/draft-taxonomy.ts`
 - `lib/content/schemas.ts`
 - `scripts/draft-question-import.ts`
 - `scripts/import-draft-questions.ts`

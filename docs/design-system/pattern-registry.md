@@ -1,6 +1,5 @@
 # Pattern Registry
 
-**Last Updated:** 2026-09-29
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -180,7 +179,7 @@ group rounded-xl bg-foreground/5
 
 **Used in:** Practice starter Topic / Substance / Treatment filter containers
 
-**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; right-side metadata is conditional: when nothing is selected it shows `All included by default`, and when selections exist it shows `{N} selected`. Expanded sections render `({N} selected)` below the chip fieldset as subordinate footer metadata. The fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `size-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-292](../_archive/debt/debt-292-filter-section-disclosure-indicator.md), and [DEBT-296](../_archive/debt/debt-296-filter-section-summary-hierarchy-swap.md).
+**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; right-side metadata is conditional: when nothing is selected it shows `All included by default`, and when selections exist it shows `{N} selected`. Expanded sections render `({N} selected)` below the chip fieldset as subordinate footer metadata. The fill is supplementary rather than a required boundary. The `<summary>` row has no hover tint: an earlier `hover:bg-foreground/[0.03]` was imperceptible and was removed, so the chevron and pointer cursor carry the disclosure affordance. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `size-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See DEBT-290, DEBT-292, and DEBT-296.
 
 **Dashboard variant (borderless tonal fill):**
 ```
@@ -602,6 +601,7 @@ Active exam sessions defer correctness until `Review & Submit`, so the footer is
 | First question | filled `Next` in `data-testid="exam-action-primary-group"` | none | No empty Previous placeholder; do not render Mark for review in the footer. |
 | Middle question | outline `Previous` + filled `Next` in `data-testid="exam-action-primary-group"` | none | Draft selections do not change footer labels. |
 | Final question | outline `Previous` + filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | Preserve the `aria-describedby` text: `Opens review and submit.` |
+| Only question (a one-question exam) | filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | No Previous; the same `aria-describedby` text. |
 
 All active exam footer buttons live in `data-testid="exam-action-primary-group"`; there is no footer right group. `data-testid="exam-action-cta-group"` and `data-testid="exam-action-secondary-group"` are intentionally absent after DEBT-380. Mark for review continues to live in the question header rail.
 
@@ -817,7 +817,7 @@ mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
 
 **Content:** Standard markdown paragraph content inside the callout.
 
-**Source:** `components/markdown/Markdown.tsx`
+**Source:** `components/markdown/markdown.tsx`
 
 ### F-8: Feedback Section Chips
 

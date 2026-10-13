@@ -1,6 +1,5 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-09-24
 
 **Retry policy reverified:** 2026-09-20; the remaining sections were not fully re-audited on this date.
 
@@ -359,71 +358,7 @@ agent-browser close
 
 ### Authenticated Exploration
 
-By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
-
-See [browser-automation.md](./browser-automation.md) for a focused quick reference and multiple auth options.
-
-1) Create a temporary script that signs in via Clerk and saves `storageState`:
-
-```ts
-// scripts/tmp-create-agent-browser-state.ts (do not commit)
-import { clerkSetup, clerk } from '@clerk/testing/playwright';
-import { config } from 'dotenv';
-import { chromium } from '@playwright/test';
-
-async function main() {
-  config({ path: '.env.local', quiet: true });
-  config({ path: '.env', quiet: true });
-
-  const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
-  const username = process.env.E2E_CLERK_USER_USERNAME;
-  const password = process.env.E2E_CLERK_USER_PASSWORD;
-
-  if (!username || !password) throw new Error('Missing Clerk E2E credentials');
-
-  await clerkSetup();
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ baseURL });
-  const page = await context.newPage();
-
-  await page.goto('/sign-in');
-  await clerk.signIn({
-    page,
-    signInParams: { strategy: 'password', identifier: username, password },
-  });
-
-  await page.goto('/app/dashboard');
-  await context.storageState({ path: '/tmp/agent-browser-state.json' });
-  await browser.close();
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
-```
-
-2) Run it:
-
-```bash
-pnpm tsx scripts/tmp-create-agent-browser-state.ts
-```
-
-3) Use agent-browser with the saved state:
-
-```bash
-agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/app/dashboard
-```
-
-If you prefer to log in “by hand”, you can also use `--profile` to persist cookies across sessions:
-
-```bash
-agent-browser --profile /tmp/agent-browser-profile open http://localhost:3000/sign-in
-```
-
-**Command reference:** `.agents/skills/agent-browser/SKILL.md`
-
----
+Use a persistent `agent-browser` profile, signed in once by a person, as [browser automation](./browser-automation.md) describes. Do not use a saved Playwright `storageState` file with `agent-browser --state`: it fails silently, even for sites without Clerk.
 
 ## Webapp-Testing Skill
 

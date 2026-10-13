@@ -1,6 +1,5 @@
 # UI QA Procedures
 
-**Last Updated:** 2026-08-14
 
 Scripted, repeatable test procedures that exercise the system **at the UI** — the third leg of the test triad this repo is adopting (see `docs/adr/adr-019-test-quality-practices.md`):
 
@@ -14,14 +13,14 @@ A QA procedure is a Markdown script (`docs/guides/qa/<subject>.md`) that a human
 
 ## Why this exists (and what Playwright E2E does not cover)
 
-The Playwright suite (`tests/e2e/`, 17 specs) is deterministic regression coverage for critical journeys. QA procedures cover what it structurally leaves out:
+The Playwright suite (`tests/e2e/`) is deterministic regression coverage for critical journeys. QA procedures cover what it structurally leaves out:
 
 - **Judgment-bearing checks** — "does this layout look broken?", copy tone, visual hierarchy, dark-mode token drift. Assertions can't encode taste; the design docs in `docs/design-system/` + a pair of eyes (or a vision-capable agent pass over screenshots) can.
 - **Surfaces without route-level UI automation.** The 2026-08-14 audit found these gaps: rendered Clerk `/sign-in` and `/sign-up` forms (E2E proves the pricing-to-sign-up handoff but signs in programmatically via `@clerk/testing`); real-browser `/privacy`–`/terms` routes (rich unit-render tests and E2E HTTP checks exist); forced route-level `error.tsx`/`not-found.tsx`/`loading.tsx` states (the components have unit-render coverage — the quick-practice error boundary included, via `app/(app)/app/practice/quick/error.test.tsx`; only the quick-practice loading file lacks a direct render test); billing-portal round-trip; paid (card) checkout + real-browser `?checkout=cancel|error|rate_limited` banners; the route-level entitlement redirect gate (`/app/*` → `/pricing?reason=…`, unit-covered); a real-browser `PastDueBanner` state (unit-covered); account deletion via the rendered Clerk `<UserButton>`; nondefault practice-starter filters at the route level (browser-component-covered); the quick-practice status switch at the route level (browser-component-covered); history tab, non-Source filters, and pagination at the route level (the Source filter and session disclosure are browser-component-covered); feedback rating + report dialog end-to-end; exam-timer expiry at the route level (browser hook/page-model and integration coverage exist); and an **app-wide mobile sweep** (one 375×667 practice E2E and one 375×667 browser-component case exist, while the Playwright project remains Desktop Chrome).
 - **Deployed-target verification.** Playwright boots its own local server (`reuseExistingServer: false`); it does not point at Vercel previews or production. QA procedures do.
 - **Pre-automation staging.** A flow becomes a procedure first; once its steps are stable and mechanizable, it is *promoted* to a Playwright spec and the procedure records the handoff (see Lifecycle).
 
-Once the practice procedure is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. The billing procedure supplies the draft procedure that can give `docs/architecture/environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
+The practice procedure has absorbed Flows A–D of the former stabilization checklist's manual "Core Flow Verification" scripts, and the checklist is gone. The billing procedure supplies the draft procedure that can give `docs/architecture/environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
 
 ---
 

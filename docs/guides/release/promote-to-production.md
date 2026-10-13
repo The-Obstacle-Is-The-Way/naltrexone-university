@@ -1,20 +1,12 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](../../architecture/environments.md)
-> **Last Updated:** 2026-10-05 (a promotion with no production deployment; the 2026-09-19 production release gate and other procedures retain their existing scope)
 
 ---
 
 ## 1. Migration Contract: Build-Command Migration
 
-[BUG-241](../../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
-
-```bash
-pnpm exec tsx scripts/verify-migration-ledger.ts pre \
-  && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
-  && pnpm exec tsx scripts/verify-migration-ledger.ts post \
-  && pnpm build
-```
+BUG-241 is fixed. The Vercel Build Command (`buildCommand` in `vercel.json`) checks the Clerk JWT key, then runs the ledger pre-check, the managed migration and the post-check, and then `pnpm build`. [The migrations guide](../database/migrations.md) writes out the exact command.
 
 The pre-check rejects applied-row content drift and ledger-only rows while
 allowing expected pending journal entries. Vercel then applies checked-in
@@ -87,7 +79,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 2. After merge to main (in parallel)
    └─ GitHub Actions runs test again on the main merge commit, including E2E
    └─ Vercel creates a production deployment of that same commit
-   └─ buildCommand (vercel.json): pre-check → managed migrate → exact post-check → build
+   └─ buildCommand (vercel.json): Clerk JWT key check → pre-check → managed migrate → post-check → build
    └─ Deployment Check: GitHub test must pass before production domains move
    └─ Preview builds remain independent; the release check targets production only
 
@@ -102,7 +94,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 
 The owner chose Vercel's built-in [GitHub Deployment Checks](https://vercel.com/docs/deployment-checks#github-checks), not a custom deployment runner. The feature is [available to GitHub-connected projects](https://vercel.com/changelog/block-vercel-deployment-promotions-with-github-actions); the 2026-09-19 read-only check confirmed this project's Hobby plan, GitHub link, `main` production branch, and enabled automatic production aliasing. This setting is operator-managed in Vercel, not encoded by `ci.yml`.
 
-Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. The `test` job is unique across the current four workflows; changing its name or duplicating it requires revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. Preview deployments are not blocked by this production-only check.
+Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. No other workflow has a job named `test`; renaming it, or adding another, means revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. Preview deployments are not blocked by this production-only check.
 
 **Configuration receipt (2026-09-19 21:28:31Z):** the project's Checks V2 API returned one GitHub-source check named `test`, with `externalCheckName=test`, `targets=[production]`, `requires=build-ready`, `blocks=deployment-alias`, and `timeout=3600`. Automatic production aliasing remained enabled. Configuration alone is not release evidence; the first enforcement receipt follows.
 
@@ -233,7 +225,7 @@ Before merging to `main` (production deploy):
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
-- [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](../../architecture/environments.md#missing-database-migration-causes-silent-write-failures))
+- [ ] If schema changed: confirm the Vercel build ran the Build Command's migration step before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](../../architecture/environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
 
 ---
@@ -300,6 +292,6 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
 ## Related
 
 - [Deployment Environments](../../architecture/environments.md) — Env var scoping, Clerk/Stripe/Neon config
-- [License Baseline](../../dev/license-baseline.md) — Production dependency license distribution and review-worthy exceptions
+- [Supply-chain policy: licences](../../policies/supply-chain.md#licences) — how dependency licences are reviewed
 - [Content Pipeline](../../architecture/content-pipeline.md) — MDX → seed → DB flow
 - [SPEC-033 §14](../../_archive/specs/spec-033-tag-taxonomy-migration.md) — Tag taxonomy DB sync procedure

@@ -1,8 +1,6 @@
-# Vendor Documentation
+# Integrations
 
-**Purpose:** Single source of truth for all external dependencies — API versions, breaking changes we've hit, fields we depend on, and migration paths.
-
-**Last Updated:** 2026-10-13
+What this application depends on from its vendors: the API versions it runs, the fields it reads, the breaking changes it has hit, and what to check on an upgrade. Package versions are not copied here; `package.json` and the lockfile own them.
 
 ---
 
@@ -11,32 +9,23 @@
 BUG-045 taught us a painful lesson: Stripe deprecated `subscription.current_period_end` in API version `2025-03-31`, but we didn't know until checkout broke in production. This documentation prevents that from happening again.
 
 **What we track:**
-1. **Pinned API versions** — What we're running
+1. **API versions** — what we run, and where each is pinned
 2. **Fields we depend on** — So we catch deprecations early
 3. **Breaking changes we've hit** — Lessons learned
 4. **Migration checklists** — When we upgrade
 
 ---
 
-## Version Matrix
+## Where Versions Live
 
-| Vendor | Package | Our Version | API Version | Last Verified |
-|--------|---------|-------------|-------------|---------------|
-| Stripe | `stripe` | ^23.0.0 | `2026-09-30.endive` | 2026-10-13 |
-| Clerk | `@clerk/nextjs` | ^7.4.1 | `2024-10-01` | 2026-03-28 |
-| Postgres | `postgres` | ^3.4.8 | N/A (driver) | 2026-03-17 |
-| Drizzle | `drizzle-orm` | ^0.45.2 | N/A | 2026-03-17 |
+| Vendor | Package version | API version |
+|--------|-----------------|-------------|
+| Stripe | `stripe` in `package.json` | Pinned in `lib/stripe-api-version.ts` and read by `lib/stripe.ts` |
+| Clerk | `@clerk/nextjs` in `package.json` | Chosen by the SDK (`SUPPORTED_BAPI_VERSION` in `@clerk/backend`), not pinned in code ([clerk.md](./clerk.md#api-version)) |
+| Postgres | `postgres` in `package.json` | None (driver) |
+| Drizzle | `drizzle-orm` and `drizzle-kit` in `package.json` | None |
 
-Package versions above were reconciled against `package.json` on 2026-09-16,
-and Stripe's on 2026-10-13.
-Stripe's API version is pinned in `lib/stripe-api-version.ts` and read by
-`lib/stripe.ts`. That pin covers outbound requests only: each Stripe webhook
-endpoint has its own version. The test endpoint moved to `2026-09-30.endive` on
-2026-10-13. The live endpoint stays at `2026-05-27.dahlia` until the promotion
-that ships the Endive pin swaps it
-([census, decision and migration](./stripe.md#webhook-endpoint-api-versions)).
-Clerk's API version remains a tracked vendor setting rather than a local code
-constant.
+Stripe's pin covers outbound requests only: each Stripe webhook endpoint carries its own version, recorded with its census, decision and migration in [the Stripe document](./stripe.md#webhook-endpoint-api-versions).
 
 ---
 
@@ -52,11 +41,11 @@ constant.
 
 ## Upgrade Checklist Template
 
-When upgrading any vendor:
+[Updating dependencies](../../guides/dependencies/updating-dependencies.md) is the procedure for every upgrade. For a vendor SDK or API version, also:
 
 1. **Read changelog** — Check for breaking changes affecting fields we use
 2. **Search codebase** — `grep -r "fieldName"` for deprecated fields
-3. **Update vendor doc** — Record new version, any migrations needed
+3. **Update vendor doc** — Record the new API version, and any migration it needed
 4. **Test locally** — Run full test suite
 5. **Test in preview** — Deploy to Vercel preview, test critical paths
 6. **Monitor production** — Watch logs for 24h after deploy

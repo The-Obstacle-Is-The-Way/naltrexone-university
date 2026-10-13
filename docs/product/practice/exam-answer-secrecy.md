@@ -1,8 +1,7 @@
 # Practice Engine: Exam Answer Secrecy Policy
 
-> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
+> **Parent:** [Practice](./README.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Last Updated:** 2026-04-27
 > **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate; BUG-235 aligns History latest-visible-attempt fallback semantics; BUG-239 aligns the remaining implicit latest-attempt readers; DEBT-367 aligns `FakeAttemptRepository` read fidelity with the production visibility predicate. This document remains the regression contract.
 
 ---
@@ -19,7 +18,7 @@ This is a cross-layer invariant, not a UI preference.
 
 The product contract is explicit: exam mode hides correctness and explanations until session end.
 
-- Master spec: [master_spec.md](../../specs/master_spec.md)
+- Product specification: [specification.md](../specification.md)
 - Active answering must remain neutral until the exam is ended.
 
 Recent bugs showed this invariant can drift when enforcement is duplicated across routes/use-cases/projections.
@@ -62,7 +61,7 @@ All previously open drift bugs have been resolved and archived:
 
 | Layer | Responsibility |
 |------|----------------|
-| **Application use cases** | Gate correctness payloads for active exams across `GetPreviousAttempt`, `GetPracticeSessionReview`, and `GetNextQuestion`; reject active-exam `SubmitAnswer` before attempt/session-answer writes |
+| **Application use cases** | Gate correctness payloads for active exams across `GetQuestionForView`, `GetPreviousAttempt`, `GetPracticeSessionReview`, and `GetNextQuestion`; reject active-exam `SubmitAnswer` before attempt/session-answer writes |
 | **Repository projections** | Exclude or redact active-exam correctness fields in user-facing aggregates (`GetUserStats`, attempted-question history feeds) |
 | **Controllers** | Preserve strict input contracts; do not allow alternate identifier paths to bypass application gates |
 | **Frontend rendering** | Never infer correctness from partial data; render only neutral state in active exam contexts |
@@ -83,13 +82,13 @@ function isActiveExamSession(session: {
 }
 ```
 
-Use this guard consistently at all answer-key disclosure points. Do not duplicate ad-hoc condition variants per feature.
+This pseudocode explains the policy; do not paste it into every feature. Application use cases enforce the rule at their own reveal boundary, while repository projections use `getActiveExamVisibilityCondition()` from `src/adapters/repositories/shared/active-exam-visibility.ts`. `GetQuestionForView` checks exact review provenance before returning an owned revision. Preserve these layer boundaries and use the shared repository predicate for SQL reads.
 
 ---
 
 ## 6. Current Enforcement Status
 
-These code paths are current as of 2026-04-27:
+These code paths enforce it:
 
 - `GetPreviousAttempt` returns `null` for active-exam attempts and only reveals `session_unanswered` answers after the exam session has ended.
 - `GetPracticeSessionReview` redacts per-question `isCorrect` while an exam session is still active.
@@ -136,10 +135,9 @@ This file is the canonical registry for exam-answer secrecy.
 
 When behavior changes, update this file first, then update dependent docs:
 
-- `docs/practice-engine/security-model.md`
+- `docs/architecture/security.md`
 - `docs/product/practice/modes.md`
 - `docs/product/practice/retries.md`
-- `docs/practice-engine/current-state.md`
-- `docs/practice-engine/spec-coverage-map.md`
+- `docs/architecture/practice-engine.md`
 - Frontend guardrails (`docs/design-system/layout.md`, `docs/design-system/standards.md`)
-- Validation checklists (`docs/dev/stabilization-checklist.md`)
+- Validation procedure (`docs/guides/qa/practice-core-flows.md`)

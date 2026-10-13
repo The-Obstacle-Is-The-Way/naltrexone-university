@@ -1,6 +1,5 @@
 # Frontend Design Principles
 
-**Last Updated:** 2026-03-17
 
 Canonical reference for layout composition patterns and UX design rules. While [standards.md](./standards.md) covers atoms (tokens, components, accessibility), this document covers how those atoms compose into consistent page layouts.
 
@@ -51,29 +50,13 @@ Question-related pages use two non-overlapping navigation zones:
 
 ## 2. Action Bar Composition
 
-Action bars are rendered inline per context (not via a shared component). The button sets differ enough that abstraction would add complexity without benefit. There is no single universal slot order across every question surface; instead, each context keeps related actions adjacent and preserves stable left-to-right sequencing within that family.
+Action bars are rendered inline per context, not through a shared component: the button sets differ enough that one abstraction would add complexity without benefit. Each context keeps related actions together, in a stable left-to-right order.
 
-```
-[← Previous] [Submit / Try Again / Finish exam] [Bookmark / Mark for review] [Next →] [Back link]
- sequential    primary learning / session action   secondary action         sequential   navigation
-```
+This page used to list each context's buttons, and the list went stale: it showed a pre-feedback **Next**, **Mark for review** in the exam footer, and a "Finish exam" label, none of which the app has. The buttons are specified elsewhere:
 
-### By Context
-
-| Context | Bottom Action Bar |
-|---------|-------------------|
-| Practice — before submit | [← Previous] [Submit] [Next →] [Bookmark] |
-| Practice — after submit (Tutor) | [← Previous] [Next →] [Bookmark] |
-| Practice — exam before submit | [← Previous] [Next →] [Mark for review] |
-| Practice — exam after submit | [← Previous] [Next →] [Mark for review] |
-| Quick Practice | [Submit] [Next →] [Bookmark] |
-| Quick Practice — after submit | [Next →] [Bookmark] |
-| Post-Exam Review | [← Previous] [Next → / Finish review] [Bookmark] |
-| History Session Review (answered) | [← Previous] [Try Again / Practice Again] [Bookmark] [Next →] [Back to ...] |
-| History Session Review (unanswered reveal) | [← Previous] [Try Again] [Bookmark] [Next →] [Back to ...] |
-| Standalone Question Review (dashboard / bookmarks, unanswered) | [Submit] [Bookmark] |
-| Standalone Question Review (answered) | [Try Again / Practice Again] [Bookmark] [Back to ...] |
-| Exam Review Stage | [Submit Exam] |
+- **Each mode's action bar and its states:** [Interaction contracts](../product/practice/interaction-contracts.md), tutor and exam.
+- **The exam action bar, which holds only navigation, and the header rail, where Mark for review lives** (active exams show no bookmark): [Pattern registry, Part 5](./pattern-registry.md#part-5-button-conventions).
+- **Every context's action bar, and the file that renders it:** [Question rendering §3.4](../architecture/question-rendering.md#34-action-bars-document-flow-context-specific-buttons).
 
 **Rules:**
 - Previous only appears when there's a session-ordered question list
@@ -141,5 +124,5 @@ When building or modifying a question-viewing context, verify:
 - [Pattern Registry](./pattern-registry.md) — Every visual pattern with canonical classes, token scales, and decision trees
 - [Question Rendering Architecture](../architecture/question-rendering.md) — All 6 viewing contexts, component inventory, state flows
 - [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) — Canonical correctness/explanation exposure timing rules
-- [Practice Engine Frontend Layer](../practice-engine/frontend-layer.md) — Routes, hook architecture, data flow
+- [Practice Engine Frontend Layer](../architecture/practice-engine.md#the-frontend-layer) — Routes, hook architecture, data flow
 - [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Spec that established the navigation zone model (Implemented)

@@ -3,8 +3,7 @@
 > **Scope:** How `topic`, `substance`, `treatment`, and `diagnosis` tags flow
 > from draft authoring through import, seed, PostgreSQL, and the Practice /
 > History UI
-> **Last Verified:** 2026-03-17
-> **Runtime SSOT:** `lib/content/draftTaxonomy.ts`, `lib/content/schemas.ts`,
+> **Runtime SSOT:** `lib/content/draft-taxonomy.ts`, `lib/content/schemas.ts`,
 > `scripts/draft-question-import.ts`, `scripts/import-draft-questions.ts`,
 > `scripts/seed/question-parser.ts`
 
@@ -57,7 +56,7 @@ Notes:
 
 ## 3) Canonical Taxonomy (SSOT)
 
-Source: `lib/content/draftTaxonomy.ts`
+Source: `lib/content/draft-taxonomy.ts`
 
 ### Topic (13)
 
@@ -89,12 +88,15 @@ Source: `lib/content/draftTaxonomy.ts`
   `splitDraftQuestionsFile()` in `scripts/draft-question-import.ts`.
 - Draft frontmatter provides `substances[]`, `topics[]`, optional
   `treatments[]`, optional `diagnoses[]`, plus `qid`, `source`, `difficulty`,
-  `type`, and `answer`.
+  `type`, and `choices[]` (label, text, `correct`, and an explanation on each
+  wrong choice).
 - Validation at draft-parse time is strict:
   - canonical topic / substance / treatment slugs only
   - diagnosis slugs must be kebab-case
-  - non-empty `qid` and `source`
+  - non-empty `qid`; `source` a kebab-case identifier
   - `topics` and `substances` must be present and non-empty
+- Conversion then requires more: `qid` becomes the MDX `slug`, which
+  `QuestionFrontmatterSchema` requires to be kebab-case.
 
 ### Step B — Draft import (`pnpm content:import:drafts`)
 
@@ -198,11 +200,10 @@ History question filters:
 
 - Use [content-taxonomy.md](../product/content-taxonomy.md) for the
   canonical slug and display-name tables.
-- Use [question-format-spec.md](./question-format-spec.md) for authoring and
+- Use the importer's schema (`scripts/draft-question-import.ts`, `lib/content/schemas.ts`) for authoring and
   parser rules.
-- Use the latest dated census report for coverage analysis instead of relying on
-  migration-era assumptions:
-  [tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
+- Measure coverage from the database rather than relying on migration-era
+  assumptions.
 - Do not derive taxonomy from directory structure or source-group names.
 - Do not surface diagnosis filters without an explicit product decision.
 
@@ -211,11 +212,9 @@ History question filters:
 ## 6) Related Files
 
 - [content-taxonomy.md](../product/content-taxonomy.md)
-- [question-format-spec.md](./question-format-spec.md)
-- [tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
 - `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`
 - `docs/_archive/specs/spec-033-tag-taxonomy-migration.md`
-- `lib/content/draftTaxonomy.ts`
+- `lib/content/draft-taxonomy.ts`
 - `lib/content/schemas.ts`
 - `scripts/draft-question-import.ts`
 - `scripts/import-draft-questions.ts`

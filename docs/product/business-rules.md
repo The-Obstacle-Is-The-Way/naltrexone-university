@@ -143,6 +143,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `selects only active, renewing annual subscriptions in the supplied window`
+- `tests/integration/send-renewal-notices-job.integration.test.ts`: `lists active, renewing monthly subscriptions in id order, after a cursor`
 - `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: `a paid subscriber cancels without obstruction; renewal stops and access continues to the period end`
 
 ### R12. A repeated or out-of-order billing event never applies twice and never moves a subscription back to an older state.

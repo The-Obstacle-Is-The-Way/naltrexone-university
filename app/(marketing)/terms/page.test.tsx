@@ -24,7 +24,10 @@ beforeAll(async () => {
 });
 
 function publicTermsMarkdown(): string {
-  const source = readFileSync('docs/legal/terms-of-service.md', 'utf8');
+  const source = readFileSync(
+    'docs/policies/legal/terms-of-service.md',
+    'utf8',
+  );
   const publicSection = source
     .split('## Terms of Service\n\n')[1]
     ?.split('\n---\n\n## Decisions on record')[0];
@@ -42,7 +45,10 @@ function publicTermsMarkdown(): string {
 
 describe('TermsPage', () => {
   it('records durable publication evidence without a stale deployment-state claim', () => {
-    const source = readFileSync('docs/legal/terms-of-service.md', 'utf8');
+    const source = readFileSync(
+      'docs/policies/legal/terms-of-service.md',
+      'utf8',
+    );
 
     expect(source).toContain(
       '**STATUS: PUBLICATION COPY; revision dated 2026-08-09; production verified 2026-08-09.**',

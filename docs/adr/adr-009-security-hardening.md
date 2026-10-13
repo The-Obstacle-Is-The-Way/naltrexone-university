@@ -29,7 +29,7 @@ We implement defense-in-depth controls aligned with OWASP principles.
 ### Authorization and Entitlement
 
 - All “subscribed” features must enforce entitlement server-side.
-- Entitlement source of truth: `stripe_subscriptions` state (see `docs/specs/master_spec.md` Section 4.2).
+- Entitlement source of truth: `stripe_subscriptions` state (see `docs/product/specification.md` Section 4.2).
 
 ### Input Validation
 
@@ -40,7 +40,7 @@ We implement defense-in-depth controls aligned with OWASP principles.
 
 - Stripe webhooks MUST verify signatures via `stripe.webhooks.constructEvent(...)`.
 - Webhook route MUST run in Node runtime (not Edge).
-- Webhook processing MUST be idempotent via `stripe_events` (see master spec Section 4.4.2).
+- Webhook processing MUST be idempotent via `stripe_events` (see the product specification, `docs/product/specification.md`, Section 4.4.2).
 
 ### Data Access
 

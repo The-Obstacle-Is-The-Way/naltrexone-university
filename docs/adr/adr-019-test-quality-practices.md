@@ -76,6 +76,8 @@ Decided under the owner's 2026-10-03 delegation, after a review of what each par
 
 The UI QA register that Part 4 created at `docs/qa/` was retired by DEBT-518's records step (#1467). Its procedures now live in `docs/guides/qa/`, without QA-NNN IDs, and the method is `docs/guides/qa/method.md`. The text above keeps the register's original description. Part 4's decision is unchanged.
 
+Two paths in the text above moved with DEBT-518's layout step (2026-10-12): `docs/dev/stabilization-checklist.md` was absorbed into `docs/guides/qa/practice-core-flows.md`, and `docs/dev/index.md` was replaced by `docs/README.md`.
+
 ## References
 
 - Alberto Savoia & Bob Evans — the CRAP metric / crap4j

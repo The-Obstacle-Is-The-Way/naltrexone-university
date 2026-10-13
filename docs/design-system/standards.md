@@ -1,6 +1,5 @@
 # Frontend Standards
 
-**Last Updated:** 2026-08-08
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -141,6 +140,7 @@ Active practice action bars use mode-specific semantics:
 | Exam active session, first question | filled `Next` in `exam-action-primary-group` | none | No empty Previous placeholder; Mark for review lives in the header rail. |
 | Exam active session, middle question | `Previous` + filled `Next` in `exam-action-primary-group` | none | Draft selections do not change footer labels. |
 | Exam active session, final question | `Previous` + filled `Review & Submit` in `exam-action-primary-group` | none | Preserve the hidden `Opens review and submit.` description for assistive tech. |
+| Exam active session, only question (a one-question exam) | filled `Review & Submit` in `exam-action-primary-group` | none | No Previous; the same hidden description. |
 
 In tutor mode and Quick Practice, pointer activation on a choice is the primary pre-feedback action and commits immediately. Keyboard/AT radio selection is select-only; the action bar renders a filled `Submit` in the same primary cluster only while a selected-uncommitted choice exists. The footer otherwise carries only backward navigation before feedback and sequential/terminal navigation after feedback.
 
@@ -189,7 +189,7 @@ Use the shared `components/ui/input.tsx` for text inputs. Raw `<input>` is accep
 ### Unused Components (0 current consumers)
 
 Current repo snapshot has one `components/ui/` primitive with 0 production imports:
-- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in `master_spec.md` SLICE-0 checklist. Needed for future progressive-disclosure filters and app-shell navigation patterns.
+- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in the SLICE-0 checklist of `docs/product/specification.md`. Needed for future progressive-disclosure filters and app-shell navigation patterns.
 
 `avatar.tsx`, `radio-group.tsx`, and `label.tsx` are no longer present in `components/ui/`.
 
@@ -902,7 +902,6 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 |----|---------|---------|
 | — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/design-system/pattern-registry.md` |
 | — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
-| — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
 ---
 
@@ -942,4 +941,4 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 | `question/question-card.tsx` | QuestionCard | Question stem + choices display |
 | `question/choice-button.tsx` | ChoiceButton | Radio-style answer choice |
 | `question/feedback.tsx` | Feedback | Correct/incorrect answer feedback |
-| `markdown/Markdown.tsx` | Markdown | Markdown renderer |
+| `markdown/markdown.tsx` | Markdown | Markdown renderer |

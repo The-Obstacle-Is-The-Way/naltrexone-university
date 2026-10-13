@@ -186,10 +186,35 @@ describe('records folder and ledger', () => {
     },
   );
 
-  it('allows living documents in an old register folder', () => {
+  it('rejects the old specification path after the layout move', () => {
     expect(
       audit({ 'docs/specs/master_spec.md': '# Living spec' })
         .retiredRegisterFiles,
+    ).toEqual(['docs/specs/master_spec.md']);
+  });
+
+  it.each([
+    'dev',
+    'frontend',
+    'practice-engine',
+    'content',
+    'tooling',
+    'vendor-docs',
+    'legal',
+    'security',
+  ])('rejects a concurrent guide added to retired docs/%s', (folder) => {
+    const file = `docs/${folder}/new-concurrent-guide.md`;
+    expect(audit({ [file]: '# New guide' }).retiredRegisterFiles).toEqual([
+      file,
+    ]);
+  });
+
+  it('reports only Markdown left in a retired or register folder', () => {
+    expect(
+      audit({
+        'docs/dev/script.ts': 'export {};',
+        'docs/bugs/notes.txt': 'notes',
+      }).retiredRegisterFiles,
     ).toEqual([]);
   });
 
@@ -202,8 +227,8 @@ describe('records folder and ledger', () => {
         'See [DEBT-001](./debt-001-example.md).',
       'docs/dev/guide.md':
         'See [the record](../records/debt-001-example.md#why).',
-      'docs/legal/privacy-policy.md':
-        'Evidence: [DEBT-001](../records/debt-001-example.md).',
+      'docs/policies/legal/privacy-policy.md':
+        'Evidence: [DEBT-001](../../records/debt-001-example.md).',
       'docs/_archive/debt/debt-000-old.md':
         '[DEBT-001](../../records/debt-001-example.md)',
     };
@@ -214,7 +239,7 @@ describe('records folder and ledger', () => {
     ).toEqual([
       'docs/records/bug-002-example.md:./debt-001-example.md',
       'docs/dev/guide.md:../records/debt-001-example.md#why',
-      'docs/legal/privacy-policy.md:../records/debt-001-example.md',
+      'docs/policies/legal/privacy-policy.md:../../records/debt-001-example.md',
     ]);
     expect(audit(files).recordLinks).toHaveLength(3);
   });
@@ -527,7 +552,7 @@ describe('repository records', () => {
     expect(tracked.filter((file) => !files.has(file))).toEqual([]);
   });
 
-  it('keeps no record or index in a register folder that docs/records replaced', () => {
+  it('keeps no Markdown in a register folder docs/records replaced, or in a folder the layout retired', () => {
     expect(result.retiredRegisterFiles).toEqual([]);
   });
 

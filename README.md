@@ -7,7 +7,7 @@ Next.js 16 (App Router), Clerk, Stripe, Postgres on Neon through Drizzle ORM, Ta
 ## Start Here
 
 - **Contributing, as a person or an agent:** [`AGENTS.md`](AGENTS.md) holds the rules, the quality gate and the pull-request process.
-- **Documentation:** [ADR-023](docs/adr/adr-023-documentation-organisation.md) explains where each kind of document lives. Open work is in [`docs/records/`](docs/records/README.md), and decisions are in [`docs/adr/`](docs/adr/index.md).
+- **Documentation:** [ADR-023](docs/adr/adr-023-documentation-organisation.md) explains where each kind of document lives. Open work is in [`docs/records/`](docs/records/README.md), and decisions are in [`docs/adr/`](docs/adr/README.md).
 - **Security issues:** report them as [`/.well-known/security.txt`](public/.well-known/security.txt) describes, not in a public issue.
 
 ## Local Setup

@@ -19,7 +19,7 @@ import {
 /**
  * Dashboard "last 7 days" accuracy window.
  *
- * SSOT: docs/specs/master_spec.md § 4.5.7 (`getUserStats`).
+ * SSOT: docs/product/specification.md § 4.5.7 (`getUserStats`).
  */
 const STATS_WINDOW_DAYS = 7;
 

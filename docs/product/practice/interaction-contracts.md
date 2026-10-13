@@ -1,10 +1,9 @@
 # Practice Engine: Interaction Contracts
 
-> **Parent:** [Practice Engine Index](../../practice-engine/index.md)
+> **Parent:** [Practice](./README.md)
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
 > **Related:** [Practice Modes](./modes.md) (lifecycle/data), [BS-055](../../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam decisions), [BS-064](../../_archive/brainstorming/bs-064-radio-choice-modality-split.md) (Tutor/Quick choice modality decision)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-07-07
 
 ---
 
@@ -126,22 +125,19 @@ Question displayed
 **Any non-last question:**
 
 ```text
-[ Previous ]  [ Next ]  ...  [ Mark for review ]
-<---- primary group ---->     <- secondary group ->
+[ Previous ]  [ Next ]
 ```
 
 **Last question:**
 
 ```text
-[ Previous ]  [ Review & Submit ]  ...  [ Mark for review ]
-<------- primary group ------->     <- secondary group ->
+[ Previous ]  [ Review & Submit ]
 ```
 
 **Contract rules:**
-- `...` denotes the visual separation between the primary navigation group and the secondary group. It does not represent hidden controls or an intermediate slot.
 - Previous occupies position 1 inside the primary navigation group when available. On Q1, that group contains only the forward control; there is no spacer.
 - Position 2 inside the primary navigation group is the sequential progression control: `Next` on non-terminal questions. On the last question, the label changes to `Review & Submit` and clicking it enters the review stage.
-- `Mark for review` lives in a trailing secondary group rather than inside the primary navigation cluster. On `sm+`, that group is pushed away from the navigation controls to mirror the post-exam review footer.
+- The footer holds navigation only. `Mark for review` lives in the question header rail (`data-testid="question-header-actions"`), beside the exam timer, not in the footer.
 - There is no persistent header-level exam-exit CTA in the shipped exam flow.
 - Next is always enabled. No selection = skip (navigate without saving). Selection exists = save draft and advance.
 - **No Submit button in the action bar.** The only submit is `Submit exam` inside the review stage.
@@ -163,20 +159,14 @@ The navigation boundary is the minimum viable persistence point. Autosave and vi
 
 #### Draft storage
 
-Drafts should continue to live in session-scoped state on `practice_sessions`, but the current `questionStates` shape is **not already a draft model**.
+Drafts live in each question's `practice_session_question_states` row, in fields separate from the finalized answer:
+- `draftSelectedChoiceId` (`uuid`, nullable)
+- `draftSavedAt` (timestamp, nullable)
+- `draftCumulativeMs` (integer, default 0)
 
-Today, `questionStates.latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` are written only by `recordQuestionAnswer(...)`. In current source, they represent **recorded post-submit answer state**, not mutable draft state.
+`latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` stay reserved for finalized answer state, written only when an answer is recorded: by `submitAnswer` in tutor mode and by finalization in exam mode. This was the design choice when exam drafts were added: adding explicit draft fields instead of redefining `latest*` kept summary and statistics semantics intact and avoided one field carrying two lifecycle meanings.
 
-**Recommendation:** keep `questionStates` as the container, but add explicit exam-draft fields instead of silently redefining `latest*`.
-
-Suggested shape (names can change in the implementation spec):
-- `draftSelectedChoiceId: string | null`
-- `draftSavedAt: string | null`
-- `draftCumulativeMs: number`
-
-Keep `latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` reserved for finalized answer state. That preserves current summary/stat semantics and avoids overloading one field with two different lifecycle meanings.
-
-**Reader implication:** current readers such as `GetNextQuestion`, `GetPracticeSessionReview`, and `GetIncompletePracticeSession` derive answered/unanswered state from `latestSelectedChoiceId`. Under the draft model, active exam-session reads must become draft-aware.
+**Reader implication:** readers such as `GetNextQuestion`, `GetPracticeSessionReview`, and `GetIncompletePracticeSession` derive answered/unanswered state through `getEffectiveSelectedChoiceId` (`src/application/shared/practice-session-state.ts`). For an active exam it returns `draftSelectedChoiceId`, falling back to `latestSelectedChoiceId`; for every other session it returns `latestSelectedChoiceId`.
 
 #### Finalization
 
@@ -185,27 +175,29 @@ When the user clicks `Submit exam` in the review stage:
 1. Save the current question's selection (if any unsaved draft exists).
 2. In a single database transaction:
    - For each question with a draft answer: run a finalization write path that creates exactly one `attempts` row and writes finalized `latestSelectedChoiceId`, `latestIsCorrect`, and `latestAnsweredAt` exactly once.
-   - Call `EndPracticeSession` to compute totals and transition session to `completed`.
+   - End the session, recording each item's fair chance, and score it (`summarizePracticeSession`) inside the same transaction, so a failed read rolls finalization back instead of failing after it commits.
 3. Return results. Feedback and scores become visible.
+
+The implementation is `src/application/use-cases/finalize-exam-answers.ts`.
 
 This preserves the existing `attempts` table constraint — each answered question gets exactly one final answer write, but it happens at exam submission rather than during the question loop.
 
 #### Per-question time accumulation
 
-Current model: `timeSpentSeconds = now - questionLoadedAt` (single-shot, captured on submit).
+Tutor and Quick Practice answers record `timeSpentSeconds = now - questionLoadedAt`, captured once on submit.
 
-**Proposed model: Stopwatch accumulation.**
-
-Two fields per question in client state:
+Exam questions use **stopwatch accumulation**, since a question can be visited several times. Two values per question live in client state:
 - `cumulativeMs` (number) — total time spent across all visits
 - `enteredAt` (timestamp, nullable) — when the current visit started
 
 ```text
 On enter question:  enteredAt = Date.now()
 On leave question:  cumulativeMs += (Date.now() - enteredAt); enteredAt = null
-On draft save:      persist cumulativeMs alongside the draft choiceId
-On finalize:        timeSpentSeconds = Math.floor(cumulativeMs / 1000)
+On draft save:      persist cumulativeMs as draftCumulativeMs alongside the draft choice
+On finalize:        timeSpentSeconds = Math.floor(draftCumulativeMs / 1000)
 ```
+
+Saved drafts never move backwards: a save older than the stored `draftSavedAt`, or carrying a smaller `cumulativeMs` than the stored `draftCumulativeMs`, is ignored, and finalization clamps the value to the draft limit.
 
 This handles revisits naturally: visit Q1 for 30s → jump to Q3 → come back to Q1 for 20s → Q1 total = 50s.
 

@@ -1,6 +1,6 @@
 # ADR-005: Payment Boundary
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-13 (where the contracts live; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-002 (Domain Model)
@@ -81,7 +81,7 @@ To avoid drift, the canonical interfaces and implementation guidance live in:
 
 - `docs/_archive/specs/spec-004-application-ports.md` (`PaymentGateway`, repositories)
 - `docs/_archive/specs/spec-009-payment-gateway.md` (Stripe adapter rules)
-- `docs/specs/master_spec.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
+- `docs/product/specification.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
 
 This ADR records the boundary decision; specs above define the exact contracts and behaviors.
 
@@ -181,3 +181,14 @@ describe('StripePaymentGateway', () => {
 - Stripe API Documentation
 - Stripe Webhook Best Practices
 - Clean Architecture, Chapter 26: The Main Component
+
+## Amendment — 2026-10-13
+
+Where the contracts live, from DEBT-518's layout review. The decision is unchanged.
+
+SPEC-004 and SPEC-009, which the "Payment Ports and Implementations" section names as the source of truth, are closed and archived; they record the contracts as they were specified. The current contracts are the code:
+- the `PaymentGateway` port in `src/application/ports/gateways.ts`;
+- the Stripe adapter in `src/adapters/gateways/stripe/`;
+- for webhook idempotency through `stripe_events`, the product specification (`docs/product/specification.md`), Section 4.4.2.
+
+The text above keeps its original references.

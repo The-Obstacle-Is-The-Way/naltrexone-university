@@ -305,7 +305,7 @@ Pipeline behavior:
 
 ## Canonical Taxonomy
 
-**Code source of truth:** `lib/content/draftTaxonomy.ts`
+**Code source of truth:** `lib/content/draft-taxonomy.ts`
 
 ### Topic (13 values)
 

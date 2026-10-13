@@ -1,7 +1,7 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^23.0.0
-**API Version:** `2026-09-30.endive` (outbound SDK requests only; webhook endpoints carry their own versions, see [Webhook Endpoint API Versions](#webhook-endpoint-api-versions))
+**Package:** `stripe` (version: `package.json`)
+**API Version:** `2026-09-30.endive`, pinned in `lib/stripe-api-version.ts` (outbound SDK requests only; webhook endpoints carry their own versions, see [Webhook Endpoint API Versions](#webhook-endpoint-api-versions))
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
 **Changelog:** https://docs.stripe.com/changelog

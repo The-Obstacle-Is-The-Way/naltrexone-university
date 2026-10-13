@@ -24,7 +24,7 @@ beforeAll(async () => {
 });
 
 function publicPrivacyMarkdown(): string {
-  const source = readFileSync('docs/legal/privacy-policy.md', 'utf8');
+  const source = readFileSync('docs/policies/legal/privacy-policy.md', 'utf8');
   const publicSection = source
     .split('## Privacy Policy\n\n')[1]
     ?.split('\n---\n\n## Provenance and adversarial verification')[0];
@@ -42,7 +42,10 @@ function publicPrivacyMarkdown(): string {
 
 describe('PrivacyPage', () => {
   it('distinguishes the revised copy from the verified production baseline', () => {
-    const source = readFileSync('docs/legal/privacy-policy.md', 'utf8');
+    const source = readFileSync(
+      'docs/policies/legal/privacy-policy.md',
+      'utf8',
+    );
 
     expect(source).toContain(
       '**2026-09-16 revision: production-verified 2026-09-17.**',

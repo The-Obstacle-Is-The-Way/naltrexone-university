@@ -1,12 +1,12 @@
 # Clerk Vendor Documentation
 
-**Package:** `@clerk/nextjs` ^7.0.7
-**API Version:** `2024-10-01`
+**Package:** `@clerk/nextjs` (version: `package.json`)
+**API Version:** chosen by `@clerk/backend` (`SUPPORTED_BAPI_VERSION`); not pinned in code
 **Dashboard:** https://dashboard.clerk.com
 **Docs:** https://clerk.com/docs
 **Changelog:** https://clerk.com/changelog
 
-**Package version note:** Reconciled against `package.json` on 2026-03-28. Upgraded from v6 (Core 2) to v7 (Core 3) via `@clerk/upgrade` CLI.
+**Upgrade history:** upgraded from v6 (Core 2) to v7 (Core 3) with the `@clerk/upgrade` CLI on 2026-03-28.
 Clerk API-version tracking remains vendor-managed rather than pinned in local
 runtime code.
 
@@ -15,10 +15,10 @@ runtime code.
 ## API Version
 
 Clerk uses date-based API versioning. Specify via:
-- Header: `Clerk-API-Version: 2024-10-01`
-- Query param: `?__clerk_api_version=2024-10-01`
+- Header: `Clerk-API-Version: <date>`
+- Query param: `?__clerk_api_version=<date>`
 
-**Current version:** `2024-10-01`
+The app sets neither. `@clerk/backend` sends the version it supports (`SUPPORTED_BAPI_VERSION` in its build), so a Clerk SDK upgrade can move it: read the SDK's changelog for API-version changes when upgrading.
 
 **SDK release cycle:** ~6 months for major releases with potential breaking changes.
 
