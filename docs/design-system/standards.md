@@ -1,0 +1,945 @@
+# Frontend Standards
+
+**Last Updated:** 2026-08-08
+
+Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
+
+**See also:**
+- [Pattern Registry](./pattern-registry.md) — Single source of truth for every visual pattern: hover opacities, link strategies, surface hierarchy, token scales, decision trees
+- [Design Principles](./layout.md) — Layout composition patterns, navigation zones, action bar conventions, state persistence expectations
+- [Contrast Policy](./contrast.md) — Canonical WCAG AA contrast targets and rules
+- [Bookmark Surface Policy](./bookmark-surfaces.md) — Where bookmark appears/doesn't and why (decision tree for new surfaces)
+
+## For AI Agents (Claude Code, Cursor, Codex, etc.)
+
+This document is **authoritative**. Claude Code loads the matching
+gateway summary from `.claude/rules/frontend.md` whenever it edits
+files in `app/**` or `components/**`; general agent guidance in
+`AGENTS.md` also points AI coding agents here. Do NOT skip it. Do NOT
+invent patterns.
+
+When making a UI change:
+
+1. **Read this document first.** It is the source of truth for tokens,
+   focus rings, spacing, typography, and component-system mandates.
+2. **Check `pattern-registry.md`** for opacity scales, foreground ramps,
+   dark-mode rules.
+3. **Check `contrast.md`** if your change involves foreground or
+   background pair choices.
+4. **If the pattern you need does not exist here, add it to
+   `pattern-registry.md` first** (with rationale and design review),
+   THEN implement in code.
+
+Violations should be caught at code review and by DEBT-398 PR 3's
+regression-test enforcement in CI. See `.claude/rules/frontend.md` for
+the mandatory pattern enforcement summary.
+
+---
+
+## Table of Contents
+
+1. [Design Tokens](#1-design-tokens)
+2. [Component Standards](#2-component-standards)
+3. [Focus Ring Standard](#3-focus-ring-standard)
+4. [Typography](#4-typography)
+5. [Spacing & Layout](#5-spacing--layout)
+6. [Border Radius](#6-border-radius)
+7. [Loading States](#7-loading-states)
+8. [Error Handling](#8-error-handling)
+9. [Empty States](#9-empty-states)
+10. [Toasts & User Feedback](#10-toasts--user-feedback)
+11. [Accessibility](#11-accessibility)
+12. [Hook Architecture](#12-hook-architecture)
+13. [File Naming](#13-file-naming)
+14. [Route & Navigation](#14-route--navigation)
+15. [Page Metadata](#15-page-metadata)
+16. [Dark Mode](#16-dark-mode)
+17. [Known Violations](#17-known-violations)
+
+---
+
+## 1. Design Tokens
+
+**Source of truth:** `app/globals.css` (CSS custom properties) + `@theme` block (Tailwind mapping).
+
+### Semantic color tokens (ALWAYS use these)
+
+| Token | Usage |
+|-------|-------|
+| `background` / `foreground` | Page background, primary text |
+| `card` / `card-foreground` | Card surfaces |
+| `primary` / `primary-foreground` | Primary buttons, links, CTAs |
+| `secondary` / `secondary-foreground` | Secondary buttons |
+| `muted` / `muted-foreground` | Subdued backgrounds, secondary text |
+| `accent` / `accent-foreground` | Hover states, highlights |
+| `destructive` / `destructive-foreground` | Errors, destructive actions |
+| `success` / `success-foreground` | Correct answers, positive states |
+| `warning` / `warning-foreground` | Billing alerts, past-due banners |
+| `border` | All borders |
+| `input` | Input field borders |
+| `ring` | Focus rings |
+| `popover` / `popover-foreground` | Popover surfaces (Radix) |
+| `chart-1` through `chart-5` | Chart color palette |
+| `sidebar-*` family | Sidebar backgrounds, text, accents, borders, rings |
+
+### NEVER use
+
+- Raw hex colors (`#fff`, `#121212`) in `.tsx` files — use semantic tokens
+- Raw Tailwind palette colors (`zinc-400`, `slate-700`, `gray-200`) — use semantic tokens
+- Exception: Clerk's `appearance.variables` API requires hex (see `providers.tsx`)
+
+### Regression guard
+
+`components/theme-token-regression.test.tsx` actively blocks raw palette usage in key components. Add new components to this test.
+
+---
+
+## 2. Component Standards
+
+### Button
+
+**Label casing (signed-out surfaces):** Button and navigation labels on `/`, `/pricing`, signed-out error/404 pages, and the marketing header/footer use sentence case ("Get started", "View pricing", "Sign in"). Proper nouns, plan names, and legal/page titles retain capitals. The pricing plan triggers follow the rule too: `Subscribe monthly` / `Subscribe annual`, per the owner's 2026-09-18 DEBT-477 D2 ruling. Those trigger labels never enter a consent snapshot (the dialog's tying sentence quotes its own commit button, and DEBT-478 deleted the prose that once quoted them), so a casing change to them needs no `disclosureVersion` bump and no DEBT-414 sign-off. Authenticated app chrome is not yet standardized; DEBT-477 records its follow-up inventory.
+
+**Component:** `components/ui/button.tsx`
+**ALWAYS** use `<Button>` for production UI interactive click targets by default. Raw `<button>` is allowed in production only inside `components/ui/` primitives and app-shell disclosure toggles that follow Pattern Registry `I-6`. The production raw-button lint rule intentionally excludes `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`; native semantic controls are allowed there only in test-only hook/state-machine probes, while tests whose subject is Button or design-system behavior must still use `<Button>`.
+
+```tsx
+// Standard button
+<Button variant="default">Submit</Button>
+
+// Link styled as button
+<Button asChild variant="outline">
+  <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>
+</Button>
+
+// External link as button
+<Button asChild variant="outline">
+  <a href={url} target="_blank" rel="noreferrer noopener">Open the guide</a>
+</Button>
+
+// Icon button
+<Button variant="ghost" size="icon" aria-label="Toggle theme">
+  <SunIcon />
+</Button>
+```
+
+**Variants:** `default`, `destructive`, `success`, `outline`, `secondary`, `ghost`, `link`
+**Sizes:** `default` (h-9), `sm` (h-8), `lg` (h-10), `icon` (size-9)
+
+**Disabled styling standard:** `disabled:pointer-events-none disabled:opacity-50` — all interactive elements MUST use `opacity-50`, never `opacity-60`.
+
+### Practice action bars
+
+Active practice action bars use mode-specific semantics:
+
+| Mode/state | Left cluster | Right cluster | Notes |
+|------------|--------------|---------------|-------|
+| Tutor / Quick Practice, no selected-uncommitted choice pre-feedback | `Previous` only when available | none | Pointer choice activation commits immediately. Do not render a placeholder primary group. |
+| Tutor / Quick Practice, selected-uncommitted choice pre-feedback | `Previous` when available + filled `Submit` | none | This state is entered by keyboard/AT radio selection, not by normal pointer clicks. No pre-feedback `Next`. |
+| Tutor / Quick Practice, post-feedback non-terminal (`hasNextQuestion`) | `Previous` when available + filled `Next` | `Bookmark` with `sm:ml-auto` when feedback exists | `Next` appears only after feedback has rendered. |
+| Tutor, post-feedback terminal (`!hasNextQuestion`) | `Previous` + filled `End session` | `Bookmark` with `sm:ml-auto` | Header `End session` remains visible too; the duplicate same-label terminal state is intentional. |
+| Exam active session, first question | filled `Next` in `exam-action-primary-group` | none | No empty Previous placeholder; Mark for review lives in the header rail. |
+| Exam active session, middle question | `Previous` + filled `Next` in `exam-action-primary-group` | none | Draft selections do not change footer labels. |
+| Exam active session, final question | `Previous` + filled `Review & Submit` in `exam-action-primary-group` | none | Preserve the hidden `Opens review and submit.` description for assistive tech. |
+
+In tutor mode and Quick Practice, pointer activation on a choice is the primary pre-feedback action and commits immediately. Keyboard/AT radio selection is select-only; the action bar renders a filled `Submit` in the same primary cluster only while a selected-uncommitted choice exists. The footer otherwise carries only backward navigation before feedback and sequential/terminal navigation after feedback.
+
+In exam mode, the footer renders a single left cluster containing Previous when applicable and the forward / terminal CTA (`Next` / `Review & Submit`). The footer never contains `Mark for review`; the header action rail owns the Mark/Unmark toggle with `aria-pressed` state.
+
+### Card
+
+**Component:** `components/ui/card.tsx`
+**ALWAYS** use the `Card` component for card-like containers. Never build card-like divs manually.
+
+```tsx
+// Standard card
+<Card>
+  <content />
+</Card>
+```
+
+Cards in this project generally use `Card` + direct children, with layout/spacing handled via Tailwind classes.
+
+### ErrorCard
+
+**Component:** `components/error-card.tsx`
+**Use for:** Inline persistent error messages within a page.
+
+```tsx
+<ErrorCard>Could not load your subscription data.</ErrorCard>
+```
+
+Has `role="alert"` built in. Do not add `role="alert"` manually.
+
+### Link
+
+**ALWAYS** use `<Link>` from `next/link` for internal navigation. Raw `<a>` is acceptable ONLY for:
+- External URLs (always add `target="_blank" rel="noreferrer noopener"`)
+- Skip-to-content anchor (`<a href="#main-content">`)
+- Inside `global-error.tsx` (Next.js router unavailable)
+
+For links that should look like buttons, use `<Button asChild><Link>`.
+
+### Input
+
+Use the shared `components/ui/input.tsx` for text inputs. Raw `<input>` is acceptable ONLY for:
+- `type="hidden"` fields
+- Visually-hidden semantic inputs (`className="sr-only"`)
+
+### Unused Components (0 current consumers)
+
+Current repo snapshot has one `components/ui/` primitive with 0 production imports:
+- `components/ui/dropdown-menu.tsx` — **KEEP.** Explicitly required in `master_spec.md` SLICE-0 checklist. Needed for future progressive-disclosure filters and app-shell navigation patterns.
+
+`avatar.tsx`, `radio-group.tsx`, and `label.tsx` are no longer present in `components/ui/`.
+
+The `buttonVariants` CVA export from `button.tsx` is intrinsic to the Button module (powers `asChild` pattern used in 20+ files). Do not remove.
+
+### FilterChip / SegmentedControl
+
+These are purpose-built UI primitives in `components/ui/`. They correctly use raw `<button>` internally — this is acceptable since they ARE the component layer.
+
+### Tab-Switch Visual Standard
+
+All tab-switch / segmented-control components MUST use shared visual constants from `components/ui/tab-switch-styles.ts`.
+
+| Constant | Classes | Usage |
+|----------|---------|-------|
+| `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1 flex-wrap` | Outer wrapper; items wrap to a second row when the parent is too narrow (Pattern Registry I-5) |
+| `tabSwitchItemBaseClasses` | `rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` | Every tab item |
+| `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Selected item |
+| `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` | Unselected items |
+
+Semantic structure (element types, ARIA attributes) is component-specific:
+- Button-based segmented controls: `<fieldset>` + `<button>` + `aria-pressed`
+- Link-based tab bars: `<nav>` + `<Link>` + `aria-current`
+
+Do not create new tab-switch components without consuming these constants.
+
+### NotificationProvider
+
+**Component:** `components/ui/notification-provider.tsx`
+**Use for:** Transient success/error feedback (toasts).
+**Consumer hook:** `useNotification()`
+
+```tsx
+const { notify } = useNotification();
+notify({ message: 'Question bookmarked.', tone: 'success' });
+notify({ message: 'Failed to save', tone: 'error' });
+```
+
+Tones: `info` (default), `success`, `error`.
+
+### Icons
+
+**Library:** Lucide React
+**Sizing standard:** Use `size-X` shorthand (e.g., `size-4`, `size-5`, `size-6`). Do NOT use `h-X w-X` separately.
+
+```tsx
+// Correct
+<ArrowRight className="size-4" />
+
+// Wrong
+<ArrowRight className="h-4 w-4" />
+```
+
+---
+
+## 3. Focus Ring Standard
+
+**The project has ONE focus ring pattern. Use the Button component's built-in ring and do not hand-roll focus styles.**
+
+The `Button` component provides:
+
+```text
+focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+For non-Button interactive elements that need focus rings, apply:
+
+```text
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Do NOT use the legacy pattern:**
+
+```text
+/* DEPRECATED — do not use */
+focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+```
+
+Every interactive element MUST have a visible focus indicator. Text links, icon buttons, nav items — no exceptions.
+
+---
+
+## 4. Typography
+
+**Canonical policy:** [Typography Policy](./typography.md) — Three-pipeline model (hardcoded UI text, question content, and public legal documents), content tier system, and Markdown renderer rules.
+
+This section covers **hardcoded UI text** sizing. For content text (question stems, choices, explanations, references), see the Typography Policy.
+
+### Page headings
+
+| Context | Pattern |
+|---------|---------|
+| App page h1 | `text-2xl font-bold font-heading tracking-tight text-foreground` |
+| Marketing hero h1 | `font-display text-5xl font-bold tracking-tight md:text-7xl` |
+| Marketing section h2 | `font-heading text-3xl font-bold tracking-tight md:text-4xl` |
+| Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading tracking-tight text-foreground`). |
+
+Marketing section h2 + lede wrappers are centered (`mx-auto max-w-2xl text-center`); their standard lede role is `mt-3 text-base text-muted-foreground`. Content cards remain left-aligned.
+
+### Subtitles and supporting copy
+
+| Context | Pattern |
+|---------|---------|
+| Standard page/section subtitle | `text-base text-muted-foreground` |
+| Marketing hero/pricing subtitle | `text-lg text-muted-foreground` |
+
+### Heading hierarchy
+
+Headings MUST follow a strict hierarchy: `h1` > `h2` > `h3`. Never skip levels (e.g., h1 directly to h3).
+
+Every page MUST have exactly one `h1`.
+
+### Card title elements
+
+Card titles that introduce a real page section MUST use heading elements (`<h2>` or `<h3>` depending on page outline), not `<div>`. Small inline utility/status labels inside a card may stay plain text when they do not create a meaningful outline node.
+
+**Correct:**
+```tsx
+<Card>
+  <h2 className="text-sm font-medium text-foreground">Recent sessions</h2>
+  ...
+</Card>
+```
+
+**Incorrect:**
+```tsx
+<Card>
+  <div className="text-sm font-medium text-foreground">Recent sessions</div>
+  ...
+</Card>
+```
+
+Reference pattern: `exam-review-view.tsx` uses `<h2>` for "Question navigator".
+
+### Stat numbers
+
+Use `text-3xl font-bold font-display text-foreground` for prominent statistics. Smaller/denser contexts may use `text-2xl`.
+
+### Body text
+
+| Context | Pattern |
+|---------|---------|
+| Labels / secondary text | `text-sm text-muted-foreground` |
+| Page/section supporting copy | `text-base text-muted-foreground` |
+| Card headings | `text-sm font-medium text-foreground` |
+| Error details (digest) | `text-xs text-muted-foreground` |
+| Content text (Markdown) | See [Typography Policy](./typography.md) — three-tier system (primary `text-base`, secondary `text-sm`, tertiary `text-xs`) |
+
+Do not rely on inherited browser `1rem` for page/section subtitles or helper copy. If the intent is 16px supporting copy, say `text-base` explicitly.
+
+---
+
+## 5. Spacing & Layout
+
+### Outer container
+
+All app pages use the layout-provided container:
+
+```text
+mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
+```
+
+Do NOT add your own container wrapper — the `(app)/app/layout.tsx` handles this.
+
+### Card padding
+
+Standard: `p-6`. Use `p-4` only for intentionally dense/compact views (e.g., exam review navigator).
+
+### Section spacing
+
+- Between page sections: `space-y-6`
+- Card grids: `gap-4`
+- Button groups: `gap-3`
+- Form fields: `gap-2` to `gap-4`
+
+### Label-to-control spacing
+
+All label + control pairs (e.g., a text label above a segmented control, select, or input) MUST use a `space-y-2` parent wrapper. Do not use bare `<div>` with `mt-2` on the control — it produces the same visual result but creates inconsistent markup that makes refactoring fragile.
+
+```tsx
+// Correct — space-y-2 wrapper
+<div className="space-y-2">
+  <label className="text-sm font-medium">Difficulty</label>
+  <SegmentedControl ... />
+</div>
+
+// Incorrect — mt-2 on control
+<div>
+  <label className="text-sm font-medium">Difficulty</label>
+  <div className="mt-2">
+    <SegmentedControl ... />
+  </div>
+</div>
+```
+
+### Flex alignment with mixed-height children
+
+When flex children have noticeably different intrinsic heights, use `items-start` or `items-baseline` — not `items-center`. Reserve `items-center` for cases where children are the same height.
+
+```tsx
+// Correct — different-height children
+<div className="flex sm:flex-row sm:items-start gap-4">
+  <div>Multi-line text block</div>
+  <Button>Action</Button>
+</div>
+
+// Incorrect — items-center with different heights causes misalignment
+<div className="flex sm:flex-row sm:items-center gap-4">
+  <div>Multi-line text block</div>
+  <Button>Action</Button>
+</div>
+```
+
+Reference pattern: `choice-button.tsx` correctly uses `items-start` with a fixed-height circle + variable-height markdown.
+
+### Interactive row/card hover
+
+Hover opacity is context-dependent. Use the Pattern Registry (`Part 1.2`, `I-1` through `I-4`) as canonical:
+
+| Context | Canonical Pattern |
+|---------|-------------------|
+| Inside card surface (muted-scale row) | `transition-colors hover:bg-muted/40` |
+| On page background (muted-scale row) | `transition-colors hover:bg-muted/50` |
+| Tonal row / direct-action target | Use the component-specific Pattern Registry entry. Dashboard-style in-card tonal rows use `hover:bg-foreground/[0.08]`; standalone tonal rows use `hover:bg-foreground/[0.12]`; choice buttons use `hover:bg-foreground/[0.06] hover:border-foreground/55` in light mode and `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50` on the unselected branch; filter chips use a borderless tonal-fill rest state with `hover:bg-foreground/[0.12] hover:text-foreground`. |
+
+Rules:
+- Use the pattern's neutral fill scale. `muted` is for muted-scale rows/containers; `foreground` is for tonal-row families and direct-action surfaces whose registry entry calls for a foreground ramp.
+- For ChoiceButton (I-3), treat hover fills as replacements on `bg-card`, not layers over the rest `bg-background/50` surface. `hover:bg-*` overrides the rest background token in CSS.
+- Do not use `transition-all` for hover color changes
+- Link-only underline hovers (`hover:underline`) are a separate link pattern (see Pattern Registry Part 4)
+
+---
+
+## 6. Border Radius
+
+| Element | Radius |
+|---------|--------|
+| Cards | `rounded-2xl` |
+| Buttons (app) | `rounded-full` (override Button's `rounded-md` default) |
+| Buttons (forms/actions) | `rounded-md` (Button default) |
+| Loading skeletons | `rounded-2xl` (MUST match the cards they replace) |
+| Toasts | `rounded-xl` |
+| Inputs | `rounded-md` (Input default) |
+| Filter chips | `rounded-md` — functional toggle chips match the app's rectangular control vocabulary; decorative tag/badge pills may use `rounded-full` if introduced separately |
+
+---
+
+## 7. Loading States
+
+### Page-level loading (Suspense)
+
+Every route under `(app)/app/` MUST have a `loading.tsx` using the shared `PageLoading` component:
+
+```tsx
+import { PageLoading } from '@/components/loading/page-loading';
+
+export default function Loading() {
+  return <PageLoading label="Loading billing" cardCount={2} />;
+}
+```
+
+`PageLoading` provides `aria-busy="true"`, `aria-live="polite"`, and `sr-only` label automatically.
+
+### Inline loading
+
+Use `<output>` with `aria-live="polite"`:
+
+```tsx
+<output aria-live="polite">Loading question...</output>
+```
+
+The `<output>` element has implicit `role="status"` — do not add it manually.
+
+### Button loading
+
+Change button text and disable during pending:
+
+```tsx
+<Button disabled={isPending}>
+  {isPending ? 'Processing...' : 'Subscribe'}
+</Button>
+```
+
+---
+
+## 8. Error Handling
+
+### Error boundaries (`error.tsx`)
+
+Every route MUST have an `error.tsx`. All error boundaries use the shared `ErrorBoundaryPage` component:
+
+**Component:** `components/error-boundary-page.tsx`
+
+```tsx
+'use client';
+import { ErrorBoundaryPage } from '@/components/error-boundary-page';
+
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  return (
+    <ErrorBoundaryPage
+      error={error}
+      reset={reset}
+      title="Context-specific title"
+      description="Context-specific message."
+      links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}
+      logPrefix="app/(app)/app/route-name/error.tsx:"
+    />
+  );
+}
+```
+
+`ErrorBoundaryPage` renders three action buttons: Try Again, contextual navigation link(s), Report Issue — always in that order. Pass `includeMainLandmark` when the error boundary replaces the page's `<main>` element (uses `<h1>` instead of `<h2>`).
+
+### Inline errors
+
+Use `ErrorCard` for standalone inline errors. Use bare `<div role="alert" className="text-sm text-destructive">` for lightweight inline errors within cards.
+
+Both MUST have `role="alert"`.
+
+---
+
+## 9. Empty States
+
+Empty states SHOULD include a helpful CTA guiding the user to take action:
+
+```tsx
+// Good
+<Card className="gap-0 rounded-2xl p-6 shadow-sm">
+  <p className="text-sm text-muted-foreground">No bookmarks yet.</p>
+  <Button asChild variant="outline" className="mt-4">
+    <Link href={ROUTES.APP_PRACTICE}>Start practicing</Link>
+  </Button>
+</Card>
+
+// Insufficient
+<Card className="gap-0 rounded-2xl p-6 shadow-sm">
+  <p className="text-sm text-muted-foreground">No bookmarks yet.</p>
+</Card>
+```
+
+---
+
+## 10. Toasts & User Feedback
+
+### When to use toasts
+
+| Action | Feedback type |
+|--------|--------------|
+| Bookmark toggled (practice) | Toast: `"Question bookmarked."` / `"Bookmark removed."` |
+| Bookmark removed (bookmarks page) | Redirect-backed success toast after revalidation; toast message is `"Bookmark removed."` |
+| Session started | Navigation to session page |
+| Session ended | Summary view renders |
+| Answer submitted | Inline Feedback component |
+| Billing portal opened | Redirect to Stripe |
+| Destructive action | Confirmation dialog first, then toast on success |
+
+### Confirmation dialogs
+
+Destructive actions MUST show a confirmation dialog before executing:
+- Abandon incomplete session
+- Remove bookmark (bookmarks page)
+- Submit/end exam session
+
+Use `AlertDialog` from `components/ui/alert-dialog.tsx` (Radix UI wrapper). Currently used in bookmarks page, exam review, and incomplete session card.
+
+Non-destructive commitment dialogs, including pricing renewal consent, use `Dialog` from `components/ui/dialog.tsx` and the registered S-4 surface. Terms appear immediately above the actual submit action, using data shared with the recorded disclosure. Plan-query auto-open is presentation only and must never submit. The consent variant scrolls on short mobile viewports; use standard Button variants in its footer.
+
+---
+
+## 11. Accessibility
+
+### Interactive element labeling
+
+Every interactive element MUST have a discernible accessible name:
+- Buttons with visible text: text is sufficient
+- Icon-only buttons: provide `aria-label` **or** visually hidden text (for example, `<span className="sr-only">`)
+- Repeated buttons in lists (e.g., "Remove", "Reattempt"): add `aria-label` with context
+
+```tsx
+// Bad — screen reader hears "Remove, Remove, Remove..."
+<Button type="submit">Remove</Button>
+
+// Good — screen reader hears "Remove bookmark: Question about naltrexone"
+<Button type="submit" aria-label={`Remove bookmark: ${stemPreview}`}>Remove</Button>
+```
+
+### Feedback announcement
+
+- `ErrorCard` has `role="alert"` (assertive) — correct
+- Inline errors: MUST have `role="alert"`
+- The `Feedback` component (correct/incorrect answer): uses `role="status"` (polite) — correct
+- Loading regions: MUST have `aria-live="polite"` (PageLoading and `<output>` handle this)
+
+### Heading levels
+
+- Every page MUST have exactly one `h1`
+- Heading levels MUST be sequential (h1 > h2 > h3, no skipping)
+- Error boundary pages use `h2` (they render inside a layout with an h1)
+- `global-error.tsx` uses `h1` (it replaces the entire document)
+
+### Focus management
+
+After error recovery ("Try again"), focus SHOULD move to the result (the new content or error). Use a `ref` + `useEffect` to programmatically focus.
+
+### Forms
+
+- Forms with multiple controls: add `aria-label` to the `<form>`
+- Single-button forms: button text provides context (acceptable)
+
+### Touch target sizes
+
+**Policy (decided 2026-03-12):** The project explicitly accepts the current shared component heights at their existing sizes. The 44px WCAG 2.1 SC 2.5.5 recommendation is AAA (aspirational), not AA (required). Current AA compliance is not affected.
+
+| Component | Current effective height | Status |
+|-----------|------------------------|--------|
+| `Button` (default) | 36px (`h-9`) | Accepted |
+| `SegmentedControl` button | ~36px (`py-2`) | Accepted |
+| `FilterChip` button | ~32px (`py-1.5`, borderless) | Accepted |
+
+**Rationale:** This is a desktop-first educational application. Bumping shared components to 44px has a wide blast radius (every page with buttons, chips, or segmented controls changes) for marginal mobile ergonomics gain. The current sizes provide adequate tap targets for the app's primary usage context.
+
+**Future consideration:** If mobile usage grows significantly, consider adding responsive padding (e.g., `py-1.5 sm:py-1.5` → `py-2.5 sm:py-1.5`) to shared components so mobile gets larger tap targets without affecting desktop layout. This would be a targeted change rather than a blanket height increase.
+
+### Contrast (WCAG AA)
+
+**Canonical rules:** `docs/design-system/contrast.md`
+
+All UI must meet WCAG AA contrast targets for:
+- SC 1.4.3 (text): 4.5:1 for normal text, 3.0:1 for large text
+- SC 1.4.11 (non-text): 3.0:1 for required UI boundaries and state indicators
+
+---
+
+## 12. Hook Architecture
+
+### Size limits
+
+Hooks SHOULD NOT exceed 150 lines. Hooks over 200 lines are godlike hooks and must be split.
+
+### State pattern
+
+Use the `LoadState` discriminated union for all async state:
+
+```typescript
+type LoadState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready' }
+  | { status: 'error'; message: string };
+```
+
+Do NOT use bare `'idle' | 'loading' | 'error'` string enums with a separate `error: string | null` state. Do NOT define a second `LoadState` without `'idle'`.
+
+### Server action calls
+
+All server actions return `ActionResult<T>`. The standard call pattern:
+
+```typescript
+let res: ActionResult<T>;
+try {
+  res = await someAction({ ... });
+} catch (error) {
+  if (!isMounted()) return;
+  setLoadState({ status: 'error', message: getThrownErrorMessage(error) });
+  return;
+}
+if (!isMounted()) return;
+if (!res.ok) {
+  setLoadState({ status: 'error', message: getActionResultErrorMessage(res) });
+  return;
+}
+// success path
+```
+
+### Return values
+
+All hooks return objects (not tuples). Properties should be named descriptively.
+
+### `useEffect` Guidelines
+
+`useEffect` is not banned here. Treat it as an escape hatch for external synchronization after ruling out derived state, event handlers, and an existing fetch abstraction.
+
+We do **not** require a repo-wide wrapper such as `useMountEffect()`. The guardrail is choosing the right primitive, not hiding `useEffect` behind another name.
+
+#### Decision tree
+
+1. **State derived from other state or props?** Compute it inline — no effect, no extra render.
+   ```tsx
+   // Wrong — extra render cycle, stale flash
+   useEffect(() => { setFiltered(items.filter(predicate)); }, [items]);
+
+   // Right — one render, always correct
+   const filtered = items.filter(predicate);
+   ```
+
+2. **Responding to a user action (click, submit, navigate)?** Do the work in the event handler, not via a state flag + effect.
+   ```tsx
+   // Wrong — flag → effect → reset flag
+   useEffect(() => {
+     if (pending) { doWork(); setPending(false); }
+   }, [pending]);
+
+   // Right — direct
+   const onClick = () => doWork();
+   ```
+
+3. **Fetching data?** Prefer a factory function (`createXxxEffect`) that returns a cleanup function, and call it from the effect. This is our established pattern (see `createBookmarksEffect`, `createSummaryReviewEffect`, etc.). Keep the fetch logic outside the hook and testable in isolation.
+   ```tsx
+   // Our pattern — testable factory with cleanup
+   useEffect(() => {
+     return createBookmarksEffect({ getBookmarksFn, setCounts, ... });
+   }, [deps]);
+   ```
+
+4. **Syncing with an external system on mount (DOM focus, scroll, third-party widget)?** This is a legitimate effect. Use `[]` deps and make the intent clear with a comment.
+
+5. **Resetting state when an ID/key changes?** Prefer React's `key` prop on the parent to force a clean remount, rather than an effect that manually resets state.
+
+#### Anti-patterns to avoid
+
+| Pattern | Problem | Fix |
+|---------|---------|-----|
+| `useEffect(() => setX(f(y)), [y])` | Derived state — extra render, stale flash | Compute `x` inline |
+| Flag → effect → reset flag | Indirect control flow, interleaving risk | Move work into the event handler |
+| `useEffect` with 6+ dependencies | Hard to reason about, fragile | Decompose into smaller hooks or extract a factory function |
+| Multiple effects setting overlapping state | Effect chains — A triggers B triggers C | Consolidate into one effect or move to event handler path |
+| `useEffect` for dev-only logging | Acceptable but noisy | Guard with `process.env.NODE_ENV` check (we do this already) |
+
+#### What's fine
+
+- **Error boundary logging** — React provides `error` as a prop; logging on mount is the intended pattern.
+- **URL-driven one-time side effects** — Toast from search params, URL cleanup. Use a dedup ref guard.
+- **SSR hydration guards** — `useEffect(() => setMounted(true), [])` for `next-themes` and similar.
+- **DOM interactions** — Focus management, scroll-into-view after state transitions.
+- **Cleanup on unmount** — Timer cleanup, subscription teardown. Idiomatic.
+- **Ref sync** — Keeping a ref up-to-date with a callback prop to avoid stale closures.
+
+#### Our codebase context
+
+The practice hooks (`use-practice-question-bookmarks`, `use-practice-session-navigator`, etc.) demonstrate the preferred pattern: extract fetch/async logic into a testable factory function (`createXxxEffect`), call it from a single `useEffect`, and return the cleanup function. This keeps effects small and pushes complexity into pure, testable code.
+
+The question-page flow should follow the same composition style: focused hooks for bookmarks, session navigation, and previous-attempt hydration, with the controller acting as the composition root instead of inlining every effect.
+
+### Duplication
+
+Logic shared between `/practice` and `/practice/[sessionId]` (question loading, answer submission, bookmark state) MUST be extracted to shared functions or a shared hook. Do not copy-paste between session and non-session variants.
+
+---
+
+## 13. File Naming
+
+| Location | Convention | Example |
+|----------|-----------|---------|
+| `components/ui/` | kebab-case | `button.tsx`, `filter-chip.tsx` |
+| `components/` (shared) | kebab-case | `error-card.tsx`, `theme-toggle.tsx` |
+| `components/question/` | kebab-case | `question-card.tsx`, `choice-button.tsx` |
+| `app/` pages | reserved entrypoint names | `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx` |
+| Hooks | `use-kebab-case.ts` | `use-practice-session-controls.ts` |
+| Tests | colocated, same name + suffix | `*.test.ts(x)`, `*.browser.spec.tsx` |
+
+**PascalCase filenames are NOT used in this project.** If you see `QuestionCard.tsx`, it should be `question-card.tsx`.
+
+---
+
+## 14. Route & Navigation
+
+### Route constants
+
+**Source of truth:** `lib/routes.ts`
+
+ALWAYS use `ROUTES.*` constants and helper functions for links. NEVER hardcode route strings in `.tsx` files.
+
+```tsx
+// Correct
+<Link href={ROUTES.APP_DASHBOARD}>Dashboard</Link>
+<Link href={toPracticeSessionRoute(sessionId)}>View session</Link>
+
+// Wrong
+<Link href="/app/dashboard">Dashboard</Link>
+```
+
+### Navigation links
+
+- App nav items: defined in `components/app-nav-items.ts`
+- Desktop nav: `components/app-desktop-nav.tsx`
+- Mobile nav: `components/mobile-nav.tsx`
+- Both source from the same `APP_NAV_ITEMS` constant
+
+### Exam answer secrecy routing rule
+
+Before adding or changing any question-review link (`mode=review`, `attemptId`, `sessionId`), verify the destination cannot expose active-exam correctness/explanations.
+
+- Canonical source: `docs/product/practice/exam-answer-secrecy.md`
+- Do not ship route/link changes that bypass that policy via alternate identifier paths.
+
+### App Shell Header
+
+**Source:** `app/(app)/app/layout.tsx:75-97`
+
+- Header: `relative border-b border-border bg-background`
+- Inner container: `mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8`
+- Sticky/z-index: not sticky; no explicit `z-*`
+- Brand link follows Pattern Registry `L-4`: `rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80 focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`
+
+### Marketing Shell Header
+
+**Source:** `components/marketing/marketing-layout.tsx:22-56`
+
+- Header: `border-b border-border bg-background`
+- Inner container: `mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8`
+- Desktop nav: `hidden items-center gap-4 text-sm sm:flex`
+- Mobile nav: `mt-3 flex items-center gap-4 text-sm sm:hidden`
+- ThemeToggle is unmounted while light mode is disabled (DEBT-421).
+
+### Marketing Shell Footer
+
+**Source:** `components/marketing/marketing-layout.tsx`, cached `MarketingFooter`.
+
+Follow the DEBT-477 marketing-footer composition in Pattern Registry Part 13: brand and tagline left, two labeled nav rows right, aligned to their first baselines. Below `md`, stack brand, tagline, product/auth links, then legal links in DOM order. Product navigation contains Features, Pricing, Sign in, Sign up; legal navigation contains Privacy Policy, Terms of Service. New links join the appropriate existing group. The footer owns the tagline "Board exam preparation for addiction psychiatry and addiction medicine." Use explicit `text-base` for the brand and `text-sm` for the tagline/navigation; keep the divider, copyright, UTC year read, and cache boundary.
+
+### Transitions on interactive elements
+
+Every element with a `hover:` color change MUST also have `transition-colors`:
+
+```tsx
+// Correct
+className="text-muted-foreground transition-colors hover:text-foreground"
+
+// Wrong — abrupt color change
+className="text-muted-foreground hover:text-foreground"
+```
+
+---
+
+## 15. Page Metadata
+
+Every page SHOULD export metadata for distinct browser tab titles and SEO:
+
+```tsx
+// In a server component page.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Dashboard - Addiction Boards',
+};
+```
+
+Format: `{Page Name} - Addiction Boards`
+
+**Public discovery contract (DEBT-479, 2026-09-22):** `/`, `/pricing`,
+`/privacy`, and `/terms` each declare their own meaningful description and
+query-free canonical path from `ROUTES`. The root layout sets `metadataBase`
+to the canonical production apex in `lib/public-routes.ts`; preview or local
+`NEXT_PUBLIC_APP_URL` values must not become canonical origins. Do not set a
+root canonical that private or auth pages would inherit. Both auth catch-all
+pages declare `robots: { index: false, follow: true }`, including their subpaths;
+they do not need self-canonicals or unique descriptions. Keep existing tab
+titles. Metadata exports have unit contracts, supplemented by signed-out
+rendered-head verification and the existing authenticated E2E journeys.
+
+The same four content pages publish Open Graph and Twitter large-image cards
+with their own title, description and canonical production URL. The shared
+`publicPageMetadata` helper keeps these declarations aligned without changing
+the original tab titles. The site image at `/opengraph-image` must return a
+real PNG anonymously; admit only that exact resource through the proxy. Its
+build-time renderer uses the narrowly documented [raster-renderer boundary](./pattern-registry.md#public-social-card-renderer-debt-479-2026-09-22),
+not a separate browser theme or a remote font dependency. Verify rendered
+absolute tags and the fetched image, not just the exported metadata objects.
+
+---
+
+## 16. Dark Mode
+
+Dark mode is implemented via CSS custom properties in `.dark` class (globals.css). The semantic token system handles light/dark switching automatically.
+
+**Rules:**
+- Use semantic tokens (`bg-background`, `text-foreground`, `bg-card`, etc.) — they adapt automatically
+- Prefer shared primitives/constants for recurring dark-mode behavior, but component-specific `dark:` overrides are allowed when they are part of a canonical Pattern Registry or Contrast Policy contract
+- If the same dark override appears across multiple consumers, promote it into a shared primitive or shared style constant instead of duplicating page-local classes
+- Structural visibility toggles (`dark:hidden`, `dark:block`) are acceptable when needed for theme-specific icon/content swaps
+- Clerk appearance follows the app theme via `providers.tsx`
+
+---
+
+## 17. Known Violations
+
+Open frontend debt is a debt record in `docs/records/`, listed in its index; the retired `FE-NNN` items are in the ledger, `docs/records/closed.md`. Fix them as you encounter the files. Each is tagged with severity.
+
+### P1 — Must fix before UI/UX refactor
+
+*No P1 items.*
+
+### P2 — Fix during UI/UX refactor
+
+Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageModel` was reduced from 737 lines / 8 effects by DEBT-320, but it still exceeds the size cap as a composition root.
+
+| Hook | Lines | File |
+|------|-------|------|
+| `useQuestionPageModel` | 374 | `app/(app)/app/questions/[slug]/hooks/use-question-page-model.ts` |
+| `useQuestionPageBookmarks` | 212 | `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts` |
+| `useQuestionPageSessionNavigation` | 207 | `app/(app)/app/questions/[slug]/hooks/use-question-page-session-navigation.ts` |
+| `usePracticeSessionQuestionFlow` | 449 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
+| `useQuestionFlowCore` | 290 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
+
+Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/design-system/contrast.md`.
+
+### P3 — Fix as encountered
+
+| ID | Summary | File(s) |
+|----|---------|---------|
+| — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/design-system/pattern-registry.md` |
+| — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
+| — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
+
+---
+
+## Appendix: Component Inventory
+
+### `components/ui/` (design system primitives)
+
+| File | Component(s) | Has `data-slot` | Uses `cn()` | Uses `cva` | Notes |
+|------|-------------|-----------------|-------------|------------|-------|
+| `button.tsx` | Button | Yes | Yes | Yes | |
+| `card.tsx` | Card | Yes | Yes | No | |
+| `dropdown-menu.tsx` | DropdownMenu, DropdownMenuTrigger, DropdownMenuItem, etc. | Yes | Yes | No | **0 consumers — KEEP (spec-mandated)** |
+| `filter-chip.tsx` | FilterChip | **No** | Yes | **No** | |
+| `input.tsx` | Input | Yes | Yes | No | |
+| `select.tsx` | Select, SelectTrigger, SelectContent, SelectItem, etc. | Yes | Yes | No | Radix UI wrapper |
+| `notification-provider.tsx` | NotificationProvider, useNotification | **No** | Yes | No | |
+| `alert-dialog.tsx` | AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction | Yes | Yes | No | Radix UI wrapper |
+| `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** | |
+| `tab-switch-styles.ts` | (style constants only) | **No** | No | **No** | Shared by SegmentedControl + HistoryTabBar |
+
+### `components/` (shared non-primitive)
+
+| File | Component(s) | Purpose |
+|------|-------------|---------|
+| `error-boundary-page.tsx` | ErrorBoundaryPage | Reusable error boundary content (Try again + nav links + Contact support, an email to support with the error ID; BUG-326) |
+| `error-card.tsx` | ErrorCard | Inline error alert |
+| `get-started-cta.tsx` | GetStartedCta | Marketing CTA |
+| `auth-nav.tsx` | AuthNav | Auth-aware nav buttons |
+| `app-nav-items.ts` | APP_NAV_ITEMS | Nav link definitions (shared by desktop + mobile) |
+| `app-desktop-nav.tsx` | AppDesktopNav | Desktop horizontal top nav |
+| `mobile-nav.tsx` | MobileNav | Mobile hamburger nav |
+| `theme-toggle.tsx` | ThemeToggle | Dark/light mode toggle |
+| `providers.tsx` | Providers | ClerkProvider + NotificationProvider wrapper |
+| `theme-provider.tsx` | ThemeProvider | next-themes wrapper |
+| `loading/page-loading.tsx` | PageLoading | Skeleton loading for pages |
+| `marketing/marketing-home.tsx` | MarketingHome shell + sections | Landing page |
+| `question/question-card.tsx` | QuestionCard | Question stem + choices display |
+| `question/choice-button.tsx` | ChoiceButton | Radio-style answer choice |
+| `question/feedback.tsx` | Feedback | Correct/incorrect answer feedback |
+| `markdown/Markdown.tsx` | Markdown | Markdown renderer |

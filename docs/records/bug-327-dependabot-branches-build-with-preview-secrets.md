@@ -10,7 +10,7 @@
 
 ## Summary
 
-The owner decided on 2026-09-19 that Dependabot's pull requests get no shared credentials before review. GitHub Actions honors that: the Dependabot secret store is empty, and E2E withholds its credentials from Dependabot (`docs/dev/dependency-update-protocol.md`, "Dependabot PRs and Secrets").
+The owner decided on 2026-09-19 that Dependabot's pull requests get no shared credentials before review. GitHub Actions honors that: the Dependabot secret store is empty, and E2E withholds its credentials from Dependabot (`docs/guides/dependencies/updating-dependencies.md`, "Dependabot PRs and Secrets").
 
 Vercel does not. Its Git integration builds every branch as a Preview deployment, Dependabot's included. The build runs with Preview environment variables:
 1. it installs the new dependency versions, running their allowed install scripts;
@@ -60,7 +60,7 @@ Option 1, plus the digest pin.
 - **`vercel.json`** sets `git.deploymentEnabled` to `{ "dependabot/**": false }`. Vercel's documentation confirms the form: a map of minimatch patterns, where unlisted branches stay enabled and any matching true rule wins. `tests/vercel-config.test.ts` pins the exclusion, and fails if any rule could re-enable a Dependabot branch.
 - **Merging is unaffected.** `scripts/merge-reviewed-pr.ts` requires only the `test` check and Codecov's patch status, not a Vercel status, and the ruleset requires only `test`.
 - **`ci.yml`'s Postgres service** is pinned to the digest the hosted-checkout workflow already uses. `tests/ci-workflow.test.ts` now requires a digest for every service and job container, in every workflow.
-- **Docs.** `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
+- **Docs.** `docs/guides/dependencies/updating-dependencies.md` and `docs/architecture/environments.md` describe the boundary.
 - **Existing branches.** Vercel reads the setting from each branch's own commit. So the open Dependabot pull requests, created before this, keep deploying until Dependabot rebases them onto a base that carries it (`dev` for routine updates, `main` for security updates).
 
 ## Verification
@@ -69,9 +69,9 @@ Option 1, plus the digest pin.
 - [x] Observation 2026-10-06: security PR [#1404](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1404), targeting `main`, carries the exclusion on head `9ccfabe5`. GitHub's deployments API returns zero records for that SHA; its checks contain no Vercel deployment. Dependabot later force-pushed #1404 to `aa516b6a`; that head also has zero deployments and no Vercel status, and its [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37499618792) fails on the same three versions.
 - [ ] Engineering, by 2026-10-20: a Dependabot PR with the exclusion merges through the checked-in tooling: #1404's successor, since #1404 was closed unmerged on 2026-10-07. No merge proof is claimed yet. On 2026-10-08 the heads of Dependabot's open #1425 and #1407 also had no deployment.
 
-  #1404's [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37479614420) failed installation with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` for three versions: `@types/node@24.19.1`, `acorn@8.19.0` and `shell-quote@1.12.0`. The existing [security-patch playbook](../dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown) already covers waiting or a reviewed exact-version exception. No new debt is needed for a missing policy. Do not exempt unrelated lockfile churn merely to unblock the security bump.
+  #1404's [CI run](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/37479614420) failed installation with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` for three versions: `@types/node@24.19.1`, `acorn@8.19.0` and `shell-quote@1.12.0`. The existing [security-patch playbook](../policies/supply-chain.md#urgent-cve-patches-before-the-7-day-cooldown) already covers waiting or a reviewed exact-version exception. No new debt is needed for a missing policy. Do not exempt unrelated lockfile churn merely to unblock the security bump.
 - [x] `ci.yml`'s Postgres image is pinned by digest, and the workflow test covers every workflow.
-- [x] `docs/dev/dependency-update-protocol.md` and `docs/dev/deployment-environments.md` describe the boundary.
+- [x] `docs/guides/dependencies/updating-dependencies.md` and `docs/architecture/environments.md` describe the boundary.
 
 ## Related
 

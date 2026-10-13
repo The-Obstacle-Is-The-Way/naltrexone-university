@@ -163,7 +163,7 @@ export function collectOpacityIssues(
     }
 
     issues.push(
-      `${occurrence.filePath}:${occurrence.lineNumber} undocumented opacity token "${occurrence.token}" is not in the Pattern Registry allowlist. Add the pattern to docs/frontend/pattern-registry.md before using it.`,
+      `${occurrence.filePath}:${occurrence.lineNumber} undocumented opacity token "${occurrence.token}" is not in the Pattern Registry allowlist. Add the pattern to docs/design-system/pattern-registry.md before using it.`,
     );
   }
 

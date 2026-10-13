@@ -10,7 +10,7 @@ import {
 // drill proves that path, but neither notices its own absence. This daily job
 // reads Sentry with a read-only token and keeps one GitHub issue open, outside
 // Sentry's email, while a check fails. The checks and what to do about each:
-// docs/dev/logging.md, "Operational alerts", Watcher.
+// docs/architecture/observability.md, "Operational alerts", Watcher.
 export const WATCHER_ISSUE_TITLE =
   'Operational alerts may not be reaching the owner';
 
@@ -287,7 +287,7 @@ function describeFailedRead(what: string, error: unknown): string {
   if (isTransient(error))
     return `Sentry did not answer the watcher's read of the ${what}, twice. If this persists, check Sentry's status page.`;
   if (error instanceof FailedRead)
-    return `The watcher could not read the ${what} from Sentry (HTTP ${error.status}). If the token was revoked or lacks a scope, replace it (docs/dev/logging.md).`;
+    return `The watcher could not read the ${what} from Sentry (HTTP ${error.status}). If the token was revoked or lacks a scope, replace it (docs/architecture/observability.md).`;
   return `The watcher could not read the ${what} from Sentry: the answer was not in the shape it expects. Sentry's API may have changed.`;
 }
 
@@ -324,14 +324,14 @@ export async function findAlertPathProblems(
 }
 
 export const NOT_CONFIGURED =
-  'The watcher has no Sentry token. The owner creates a read-only one and adds it as the repository secret `SENTRY_WATCHER_TOKEN` (docs/dev/logging.md); until then only the monthly drill email shows the alerts work.';
+  'The watcher has no Sentry token. The owner creates a read-only one and adds it as the repository secret `SENTRY_WATCHER_TOKEN` (docs/architecture/observability.md); until then only the monthly drill email shows the alerts work.';
 
 function describeProblems(problems: string[]): string {
   return (
     'The daily watcher found something that may keep operational alerts, including the legal-deadline renewal alerts, from reaching the owner:\n\n' +
     problems.map((problem) => `- ${problem}\n`).join('') +
     '\nFix each one, then let the next daily run close this issue, or run the "Operational alert watcher" workflow by hand. ' +
-    'What each check means: docs/dev/logging.md, "Operational alerts".\n'
+    'What each check means: docs/architecture/observability.md, "Operational alerts".\n'
   );
 }
 

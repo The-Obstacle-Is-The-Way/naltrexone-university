@@ -1,0 +1,277 @@
+# Deployment Environments: Source of Truth
+
+**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret and production release-gate sections reverified 2026-09-19.
+
+This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
+
+It intentionally avoids hard-coding private dashboard values that the repo cannot self-verify, such as exact account IDs, branch hostnames, webhook secrets, or live price IDs. Those belong in the providers themselves. This document records the contract the codebase expects.
+
+---
+
+## Environment Model
+
+| Environment | URL shape | Branch / deploy source | Auth + billing mode | Database target | Notes |
+|-------------|-----------|------------------------|---------------------|-----------------|-------|
+| Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
+| Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
+| Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
+| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database requires both existing-target and non-local opt-ins |
+| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
+
+### Core isolation rule
+
+Production, Preview, and local development must never share the same live database or live billing/auth keys.
+
+### Current Vercel/Neon Branch Contract
+
+The current Vercel + Neon setup uses one Neon project with isolated database branches:
+
+- Vercel **Production** targets the Neon `main` branch.
+- Vercel **Preview** and **Development** target the Neon `dev` branch.
+- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; combine `E2E_USE_EXISTING_DATABASE=true` with `ALLOW_NON_LOCAL_DATABASE_URL=true` only for deliberate deploy-target E2E checks.
+
+Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry exists in Production, Preview, and Development scopes, with no git-branch-specific override observed. A value-free host comparison on 2026-06-16 (each scope's `DATABASE_URL` pulled to a temp directory outside the repo, compared by host, booleans only — no connection strings or hostnames recorded) confirmed that the **Production** host is distinct from both **Preview** and **Development**, and that **Preview** and **Development** resolve to the **same** non-production host. This matches the contract above: production is isolated from the shared non-production database. The literal Neon branch *names* behind each value are confirmable in the Neon/Vercel dashboards; the safety-critical isolation is verified in-repo here without recording any secret.
+
+Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
+
+### Production Release Gate
+
+Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](../guides/release/promote-to-production.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
+
+Production database migrations run during the build, **before** the release gate. They must remain compatible with the live application under the existing [expand/contract authoring contract](../guides/database/migrations.md#deployed-code-compatibility), even if the check fails and the old release keeps serving.
+
+### CI Secret Standard
+
+Owner ruling 2026-09-19, recorded 2026-09-20:
+
+- Keep secrets on their consuming steps, never at workflow/job scope. Required and hosted-checkout Build steps use real compiled public values (or documented credential-free fallbacks) and shape-valid server-only placeholders. Real TEST-mode provider/E2E credentials belong only on E2E; the scheduled provider-contract runner receives only its required Stripe inputs. Codecov gets only its upload token.
+- Typecheck, lint, unit, database migrate/seed, integration and browser steps receive no provider credential. Public values are not authentication secrets. Step scoping does not isolate a secret from dependency code executing within the authorized step.
+- SHA-pin every action, and pin every container image by digest; `tests/ci-workflow.test.ts` checks the images in every workflow (BUG-327). Four workflows currently exist: `tests/ci-workflow.test.ts` enumerates permitted secret consumers and verifies pins in CI and both Stripe workflows; `scripts/security-txt-renewal.test.ts` separately verifies the renewal workflow's pins and least-privilege permissions. Every added workflow needs the corresponding contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
+- Keep the Dependabot secret store empty and retain its E2E actor guard. Vercel does not build `dependabot/**` branches (`vercel.json`, BUG-327), so Preview secrets never reach unreviewed dependency code either. Do not run bot heads locally with shared credentials. Re-author a reviewed owner PR when PR-time E2E is needed. Revisit only after separate Stripe Sandbox and Clerk-instance isolation at the paying-customer/second-engineer trigger; see [Dependency Update Protocol](../guides/dependencies/updating-dependencies.md#dependabot-prs-and-secrets).
+- GitHub Actions has no consumer for `CRON_SECRET`. Its unused copy was deleted on 2026-09-20; API readback found zero matching secrets. This does not attest to Vercel rotation. Cron authentication validates the value actually consumed at request time, without making application startup depend on it.
+
+### Deploy Migration Contract
+
+[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
+
+---
+
+## Code-Enforced Contract
+
+These rules are enforced by the repo today:
+
+- `lib/env.ts` requires `DATABASE_URL`, Stripe keys, Stripe price IDs, and `NEXT_PUBLIC_APP_URL` in every runtime.
+- `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` and `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` must start with `price_`.
+- Clerk keys are required unless `NEXT_PUBLIC_SKIP_CLERK=true`.
+- `NEXT_PUBLIC_SKIP_CLERK=true` is allowed for local/CI non-production flows, but it is rejected when `VERCEL_ENV=production`.
+- `CLERK_WEBHOOK_SIGNING_SECRET` is required at Vercel production runtime when Clerk is enabled.
+- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is required on Vercel production and preview builds, and must be a base64 AES key of 16, 24 or 32 bytes. Without it, Next.js salts server-action IDs with a key it generates and caches for 14 days, so a deploy after that cache expires (or misses the build cache) leaves a page loaded earlier unable to call its actions (BUG-319). Changing the key changes every action ID once. A page open at the time fails its next action; it recovers on a full page load, which the error page starts by itself for the payment forms, "Try again" starts, and the next in-app navigation starts because the build changed. Production and Preview each have their own key.
+- `CONSENT_STATE_SECRET` is required on Vercel production and preview builds, and must be at least 32 characters. "Add a card" signs the trial's consent state with it, and the setup webhook checks that signature, so without it the card form always fails (DEBT-502 item 6). Off Vercel it stays optional, and the flow then fails closed.
+- `CRON_SECRET` is intentionally not startup-validated. The cron route validates it at request time and returns `401` when it is missing or invalid.
+- Sentry DSNs are optional. `instrumentation.ts` logs `[SENTRY_DISABLED] ...` on Vercel production when `SENTRY_DSN` is unset; the browser's key no longer stands in for it.
+- `playwright.config.ts` loads `.env.local` first, then `.env`, and uses `NEXT_PUBLIC_APP_URL` for `baseURL`.
+- `NEXT_PUBLIC_*` values are build-time values. Changing them requires a fresh build.
+
+---
+
+## Intended Operator Scoping
+
+| Variable family | Production | Preview | Development / local |
+|-----------------|------------|---------|----------------------|
+| `DATABASE_URL` | Production database only | Isolated non-production database | Non-production database only |
+| Clerk keys | Live production Clerk instance | Test/development Clerk instance | Test/development Clerk instance |
+| Clerk webhook secret | Production Clerk webhook | Preview/dev Clerk webhook if used | Local/dev webhook secret if used |
+| Stripe secret + publishable keys | Live mode | Test mode | Test mode |
+| Stripe price IDs | Live price IDs | Test price IDs | Test price IDs |
+| `NEXT_PUBLIC_APP_URL` | Canonical production domain | Actual preview deployment URL | Local origin you are serving (`127.0.0.1` or `localhost`) |
+| `SENTRY_DSN` (server project's key, sensitive, never `NEXT_PUBLIC`) / `NEXT_PUBLIC_SENTRY_DSN` (browser project's key) | Set both: server events and operational alerts need `SENTRY_DSN` | Optional | Optional |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Required; generate with `openssl rand -base64 32` | Required | Optional |
+| `CONSENT_STATE_SECRET` | Required; generate with `openssl rand -hex 32` | Required | Optional; the E2E server gets a test-only value |
+| `CRON_SECRET` | Required anywhere cron route is exercised | Required if you hit cron route | Required if you hit cron route |
+| `GITHUB_READ_TOKEN` (fine-grained, read-only Actions on this repository only, sensitive; DEBT-505) | Required: the renewal job's check of GitHub's scheduled workflows. Without it GitHub is read anonymously, and a refusal at GitHub's per-address limit raises `scheduled_checks_unreadable` | Not needed | Not needed |
+
+### Stripe account rule
+
+Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md).
+
+### Stripe price ID rule
+
+Never change `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` or `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` in an environment that has subscribers. The app recognizes only the current monthly and annual IDs (DEBT-501 item 2). Every subscription still on an old ID would then fail:
+
+- its webhooks answer 500;
+- reads of it throw;
+- the reconcile job fails its row;
+- the success page sends its buyer to an error.
+
+A new price for new customers waits for item 2's list of recognized legacy IDs. Nothing enforces this rule yet.
+
+### Clerk key pairing rule
+
+`CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must come from the same Clerk instance and the same environment type (`test` vs `live`). `lib/env.ts` validates both conditions.
+
+### Clerk JWT key (Production)
+
+`CLERK_JWT_KEY` lets the middleware verify session tokens without fetching Clerk's signing keys from the Backend API (DEBT-503 item 5). Without it, each server instance fetches them every five minutes, and a failed fetch, in a Clerk outage or a network failure, signs every visitor on that instance out. A session token naming an uncached key ID also forces a fetch, so anyone can make a request wait on Clerk. `@clerk/nextjs` does not read this variable itself; `proxy.ts` passes it to `clerkMiddleware` as `jwtKey`.
+
+- **Value.** The production instance's public key in PEM form, from the Clerk Dashboard's API keys page, or built from the key the Frontend API publishes at `/.well-known/jwks.json`. It is public, not a secret. Escaped `\n` newlines are restored.
+- **Where.** Vercel Production only. Preview and development use the development instance, and keep fetching.
+- **Checked twice.**
+  - **On every deploy.** `scripts/check-clerk-jwt-key.ts`, the first step of `vercel.json`'s `buildCommand`, runs before the migrations. It stops the deploy when the keys Clerk publishes for the publishable key's instance do not include it, so a wrong key never deploys.
+  - **When Clerk cannot be read.** The deploy goes on, and its log says the key is unchecked. A failed read says nothing about the key, and refusing would let a Clerk outage block every fix. Nothing more is needed unless the key was edited since the last checked deploy. If it was, redeploy once Clerk answers.
+  - **At runtime,** more than three rejected signatures in a minute raise `clerk_session_tokens_rejected`.
+- **If Clerk changes its signing key,** every visitor is signed out until this is updated. The fastest way back is Vercel's Instant Rollback to a production deployment built without the key; then remove the variable, or set the new key, and redeploy.
+
+---
+
+## Known Gotchas
+
+### Vercel Deployment Protection Blocks Webhooks
+
+If Vercel Standard Protection is enabled for Preview deployments, Clerk and Stripe webhooks will be intercepted by Vercel auth before they reach your route handlers.
+
+Preview webhook targets must therefore be publicly reachable without Vercel login gates, or webhook testing must use another public endpoint.
+
+See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md).
+
+### Header-Safe `CRON_SECRET` Across Vercel Scopes
+
+`CRON_SECRET` is used as an HTTP `Authorization: Bearer ...` value for both Vercel cron routes. Vercel's [troubleshooting guide](https://vercel.com/kb/guide/troubleshooting-vercel-cron-jobs) tells operators to check for invalid header characters; it does not establish the previously claimed guarantee that every malformed value is rejected during deployment. **Corrected 2026-09-19:** validate at the request boundary, not at application startup. After parsing the authorization header, both routes reject a configured value containing whitespace, control characters, or characters that cannot be encoded in a Fetch header. They return the same generic `401` as other authorization failures and log only `CRON_SECRET is not header-safe` plus the route. No rate limiter, reconciliation, cleanup, or notice delivery runs on that path. Do not silently repair the value with `.trim()`.
+
+Vercel stores environment variables per scope. Production, Preview, Development, and git-branch-specific Preview overrides can each carry different bytes for the same name. Keep `CRON_SECRET` non-empty, identical, and header-safe in every scope where cron or manual cron calls are expected.
+
+**Prevention**
+
+- Use `printf '%s'` when piping values to `vercel env add`.
+- Do not use `echo`, which appends a newline.
+- Do not silently trim secrets in application code; reject or reset the bad value at the provider.
+- After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing/internal whitespace booleans, and header-unsafe booleans. Never print the value.
+- GitHub Actions does not need `CRON_SECRET`: its former validator checked only the unrelated Actions copy. The owner ruled deletion and rotation on 2026-09-19. `scripts/validate-header-safe-secret.ts` remains a value-free operator tool, using the same `src/adapters/shared/header-secret.ts` validator as both runtime handlers. Vercel Production/Preview/Development still need verification after changes; removing the CI consumer does not prove the provider values were rotated.
+
+**Safe Vercel reset procedure**
+
+Generate the replacement only in process memory. Do not print it or write it to a file, ticket, shell history, log, or chat. Rotate immediately before the reviewed production promotion; an environment-store update alone does not update an already-created deployment. Check each command's status and stop on failure.
+
+```bash
+(
+  # Never enable shell tracing around a secret operation.
+  set +x
+  trap 'unset rotation_secret' EXIT
+  # One value lives only in this subshell; every later operation is conditional.
+  rotation_secret="$(openssl rand -hex 32)" &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET production --force &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET preview --force &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET development --force &&
+    vercel env rm CRON_SECRET preview <branch-name> --yes
+)
+```
+
+Replace `<branch-name>` with a verified override target; if there is no override, omit that final `&&`/removal command. For multiple overrides, keep their removals in the same `&&` chain. The subshell returns the failing operation's nonzero status and clears its in-memory value on exit; a failed scope update cannot proceed to override removal.
+
+After resetting, redeploy the affected Preview and Production targets. Env changes do not repair an already-created deployment.
+
+Verify only value-free metadata after the update (present, length, header-safe). The current schedules in `vercel.json` are **08:00 UTC** for reconciliation and **09:00 UTC** for renewal notices, not two 08:00 runs. Confirm each next scheduled production invocation returns `200` in Vercel logs; a deployment becoming Ready or a manual unauthorized probe does not supply that receipt. On the Hobby plan, allow the scheduled hour per [Vercel's cron accuracy contract](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
+
+### A Missed Clerk Webhook Leaves a Stale Email or a Deleted User's Row
+
+Since DEBT-503 item 1, a signed-in page serves the stored `users` row and does not ask Clerk. So a `user.updated` event that never arrives leaves the stored email stale until the user starts a checkout or trial card setup, or until another user's sign-up finds the address held and BUG-284's stale-owner check moves it. A `user.deleted` that never arrives leaves the row and the Stripe customer in place, and the subscription keeps renewing.
+
+- **Delivery.** Clerk sends webhooks through Svix, which retries a failed delivery for about 27 hours and disables an endpoint that keeps failing for 5 days. Deliveries are not guaranteed.
+- **Detect.** In the Clerk Dashboard, open Webhooks and the production endpoint, and look for failed messages or a disabled endpoint.
+- **Recover.** Fix the cause, re-enable the endpoint if it was disabled, then replay the failed messages from the same page, which can recover every failure since a chosen time. The webhook controller records each event by ID: a replay of an event it already processed is skipped, and one that failed is processed again.
+- **Replay promptly.** Until DEBT-511 ships, legal notices go to the stored email, so a missed `user.updated` can misdirect one; after it ships, a send under its last-run rule still can.
+
+### `NEXT_PUBLIC_*` Vars Require Fresh Builds
+
+`NEXT_PUBLIC_*` values are inlined at build time. Updating the environment variable alone is not enough.
+
+If you change `NEXT_PUBLIC_APP_URL`, Clerk publishable keys, Stripe publishable keys, or any other `NEXT_PUBLIC_*` value, trigger a fresh build rather than relying on a cached redeploy.
+
+### Missing Database Migration Causes Silent Write Failures
+
+When code references a newly added column but the target database has not had `pnpm db:migrate` run yet, reads can still work while writes fail with generic `Internal error` responses.
+
+**Typical symptoms**
+
+- Pages load normally.
+- Auth works.
+- Server actions that write start failing.
+- Logs show Postgres errors such as `column "X" does not exist`.
+
+**Diagnosis**
+
+- Inspect Vercel function logs or local server logs.
+- Look for the real Postgres error behind the generic controller error handling.
+- Compare the repo migration journal to the target DB ledger. Reuse the DEBT-391 primitive: `db/migrations/meta/_journal.json` `entries[].when` must be present in `drizzle.__drizzle_migrations.created_at`.
+
+**Fix (manual fallback — the Vercel Build Command now applies deploy migrations automatically)**
+
+Run migrations against the exact database backing the failing environment:
+
+```bash
+# Preview / shared non-production DB
+DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
+
+# Production DB
+DATABASE_URL="<production-connection-string>" pnpm db:migrate
+```
+
+For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
+
+Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with both explicit opt-ins. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
+
+```bash
+# Prints only the host, not the password.
+LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
+
+# Migrate only the deploy target you just verified.
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+
+# Then opt into using that existing database for E2E.
+E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
+```
+
+Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.
+
+**Prevention**
+
+The Vercel Build Command runs `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds (set in `vercel.json`), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
+
+Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
+
+Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; deploy-target E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
+
+### Clerk Development Mode Can Re-Authenticate After Stripe Checkout
+
+In Clerk development mode, non-production sessions may rely on development-mode transport that behaves differently from production cookies. A redirect back from Stripe can therefore land on a sign-in screen in dev/preview even though the equivalent production flow would stay signed in.
+
+Treat this as an environment-mode behavior difference first, not automatically as a production auth bug.
+
+---
+
+## Operator Verification Checklist
+
+When changing environment configuration, verify all of the following:
+
+1. Production uses production/live auth and billing keys only.
+2. Preview/local use non-production auth and billing keys only.
+3. Production and non-production databases are isolated.
+4. `NEXT_PUBLIC_APP_URL` matches the environment actually serving the app.
+5. Preview webhook targets are publicly reachable.
+6. Any schema change is applied by the Vercel Build Command migration on deploy; verify the build ran the migration for the target deployment before it serves (the build fails closed otherwise).
+7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database.
+8. Auth and payment flows have been smoke-tested on the target environment after changes.
+
+---
+
+## Related
+
+- [promote-to-production.md](../guides/release/promote-to-production.md)
+- [database-recovery.md](../guides/operations/database-recovery.md)
+- [license-baseline.md](../dev/license-baseline.md)
+- [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
+- [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
+- [proxy.ts](../../proxy.ts)
+- [lib/env.ts](../../lib/env.ts)
+- [app/api/webhooks/clerk/route.ts](../../app/api/webhooks/clerk/route.ts)
+- [app/api/stripe/webhook/route.ts](../../app/api/stripe/webhook/route.ts)

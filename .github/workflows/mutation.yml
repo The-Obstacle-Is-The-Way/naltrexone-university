@@ -1,7 +1,7 @@
 name: Mutation
 
 # DEBT-465 Part 2: a weekly mutation-testing report. It never gates a pull
-# request (ADR-019); the runbook is docs/dev/mutation-testing.md.
+# request (ADR-019); the runbook is docs/guides/testing/mutation-testing.md.
 on:
   schedule:
     - cron: '0 6 * * 1'

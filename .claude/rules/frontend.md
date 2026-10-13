@@ -18,12 +18,12 @@ paths:
 ALWAYS refer to these design docs as sources of truth when editing
 files in `app/**`, `components/**`, or any UI surface:
 
-- `docs/frontend/standards.md` — tokens, focus rings, spacing, typography
-- `docs/frontend/pattern-registry.md` — opacity scale, foreground ramps, dark-mode rules
-- `docs/frontend/contrast-policy.md` — WCAG AA contrast targets
-- `docs/frontend/design-principles.md` — layout composition
-- `docs/frontend/typography-policy.md` — text-size discipline
-- `docs/frontend/bookmark-surface-policy.md` — bookmark appearance decision tree
+- `docs/design-system/standards.md` — tokens, focus rings, spacing, typography
+- `docs/design-system/pattern-registry.md` — opacity scale, foreground ramps, dark-mode rules
+- `docs/design-system/contrast.md` — WCAG AA contrast targets
+- `docs/design-system/layout.md` — layout composition
+- `docs/design-system/typography.md` — text-size discipline
+- `docs/design-system/bookmark-surfaces.md` — bookmark appearance decision tree
 
 Mandatory patterns — never diverge:
 
@@ -92,7 +92,7 @@ theme regression test because a file-level lint exception cannot bound it.
 
 Semantic tokens handle light/dark automatically. Component-specific
 `dark:` overrides are allowed ONLY when they appear in
-`pattern-registry.md` or `contrast-policy.md`. If the same dark
+`pattern-registry.md` or `contrast.md`. If the same dark
 override appears in 2+ components, promote it into a shared primitive
 or a constant in `lib/shared-styles.ts`.
 

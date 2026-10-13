@@ -92,7 +92,7 @@ describe('raising upstream advisories', () => {
       '`package.json` pins `next` at `16.3.6`, and `pnpm-lock.yaml` resolves `16.3.6`',
     );
     expect(body).toContain(
-      'docs/dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown',
+      'docs/policies/supply-chain.md#urgent-cve-patches-before-the-7-day-cooldown',
     );
   });
 

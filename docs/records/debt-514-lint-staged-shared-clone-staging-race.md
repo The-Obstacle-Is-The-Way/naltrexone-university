@@ -88,5 +88,5 @@ Once one path is verified, remove the `>=17.6.0` ignore and restore a caret rang
 
 ## Related
 
-- [Dependency update protocol](../dev/dependency-update-protocol.md#dependabot-config-policy): the Dependabot ignore.
+- [Dependency update protocol](../guides/dependencies/updating-dependencies.md#dependabot-config-policy): the Dependabot ignore.
 - [lint-staged#1854](https://github.com/lint-staged/lint-staged/pull/1854): the upstream change.

@@ -4,7 +4,7 @@ name: Operational alert watcher
 # reach the owner as Sentry email, and nothing in that path notices its own
 # absence. This daily job reads Sentry after the renewal job's 09:00 UTC run
 # and keeps one issue open while a check fails. The checks:
-# docs/dev/logging.md, "Operational alerts", Watcher.
+# docs/architecture/observability.md, "Operational alerts", Watcher.
 on:
   schedule:
     - cron: '37 11 * * *'

@@ -6,7 +6,7 @@
 services:
   db:
     # postgres:16 (PostgreSQL 16.15), pinned to the digest CI pulls; the two
-    # change together (docs/dev/dependency-update-protocol.md).
+    # change together (docs/guides/dependencies/updating-dependencies.md).
     image: postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5
     environment:
       POSTGRES_USER: postgres
