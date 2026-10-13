@@ -73,6 +73,7 @@ export function createGatewayFactories(input: {
       new StripePaymentGateway({
         stripe: primitives.getStripe(),
         webhookSecret: primitives.env.STRIPE_WEBHOOK_SECRET,
+        nextWebhookSecret: primitives.env.STRIPE_WEBHOOK_SECRET_NEXT,
         consentStateSecret: primitives.env.CONSENT_STATE_SECRET,
         webhookE2EOwner: primitives.env.STRIPE_WEBHOOK_E2E_OWNER,
         priceIds: stripePriceIds,

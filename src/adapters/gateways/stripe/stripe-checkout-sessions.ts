@@ -279,7 +279,10 @@ export async function createStripeTrialPaymentMethodSetupSession({
     currency: input.currency,
     // BUG-310: the flow saves the card the trial renews on, and its consent
     // says "card", so the Session offers only cards (card wallets included).
-    payment_method_types: ['card'],
+    // Endive replaced `payment_method_types` with this field, which filters
+    // the methods enabled in Stripe's payment-method settings, so card must
+    // stay enabled there.
+    allowed_payment_method_types: ['card'],
     consent_collection: { terms_of_service: 'required' },
     // BUG-308: prefills the learner's email without naming a customer; the
     // webhook attaches the card only after verifying ownership.

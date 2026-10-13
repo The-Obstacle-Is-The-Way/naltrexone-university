@@ -54,11 +54,14 @@ its parser may be removed, but every deployment that wrote the shape stays a
 technically possible rollback target. Rolling production back below a floor
 puts that writer back in serving traffic. The release that rolls forward must
 then restore the shape's replay parser and fixtures, and keep them for one full
-TTL after the rollback ends. Check this list before any production rollback:
+TTL after the rollback ends.
+
+A floor can also come from outside the code. Instant Rollback serves a deployment with the environment variables it was built with, so a deployment whose webhook secret the provider no longer signs with rejects every delivery. Check this list before any production rollback:
 
 | Floor | Shape no longer read | Deployments below it |
 |-------|----------------------|----------------------|
 | #1360 (2026-10-04) | End and finalize outputs without `totals.scored` (DEBT-493) | Any production deployment assigned before #1350's, at 2026-10-03 20:02:33Z |
+| The promotion that ships #1483, from when the Dahlia live webhook endpoint `we_1Tejqg…` is disabled | Stripe webhooks signed by that endpoint: deployments below it know only its secret (Stripe doc, "Major-release migration") | Any production deployment assigned before that promotion's. Enable `we_1Tejqg…` again before rolling back below it, and disable it once production is back above |
 
 ```text
 1. Promotion PR (dev → main): CI (GitHub Actions)

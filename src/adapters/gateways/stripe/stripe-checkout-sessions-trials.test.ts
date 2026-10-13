@@ -387,7 +387,11 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     expect(params).not.toHaveProperty('customer');
     expect(params).not.toHaveProperty('line_items');
     // BUG-310: the flow saves a card, so the Session offers only cards.
-    expect(params).toHaveProperty('payment_method_types', ['card']);
+    // Endive (2026-09-30) removed `payment_method_types` from Session
+    // create and answers it with a 400; `allowed_payment_method_types`
+    // replaces it.
+    expect(params).toHaveProperty('allowed_payment_method_types', ['card']);
+    expect(params).not.toHaveProperty('payment_method_types');
     if (!params) throw new Error('Expected Checkout Session params');
     const metadata = params.metadata;
     if (!metadata) throw new Error('Expected signed consent metadata');

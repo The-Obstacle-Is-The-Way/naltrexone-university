@@ -59,7 +59,7 @@ export type CheckoutSessionCreateParams =
   | (CheckoutSessionCreateParamsBase & {
       mode: 'setup';
       currency: string;
-      payment_method_types?: Array<'card'>;
+      allowed_payment_method_types?: Array<'card'>;
       // Prefills the email field; a setup Session names no customer.
       customer_email?: string;
     });
