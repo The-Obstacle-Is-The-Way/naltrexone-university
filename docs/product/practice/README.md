@@ -4,7 +4,7 @@ What practice does for a learner: tutor and exam sessions, Quick Practice, revie
 
 ## The Contracts
 
-These documents state the invariants practice keeps. Where another document disagrees, they win until one of them is changed.
+These documents state the invariants practice keeps. A document that disagrees with one of them is a defect: reconcile it against the code and the owner's product decision, and correct whichever is wrong.
 
 | Contract | Document | Applies to |
 |---|---|---|

@@ -193,8 +193,9 @@ The migration defined by this doc is complete.
 
 ## Coverage Tracking
 
-Use dated census reports for coverage analysis instead of relying on old
-migration-era expectations.
+Judge coverage from a census of the published questions, not from old
+migration-era expectations. The census reports and their script are gone; the
+last census's findings are below.
 
 The last census, on 2026-03-17 (its reports and script have since been removed), found:
 
