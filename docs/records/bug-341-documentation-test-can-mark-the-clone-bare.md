@@ -21,7 +21,7 @@
 
 ## Impact
 
-It affects any session or person who pushes from a linked worktree, and through the shared config everyone working in that clone's main folder. No commits or files are lost; git refuses to work until `git config core.bare false` is run. Production is unaffected.
+It affects any session or person who pushes from a linked worktree while the pre-push hook runs the unit tests, which include this test on any branch that has #1471 but not this fix. Through the shared config, it then affects everyone working in that clone's main folder. No commits or files are lost; git refuses to work until `git config core.bare false` is run. Production is unaffected.
 
 ## Options
 

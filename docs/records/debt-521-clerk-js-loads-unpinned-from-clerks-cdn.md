@@ -28,7 +28,7 @@ The browser half of sign-in, Clerk JS and its UI bundle, is not part of the app'
 2. **Pin both halves to the lockfile.** For the UI, pass `@clerk/ui`'s `ui` export to `<ClerkProvider>`'s `ui` option, which Clerk documents for bundling the UI instead of loading it from the CDN; `@clerk/ui` is already a dependency. For Clerk JS, add `@clerk/clerk-js` as a dependency and set `NEXT_PUBLIC_CLERK_JS_VERSION` from its installed version at build time. Dependabot then proposes each Clerk release, and it passes E2E before reaching users. A security fix waits for that pull request, usually a day. *Recommended*: every other runtime dependency already works this way.
 3. **Self-host the bundles.** This adds build and CSP work for little over option 2.
 
-## Resolution (decided)
+## Resolution
 
 Not yet decided. It is the owner's call, because option 2 makes the team responsible for applying Clerk's security fixes. Engineering for option 2 is one small PR, with a test that the build takes both versions from the lockfile. Decide by 2026-10-26.
 
