@@ -140,6 +140,7 @@ Active practice action bars use mode-specific semantics:
 | Exam active session, first question | filled `Next` in `exam-action-primary-group` | none | No empty Previous placeholder; Mark for review lives in the header rail. |
 | Exam active session, middle question | `Previous` + filled `Next` in `exam-action-primary-group` | none | Draft selections do not change footer labels. |
 | Exam active session, final question | `Previous` + filled `Review & Submit` in `exam-action-primary-group` | none | Preserve the hidden `Opens review and submit.` description for assistive tech. |
+| Exam active session, only question (a one-question exam) | filled `Review & Submit` in `exam-action-primary-group` | none | No Previous; the same hidden description. |
 
 In tutor mode and Quick Practice, pointer activation on a choice is the primary pre-feedback action and commits immediately. Keyboard/AT radio selection is select-only; the action bar renders a filled `Submit` in the same primary cluster only while a selected-uncommitted choice exists. The footer otherwise carries only backward navigation before feedback and sequential/terminal navigation after feedback.
 

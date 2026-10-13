@@ -133,7 +133,7 @@ PracticeSessionPage (server)
                  ├─ End session button (top-right)
                  ├─ QuestionCard (shared)
                  ├─ Feedback (shared) — shown immediately after submit
-                 └─ Action bar: [← Previous] [Submit] [Next Question] [Bookmark]
+                 └─ Action bar: [← Previous] [Submit] [Next] [Bookmark]
 ```
 
 **State management:**
@@ -143,8 +143,8 @@ PracticeSessionPage (server)
 - `submitResult: SubmitAnswerOutput | null` — correctness + explanation data
 - `sessionInfo: { mode, index, total, isMarkedForReview, latestSelectedChoiceId, latestIsCorrect }`
 
-**Data flow for "Next Question":**
-1. User clicks "Next Question"
+**Data flow for "Next":**
+1. User clicks "Next"
 2. `onNextQuestion()` → `loadNextQuestion()` (`app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts`, which calls `runLoadQuestionFlow()` in `app/(app)/app/practice/shared/question-flow-actions.ts`)
 3. State cleared: `setSelectedChoiceId(null)`, `setSubmitResult(null)` (`app/(app)/app/practice/shared/question-flow-actions.ts:47-48`)
 4. Server action `getNextQuestion({ sessionId })` fetches next question
@@ -157,9 +157,9 @@ PracticeSessionPage (server)
 Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 
 **Differences from Tutor:**
-- `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:277-279`) — no green/red highlighting during exam
-- Feedback hidden: `feedbackResult` is gated behind `!isExamMode` (`app/(app)/app/practice/components/practice-view.tsx:285-288`)
-- No per-question `Submit` button. The active exam footer is `[Previous] [Next]` on non-terminal questions and `[Previous] [Review & Submit]` on the last question.
+- `correctChoiceId` forced to `null` (`PracticeView` in `app/(app)/app/practice/components/practice-view.tsx`) — no green/red highlighting during exam
+- Feedback hidden: `feedbackResult` is gated behind `!isExamMode` (`PracticeView`, same file)
+- No per-question `Submit` button. The active exam footer (`ExamActionBar`) is `[Next]` on the first question, `[Previous] [Next]` on middle questions, `[Previous] [Review & Submit]` on the last question, and `[Review & Submit]` alone in a one-question exam.
 - Draft answer state is persisted on navigation boundaries and when entering the review stage
 - "Mark for review" button in the question header rail (`data-testid="question-header-actions"` in `app/(app)/app/practice/components/practice-view.tsx`)
 - Last exam question swaps the bottom-bar label to `Review & Submit`; that click saves any pending draft and enters the exam review stage
@@ -277,7 +277,7 @@ QuickPracticePage (server)
             ├─ Top-right link: "Back to Practice"
             ├─ QuestionCard (shared)
             ├─ Feedback (shared) — shown immediately after submit
-            └─ Action bar: [Submit] [Next Question] [Bookmark]
+            └─ Action bar: [Submit] [Next] [Bookmark]
 ```
 
 ---
@@ -376,7 +376,7 @@ The codebase has two navigators that look similar but serve different contexts:
 │         ├─ loadState: LoadState                                     │
 │         └─ canSubmit: boolean                                       │
 │                                                                     │
-│  On "Next Question":                                                │
+│  On "Next":                                                         │
 │    question-flow-actions.ts:                                        │
 │      setSelectedChoiceId(null)  ──► cleared before fetch            │
 │      setSubmitResult(null)      ──► cleared before fetch            │
