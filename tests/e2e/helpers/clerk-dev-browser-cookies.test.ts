@@ -6,7 +6,8 @@ import { devBrowserCookieKeeper } from './clerk-dev-browser-cookies';
 // dev-browser cookies before setting them again. A request that leaves in
 // the gap reaches the server without them and is signed out. The page script
 // holds those removals until the current script ends and drops each one that
-// a write of the same cookie follows, so the write replaces it in place.
+// a write of the same cookie overtakes before then, so the write replaces it
+// in place.
 function writeCookie(value: string): void {
   // biome-ignore lint/suspicious/noDocumentCookie: Clerk JS writes its cookies this way, and the keeper wraps exactly this setter.
   document.cookie = value;

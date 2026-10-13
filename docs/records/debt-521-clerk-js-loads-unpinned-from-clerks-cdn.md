@@ -19,13 +19,13 @@ The browser half of sign-in, Clerk JS and its UI bundle, is not part of the app'
 
 ## Impact
 
-- **A Clerk regression ships to users without passing the app's gates.** If sign-in breaks with no deploy of the app, rolling the app back to a deployment on the same `@clerk/nextjs` major does not help, since that major still loads the latest Clerk JS 6. The runbook note in the Clerk integration document says so.
+- **A Clerk regression ships to users without passing the app's gates.** If sign-in breaks with no deploy of the app, rolling the app back to a deployment on the same `@clerk/nextjs` major does not help, since that major still loads the latest Clerk JS 6 and UI 1. The runbook note in the Clerk integration document says so.
 - **Security fixes arrive automatically.** That is the benefit of the default.
 
 ## Options
 
 1. **Keep the default.** Clerk fixes reach users at once, and so do Clerk regressions. Add the runbook note (done) and rely on Sentry for sign-in errors.
-2. **Pin both halves to the lockfile.** For the UI, pass `@clerk/ui`'s `ui` export to `<ClerkProvider>`'s `ui` option, which Clerk documents for bundling the UI instead of loading it from the CDN; `@clerk/ui` is already a dependency. For Clerk JS, add `@clerk/clerk-js` as a dependency and set `NEXT_PUBLIC_CLERK_JS_VERSION` from its installed version at build time. Dependabot then proposes each Clerk release, and it passes E2E before reaching users. A security fix waits for that pull request, usually a day. *Recommended*: every other runtime dependency already works this way.
+2. **Pin both halves to the lockfile.** For the UI, pass `@clerk/ui`'s `ui` export to `<ClerkProvider>`'s `ui` option, which Clerk documents for bundling the UI instead of loading it from the CDN; `@clerk/ui` is already a dependency. For Clerk JS, add `@clerk/clerk-js` as a dependency and set `NEXT_PUBLIC_CLERK_JS_VERSION` from its installed version at build time. Dependabot then proposes Clerk releases in its weekly grouped pull request, after a seven-day cooldown, and `main`'s E2E runs on them before production. A Clerk fix therefore waits one to two weeks, unless a security advisory makes Dependabot's daily security entry raise it sooner. *Recommended*: every other runtime dependency already works this way.
 3. **Self-host the bundles.** This adds build and CSP work for little over option 2.
 
 ## Resolution

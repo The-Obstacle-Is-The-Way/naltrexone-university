@@ -13,13 +13,14 @@ import type { BrowserContext } from '@playwright/test';
  * `document.cookie` leave the held cookie out, so Clerk JS sees it gone at once
  * and asks for a new dev browser.
  *
- * Partitioned and unpartitioned copies of a name are treated as one cookie;
- * E2E pages on http://localhost never set a partitioned one.
+ * Partitioned and unpartitioned copies of a name are treated as one cookie.
+ * That matters only if the Clerk instance enables partitioned cookies, the one
+ * case in which Clerk JS writes partitioned dev-browser cookies.
  *
  * Playwright sends this function's source text to the page, so it must not use
- * anything from this module. It also declares no functions of its own: some
- * compilers (tsx's esbuild, with names kept) wrap those in a module helper
- * that the page does not have.
+ * anything from this module. It also binds no function to a name (no function
+ * declaration, no `const f = () => …`): some compilers (tsx's esbuild, with
+ * names kept) wrap those in a module helper that the page does not have.
  */
 export function devBrowserCookieKeeper(): void {
   const cookie = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');

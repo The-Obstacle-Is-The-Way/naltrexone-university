@@ -72,7 +72,7 @@ The first is now shown; the others are ruled out for the traced failure.
 
 Fixed with BUG-333's option 9 (2026-10-12). The cause is BUG-333's race with a second trigger: Clerk JS rewrites the dev-browser cookies after every environment fetch, which BUG-333's echo drop did not stop. A request that left inside the rewrite reached the server without the cookies. A server action was then answered with a redirect to Clerk, which the browser reports as "Failed to fetch", and a navigation landed on sign-in.
 
-In every E2E page, a script now holds each removal of the two cookies until the current script ends, and drops it if Clerk JS writes that cookie first, so a rewrite replaces them in place. A removal that no write follows still lands, and the page sees the cookie gone at once, so Clerk JS can still discard a dev browser it no longer accepts. BUG-333 records the tests and the experiment. Pinning Clerk JS would not have helped: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
+In every signed-in E2E test's pages, a script now holds each removal of the two cookies until the current script ends, and drops it if Clerk JS writes that cookie first, so a rewrite replaces them in place. A removal that no write follows still lands, and the page sees the cookie gone at once, so Clerk JS can still discard a dev browser it no longer accepts. BUG-333 records the tests and the experiment. Pinning Clerk JS would not have helped: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
 
 The diagnostic logging records names and lengths only, never values. It stays on a local branch and never ships.
 
