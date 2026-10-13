@@ -2,7 +2,7 @@
 
 > **Status:** Implemented (2026-02-18 via SPEC-033; re-verified 2026-03-17)
 > **Companion docs:** [the tag taxonomy's implementation](../architecture/tag-taxonomy.md).
-> The authoring format is owned by the importer's schema, `scripts/draft-question-import.ts`, and `lib/content/schemas.ts`.
+> The authoring format is owned by [the draft schema](../../content/drafts/questions/SCHEMA.md), the importer (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts`.
 >
 > This is the canonical taxonomy reference. Runtime implementation is aligned;
 > use this doc for slugs, display names, ordering, and migration intent.
@@ -197,7 +197,7 @@ Judge coverage from a census of the published questions, not from old
 migration-era expectations. The census reports and their script are gone; the
 last census's findings are below.
 
-The last census, on 2026-03-17 (its reports and script have since been removed), found:
+The last census, on 2026-03-17, found:
 
 - Zero-count canonical slugs: substance `inhalants`
 - Low-count canonical slugs at the default `<= 3` threshold: none

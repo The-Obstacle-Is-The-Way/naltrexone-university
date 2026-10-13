@@ -2,7 +2,6 @@
 
 > **Parent:** [Documentation map](../README.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-03-17
 > **Import workflow updated:** 2026-09-20 — clean staging; other architectural/format sections retain their earlier verification scope.
 
 This document serves two purposes:

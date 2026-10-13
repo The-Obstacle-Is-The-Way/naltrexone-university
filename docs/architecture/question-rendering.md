@@ -1,7 +1,6 @@
 # Question Rendering Architecture
 
 > **Type:** Current-Implementation Reference
-> **Last Verified:** 2026-04-25
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
 > **Important:** [Interaction Contracts](../product/practice/interaction-contracts.md) remains the canonical click-by-click UI contract when surface details conflict.
 

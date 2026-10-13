@@ -1,6 +1,5 @@
 # Migration Authoring
 
-**Last Updated:** 2026-08-29
 
 This guide is the durable review checklist for Drizzle migration files. It was `docs/dev/migration-authoring.md` until 2026-10-11, and two applied migrations, `0027` and `0028`, still cite that path; applied migrations never change. It
 complements [Deployment Procedure](../release/promote-to-production.md), which describes

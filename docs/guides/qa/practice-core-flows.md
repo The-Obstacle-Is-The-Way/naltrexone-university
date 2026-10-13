@@ -1,8 +1,8 @@
-# Practice Core Flows (Tutor, Exam, Quick Practice)
+# Practice Core Flows (Tutor, Exam, Quick Practice, Review)
 
 **Status:** Draft
 **Created:** 2026-08-13
-**Surfaces:** `/app/practice`, `/app/practice/quick`, `/app/practice/[sessionId]`
+**Surfaces:** `/app/practice`, `/app/practice/quick`, `/app/practice/[sessionId]`, `/app/history`, `/app/bookmarks`, `/app/dashboard`, `/app/questions/[slug]`
 **Preconditions:** Local dev (`pnpm dev`) or a Vercel preview; an **entitled** user signed in and able to open `/app/dashboard` (do not assume the database-isolated `pnpm test:e2e` database seeded the database used by `pnpm dev`). No incomplete session at start (finish or abandon leftovers first — the starter blocks new sessions while one is open).
 **Execution modes:** Human in full. Playwright-assisted runs can execute all behavior steps but need human/vision review for the judgment checks. Agent modes can run the remaining tutor/quick steps, but steps 2 and 21 need `SegmentedControl`/`FilterChip` interaction and are marked `⚠ human/PW` (DEBT-323); pointer choice activation submits immediately, while keyboard/AT or the agent `eval` label-click fallback exposes a **Submit** button that needs the button-click fallback.
 **Estimated time:** 15–20 min

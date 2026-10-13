@@ -32,4 +32,4 @@ Apply the test to the document’s primary purpose. Colocated READMEs/contracts 
 
 DEBT-518 is moving the rest:
 - `legal/` and `security/` (to `policies/`, with the owner's consent);
-- `_archive/` (to delete once the ledger covers it), and the asset folders under `audits/`, `bugs/` and `debt/` that only archived records link.
+- `_archive/` (to delete once the ledger covers it), and the asset folders under `audits/`, `bugs/` and `debt/`, once their remaining live links (ADR-001, ADR-021 and the E2E guide) are repointed.

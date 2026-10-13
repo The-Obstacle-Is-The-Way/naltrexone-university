@@ -6,7 +6,7 @@ Scripts that test the app **at the UI**, run by a person, by an agent (Chrome MC
 
 | Procedure | Covers | Status | Surfaces | Modes |
 |-----------|--------|--------|----------|-------|
-| [Practice core flows](./practice-core-flows.md) | Tutor, exam and quick practice | Draft | `/app/practice`, `/app/practice/quick`, `/app/practice/[sessionId]` | Person; Playwright-assisted behaviour; agent in part |
+| [Practice core flows](./practice-core-flows.md) | Tutor, exam and quick practice, then review, bookmarks and the dashboard | Draft | `/app/practice`, `/app/practice/quick`, `/app/practice/[sessionId]`, `/app/history`, `/app/bookmarks`, `/app/dashboard`, `/app/questions/[slug]` | Person; Playwright-assisted behaviour; agent in part |
 | [Billing and entitlement](./billing-and-entitlement.md) | Pricing states, trial, portal, gate redirects | Draft | `/pricing`, `/checkout/success`, `/app/billing`, the `/app/*` gate | Person; agent or Playwright-assisted by section |
 
 - **Draft:** written, not yet run end to end twice.
@@ -23,7 +23,7 @@ From the 2026-08-13 UI-coverage audit. Write a procedure when one is needed.
 |---|---|---|
 | Sign-up and first run | E2E proves the pricing CTA hands off to `/sign-up`, but the live Clerk form and a new user's first practice session are uncovered | Person (Clerk form) |
 | Error, 404 and loading states | Error boundaries, `not-found.tsx` and loading files have unit-render coverage except the quick-practice loading file; forced route-level boundary states are uncovered | Agent |
-| History filters and pagination | Browser-component coverage clicks the Source filter and session disclosure; route-level tabs, `result`/`difficulty`/`tag`/`sort`, and Previous/Next remain uncovered | Playwright-assisted (chips are toggles) |
+| History filters and pagination | Browser-component coverage clicks the Source filter and session disclosure; route-level `result`/`difficulty`/`tag`/`sort` and Previous/Next remain uncovered (the practice procedure's step 22 checks that both tabs render) | Playwright-assisted (chips are toggles) |
 | Mobile sweep | One 375×667 practice E2E and one browser-component case exist; a 390×844 app-shell and practice sweep remains uncovered | Agent screenshots and a person's review |
 | Accessibility and focus rings | The canonical focus ring, keyboard navigation, and contrast per [the contrast policy](../../design-system/contrast.md) | Person and agent |
 | Feedback and report dialog | The controls have browser-component coverage, but no route-level rating or report interaction | Agent (dialog buttons work) |

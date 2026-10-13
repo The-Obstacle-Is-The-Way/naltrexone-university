@@ -1,10 +1,9 @@
 # Legacy Question Format
 
 > **Status:** Historical format, retained pending owner review; not valid for new drafts
-> **Last Updated:** 2026-03-24
 > **Purpose:** Preserve the previous authoring and operational guidance until its unique content has been reconciled. New drafts use [the active schema](../../../content/drafts/questions/SCHEMA.md) and [the importer](../../../scripts/draft-question-import.ts). The `answer:` field and `## Choices` examples below are historical and rejected by the active importer.
 >
-> This document is intentionally code-backed. When in doubt, verify against
+> This described the importer as of 2026-03-24; the current importer rejects this format. For today's rules, read
 > `scripts/draft-question-import.ts`, `lib/content/schemas.ts`,
 > `scripts/seed/question-parser.ts`, and `scripts/seed-helpers.ts`.
 

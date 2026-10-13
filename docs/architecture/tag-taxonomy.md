@@ -3,7 +3,6 @@
 > **Scope:** How `topic`, `substance`, `treatment`, and `diagnosis` tags flow
 > from draft authoring through import, seed, PostgreSQL, and the Practice /
 > History UI
-> **Last Verified:** 2026-03-17
 > **Runtime SSOT:** `lib/content/draft-taxonomy.ts`, `lib/content/schemas.ts`,
 > `scripts/draft-question-import.ts`, `scripts/import-draft-questions.ts`,
 > `scripts/seed/question-parser.ts`

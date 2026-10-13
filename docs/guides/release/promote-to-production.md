@@ -1,13 +1,12 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](../../architecture/environments.md)
-> **Last Updated:** 2026-10-05 (a promotion with no production deployment; the 2026-09-19 production release gate and other procedures retain their existing scope)
 
 ---
 
 ## 1. Migration Contract: Build-Command Migration
 
-[BUG-241](../../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command (`buildCommand` in `vercel.json`) checks the Clerk JWT key, then runs the ledger pre-check, the managed migration and the post-check, and then `pnpm build`. [The migrations guide](../database/migrations.md) writes out the exact command.
+BUG-241 is fixed. The Vercel Build Command (`buildCommand` in `vercel.json`) checks the Clerk JWT key, then runs the ledger pre-check, the managed migration and the post-check, and then `pnpm build`. [The migrations guide](../database/migrations.md) writes out the exact command.
 
 The pre-check rejects applied-row content drift and ledger-only rows while
 allowing expected pending journal entries. Vercel then applies checked-in
@@ -77,7 +76,7 @@ TTL after the rollback ends. Check this list before any production rollback:
 2. After merge to main (in parallel)
    └─ GitHub Actions runs test again on the main merge commit, including E2E
    └─ Vercel creates a production deployment of that same commit
-   └─ buildCommand (vercel.json): pre-check → managed migrate → exact post-check → build
+   └─ buildCommand (vercel.json): Clerk JWT key check → pre-check → managed migrate → post-check → build
    └─ Deployment Check: GitHub test must pass before production domains move
    └─ Preview builds remain independent; the release check targets production only
 

@@ -2,7 +2,6 @@
 
 > **Parent:** [Practice](./README.md)
 > **Scope:** Current retry/reattempt behavior, provenance rules, and cross-mode consistency
-> **Last Verified:** 2026-04-25
 
 ---
 

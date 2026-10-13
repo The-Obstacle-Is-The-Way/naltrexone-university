@@ -2,7 +2,6 @@
 
 > **Parent:** [Practice](./README.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-07-07
 
 ---
 
@@ -89,4 +88,4 @@ For the full click-by-click UI contract (buttons, persistence boundaries, lockin
 ## 7. Concurrency Protection
 
 - **Duplicate session answers:** Partial unique index `attempts(practiceSessionId, questionId)` prevents two concurrent finalized attempts for the same question in a session. Postgres error code `23505` is caught and mapped to `ApplicationError('CONFLICT')`.
-- **Session state updates:** CAS (compare-and-swap) on each question's state row — read the `practice_session_question_states` row, compute the update, and write it `WHERE id = … AND version = expectedVersion` while the session is still the user's and not ended, incrementing `version`. Retries up to 3 times on conflict (`src/adapters/repositories/practice-session-question-state-updater.ts`).
+- **Session state updates:** CAS (compare-and-swap) on each question's state row — read the `practice_session_question_states` row, compute the update, and write it `WHERE id = … AND version = expectedVersion` while the session is still the user's and not ended, incrementing `version`. Makes up to 3 attempts, then reports a concurrent change (`src/adapters/repositories/practice-session-question-state-updater.ts`).

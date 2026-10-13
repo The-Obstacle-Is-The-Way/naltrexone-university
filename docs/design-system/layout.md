@@ -1,6 +1,5 @@
 # Frontend Design Principles
 
-**Last Updated:** 2026-03-17
 
 Canonical reference for layout composition patterns and UX design rules. While [standards.md](./standards.md) covers atoms (tokens, components, accessibility), this document covers how those atoms compose into consistent page layouts.
 
@@ -53,11 +52,11 @@ Question-related pages use two non-overlapping navigation zones:
 
 Action bars are rendered inline per context, not through a shared component: the button sets differ enough that one abstraction would add complexity without benefit. Each context keeps related actions together, in a stable left-to-right order.
 
-This page used to list each context's buttons, and the list went stale: it showed a pre-feedback **Next**, **Mark for review** in the exam footer, and a "Finish exam" label, none of which the app has. The buttons are now specified once:
+This page used to list each context's buttons, and the list went stale: it showed a pre-feedback **Next**, **Mark for review** in the exam footer, and a "Finish exam" label, none of which the app has. The buttons are specified elsewhere:
 
 - **Each mode's action bar and its states:** [Interaction contracts](../product/practice/interaction-contracts.md), tutor and exam.
 - **The exam action bar and the header rail,** where **Mark for review** and the bookmark live: [Pattern registry, Part 5](./pattern-registry.md#part-5-button-conventions).
-- **The source of truth:** `app/(app)/app/practice/components/practice-view.tsx`.
+- **Every context's action bar, and the file that renders it:** [Question rendering §3.4](../architecture/question-rendering.md#34-action-bars-document-flow-context-specific-buttons).
 
 **Rules:**
 - Previous only appears when there's a session-ordered question list

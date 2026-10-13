@@ -1,6 +1,5 @@
 # Frontend Standards
 
-**Last Updated:** 2026-08-08
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 

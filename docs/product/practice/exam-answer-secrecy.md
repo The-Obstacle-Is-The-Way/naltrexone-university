@@ -2,7 +2,6 @@
 
 > **Parent:** [Practice](./README.md)
 > **Scope:** Canonical policy for when correctness/explanations may be exposed
-> **Last Updated:** 2026-04-27
 > **Status:** Enforced. BUG-180/181/185 and BUG-186/187/191/192/193/195 are archived as fixed; BUG-237 rejects active-exam `SubmitAnswer` at the use-case boundary; BUG-236 aligns dashboard streak timestamps with the repository visibility predicate; BUG-235 aligns History latest-visible-attempt fallback semantics; BUG-239 aligns the remaining implicit latest-attempt readers; DEBT-367 aligns `FakeAttemptRepository` read fidelity with the production visibility predicate. This document remains the regression contract.
 
 ---

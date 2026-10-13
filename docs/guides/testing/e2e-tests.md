@@ -1,6 +1,5 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-09-24
 
 **Retry policy reverified:** 2026-09-20; the remaining sections were not fully re-audited on this date.
 
@@ -359,7 +358,7 @@ agent-browser close
 
 ### Authenticated Exploration
 
-Use a persistent `agent-browser` profile, signed in once by a person, as [browser automation](./browser-automation.md) describes. Do not use a saved Playwright `storageState` file with `agent-browser --state`: it fails silently with Clerk.
+Use a persistent `agent-browser` profile, signed in once by a person, as [browser automation](./browser-automation.md) describes. Do not use a saved Playwright `storageState` file with `agent-browser --state`: it fails silently, even for sites without Clerk.
 
 ## Webapp-Testing Skill
 
