@@ -19,7 +19,7 @@ The browser half of sign-in, Clerk JS and its UI bundle, is not part of the app'
 
 ## Impact
 
-- **A Clerk regression ships to users without passing the app's gates.** If sign-in breaks with no deploy of the app, rolling the app back does not help. The runbook note in the Clerk integration document says so.
+- **A Clerk regression ships to users without passing the app's gates.** If sign-in breaks with no deploy of the app, rolling the app back to a deployment on the same `@clerk/nextjs` major does not help, since that major still loads the latest Clerk JS 6. The runbook note in the Clerk integration document says so.
 - **Security fixes arrive automatically.** That is the benefit of the default.
 
 ## Options
