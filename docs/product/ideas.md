@@ -1,6 +1,6 @@
 # Product Ideas
 
-Unscheduled ideas: worth keeping, not yet decided or planned. Each line gives the idea and the closed record or brainstorm that holds its thinking, which [the ledger](../records/closed.md) resolves. When the owner picks one, it becomes a record.
+Unscheduled ideas: worth keeping, not yet decided or planned. Each line gives the idea and the closed record or brainstorm that holds its thinking, which [the ledger](../records/closed.md) resolves. When the owner picks one, it is specified in a product document under `docs/product/`, as [the product map](./README.md) describes; a record is only for a defect, debt or an investigation it uncovers.
 
 - **Softer dark-mode borders** for read-only containers and subordinate separators, where the uniform bright border still reads as heavy (BS-044).
 - **A bookmark icon toggle**, filled or unfilled, in place of the text pills for adding and removing a bookmark (BS-052).
