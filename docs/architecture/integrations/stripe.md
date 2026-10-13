@@ -140,9 +140,9 @@ Stripe renders each event payload at the receiving endpoint's API version. An en
 
 | Surface | API version | Evidence |
 |---------|-------------|----------|
-| Code client pin | `2026-08-26.dahlia` | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`) |
+| Code client pin | `2026-08-26.dahlia`; `2026-09-30.endive` from #1483 | `lib/stripe-api-version.ts`; `stripe@22.6.2` resolved in `pnpm-lock.yaml` (range `^22.6.1`), then `stripe@23.0.0` |
 | Live endpoint `we_1Tejqg…` (`https://addictionboards.com/api/stripe/webhook`) | `2026-05-27.dahlia`, explicit | Enabled; created 2026-06-04 by DEBT-406; the only live endpoint |
-| Test endpoint (the `dev` branch preview alias) | Found `null`, so the account default; now `2026-05-27.dahlia`, explicit | `we_1T19r…` (created 2026-02-15) had no version. It was replaced on 2026-10-11 by `we_1UPPK…`, see [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and on 2026-10-13 by `we_1UQ2wp…` at `2026-09-30.endive`, see [Endive migration](#endive-migration-2026-10). The only test endpoint |
+| Test endpoint (the `dev` branch preview alias) | Found `null`, so the account default; `2026-05-27.dahlia`, explicit, from 2026-10-11; now `2026-09-30.endive`, explicit | `we_1T19r…` (created 2026-02-15) had no version. It was replaced on 2026-10-11 by `we_1UPPK…`, see [Test endpoint rotation](#test-endpoint-rotation-2026-10-11), and on 2026-10-13 by `we_1UQ2wp…` at `2026-09-30.endive`, see [Endive migration](#endive-migration-2026-10). The only test endpoint |
 | Account default, live and test | `2026-01-28.clover` | `api_version` on the latest events in both modes |
 
 At the census, both endpoints subscribed to the same seven events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.trial_will_end`, `invoice.payment_succeeded` and `invoice.payment_failed`.
@@ -157,9 +157,9 @@ Delivery receipts:
 
 Endpoints follow the code pin's **major release** (Dahlia, Endive, …), not each monthly version.
 
-- **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. The live endpoint therefore stays at `2026-05-27.dahlia` while the client is at `2026-08-26.dahlia`. Recreating it each month would rotate production's signing secret and redeploy, now under live traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable across Dahlia and passes the rest through.
+- **Within a major release, the endpoints stay.** Stripe documents that monthly versions add and never break, and that an endpoint can move to any version in the same major release without code changes. Under Dahlia, the live endpoint therefore stayed at `2026-05-27.dahlia` while the client moved to `2026-08-26.dahlia`. Recreating it each month would rotate production's signing secret and redeploy, now under live traffic, for no difference the parser can see. `stripe-webhook-schemas.ts` reads only fields that are stable within a major release and passes the rest through.
 - **At a major release, the endpoints move,** following [Major-release migration](#major-release-migration). The test endpoint goes first.
-- **The test endpoint mirrors the live endpoint's version, explicitly.** Preview then receives production's payload shape. An endpoint without a version follows the account default (`2026-01-28.clover`, before Dahlia), which is how Preview came to receive Clover payloads while production received Dahlia ones. Do not align them by upgrading the account default. That also changes how the Events API renders events, and every other caller that relies on the default.
+- **The test endpoint mirrors the live endpoint's version, explicitly,** except while a major-release migration has moved it first. Preview then receives production's payload shape. An endpoint without a version follows the account default (`2026-01-28.clover`, before Dahlia), which is how Preview came to receive Clover payloads while production received Dahlia ones. Do not align them by upgrading the account default. That also changes how the Events API renders events, and every other caller that relies on the default.
 
 ### Event-set gap: handled but not subscribed
 
