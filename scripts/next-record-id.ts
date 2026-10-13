@@ -4,11 +4,12 @@ import { pathToFileURL } from 'node:url';
 
 export type RecordPrefix = 'bug' | 'debt';
 
-// The next ID is one past the highest used anywhere: open records, the ledger
-// of closed ones, and the archive until it is deleted. It is computed, not kept
-// as a line in the index, because two branches bumping that line merge cleanly
-// into a duplicate. Two branches can still take the same ID; the
-// documentation guard then fails the second to merge, which renumbers.
+// The next ID is one past the highest used anywhere: open records and the
+// ledger of closed ones, which lists every ID the deleted archive held. It is
+// computed, not kept as a line in the index, because two branches bumping
+// that line merge cleanly into a duplicate. Two branches can still take the
+// same ID; the documentation guard then fails the second to merge, which
+// renumbers.
 export function nextRecordId(
   prefix: RecordPrefix,
   files: Iterable<string>,
@@ -34,15 +35,10 @@ export function repositoryNextRecordId(
   prefix: RecordPrefix,
   root = process.cwd(),
 ): string {
-  const folders = [
-    'docs/records',
-    prefix === 'bug' ? 'docs/_archive/bugs' : 'docs/_archive/debt',
-  ];
-  const files = folders.flatMap((folder) =>
-    existsSync(path.join(root, folder))
-      ? readdirSync(path.join(root, folder)).map((name) => `${folder}/${name}`)
-      : [],
-  );
+  const folder = 'docs/records';
+  const files = existsSync(path.join(root, folder))
+    ? readdirSync(path.join(root, folder)).map((name) => `${folder}/${name}`)
+    : [];
   const ledger = path.join(root, 'docs/records/closed.md');
   // Without the ledger this is not the repository root, and a guess would
   // reuse a closed ID.

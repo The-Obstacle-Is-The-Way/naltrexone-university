@@ -39,9 +39,7 @@ function headingsWithoutBlankLines(source: string): number[] {
 }
 
 const LIVE_MARKDOWN = [
-  ...globSync('docs/**/*.md').filter(
-    (file) => !file.startsWith('docs/_archive/'),
-  ),
+  ...globSync('docs/**/*.md'),
   ...globSync('*.md'),
   ...globSync('.claude/rules/*.md'),
   ...globSync('.github/**/*.md'),

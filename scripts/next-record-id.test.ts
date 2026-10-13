@@ -9,11 +9,11 @@ import {
 } from './next-record-id';
 
 describe('nextRecordId', () => {
-  it('takes one past the highest ID among open records, the ledger and the archive', () => {
+  it('takes one past the highest ID among open records and the ledger', () => {
     expect(
       nextRecordId(
         'debt',
-        ['docs/records/debt-518-x.md', 'docs/_archive/debt/debt-520-y.md'],
+        ['docs/records/debt-518-x.md', 'docs/records/debt-520-y.md'],
         '- DEBT-519 · Closed · Resolved · 2026-10-11 · a.md',
       ),
     ).toBe('DEBT-521');
@@ -48,14 +48,15 @@ describe('repositoryNextRecordId', () => {
     );
   });
 
-  it('reads the records folder, the ledger and the archive', () => {
+  // The ledger lists every ID the deleted archive held (DEBT-518).
+  it('reads the records folder and the ledger, not a leftover archive', () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'next-record-id-'));
     roots.push(root);
     const files: Record<string, string> = {
       'docs/records/bug-012-open.md': '# Open',
       'docs/records/closed.md':
         '- BUG-014 · Closed · Resolved · 2026-10-11 · a.md',
-      'docs/_archive/bugs/bug-013-old.md': '# Old',
+      'docs/_archive/bugs/bug-016-old.md': '# Leftover',
     };
     for (const [file, contents] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   auditDocumentation,
   auditRecordLifecycle,
-  REGISTER_ARCHIVE_BUDGET_BYTES,
   REGISTER_INDEX_BUDGET_BYTES,
 } from '../scripts/documentation-archive';
 
@@ -30,25 +29,14 @@ describe('documentation register size budget', () => {
     ]);
   });
 
-  // Frozen register history is parsed whole by the link audit, so its size
-  // bounds that audit's cost.
-  it.each([
-    'docs/_archive/debt/register-history-2026-09.md',
-    'docs/_archive/bugs/register-frozen-2026-10-05.md',
-  ])('reports %s over its 256 KiB budget', (file) => {
-    expect(oversized({ [file]: '€'.repeat(90_000) })).toEqual([file]);
-  });
-
-  it('accepts register files at their budgets and ignores other large files', () => {
+  it('accepts the index at its budget and ignores other large files', () => {
     const indexAtBudget = `${now}${'a'.repeat(REGISTER_INDEX_BUDGET_BYTES - Buffer.byteLength(now))}`;
-    const archiveAtBudget = 'a'.repeat(REGISTER_ARCHIVE_BUDGET_BYTES);
+    const large = 'a'.repeat(REGISTER_INDEX_BUDGET_BYTES * 8);
     expect(
       oversized({
         [index]: indexAtBudget,
-        'docs/_archive/debt/register-history-2026-09.md': archiveAtBudget,
-        'docs/_archive/debt/register-frozen-2026-10-05.md': archiveAtBudget,
-        'docs/records/debt-001-large-record.md': `**Status:** Active\n\n${archiveAtBudget}`,
-        'docs/guide.md': `${archiveAtBudget}a`,
+        'docs/records/debt-001-large-record.md': `**Status:** Active\n\n${large}`,
+        'docs/guide.md': `${large}a`,
       }),
     ).toEqual([]);
   });
