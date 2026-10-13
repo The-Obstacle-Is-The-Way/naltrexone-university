@@ -142,25 +142,25 @@ describe('usePracticeSessionQuestionFlow conflict notices', () => {
 
     await expect
       .element(screen.getByTestId('load-state'))
-      .toHaveTextContent(/^ready$/);
+      .toMatchTextContent(/^ready$/);
     await screen.getByRole('button', { name: 'Select choice' }).click();
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(fixtureChoice1Id);
+      .toMatchTextContent(fixtureChoice1Id);
 
     await screen.getByRole('button', { name: 'Save draft' }).click();
 
     await expect
       .element(screen.getByTestId('save-requested'))
-      .toHaveTextContent(/^yes$/);
+      .toMatchTextContent(/^yes$/);
     await expect
       .element(screen.getByTestId('load-state'))
-      .toHaveTextContent(/^ready$/);
+      .toMatchTextContent(/^ready$/);
     await expect
       .element(screen.getByTestId('app-toast'))
       .toHaveAttribute('role', 'status');
     await expect
       .element(screen.getByTestId('app-toast'))
-      .toHaveTextContent(/changed in another tab/i);
+      .toMatchTextContent(/changed in another tab/i);
   });
 });

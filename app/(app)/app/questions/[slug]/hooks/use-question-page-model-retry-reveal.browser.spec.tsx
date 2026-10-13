@@ -97,21 +97,21 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
+      .toMatchTextContent(QUESTION_PAGE_CHOICE_2_ID);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
+      .toMatchTextContent(QUESTION_PAGE_ATTEMPT_1_ID);
     await expect
       .element(screen.getByTestId('session-nav-current-was-retried'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
 
     await screen.getByTestId('trigger-reattempt').click();
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     await screen.getByTestId('select-choice-1').click();
     await screen.getByTestId('trigger-submit').click();
@@ -128,7 +128,7 @@ describe('useQuestionPageModel (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('session-nav-current-was-retried'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
   });
 
   it('maps kind=session_unanswered to reveal state and clears selected choice/result', async () => {
@@ -192,16 +192,16 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('unanswered-reveal-correct-choice'))
-      .toHaveTextContent(QUESTION_PAGE_CHOICE_2_ID);
+      .toMatchTextContent(QUESTION_PAGE_CHOICE_2_ID);
   });
 
   it('requires explicit answer-as-new action after hydration error before submitting', async () => {
@@ -241,12 +241,12 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent('hydration_error');
+      .toMatchTextContent('hydration_error');
 
     await screen.getByTestId('trigger-answer-as-new').click();
     await expect
       .element(screen.getByTestId('review-hydration-state'))
-      .toHaveTextContent('no_prior_attempt');
+      .toMatchTextContent('no_prior_attempt');
 
     await screen.getByTestId('select-choice-1').click();
     await screen.getByTestId('trigger-submit').click();

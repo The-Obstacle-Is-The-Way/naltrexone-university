@@ -96,7 +96,7 @@ describe('useQuestionPageModel (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('question-slug'))
-      .toHaveTextContent('q-2');
+      .toMatchTextContent('q-2');
 
     deferredFirst.resolve(
       ok({
@@ -115,7 +115,7 @@ describe('useQuestionPageModel (browser)', () => {
     await deferredFirst.promise;
     await expect
       .element(screen.getByTestId('question-slug'))
-      .toHaveTextContent('q-2');
+      .toMatchTextContent('q-2');
   });
 
   it('discards stale previous-attempt hydration when slug changes mid-flight', async () => {
@@ -215,10 +215,10 @@ describe('useQuestionPageModel (browser)', () => {
     );
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_2_ID);
+      .toMatchTextContent(QUESTION_PAGE_ATTEMPT_2_ID);
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(QUESTION_PAGE_CHOICE_1_ID);
+      .toMatchTextContent(QUESTION_PAGE_CHOICE_1_ID);
 
     deferredFirst.resolve(
       ok({
@@ -238,10 +238,10 @@ describe('useQuestionPageModel (browser)', () => {
     await deferredFirst.promise;
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(QUESTION_PAGE_ATTEMPT_2_ID);
+      .toMatchTextContent(QUESTION_PAGE_ATTEMPT_2_ID);
     await expect
       .element(screen.getByTestId('selected-choice'))
-      .toHaveTextContent(QUESTION_PAGE_CHOICE_1_ID);
+      .toMatchTextContent(QUESTION_PAGE_CHOICE_1_ID);
   });
 
   it('clears previous-attempt loading when stale hydration is invalidated by a failed question reload', async () => {
@@ -304,15 +304,15 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('true');
+      .toMatchTextContent('true');
 
     await screen.getByTestId('set-slug-q-2').click();
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('error');
+      .toMatchTextContent('error');
 
     deferredPrevious.resolve(
       ok({
@@ -333,7 +333,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('is-loading-previous-attempt'))
-      .toHaveTextContent('false');
+      .toMatchTextContent('false');
   });
 
   it('discards stale submit response when slug changes mid-flight', async () => {
@@ -387,7 +387,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     await screen.getByTestId('select-choice-1').click();
     await screen.getByTestId('trigger-submit').click();
@@ -396,10 +396,10 @@ describe('useQuestionPageModel (browser)', () => {
     await screen.getByTestId('set-slug-q-2').click();
     await expect
       .element(screen.getByTestId('question-slug'))
-      .toHaveTextContent('q-2');
+      .toMatchTextContent('q-2');
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
 
     deferredSubmit.resolve(
       ok({
@@ -414,7 +414,7 @@ describe('useQuestionPageModel (browser)', () => {
     await deferredSubmit.promise;
     await expect
       .element(screen.getByTestId('attempt-id'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('executes only one submit when the standalone action is invoked twice while pending', async () => {
@@ -449,7 +449,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
     await screen.getByTestId('select-choice-1').click();
     await screen.getByTestId('trigger-submit').click();
     await screen.getByTestId('trigger-submit').click();

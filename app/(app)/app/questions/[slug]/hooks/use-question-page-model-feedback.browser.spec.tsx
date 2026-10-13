@@ -56,7 +56,7 @@ describe('useQuestionPageModel feedback wiring (browser)', () => {
 
     await expect
       .element(screen.getByTestId('question-rating'))
-      .toHaveTextContent('not_helpful');
+      .toMatchTextContent('not_helpful');
     expect(getQuestionRating).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
     });
@@ -73,7 +73,7 @@ describe('useQuestionPageModel feedback wiring (browser)', () => {
     });
     await expect
       .element(screen.getByTestId('question-rating'))
-      .toHaveTextContent('helpful');
+      .toMatchTextContent('helpful');
   });
 
   it('submits report context for a standalone review question', async () => {
@@ -113,7 +113,7 @@ describe('useQuestionPageModel feedback wiring (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByTestId('trigger-submit-report').click();
 

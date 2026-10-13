@@ -86,22 +86,22 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     expect(getPracticeSessionReview).toHaveBeenCalledWith({ sessionId });
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
     await expect
       .element(screen.getByTestId('session-nav-prev-slug'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('session-nav-next-slug'))
-      .toHaveTextContent('q-2');
+      .toMatchTextContent('q-2');
   });
 
   it('builds navigation from history sequence when sessionId is absent', async () => {
@@ -133,21 +133,21 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('load-status'))
-      .toHaveTextContent('ready');
+      .toMatchTextContent('ready');
 
     expect(getPracticeSessionReview).not.toHaveBeenCalled();
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     await expect
       .element(screen.getByTestId('session-nav-prev-slug'))
-      .toHaveTextContent('q-1');
+      .toMatchTextContent('q-1');
     await expect
       .element(screen.getByTestId('session-nav-next-slug'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('does not refetch the session review when slug changes within the same session', async () => {
@@ -232,13 +232,13 @@ describe('useQuestionPageModel (browser)', () => {
     await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('0');
+      .toMatchTextContent('0');
 
     await screen.getByTestId('set-slug-q-2').click();
 
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
     await expect.poll(() => getPracticeSessionReview.mock.calls.length).toBe(1);
   });
 
@@ -325,16 +325,16 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
 
     await screen.getByTestId('clear-session').click();
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
   });
 
   it('clears session navigation when session review fails', async () => {
@@ -425,7 +425,7 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent('2');
+      .toMatchTextContent('2');
 
     await screen.getByTestId('set-session-2').click();
 
@@ -436,10 +436,10 @@ describe('useQuestionPageModel (browser)', () => {
 
     await expect
       .element(screen.getByTestId('session-nav-total'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent(/^$/);
+      .toMatchTextContent(/^$/);
     expect(reportClientErrorSpy).toHaveBeenCalledWith(
       { code: 'INTERNAL_ERROR', message: 'Boom' },
       {
@@ -550,7 +550,7 @@ describe('useQuestionPageModel (browser)', () => {
     deferred2.resolve(ok(reviewOutputNew));
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
 
     // Resolve the first request (stale)
     deferred1.resolve(ok(reviewOutputStale));
@@ -560,6 +560,6 @@ describe('useQuestionPageModel (browser)', () => {
     // Still shows q-2 index, not stale q-1 index
     await expect
       .element(screen.getByTestId('session-nav-index'))
-      .toHaveTextContent('1');
+      .toMatchTextContent('1');
   });
 });

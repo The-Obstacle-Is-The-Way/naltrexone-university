@@ -79,10 +79,10 @@ describe('useQuestionPageFeedback (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('not_helpful');
+      .toMatchTextContent('not_helpful');
     expect(getQuestionRating).toHaveBeenCalledWith({ questionId });
   });
 
@@ -91,10 +91,10 @@ describe('useQuestionPageFeedback (browser)', () => {
 
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
     await expect
       .element(screen.getByTestId('rating'))
-      .toHaveTextContent('none');
+      .toMatchTextContent('none');
     expect(getQuestionRating).not.toHaveBeenCalled();
   });
 
@@ -102,7 +102,7 @@ describe('useQuestionPageFeedback (browser)', () => {
     const screen = await render(<Probe />);
     await expect
       .element(screen.getByTestId('feedback-status'))
-      .toHaveTextContent('idle');
+      .toMatchTextContent('idle');
 
     await screen.getByRole('button', { name: 'submit-report' }).click();
 
