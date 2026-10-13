@@ -1,6 +1,6 @@
 # ADR-005: Payment Boundary
 
-**Status:** Accepted, as amended 2026-10-13 (where the contracts live; see [Amendment](#amendment--2026-10-13))
+**Status:** Accepted, as amended 2026-10-13 (where the contracts live, see [Amendment](#amendment--2026-10-13); the gateways exist, see [Amendment](#amendment--2026-10-13-the-gateways-exist))
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-002 (Domain Model)
@@ -192,3 +192,7 @@ SPEC-004 and SPEC-009, which the "Payment Ports and Implementations" section nam
 - for webhook idempotency through `stripe_events`, the product specification (`docs/product/specification.md`), Section 4.4.2.
 
 The text above keeps its original references.
+
+## Amendment — 2026-10-13: the gateways exist
+
+The implementation note under the Compliance Checklist is out of date: the `AuthGateway` and `PaymentGateway` adapters are built, in `src/adapters/gateways/clerk-auth-gateway.ts` and `src/adapters/gateways/stripe-payment-gateway.ts`, which composes the modules in `src/adapters/gateways/stripe/`. The decision is unchanged.

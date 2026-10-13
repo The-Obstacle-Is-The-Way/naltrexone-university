@@ -1,6 +1,6 @@
 # ADR-017: Webhook Processing Lifecycle
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-13 (where a failure is recorded; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-005 (Payment Boundary), ADR-006 (Error Handling Strategy), ADR-009 (Security Hardening), ADR-014 (Stripe Eager Sync)
@@ -147,3 +147,9 @@ Webhook endpoints are rate-limited per-IP (ADR-016):
 - ADR-005 (Payment Boundary) — Stripe isolation strategy
 - ADR-014 (Stripe Eager Sync) — Complements webhooks for checkout flow
 - ADR-016 (Rate Limiting) — Webhook rate limit configuration
+
+## Amendment — 2026-10-13
+
+Correction of fact. The decision is unchanged.
+
+Section 5's diagram shows `markFailed` inside the processing transaction. It cannot run there: after a statement error, Postgres aborts the transaction (`25P02`) and refuses every later statement. A failure is recorded after that transaction rolls back, in a fresh one that claims and locks the event and skips one already processed (`persistFailure` in `src/adapters/controllers/stripe-webhook-controller.ts`), and the original error is rethrown (BUG-285). The Clerk webhook records its failures the same way. Fakes cannot model an aborted transaction, so only real Postgres proves this path (`tests/integration/stripe-webhook-failure-boundary.integration.test.ts`).

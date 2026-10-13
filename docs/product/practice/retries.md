@@ -195,7 +195,7 @@ Core retry lineage behavior remains implemented across DEBT-265, DEBT-266, and D
 - Observability events are emitted for retry submissions, review hydration outcomes, and mixed-id normalization.
 - `GetPreviousAttempt` mixed-id contract is hardened (deterministic rejection at controller + use case).
 - Session-review retry marker persistence policy is explicitly accepted as visit-scoped (Option A).
-- Exam-answer secrecy gates are enforced across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, `SubmitAnswer`, and repository-backed status projections. BUG-235/236/237 closed the 2026-04-24 active-exam visibility sweep; BUG-239 tracks a remaining lower-severity implicit latest-reader fallback gap that does not expose correctness. The archived BUG-180/181/185 and BUG-186/187/191/192/193/195 family remains the regression lineage.
+- Exam-answer secrecy gates are enforced across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, `SubmitAnswer`, and repository-backed status projections. BUG-235/236/237 and BUG-239 closed the active-exam visibility sweep, implicit latest-attempt readers included. The archived BUG-180/181/185 and BUG-186/187/191/192/193/195 family remains the regression lineage.
 
 Retry lineage is structurally in place and the secrecy contract is now enforced, but the archived bug family must remain an explicit regression target.
 
@@ -215,7 +215,7 @@ Retry lineage is structurally in place and the secrecy contract is now enforced,
 - [x] Server telemetry for mixed-id normalization + hydration outcomes is in place.
 - [x] Session-review retry marker persistence policy is explicitly defined (visit-scoped).
 - [x] `GetPreviousAttempt` mixed-id contract is hardened beyond boundary normalization.
-- [x] Active-exam secrecy gates are enforced across all correctness-bearing verified surfaces; BUG-239 tracks a remaining implicit latest-reader fallback consistency gap (see [Exam Answer Secrecy Policy](./exam-answer-secrecy.md)).
+- [x] Active-exam secrecy gates are enforced across all correctness-bearing verified surfaces, implicit latest-attempt readers included (see [Exam Answer Secrecy Policy](./exam-answer-secrecy.md)).
 
 ---
 

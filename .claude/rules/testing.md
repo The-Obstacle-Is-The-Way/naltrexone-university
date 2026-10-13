@@ -16,6 +16,8 @@ ALL code MUST be test-driven. No exceptions.
 2. Write minimum code to pass (Green)
 3. Refactor if needed (Refactor)
 
+Production must run the path the tests run. Never fix a defect with a production-only, build-mode or `NODE_ENV` switch that sends production down a path no test exercises: nothing then sees what it breaks. Change the structure so the tested path is the production path.
+
 ## Test-Double Fidelity: Shape vs. Behavior
 
 This section is the canonical live vocabulary and decision rule. Other agent and reviewer instructions reference it instead of defining competing versions.

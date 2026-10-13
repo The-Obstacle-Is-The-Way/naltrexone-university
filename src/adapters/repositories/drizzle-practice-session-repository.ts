@@ -848,6 +848,12 @@ export class DrizzlePracticeSessionRepository
     // question is published now, or a tutor answer already gave it one, as
     // the domain's hadFairChanceAtEnd decides. One statement, so the record
     // and the end commit together in every caller's transaction context.
+    // A tutor submit in another tab can commit while this statement runs.
+    // The answer then counts, but the session returned below, read before this
+    // statement, can omit it, and its answered_at (database clock) can be later
+    // than this ended_at (application clock). The owner accepted that residual
+    // (DEBT-437). If a strict "no answer after ended_at" rule is ever needed,
+    // make end() win the race; do not make every submit lock the session row.
     const ended = await this.db.execute<{
       question_id: string | null;
       fair_chance_at_end: boolean | null;

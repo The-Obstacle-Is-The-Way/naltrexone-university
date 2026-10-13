@@ -37,7 +37,7 @@ import type {
 } from './question-page-logic';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
-// DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
+// Biome's line limit covers test files only; DEBT-224 keeps 300 lines as the design guideline.
 // It is a deep module (Ousterhout) with a single responsibility: compose question review page UI with origin-aware navigation and controller wiring.
 // Splitting would decouple route-origin parsing and navigation contracts from rendering, increasing risk of inconsistent back-link and session-navigation behavior.
 // Reviewed in DEBT-224 audit (2026-02-18).
