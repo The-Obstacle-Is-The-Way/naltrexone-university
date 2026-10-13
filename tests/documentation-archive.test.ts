@@ -293,6 +293,12 @@ describe('documentation archive command', () => {
       `**Status:** Open — ${'x'.repeat(200)}`,
       '**Status:** Open — short',
     ],
+    [
+      'a branch URL into the deleted archive',
+      'docs/guides/example.md',
+      '[Branch](https://github.com/o/r/blob/dev/docs/_archive/bugs/bug-001-x.md)',
+      `[Pinned](https://github.com/o/r/blob/${'a'.repeat(40)}/docs/_archive/bugs/bug-001-x.md)`,
+    ],
   ])(
     'fails the command solely for %s and passes after correction',
     (_kind, file, before, after) => {
@@ -312,7 +318,6 @@ describe('documentation archive command', () => {
         missingLiveRows: [],
         missingRowTargets: [],
         brokenLive: [],
-        archiveDestinations: [],
       });
       writeFileSync(
         path.join(root, file),

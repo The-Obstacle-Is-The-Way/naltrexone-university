@@ -558,26 +558,6 @@ describe('records command', () => {
     expect(runDocumentationCommand(root, () => {})).toBe(1);
   });
 
-  it('exits nonzero for a live link into the deleted archive', () => {
-    const root = fixture();
-    populate(root, {
-      'docs/guides/example.md':
-        '[Branch](https://github.com/o/r/blob/dev/docs/_archive/bugs/bug-001-x.md)',
-    });
-    const reports: DocumentationAudit[] = [];
-    expect(
-      runDocumentationCommand(root, (json) => reports.push(JSON.parse(json))),
-    ).toBe(1);
-    expect(reports[0]?.archiveDestinations).toEqual([
-      {
-        file: 'docs/guides/example.md',
-        line: 1,
-        reference:
-          'https://github.com/o/r/blob/dev/docs/_archive/bugs/bug-001-x.md',
-      },
-    ]);
-  });
-
   it('exits nonzero for an ID listed twice in the ledger, and for a file left in a replaced register folder', () => {
     const root = fixture();
     populate(root, {
