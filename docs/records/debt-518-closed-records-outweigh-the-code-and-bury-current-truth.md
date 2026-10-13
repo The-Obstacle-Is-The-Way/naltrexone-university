@@ -93,7 +93,7 @@ Measured 2026-10-11 on `dev` after #1464.
    - **Exception:** a security finding that an outsider could use is challenged locally and not pushed until its fix ships, as `AGENTS.md` already requires.
 3. **Ship it with its fix.** The record and its fix go up in one pull request, so one review covers both. A record that must be visible before any code, such as an investigation or a decision deferred to the owner, merges without a fix. It can share a pull request with another small change to save a review, as this record does with BUG-336.
 4. **Close by deleting.** Once a record's checks are recorded, the next pull request that touches its register:
-   1. moves any lasting knowledge to its home: a rule to `AGENTS.md` or `docs/dev/`, a decision to an ADR, a reason to a code comment, and an unfinished tail to a self-contained Waiting row;
+   1. moves any lasting knowledge to its home: a rule to `AGENTS.md` or `.claude/rules/`, a decision to an ADR, a reason to a code comment, and an unfinished tail to a self-contained Waiting row;
    2. deletes the file and its asset folder;
    3. adds one ledger line: ID, title, disposition, date and path, then the closing PR and the commit of the record's last version. Those give a GitHub permanent link, and an offline read with `git show <commit>:<path>`.
 5. **Keep what works:** the Now stanza; the Active table and the Waiting rows; due dates and the weekly due-check issue; one-line statuses; `Corrected` notes; and red-first evidence.

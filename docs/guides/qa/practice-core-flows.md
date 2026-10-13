@@ -21,7 +21,7 @@ This procedure absorbed the stabilization checklist's core flows, including revi
 | 2 | ⚠ Narrow filters (e.g. one tag + "Unanswered") | Availability output updates to match the narrowed pool |
 | 3 | Restore or widen filters until at least 5 questions are available; with mode = Tutor and count = 5, press **Start session** | URL becomes `/app/practice/<sessionId>`; question 1 of 5 renders; **no timer is shown** (tutor has no clock) |
 | 4 | Activate a choice; if using keyboard/AT or the agent label-click fallback, press **Submit** when it appears | Verdict pill (`data-testid="verdict-pill"`) and the explanation render **immediately** after pointer activation or Submit — tutor mode always shows feedback on commit |
-| 5 | Check the question footer | Bookmark control **is present** (tutor = YES in `docs/design-system/bookmark-surfaces.md`); rating footer (helpful / not helpful) present |
+| 5 | Check the question footer, then activate the bookmark control | Bookmark control **is present** (tutor = YES in `docs/design-system/bookmark-surfaces.md`) and shows the question as bookmarked, for step 23; rating footer (helpful / not helpful) present |
 | 6 | Press **Next**, answer one more, then navigate away (e.g. Dashboard) mid-session | The question progress indicator advances; no error on leaving |
 | 7 | Return to `/app/practice` | **Continue session** card shows the session with its mode label and progress, with **Resume session** and abandon actions |
 | 8 | Press **Resume session** | Returns to the exact `/app/practice/<sessionId>` URL at the next unanswered question |
@@ -49,14 +49,14 @@ This procedure absorbed the stabilization checklist's core flows, including revi
 | 20 | Activate a choice; if using keyboard/AT or the agent label-click fallback, press **Submit** when it appears | Verdict pill + explanation render (tutor-style feedback); **Next** loads another question |
 | 21 | ⚠ Switch the status filter (e.g. to "Incorrect") | Question pool and counts change accordingly |
 
-## Steps — Review, bookmarks and dashboard
+## Steps — Review, bookmarks and dashboard (⚠ human/PW: step 25 uses toggles)
 
 | # | Action | Expected |
 |---|--------|----------|
 | 22 | Go to `/app/history` | The Sessions and Questions tabs both render |
 | 23 | Go to `/app/bookmarks`; remove one bookmark | The list shows bookmarks, and the removed one disappears after confirming |
 | 24 | Go to `/app/dashboard` | Stats and recent activity render |
-| 25 | During an active exam session, open the dashboard, History, and a question in that session | No surface reveals correctness or explanations before the exam ends ([exam answer secrecy](../../product/practice/exam-answer-secrecy.md)) |
+| 25 | ⚠ Start a new exam session as in step 11 and select an answer on Q1. Without submitting, open the dashboard, History, and Q1's page (`/app/questions/<slug>`), then abandon the session as in step 18 | No surface reveals correctness or explanations before the exam ends ([exam answer secrecy](../../product/practice/exam-answer-secrecy.md)) |
 
 ## Visual checks
 

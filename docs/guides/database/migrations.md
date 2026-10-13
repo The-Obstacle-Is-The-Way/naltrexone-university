@@ -128,8 +128,11 @@ Do not invoke the raw dependency CLI for repository work. It loads
 human acknowledgement boundary.
 
 Git-triggered Vercel Preview and Production deploys run the Build Command in
-`vercel.json`, which `vercel.test.ts` pins. It checks the Clerk JWT key against
-Clerk's published keys, runs a content/ledger pre-check, applies the
+`vercel.json`, which `vercel.test.ts` pins. It checks a configured Clerk JWT key
+against Clerk's published keys and fails on a mismatch. With no key set it skips
+the check, and when Clerk's keys cannot be read it logs that the key went
+unchecked; either way the build continues.
+It then runs a content/ledger pre-check, applies the
 checked-in migration journal, runs an exact post-check, and then builds:
 
 ```bash
