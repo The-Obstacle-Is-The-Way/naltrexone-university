@@ -77,5 +77,5 @@ ports through the existing script. This is a local workaround, not a shipped fix
 
 ## Related
 
-- [Testing infrastructure](../dev/testing-infrastructure.md).
+- [Testing infrastructure](../guides/testing/e2e-tests.md).
 - AUDIT-014, the external record audit.

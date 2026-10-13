@@ -72,7 +72,7 @@ Rows use borderless tonal fill elevation (implemented in [DEBT-289](../../_archi
 
 ## Related Documentation
 
-- [Frontend Standards](../standards.md) — Design tokens, Card component standard
-- [Pattern Registry](../pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-1 (Hoverable Row)
-- [Contrast Policy](../contrast-policy.md) — WCAG AA targets
+- [Frontend Standards](../../design-system/standards.md) — Design tokens, Card component standard
+- [Pattern Registry](../../design-system/pattern-registry.md) — S-1 (Card Surface), S-2 (Muted Row), I-1 (Hoverable Row)
+- [Contrast Policy](../../design-system/contrast.md) — WCAG AA targets
 - [DEBT-289](../../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) — Nested card visual strategy

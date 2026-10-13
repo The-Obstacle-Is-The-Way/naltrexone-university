@@ -92,5 +92,5 @@
 
 - `docs/specs/master_spec.md`
 - `docs/records/README.md`
-- `docs/practice-engine/exam-answer-secrecy-policy.md`
+- `docs/product/practice/exam-answer-secrecy.md`
 - [BUG-074](../_archive/bugs/bug-074-missed-questions-timestamp-tie-misclassification.md)

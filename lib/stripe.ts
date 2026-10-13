@@ -13,7 +13,7 @@ export function getStripe(): Stripe {
      * Pinned Stripe API version for outbound requests, to prevent silent
      * behavior changes across environments. It does not shape webhook
      * payloads: each Stripe webhook endpoint has its own version
-     * (docs/vendor-docs/stripe.md, "Webhook Endpoint API Versions").
+     * (docs/architecture/integrations/stripe.md, "Webhook Endpoint API Versions").
      *
      * Update only after:
      * - Reviewing Stripe's API version changelog for breaking changes

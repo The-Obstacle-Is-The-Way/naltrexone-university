@@ -19,7 +19,7 @@
       "precedence": "keep-both-with-note; repo-specific agent-browser guidance wins when AGENTS.md calls for that CLI",
       "refreshMode": "manual-merge",
       "refreshCommand": "tmp=$(mktemp -d); git clone --depth=1 https://github.com/andrelandgraf/fullstackrecipes.git \"$tmp/fullstackrecipes\"; diff -u .agents/skills/agent-browser/SKILL.md \"$tmp/fullstackrecipes/.agents/skills/agent-browser/SKILL.md\"",
-      "localPreservationNotes": "Manual merge only. 2026-06-12 diff showed upstream generic content would delete Clerk profile auth, React click-failure / DEBT-323 guidance, and docs/tooling/agent-browser.md links, so local fork was preserved unchanged."
+      "localPreservationNotes": "Manual merge only. 2026-06-12 diff showed upstream generic content would delete Clerk profile auth, React click-failure / DEBT-323 guidance, and docs/guides/testing/browser-automation.md links, so local fork was preserved unchanged."
     },
     {
       "name": "api-security-best-practices",

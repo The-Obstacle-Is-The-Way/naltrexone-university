@@ -86,7 +86,7 @@ export function watchedRepositories(): string[] {
 export const WATCH_START = '2026-10-01T00:00:00Z';
 
 const URGENT_PROCEDURE =
-  'docs/dev/supply-chain-overrides.md#urgent-cve-patches-before-the-7-day-cooldown';
+  'docs/policies/supply-chain.md#urgent-cve-patches-before-the-7-day-cooldown';
 
 export type UpstreamAdvisory = {
   ghsaId: string;

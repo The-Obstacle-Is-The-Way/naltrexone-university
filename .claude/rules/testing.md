@@ -61,7 +61,7 @@ Do not trust an inline SDK stub to model runtime binding: detached SDK methods d
 
 The executable ratchet runs through `pnpm lint:doubles` and blocks growth in own-code module mocks, unknown double casts, and hand-rolled doubles for ports with maintained fakes. It scans test files, `*-test-helpers` modules, every `test-helpers/` directory and every `tests/` subdirectory. Each per-file floor must equal its live count: a change that removes a site lowers or deletes its floor in the same patch, so the site cannot return. When you next edit a file that has a floor, move its sites onto the maintained fake or a narrow seam, and lower the floor. Local `pnpm lint` and required CI invoke it; it is deliberately not a Vitest `globalSetup` tax.
 
-The live fake↔real evidence, dated waivers, and explicit known divergences are in `docs/dev/test-double-contract-register.md`. Update that register whenever a maintained fake or its corresponding adapter changes; a missing note is not equivalent to “no known divergence.”
+The live fake↔real evidence, dated waivers, and explicit known divergences are in `docs/guides/testing/fake-contracts.md`. Update that register whenever a maintained fake or its corresponding adapter changes; a missing note is not equivalent to “no known divergence.”
 
 ## Test Environment Isolation
 
@@ -79,7 +79,7 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 4. Use factories: `createQuestion()`, `createChoice()` from `src/domain/test-helpers/`
 5. Descriptive names: `it('returns isCorrect=false when incorrect choice selected')`
 6. Prefer semantic assertions over exact utility-class strings
-7. In Vitest tests (unit, jsdom and Browser Mode), load heavy or dynamic imports once in `beforeAll`, not inside each `it()`, and add no per-test timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`): the Vitest configs set the timeout policy. Playwright E2E keeps its own policy in `docs/dev/testing-infrastructure.md`: assertion-level waits first, and every non-default timeout explained beside it.
+7. In Vitest tests (unit, jsdom and Browser Mode), load heavy or dynamic imports once in `beforeAll`, not inside each `it()`, and add no per-test timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`): the Vitest configs set the timeout policy. Playwright E2E keeps its own policy in `docs/guides/testing/e2e-tests.md`: assertion-level waits first, and every non-default timeout explained beside it.
 
 ### Styling Assertions
 

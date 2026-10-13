@@ -4,7 +4,7 @@ import ts from '@typescript/typescript6';
 
 const APPLICATION_FAKE_BARREL_PATH =
   'src/application/test-helpers/fakes/index.ts';
-const FAKE_CONTRACT_REGISTER_PATH = 'docs/dev/test-double-contract-register.md';
+const FAKE_CONTRACT_REGISTER_PATH = 'docs/guides/testing/fake-contracts.md';
 const ADAPTER_OWNED_FAKE_NAMES = ['FakeStripeCheckoutClient'] as const;
 const REGISTER_START = '<!-- fake-contract-register:start -->';
 const REGISTER_END = '<!-- fake-contract-register:end -->';

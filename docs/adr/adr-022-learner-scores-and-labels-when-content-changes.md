@@ -183,4 +183,4 @@ A review of a key-corrected attempt therefore says "This attempt isn't scored." 
 
 - [ADR-021](./adr-021-question-revisions-and-content-releases.md): immutable revisions and releases.
 - [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md): the implementation.
-- [Pattern Registry](../frontend/pattern-registry.md): F-11 (withdrawal notice) and F-12 (updated notice), revised by DEBT-493.
+- [Pattern Registry](../design-system/pattern-registry.md): F-11 (withdrawal notice) and F-12 (updated notice), revised by DEBT-493.

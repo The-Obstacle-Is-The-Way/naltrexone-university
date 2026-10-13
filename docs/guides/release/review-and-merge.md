@@ -1,6 +1,6 @@
 # Review and Merge
 
-How a feature PR gets reviewed and merged into `dev`. The rules are in [`AGENTS.md`](../../../AGENTS.md#pull-requests-and-review). The decisions behind them are in [ADR-024](../../adr/adr-024-review-merge-and-promotion.md). Promotions to `main` are in [the deployment procedure](../../dev/deployment-procedure.md#8-promoting-dev-to-main).
+How a feature PR gets reviewed and merged into `dev`. The rules are in [`AGENTS.md`](../../../AGENTS.md#pull-requests-and-review). The decisions behind them are in [ADR-024](../../adr/adr-024-review-merge-and-promotion.md). Promotions to `main` are in [the deployment procedure](./promote-to-production.md#8-promoting-dev-to-main).
 
 ## Before Review
 

@@ -49,7 +49,7 @@ type ZodDef = {
 
 const CONTROLLER_ROOT = resolve(process.cwd(), 'src/adapters/controllers');
 const DATETIME_CONTRACT_REF =
-  'docs/practice-engine/interaction-contracts.md#datetime-representation-at-the-controller-boundary';
+  'docs/product/practice/interaction-contracts.md#datetime-representation-at-the-controller-boundary';
 const DATE_LIKE_FIELD_PATTERN =
   /(?:At|Date)$|^expires|^period|^created|^updated/i;
 const ZOD_SOURCE_WRAPPER_METHODS = new Set([

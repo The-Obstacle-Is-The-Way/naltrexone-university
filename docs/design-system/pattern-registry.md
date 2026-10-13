@@ -1,0 +1,1720 @@
+# Pattern Registry
+
+**Last Updated:** 2026-09-29
+**Status:** Canonical — all UI changes MUST conform to this registry
+
+Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
+
+**Related:**
+- [Frontend Standards](./standards.md) — Component APIs, accessibility rules, hook architecture, file naming
+- [Design Principles](./layout.md) — Navigation zones, action bar composition, state persistence
+- [Contrast Policy](./contrast.md) — WCAG AA contrast targets and required-boundary rules
+- [BS-035](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Audit that identified current divergences from this registry
+- [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan and resolution history for frontend divergences
+
+---
+
+## How to Use This Document
+
+1. **Building new UI?** Find the matching pattern by ID, copy the canonical classes exactly.
+2. **Pattern doesn't exist?** Add it here first with a rationale, then implement.
+3. **Divergence found?** File it against this doc and fix the code — the registry is the source of truth.
+4. **Modifying a pattern?** Update this doc first, then update all consumers.
+5. **Any new/changed pattern MUST meet contrast targets** (or explicitly document a temporary exception). See `docs/design-system/contrast.md`.
+
+Every pattern has an **ID** (e.g., `I-1`, `L-2`) for easy cross-referencing in code reviews, specs, and debt tickets.
+
+---
+
+## Review Surface Map
+
+Lightweight map of the review-related surfaces that matter for routing and chrome consistency. This is intentionally smaller than a full page registry.
+
+**Maintenance rule:** update this table in the same PR whenever a review surface is added, removed, or changes its route/origin, primary renderer, navigator family, or exit model.
+
+| Surface | Route / Origin | Primary Renderer | Navigator Family | Exit Model | Owner Doc |
+|---------|----------------|------------------|------------------|------------|-----------|
+| Review & Submit | `/app/practice/[sessionId]` before final exam submit | `ExamReviewView` | None | In-session submit to post-exam review | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md) |
+| Post-Exam Review | `/app/practice/[sessionId]` after exam finalization | `PostExamReviewView` | `QuestionNavigator` (callback / in-memory) | In-session `View Summary` / `Finish review` | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md) |
+| Session Summary | `/app/practice/[sessionId]` after session completion | `SessionSummaryView` | None | Route exits to Practice / History; `Review your answers` currently routes into summary-origin standalone review (tracked in [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md)) | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md) |
+| Standalone Review — summary origin | `/app/questions/[slug]?from=summary&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to practice-session summary | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md), BS-059 |
+| Standalone Review — history origin | `/app/questions/[slug]?from=history&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to History | BS-059 |
+| Standalone Review — dashboard / bookmarks / practice origins | `/app/questions/[slug]?from=dashboard\|bookmarks\|practice...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to origin-specific page | BS-059 |
+
+---
+
+## Part 1: Token Scales
+
+### 1.1 Dark Mode Gray Stack
+
+The foundation of the visual hierarchy. Every surface must sit at its correct layer.
+
+| Layer | Token | Dark Mode Value | Approx Lightness | Role |
+|-------|-------|----------------|-------------------|------|
+| 0 | `--background` | `0 0% 3.5%` | 3.5% | Page background — the darkest surface |
+| 1 | `--card` | `0 0% 7%` | 7% | Card surfaces — one step up from page |
+| 2 | `--muted` / `--secondary` / `--accent` | `0 0% 11%` | 11% | Subdued fills, hover targets, tinted backgrounds |
+| 3 | `--border` / `--input` | `0 0% 15%` | 15% | Borders, input outlines, separators |
+| 4 | `--muted-foreground` | `0 0% 55%` | 55% | Secondary text, labels, timestamps. Raised from 51.5% by BUG-309 so small text clears 4.5:1 on the foreground-ramp rows, their hovers and `bg-muted` |
+| 5 | `--foreground` | `0 0% 93%` | 93% | Primary text, headings |
+
+**Rule:** Surfaces must step UP this stack, never skip layers or go backwards. A hover effect on a card surface (layer 1) targets layer 2 with opacity. A hover on page background (layer 0) also targets layer 2 but needs slightly higher opacity for equivalent perceived contrast.
+
+**Dark destructive:** `--destructive` is `0 91% 71%` in dark mode (raised from `0 72% 51%` by BUG-309), so `text-destructive` small text clears 4.5:1 on every surface it sits on. Solid destructive fills stay at `dark:bg-destructive/60`; the destructive Button's dark hover is `dark:hover:bg-destructive/50`, because the inherited `/90` would drop white text below 4.5:1. `components/theme-dark-text-contrast.test.ts` measures these pairings.
+
+**Known debt:** `--muted`, `--secondary`, and `--accent` are identical values. `--border` and `--input` are identical values. If these tokens are ever differentiated, all patterns in this registry will need visual regression testing.
+
+### 1.1a Light Mode Gray Stack
+
+Light mode uses the same semantic tokens, but the layer ordering is inverted (page background is light, text is dark). Values below are sourced from `app/globals.css` `:root`.
+
+| Layer | Token | Light Mode Value | Approx Lightness | Role |
+|-------|-------|------------------|------------------|------|
+| 0 | `--background` | `0 0% 100%` | 100% | Page background — the lightest surface |
+| 1 | `--card` | `0 0% 100%` | 100% | Card surfaces (no elevation via fill in light mode; relies on border/shadow) |
+| 2 | `--muted` / `--secondary` / `--accent` | `210 40% 96.1%` | 96.1% | Subdued fills, hover targets, tinted backgrounds |
+| 3 | `--border` / `--input` | `214.3 31.8% 91.4%` | 91.4% | Borders, input outlines, separators |
+| 4 | `--muted-foreground` | `215.4 16.3% 46.9%` | 46.9% | Secondary text, labels, timestamps |
+| 5 | `--foreground` | `222.2 84% 4.9%` | 4.9% | Primary text, headings |
+
+**Known debt (light mode):** `--muted`, `--secondary`, and `--accent` are identical values. `--border` and `--input` are identical values.
+
+### 1.2 Background Opacity Scale
+
+When to use each opacity on `bg-muted` (or equivalent layer-2 token):
+
+| Opacity | Name | Use Case | Effective Dark Lightness |
+|---------|------|----------|--------------------------|
+| `/20` | Tint | Non-interactive row backgrounds inside cards | ~5% on page, ~8% inside card |
+| `/40` | Subtle hover | Row hover inside cards (where card bg already elevates) | ~8.6% inside card |
+| `/50` | Standard hover | Row hover on page background; tab-switch inactive hover | ~7.3% on page, ~9% inside card |
+| `/60` | Emphasized hover | Exception-only emphasized hover (no current canonical consumers) | ~9.4% inside card |
+| `/80` | **RESERVED — do not use** | Legacy hover intensity slot (no current approved usage) | — |
+| `/100` | **RESERVED — do not use for hover** | Only for solid fills (e.g., tab-switch container `bg-muted`) | 11% |
+
+**Key insight:** The same opacity produces different perceived contrast depending on the parent surface. `/40` inside a card (7% base) looks similar to `/50` on page background (3.5% base). The scale above accounts for this.
+
+**Decision:** Hover opacity is context-dependent. Use `/40` inside cards when the pattern is intentionally using the muted/layer-2 hover scale, `/50` on page background when the hover is driven by that same muted/layer-2 scale, and the foreground-ramp tonal row contracts documented below for I-1, I-2, I-3, and I-4. `/60` is exception-only and requires explicit design review.
+
+**Foreground-ramp tonal row scale (parent-aware):**
+
+| Context | Rest fill | Hover fill | Notes |
+|---------|-----------|------------|-------|
+| In-card tonal row | `bg-foreground/5` | `hover:bg-foreground/[0.08]` | Use when a Card already provides the primary surface (Dashboard I-1 rows). |
+| On-page tonal row | `bg-foreground/[0.08]` | `hover:bg-foreground/[0.12]` | Use for standalone navigation rows on `bg-background` (History I-2 rows). Disclosure-primary rows on page background may omit hover entirely while keeping the raised rest fill (History sessions). |
+
+**Light-mode caveat (Decision 12 resolved):** This scale was designed for dark mode where `--muted` at 11% lightness provides ample contrast headroom. In light mode, `--muted` at 96.1% lightness is only 3.9% from white — opacities below `/100` produce imperceptible fill contrast. The system intentionally uses background-fill deltas as the primary hover channel for tonal rows, paired with non-fill affordances such as cursor state, CTA labels, and the shared focus ring. Add border/text/shadow hover reinforcement only when the fill delta is not sufficient for the specific surface.
+
+### 1.3 Border Opacity Scale
+
+| Opacity | Name | Use Case |
+|---------|------|----------|
+| `border-border` (100%) | Full | Card component edges, standalone row edges, page section dividers |
+| `border-border/60` | Subdued | Base/light-mode rows nested inside cards (subordinate to card border), badge pills |
+| `border-border/40` | Separator | Internal content separators. Use the question-flow-specific override patterns for feedback reference sections/callouts where dark-mode contrast needs strengthening. |
+| `dark:border-foreground/40` | Required dark boundary override | Required interactive boundaries on dark surfaces that fail 3:1 with `border-border/60` |
+
+**Rule:** A border inside a bordered container must use a lower opacity than its parent.
+
+### 1.4 Semantic Status Background Scale
+
+Three-tier system for warning, success, and destructive backgrounds:
+
+| Tier | Opacity | Name | Use Case | Example |
+|------|---------|------|----------|---------|
+| 1 | `/5` | Hint | Inline status indicators inside existing containers | Unanswered question reveal card |
+| 2 | `/10` | Standard | Banners, toasts, standalone alert surfaces | Past-due banner, error/success toasts |
+| 3 | `/15` | Emphasized | Blocking alerts requiring immediate user attention | Cancellation warning, result badges |
+
+Applies uniformly to `bg-warning/`, `bg-success/`, `bg-destructive/` backgrounds.
+
+**Semantic border opacities** for status surfaces:
+
+| Token | Border Opacity | Usage |
+|-------|---------------|-------|
+| `border-destructive` | Standard | ErrorCard, error toasts |
+| `border-success/60` | Standard | Success toasts |
+| `border-warning/50` | Standard | Warning cards |
+| `border-warning` (100%) | Emphasized | Cancellation alert, blocking warnings |
+
+---
+
+## Part 2: Surface Patterns
+
+### S-1: Card Surface
+
+The primary elevated container. Used for grouping related content.
+
+```
+bg-card text-card-foreground flex flex-col gap-0 rounded-2xl border p-6 shadow-sm
+```
+
+**Source:** `components/ui/card.tsx` — ALWAYS use the `<Card>` component, never raw divs.
+
+| Variant | Override | When |
+|---------|----------|------|
+| Standard | (none) | Stats, containers, summaries |
+| Dense | `p-4` over default `p-6` | Navigator grids, filter panels, compact layouts |
+| Warning-tinted | `border-warning/50 bg-warning/5` | Inline status cards (unanswered reveal) |
+| Status notice | Dense (`p-4`) plus `text-sm` and `role="status"` | A non-error page notice, such as Billing's acknowledgement of the add-card return (BUG-308); errors use F-3 `ErrorCard` |
+
+**Non-interactive cards have NO hover classes.** This is intentional — "less is more." Only genuinely clickable surfaces should respond to interaction.
+
+### S-2: Muted Row (non-interactive)
+
+A tinted row inside a Card, used when the row is not itself clickable but may contain interactive elements.
+
+**Default variant (bordered):**
+```
+rounded-xl border border-border/60 bg-muted/20 px-4 py-3 dark:border-foreground/40
+```
+
+**Used in:** No active consumer. Retained for bordered muted groups that still need explicit container stroke.
+
+**Rule:** The row border (`/60`) must be lower than the parent Card border (100%).
+
+**Practice variant (borderless tonal fill):**
+```
+group rounded-xl bg-foreground/5
+```
+
+**Used in:** Practice starter Topic / Substance / Treatment filter containers
+
+**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; right-side metadata is conditional: when nothing is selected it shows `All included by default`, and when selections exist it shows `{N} selected`. Expanded sections render `({N} selected)` below the chip fieldset as subordinate footer metadata. The fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `size-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-292](../_archive/debt/debt-292-filter-section-disclosure-indicator.md), and [DEBT-296](../_archive/debt/debt-296-filter-section-summary-hierarchy-swap.md).
+
+**Dashboard variant (borderless tonal fill):**
+```
+rounded-xl bg-foreground/5 p-3
+```
+
+**Used in:** Dashboard unavailable activity rows, only for a question that no longer exists. A question no longer available uses F-11: its label for an answered row, and its heading for an omitted attempt (ADR-022).
+
+**Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
+
+**Page-background sibling variant:**
+```
+rounded-2xl bg-foreground/[0.08] p-4
+```
+
+**Used in:** History questions unavailable rows, only for a question that no longer exists, and bookmarks unavailable rows. A question no longer available uses F-11 in History: its label for an answered row, and its heading for an omitted attempt (ADR-022).
+
+**Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
+
+### S-3: Menu Popover Surface
+
+Floating overlay for dropdowns, selects, context menus.
+
+```
+bg-popover text-popover-foreground rounded-md border p-1 shadow-md
+```
+
+**Source:** `components/ui/dropdown-menu.tsx`, `components/ui/select.tsx`
+
+Items within popovers use `focus:bg-accent focus:text-accent-foreground` — keyboard focus drives the highlight, not hover.
+
+**SelectContent (exact)** — `components/ui/select.tsx:59`:
+```text
+bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-96 min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md
+```
+
+**Select viewport padding:** `components/ui/select.tsx:70` uses `p-1`.
+
+**DropdownMenuContent (exact)** — `components/ui/dropdown-menu.tsx:45`:
+```text
+bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md
+```
+
+**DropdownMenuItem (exact)** — `components/ui/dropdown-menu.tsx:77`:
+```text
+focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+```
+
+**DropdownMenuCheckboxItem / RadioItem (exact)** — `components/ui/dropdown-menu.tsx:95`, `components/ui/dropdown-menu.tsx:131`:
+```text
+focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+```
+
+**DropdownMenuSubContent (exact)** — `components/ui/dropdown-menu.tsx:233`:
+```text
+bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg
+```
+
+### S-4: Modal Dialog Surface
+
+Blocking dialog surface used by confirmation flows.
+
+**Overlay:**
+```
+fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0
+```
+
+**Dialog card:**
+```
+fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border border-border bg-card p-6 text-foreground shadow-lg outline-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:w-full
+```
+
+**Sources:** `components/ui/alert-dialog.tsx`, `components/ui/dialog.tsx`
+
+General-purpose dialogs reuse the same overlay and card class strings as alert dialogs. If a dialog
+needs a scroll-safe mobile variant or any other overlay/card change, document the S-4 variant here
+before adding new production UI classes.
+
+**Scrollable consent variant (DEBT-478; also the trial add-card consent since DEBT-414 F03b):** `DialogContent` adds `max-h-[calc(100dvh-2rem)] overflow-y-auto`. Since DEBT-414 F15 added the cancellation and refund row, the five trial rows exceed the space available at 390×844 as well as 390×667, and the four standard rows exceed it at 390×667; scrolling the card preserves access to all terms and both footer buttons without clipping. Keep the existing `max-w-lg` surface, overlay, focus trap, and Escape/trigger focus behavior. Initially focus the dialog title (`tabIndex={-1}`, `rounded-sm ring-focus`) so short viewports start at the terms heading rather than scrolling to the legal links near the footer. Use the canonical ring on this programmatic focus target instead of the browser's native heading outline.
+
+**Plan consent composition:** `app/pricing/plan-consent-dialog.tsx` uses `DialogHeader`, a labeled form, and `DialogFooter`. The form has `space-y-4`; first, after a failed checkout only, the F-3 `ErrorCard` with the dense `p-4` override (BUG-322), hidden while a retry is pending and named in the dialog's `aria-describedby`; then the idempotency key and displayed-offer identity, then `ConsentTerms` (`components/consent-terms.tsx`): `<dl className="text-sm">`, the I-7 opt-in, and the exact consent sentence. The trial add-card consent dialog (`app/(app)/app/trial-payment-consent-dialog.tsx`, DEBT-414 F03b) uses the same composition with its displayed disclosure version in place of the offer identity. Each row wrapper is `grid gap-x-6 gap-y-1 border-t border-border/40 py-3 sm:grid-cols-3`; `dt` uses `text-sm text-muted-foreground`, includes its colon, and `dd` uses `text-sm font-bold text-foreground sm:col-span-2`. Bold values make renewal terms conspicuous. The sentence uses `text-sm text-muted-foreground` with L-2 legal links; it measures 4.94:1 on `bg-card`. All row/sentence text comes from `PRICING_DATA[plan].consent`, the same object serialized as consent evidence. Buttons keep standard `rounded-md`, outline Cancel and default submit. Signed-out visitors retain a direct signup link. Only authenticated plan views render the eligibility footnote (`mt-6 text-center text-sm text-muted-foreground`); no personalized content enters cached fragments.
+
+Action buttons inside dialogs use `buttonVariants` from `components/ui/button.tsx` (not ad-hoc dialog button styles).
+
+---
+
+## Part 3: Interactive Patterns
+
+### I-1: Hoverable Row (inside Card)
+
+A clickable row nested within a `<Card>` container. The card provides the primary surface; the row provides the interaction.
+
+**Default variant (bordered):**
+```
+block rounded-xl border border-border/60 bg-muted/20 p-3 transition-colors hover:bg-muted/40
+dark:border-foreground/40 dark:hover:border-foreground/70
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Used in:** No active consumer. Retained for nested-card rows that still need an explicit stroked inner boundary.
+
+**Design rationale:** `/40` hover inside a card (base 7% lightness) produces ~8.6% effective lightness — a subtle, satisfying shift. The card surface already elevates the row above page background, so the hover only needs a gentle nudge.
+
+**Tonal-fill variant (Dashboard):**
+```
+block rounded-xl bg-foreground/5 p-3 transition-colors hover:bg-foreground/[0.08]
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Used in:** Dashboard session rows, dashboard activity rows
+
+**Design rationale:** When a parent surface or surrounding layout already establishes hierarchy, bordered inner rows create visual noise. Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast.md) — row identification comes from text content, cursor, hover fill, and focus ring.
+
+**History sessions note:** History sessions reuse the same borderless tonal-fill family, but because they sit directly on `bg-background` and are disclosure-primary, the page-background adaptation is `rounded-xl bg-foreground/[0.08] p-3` with no row-level hover or `transition-colors`. The chevron, `cursor-pointer`, nested review Link, and focus ring communicate interaction while the raised rest fill supplies the hierarchy. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md).
+
+**Reuse candidate:** This variant is suitable for any nested-card list pattern where the parent surface already provides hierarchy, or for page-background hybrids that intentionally avoid adding a wrapping Card.
+
+**Must be a `<Link>` element** (entire row is the click target).
+
+**Known structural exception:** `history-sessions-tab.tsx` uses delegated row click on `<li>` + nested `<Link>` to avoid nested link-role conflicts with inner links (`A11Y-1` resolution). DEBT-301 kept that interaction model but realigned the visual tokens to this tonal-fill variant on page background.
+
+### I-2: Hoverable Row (standalone)
+
+A clickable row directly on the page background, not inside a Card.
+
+```
+block rounded-2xl bg-foreground/[0.08] p-4 transition-colors hover:bg-foreground/[0.12]
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Used in:** History questions available rows, bookmarks available rows
+
+**Design rationale:** On page background, standalone rows need a stronger foreground-ramp rest fill than in-card rows to achieve the same perceived lift. `bg-foreground/[0.08]` at rest and `hover:bg-foreground/[0.12]` on hover keep the hover step visible against `bg-background` without reintroducing border/shadow chrome. The row reads as interactive via its content, hover lift, and focus ring. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
+
+**Default structure:** Entire row is a `<Link>` element.
+
+**Multi-action variant (Bookmarks):** When the row also needs a separate secondary action, keep the same visual tokens on a non-focusable container (`<div className="cursor-pointer ...">`), keep the primary title as the explicit `<Link>`, and delegate pointer clicks on the container to the same href. Guard nested interactive descendants with `closest('a,button,input,select,textarea,[role="button"],[role="link"]')` so the title link and secondary button do not double-trigger. Focus rings stay on the explicit controls, not the row container.
+
+### I-3: Choice Button
+
+Direct-action interactive target for answering questions. Choices render inside `QuestionCard` (`bg-card`) and use a hybrid pattern: a tonal child surface plus a required boundary because the row itself is the clickable control.
+
+**Base state:**
+```
+block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors
+dark:border-foreground/40 dark:bg-background/50
+focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]
+```
+
+**Hover (enabled):**
+```
+cursor-pointer
+```
+
+**Hover (unselected only — border + fill):**
+```
+hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]
+```
+
+**Selected (neutral):** `border-ring bg-foreground/[0.08] dark:border-foreground/70 dark:bg-foreground/[0.12]`
+
+**Correct:** `border-success bg-success/10 text-success`
+**Incorrect:** `border-destructive bg-destructive/10 text-destructive`
+**Ungraded** (`correctness="ungraded"`, [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05): a review that no score counts. Every choice keeps the base state at full strength, and the learner's choice keeps **Selected (neutral)**. A `note` line under the choice text names its role in words: `mt-1 text-xs font-medium text-foreground`, reading "Your answer", the key's name, or both joined by " · ". The key is named "Answer before the correction" when it was corrected, and otherwise "Keyed answer". No success or destructive token appears. Words carry the meaning, not color.
+**Disabled (no correctness):** `cursor-not-allowed opacity-50`
+**Wrong-unselected dimming:** do not apply parent opacity to the whole label subtree; keep answer content text at `text-foreground` for WCAG AA legibility.
+
+**Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
+
+**Behavior:** In tutor mode and Quick Practice, pointer activation on a choice commits the answer immediately by invoking the submit flow. Keyboard/AT radio selection (arrow keys, Space, or an activation synthesized without `pointerdown`) only selects the choice and exposes the action-bar `Submit` affordance; `Enter` in the choice fieldset commits that selected-uncommitted choice. In exam mode, selecting a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive reports pointer vs non-pointer origin, while mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` ([BS-064](../_archive/brainstorming/bs-064-radio-choice-modality-split.md)).
+
+### I-4: Filter Chip
+
+Toggle-style filter for tags, modes, difficulty levels.
+
+**Unselected:**
+
+```text
+bg-foreground/[0.07] text-foreground/80 hover:bg-foreground/[0.12] hover:text-foreground
+```
+
+**Selected:**
+
+```text
+bg-primary text-primary-foreground
+```
+
+**Shared base:**
+
+```text
+inline-flex cursor-pointer items-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+disabled:pointer-events-none disabled:opacity-50
+```
+
+**Source:** `components/ui/filter-chip.tsx`
+
+**Design rationale:** FilterChip moves to the I-1 borderless tonal-fill family. Identification rests on text + fill + cursor + hover + focus ring + `aria-pressed`, not on a stroked edge. Shape unified to `rounded-md` to match SegmentedControl items and Button defaults — filter chips are functionally toggle controls, not decorative pills. DEBT-377 redirected this pattern from a font-weight tweak to a chrome fix after visual review showed the per-chip border and `rounded-full` shape were the actual hierarchy problem.
+**Status:** Implemented in `components/ui/filter-chip.tsx` (DEBT-290, DEBT-291, DEBT-294, DEBT-295, DEBT-309, DEBT-377).
+
+### I-5: Segmented Control Item
+
+Tab-switch for mode selection, history tab bar, etc.
+
+**Container:**
+```
+inline-flex rounded-lg border border-border bg-muted p-1 flex-wrap
+```
+
+`flex-wrap` (2026-09-27, DEBT-468 phone-width probe): when the items do not fit their parent, they continue on a second row inside the same muted container, so every option stays visible at its full label and tap size. Before this, the practice Status control (Unanswered / Incorrect / Bookmarked) could not shrink or wrap: at 375px it extended past its card's border, and at 360px the page scrolled sideways. At widths where the items fit, the control renders exactly as before. Do not replace wrapping with inner horizontal scroll (it hides options off-screen) or with smaller text or padding (it trades legibility and tap size for one breakpoint).
+
+**Item base:**
+```
+rounded-md px-4 py-2 text-sm font-medium transition-colors
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Active:** `bg-primary text-primary-foreground shadow-sm`
+**Inactive:** `text-muted-foreground hover:bg-muted/50 hover:text-foreground`
+
+**Source:** `components/ui/tab-switch-styles.ts` — shared constants consumed by `SegmentedControl` and `HistoryTabBar`.
+
+**Note:** The container is `bg-muted` (solid), so inactive item hover (`bg-muted/50`) appears as a slight intensification. The active item completely overrides with `bg-primary`. Do not add `dark:border-foreground/40` back to the shared container; the container border is decorative and the active pill carries the state affordance.
+
+### I-6: Icon Toggle Control (App Shell)
+
+Compact icon-only disclosure toggle used in app chrome (example: mobile nav open/close).
+
+```
+p-2.5 text-muted-foreground transition-colors hover:text-foreground
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Source:** `components/mobile-nav.tsx`
+
+**Rule:** Prefer `<Button size="icon" variant="ghost">` for standard icon actions. Raw `<button>` is acceptable for app-shell disclosure controls when this exact focus/hover treatment and accessible labeling (`aria-label`, `aria-expanded`, `aria-controls`) are present.
+
+---
+
+### I-7: Consent Opt-In Checkbox
+
+A separate, unchecked, required opt-in to automatic renewal inside a consent form (DEBT-414 F03). It is a native checkbox for four reasons: the browser blocks submission until it is checked, FormData carries it without JavaScript, assistive technology announces it as a checkbox with its label, and the `<Button>` mandate does not apply to a form control.
+
+```
+<label class="flex items-start gap-3 text-sm font-bold text-foreground">
+  <input type="checkbox" name="renewalOptIn" value="yes" required
+    class="mt-0.5 size-4 shrink-0 rounded-sm accent-primary focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]" />
+  <span>{the offer's opt-in statement}</span>
+</label>
+```
+
+**Source:** `components/consent-terms.tsx`, rendered by checkout's plan consent dialog and, since DEBT-414 F03b, the trial add-card consent dialog.
+
+**Rules:**
+- Never pre-checked.
+- The label is the offer's full renewal statement, set in bold so it is conspicuous, and it is recorded verbatim in the consent evidence.
+- The browser's native `required` check is the first line, not the only one: the server rejects any submission without `renewalOptIn`.
+- `accent-primary` colors the native control with the primary token in both themes.
+- The focus ring is the canonical non-Button ring (X-2).
+
+---
+
+## Part 4: Link Patterns
+
+### L-1: Nav Link
+
+Navigation links in desktop nav, marketing nav, auth nav, and similar chrome.
+
+```
+rounded-md text-muted-foreground transition-colors hover:text-foreground
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Active variant** (desktop): add `text-foreground font-medium` (remove `text-muted-foreground`)
+**Design rationale:** Use this for compact nav links in header/footer/chrome where text-color hover is sufficient.
+
+### L-2: Content Link
+
+Links embedded in content areas — session breakdown question lists, inline references.
+
+```
+rounded-sm font-medium text-foreground hover:underline
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Design rationale:** Content links use underline-on-hover because they appear within text-heavy areas where a background color change would be visually noisy. The underline clearly communicates "this is a link" without disrupting the reading flow.
+
+### L-3: Header Action Link
+
+"View all", "Clear filters", pagination controls — secondary actions that appear in card/section headers.
+
+```
+h-auto p-0 text-muted-foreground no-underline hover:text-foreground hover:no-underline
+```
+
+**Applied via:** `<Button asChild variant="link" className={headerActionLinkClasses}>`
+
+**Design rationale:** These override the link variant's default `hover:underline` because header action links are navigational controls, not content links. The text color change alone provides sufficient affordance in the context of a card header.
+
+**Status:** Extracted to `headerActionLinkClasses` in `lib/shared-styles.ts` (DEBT-259, PR #152). Reuse this constant for all header action links.
+
+### L-4: Brand Link
+
+Logo/brand text links in app header and marketing header.
+
+```
+rounded-md text-sm font-semibold text-foreground transition-colors hover:text-foreground/80
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Design rationale:** Brand links are always visible (not muted), so hover dims slightly rather than brightening. This is the opposite direction from nav links (which brighten from muted to foreground).
+
+**Marketing variant (DEBT-477):** header brand link uses `rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus`. Footer brand is non-interactive `<p>` with `text-base font-bold font-heading text-foreground`. The app shell keeps `text-sm font-semibold`.
+
+**Status:** Implemented in app and marketing headers; marketing sizing is intentionally stronger.
+
+### L-5: Banner Inline Link
+
+Inline action link inside status banners/alerts where persistent affordance is required.
+
+```
+underline font-medium transition-colors hover:text-foreground
+```
+
+**Source:** `app/(app)/app/layout.tsx` (past-due billing banner; the trial banner's saved-card "Manage billing" link, BUG-308)
+
+**Design rationale:** In warning banners, persistent underline is preferred over hover-only affordance so the action remains obvious at a glance.
+
+### L-6: Mobile Menu Link
+
+Full-width mobile navigation items inside drawer/sheet menus.
+
+**Inactive:**
+```
+block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors
+hover:bg-muted/50 hover:text-foreground
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Active:**
+```
+block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Design rationale:** Mobile menu entries are larger touch targets than desktop nav links, so they use row-style background hover. `/50` keeps parity with the global hover scale and avoids the heavier 100% muted fill. The active state uses full `bg-muted` (100%) — stronger than hover — so the current page is always visually distinguished from hovered items. **Principle: active fill > hover fill.**
+
+---
+
+## Part 5: Button Conventions
+
+Button variants are defined in `components/ui/button.tsx` via CVA. This section documents **app-level conventions** layered on top.
+
+### Button Component (Exact Class Strings)
+
+**Source of truth:** `components/ui/button.tsx:7-38`
+
+**CVA base classes (exact)** — `components/ui/button.tsx:8`:
+```text
+inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
+```
+
+**Variant classes (exact)** — `components/ui/button.tsx:12-25`:
+```text
+default: bg-primary text-primary-foreground shadow-xs hover:bg-primary/90
+destructive: bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60
+success: bg-success text-success-foreground shadow-xs hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/60
+outline: border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50
+secondary: bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80
+ghost: hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50
+link: text-primary underline-offset-4 hover:underline
+```
+
+**Size classes (exact)** — `components/ui/button.tsx:27-31`:
+```text
+default: h-9 px-4 py-2 has-[>svg]:px-3
+sm: h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5
+lg: h-10 rounded-md px-6 has-[>svg]:px-4
+icon: size-9
+```
+
+**Active state:** No `active:` utilities are applied currently (browser default only).
+
+### Pill Shape Convention
+
+All standalone action buttons in the app use `rounded-full`:
+
+```tsx
+<Button className="rounded-full">Submit</Button>
+<Button variant="outline" className="rounded-full">← Previous</Button>
+```
+
+**Exception:** Buttons inside error states, dialogs, and dense inline contexts keep the default `rounded-md`.
+
+### Variant Usage Guide
+
+| Context | Variant | Example |
+|---------|---------|---------|
+| Primary page action | `default` + `rounded-full` | "Go to Practice", "Submit", "Subscribe" |
+| Secondary action | `outline` + `rounded-full` | "← Previous", "Next →", "Review", "Remove" |
+| Tertiary/back navigation | `ghost` + `rounded-full` | "Back to Dashboard", "Back to History" |
+| In-card header link | `link` + `headerActionLinkClasses` | "View all", "Clear filters" |
+| Destructive confirmation | `destructive` | AlertDialog "Remove bookmark" action |
+| Success indicator (navigator) | `success` + `rounded-full` | Correct question dot in navigator |
+| Header bail / abandon session | `outline` + `rounded-full` | Header "End session"; future exam abandon actions |
+| Tutor terminal session action | `default` + `rounded-full` | Footer "End session" on the last tutor question after feedback |
+| Error recovery | `outline` (no `rounded-full`) | "Try again", "Return to dashboard" |
+
+**End session usage:** In tutor sessions, `End session` is always present in the header as the low-friction exit and also appears as the filled footer terminal CTA on the last question after feedback has rendered. The duplicate same-label Q3 state is intentional; both buttons call `onEndSession` (DEBT-378). Exam mode does not expose a header bail button; its header rail owns only the Mark-for-review toggle.
+
+### Active Exam Action Bar
+
+**Source:** `ExamActionBar` in `app/(app)/app/practice/components/practice-view.tsx`
+
+Active exam sessions defer correctness until `Review & Submit`, so the footer is navigation-only. Previous and the forward / terminal CTA stay together in one left cluster to mirror tutor-mode navigation.
+
+| Session position | Left group | Right group | Notes |
+|------------------|------------|-------------|-------|
+| First question | filled `Next` in `data-testid="exam-action-primary-group"` | none | No empty Previous placeholder; do not render Mark for review in the footer. |
+| Middle question | outline `Previous` + filled `Next` in `data-testid="exam-action-primary-group"` | none | Draft selections do not change footer labels. |
+| Final question | outline `Previous` + filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | Preserve the `aria-describedby` text: `Opens review and submit.` |
+
+All active exam footer buttons live in `data-testid="exam-action-primary-group"`; there is no footer right group. `data-testid="exam-action-cta-group"` and `data-testid="exam-action-secondary-group"` are intentionally absent after DEBT-380. Mark for review continues to live in the question header rail.
+
+### Header Rail / Persistent Header Actions
+
+**Source:** header action rail in `PracticeView` (`data-testid="question-header-actions"`)
+
+The page header action rail holds one mode-specific persistent action:
+
+| Mode | Header action | Notes |
+|------|---------------|-------|
+| Tutor / Quick Practice | outline `End session` when `onEndSession` is provided | This is the low-friction exit and remains independent of the tutor footer terminal CTA. |
+| Exam | outline `Mark for review` / `Unmark review` when `onToggleMarkForReview` is provided | Uses `aria-pressed`, disables while marking, while pending, or while the next question is loading. |
+| No session action | header action link | Falls back to the page-level back link when no session action is available. |
+
+**Removed tutor affordances:** Active tutor sessions no longer render `Submitting…`, pre-feedback `Next`, or footer `View Summary`. Before feedback, pointer choice activation is the primary action. The footer `Submit` is allowed only for the selected-uncommitted keyboard/AT state introduced by BUG-274; skip-without-answering is handled by the question navigator in active sessions.
+
+### Dark Mode Behavior (built into button.tsx)
+
+| Variant | Dark Override | Notes |
+|---------|-------------|-------|
+| `outline` | `dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50` | Uses explicit dark boundary override for required outlines |
+| `ghost` | `dark:hover:bg-accent/50` | Uses `accent` token (11% lightness) |
+| `destructive` | `dark:bg-destructive/60` | Reduced saturation in dark |
+| `success` | `dark:bg-success/60` | Reduced saturation in dark |
+
+**Rule:** These are the ONLY dark-mode overrides for buttons. Page/component code must NEVER add `dark:` classes to buttons. If a button looks wrong in dark mode, fix the variant in `button.tsx`.
+
+### Marketing Button Overrides (Decision 1 — Resolved)
+
+The marketing landing page CTA strategy was standardized in DEBT-258:
+
+| Button | Treatment | Rationale |
+|--------|----------|-----------|
+| "View pricing" / "Sign in" pills | `variant="outline"` (standard hover) | Replaced custom `hover:bg-muted` (100% opacity) which was far more aggressive than any other hover |
+| Monthly "Get started" | `variant="outline"` | Previously `variant="secondary"` — 4% lightness difference from card surface (invisible). Outline gives a real border. |
+| Annual "Get started" | `variant="default"` (primary) | Replaced custom `bg-foreground text-background`. In dark mode `--primary` = `--foreground` (zero visual regression). Highest affordance for the promoted plan. |
+
+**Shared plan-card sizing:** `mt-8 h-auto w-full rounded-full py-3 text-base`. The monthly outline is 50 px high and annual filled is 48 px; both use the same typography tier.
+
+| Button | Treatment | Rationale |
+|---|---|---|
+| Hero primary "Get started" / "Go to dashboard" | `default` + `h-auto rounded-full px-8 py-3 text-base` | `h-auto` removes the primitive's fixed `h-9`, allowing 24 px line-height plus 24 px vertical padding. |
+| Final CTA "Get started" | `default` + `h-auto rounded-full px-8 py-3 text-base` | Same as hero primary; replaces D-15 under DEBT-477. |
+
+**Pricing plan action (DEBT-478):** `mt-8 h-auto w-full rounded-full py-3 text-base`; authenticated visitors open the S-4 consent dialog, while signed-out visitors follow the existing signup link with selected-plan context. Trial-eligible labels remain "Start 7-day free trial"; standard outer labels are "Subscribe monthly" / "Subscribe annual" (sentence case per DEBT-477 D2, 2026-09-18). The dialog's actual commit label is taken from its consent data. The obsolete `postTrialNote` subtext recipe is retired.
+
+### Third-Party Component Exceptions (Decision 8)
+
+| Component | Owner | Visual Delta | Policy |
+|-----------|-------|-------------|--------|
+| Clerk auth surfaces (`<SignIn />`, `<SignUp />`, `<UserButton />`) | Clerk SDK | 4px border radius difference (12px vs 16px), internal hover/focus states | Accepted third-party seam. Base colors match via `providers.tsx` appearance config. Do not attempt pixel-match overrides — Clerk's internal CSS hierarchy is undocumented and changes between versions. |
+
+---
+
+## Part 6: Feedback & Status Patterns
+
+### F-1: Result Badge
+
+Correct/incorrect indicator shown after answer submission.
+
+**Correct:**
+```
+inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold bg-success text-success-foreground dark:bg-success/60
+```
+
+**Incorrect:**
+```
+inline-flex self-start rounded-full px-3 py-1 text-sm font-semibold bg-destructive text-destructive-foreground dark:bg-destructive/60
+```
+
+**Not scored** (an answer no score counts; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05): F-8's neutral chip palette, in place of either verdict:
+```
+self-start inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10
+```
+
+**Source:** `components/question/feedback.tsx`; Not scored, `components/question/feedback-ungraded.tsx`
+
+Uses a solid semantic pill in light mode plus `dark:bg-*/60` in dark mode so verdict text stays readable while the badge remains compact via `self-start`. Not scored is deliberately neutral: the item is neither credited nor penalized, so no verdict color applies.
+
+### F-2: Warning Surface (3-tier)
+
+| Tier | Classes | Use Case |
+|------|---------|----------|
+| Hint | `border-warning/50 bg-warning/5 text-foreground` | Unanswered question reveal (inside Card) |
+| Standard | `border-warning bg-warning/10 text-warning-foreground` | Past-due banner (layout-level) |
+| Emphasized | `border-warning bg-warning/15 text-warning-foreground` | Cancellation scheduled alert |
+
+### F-3: Error Surface (ErrorCard)
+
+Inline persistent error within a page.
+
+**Canonical (target):**
+```
+rounded-2xl border border-destructive bg-destructive/10 p-6 text-sm text-destructive shadow-sm
+```
+
+**Current (COMP-1):**
+```
+rounded-2xl border border-destructive bg-destructive/10 p-4 text-sm text-destructive shadow-sm
+```
+
+**Source:** Current implementation is `components/error-card.tsx` (has `role="alert"` built in).
+
+**Dense override (compact contexts only):** `p-4`
+
+**Never manually add `role="alert"`** when using ErrorCard.
+
+### F-4: Toast
+
+Transient feedback notification via `useNotification()`.
+
+**Region positioning:**
+```
+pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4
+```
+
+**Shell:**
+```
+block rounded-xl border px-4 py-3 text-sm shadow-sm
+```
+
+| Tone | Border + Background |
+|------|-------------------|
+| `info` | `border-border bg-card text-foreground dark:border-foreground/40` |
+| `success` | `border-success/60 bg-success/10 text-foreground` |
+| `error` | `border-destructive bg-destructive/10 text-foreground` |
+
+**Source:** `components/ui/notification-provider.tsx`
+
+### F-5: Feedback Answer Card
+
+Display-only answer explanation block shown after submission.
+
+**Correct answer:**
+```
+rounded-xl border border-success/60 bg-success/5 p-4
+```
+
+**Your incorrect answer:**
+```
+rounded-xl border border-destructive bg-destructive/5 p-4
+```
+
+**Other wrong answers:**
+```
+rounded-xl border border-border/60 bg-background/50 p-4 dark:border-foreground/40
+```
+
+**Answer row:**
+```
+flex items-start gap-3
+```
+
+**Feedback answer text:**
+```
+text-base text-foreground
+```
+
+**Feedback explanation text:**
+```
+text-base text-foreground
+```
+
+**Source:** `components/question/feedback.tsx`
+
+**Rule:** These cards are not interactive, but they still separate mutually exclusive answer explanations inside a larger feedback card. Neutral cards therefore need the same dark-mode required-boundary override as other low-contrast in-card rows.
+
+**Ungraded** (an answer no score counts; [ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05; `components/question/feedback-ungraded.tsx`). The F-1 verdict reads Not scored, and no success or destructive card appears.
+- **Withdrawn or under review:** each answer is shown on the neutral "Other wrong answers" card, under an F-8 neutral chip:
+  - "Your answer", when the learner chose another choice, with that choice's explanation;
+  - "Keyed answer", with the question's explanation;
+  - "Other answers", for the remaining choices that have explanations.
+
+  The F-6 Reference stays. The F-11 caution above already says not to rely on them.
+- **Key corrected:** no answer card, explanation or reference, because they were written for the superseded key. One line says why: "The explanation was written for the answer before the correction, so it isn't shown." (`mt-6 text-base text-foreground`). The F-12 caution's link leads to the corrected question.
+
+### F-6: Feedback Reference Section
+
+Reference block appended to the bottom of a feedback card.
+
+```
+mt-4 border-t border-border/40 pt-3 dark:border-foreground/40
+```
+
+**Heading:**
+```
+text-xs font-semibold uppercase tracking-wide text-muted-foreground
+```
+
+**Body:**
+```
+mt-1 text-sm
+```
+
+**Source:** `components/question/feedback.tsx`
+
+**Rule:** The feedback reference body is a feedback-context readability exception. It uses `text-sm` instead of the default content-tier `text-xs` citation treatment because 12px reference text was too small on this dark card surface. The heading remains compact UI chrome.
+
+### F-7: Clinical Pearl Callout
+
+Inline explanatory callout rendered from markdown paragraphs that begin with `**Clinical pearl:**`.
+
+**Container:**
+```
+mt-3 border-l-2 border-foreground/40 pl-3
+```
+
+**Label:**
+```
+mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
+```
+
+**Content:** Standard markdown paragraph content inside the callout.
+
+**Source:** `components/markdown/Markdown.tsx`
+
+### F-8: Feedback Section Chips
+
+Section-level pills used inside the feedback card. This family has two variants: a semantic success chip for the incorrect-flow correct-answer section, and a neutral structural chip for fallback/explanatory subsections.
+
+**Semantic correct-answer chip (incorrect flow only):**
+```
+inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-success text-success-foreground dark:bg-success/60
+```
+
+**Neutral section chip:**
+```
+inline-flex rounded-full bg-muted px-3 py-1 text-sm font-semibold text-foreground dark:bg-foreground/10
+```
+
+**Used for:** `Correct Answer` (semantic success), `Explanation`, `Why Other Answers Are Wrong`; and, in F-5's ungraded form, `Your answer`, `Keyed answer` and `Other answers`, which stay neutral because nothing is graded
+
+**Source:** `components/question/feedback.tsx`
+
+**Rule:** The semantic `Correct Answer` chip intentionally borrows the F-1 success-pill palette so the correct-answer section is visually distinct from the preceding incorrect-answer block. Neutral section chips are structural labels, not metadata chrome: keep them title case, `text-sm`, and full `text-foreground` rather than the older uppercase/tracking-wide micro-label treatment. In correct flow, `CorrectAnswerSection` passes `showLabel={false}`, so no section chip renders above the correct-answer card. Do not replace the verdict pill, the Reference label, or the Markdown-driven clinical pearl label with this pattern.
+
+### F-9: Post-Action Rating Footer
+
+Quiet, optional per-question rating chrome rendered after a question review action bar. This pattern is for the SPEC-041 thumbs rating only; it is not a general action-bar extension.
+
+**Wrapper:**
+
+```text
+border-t border-border pt-4
+```
+
+**Content row:**
+
+```text
+flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground
+```
+
+**Rules:**
+- Reuse M-2 `Standard` (`border-t border-border`) for the full-width hairline separator.
+- Keep the footer boxless: no `bg-*` fill, no `Card`, no bordered inset container, and no undocumented opacity values.
+- Render interactive targets as `<Button>` instances so the canonical focus ring remains inherited from the Button primitive.
+- Preserve `<fieldset>` + `<legend className="sr-only">Rate this question</legend>`, `aria-pressed`, and the `aria-live` status region from the rating control.
+
+**Source:** `components/question/question-rating-footer.tsx`
+
+### F-10: Trial Countdown Banner (layout-level info banner)
+
+Persistent app-shell banner shown while a subscription is `inTrial` (DEBT-410 PR-3). Informational — not a warning — so it deliberately avoids the F-2 warning palette that the past-due banner uses; a 7-day-persistent surface must stay calm.
+
+**Wrapper:**
+
+```text
+block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground
+```
+
+**Content row:**
+
+```text
+mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
+```
+
+**Countdown phrase:** `font-medium text-foreground` (e.g. "7 days left in trial") — emphasized against the muted wrapper so the number reads at a glance.
+
+**Summary line:** `text-foreground`, one short sentence ("Add a card before your trial ends to keep access."). The full terms live in the dialog, not the banner (DEBT-414 F03b).
+
+**Saved-card state (BUG-308):** once the add-card flow has set a card as the trial subscription's default, the summary line states the renewal instead ("Pro Monthly renews at $29 per month on your saved card when your trial ends."). An L-5 banner inline link, "Manage billing", replaces the action and keeps cancellation one click away. No add-card button is rendered.
+
+**Action:** `<Button type="button" variant="outline" size="sm" className="rounded-full">` ("Add a card to keep access"), the trigger of the S-4 scrollable consent dialog (`app/(app)/app/trial-payment-consent-dialog.tsx`). That dialog shows the add-card terms in bold, the separate renewal opt-in (I-7), and the closing sentence with the Terms and Privacy links, then posts the protected trial payment-method action with the displayed disclosure version. The Button primitive supplies the canonical focus ring; the pill shape follows the Pill Shape Convention (Part 5).
+
+**Rules:**
+- Semantic tokens only; no opacity-scale values at all (`bg-card` is a solid surface fill), so the banner adds nothing to the source-scan allowlist.
+- Light/dark handled entirely by `border-border` / `bg-card` / `text-muted-foreground` / `text-foreground`; no component `dark:` overrides.
+- Contrast: reuses the 12.3 "Card body / dense helper copy" pairing (`text-sm text-muted-foreground` on card surface) and full `text-foreground` for the countdown phrase — both established app-wide pairings; no new color pair is introduced, so no new `contrast.md` ledger entry is required.
+- Renders in the same `AppLayoutShell` `banner` slot as the past-due banner (banner → header → main ordering); the two are mutually exclusive because `pastDue` and `inTrial` are distinct subscription statuses.
+- Server-rendered at page load; no live-region role needed (matches past-due banner precedent).
+
+**Source:** `app/(app)/app/layout.tsx` (trial countdown banner)
+
+### F-11: Availability Notice (a question no longer available that the learner answered)
+
+Marks a question that is no longer available, by its state ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 1), derived from its status, its withdrawals and its unlifted holds:
+
+| State | Label | Notice heading | Notice body | Tone |
+|---|---|---|---|---|
+| Withdrawn | `Withdrawn` | "This question was withdrawn." | "Its answer and explanation may be inaccurate or outdated, so don't rely on them." | Caution |
+| Under review | `Under review` | "This question is under review." | "Its answer or explanation may change, so don't rely on them until it returns." | Caution |
+| Retired | `Retired` | "This question has been retired from the bank." | "You can still review your answer." | Neutral |
+
+ADR-021 §3 keeps the question reviewable by a learner who **answered** it, as the revision they answered, and every such view says so. A learner who never answered it never sees its content (ADR-022 Decision 2; an omitted attempt is not an answer). Withdrawn and under-review content may be wrong, so those notices are clinical cautions. A retired question's content was not found wrong, so its notice is neutral. The component is `QuestionAvailabilityNotice` (`components/question/question-availability-notice.tsx`), which also owns the labels and headings.
+
+**Review views** (standalone review, post-exam review, completed-session feedback): the notice is placed first in the question region, above the stem.
+
+```text
+Caution: <Card role="status" data-tone="caution" className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm">
+Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
+```
+
+- **Heading line:** `font-medium text-foreground`.
+- **Body line:** `text-foreground` in a caution, and `text-muted-foreground` in a neutral notice.
+- The answer, the correct choice and the explanation show as the learner answered them. Bookmark, report and rating actions stay hidden, as for unavailable rows.
+- **Withdrawn or under review: shown ungraded** ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05). No score counts the answer, so the verdict reads Not scored (F-1), and the choices take I-3's ungraded state with the key named "Keyed answer". The explanations follow F-5's ungraded form. A retired question keeps its grade, since retirement is not doubt.
+
+**List rows** (History attempted list, Dashboard recent activity, Session breakdown):
+
+- An answered row keeps the available row's family (I-1 in a Card, I-2 standalone). It links into the review view and shows the stem of the revision the learner answered.
+- Its metadata shows the state's label where an available row shows the difficulty, in the same metadata style. Only a difficulty is capitalized; a label keeps its own case.
+- A row with no difficulty slot, such as a session breakdown row, shows the label before its result, in the style the row already uses for its `Unanswered` label (`shrink-0 text-muted-foreground`).
+- **A result no score counts reads "Not scored"** in place of Correct or Incorrect ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05, DEBT-498). That covers an answer on a question withdrawn, under review or gone, or graded on a key corrected since, and in History an omitted attempt on a question withdrawn, under review or gone. It uses the row's muted style (`text-muted-foreground`), not `text-success` or `text-destructive`. The rule is `isResultNotScored` (`app/(app)/app/shared/components/review-navigator-utils.ts`), over the domain's `contentInDoubt`. In History, such a row is listed under neither the Correct nor the Incorrect filter, and the Incorrect-first and Correct-first sorts place it after every graded row (ADR-022). In use: the session breakdown, the Dashboard's recent activity and History's rows.
+  - **Contrast**, computed from `app/globals.css` and passing AA (4.5:1) in the product's dark theme:
+    - `text-muted-foreground` measures 5.04:1 on the Dashboard row (`bg-foreground/5` on the card), 5.60:1 on the session breakdown (the card), and 5.13:1 on History's row (`bg-foreground/[0.08]` on the page), 4.61:1 when that row is hovered.
+    - These are the pairs the same lines already use for their dates and for "Unanswered", so no new pair is added.
+  - **Light mode** is unfinished and switched off (`forcedTheme="dark"`, [DEBT-421](../_archive/debt/debt-421-light-mode-force-dark-vs-default-dark.md)). There, the same muted text measures 4.27:1 on the Dashboard row and 4.00:1 on History's row, and the existing `text-destructive` result measures 4.37:1 and 4.09:1. Light mode would need these rows' metadata in S-2's `text-foreground/60` (5.17:1 and 5.06:1) before it ships.
+
+**Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered". A result no score counts takes the Button `secondary` variant and no correctness badge, and its name reads "Not scored", as in "Question 2: Withdrawn, Not scored" (DEBT-498). The question page's session navigator does the same. `secondary` is the variant the exam navigator already gives an answered item: 14.57:1 in the dark theme (16.30:1 in light). The Review & Submit list also marks such an item "Won't be scored", and the submit warning counts only the unanswered items that would count if the exam ended now.
+
+**Never answered** (left unanswered, or omitted by an exam's finalization): the row or card names the state in a sentence, the notice heading alone, in place of S-2's generic text (`[Question no longer available]`, "Question no longer available.", "This question was removed or unpublished."). No content shows and there is nothing to caution against, so the tone is neutral (`labelOnly`). S-2's generic text remains only for a question that no longer exists.
+
+**Active session** (a question that became unavailable after the session began): the same Status notice, in place of the F-3 `Question not found` error card. It names the state, and says the item won't count where that is true (ADR-022 Decision 5, as amended).
+
+- **Heading line,** by state: "This question was withdrawn after your session began.", "This question was placed under review after your session began." or "This question was retired from the bank after your session began."
+- **Body line:** "It can't be answered here. It won't count toward your score. Continue to the next question." The middle sentence is left out for a tutor answer already given on a question retired since, which still counts, unless that answer's key was corrected since (DEBT-498).
+- The notice is neutral in every state: no content shows, so there is nothing to caution against.
+- The item cannot be answered or submitted.
+- The action bar offers navigation only:
+  - `Previous` when an earlier question is available, and `Next` when a later one is.
+  - Otherwise, the session's end action: `Review & Submit` in an exam, `End session` in tutor mode.
+  - The learner can always move on; the page never leaves them at the unavailable item with no way forward.
+  - Exam `Mark for review` is hidden for the item.
+- A question that becomes unavailable while the learner has it open behaves the same way. When their answer fails because the question is gone, the item is fetched again and, if it comes back unavailable, shows this notice instead of an error.
+
+**Rules:**
+- Reuses the S-1 Status notice (`role="status"`, Dense `p-4`, `text-sm`) for neutral notices, and, for cautions, the warning-tinted inline status card the unanswered reveal already uses (`border-warning/50 bg-warning/5`, `text-foreground`). No new surface, token, opacity value or color pair, so no new `contrast.md` ledger entry is required.
+- Plain language that says what happened and what the learner can still do, without implying the learner did anything wrong. A learner-facing reason is not shown: a withdrawal's recorded reason is written for the clinical audit (ADR-022).
+- `role="status"` announces the notice politely; it is never focused automatically.
+
+**Source:** ADR-021 §3, DEBT-484 phase 2a increment 5, and ADR-022 (DEBT-493 parts A to C and E, and increments 3 and 5). In use: post-exam review, the standalone review page, History's attempted questions, the Dashboard's recent activity, the session breakdown, the navigators and Review & Submit list, the active session page, and Bookmarks. A bookmark binds no revision, so its row names the state with the heading and label alone, inside the S-2 tonal row it already used; it shows no content, as for an item never answered. A question that no longer exists keeps the S-2 wording, "[Question no longer available]".
+
+
+### F-12: Update Notice (a question updated after the learner saw it)
+
+Marks a review whose question has changed since the learner saw it: the revision they answered is no longer the current one (ADR-021). Usually a newer revision is current; after a rollback or a stale revert, an older one can be. The review still shows the revision the learner answered, because that is the record of what they saw and were graded against. It says plainly that the question has been updated and links to the current version. This follows medical publishing's correction practice: the original stays readable, is marked, and points to the correction.
+
+A superseded answer key is the case that matters. Without the notice, a review would present the old key as correct, so a corrected key has its own caution form (below). Otherwise the notice is informational, not a warning or an error, so it uses neither F-2 nor F-3.
+
+**Review views** (the standalone review page and post-exam review): the S-1 **Status notice** that F-11 uses, first in the question region, above the stem:
+
+```text
+<Card role="status" className="gap-0 p-4 text-sm">
+```
+
+- **Heading line:** `font-medium text-foreground`: "This question has been updated."
+- **Body line:** `text-muted-foreground`: "This is the version you saw. Its answer or explanation may have changed."
+- **Action:** an L-5 Banner Inline Link, "Practice the current version", to the question's standalone page (`toQuestionRoute(slug)`), which shows the current revision.
+  - Classes: L-5's `underline font-medium transition-colors hover:text-foreground`, plus the canonical `rounded-sm ring-focus`.
+- The answer, the correct choice and the explanation show as the learner saw them.
+- Bookmark, report and rating stay available. They belong to the question, which is still published.
+
+**Active session** (a question updated after the session began): the session keeps the revision its item was bound to, so it can show a superseded key in tutor feedback. The same S-1 Status notice goes first in the question region, above the stem, from the moment the item loads, in tutor and exam mode alike:
+
+- **Heading line:** "This question has been updated since your session began."
+- **Body line:** "This session uses the version shown here. Its answer or explanation may have changed."
+- **No link.** Leaving mid-session would interrupt it. The post-session review carries the review notice and its link.
+- The item is answered and graded as usual.
+
+**Key corrected** ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 4): the current revision keys another answer than the one shown, by the correct choices' labels or text. The notice says so in place of the update notice, as a caution, because the learner may have learned a wrong answer. It uses F-11's caution card, `data-tone="caution"`:
+
+```text
+<Card role="status" className="gap-0 rounded-2xl border-warning/50 bg-warning/5 p-4 text-sm text-foreground shadow-sm">
+```
+
+- **Review views**, for an answered item only: "The answer to this question was corrected after you answered." (`font-medium`), then "This attempt isn't scored.", then the L-5 link "Practice the corrected question" to the standalone page. An unanswered or omitted item has no answer to correct, so it keeps the update notice.
+- **Beneath the notice, the answer is shown ungraded** ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Amendment 2026-10-05):
+  - the verdict reads Not scored (F-1);
+  - the choices take I-3's ungraded state, with the old key named "Answer before the correction";
+  - the superseded explanation and reference are not shown (F-5's ungraded form).
+
+  The notice alone did not stop a review from presenting the old key as correct (DEBT-498).
+- **Active session**, in tutor and exam mode alike: "The answer to this question was corrected after your session began." (`font-medium`), then "This session shows the earlier version, so your answer here won't be scored." No link, as above. A tutor answer's feedback takes F-5's ungraded key-corrected form, so the earlier key is never graded as right.
+- Both lines read `text-foreground`, as F-11's caution does.
+
+**Precedence:** a question no longer available shows F-11 only. It is no longer offered, so there is no current version to link to. Its answer is still shown ungraded in the key-corrected form when its key was corrected, because no score counts that answer, whatever the question's state (DEBT-498).
+
+**Not marked:** list rows (History, Dashboard, the session breakdown, Review & Submit) show only the stem the learner saw, not the key or explanation, so they carry no notice. A key-corrected answer's result still reads "Not scored" there (F-11's list rule, DEBT-498).
+
+**Rules:**
+- Reuses S-1 Status notice, F-11's caution card for a key correction, L-5 with the canonical focus ring, and the F-11 copy pairing. There is no new surface, token or opacity value.
+- Contrast: the same pairings as F-11 (12.3 "Card body / dense helper copy" and `text-foreground`, and `text-foreground` on the caution card). No new `contrast.md` ledger entry is required.
+- `role="status"` announces the notice politely; it is never focused automatically.
+- A stored grade is never regraded ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)). An answer graded on a key corrected since leaves every score instead (F-13 names the reason), and the Incorrect practice filter offers its question again.
+
+**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, DEBT-484 phase 2b, and ADR-022 Decision 4 ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md) increment 4). In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`, each with its `keyCorrected` form). It renders nothing while every question has one revision.
+
+
+### F-13: Unscored Disclosure (a score that leaves items out)
+
+States how many questions a score leaves out ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md) Decision 3, as amended 2026-10-03). A score counts an item when the learner had a fair chance at it, recorded when its session ended, and its content is not now in doubt: withdrawn, under review, or its key corrected since the learner answered. A learner who sees a smaller denominator is told why.
+
+```text
+<p className="text-xs text-muted-foreground">
+```
+
+- **Copy:** "N questions aren't scored: withdrawn, under review, removed mid-session, or their answer was corrected." For one: "1 question isn't scored: withdrawn, under review, removed mid-session, or its answer was corrected." It names every reason, not the item's own: a score summarizes many items. A retired question is not a reason: retirement changes no score (DEBT-494).
+- **Placement:** directly below the score it qualifies, inside the same row or card. Nothing renders when every question is scored.
+- **The score beside it** counts only the scored items: a fraction reads `correct/scored` (History, the Dashboard's recent sessions, the post-exam header's "X of scored correct"), a percentage is over the scored items, and either shows "—" for accuracy when nothing is scored. A count of activity, such as Answered, stays every answer.
+
+**Rules:**
+- Reuses the dense helper-copy style (`text-xs text-muted-foreground`, the 12.3 pairing at a smaller size). There is no new surface, token or color pair.
+- Informational, not a warning: nothing is wrong, and the learner has nothing to do.
+
+**Source:** ADR-022 Decision 3, as amended by DEBT-494, and DEBT-493 increment 2. The component is `UnscoredDisclosure` (`components/question/unscored-disclosure.tsx`). In use: History's session rows, the Dashboard's recent sessions and its two accuracy cards, where the count is of questions, not attempts, the session summary's Accuracy card, and the post-exam header, whose sentence reads "X of scored correct".
+
+---
+
+## Part 7: Metadata & Decoration
+
+### M-1: Metadata Badge/Pill
+
+Non-interactive labels for mode, difficulty, status.
+
+```
+inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-muted-foreground dark:border-foreground/40
+```
+
+**Used in:** Dashboard session mode badge, dashboard activity difficulty badge
+
+**Rule:** Badges are NEVER interactive. If a badge needs to be clickable, it's a FilterChip (I-4), not a badge.
+
+**Marketing eyebrow variant (DEBT-477):** `inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground`. The landing hero uses full foreground because muted text on this full-strength muted fill measured 4.49:1, below AA. This is non-interactive metadata; it adds no dark override or opacity token.
+
+### M-2: Content Separator
+
+Visual dividers within cards or content areas.
+
+| Weight | Classes | Use Case |
+|--------|---------|----------|
+| Standard | `border-t border-border` | Major section breaks |
+| Subtle | `border-t border-border/60` | Between content blocks inside cards |
+| Light | `border-t border-border/40` | Internal separators (expanded breakdowns; feedback reference sections use F-6 in dark mode) |
+
+### M-3: Loading Skeleton (PageLoading)
+
+Skeleton placeholder shown during Suspense loading.
+
+**Outer:** `animate-pulse space-y-6` + `aria-busy="true"` + `aria-live="polite"`
+**Heading bar:** `h-8 w-48 rounded-md bg-background`
+**Card skeleton:** `space-y-4 rounded-2xl border border-border bg-background p-6`
+**Text lines:** `h-4 bg-muted rounded` (varied widths)
+**Action bar:** `h-10 w-32 bg-muted rounded`
+
+**Source:** `components/loading/page-loading.tsx`
+
+**Known issue:** Skeleton cards use `bg-background` instead of `bg-card`, making them visually flatter than the real cards they replace. This is acceptable for skeleton state but should be noted.
+
+### M-4: Choice Badge Circle
+
+The letter label (A, B, C, D) inside choice buttons.
+
+**Default:**
+```
+flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-foreground/20 bg-foreground/[0.06] text-xs font-semibold leading-none text-foreground dark:border-foreground/60 dark:bg-foreground/20
+```
+
+**Used in:** Choice buttons and feedback answer rows
+
+**Correct:** `border-success bg-success/15 text-success`
+**Incorrect:** `border-destructive bg-destructive/15 text-destructive`
+
+---
+
+## Part 8: State Modifiers
+
+### X-1: Disabled
+
+One universal disabled treatment. No exceptions.
+
+```
+disabled:pointer-events-none disabled:opacity-50
+```
+
+**Applies to:** Buttons, inputs, selects, filter chips, segmented controls, choice buttons.
+
+**NEVER use `opacity-60`** or any other value. The `opacity-50` is the disabled standard.
+
+### X-2: Focus Ring
+
+One universal focus ring. No exceptions.
+
+**Button component (built-in):**
+```
+focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**Non-Button interactive elements:**
+```
+focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
+```
+
+**DEPRECATED — do NOT use:**
+```
+ring-2 ring-ring
+ring-2 ring-ring ring-offset-2
+focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+```
+
+### X-3: Transitions
+
+Every element with a `hover:` color change MUST have `transition-colors`.
+
+```
+transition-colors hover:bg-muted/50      ← correct
+hover:bg-muted/50                        ← WRONG (abrupt change)
+transition-all hover:bg-muted/50         ← WRONG (animates everything, causes jank)
+```
+
+---
+
+## Part 9: Decision Trees
+
+### "I need a list of items"
+
+```
+Is the list inside a <Card> container?
+├── YES → Use I-1 tonal-fill variant by default
+│         rounded-xl, bg-foreground/5, hover:bg-foreground/[0.08]
+│         Use the bordered default only when a spec explicitly requires an inner stroke
+│         Is the row non-interactive?
+│         └── YES → Use S-2 tonal sibling variant (no hover classes)
+└── NO → Is each item a standalone container?
+    ├── YES → Use I-2 tonal standalone row
+    │         rounded-2xl, bg-foreground/[0.08], hover:bg-foreground/[0.12]
+    │         Is the row non-interactive?
+    │         └── YES → Use S-2 page-background sibling variant
+    └── NO → Use a regular <Card> or a page-specific spec
+              Do not resurrect the legacy bookmarks card-with-buttons branch
+```
+
+### "I need a hover effect"
+
+```
+What is the parent surface?
+├── Inside a Card, muted-scale row → hover:bg-muted/40
+├── Inside a Card, tonal row/direct-action surface → hover:bg-foreground/[0.08]
+├── On page background, muted-scale row → hover:bg-muted/50
+├── On page background, tonal row → hover:bg-foreground/[0.12]
+├── Choice button inside card (I-3) → hover:bg-foreground/[0.06] + hover:border-foreground/55 in light mode; dark:hover:bg-foreground/[0.05] + dark:hover:border-foreground/50 in dark mode (unselected branch only; replacement fills, not layers)
+├── `/60` hover tier → exception-only (requires explicit design review)
+└── Tab-switch inactive → hover:bg-muted/50 (inside bg-muted container)
+
+Token (neutral surface fills): Use the pattern's scale. `muted` is for muted-scale rows/containers; `foreground` is for tonal-row families such as I-1, I-2, I-3, and I-4.
+Border hovers in remediated dark-mode interactive rows/buttons typically use `dark:hover:border-foreground/70`. I-3 choice buttons are the deliberate exception at `/50` because the recessed `dark:bg-background/50` rest surface already creates stronger separation; the softer hover border keeps the lift distinct from the darker selected stack without over-brightening the full row.
+Avoid introducing new `hover:bg-accent*` outside `components/ui/` (button variants use `accent` by design). Only use `foreground`-based hover fills where the pattern spec explicitly calls for them.
+```
+
+### "I need a link"
+
+```
+Where is the link?
+├── Mobile drawer/sheet menu item → L-6 (Mobile Menu Link)
+│   row-style hover: hover:bg-muted/50 + hover:text-foreground
+├── Navigation chrome (header, sidebar, footer) → L-1 (Nav Link)
+│   text color change: text-muted-foreground → hover:text-foreground
+├── Card/section header action ("View all") → L-3 (Header Action Link)
+│   text color change, no underline, via Button variant="link"
+├── Inline status/banner action → L-5 (Banner Inline Link)
+│   persistent underline + hover:text-foreground
+├── Inside content (breakdown lists, inline refs) → L-2 (Content Link)
+│   hover:underline
+├── Brand/logo → L-4 (Brand Link)
+│   hover:text-foreground/80
+└── Standalone CTA → Use Button component (not a link pattern)
+```
+
+### "I need a warning/error/success indicator"
+
+```
+Is it transient feedback?
+├── YES → F-4 (Toast) via useNotification()
+└── NO → Is it a persistent inline error?
+    ├── YES → F-3 (ErrorCard)
+    └── NO → Is it a status indicator?
+        ├── Result badge → F-1 (/15 background)
+        ├── Warning/alert → F-2 (pick tier: /5 hint, /10 standard, /15 emphasized)
+        ├── Informational layout-level banner → F-10 (neutral border/card tokens, no status tint)
+        └── Full-page error → ErrorBoundaryPage component
+```
+
+---
+
+## Part 10: Shared Constants (Extraction Candidates)
+
+Patterns that are currently copy-pasted and should be extracted to shared constants.
+
+### Already Shared
+
+| Constant | File | Consumers |
+|----------|------|-----------|
+| `tabSwitchContainerClasses` | `components/ui/tab-switch-styles.ts` | SegmentedControl, HistoryTabBar |
+| `tabSwitchItemBaseClasses` | same | same |
+| `tabSwitchItemActiveClasses` | same | same |
+| `tabSwitchItemInactiveClasses` | same | same |
+| `headerActionLinkClasses` | `lib/shared-styles.ts` | Dashboard, History (sessions + questions), Practice, Bookmarks (7 files, DEBT-259/PR #152) |
+
+### Needs Extraction
+
+| Pattern | Current State | Proposed Constant | Proposed File |
+|---------|--------------|-------------------|---------------|
+| Hoverable row (inside Card) | Inline in dashboard, history sessions | `hoverableRowInsideCardClasses` | `lib/shared-styles.ts` |
+| Muted row (non-interactive) | Inline in dashboard, practice starter | `mutedRowClasses` | `lib/shared-styles.ts` |
+| Metadata badge/pill | Inline in dashboard (2 instances) | `metadataBadgeClasses` | `lib/shared-styles.ts` |
+
+**Extraction rule:** Extract when 3+ files use the same class string. Below 3, inline is fine.
+
+---
+
+## Part 11: Known Divergences from This Registry
+
+Approved exceptions tracked in [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md):
+
+No active divergences in this inventory.
+
+**Resolved (historical):** All 31 items from DEBT-250 are resolved or retain their documented accepted-exception decisions:
+- `D-15` — MetallicCtaButton retired 2026-09-16 (DEBT-477); final CTA uses `default` + `rounded-full`. Reverses DEBT-250 Decision 2, preserved by DEBT-258; it was an approved exception until this retirement.
+- `D-1` through `D-10`, `D-12`, `D-14`, `D-16`, `D-17` — code fixes via DEBT-251 through DEBT-258 (PRs #149–#151)
+- `D-11` — pricing page converted to `<Card>` components (DEBT-259, PR #152)
+- `D-13` — `headerActionLinkClasses` extracted to `lib/shared-styles.ts` (DEBT-259, PR #152)
+- `COMP-1`, `A11Y-1`, `A11Y-2`, `STRUCT-1`, `AFFORD-1`, `LIGHT-3` — code fixes via DEBT-251–258
+- `UX-1` (pricing dead space), `UX-2` (standalone bookmark — no change by design), `UX-3` (ThemeToggle added to marketing), `UX-4` (Clerk seam — accepted third-party exception) — DEBT-260, PR #152
+- `TOUCH-1`, `TOUCH-2` — targeted touch target fixes (DEBT-261, PR #152)
+- `LIGHT-1` — light-mode opacity asymmetry accepted and documented (DEBT-262, Decision 12)
+- `LIGHT-2` — success/destructive token contrast fixed in `globals.css` (DEBT-263, PR #153)
+
+Clerk auth-surface radius/interaction differences are an accepted third-party seam and not a local styling target (Decision 8).
+
+---
+
+## Part 12: Typography System
+
+### 12.1 Font Families
+
+Three Google Fonts families, self-hosted from `app/fonts/` through `next/font/local` in `app/layout-fonts.ts` so builds never fetch fonts (Biome rejects `next/font/google`; provenance and licenses in `app/fonts/README.md`):
+
+| Class | Font Family | Fallback Chain | Weights | Role |
+|-------|------------|----------------|---------|------|
+| _(body default)_ | Manrope | Manrope Fallback (metric-adjusted Arial), Arial, Helvetica, sans-serif | All (variable) | Body text, UI labels, all default text |
+| `font-heading` | Instrument Sans | Manrope, system-ui, sans-serif | All (variable) | Page headings (H1, H2, H3), card section titles |
+| `font-display` | Plus Jakarta Sans | Manrope, system-ui, sans-serif | 700, 800 only | Large numeric values, stat card numbers, pricing amounts |
+
+**Source:** Font faces in `app/layout-fonts.ts`. Fallback faces and `--font-*` variables in `app/globals.css:220-262`. CSS classes in `app/globals.css:264-273`. Body font-family in `app/globals.css:95-97`.
+
+**Rule:** Never use `font-sans` or other Tailwind font utilities. The three classes above are the only font-family selectors.
+
+### 12.2 Heading Conventions
+
+**App page H1 (standard):**
+```
+text-2xl font-bold font-heading tracking-tight text-foreground
+```
+Used on: Dashboard, History, Bookmarks, Billing, Practice, Question Review, Exam Review, Session Summary.
+
+**Marketing/standalone H1:**
+```
+text-4xl font-bold font-heading tracking-tight text-foreground
+```
+Used on: Pricing page, Not Found page.
+
+**Marketing hero H1:**
+```
+font-display text-5xl font-bold tracking-tight md:text-7xl
+```
+Used on: Landing page hero (uses `font-display` instead of `font-heading`).
+
+**Marketing section H2:**
+```
+font-heading text-3xl font-bold tracking-tight md:text-4xl
+```
+
+**Utility page H1 (auth, error, checkout):**
+```
+text-xl font-semibold font-heading tracking-tight text-foreground
+```
+Deliberately smaller — these are centered narrow-width contexts.
+
+**Global error H1:**
+```
+text-2xl font-bold font-heading tracking-tight text-foreground
+```
+
+### 12.3 Text Size Roles
+
+| Role | Classes | Used For |
+|------|---------|----------|
+| Page / section subtitle (standard UI) | `text-base text-muted-foreground` | Authenticated app pages, centered utility pages, standard marketing section ledes |
+| Page subtitle (marketing hero) | `text-lg text-muted-foreground` | Pricing page hero, marketing hero |
+| Card section heading | `text-sm font-medium text-foreground` | "Subscription", "Start a session", section titles |
+| Card body / dense helper copy | `text-sm text-muted-foreground` | Dense card content text, compact utility/error copy |
+| Compact stat labels | `text-xs text-muted-foreground` | Exam review stat cards (intentional compact tier) |
+| Badge / pill text | `text-xs font-medium text-muted-foreground` | Tags, counts |
+| Marketing CTA label | `text-base font-medium` | Hero / pricing primary CTAs |
+| Text input content | `text-base md:text-sm` | Shared `Input` primitive mobile zoom safeguard |
+| Question stem | `text-base text-foreground` | Question card body |
+| Error ID | `text-xs text-muted-foreground` | Error pages |
+| Reference label | `text-xs font-semibold uppercase tracking-wide text-muted-foreground` | Feedback reference section |
+
+### 12.4 Stat Card Tiers
+
+Two distinct stat card presentations:
+
+| Tier | Number Size | Card Padding | Label Size | Label Margin | Used In |
+|------|------------|-------------|------------|-------------|---------|
+| Full | `text-3xl font-bold font-display` | `p-6` | `text-sm` | `mt-2` | Dashboard, Session Summary |
+| Compact | `text-2xl font-bold font-display` | `p-4` | `text-xs` | `mt-1` | Exam Review |
+
+### 12.5 Legal Document Surface
+
+Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from mirrored markdown content modules. Registered 2026-08-05 and redesigned 2026-08-08 under [DEBT-463](../_archive/debt/debt-463-legal-page-redesign.md).
+
+| Element | Classes |
+|---|---|
+| Document container | `mx-auto max-w-[72ch] px-4 py-16 sm:px-6 lg:px-8` |
+| Document H1 | `font-heading text-4xl font-bold tracking-tight text-foreground text-pretty` (the standard Marketing/standalone H1 plus legal-surface wrapping) |
+| Section heading | `mt-12 border-t border-border pt-8 font-heading text-2xl font-bold tracking-tight text-foreground text-pretty` |
+| Subsection heading | `mt-8 font-heading text-xl font-semibold tracking-tight text-foreground text-pretty` |
+| Nested heading | `mt-6 font-heading text-lg font-semibold tracking-tight text-foreground text-pretty` |
+| Body / list text | `mt-4 text-base leading-7 text-foreground/80` |
+| Table body cell | `border-b border-border px-4 py-3 align-top leading-6 text-foreground/80 [tbody_tr:last-child_&]:border-b-0` |
+| Strong emphasis | `font-semibold text-foreground` |
+| Last-updated line | `mt-4 text-sm text-muted-foreground` |
+| Inline code | `rounded bg-muted px-1 py-0.5 text-sm text-foreground` |
+
+**Reading-measure rationale:** the legal container uses `max-w-[72ch]`, including its responsive padding. At the audited 1600px viewport this replaces the former 832px content column, which measured 95.8 average / 106 median CPL in Terms and 89.1 average / 106 median CPL in Privacy. The target is approximately 65–75 CPL for sustained prose. This is a legal-reading measure, not a replacement for `max-w-4xl` marketing hero content.
+
+**Tone and rhythm rationale:** body, list, and table-cell copy use the documented semantic foreground ramp at `text-foreground/80`; strong emphasis, headings, and links remain full `text-foreground`. Against the current page tokens, the body ramp computes to approximately 10.87:1 in dark mode and 11.48:1 in light mode, above the WCAG AA 4.5:1 target. Keep `leading-7`: the measured 16px/28px ratio is 1.75 and is intentionally more open than marketing `leading-relaxed`, not an inheritance drift.
+
+**Section rhythm:** each top-level section begins with a decorative `border-border` separator, `mt-12`, and `pt-8`. Spacing and the heading remain sufficient to identify the section without the separator, so the line is decorative under the Contrast Policy and is not a required SC 1.4.11 boundary.
+
+**Heading mapping:** markdown `##`, `###`, and `####` render as `<h2>`, `<h3>`, and `<h4>` respectively. Public legal content must use `##` for sections and `###` for subsections, preserving the page outline `h1 > h2 > h3`. Do not flatten heading levels for visual convenience.
+
+**Links:** before sanitization, URI schemes already allowed by `rehype-sanitize` are normalized to lowercase because URI schemes are case-insensitive while `hast-util-sanitize`'s protocol comparison is not; unsafe schemes remain untouched and are removed. A missing post-sanitize `href` renders as an inert anchor. Empty destinations, same-page `#anchor`, and `mailto:` render in the same tab; a **single** leading `/` or a relative same-origin destination such as `terms` is an app route via `next/link`; protocol-relative `//host` and absolute remote URLs are external and get `target="_blank" rel="noreferrer noopener"`. The `//` case matters: it starts with a slash but is cross-origin and must never reach `next/link`. All branches share the L-2 Content Link class string, expressed as the shared **`ring-focus`** utility.
+
+**Focus-ring spelling:** this surface uses the `ring-focus` utility from `app/globals.css`, not a hand-copied literal — one enforced spelling per DEBT-399, asserted that way in `components/theme-token-regression.test.tsx`.
+
+**Scrollable table region (accessibility):** each table is wrapped in `div[tabIndex=0]` with `mt-6 overflow-x-auto rounded-xl border border-border` plus `ring-focus`, so keyboard users can reach and scroll overflowing disclosure tables (WCAG 2.1.1 / axe `scrollable-region-focusable`). **No `role` and no `aria-label` — deliberately.** That rule requires only keyboard reachability; adding `role="region"` (or a `<section>` with a name, which implies it) would make every table on a legal page a landmark sharing one accessible name and fail axe `landmark-unique`, trading one violation for another. A unique per-table name would need to be derived from surrounding content, which this markdown renderer has no access to. **Accepted tradeoff:** `tabIndex` is unconditional, so on viewports wide enough that a table does not overflow, the wrapper is a focusable stop with nothing to scroll. Making it conditional needs client-side width measurement; the dead stop is preferred over unreachable disclosure content on narrow viewports.
+
+Row separators are suppressed on the last body row only, via `[tbody_tr:last-child_&]:border-b-0` on `td` — plain `last:` targets each row's last cell, not the last row, which strips the rightmost column's separators instead. **Test-coverage limit:** the regression tests assert the class string is present, not that Tailwind emits the rule; the compiled output was verified by hand (`tbody tr:last-child .[…]{border-bottom-width:0}`, specificity beats `.border-b`). A `@source` or Tailwind-major change that stopped generating it would not fail a test.
+
+---
+
+## Part 13: Spacing Conventions
+
+### 13.1 Page-Level Container
+
+Default responsive container pattern (app + marketing shells):
+```
+mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
+```
+
+**Exceptions:** Centered utility pages (sign-in/up fallback, global error, error boundary, not found, checkout success) use their own centered layouts and do not use this container.
+
+**Vertical padding:**
+- App layout content area: `py-8`
+- Marketing/pricing standalone: `py-16`
+- Marketing section spacing: varies per section design
+
+### 13.2 Page Section Spacing
+
+**Default:** `space-y-6` at app page root containers.
+
+**Known exceptions (denser stacks):** Some tab panels and error-state fallbacks use `space-y-4` (e.g., `app/(app)/app/history/components/history-sessions-tab.tsx:118`, `app/(app)/app/history/components/history-questions-tab.tsx:420`, `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:126`).
+
+### 13.3 Card Padding Tiers
+
+| Tier | Padding | Usage |
+|------|---------|-------|
+| Standard | `p-6` | All content cards (stats, sections, practice, bookmarks empty state) |
+| Dense | `p-4` | Compact cards (exam review stats, filter bars, question list items, navigator) |
+| Showcase | `p-8` | Marketing pricing cards, pricing page plan cards — left-aligned list-bearing content. Only stat and single-message status cards use `text-center`. |
+
+**Rule:** `p-3` is for inner list items within cards (dashboard recent lists, feedback choices), never on `<Card>` directly.
+
+### Marketing footer composition (DEBT-477)
+
+`grid gap-y-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-baseline md:gap-x-8` preserves the brand-left / links-right layout. DOM order is brand, tagline, product/auth navigation, legal navigation. Brand/tagline use `md:col-start-1` with `md:row-start-1` / `md:row-start-2`; the two navs use column 2 and corresponding rows. Both navs use `flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground md:justify-end`; the product nav adds `mt-4 md:mt-0`. Names are `Footer product navigation` and `Footer legal navigation`. At 768 px the two-line tagline aligns its first baseline with the legal row. This replaces the DEBT-389 single cluster after legal links made it wrap poorly. The existing divider/copyright row stays.
+
+### 13.4 Grid Gap Scale
+
+| Gap | Usage |
+|-----|-------|
+| `gap-3` | Dense filter bar grids |
+| `gap-4` | Standard card grids (stats, features, section layouts) |
+| `gap-6` | Marketing pricing and `/pricing` plan grids |
+
+### 13.5 List Spacing Scale
+
+| Spacing | Tier | Usage |
+|---------|------|-------|
+| `space-y-2` | Dense | In-card lists (dashboard recent, session breakdown, history sessions) |
+| `space-y-3` | Standard | Item lists (exam review questions, pricing features, choices) |
+| `space-y-4` | Card-level | Card-like item lists (history questions, bookmarks, practice sections) |
+
+### 13.6 Max-Width Scale
+
+| Width | Purpose | Examples |
+|-------|---------|---------|
+| `max-w-7xl` (1280px) | Full-page layouts | App layout, marketing layout |
+| `max-w-4xl` | Hero content | Marketing hero section |
+| `max-w-[72ch]` | Sustained legal reading measure, including responsive page padding | Privacy Policy, Terms of Service |
+| `max-w-3xl` | Featured sections | Marketing pricing grid, CTA section, and `/pricing` plans section (outer shell/status cards retain their existing width) |
+| `max-w-2xl` | Centered content | Pricing cards, subtitles, feature headings |
+| `max-w-lg` | Dialogs | Alert dialog |
+| `max-w-md` | Error pages | Not Found, Global Error, Error Boundary |
+| `max-w-sm` | Toasts | Notification toast |
+
+---
+
+## Part 14: Shadow & Elevation Scale
+
+Four tiers, cleanly separated by element type:
+
+| Level | Class | Usage | Elements |
+|-------|-------|-------|----------|
+| Micro | `shadow-xs` | Form controls | Button (all variants except ghost/link), Input, Select trigger |
+| Surface | `shadow-sm` | Cards and surfaces | Card (built-in default), ErrorCard, ChoiceButton, Toast, TabSwitch active |
+| Popup | `shadow-md` | Floating menus | Select content, DropdownMenu content |
+| Modal | `shadow-lg` | Blocking overlays | AlertDialog, DropdownMenu sub-content |
+
+**Rule:** Never use `shadow`, `shadow-xl`, or `shadow-2xl`. The four tiers above are the complete scale.
+
+**Note:** The `<Card>` component includes `shadow-sm` in its base class. Callers do not need to pass `shadow-sm` explicitly (though many currently do — it's harmless but redundant).
+
+### 14.1 Z-index Conventions (Current)
+
+| Layer | Class | Used By | Source |
+|------|-------|---------|--------|
+| Overlays + popovers | `z-50` | AlertDialog overlay/content, SelectContent, DropdownMenu content/sub-content | `components/ui/alert-dialog.tsx:39`, `components/ui/alert-dialog.tsx:57`, `components/ui/select.tsx:59`, `components/ui/dropdown-menu.tsx:45`, `components/ui/dropdown-menu.tsx:233` |
+| Notifications | `z-50` | Toast region | `components/ui/notification-provider.tsx:125` |
+
+**Known limitation:** Since all overlays and toasts share `z-50`, a toast fired while a dialog is open can render behind the dialog overlay. Tracked as out-of-scope in DEBT-250.
+
+---
+
+## Part 15: Animation & Transition Conventions
+
+### 15.1 Transition Rules
+
+| Transition | When to Use |
+|-----------|-------------|
+| `transition-colors` | Any element with `hover:` color/background change. **Universal default.** |
+| `transition-[color,box-shadow]` | Form controls (Input, Select trigger) — animates both color and focus ring |
+
+**Never use:** `transition-all` (causes jank by animating everything), `transition-opacity`, `transition-transform`.
+
+**Duration:** No `duration-*` classes anywhere. All transitions use the Tailwind default (150ms). This is a deliberate design choice for snappy interactions.
+
+### 15.2 Custom Animations (globals.css)
+
+| Animation | Class/Selector | Duration | Usage | Locations |
+|-----------|---------------|----------|-------|-----------|
+| `fade-in-up` | `.animate-fade-in-up` | 0.6s ease-out | Staggered entrance for marketing impact stats | `marketing-home.tsx:109` (1 location) |
+
+### 15.3 Radix UI Animations (tw-animate-css)
+
+The `tw-animate-css` library (imported in `globals.css:7`) provides enter/exit animation utilities consumed by Radix-based UI primitives:
+
+| Utility | Purpose | Consumers |
+|---------|---------|-----------|
+| `animate-in` / `animate-out` | Enter/exit animation wrapper | Select, DropdownMenu, AlertDialog |
+| `fade-in-0` / `fade-out-0` | Opacity 0→1 / 1→0 | Same |
+| `zoom-in-95` / `zoom-out-95` | Scale 0.95→1 / 1→0.95 | Select, AlertDialog |
+| `slide-in-from-top-2`, `slide-in-from-bottom-2`, etc. | Directional slide | Select, DropdownMenu |
+
+**Note:** `animate-pulse` (for skeleton loading shimmer in M-3) is a built-in Tailwind utility, not from `tw-animate-css`.
+
+### 15.4 Reduced Motion
+
+All custom CSS animations are properly disabled under `prefers-reduced-motion: reduce` (`app/globals.css`, `@media (prefers-reduced-motion: reduce)`):
+- `scroll-behavior: smooth` → `auto`
+- `.animate-fade-in-up` animation → `none`
+
+The `tw-animate-css` library handles its own reduced-motion support internally.
+
+---
+
+## Part 16: Responsive Breakpoint Strategy
+
+### 16.1 Breakpoints in Use
+
+| Prefix | Breakpoint | Usage |
+|--------|-----------|-------|
+| `sm:` | 640px | Widely used — grid columns, flex direction, padding |
+| `md:` | 768px | Marketing pages + `Input` text size only |
+| `lg:` | 1024px | Container padding, grid column layouts |
+| `xl:` / `2xl:` | — | **Not used anywhere.** `max-w-7xl` (1280px) makes these unnecessary |
+
+### 16.2 Responsive Patterns
+
+**Container padding (universal):**
+```
+px-4 sm:px-6 lg:px-8
+```
+
+**Stack-to-row (mobile-first):**
+```
+flex flex-col sm:flex-row
+```
+Used for: header action bars, card content layouts, button groups.
+
+**Show/hide (navigation):**
+- Desktop nav: `hidden sm:flex`
+- Mobile nav: `sm:hidden`
+
+### 16.3 Two-Tier Breakpoint Strategy
+
+- **App pages:** `sm:` + `lg:` only (skip `md:`)
+- **Marketing pages:** `sm:` + `md:` + `lg:`
+
+This is intentional — marketing pages have richer responsive layouts (multi-column features, pricing grids) while app pages are simpler single/dual column layouts.
+
+---
+
+## Part 17: Form Input Patterns
+
+### Input Component
+
+The `<Input>` component (`components/ui/input.tsx`) is the single form input primitive. All text/number inputs MUST use it.
+
+**Base classes:**
+```
+border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs
+transition-[color,box-shadow] outline-none md:text-sm
+```
+
+**Dark mode:** `dark:bg-input/30 dark:border-foreground/40` (subtle dark background tint + required boundary override)
+
+**Focus:** `focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]`
+
+**Validation:** `aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive`
+
+**Disabled:** `disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50`
+
+**Placeholder:** `placeholder:text-muted-foreground` (centralized — no other placeholder styles exist)
+
+**Selection:** `selection:bg-primary selection:text-primary-foreground`
+
+**File input pseudo-element:** `file:text-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium`
+
+**Exact `className` strings (current)** — `components/ui/input.tsx:11-13`:
+```text
+file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input dark:border-foreground/40 flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm
+focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]
+aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
+```
+
+**Note:** Uses `transition-[color,box-shadow]` (not `transition-colors`) because form controls animate both color and the focus ring box-shadow.
+
+### Select Component
+
+The `<Select>` component (`components/ui/select.tsx`) is the single select/menu form primitive.
+
+**Trigger base classes:**
+```
+border-input dark:border-foreground/40 data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2
+```
+
+**Content surface:** Uses S-3 (Popover Surface) + Radix enter/exit animations (Part 15.3).
+
+**Item base classes (keyboard focus highlight):**
+```
+focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4
+```
+
+**Note:** Like `<Input>`, uses `transition-[color,box-shadow]` on the trigger because focus rings animate via box-shadow.
+
+---
+
+## Part 18: Accessibility Patterns
+
+### 18.1 Landmarks
+
+All route pages render a `<main id="main-content" tabIndex={-1}>` landmark **except** `app/global-error.tsx` (Next.js global error renders its own `<html>/<body>` and does not use `app/layout.tsx`).
+
+A global skip-to-content link in `app/layout.tsx:38-43` targets the main landmark:
+```tsx
+<a
+  href="#main-content"
+  className="sr-only focus:not-sr-only focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+>
+  Skip to content
+</a>
+```
+
+All `<nav>` elements (10 total) have `aria-label`. Marketing page `<section>` elements have `aria-label` or `aria-labelledby`.
+
+### 18.2 Live Regions
+
+Page-level Suspense loading uses the shared `<PageLoading>` component with `aria-busy="true"` + `aria-live="polite"` on its wrapper (`components/loading/page-loading.tsx`).
+
+Inline loading states use the `<output>` HTML element with `aria-live="polite"`:
+```tsx
+<output aria-live="polite">Loading question...</output>
+```
+
+**Note:** The `<output>` element has implicit `role="status"` and `aria-live="polite"`, so the explicit `aria-live` is technically redundant but harmless.
+
+### 18.3 ARIA State Conventions
+
+| Attribute | Usage Pattern |
+|-----------|--------------|
+| `aria-current="page"` | Active nav links, active tab bar items |
+| `aria-current="step"` | Current question in navigator dots |
+| `aria-pressed` | SegmentedControl, FilterChip, bookmark/mark-for-review toggles |
+| `aria-expanded` + `aria-controls` | Mobile nav toggle button |
+| `role="alert"` | ErrorCard, pricing error banner, inline error messages |
+| `role="status"` | Feedback card, non-error notification toasts |
+
+### 18.4 Icon Accessibility
+
+Decorative Lucide icons set `aria-hidden="true"`. Icon-only controls provide an accessible name via either `aria-label` or visually hidden text (for example, `<span className="sr-only">`).
+
+**Icon sizing scale:**
+| Size | Class | Usage |
+|------|-------|-------|
+| 16px | `size-4` | Standard inline (buttons, menus, controls) |
+| 20px | `size-5` | Standalone (theme toggle) |
+| 24px | `size-6` | Prominent standalone (nav hamburger, feature icons) |
+| 48px | `size-12` | Decorative hero-level (404 page) |
+
+### 18.5 Global Defaults (globals.css)
+
+Two global defaults set in `@layer base` (`globals.css:169-176`):
+```css
+* { @apply border-border outline-ring/50; }
+body { @apply bg-background text-foreground; }
+```
+
+The `outline-ring/50` ensures all elements default to the ring token for outline color. The `border-border` ensures all borders default to the border token.
+
+Additionally, `html { scroll-behavior: smooth; }` (`globals.css:178-180`) enables smooth scrolling globally, properly disabled under `prefers-reduced-motion: reduce`.
+
+---
+
+## Part 19: CSS Infrastructure
+
+### Public social-card renderer (DEBT-479, 2026-09-22)
+
+`app/opengraph-image.tsx` is a build-time raster renderer, not a browser UI.
+Its `ImageResponse`/Satori styles cannot inherit the DOM's CSS custom properties.
+Use the dark semantic background/foreground equivalents from `globals.css`
+(`hsl(0, 0%, 3.5%)` and `hsl(0, 0%, 93%)`) only at this renderer boundary.
+The 1200×630 card uses a simple left-aligned brand/title hierarchy, generous
+padding and the renderer's bundled Geist font; no remote font, icon asset or
+interactive control is needed. This is not permission for raw colors elsewhere.
+Review the actual PNG for clipping and legibility before shipping it.
+
+### 19.1 Tailwind Version
+
+The project uses **Tailwind CSS v4** with CSS-first configuration (`@theme` block in `globals.css`). There is no `tailwind.config.js`; source detection is controlled from `app/globals.css`, including the DEBT-409 `@source not "../docs"` exclusion that prevents documentation examples from entering generated production CSS. The CSS `@theme` is the authoritative source for theme tokens.
+
+### 19.2 Unused Tokens
+
+13 CSS custom properties are defined but never referenced in any component:
+- `chart-1` through `chart-5` — shadcn/ui scaffolding defaults
+- `sidebar-background`, `sidebar-foreground`, `sidebar-primary`, `sidebar-primary-foreground`, `sidebar-accent`, `sidebar-accent-foreground`, `sidebar-border`, `sidebar-ring` — shadcn/ui scaffolding defaults
+
+These should be removed in a cleanup pass.
+
+### 19.3 Dead CSS
+
+The `scrollbar-hidden` utility class (`globals.css:251-258`) is defined but has zero usages in any `.tsx` file.
+
+---
+
+## Appendix: Pattern Quick Reference
+
+Compact lookup for code reviews and implementation.
+
+| ID | Pattern | Canonical Hover | Radius | Border |
+|----|---------|----------------|--------|--------|
+| S-1 | Card | — (non-interactive) | `rounded-2xl` | `border` |
+| S-2 | Muted Row | — (non-interactive) | `rounded-xl` | Default: `border-border/60 dark:border-foreground/40`; tonal variants may omit border |
+| S-3 | Menu Popover | — | `rounded-md` | `border` |
+| S-4 | Modal Dialog | — | `rounded-2xl` | `border-border` |
+| I-1 | Row in Card | `hover:bg-foreground/[0.08]` | `rounded-xl` | tonal-fill variant omits border |
+| I-2 | Standalone Row | `hover:bg-foreground/[0.12]` | `rounded-2xl` | tonal-fill variant omits border |
+| I-3 | Choice Button | `hover:bg-foreground/[0.06] hover:border-foreground/55` (+ `dark:hover:bg-foreground/[0.05] dark:hover:border-foreground/50`) | `rounded-xl` | `border-foreground/50 dark:border-foreground/40` |
+| I-4 | Filter Chip | `hover:bg-foreground/[0.12] hover:text-foreground` | `rounded-md` | borderless tonal fill |
+| I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
+| I-6 | Icon Toggle | `hover:text-foreground` | — | — |
+| I-7 | Consent Opt-In Checkbox | native control (`accent-primary`) | `rounded-sm` | — |
+| L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |
+| L-2 | Content Link | `hover:underline` | `rounded-sm` | — |
+| L-3 | Header Action Link | `hover:text-foreground` | — | — |
+| L-4 | Brand Link | `hover:text-foreground/80` | `rounded-md` | — |
+| L-5 | Banner Inline Link | `hover:text-foreground` | — | — |
+| L-6 | Mobile Menu Link | `hover:bg-muted/50` | `rounded-md` | — |
+| F-3 | ErrorCard | — | `rounded-2xl` | `border-destructive` |
+| F-4 | Toast | — | `rounded-xl` | varies by tone |
+| F-11 | Availability Notice | — (non-interactive; list rows keep I-1 / I-2 hover) | `rounded-2xl` (S-1) | `border` (S-1); a caution adds `border-warning/50` |
+| F-12 | Update Notice | L-5 link `hover:text-foreground` | `rounded-2xl` (S-1) | `border` (S-1) |
+| F-13 | Unscored Disclosure | — (non-interactive helper line) | — | — |
+| M-1 | Badge/Pill | — | `rounded-full` | `border-border/60` |

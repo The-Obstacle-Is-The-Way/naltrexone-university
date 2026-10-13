@@ -69,4 +69,4 @@ PR #328 showed that jsdom 26 -> 29 selector/CSS parsing changes can break URL-be
 
 Prefer `findAnchorByHref()` for new exact anchor href assertions when it reads clearly. Do not churn existing simple static-href `querySelector('a[href="..."]')` sites only for style consistency.
 
-### Full details: `docs/dev/react-vitest-testing.md`
+### Full details: `docs/guides/testing/react-component-tests.md`

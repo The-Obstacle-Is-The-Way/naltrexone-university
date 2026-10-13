@@ -1,6 +1,6 @@
 # ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-**Status:** Accepted, as amended 2026-10-03 (Parts 1, 2 and 4; Part 3 not adopted)
+**Status:** Accepted, as amended 2026-10-03 (Parts 1, 2 and 4; Part 3 not adopted) and 2026-10-12 (where the QA procedures live)
 **Date:** 2026-08-13
 **Decision Makers:** Owner
 **Depends On:** ADR-003 (Testing Strategy), ADR-001 (Clean Architecture Layers)
@@ -14,18 +14,18 @@ The suite ADR-003 defined is mature: 556 test files (~151k lines) across four la
 1. **Nothing measures whether the tests actually constrain behavior.** Coverage says lines ran; it cannot say a mutated `<=` would be caught. The audit found both consequential thin spots (`grading.ts` — the product's core correctness function — carries 5 tests) and high-consequence code paths whose mutation resistance nothing audits (`subscription-write-guard.ts`, which decides whether a paying customer's subscription can be overwritten, carries 21 table-driven cases that have never been adversarially checked).
 2. **Nothing ranks under-tested complexity.** Triage of "where do tests or refactors pay off next" is currently manual sweeps.
 3. **Business rules have no UI-independent executable specification.** Rules live in use cases and their unit tests; nothing states them in business language, so nothing structurally prevents a rule from migrating into a component during agent iteration.
-4. **UI verification is tribal.** Manual flow scripts exist inside `docs/dev/stabilization-checklist.md`, the operator checklist demands smoke tests but does not yet link the Draft QA register, and an audit found a long list of route-level gaps — enumerated in `docs/dev/qa-procedures.md` (rendered Clerk auth forms, forced route-boundary states, billing portal round-trip, route-level entitlement redirect, app-wide mobile sweep…).
+4. **UI verification is tribal.** Manual flow scripts exist inside `docs/dev/stabilization-checklist.md`, the operator checklist demands smoke tests but does not yet link the Draft QA register, and an audit found a long list of route-level gaps — enumerated in `docs/guides/qa/method.md` (rendered Clerk auth forms, forced route-boundary states, billing portal round-trip, route-level entitlement redirect, app-wide mobile sweep…).
 
-Standing constraint honored throughout: **coverage numbers are observational in this repo** (`docs/dev/react-vitest-testing.md`) — TDD discipline and behavior assertions are the enforcement mechanism, not numeric gates.
+Standing constraint honored throughout: **coverage numbers are observational in this repo** (`docs/guides/testing/react-component-tests.md`) — TDD discipline and behavior assertions are the enforcement mechanism, not numeric gates.
 
 ## Decision
 
 Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one part each):
 
-1. **CRAP analysis** — a repo-built `scripts/crap-report.ts` ranks every function by `comp² × (1 − cov)³ + comp` using existing coverage output and the TypeScript compiler API. Ranked triage only. Runbook: `docs/dev/code-quality-metrics.md`.
-2. **Mutation testing** — StrykerJS with the Vitest runner, scoped to the unit lane (`vitest.config.mts`) and to pure domain/application modules, incremental mode, weekly scheduled CI + on-demand local runs. Runbook: `docs/dev/mutation-testing.md`.
-3. **Gherkin acceptance tests** — real `.feature` files bound via `@amiceli/vitest-cucumber` to an application-layer driver built on the existing fakes; bindings named `*.acceptance.test.ts` under `tests/acceptance/` so they run inside the existing unit lane with zero runner changes. New business rules ship their feature file first (the outer TDD loop). Runbook: `docs/dev/acceptance-testing.md`.
-4. **UI QA procedures** — a `docs/qa/` register (QA-NNN, same mechanics as the debt/bug registers) of scripted, evidence-producing procedures executable by humans, agents (within the DEBT-323 constraint table), or Playwright-assisted runs; stable procedures get promoted into `tests/e2e/`. Runbook: `docs/dev/qa-procedures.md`.
+1. **CRAP analysis** — a repo-built `scripts/crap-report.ts` ranks every function by `comp² × (1 − cov)³ + comp` using existing coverage output and the TypeScript compiler API. Ranked triage only. Runbook: `docs/guides/testing/crap-report.md`.
+2. **Mutation testing** — StrykerJS with the Vitest runner, scoped to the unit lane (`vitest.config.mts`) and to pure domain/application modules, incremental mode, weekly scheduled CI + on-demand local runs. Runbook: `docs/guides/testing/mutation-testing.md`.
+3. **Gherkin acceptance tests** — real `.feature` files bound via `@amiceli/vitest-cucumber` to an application-layer driver built on the existing fakes; bindings named `*.acceptance.test.ts` under `tests/acceptance/` so they run inside the existing unit lane with zero runner changes. New business rules ship their feature file first (the outer TDD loop). Runbook: `docs/product/business-rules.md`.
+4. **UI QA procedures** — a `docs/qa/` register (QA-NNN, same mechanics as the debt/bug registers) of scripted, evidence-producing procedures executable by humans, agents (within the DEBT-323 constraint table), or Playwright-assisted runs; stable procedures get promoted into `tests/e2e/`. Runbook: `docs/guides/qa/method.md`.
 
 **Metric posture (binding):** mutation scores and CRAP scores enter as *observational ratchets* — metric outcomes never fail a build (`break: null`; CRAP exits 0 for every score, band, or empty filtered result). A CRAP run exits nonzero only when infrastructure prevents a trustworthy report: missing/unreadable/malformed required coverage, source parse diagnostics, I/O failure, or invalid CLI configuration. That is report-integrity enforcement, not a metric threshold. Converting any measured outcome into a gate requires a new ADR that amends this one with measured baselines. This deliberately extends the existing coverage-observational policy rather than overriding it.
 
@@ -68,9 +68,13 @@ Decided under the owner's 2026-10-03 delegation, after a review of what each par
 - **Parts 1 and 2 are adopted** and in production: the CRAP report, and mutation testing at 100% across the domain and application layers.
 - **Part 3 (Gherkin acceptance tests) is not adopted.**
   - Its candidate rules are already proven by mutation-proven unit tests and by real-Postgres and E2E tests. Re-testing adapter rules over fakes would lower fidelity.
-  - It is replaced by a rule-to-test register: plain-language rules linked to the tests that prove them, with a documentation check. The register is in [`docs/dev/acceptance-testing.md`](../dev/acceptance-testing.md) and the check in `tests/rule-to-test-register.test.ts`, both since DEBT-465 Part 3 (2026-10-04).
+  - It is replaced by a rule-to-test register: plain-language rules linked to the tests that prove them, with a documentation check. The register is in [`docs/product/business-rules.md`](../product/business-rules.md) and the check in `tests/rule-to-test-register.test.ts`, both since DEBT-465 Part 3 (2026-10-04).
 - **Part 4 (UI QA procedures) is adopted,** with the procedures run before the production bootstrap and before releases that change their flows, not before every promotion.
 - **The Compliance rule against numeric gates without a new ADR is unchanged.**
+
+## Amendment — 2026-10-12
+
+The UI QA register that Part 4 created at `docs/qa/` was retired by DEBT-518's records step (#1467). Its procedures now live in `docs/guides/qa/`, without QA-NNN IDs, and the method is `docs/guides/qa/method.md`. The text above keeps the register's original description. Part 4's decision is unchanged.
 
 ## References
 
@@ -79,5 +83,5 @@ Decided under the owner's 2026-10-03 delegation, after a review of what each par
 - `@amiceli/vitest-cucumber` — Gherkin for Vitest 4
 - Dave Farley — four-layer acceptance-test model (spec → DSL → driver → SUT)
 - Robert C. Martin — TDD, Clean Code, and Clean Architecture
-- ADR-003 (Testing Strategy); `docs/dev/react-vitest-testing.md` (coverage-as-observational policy)
+- ADR-003 (Testing Strategy); `docs/guides/testing/react-component-tests.md` (coverage-as-observational policy)
 - [ADR-020](./adr-020-coverage-patch-gate.md) (2026-09-26): coverage stays a patch-level signal; no per-lane thresholds

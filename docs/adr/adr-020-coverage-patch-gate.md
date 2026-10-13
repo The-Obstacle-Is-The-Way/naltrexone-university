@@ -28,7 +28,7 @@ Three facts decide the question:
 
 - One coverage rule applies to every change: its measured patch coverage must not fall below the base target. There is no second, weaker floor to maintain.
 - A PR whose measured patch coverage falls below the base target fails `codecov/patch` and cannot merge. This has already shaped work: extracted test helpers are made fully coverable before a split (DEBT-469).
-- `docs/dev/react-vitest-testing.md`'s rule that coverage is observational now carries one stated exception: `codecov/patch` binds through the merge tools.
+- `docs/guides/testing/react-component-tests.md`'s rule that coverage is observational now carries one stated exception: `codecov/patch` binds through the merge tools.
 - Revisit this record if Codecov stops posting `codecov/patch` on every PR, or if DEBT-465's mutation pilot shows that patch coverage is passing tests that catch no defects.
 
 ## Amendment: PRs with nothing to measure (2026-09-28)
