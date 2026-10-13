@@ -414,7 +414,9 @@ describe('the watcher issue', () => {
     expect(issues.issues).toHaveLength(1);
     expect(issues.issues[0]?.title).toBe(WATCHER_ISSUE_TITLE);
     expect(issues.issues[0]?.body).toContain('workflow is disabled');
-    expect(issues.issues[0]?.body).toContain('docs/dev/logging.md');
+    expect(issues.issues[0]?.body).toContain(
+      'docs/architecture/observability.md',
+    );
   });
 
   it('keeps the same description while the findings stay the same, whatever the counts', async () => {

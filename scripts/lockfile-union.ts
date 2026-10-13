@@ -7,7 +7,7 @@ import { isAlias, isScalar, parseDocument, visit } from 'yaml';
 // changes its source Dependabot lockfiles make against their shared base
 // (issue #885). It reads package-manager-generated lockfiles and never writes,
 // merges or synthesizes one. The CLI is scripts/verify-lockfile-union.ts; see
-// docs/dev/dependency-update-protocol.md.
+// docs/guides/dependencies/updating-dependencies.md.
 
 const USAGE =
   'Usage: tsx scripts/verify-lockfile-union.ts --base <rev|file> --source <rev|file> --source <rev|file> [--source <rev|file> ...] --candidate <rev|file>';

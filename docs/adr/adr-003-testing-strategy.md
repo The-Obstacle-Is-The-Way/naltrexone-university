@@ -239,7 +239,7 @@ describe('DrizzleQuestionRepository', () => {
 
 **Amendment (2026-08-23, DEBT-472 Part A):** Supported provider behavior is a distinct required category, not a hermetic integration stub and not a hosted-HTML journey. It uses genuine provider test-mode objects and the application's real synchronization path. A provider stub cannot satisfy this category.
 
-The current required F2 lane is `tests/e2e/checkout-success-provider.spec.ts`: it proves application-created Checkout Session parameters, rejection of an open Session, CLI-triggered completion, real success-return synchronization, Postgres subscription persistence, and entitlement. Stripe-hosted DOM compatibility journeys remain scheduled observational tests because Stripe owns that HTML. See `docs/dev/testing-infrastructure.md` for lane ownership and bounded failure contracts.
+The current required F2 lane is `tests/e2e/checkout-success-provider.spec.ts`: it proves application-created Checkout Session parameters, rejection of an open Session, CLI-triggered completion, real success-return synchronization, Postgres subscription persistence, and entitlement. Stripe-hosted DOM compatibility journeys remain scheduled observational tests because Stripe owns that HTML. See `docs/guides/testing/e2e-tests.md` for lane ownership and bounded failure contracts.
 
 #### E2E Tests (Full System)
 

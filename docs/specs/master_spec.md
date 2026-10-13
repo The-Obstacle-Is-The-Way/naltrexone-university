@@ -79,7 +79,7 @@ Next.js Route Handlers use the Web `Request`/`Response` APIs and live inside the
 The executable [Drizzle schema](../../db/schema.ts) owns table, column,
 constraint, enum and relation definitions. The [migration ledger](../../db/migrations/meta/_journal.json)
 and its SQL files own the deployed evolution; the
-[migration runbook](../dev/deployment-environments.md#deploy-migration-contract)
+[migration runbook](../architecture/environments.md#deploy-migration-contract)
 describes applying that history. Do not recreate the database from a copied
 schema block or use schema push to bypass migrations.
 
@@ -285,7 +285,7 @@ export type ClerkWebhookResponse = { received: true };
 
 **Events handled:**
 
-* `user.created` — No-op; users are created lazily via `upsertByClerkId` on first authenticated request (see `docs/vendor-docs/clerk.md`)
+* `user.created` — No-op; users are created lazily via `upsertByClerkId` on first authenticated request (see `docs/architecture/integrations/clerk.md`)
 * `user.updated` — Update user email in `users` table
 * `user.deleted` — Delete user and cascade (subscription, attempts, bookmarks, etc.)
 
@@ -1384,7 +1384,7 @@ The [content schema](../../lib/content/schemas.ts) and
 [MDX parser](../../lib/content/parse-mdx-question.ts) own the accepted format:
 question files under `content/questions/` have YAML frontmatter and ordered
 `## Stem` / `## Explanation` sections. Use the
-[content import runbook](../practice-engine/content-pipeline.md) for authoring/import operations.
+[content import runbook](../architecture/content-pipeline.md) for authoring/import operations.
 
 ### 5.2 Frontmatter validation
 
@@ -1418,7 +1418,7 @@ No “exact” schema is duplicated here.
 ### 5.5 Seed synchronization and identity
 
 The entry point is [scripts/seed.ts](../../scripts/seed.ts), invoked with
-`pnpm db:seed` under the [database-target safety procedure](../dev/deployment-environments.md).
+`pnpm db:seed` under the [database-target safety procedure](../architecture/environments.md).
 Target selection and acknowledgement are mandatory; a content update does not
 authorize a different database.
 
@@ -2017,7 +2017,7 @@ workflow authority. [package.json](../../package.json) owns command/toolchain
 versions, and [ci-workflow.test.ts](../../tests/ci-workflow.test.ts) pins the
 workflow boundary. This section intentionally does not reproduce YAML.
 
-Follow the [CI Secret Standard](../dev/deployment-environments.md#ci-secret-standard):
+Follow the [CI Secret Standard](../architecture/environments.md#ci-secret-standard):
 provider credentials belong only to consuming E2E steps; Build receives compiled
 public values and shape-valid server-only placeholders. Actions are SHA-pinned.
 Dependabot keeps the credential-free non-E2E lane policy; its omitted E2E evidence
@@ -2026,12 +2026,12 @@ must be explicit, not reported as executed.
 The workflow runs unit, integration, browser, build and eligible required E2E
 lanes, and emits their actual outcomes. The separate hosted-provider DOM lane is
 observational, not required PR coverage. See the
-[dependency update protocol](../dev/dependency-update-protocol.md) and
-[testing infrastructure guide](../dev/testing-infrastructure.md) for execution rules.
+[dependency update protocol](../guides/dependencies/updating-dependencies.md) and
+[testing infrastructure guide](../guides/testing/e2e-tests.md) for execution rules.
 
 **Production ordering:** promotion-PR E2E precedes the merge; Vercel builds main
 while main CI runs; production domains are assigned only after main's required
-`test` passes. The [Deployment Check procedure](../dev/deployment-procedure.md#production-deployment-check)
+`test` passes. The [Deployment Check procedure](../guides/release/promote-to-production.md#production-deployment-check)
 owns the configuration and timestamp proof. The Vercel build applies migrations
 before domain assignment, so migrations must remain compatible with the serving
 release. An echo-only deployment job is not a gate.
@@ -2193,7 +2193,7 @@ Enable Stripe Customer Portal and configure:
 
 * **Admin UI for question authoring** — content is authored in MDX and seeded via script; admin UI adds large surface area and auth roles.
 * **Spaced repetition algorithm** — requires scheduling, per-tag modeling, and more complex data structures; MVP focuses on straightforward practice/review.
-* **Advanced pacing analytics** — per-question timing is already persisted, not universally zero. [SubmitAnswer](../../src/application/use-cases/submit-answer.ts) bounds supplied seconds (zero is the missing/invalid fallback); [FinalizeExamAnswers](../../src/application/use-cases/finalize-exam-answers.ts) converts bounded cumulative draft milliseconds to seconds. See [practice timing](../practice-engine/interaction-contracts.md#per-question-time-accumulation) and the [exam timing bound](../practice-engine/exam-answer-secrecy-policy.md). A richer pacing-analysis product remains out of scope.
+* **Advanced pacing analytics** — per-question timing is already persisted, not universally zero. [SubmitAnswer](../../src/application/use-cases/submit-answer.ts) bounds supplied seconds (zero is the missing/invalid fallback); [FinalizeExamAnswers](../../src/application/use-cases/finalize-exam-answers.ts) converts bounded cumulative draft milliseconds to seconds. See [practice timing](../product/practice/interaction-contracts.md#per-question-time-accumulation) and the [exam timing bound](../product/practice/exam-answer-secrecy.md). A richer pacing-analysis product remains out of scope.
 * **AI-generated questions** — quality/safety and editorial control are MVP priorities; AI generation introduces validation risk.
 * **Native mobile app** — web app is sufficient for initial market; mobile adds parallel build/test/deploy complexity.
 * **Offline mode** — requires caching and conflict resolution; not needed for initial board prep workflow.

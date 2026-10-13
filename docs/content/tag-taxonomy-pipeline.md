@@ -196,7 +196,7 @@ History question filters:
 
 ## 5) Operational Guardrails
 
-- Use [tag-taxonomy-golden-spec.md](./tag-taxonomy-golden-spec.md) for the
+- Use [content-taxonomy.md](../product/content-taxonomy.md) for the
   canonical slug and display-name tables.
 - Use [question-format-spec.md](./question-format-spec.md) for authoring and
   parser rules.
@@ -210,7 +210,7 @@ History question filters:
 
 ## 6) Related Files
 
-- [tag-taxonomy-golden-spec.md](./tag-taxonomy-golden-spec.md)
+- [content-taxonomy.md](../product/content-taxonomy.md)
 - [question-format-spec.md](./question-format-spec.md)
 - [tag-census-2026-03-17.md](./reports/tag-census-2026-03-17.md)
 - `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`

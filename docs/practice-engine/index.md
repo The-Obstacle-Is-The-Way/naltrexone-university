@@ -82,19 +82,19 @@ Dependencies point **inward only** (Clean Architecture, ADR-001). The domain lay
 
 | Document | Scope |
 |----------|-------|
-| [Architecture Layers](./architecture-layers.md) | Domain entities, value objects, services, errors; Application use cases, ports; Adapters repositories, controllers, schema |
+| [Architecture Layers](../architecture/practice-engine.md) | Domain entities, value objects, services, errors; Application use cases, ports; Adapters repositories, controllers, schema |
 | [Frontend Layer](./frontend-layer.md) | Routes, hook architecture, data flow, shared UI components, error handling |
-| [Practice Modes](./practice-modes.md) | Ad-hoc / Tutor / Exam modes, session lifecycle, question selection, grading, concurrency |
+| [Practice Modes](../product/practice/modes.md) | Ad-hoc / Tutor / Exam modes, session lifecycle, question selection, grading, concurrency |
 | [Security Model](./security-model.md) | Authentication, authorization, rate limiting, idempotency, data isolation |
-| [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Canonical cross-layer policy for correctness/explanation exposure timing in exam mode |
+| [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) | Canonical cross-layer policy for correctness/explanation exposure timing in exam mode |
 | [Current State](./current-state.md) | What's working, open debt, SPEC-019 status, product decisions |
 | [Spec Coverage Map](./spec-coverage-map.md) | Maps each component to its defining spec; drift summary |
 | [File Index](./file-index.md) | Directory listings for all practice-engine source files |
-| [Content Pipeline](./content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes resolved BS-011 root cause analysis (SPEC-025, SPEC-026) and developer operations (import, seed, troubleshoot). |
-| [Question Rendering Architecture](./question-rendering-architecture.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, hydration/retry state flows, navigation patterns. |
-| [Retry Logic](./retry-logic.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes runtime topology, provenance contract, tracer bullets, and acceptance status. |
-| [Ordering Policy](./ordering-policy.md) | Canonical question and choice ordering rules across all practice paths. Design principles, per-path ordering contracts, domain service roles, and anti-patterns. |
-| [Interaction Contracts](./interaction-contracts.md) | Click-by-click UI contracts for tutor, exam, and quick practice modes. Buttons, persistence boundaries, locking rules, navigation, and post-session flows for the current shipped implementation. |
+| [Content Pipeline](../architecture/content-pipeline.md) | Full end-to-end trace: MDX authoring → seeding → database → shuffling → rendering. Includes resolved BS-011 root cause analysis (SPEC-025, SPEC-026) and developer operations (import, seed, troubleshoot). |
+| [Question Rendering Architecture](../architecture/question-rendering.md) | How questions are rendered, navigated, and state-managed across all 6 viewing contexts. Shared vs context-specific components, hydration/retry state flows, navigation patterns. |
+| [Retry Logic](../product/practice/retries.md) | Canonical retry/reattempt behavior across tutor, exam, quick practice, history, dashboard, and bookmarks; includes runtime topology, provenance contract, tracer bullets, and acceptance status. |
+| [Ordering Policy](../product/practice/question-ordering.md) | Canonical question and choice ordering rules across all practice paths. Design principles, per-path ordering contracts, domain service roles, and anti-patterns. |
+| [Interaction Contracts](../product/practice/interaction-contracts.md) | Click-by-click UI contracts for tutor, exam, and quick practice modes. Buttons, persistence boundaries, locking rules, navigation, and post-session flows for the current shipped implementation. |
 
 ---
 
@@ -104,9 +104,9 @@ These documents define cross-layer invariants and current shipped contracts. If 
 
 | Policy | Canonical Doc | Applies To |
 |--------|----------------|------------|
-| Exam answer secrecy (active exam = no correctness/explanation exposure) | [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) | Use cases, repositories, controllers, frontend rendering, test contracts |
-| Ordering determinism (question/choice ordering) | [Ordering Policy](./ordering-policy.md) | Session start, quick practice, review routes, rendering contracts |
-| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](./interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, and post-session navigation. Current shipped contract, with follow-up deltas tracked in linked debt docs where relevant. |
+| Exam answer secrecy (active exam = no correctness/explanation exposure) | [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) | Use cases, repositories, controllers, frontend rendering, test contracts |
+| Ordering determinism (question/choice ordering) | [Ordering Policy](../product/practice/question-ordering.md) | Session start, quick practice, review routes, rendering contracts |
+| Mode interaction contracts (buttons, persistence, locking) | [Interaction Contracts](../product/practice/interaction-contracts.md) | PracticeView action bar, question-flow-actions, session hooks, and post-session navigation. Current shipped contract, with follow-up deltas tracked in linked debt docs where relevant. |
 
 ---
 
@@ -135,8 +135,8 @@ These documents define cross-layer invariants and current shipped contracts. If 
 | [ADR-003](../adr/adr-003-testing-strategy.md) | Testing strategy (TDD, fakes over mocks) |
 | [ADR-006](../adr/adr-006-error-handling-strategy.md) | Error handling (ApplicationError) |
 | [ADR-015](../adr/adr-015-idempotency-strategy.md) | Idempotency strategy |
-| [Frontend Standards](../frontend/standards.md) | UI/UX standards and known violations |
-| [Frontend Design Principles](../frontend/design-principles.md) | Navigation zones, action bar composition, state persistence expectations |
+| [Frontend Standards](../design-system/standards.md) | UI/UX standards and known violations |
+| [Frontend Design Principles](../design-system/layout.md) | Navigation zones, action bar composition, state persistence expectations |
 | [BS-011](../_archive/brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md) | History review wiring + choice label desync (resolved; see SPEC-025, SPEC-026) |
 | [Debt Register](../records/README.md) | All open technical debt |
 

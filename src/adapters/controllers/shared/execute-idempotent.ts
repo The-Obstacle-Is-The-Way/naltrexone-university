@@ -58,7 +58,7 @@ export async function executeIdempotent<TOutput>({
     // shape (including rollback targets) that can coexist inside the 24-hour
     // TTL. Retain each shape until its last writer has been absent for one
     // full TTL; do not replace this strict boundary with a cache miss or raw
-    // JSON fallback. See docs/dev/deployment-procedure.md.
+    // JSON fallback. See docs/guides/release/promote-to-production.md.
     parseResult: (value) => outputSchema.parse(value),
     ...(beforeExecute ? { beforeExecute } : {}),
     shouldCacheError: (error) =>

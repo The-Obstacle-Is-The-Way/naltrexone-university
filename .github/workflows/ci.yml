@@ -32,7 +32,7 @@ jobs:
 
       # DEBT-516: the first of Docker Hub, ECR Public and Google's mirror that
       # serves this digest. Refresh it with docker-compose.yml's, per
-      # docs/dev/dependency-update-protocol.md.
+      # docs/guides/dependencies/updating-dependencies.md.
       - name: Start Postgres
         run: bash scripts/ci/start-postgres.sh
         timeout-minutes: 12

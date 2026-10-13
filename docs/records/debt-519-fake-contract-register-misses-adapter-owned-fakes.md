@@ -8,7 +8,7 @@
 
 ## Summary
 
-The fake-contract register (`docs/dev/test-double-contract-register.md`) records, for every maintained fake, the evidence that it behaves like its real adapter. A test forces every fake in the application barrel into it. Adapter-owned fakes are named by hand instead: `tests/fake-contract-register-source-scan.ts` lists only `FakeStripeCheckoutClient`. So `FakeStripePortalConfigurations`, added on 2026-09-27, is in neither the scan nor the register, and nothing records whether it matches Stripe.
+The fake-contract register (`docs/guides/testing/fake-contracts.md`) records, for every maintained fake, the evidence that it behaves like its real adapter. A test forces every fake in the application barrel into it. Adapter-owned fakes are named by hand instead: `tests/fake-contract-register-source-scan.ts` lists only `FakeStripeCheckoutClient`. So `FakeStripePortalConfigurations`, added on 2026-09-27, is in neither the scan nor the register, and nothing records whether it matches Stripe.
 
 DEBT-472 deferred this with a trigger: "a second adapter-owned fake is proposed: make discovery mechanical, red first, before it lands". That trigger fired on 2026-09-27 and went unnoticed.
 
@@ -16,7 +16,7 @@ DEBT-472 deferred this with a trigger: "a second adapter-owned fake is proposed:
 
 - `tests/fake-contract-register-source-scan.ts:8`: `const ADAPTER_OWNED_FAKE_NAMES = ['FakeStripeCheckoutClient'] as const;`
 - `src/adapters/gateways/stripe/test-helpers/fake-stripe-portal-configurations.ts:32`: `export class FakeStripePortalConfigurations implements PortalConfigurations`, added in ed9e1d09 (2026-09-27).
-- `grep -c FakeStripePortalConfigurations docs/dev/test-double-contract-register.md` gives 0.
+- `grep -c FakeStripePortalConfigurations docs/guides/testing/fake-contracts.md` gives 0.
 
 ## Impact
 

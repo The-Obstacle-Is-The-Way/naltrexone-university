@@ -10,7 +10,7 @@ import { parse } from 'yaml';
 // them, into the install graph until packageExtensions marked the peer
 // optional. Clerk UI 1.38 dropped those adapters, and the extensions went with
 // them. If an update declares the peer again, this fails first; the remedy is
-// in docs/dev/supply-chain-overrides.md, "Required peers a web build never
+// in docs/policies/supply-chain.md, "Required peers a web build never
 // imports".
 const NEVER_INSTALLED = ['react-native'];
 
