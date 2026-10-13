@@ -97,6 +97,48 @@ describe('env', () => {
     );
   });
 
+  it('reads a next Stripe webhook secret for an endpoint migration', async () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    delete process.env.VERCEL_ENV;
+    process.env.STRIPE_WEBHOOK_SECRET_NEXT = 'whsec_next_endpoint';
+
+    vi.resetModules();
+
+    await expect(import('@/lib/env')).resolves.toMatchObject({
+      env: { STRIPE_WEBHOOK_SECRET_NEXT: 'whsec_next_endpoint' },
+    });
+  });
+
+  it("rejects a next Stripe webhook secret that isn't a signing secret", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+    delete process.env.VERCEL_ENV;
+    // A pasted endpoint response instead of its `secret` field.
+    process.env.STRIPE_WEBHOOK_SECRET_NEXT = '{"id":"we_123"}';
+
+    vi.resetModules();
+
+    await expect(import('@/lib/env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+  });
+
   it('rejects a configured consent-state secret that is too short', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     process.env.DATABASE_URL =

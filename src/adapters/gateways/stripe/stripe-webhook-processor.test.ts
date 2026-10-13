@@ -52,11 +52,12 @@ function createStripe(input: {
 
 function processEvent(
   stripe: FakeStripeCheckoutClient,
-  overrides: { logger?: FakeLogger } = {},
+  overrides: { logger?: FakeLogger; nextWebhookSecret?: string } = {},
 ) {
   return processStripeWebhookEvent({
     stripe,
     webhookSecret: 'whsec_test',
+    nextWebhookSecret: overrides.nextWebhookSecret,
     rawBody: '{}',
     signature: 'sig_test',
     priceIds,
@@ -166,6 +167,26 @@ describe('processStripeWebhookEvent', () => {
     });
     expect(stripe.webhookCalls).toEqual([
       { rawBody: '{}', signature: 'sig_test', secret: 'whsec_test' },
+    ]);
+  });
+
+  // A major-release migration overlaps two live endpoints, each signing with
+  // its own secret (docs/architecture/integrations/stripe.md). Verification of
+  // real signatures by either secret is proven in
+  // stripe-webhook-signature.test.ts; this pins what the processor forwards.
+  it("tries the next endpoint's secret after the configured one fails", async () => {
+    const stripe = createStripe({});
+
+    await expect(
+      processEvent(stripe, { nextWebhookSecret: 'whsec_next' }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_SIGNATURE',
+      message:
+        'Invalid webhook signature: FakeStripeCheckoutClient does not process webhooks',
+    });
+    expect(stripe.webhookCalls).toEqual([
+      { rawBody: '{}', signature: 'sig_test', secret: 'whsec_test' },
+      { rawBody: '{}', signature: 'sig_test', secret: 'whsec_next' },
     ]);
   });
 

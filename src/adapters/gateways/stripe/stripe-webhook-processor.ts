@@ -19,6 +19,7 @@ import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
+import { constructStripeWebhookEvent } from './stripe-webhook-signature';
 
 function isSetupSessionPayload(payload: unknown): boolean {
   return (
@@ -438,6 +439,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
 export async function processStripeWebhookEvent({
   stripe,
   webhookSecret,
+  nextWebhookSecret,
   consentStateSecret,
   rawBody,
   signature,
@@ -449,6 +451,7 @@ export async function processStripeWebhookEvent({
 }: {
   stripe: StripeClient;
   webhookSecret: string;
+  nextWebhookSecret?: string | undefined;
   consentStateSecret?: string | undefined;
   rawBody: string;
   signature: string;
@@ -460,7 +463,13 @@ export async function processStripeWebhookEvent({
 }): Promise<WebhookEventResult> {
   let event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    event = constructStripeWebhookEvent({
+      webhooks: stripe.webhooks,
+      rawBody,
+      signature,
+      secret: webhookSecret,
+      nextSecret: nextWebhookSecret,
+    });
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';

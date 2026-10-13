@@ -56,6 +56,13 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().min(1),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
   STRIPE_WEBHOOK_SECRET: z.string().min(1),
+  // Set only while a major-release migration overlaps two live endpoints
+  // (docs/architecture/integrations/stripe.md).
+  STRIPE_WEBHOOK_SECRET_NEXT: z
+    .string()
+    .min(1)
+    .regex(/^whsec_/, 'Must start with "whsec_"')
+    .optional(),
   CONSENT_STATE_SECRET: z.string().min(32).optional(),
   STRIPE_WEBHOOK_E2E_OWNER: z.string().min(1).optional(),
   NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: z

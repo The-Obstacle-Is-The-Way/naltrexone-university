@@ -227,7 +227,7 @@ export type StripeWebhookResponse = { received: true };
 
 **Required Stripe verification:**
 
-* Must use `stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET)` (signature verification is mandatory).
+* Must use `stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET)` (signature verification is mandatory). While a Stripe major-release migration overlaps two webhook endpoints, a delivery may verify against `STRIPE_WEBHOOK_SECRET_NEXT` instead.
 
 **Idempotency:**
 
@@ -2090,6 +2090,7 @@ release. An echo-only deployment job is not a gate.
 | STRIPE_SECRET_KEY                   | Stripe secret key (server)                                                                                                  |               ✅ |            ✅ |                   ✅ |                ✅ |
 | NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY  | Stripe publishable key (client)                                                                                             |               ✅ |            ✅ |                   ✅ |                ✅ |
 | STRIPE_WEBHOOK_SECRET               | Stripe webhook signing secret                                                                                               |               ✅ |            ✅ |                   ✅ |                ✅ |
+| STRIPE_WEBHOOK_SECRET_NEXT          | The next webhook endpoint's signing secret, set only while a major-release migration overlaps two endpoints                 |               — |            — |                   — |                — |
 | NEXT_PUBLIC_APP_URL                 | Canonical base URL (e.g., [http://localhost:3000](http://localhost:3000), [https://yourdomain.com](https://yourdomain.com)) |               ✅ |            ✅ |                   ✅ |                ✅ |
 | CRON_SECRET                         | Shared bearer secret for `/api/cron/reconcile-stripe-subscriptions`. Runtime validation currently enforces this on Vercel production deploys (`VERCEL_ENV=production`). |               — |            — |                   — |                ✅ |
 | NEXT_SERVER_ACTIONS_ENCRYPTION_KEY  | Base64 AES key (16, 24 or 32 bytes) that keeps server-action IDs stable across deploys (BUG-319). `lib/env.ts` requires it on Vercel production and preview builds (`VERCEL_ENV`). |               — |            — |                   ✅ |                ✅ |
