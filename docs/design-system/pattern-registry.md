@@ -601,6 +601,7 @@ Active exam sessions defer correctness until `Review & Submit`, so the footer is
 | First question | filled `Next` in `data-testid="exam-action-primary-group"` | none | No empty Previous placeholder; do not render Mark for review in the footer. |
 | Middle question | outline `Previous` + filled `Next` in `data-testid="exam-action-primary-group"` | none | Draft selections do not change footer labels. |
 | Final question | outline `Previous` + filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | Preserve the `aria-describedby` text: `Opens review and submit.` |
+| Only question (a one-question exam) | filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | No Previous; the same `aria-describedby` text. |
 
 All active exam footer buttons live in `data-testid="exam-action-primary-group"`; there is no footer right group. `data-testid="exam-action-cta-group"` and `data-testid="exam-action-secondary-group"` are intentionally absent after DEBT-380. Mark for review continues to live in the question header rail.
 
