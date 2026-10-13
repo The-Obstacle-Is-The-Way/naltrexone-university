@@ -63,11 +63,14 @@ export function devBrowserCookieKeeper(): void {
         removals.push(text);
         return;
       }
-      held.set(name, [text]);
+      // A write may cancel this batch and a later removal start another
+      // before this task runs; only this batch's own task may apply it.
+      const batch = [text];
+      held.set(name, batch);
       queueMicrotask(() => {
-        const pending = held.get(name) ?? [];
+        if (held.get(name) !== batch) return;
         held.delete(name);
-        for (const write of pending) set.call(this, write);
+        for (const write of batch) set.call(this, write);
       });
     },
   });

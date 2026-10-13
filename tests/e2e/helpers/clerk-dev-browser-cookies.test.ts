@@ -72,12 +72,14 @@ describe('devBrowserCookieKeeper', () => {
   // tsx's esbuild, with names kept, wraps a function bound to a name in a
   // module helper the page lacks, and the script then throws on load.
   it('declares no function bound to a name, which some compilers wrap', () => {
-    const body = devBrowserCookieKeeper.toString().replace(/^[^{]*\{/, '');
+    const body = devBrowserCookieKeeper
+      .toString()
+      .replace(/^[^{]*\{/, '')
+      .replace(/\/\/.*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
 
-    expect(body).not.toMatch(/\bfunction\b/);
-    expect(body).not.toMatch(
-      /\b(?:const|let|var)\s+\w+\s*=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*=>/,
-    );
+    expect(body).not.toMatch(/\b(?:function|class)\b/);
+    expect(body).not.toMatch(/[^=!<>]=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*=>/);
   });
 
   it("keeps both dev-browser cookies in the jar through Clerk JS's rewrite, then takes the new token", async () => {
@@ -108,10 +110,40 @@ describe('devBrowserCookieKeeper', () => {
     expect(visible()).not.toHaveProperty('__clerk_db_jwt');
     expect(visible()).not.toHaveProperty(SUFFIXED);
 
-    await nextTask();
+    // The keeper's task was queued first, so it has run by the time this
+    // await resumes: the removal lands as soon as the script ends.
+    await Promise.resolve();
 
     expect(jar()).not.toHaveProperty('__clerk_db_jwt');
     expect(jar()).not.toHaveProperty(SUFFIXED);
+  });
+
+  it('never sends a removal that a write cancels, though an earlier batch is still queued', async () => {
+    writeCookie('__clerk_db_jwt=one; path=/');
+    const sent: string[] = [];
+    Object.defineProperty(Document.prototype, 'cookie', {
+      ...original,
+      set(value: string) {
+        sent.push(value);
+        original?.set?.call(this, value);
+      },
+    });
+    installKeeper();
+
+    writeCookie(`__clerk_db_jwt=; path=/; expires=${PAST}`);
+    const late = Promise.resolve().then(() =>
+      writeCookie('__clerk_db_jwt=late; path=/'),
+    );
+    writeCookie('__clerk_db_jwt=mid; path=/');
+    writeCookie(`__clerk_db_jwt=; path=/; expires=${PAST}`);
+    await late;
+    await nextTask();
+
+    expect(sent).toEqual([
+      '__clerk_db_jwt=mid; path=/',
+      '__clerk_db_jwt=late; path=/',
+    ]);
+    expect(jar()).toHaveProperty('__clerk_db_jwt', 'late');
   });
 
   it('removes every other cookie at once', () => {

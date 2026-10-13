@@ -13,7 +13,7 @@
 Since 2026-10-08, a signed-in E2E test has sometimes been sent to Clerk's sign-in page partway through, after its stored session restored normally, while the other tests passed.
 - **Two captures, 2026-10-10.** One came through BUG-330's trace, one through a kept Playwright trace. Both show the cause: the test navigated while Clerk JS was rewriting its dev-browser cookies.
 - **Three earlier losses**, twice in CI and once locally, left no trace. They fit the same race, but are not shown to be it.
-- **The fix.** E2E contexts drop Clerk's echo of the dev-browser token (2026-10-10). They also keep both dev-browser cookies in place while Clerk JS rewrites them after every environment fetch (2026-10-12): a page script skips the removals, so each write replaces the cookie in place.
+- **The fix.** E2E contexts drop Clerk's echo of the dev-browser token (2026-10-10). They also keep both dev-browser cookies in place while Clerk JS rewrites them after every environment fetch (2026-10-12): a page script holds each removal until the script ends and drops it when a write follows, so each write replaces the cookie in place.
 - **Remaining.** A week of CI without a mid-run loss.
 
 ## Evidence
@@ -118,9 +118,9 @@ Each loss turns a required CI run red. It costs a documented re-run, and on a pr
 - [x] The trail, with the server's output, names which of Clerk's four cases sent the page to sign-in, and why. *2026-10-10: case 2, after a `dev-browser-missing` handshake, caused by a navigation during Clerk JS's cookie rewrite.*
 - [x] A fix against the echo trigger, test-first. *2026-10-10: option 8, unit-tested. In #1452's pull request: three local E2E runs and two stripe-hosted runs, then CI, without a loss. Another session's synced run and promotion #1455's CI also ran without one. That day's rate before it was about one loss in two runs.*
 - [x] A fix against the environment-fetch trigger, test-first. *2026-10-12: option 9.*
-  - Five jsdom tests, which run the function from its source text as Playwright does. The discard case and a cookie that only shares the prefix were red against the first version. Seven mutations each turn one red.
+  - Six jsdom tests, which run the function from its source text as Playwright does. The discard case and a cookie that only shares the prefix were red against the first version. Ten mutations each turn one red, among them a stale task applying a newer batch of removals, and removals applied a task late.
   - In Chromium (2026-10-13), a synchronous request sent between Clerk JS's removals and its write carried both cookies with the script, and neither without it. During a discard, the page saw both gone at once, and they left the jar when the script ended.
-  - In a local experiment under load, 12 full E2E runs with the script had no loss, against 2 losses in 11 runs without it. One unrelated failure was a slow page.
+  - In a local experiment under load, with the first version, 12 full E2E runs with the script had no loss, against 2 losses in 11 runs without it. One unrelated failure was a slow page.
 - [ ] No mid-run Clerk session loss in CI for a week after the merge, due 2026-10-21. A loss with a trace that names another cause reopens the investigation.
   - *Reopened 2026-10-12.* Another session's local E2E lost its session at `practice.spec.ts:307` (04:00:38Z), and its trace was kept. The echo had been dropped as designed. The navigation's request carried both dev-browser cookies, unchanged, and both session copies, yet the server answered `dev-browser-missing`, which `@clerk/backend` 3.22 returns only when it finds no dev-browser token. That is the contradiction BUG-337's trace shows for a server action. The rewrite mechanism above does not explain it. BUG-337 owns the next step, which is to log the server's own view of each signed-out request.
   - *Explained the same day:* see the 2026-10-12 correction under Resolution.

@@ -467,7 +467,8 @@ describe('DrizzleUserRepository', () => {
     );
     cleanup.userIds.push(existing.id);
     cleanup.userIds.push(incoming.id);
-    expect(incoming.updatedAt).toEqual(existing.updatedAt);
+    expect(existing.updatedAt).toEqual(instant);
+    expect(incoming.updatedAt).toEqual(instant);
 
     await db.transaction(async (tx) => {
       const txRepo = new DrizzleUserRepository(tx, clock);
