@@ -36,9 +36,11 @@ function isVersionConflict(
 
 /**
  * The write fence for every writer that refreshes a subscription from Stripe
- * (webhook, checkout-success sync, reconcile). Read the local observation
- * version before the Stripe retrieve and compare-and-set on it; on a conflict,
- * repeat the whole read-retrieve-write. Never fence on request time or a Stripe
+ * (webhook, checkout-success sync, reconcile, and Checkout's sync of a
+ * subscription Stripe already holds). Read the local observation version
+ * before the Stripe retrieve and compare-and-set on it; on a conflict, repeat
+ * the whole read-retrieve-write, up to SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS
+ * times. Never fence on request time or a Stripe
  * event's `created`: latency can reorder requests, and an event's `created`
  * predates the state the handler retrieves, so either can accept an older
  * state. The advisory lock orders writers by arrival, not by what they saw

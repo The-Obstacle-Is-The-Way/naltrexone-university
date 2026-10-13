@@ -62,7 +62,7 @@ export default clerkMiddleware(async (auth, request) => {
 });
 ```
 
-**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`); every other route is protected. `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
+**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`). The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and every other route the proxy matches is protected. `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
 
 ---
 
@@ -86,7 +86,7 @@ We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) wit
 
 **Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. DEBT-420 records the current decision: do **not** enforce Clerk strict nonce CSP on this stack because Next 16 PPR/Cache Components serve prerendered shell scripts without the per-request nonce; if enforcement is prioritized later, use a separate non-nonce host-allowlist CSP design.
 
-Our directives are merged into Clerk's defaults: they can add sources but never remove one. Billing redirects to Stripe-hosted pages and loads no Stripe.js, so the policy needs no Stripe hosts; adding Stripe.js, Elements or embedded Checkout means revisiting it. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
+Our directives are merged into Clerk's defaults: they add sources, and only a `'none'` value replaces a default directive. Billing redirects to Stripe-hosted pages and loads no Stripe.js, so our directives add no Stripe hosts (Clerk's defaults already carry some); adding Stripe.js, Elements or embedded Checkout means revisiting it. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
 
 ### Server Components
 

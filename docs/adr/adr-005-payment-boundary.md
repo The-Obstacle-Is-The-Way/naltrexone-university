@@ -195,4 +195,4 @@ The text above keeps its original references.
 
 ## Amendment — 2026-10-13: the gateways exist
 
-The implementation note under the Compliance Checklist is out of date: the `AuthGateway` and `PaymentGateway` adapters are built, in `src/adapters/gateways/clerk-auth-gateway.ts` and `src/adapters/gateways/stripe-payment-gateway.ts`. The decision is unchanged.
+The implementation note under the Compliance Checklist is out of date: the `AuthGateway` and `PaymentGateway` adapters are built, in `src/adapters/gateways/clerk-auth-gateway.ts` and `src/adapters/gateways/stripe-payment-gateway.ts`, which composes the modules in `src/adapters/gateways/stripe/`. The decision is unchanged.
