@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** Open — an independent audit of this record comes first; the fix follows the documentation pull requests' promotion; due 2026-10-20
+**Status:** Open — the test-mode reproduction, then the fix, after the documentation pull requests' promotion; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-13
 
@@ -32,34 +32,36 @@ Line references are at `a57f5c0f` (`dev` after #1482) unless a line says otherwi
   - It refuses with `ALREADY_SUBSCRIBED` if one is in `BLOCKING_SUBSCRIPTION_STATUSES`: `active`, `trialing`, `past_due`, `unpaid`, `incomplete` and `paused` (`:54-61`).
   - Nothing in the request lists subscriptions again.
 - **It then handles at most one open Session** (`:832-838`, `limit: 1`).
-  - It retrieves that Session with its line items.
-  - If the Session matches the request but is already inactive, it creates a fresh one.
-  - If the Session is for a different plan, it expires it whatever the retrieved status (`:933-953`, key `expire_checkout_session:` at `:977`). A failure there is fatal (`expireFailureIsFatal = true`, `:940-941`), so the request fails with `STRIPE_ERROR` (`:1008-1011`).
+  - It retrieves that Session with its line items. The branch below compares the price only (`existingPriceId === priceId`, `:882`).
+  - If the Session has the same price and is already inactive, whatever its terms, it creates a fresh one (`:918-931`).
+  - If it has the same price, different terms, and is still active, it expires it, and a failure is fatal (`:897-905`).
+  - If it is for a different plan, it expires it whatever the retrieved status (`:933-953`, key `expire_checkout_session:` at `:977`). A failure there is fatal too (`expireFailureIsFatal = true`, `:940-941`): the request fails with `STRIPE_ERROR` (`:1008-1011`).
   - **The exception: an error the adapter calls terminal.** `isAlreadyTerminalSessionError` (`:420-438`) requires Stripe's `rawType` `invalid_request_error`, and then either the code `resource_missing` (`:62-64`), or a message containing `'already complete'`, `'already expired'` or `'cannot be expired'` (`:65-69`). Such an error counts as success, and creation continues (`:985-997`).
-  - After a failed inspection, an expire failure is not fatal either (`:954-969`).
-- **Stripe does not document the error text.** It says only: "Returns an error if the Checkout Session has already expired or isn't in an expireable state" ([Stripe: expire a Session](https://docs.stripe.com/api/checkout/sessions/expire)). The unit tests use only texts for an expired or missing Session (`stripe-checkout-sessions.test.ts:398-461`). Whether expiring a completed Session matches the terminal patterns is unverified.
-- **It creates a Session keyed per plan.** The idempotency key is `checkout_session:${userId}:${plan}`, plus a trial suffix (`:492`). Two plans never share a key. The use case's client key does not reach Stripe, because the gateway ignores its options argument (`src/adapters/gateways/stripe-payment-gateway.ts:66`).
+  - When the retrieve itself failed, an expire failure is not fatal: the request continues with creation (`:954-969`, `:1012-1021`).
+- **Stripe documents no error code or message for it.** It says a Session "can be expired when it is in one of these statuses: `open`", and "Returns an error if the Checkout Session has already expired or isn't in an expireable state" ([Stripe: expire a Session](https://docs.stripe.com/api/checkout/sessions/expire)). The unit tests use only texts for an expired or missing Session (`stripe-checkout-sessions.test.ts:398-461`, `stripe-checkout-sessions-reconciliation.test.ts:83-88`). Whether expiring a completed Session matches the terminal patterns is unverified.
+- **It creates a Session keyed per plan.** The key is `checkout_session:${userId}:${plan}`, plus a trial suffix (`:492`), so two plans never share a key. When a trial request has handled an existing Session, a recovery key naming that Session takes precedence (`:533`, set at `:934-938` and `:955-959`, used at `:1113-1114`). For the same plan, B's create can replay A's: the live retrieve then finds A complete, and the recovery path creates B (`:1124-1183`). The use case's client key does not reach Stripe, because the gateway ignores its options argument (`src/adapters/gateways/stripe-payment-gateway.ts:66`).
 - **After the create, it reconciles open Sessions** (`reconcileOpenCheckoutSessionsAfterCreate`, `:625-692`).
   - It lists up to `OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT` (10) open Sessions (`:645-646`).
   - It keeps the newest still-active one that carries renewal metadata (`:673`) and expires the other active ones (`:683`).
   - A terminal expire again counts as success (`:600`).
 - **No lock spans these Stripe calls.** None would help with this race: a completion happens on Stripe's page, not in a request we serialize.
-- **Sessions use Stripe's default lifetime.** The create parameters (`:1036-1070`) set no `expires_at`. Stripe: "It can be anywhere from 30 minutes to 24 hours after Checkout Session creation. By default, this value is 24 hours from creation" ([Stripe: create a Session, `expires_at`](https://docs.stripe.com/api/checkout/sessions/create?query=expires_at)).
+- **Sessions use Stripe's default lifetime.** The create parameters (`:1037-1069`) set no `expires_at`. Stripe: "It can be anywhere from 30 minutes to 24 hours after Checkout Session creation. By default, this value is 24 hours from creation" ([Stripe: create a Session, `expires_at`](https://docs.stripe.com/api/checkout/sessions/create?query=expires_at)).
 - **The Session names the customer** (`customer`, `:1039`) and requires the terms checkbox (`consent_collection: { terms_of_service: 'required' }`, `:1043`).
 - **Trial Sessions collect a card only if required.** They set `payment_method_collection: 'if_required'`, `trial_period_days` and `missing_payment_method: 'cancel'` (`:1059-1065`).
 
 ### The race
 
-Two tabs, A and B. Tab A's Checkout page is open. B's request passes its subscription list, because A is not yet complete. A is then completed at one of three moments:
+Two tabs, A and B. Tab A's Checkout page is open. B's request passes its subscription list, because A is not yet complete. A is then completed at one of four moments:
 1. **Before B's open-Session list.** The list no longer returns A, because it is not open. B creates a fresh Session.
-2. **After that list returned A and B's retrieve found it inactive.** This happens when A matches B's request (the same plan and terms). B creates a fresh Session.
-3. **After the list, for a different plan, before B's expire reaches A.** B's expire fails.
+2. **After that list returned A, before B's retrieve.** For the same plan, the retrieve finds A inactive, and B creates a fresh Session.
+3. **After the list, before B's expire reaches A.** This happens for a different plan, or the same plan on different terms. B's expire fails.
    - If Stripe's error matches the terminal patterns, which is unverified, creation continues.
    - Otherwise B's request fails with `STRIPE_ERROR`, and this interleaving closes.
+4. **After the list, when B's retrieve has failed.** The expire is then non-fatal, so B is created whatever Stripe's error says (`:954-969`, `:1012-1021`).
 
 B's reconcile no longer sees A as open, so it keeps B, and B's request returns B's URL.
 
-**The window** runs from B's subscription list to B's handling of A. That is at most three Stripe calls (the open-Session list, the retrieve, and the expire), each retried by `callStripeWithRetry`. The planning bounds at `:25-46` cover the later recovery path, not this window.
+**The window** runs from B's subscription list to B's handling of A. When A is the customer's only open Session, that is at most three Stripe calls (the open-Session list, the retrieve and the expire), each retried by `callStripeWithRetry`. The list returns one Session (`limit: 1`, `:836`), so any other open Session is reached only by the post-create reconcile. For that Session, whose terminal expire also counts as success (`:600`), the window runs through the create. The planning bounds at `:26-46` cover the recovery path.
 
 **The tail.** B stays completable until Stripe's 24-hour default ends. Every later checkout stops at `ALREADY_SUBSCRIBED` before reaching the Session code, so nothing expires B.
 
@@ -78,7 +80,10 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
   - line 62 lists the setting under "Backstops remain outside this PR", and line 64 calls it "the completion-time-proof guard if more than one checkout URL ever exists";
   - its manual check, line 71, was never ticked: "two-tab monthly+annual repro yields one live subscription after the fix".
 - BUG-245 closed as Resolved on 2026-06-13 (`docs/records/closed.md:236`).
-- At `a57f5c0f` no live document mentions the setting. The lessons pull request, #1487 (not yet merged), adds a description of it to `docs/architecture/integrations/stripe.md`.
+- At `a57f5c0f` no live document mentions the setting.
+  - The lessons pull request, #1487 (not yet merged), adds a description to `docs/architecture/integrations/stripe.md` and a comment before `reconcileOpenCheckoutSessionsAfterCreate`.
+  - Two of their statements go further than this record. The comment says the setting "is not a check at completion", where Stripe only does not describe one. `stripe.md` says the owner turned it on in live mode, which rests on BUG-245's owner note.
+  - The fix pull request should correct both.
 - The live Dashboard state is not verified here: only the owner can see it.
 
 ### The second subscription is invisible
@@ -96,7 +101,7 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
   - `stripe-webhook-controller-subscription-writes.test.ts:231` pins the consent skip as intended;
   - the reason `write_guard_rejected` is not logged or alerted anywhere: outside tests it appears only where it is returned (`:145`) and in the port's type.
 - **The success page** shows the stored subscription when its write is rejected (`app/(marketing)/checkout/success/checkout-success-sync.tsx:409`). It never lists the customer's subscriptions.
-- **BUG-321's sync** runs when a checkout is refused. It lists every blocking subscription on the customer, records the canonical one, and reports nothing about the rest (`src/adapters/gateways/stripe/stripe-customer-subscriptions.ts:38-69`; `src/application/shared/sync-customer-subscription.ts:46-59`).
+- **BUG-321's sync** runs only when Stripe refuses a checkout that our database allowed (`create-checkout-session.ts:184-189`), so it never runs for a checkout the stored row refuses. That includes every later checkout in this bug's tail. When it does run, it lists every blocking subscription on the customer, records the canonical one, and reports nothing about the rest (`src/adapters/gateways/stripe/stripe-customer-subscriptions.ts:38-69`; `src/application/shared/sync-customer-subscription.ts:46-59`).
 - **The daily reconcile** is the only code that acts on a duplicate (`src/adapters/jobs/reconcile-stripe-subscriptions.ts`).
   - For each customer with a local row, it lists their subscriptions (`:118`) and keeps the blocking ones (`:129`), `trialing` included (`:22-29`).
   - It cancels all but the canonical one with Stripe's `subscriptions.cancel` (`:78-79`, `:305-306`).
@@ -105,7 +110,8 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
   - It marks consent terminated only for the canonical subscription (`:279-284`).
 - **What Stripe's cancel does** ([Stripe: cancel a subscription](https://docs.stripe.com/api/subscriptions/cancel)). "Cancels a customer's subscription immediately."
   - `invoice_now` and `prorate` both default to `false`, so nothing is credited or refunded; a refund needs the Refunds API.
-  - "By default, upon subscription cancellation, Stripe stops automatic collection of all finalized invoices for the customer." The reconcile passes no option that changes this. So cancelling a duplicate also stops collection of any finalized, unpaid invoice on the subscription it keeps.
+  - "By default, upon subscription cancellation, Stripe stops automatic collection of all finalized invoices for the customer." The reconcile passes no option that changes this.
+  - Read literally, which is unverified, this would also stop collection of any finalized unpaid invoice on the kept subscription. In this race that is normally none, because the kept subscription's first invoice is $0 (a trial) or already paid.
 
 ### Rules and tests
 
@@ -114,7 +120,7 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
 - **The concurrency tests** (`src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts:58`, `:86`) prove that same-plan creates collapse, and that different-plan creates leave one completable Session.
 - **The webhook tests** cover a rejected Checkout completion (`stripe-webhook-controller-subscription-writes.test.ts:231`) and a second canceled or unpaid subscription (`:248`, `:258`).
 - **The duplicate tests** (`src/adapters/jobs/reconcile-stripe-subscriptions-duplicates.test.ts:81-315`, eight cases) prove the cron's cancellation against fakes.
-- **The maintained fake diverges from Stripe.** `FakeStripeCheckoutClient.expire` marks any Session expired, a completed one included, without an error (`src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts:422-431`). Stripe refuses to expire a Session that is not `open`. The divergence is not listed in `docs/guides/testing/fake-contracts.md`. No unit test built on the fake can observe interleaving 3.
+- **The maintained fake diverges from Stripe.** `FakeStripeCheckoutClient.expire` marks any Session expired, a completed one included, without an error (`src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts:422-431`). Stripe refuses to expire a Session that is not `open`. The divergence is not listed in `docs/guides/testing/fake-contracts.md`. The fake's own expire cannot reproduce interleaving 3. A test can stage it only by injecting an error through `setExpireFault`, and the text of Stripe's real error is unverified.
 - **Not covered by any test:**
   - a Session completed while a checkout request is in flight;
   - an expire refused because the Session is complete;
@@ -127,15 +133,16 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
 - **A first-time customer**, the unguarded path, can get two trialing subscriptions.
   - Access comes from one row, so this grants no extra time: it is two Stripe objects, and the first one is hidden.
   - The daily reconcile counts `trialing` and should cancel the hidden one within a day, if it reaches the customer.
-  - If it does not, the hidden trial has no payment method. A card added later is attached to the customer (`src/adapters/gateways/stripe-payment-gateway.ts:111-122`), but is set as the default only on the stored subscription (`src/application/use-cases/create-trial-payment-method-setup-session.ts:67-68`, through the gateway at `:165-169`).
-  - Stripe checks "`default_source` and `default_payment_method` on the subscription and customer" ([Stripe: free trials](https://docs.stripe.com/billing/subscriptions/trials/free-trials)), so `missing_payment_method: 'cancel'` should end the hidden trial at its end, without a charge. That is an inference, not observed.
+  - If it does not, the hidden trial has no payment method. A card added later is attached to the customer (`src/adapters/gateways/stripe-payment-gateway.ts:111-122`), but is set as the default only on the stored subscription. The use case takes that subscription's ID from the stored row (`src/application/use-cases/create-trial-payment-method-setup-session.ts:67-68`), and the webhook sets the default (`src/adapters/controllers/stripe-webhook-controller.ts:330-335`, gateway `:165-169`).
+  - Stripe checks "`default_source` and `default_payment_method` on the subscription and customer" ([Stripe: free trials](https://docs.stripe.com/billing/subscriptions/trials/free-trials), in the page's section on pausing). So `missing_payment_method: 'cancel'` should end the hidden trial at its end, without a charge. That is an inference, not observed.
+  - **It fails if a card becomes the customer's default.** The app's trial portal profile disables card updates on purpose (`payment_method_update: { enabled: profile === 'paid' }`, `stripe-portal-configurations.ts:31-33`). The Dashboard's no-code portal, which Stripe's login link opens, uses its own configuration, and DEBT-414 records a live portal configuration with payment-method updates enabled. A card added there could become the customer default and convert the hidden trial. That is unverified.
 - **A returning customer** is charged twice only if Stripe's redirect does not stop B: the setting is off, the portal login link is off, or A is not in a counted status.
   - Then the cron cancels one within a day, if it reaches the customer, without a refund.
   - Per Stripe's default, that cancel also stops collection of finalized invoices on the kept subscription.
   - The owner learns of it only from Stripe or the customer.
 - **Consent.**
   - A rejected write skips the initial consent and acknowledgment. That happens when a lower-ranked completion arrives after a higher-ranked one is stored: a monthly after an annual, or webhooks delivered out of order. For two trials completed in order, B is accepted, and both consents are recorded.
-  - The hidden subscription's consent record is never marked terminated when it is cancelled. The webhook marks termination only on a persisted write (`stripe-webhook-controller.ts:612-621`), and the reconcile only for the canonical subscription.
+  - The hidden subscription's consent record is never marked terminated when it is cancelled. For a known user, the webhook marks termination only on a persisted write (`stripe-webhook-controller.ts:612-621`), and the reconcile only for the canonical subscription.
 - **Likelihood.** Low. A purchase must be completed in one tab while another tab's checkout request is still running. A trial page needs the terms checkbox and one click, and no payment details.
 
 ## Options
@@ -143,8 +150,9 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
 1. **Rely on Stripe's setting.** Rejected as the guard: it does not count `trialing`, and Stripe does not describe it as a check at completion. It stays on, with its portal login link, for returning customers.
 2. **Re-check after the create.**
    - After the create and the reconcile, list the customer's subscriptions again. If a blocking one appeared, expire our new Session and refuse with `ALREADY_SUBSCRIBED`.
-   - On any expire failure, retrieve the Session and act on its status (`complete` means refuse) instead of on Stripe's error text.
-   - This covers interleavings 1 to 3. A per-user lock adds nothing for this race: the completion happens on Stripe's page, and the reconcile already handles two concurrent creates.
+   - On any expire failure, retrieve the Session and act on its status instead of on Stripe's error text. Continue only if it is `expired`. Refuse if it is `open` or `complete`, or if the retrieve or the re-check list fails.
+   - This covers interleavings 1 to 4. The residual is a completion Stripe confirms after B's re-check, for example a returning customer finishing a 3DS challenge; options 3 and 4 close it.
+   - A per-user lock adds nothing for this race: the completion happens on Stripe's page, and the reconcile already handles two concurrent creates.
 3. **Sweep when a Checkout completes.** On `checkout.session.completed`, expire the customer's other open subscription-mode Sessions. This ends the 24-hour tail when B already exists. When B is created after A's webhook, option 2's re-check catches it.
 4. **Correct a duplicate within seconds.** On `customer.subscription.created`, list the customer's subscriptions. If another live one exists:
    - cancel the one the canonical ranking puts second;
@@ -152,12 +160,12 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
    - mark its consent terminated, and alert.
    - Stripe's cancel stops collection of the customer's finalized invoices, so the cancel must not leave the kept subscription's invoices uncollected.
    - The daily reconcile stays as the backstop, with the same cancellation fixes.
-5. **Make it visible.** Alert when the write guard rejects a competing entitled subscription, when BUG-321's sync sees more than one blocking subscription, and when the cron cancels a duplicate (DEBT-505's alert path).
+5. **Make it visible.** Alert when the write guard rejects a competing entitled subscription, when option 4's handler or the daily reconcile finds more than one live subscription, and when either cancels one (DEBT-505's alert path). BUG-321's sync does not run in this bug's tail, so it is not where this alert belongs.
 6. **Correct the fake.** Make `FakeStripeCheckoutClient.expire` refuse a Session that is not `open`, as Stripe does, and record the correction in the fake-contract register, so tests can observe the race.
 7. **Shorten Session lifetime** with `expires_at`, 30 minutes at least. This narrows the tail, but a learner who leaves a page open longer must start again.
 8. **Make the app the only writer of subscriptions.** Collect the card with a setup-mode Checkout, then create the subscription from the server. This closes the race completely, but it changes the purchase page, the disclosures and the consent flow.
 
-## Resolution
+## Resolution (proposed)
 
 Not decided. This record is audited before any choice, and no code changes until the documentation pull requests in flight are merged and promoted.
 
@@ -167,16 +175,17 @@ The proposal for review: options 2 to 6 together, each layer for the case the on
 
 - [ ] When a duplicate subscription is cancelled, refund any charge on it automatically? The proposal is yes: a full refund of the duplicate's charge, because the product never intends a second subscription.
 - [ ] Shorten Checkout Session lifetime (option 7)?
-- [ ] Confirm in the live Dashboard that "limit customers to one subscription" is on, and that the customer portal's login link is enabled.
+- [ ] Confirm in the live Dashboard that "limit customers to one subscription" is on, and that the customer portal's login link is enabled. Check which portal configuration that login link uses, and whether a card added there becomes the customer's default and could convert a hidden trial.
 
 ## Verification
 
 - [x] An independent audit checked every statement against the code at `a57f5c0f` and Stripe's documentation (2026-10-13): 18 findings, four substantive, all folded into this text.
-- [ ] A second audit of this corrected text finds nothing material.
+- [x] A second independent audit of the corrected text (2026-10-13) judged it accurate enough to act on, and found 14 more corrections: the price-only branch, a fourth interleaving, the BUG-321 sync's scope, option 2's fail-closed rule and residual, the cancel's collection effect as an unverified reading, and the login-link portal. All are folded in.
 - [ ] In Stripe test mode, with a disposable test customer (not the shared E2E customer), a two-tab reproduction:
   - captures Stripe's actual error for expiring a completed Session;
   - shows whether the redirect stops B with the setting on;
-  - shows the race, or a guard this record missed, for a trial and for a returning customer.
+  - shows the race, or a guard this record missed, for a trial and for a returning customer;
+  - shows whether a card added through the login-link portal becomes the customer's default.
 - [ ] Tests fail first for each chosen option: a Session completed in flight, an expire refused for a completed Session, the completion sweep, the webhook's correction and its collection handling, and the alerts.
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, with its proving tests.
 - [ ] After the fix ships, the test-mode reproduction ends with one live subscription.
