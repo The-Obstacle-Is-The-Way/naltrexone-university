@@ -8,7 +8,9 @@
 
 ## Summary
 
-`tests/documentation-records.test.ts` runs `git init` in a temporary fixture to check that the documentation audit skips git-ignored files. It cleared only the git config variables and kept every other inherited `GIT_*` variable. When a worktree's pre-push hook runs the unit tests, git exports `GIT_DIR` set to the worktree's directory inside the clone, `.git/worktrees/<name>`. The fixture's `git init` then re-initializes that repository instead of the fixture. That path does not end in `.git`, so git guesses the repository is bare and writes `core.bare = true` into the clone's shared `.git/config`. From then on, every git command that needs a work tree fails in that clone and its worktrees, with "must be run in a work tree", until someone resets the setting.
+`tests/documentation-records.test.ts` runs `git init` in a temporary fixture to check that the documentation audit skips git-ignored files. It cleared only the git config variables and kept every other inherited `GIT_*` variable. When a worktree's pre-push hook runs the unit tests, git exports `GIT_DIR` set to the worktree's directory inside the clone, `.git/worktrees/<name>`. The fixture's `git init` then re-initializes that repository instead of the fixture. That path does not end in `.git`, so git guesses the repository is bare and writes `core.bare = true` into the clone's shared `.git/config`. From then on, every git command that needs a work tree fails in the clone's main folder, with "must be run in a work tree", until someone resets the setting.
+
+*Corrected 2026-10-13: the main folder breaks, not every worktree. In a sandbox (git 2.54), a hook run by a push from the main folder had no `GIT_DIR`, and nothing broke. A push from a linked worktree marked the repository bare: the main folder then refused work-tree commands, while the linked worktree kept working.*
 
 ## Evidence
 
@@ -19,7 +21,7 @@
 
 ## Impact
 
-It affects any session or person who pushes from a linked worktree, and through the shared config every worktree of that clone. No commits or files are lost; git refuses to work until `git config core.bare false` is run. Production is unaffected.
+It affects any session or person who pushes from a linked worktree, and through the shared config everyone working in that clone's main folder. No commits or files are lost; git refuses to work until `git config core.bare false` is run. Production is unaffected.
 
 ## Options
 
