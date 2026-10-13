@@ -1,7 +1,5 @@
 # Integration Tests
 
-**Last Updated:** 2026-09-24
-
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
 ---
@@ -124,7 +122,7 @@ Integration tests are part of every PR and every push to `main`.
 
 ## Test Files
 
-The suites are the `*.integration.test.ts` files in `tests/integration/`; each file's top-level `describe` names what it covers. Some, such as `tag-taxonomy-census.integration.test.ts`, need the seed data described above.
+The suites are the `*.integration.test.ts` files in `tests/integration/`; each file's name, with its top-level `describe` or contract runner, says what it covers. Some, such as `tag-taxonomy-census.integration.test.ts`, need the seed data described above.
 
 ---
 

@@ -1,6 +1,6 @@
 # Guides
 
-How to do a task. Each guide is a procedure; the rules an agent obeys on every edit are in [`AGENTS.md`](../../AGENTS.md) and `.claude/rules/`.
+How to do a task: procedures, and the references they rely on. The rules an agent obeys on every edit are in [`AGENTS.md`](../../AGENTS.md) and `.claude/rules/`.
 
 ## Testing
 

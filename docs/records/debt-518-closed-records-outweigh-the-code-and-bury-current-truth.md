@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, with its own manifest
+**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, which the owner approved on 2026-10-13
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -194,6 +194,8 @@ The owner widened the plan from records to every document: the product spec, arc
 | Open GitHub issues citing doc paths (#423, #772, #883, #902, #903) | a comment on each with the new path, in the PR that moves it |
 | Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; the guard rejects files recreated in retired folders; step 5, the archive's removal, adds rejection of unpinned live links into the archive, while preserving ledger retrieval paths, pinned history and immutable migration comments |
 
+**Not split, by design for now.** The content procedures in the content pipeline document, environment troubleshooting in the environments document, the alert runbooks in observability, and the migration rules in the migrations guide stayed whole. ADR-023's placement test would send procedures to `guides/` and rules to `.claude/rules/`. Each split is a separate move with no content change, to follow the archive's removal, by 2026-10-27.
+
 ### Migration, in Pull Requests
 
 Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` commits, but do not promise automatic conflict-free integration: Git detects renames heuristically, and adding a new file at an old path can merge without a textual conflict. Before each move PR, capture `git ls-files '*.md'` and review `git diff --name-status -M <base>...HEAD`; include every repository-authored Markdown file, including colocated files and `.github`, while treating vendored skill bodies as tooling. After integrating other sessions' branches, re-run the inventory, retired-path and live-link checks, move any newly added old-path file, and recheck duplicate IDs and citations. Code comments in applied migrations and the ledger's pinned historical paths are deliberate exceptions, not strings to rewrite. The guard reports old paths; use this mapping to choose the new home. Keep an explicit receipt for files that disappear or split; rename detection alone does not establish preservation.
@@ -239,17 +241,20 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 
 - [x] Approve option G, or amend it. Approved 2026-10-11, and widened to every document.
 - [x] The master spec: keep it whole and correct it in place, keeping its API contracts; remove nothing but its four navigation stubs (2026-10-11).
+- [x] Move `legal/` and `security/` under `policies/` (2026-10-13).
+- [x] Delete `docs/_archive/` and the asset folders only it links, after the lessons review (2026-10-13).
+- [ ] Drop the history sections the layout's rules exclude from living documents: question rendering's §12 changelog and the retry document's §8–10. They stay, under the preserve-content ruling, until the owner decides.
 - [ ] Optional: a CodeRabbit plan with a higher review limit, since that limit is now the bottleneck shared across repositories.
 
 ## Verification
 
 - [x] The owner approves the model (2026-10-11).
 - [x] Step 0: every live document has a disposition and a target path, and a second agent has challenged them (2026-10-11; ADR-023 and the mapping above).
-- [ ] The ledger is complete: every archived record has a line, and every record ID cited in code resolves.
+- [x] The ledger is complete: every archived record has a line, and every record ID cited in code resolves (2026-10-13: all 920 archived records have a line whose path matches, every file is retrievable at its last commit, and the only unresolved cited ID is a test fixture's).
 - [ ] Every Deferred row is self-contained, and no live link points into `docs/_archive/`.
 - [ ] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted.
 - [x] The records index describes delete-on-close, `AGENTS.md` and `CLAUDE.md` point to it, and the guard enforces it: no closed record stays live, and every closure from the cutover carries its receipt (#1467 and #1471).
-- [ ] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location.
+- [x] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location (2026-10-13: the guard reports no broken live link and no file in a retired folder; old paths remain only in history, applied migrations and fixtures).
 - [ ] Three records are closed under the model, and the reviewing agent reports no lost knowledge.
 - [ ] A month later, these are re-measured against this record's table: the share of documentation-only PRs, the search-noise ratios, and the record lines in the tree.
 

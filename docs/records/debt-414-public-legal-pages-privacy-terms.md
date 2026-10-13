@@ -10,7 +10,7 @@
 **Product:** Addiction Boards at `addictionboards.com`
 **Contact:** `support@addictionboards.com`
 **Branch baseline:** re-audited from `a9c17d90` on 2026-07-29; Stage 1 built, adversarially reviewed, and promoted 2026-08-05 (production merge `874f1599`); Stage 2 shipped through promo #747 on 2026-08-07 (CodeRabbit approval review `4882980598`; merge `19f8a31efb466aebe86ff40257824f5fd2854304`)
-**Related:** DEBT-410, [Privacy Policy draft](../policies/legal/privacy-policy.md), [Debt Index](./README.md)
+**Related:** DEBT-410, [Privacy Policy](../policies/legal/privacy-policy.md), [Debt Index](./README.md)
 
 > This is a diligent non-lawyer implementation and evidence record, not legal advice. The owner has chosen in-house drafting while the product is pre-revenue with no active users and a focused legal review before paid user acquisition. “Lawyer review” below is limited to named clauses and evidentiary questions; it is not a substitute for finishing the engineering and operational work.
 
