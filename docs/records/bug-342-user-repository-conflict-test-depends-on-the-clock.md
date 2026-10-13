@@ -12,7 +12,7 @@ The integration test "keeps an outer transaction usable after classifying an ema
 
 ## Evidence
 
-- **The failure.** #1469's CI on 2026-10-13 (run 38324807733, first attempt) failed the test with `expected undefined to match object { code: 'CONFLICT', … }`. #1469 touches neither the test nor the repository. The whole test took 6 ms, and the re-run passed. The cause was recorded on #1469 before the re-run.
+- **The failure.** #1469's CI on 2026-10-13 failed the test with `expected undefined to match object { code: 'CONFLICT', … }`. #1469 touches neither the test nor the repository. The whole test took 6 ms, and the re-run passed. The cause was recorded on #1469 before the re-run.
 - **Reproduced.** Giving both repositories one fixed clock fails the test locally with the same assertion.
 - **Rare.** It is this test's only failure among the 40 most recent failed CI runs, and the test has existed since July.
 - **The only such test.** A sweep of every test that writes through a timestamp guard found no other that needs the clock to move between two writes. The others pass explicit times, inject a clock, or make one write. Two test doubles share the guard and default to the wall clock: `FakeUserRepository.updateEmailByClerkId` and a stub in `clerk-webhook-controller-ordering.test.ts`. No test reaches either default.
@@ -29,7 +29,7 @@ CI only: a red pull request, a written cause and a re-run, about 20 minutes. Pro
 
 ## Resolution (decided)
 
-Option 1. Both repositories in the test share one fixed instant, and the conflicting write passes `observedAt` one millisecond after the incoming row's `updatedAt`.
+Option 1. Both repositories in the test share one fixed instant, which the test checks the two rows carry, and the conflicting write passes `observedAt` one millisecond after the incoming row's `updatedAt`.
 
 ## Verification
 
