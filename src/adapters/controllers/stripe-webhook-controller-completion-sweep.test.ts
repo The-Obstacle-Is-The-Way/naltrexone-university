@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
-import { FakePaymentGateway } from '@/src/application/test-helpers/fakes';
+import {
+  FakePaymentGateway,
+  FakeSubscriptionRepository,
+} from '@/src/application/test-helpers/fakes';
 import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { processStripeWebhook } from './stripe-webhook-controller';
 import { createStripeWebhookTestHarness } from './test-helpers/stripe-webhook-controller-harness';
@@ -13,17 +16,50 @@ describe('processStripeWebhook completion sweep', () => {
   const input = { rawBody: '{}', signature: 'sig' };
   const occurredAt = new Date('2026-10-14T05:00:00.000Z');
 
+  // One customer throughout: the subscription stored and the one swept.
+  const customer = 'cus_test';
+
   function completion(eventId: string, userId: string): WebhookEventResult {
     return {
       eventId,
       type: 'checkout.session.completed',
       occurredAt,
-      subscriptionUpdate: createTestWebhookSubscriptionUpdate({ userId }),
+      subscriptionUpdate: createTestWebhookSubscriptionUpdate({
+        userId,
+        externalCustomerId: customer,
+      }),
       completedSubscriptionCheckout: {
         sessionId: 'cs_completed',
-        externalCustomerId: 'cus_test',
+        externalCustomerId: customer,
       },
     };
+  }
+
+  // Observes, when the sweep is asked for, whether the subscription it
+  // follows is already stored.
+  class StorageObservingPaymentGateway extends FakePaymentGateway {
+    storedWhenSwept: boolean | null = null;
+
+    constructor(
+      webhookResult: WebhookEventResult,
+      private readonly isStored: () => Promise<boolean>,
+    ) {
+      super({
+        externalCustomerId: customer,
+        checkoutUrl: 'https://stripe/checkout',
+        portalUrl: 'https://stripe/portal',
+        webhookResult,
+      });
+    }
+
+    override async expireOtherOpenCheckoutSessions(
+      input: Parameters<
+        FakePaymentGateway['expireOtherOpenCheckoutSessions']
+      >[0],
+    ): Promise<void> {
+      this.storedWhenSwept = await this.isStored();
+      return super.expireOtherOpenCheckoutSessions(input);
+    }
   }
 
   function gatewayFor(
@@ -31,7 +67,7 @@ describe('processStripeWebhook completion sweep', () => {
     otherCheckoutSessionsError?: Error,
   ): FakePaymentGateway {
     return new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
+      externalCustomerId: customer,
       checkoutUrl: 'https://stripe/checkout',
       portalUrl: 'https://stripe/portal',
       webhookResult,
@@ -41,19 +77,26 @@ describe('processStripeWebhook completion sweep', () => {
 
   it("asks the gateway to expire the customer's other open Checkout Sessions created before the event, after storing the subscription", async () => {
     const userId = crypto.randomUUID();
-    const paymentGateway = gatewayFor(completion('evt_completed', userId));
-    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    const subscriptions = new FakeSubscriptionRepository();
+    const paymentGateway = new StorageObservingPaymentGateway(
+      completion('evt_completed', userId),
+      async () => (await subscriptions.findByUserId(userId)) !== null,
+    );
+    const harness = createStripeWebhookTestHarness({
+      paymentGateway,
+      subscriptions,
+    });
 
     await processStripeWebhook(harness.deps, input);
 
     expect(paymentGateway.otherCheckoutSessionInputs).toEqual([
       {
-        externalCustomerId: 'cus_test',
+        externalCustomerId: customer,
         keepSessionId: 'cs_completed',
         createdBefore: occurredAt,
       },
     ]);
-    expect(await harness.subscriptions.findByUserId(userId)).not.toBeNull();
+    expect(paymentGateway.storedWhenSwept).toBe(true);
   });
 
   it('fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again', async () => {
@@ -65,8 +108,9 @@ describe('processStripeWebhook completion sweep', () => {
     await expect(processStripeWebhook(harness.deps, input)).rejects.toThrow(
       'expire failed',
     );
-    const [[, stored] = []] = harness.stripeEvents.snapshot();
-    expect(stored?.processedAt).not.toBeNull();
+    const [[eventId, stored] = []] = harness.stripeEvents.snapshot();
+    expect(eventId).toBe('evt_sweep_failed');
+    expect(stored?.processedAt).toBeInstanceOf(Date);
 
     const redelivered = gatewayFor(event);
     await processStripeWebhook(

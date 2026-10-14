@@ -223,7 +223,8 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
   - the webhook sweeps after storing, a failed sweep fails the delivery and a redelivery sweeps again, and a user this environment does not hold sweeps nothing;
   - the adapter ends the other open subscription Sessions, keeps the completed one and any created after the event, leaves other modes alone, logs a second completion, and throws when it cannot list or end one.
   - CodeRabbit's first review added two cases: a second page of open Sessions, and a sweep before the acknowledgment that still lets it go when the sweep fails.
-  - Twenty mutations each fail a test.
+  - Its second review tightened three fixtures, among them that the sweep observes the subscription already stored.
+  - Twenty-one mutations each fail a test.
 - [ ] Tests fail first for options 4 and 5: the webhook's correction and its collection handling, and the alerts.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.
