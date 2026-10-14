@@ -1,7 +1,5 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-06-13
-
 This document exists because we got burned. Every claim is validated against official sources.
 
 Coverage reports are observational in this repo: do not add or chase numeric coverage thresholds as a quality gate; TDD discipline and behavior assertions are the enforcement mechanism. The one exception is `codecov/patch`: both merge tools require it green by name, so a change's measured patch coverage may not fall below the base target ([ADR-020](../../adr/adr-020-coverage-patch-gate.md)).
@@ -198,7 +196,7 @@ Representative current hook/browser suites include:
 - `app/(app)/app/practice/hooks/use-practice-question-flow.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.browser.spec.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-*.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.browser.spec.tsx`
 

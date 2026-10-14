@@ -118,7 +118,7 @@ Controllers call `rateLimiter.limit()` before executing the use case. On failure
   - `app/api/health/route.test.ts`
 - Controller tests verify `RATE_LIMITED` behavior on authenticated actions:
   - `src/adapters/controllers/billing-controller.test.ts`
-  - `src/adapters/controllers/practice-controller.test.ts`
+  - `src/adapters/controllers/practice-controller-*.test.ts`
   - `src/adapters/controllers/question-controller.test.ts`
   - `src/adapters/controllers/bookmark-controller.test.ts`
 - SPEC-017 tracks the implemented Postgres MVP. A Redis / multi-region upgrade
