@@ -115,3 +115,5 @@ allowBuilds:
   core-js: false # postinstall prints support/funding banner with temp-file dedupe; no build artifact.
   esbuild: true # validates/prepares platform esbuild binaries used by Vite, tsx, and Drizzle tooling.
   sharp: true # verifies/builds the native image-processing addon used by Next's image pipeline.
+patchedDependencies:
+  '@stryker-mutator/vitest-runner@9.6.1': patches/@stryker-mutator__vitest-runner@9.6.1.patch
