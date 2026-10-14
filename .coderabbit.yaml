@@ -39,31 +39,22 @@ reviews:
   pre_merge_checks:
     docstrings:
       mode: off
+  # Each path-scoped rule lives once, in .claude/rules/, and reaches CodeRabbit
+  # through knowledge_base.code_guidelines.filePatterns below (ADR-023 §6). Path
+  # instructions add only what no rule file says: a layer's role, a known false
+  # positive, a scanner's policy, or a checklist for files no rule covers. Do not
+  # restate a rule here; a second copy drifts from the first.
   path_instructions:
-    # Domain Layer - Pure business logic, no external dependencies
-    - path: "src/domain/**"
-      instructions: |
-        This is the DOMAIN layer (Clean Architecture innermost layer).
-        MUST have ZERO external dependencies - only pure TypeScript.
-        Entities must not contain vendor IDs (Clerk, Stripe).
-        Value objects must be immutable with factory functions.
-        Domain services must be pure functions.
-        All domain code MUST be 100% unit testable without mocks.
-
     # Application Layer - Use cases and ports
     - path: "src/application/**"
       instructions: |
         This is the APPLICATION layer (use cases + ports).
-        Dependencies flow INWARD only (can import from domain/).
         Use cases orchestrate, they don't implement business rules.
-        Ports (interfaces) define contracts for adapters.
-        Tests should use fakes from src/application/test-helpers/fakes/, NOT vi.mock().
 
     # Adapters Layer - Implementations
     - path: "src/adapters/**"
       instructions: |
         This is the ADAPTERS layer (repositories, gateways, controllers).
-        Implements ports defined in application layer.
         Controllers handle validation, error mapping, and orchestration.
         Repositories wrap database operations.
         Gateways wrap external services (Clerk, Stripe).
@@ -78,12 +69,9 @@ reviews:
         1. Apply the single taxonomy, shape-vs-behavior decision rule, and exceptions
            in .claude/rules/testing.md; do not infer a double's kind from its variable name.
         2. Do not allow growth past tests/test-double-fidelity-ratchet-floors.ts.
-        3. One concept per test, use Arrange-Act-Assert pattern
-        4. Test behavior, not implementation details
-        5. Use factories: createQuestion(), createChoice() from test-helpers/
-        6. Do NOT require dynamic import()/beforeAll loading in pure TypeScript *.test.ts suites.
+        3. Do NOT require dynamic import()/beforeAll loading in pure TypeScript *.test.ts suites.
            That React 19 compatibility rule is scoped to **/*.test.tsx component tests.
-        7. FIXTURE IDs (see .claude/rules/fixture-integrity.md): in fakes-only
+        4. FIXTURE IDs (see .claude/rules/fixture-integrity.md): in fakes-only
            application/domain/use-case tests, readable string IDs such as 'q1',
            'user-1', or 'attempt-1' are INTENTIONAL and correct — do NOT suggest
            replacing them with UUIDs or crypto.randomUUID(). UUID-shaped fixtures are
@@ -91,22 +79,6 @@ reviews:
            covered in adapter/controller tests (those legitimately assert UUID shape and
            the 'not-a-uuid' rejection path). Flagging readable fake-backed IDs in
            fakes-only tests is a known recurring false positive in this repo.
-
-    # React component tests - React 19 specific
-    - path: "**/*.test.tsx"
-      instructions: |
-        REACT 19 + VITEST REQUIREMENTS:
-        1. MUST have "// @vitest-environment jsdom" as FIRST LINE
-        2. Use renderToStaticMarkup from react-dom/server for render tests
-        3. DO NOT use @testing-library/react (broken with React 19)
-        4. DO NOT use react-test-renderer (deprecated in React 19)
-        5. Interactive or async UI tests belong in *.browser.spec.tsx, not here
-
-    - path: "**/*.browser.spec.tsx"
-      instructions: |
-        Browser mode tests use vitest-browser-react and run with pnpm test:browser.
-        Use real browser interactions and async expectations.
-        Do not suggest @testing-library/react or jsdom-only interaction patterns here.
 
     - path: "tests/skip-policy-source-scan*.ts"
       instructions: |
@@ -122,7 +94,9 @@ reviews:
     - path: "tests/e2e/**"
       instructions: |
         E2E tests use Playwright.
-        Use waitForURL() or waitForNavigation() before checking page.url().
+        After a navigation, assert the URL with `await expect(page).toHaveURL(...)`,
+        or wait with `page.waitForURL()` before reading page.url().
+        Do not suggest `page.waitForNavigation()`: Playwright deprecated it as racy.
         Avoid race conditions with synchronous URL checks after navigation.
 
     # Next.js App Router
