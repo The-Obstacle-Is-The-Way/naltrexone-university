@@ -1,7 +1,5 @@
 # Code Quality Metrics (CRAP Analysis)
 
-**Last Updated:** 2026-08-22
-
 CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, crap4j; originally expanded "Change Risk Analysis and Predictions" before the authors re-glossed it) — scores every function by combining the two numbers that are individually misleading but jointly decisive:
 
 ```text
