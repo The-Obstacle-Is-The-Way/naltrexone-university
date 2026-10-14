@@ -28,7 +28,7 @@ describe('Stripe Checkout client contract registration', () => {
       "sets a Subscription's default only to a PaymentMethod on its customer",
       'creates a portal configuration once per idempotency key and lists it among the active ones',
       'retrieves a Customer by id with its metadata, answers a deleted one as deleted without metadata, and refuses an unknown id as resource_missing',
-      'expires an open Session, replays a same-key repeat, and refuses a fresh expire of a Session that is not open or of an unknown id',
+      'expires an open Session, replays a same-key repeat, and refuses a fresh expire of an expired Session or of an unknown id',
     ]);
   });
 

@@ -156,9 +156,10 @@ type ExpireCall = {
   options?: StripeRequestOptions | undefined;
 };
 
-// An expire fault runs after the call is recorded and before the Session is
-// marked expired; it injects a caller-supplied error by throwing. Like the
-// create fault it models no Stripe fault shape and is not contract-tested.
+// An expire fault runs after the call is recorded and before the fake
+// answers. It injects a caller-supplied error by throwing, or changes the
+// Session (completing or expiring it) so the fake's own refusal answers. Like
+// the create fault it models no Stripe fault shape and is not contract-tested.
 type ExpireFault = (
   sessionId: string,
   options?: StripeRequestOptions,
@@ -425,8 +426,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
       },
       // Expires an open Session once and saves the answer under its key, so
       // a repeat with that key replays it. Any other expire of a Session that
-      // is not open is refused with Stripe's 400, and an unknown id with its
-      // 404; the contract's twelfth scenario proves both against TEST mode.
+      // is not open is refused with Stripe's 400 naming its status, and an
+      // unknown id with its 404. The contract's twelfth scenario proves the
+      // replay, the refusal of an expired Session and the 404 against TEST
+      // mode; Stripe refused a completed Session the same way by hand.
       expire: async (sessionId, _params, options) => {
         this.expireCalls.push({
           sessionId,
@@ -775,8 +778,18 @@ export class FakeStripeCheckoutClient implements StripeClient {
     this.setupIntents.seeded.push(structuredClone(intent));
   }
 
-  markComplete(sessionId: string): void {
+  // A completed subscription-mode Session names the Subscription it created;
+  // a case passes that id when it stages the completion. It is synthetic.
+  markComplete(sessionId: string, subscriptionId?: string): void {
     this.setTerminalState(sessionId, 'complete');
+    if (subscriptionId === undefined) return;
+    const session = this.liveSessionsById.get(sessionId);
+    if (session) {
+      this.liveSessionsById.set(sessionId, {
+        ...session,
+        subscription: subscriptionId,
+      });
+    }
   }
 
   markExpired(sessionId: string): void {

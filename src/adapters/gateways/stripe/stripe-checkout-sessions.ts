@@ -27,9 +27,9 @@ export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
 // for 25 rows. Under the repository third-attempt-success envelope, four pages
 // plus the existing primary-and-ten-rung fallback budget 20.289 s of the
 // pricing route's 30 s maxDuration. BUG-343's subscription re-check adds one
-// listing: a 2026-10-14 test-mode probe measured 104.9 ms median (6 samples),
-// 3×104.9 + 300 = 614.7 ms at third-attempt success, for 20.904 s in all. This
-// is a planning bound, not a timeout.
+// listing to it: a 2026-10-14 test-mode probe measured 104.9 ms median (6
+// samples), 3×104.9 + 300 = 614.7 ms at third-attempt success, so 20.904 s.
+// This is a planning bound, not a timeout.
 export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_SIZE = 25;
 export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_LIMIT = 4;
 // WHY 10: after the bounded tail scan, this caps fallback/race recovery creates;
@@ -412,6 +412,10 @@ function getStringProp(value: unknown, key: string): string | null {
   return typeof record[key] === 'string' ? record[key] : null;
 }
 
+type EndedCheckoutSession =
+  | { status: 'expired' }
+  | { status: 'complete'; subscriptionId: string | null };
+
 // BUG-343: Stripe refuses to expire a Session that is not open with a 400
 // that has no code and names the status only in its message, and an unknown
 // Session with a 404 resource_missing (the contract's twelfth scenario). The
@@ -426,7 +430,7 @@ async function expireCheckoutSession({
   stripe: StripeClient;
   sessionId: string;
   logger: Logger;
-}): Promise<'expired' | 'complete'> {
+}): Promise<EndedCheckoutSession> {
   try {
     await callStripeWithRetry({
       operation: 'checkout.sessions.expire',
@@ -436,34 +440,42 @@ async function expireCheckoutSession({
         }),
       logger,
     });
-    return 'expired';
+    return { status: 'expired' };
   } catch (error) {
     if (getStringProp(error, 'code') === 'resource_missing') {
       logger.info(
         { sessionId, status: 'missing' },
         'Checkout session had already ended when it was expired',
       );
-      return 'expired';
+      return { status: 'expired' };
     }
-    let status: string | null | undefined;
+    let session: StripeCheckoutSession;
     try {
-      const session = await callStripeWithRetry({
+      session = await callStripeWithRetry({
         operation: 'checkout.sessions.retrieve',
         fn: () => stripe.checkout.sessions.retrieve(sessionId),
         logger,
       });
-      status = session.status;
     } catch {
       // The read only settles the refused expire; the expire's own error is
       // the one to report.
       throw error;
     }
+    const { status } = session;
     if (status === 'expired' || status === 'complete') {
       logger.info(
         { sessionId, status },
         'Checkout session had already ended when it was expired',
       );
-      return status;
+      if (status === 'expired') return { status: 'expired' };
+      const { subscription } = session;
+      return {
+        status: 'complete',
+        subscriptionId:
+          typeof subscription === 'string'
+            ? subscription
+            : (subscription?.id ?? null),
+      };
     }
     throw error;
   }
@@ -798,7 +810,12 @@ async function retrieveLiveCheckoutSessionAfterCreate({
   });
 }
 
-async function findBlockingSubscription({
+type BlockingSubscription = {
+  subscription: StripeListedSubscription;
+  status: StripeSubscriptionStatus;
+};
+
+async function listBlockingSubscriptions({
   stripe,
   input,
   logger,
@@ -806,10 +823,7 @@ async function findBlockingSubscription({
   stripe: StripeClient;
   input: CheckoutSessionInput;
   logger: Logger;
-}): Promise<{
-  subscription: StripeListedSubscription;
-  status: StripeSubscriptionStatus;
-} | null> {
+}): Promise<BlockingSubscription[]> {
   const subscriptions = await callStripeWithRetry({
     operation: 'subscriptions.list',
     fn: () =>
@@ -820,21 +834,22 @@ async function findBlockingSubscription({
       }),
     logger,
   });
+  const blocking: BlockingSubscription[] = [];
   for (const subscription of subscriptions.data) {
     const status = getBlockingSubscriptionStatus(subscription);
-    if (status) return { subscription, status };
+    if (status) blocking.push({ subscription, status });
   }
-  return null;
+  return blocking;
 }
 
 // BUG-343: the subscription check runs before any Session is handled. A
-// Checkout another tab completes after it, and before this request expires
-// or replaces that tab's Session, leaves this request holding a second
-// completable Session. So the check runs again once the Session to hand back
-// is settled: if a subscription appeared, that Session is expired and the
-// request refused. A completion Stripe confirms after this check is not
-// closed here. The extra listing costs one Stripe call on every checkout,
-// and an expire and a retrieve only when a subscription appeared.
+// Checkout another tab completes after it leaves this request holding a
+// second completable Session, whether it reuses, replaces or creates one. So
+// the check runs again just before a Session is handed back: if a
+// subscription appeared, that Session is expired and the request refused. A
+// completion Stripe confirms after this check is not closed here. It costs
+// one more listing on every checkout that hands back a Session, and an
+// expire and a retrieve only when a subscription appeared.
 async function refuseIfSubscriptionAppeared({
   stripe,
   input,
@@ -846,9 +861,9 @@ async function refuseIfSubscriptionAppeared({
   session: StripeCheckoutSession;
   logger: Logger;
 }): Promise<void> {
-  let blocking: Awaited<ReturnType<typeof findBlockingSubscription>>;
+  let blocking: BlockingSubscription[];
   try {
-    blocking = await findBlockingSubscription({ stripe, input, logger });
+    blocking = await listBlockingSubscriptions({ stripe, input, logger });
   } catch (error) {
     logger.error(
       {
@@ -857,21 +872,22 @@ async function refuseIfSubscriptionAppeared({
         sessionId: session.id,
         error: error instanceof Error ? error.message : 'Unknown error',
       },
-      'Failed to re-check subscriptions after checkout creation',
+      'Failed to re-check subscriptions before handing back a checkout session',
     );
     throw new ApplicationError(
       'STRIPE_ERROR',
-      'Failed to re-check subscriptions after checkout creation',
+      'Failed to re-check subscriptions before handing back a checkout session',
     );
   }
-  if (!blocking) return;
+  const [first] = blocking;
+  if (!first) return;
 
   const context = {
     userId: input.userId,
     externalCustomerId: input.externalCustomerId,
     sessionId: session.id,
-    externalSubscriptionId: blocking.subscription.id ?? null,
-    subscriptionStatus: blocking.status,
+    externalSubscriptionId: first.subscription.id ?? null,
+    subscriptionStatus: first.status,
   };
   try {
     const ended = await expireCheckoutSession({
@@ -879,15 +895,25 @@ async function refuseIfSubscriptionAppeared({
       sessionId: session.id,
       logger,
     });
-    if (ended === 'complete') {
-      logger.error(
+    if (ended.status === 'expired') {
+      logger.warn(
         context,
-        'Checkout Session completed while a live subscription already existed',
+        'A subscription appeared during checkout; expired the checkout session',
+      );
+    } else if (
+      blocking.some(
+        ({ subscription }) => subscription.id !== ended.subscriptionId,
+      )
+    ) {
+      // The Session's own Subscription is not the only live one.
+      logger.error(
+        { ...context, sessionSubscriptionId: ended.subscriptionId },
+        'Checkout session completed while another live subscription existed',
       );
     } else {
       logger.warn(
-        context,
-        'A subscription appeared during checkout; expired the new checkout session',
+        { ...context, sessionSubscriptionId: ended.subscriptionId },
+        'Checkout session completed during the subscription re-check',
       );
     }
   } catch (error) {
@@ -921,7 +947,11 @@ export async function createStripeCheckoutSession({
   const priceId = getStripePriceId(input.plan, priceIds);
   const trialRequested = input.trialPeriodDays !== undefined;
   const requestedCheckoutVariant = getRequestedCheckoutSessionVariant(input);
-  const blocking = await findBlockingSubscription({ stripe, input, logger });
+  const [blocking] = await listBlockingSubscriptions({
+    stripe,
+    input,
+    logger,
+  });
   if (blocking) {
     logger.warn(
       {
@@ -1002,6 +1032,12 @@ export async function createStripeCheckoutSession({
         consentEvidenceMatches &&
         (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
       ) {
+        await refuseIfSubscriptionAppeared({
+          stripe,
+          input,
+          session: existingSession,
+          logger,
+        });
         return { url: existingUrl };
       }
 

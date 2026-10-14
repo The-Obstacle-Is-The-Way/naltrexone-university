@@ -23,7 +23,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 with BUG-343.
 
 ## Practice sessions
 
@@ -157,6 +157,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses %s with ALREADY_SUBSCRIBED and leaves no open Session when the first Checkout completes after the subscription check`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it expires for another plan completed first`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it could not inspect completed before its expire`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED instead of reusing an open Session when another completed after the subscription check`
 
 ## Account
 

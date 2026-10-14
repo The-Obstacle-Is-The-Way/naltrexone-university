@@ -25,7 +25,7 @@ The window is a few Stripe calls long.
 
 ## Evidence
 
-Line references are at `a57f5c0f` (`dev` after #1482) unless a line says otherwise. Stripe's behaviour is quoted from its documentation, read on 2026-10-13, except where the test-mode reproduction below (2026-10-14) observed it.
+The Evidence describes the code at `a57f5c0f` (`dev` after #1482), before the fix, and its line references are at that commit unless a line says otherwise. Stripe's behaviour is quoted from its documentation, read on 2026-10-13, except where the test-mode reproduction below (2026-10-14) observed it.
 
 ### The create path checks once, before it creates
 
@@ -167,9 +167,9 @@ Stripe test mode, one disposable test customer per scenario, deleted afterwards;
 ## Options
 
 1. **Rely on Stripe's setting.** Rejected as the guard: it does not count `trialing`, and Stripe does not describe it as a check at completion. It stays on, with its portal login link, for returning customers.
-2. **Re-check after the create.**
-   - After the create and the reconcile, list the customer's subscriptions again. If a blocking one appeared, expire our new Session and refuse with `ALREADY_SUBSCRIBED`.
-   - On any expire failure, retrieve the Session and act on its status instead of on Stripe's error text. Continue only if it is `expired`. Refuse if it is `open` or `complete`, or if the retrieve or the re-check list fails.
+2. **Re-check before handing back a Session.**
+   - Just before a Session is handed back, reused or newly created, list the customer's subscriptions again. If a blocking one appeared, expire that Session and refuse with `ALREADY_SUBSCRIBED`, whatever the expire returns. If the listing fails, refuse with `STRIPE_ERROR`.
+   - On any expire failure, read the Session's status instead of Stripe's error text. An `expired` or missing Session has ended. A `complete` one is left to the re-check, which refuses. A Session still `open`, or a failed read, keeps the expire's failure, fatal or not as before.
    - This covers interleavings 1 to 4. The residual is a completion Stripe confirms after B's re-check, for example a returning customer finishing a 3DS challenge; options 3 and 4 close it.
    - A per-user lock adds nothing for this race: the completion happens on Stripe's page, and the reconcile already handles two concurrent creates.
 3. **Sweep when a Checkout completes.** On `checkout.session.completed`, expire the customer's other open subscription-mode Sessions. This ends the 24-hour tail when B already exists. When B is created after A's webhook, option 2's re-check catches it.
@@ -184,13 +184,15 @@ Stripe test mode, one disposable test customer per scenario, deleted afterwards;
 7. **Shorten Session lifetime** with `expires_at`, 30 minutes at least. This narrows the tail, but a learner who leaves a page open longer must start again.
 8. **Make the app the only writer of subscriptions.** Collect the card with a setup-mode Checkout, then create the subscription from the server. This closes the race completely, but it changes the purchase page, the disclosures and the consent flow.
 
+*Corrected 2026-10-14: option 2 re-checks before any Session is handed back, a reused one included, and leaves a complete Session to that re-check instead of refusing at the expire.*
+
 ## Resolution (decided)
 
 Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for the case the one before cannot close, shipped in steps. The owner delegated engineering calls; the refund in option 4 stays the owner's decision.
 
 1. **The first pull request: options 6 and 2.**
-   - The fake refuses to expire a Session that is not open, as Stripe does, proved against TEST mode by the contract's twelfth scenario.
-   - The adapter settles a refused expire by the Session's status instead of the message. It checks the customer's subscriptions again once the Session to hand back is settled, and if one appeared, it expires that Session and refuses with `ALREADY_SUBSCRIBED`.
+   - The fake refuses to expire a Session that is not open, as Stripe does. The contract's twelfth scenario proves this against TEST mode for an expired Session; the reproduction observed the same refusal for a completed one.
+   - The adapter settles a refused expire by the Session's status instead of the message. It checks the customer's subscriptions again just before it hands back a Session, reused or new, and if one appeared, it expires that Session and refuses with `ALREADY_SUBSCRIBED`.
    - Business rule R24 states it.
 2. **Next: option 3, the completion sweep, then option 5's alerts,** each test first, by 2026-10-20.
 3. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
@@ -211,7 +213,7 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
 - [x] In Stripe test mode, with disposable test customers, the race (interleaving 1) left two `trialing` subscriptions for a trial and two `active`, paid subscriptions for a returning customer. Expiring a completed Session returned an error the adapter does not treat as terminal (2026-10-14).
 - [ ] The owner checks whether "limit customers to one subscription" is on in test mode. If it is, the reproduction shows it does not stop B.
 - [ ] Whether a card added through the login-link portal becomes the customer's default.
-- [x] Tests failed first for options 6 and 2 (2026-10-14): a Session completed in flight, for a trial and for a returning customer; interleavings 3 and 4; an expire refused for a Session already expired; and the re-check's failure cases. Eight mutations of the fix each fail a test. The provider contracts pass in TEST mode, `executed=14 passed=14 skipped=0`.
+- [x] Tests for options 6 and 2 (2026-10-14): a Session completed in flight, for a trial and for a returning customer; interleavings 3 and 4; a reused Session; an expire refused for a Session already expired; and the re-check's outcomes, its failed listing and its failed expire. The first nine failed before the fix; the rest were added after it, and twelve mutations of the fix each fail a test. The provider contracts pass in TEST mode, `executed=14 passed=14 skipped=0`.
 - [ ] Tests fail first for options 3, 4 and 5: the completion sweep, the webhook's correction and its collection handling, and the alerts.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.

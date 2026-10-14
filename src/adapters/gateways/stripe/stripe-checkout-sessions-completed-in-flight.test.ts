@@ -60,7 +60,7 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
     sessionId: string,
     status: 'trialing' | 'active',
   ): void {
-    stripe.markComplete(sessionId);
+    stripe.markComplete(sessionId, `sub_${sessionId}`);
     stripe.seedSubscription({ id: `sub_${sessionId}`, customer, status });
   }
 
@@ -232,12 +232,42 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
     expect(await openSessionIds(stripe)).toEqual([sessionIdOf(monthly.url)]);
   });
 
-  it('logs an error and refuses when the Session it would hand back completed before the re-check could expire it', async () => {
-    const stripe = createFake();
+  // The re-check's listing is the request's second; a case stages what
+  // completes there.
+  function onRecheck(
+    stripe: FakeStripeCheckoutClient,
+    stage: () => Promise<void>,
+  ) {
     let checks = 0;
     stripe.setSubscriptionListHook(async () => {
       checks += 1;
-      if (checks !== 2) return;
+      if (checks === 2) await stage();
+    });
+  }
+
+  it('warns and refuses when the Session it would hand back completed during the re-check with the only live subscription', async () => {
+    const stripe = createFake();
+    onRecheck(stripe, async () => {
+      const [created] = await openSessionIds(stripe);
+      if (created) completeCheckout(stripe, created, 'active');
+    });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(logger.warnCalls).toContainEqual(
+      expect.objectContaining({
+        msg: 'Checkout session completed during the subscription re-check',
+      }),
+    );
+    expect(logger.errorCalls).toEqual([]);
+  });
+
+  it('logs an error when the Session it would hand back completed while another live subscription existed', async () => {
+    const stripe = createFake();
+    onRecheck(stripe, async () => {
+      stripe.seedSubscription({ id: 'sub_other', customer, status: 'active' });
       const [created] = await openSessionIds(stripe);
       if (created) completeCheckout(stripe, created, 'active');
     });
@@ -248,8 +278,56 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
 
     expect(logger.errorCalls).toContainEqual(
       expect.objectContaining({
-        msg: 'Checkout Session completed while a live subscription already existed',
+        msg: 'Checkout session completed while another live subscription existed',
       }),
+    );
+  });
+
+  it('still refuses with ALREADY_SUBSCRIBED, and logs an error, when the re-check cannot expire the Session', async () => {
+    const stripe = createFake();
+    onRecheck(stripe, async () => {
+      stripe.seedSubscription({ id: 'sub_other', customer, status: 'active' });
+      stripe.setExpireFault(() => {
+        throw new Error('expire failed');
+      });
+    });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(logger.errorCalls).toContainEqual(
+      expect.objectContaining({
+        msg: 'Failed to expire checkout session after a subscription appeared',
+      }),
+    );
+  });
+
+  it('refuses with ALREADY_SUBSCRIBED instead of reusing an open Session when another completed after the subscription check', async () => {
+    const stripe = createFake();
+    const reusable = sessionIdOf((await createCheckout(stripe)).url);
+    // A second open Session on the same terms, newer, as a failed reconcile
+    // can leave: it completes after the next request's subscription check,
+    // so that request's listing returns the older one to reuse.
+    const params = stripe.createCalls[0]?.params;
+    if (!params) throw new Error('Expected the adapter create params');
+    const newer = await stripe.checkout.sessions.create(params, {
+      idempotencyKey: 'second-open-session',
+    });
+    let completed = false;
+    stripe.setListHook(() => {
+      if (completed) return;
+      completed = true;
+      completeCheckout(stripe, newer.id, 'active');
+    });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(await openSessionIds(stripe)).toEqual([]);
+    expect(stripe.expireCalls.map(({ sessionId }) => sessionId)).toContain(
+      reusable,
     );
   });
 

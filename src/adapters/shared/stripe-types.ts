@@ -89,6 +89,8 @@ export type StripeCheckoutSession = {
   payment_method_collection?: StripeCheckoutSessionPaymentMethodCollection | null;
   mode?: StripeCheckoutSessionMode;
   setup_intent?: string | { id: string } | null;
+  // A completed subscription-mode Session names the Subscription it created.
+  subscription?: string | { id: string } | null;
   consent?: { terms_of_service?: 'accepted' | 'required' | null } | null;
 };
 
