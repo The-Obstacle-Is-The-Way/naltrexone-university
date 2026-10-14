@@ -65,6 +65,10 @@ content/drafts/*
 content/drafts/questions/*
 !content/drafts/questions/*.md
 !content/drafts/questions/*.MD
+# PLAN.md and NOTES.md track and quote the proprietary questions, so they stay
+# local beside them: this repository is public.
+content/drafts/questions/PLAN.md
+content/drafts/questions/NOTES.md
 content/imports/
 
 # Stryker mutation testing (DEBT-465 Part 2)
