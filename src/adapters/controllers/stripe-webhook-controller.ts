@@ -635,8 +635,18 @@ async function processSubscriptionWebhook(
   } catch (transactionError) {
     if (transactionError instanceof StripeWebhookAlreadyProcessed) {
       // Another delivery committed this event first. A completion's sweep
-      // runs again: a failed sweep is what makes Stripe send it again.
-      await expireOtherOpenCheckoutSessions(deps, event);
+      // runs again, since a failed sweep is what makes Stripe send it again,
+      // but only if this environment holds the user's subscription: a
+      // missing-user completion is recorded as processed too, and sweeps
+      // nothing.
+      if (
+        event.completedSubscriptionCheckout &&
+        (await deps.subscriptionVersions.findObservationVersionByUserId(
+          discoveredUserId,
+        )) !== null
+      ) {
+        await expireOtherOpenCheckoutSessions(deps, event);
+      }
       return;
     }
 

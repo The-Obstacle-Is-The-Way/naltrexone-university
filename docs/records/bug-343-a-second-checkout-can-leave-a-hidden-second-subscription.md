@@ -195,7 +195,7 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
    - The adapter settles a refused expire by the Session's status instead of the message. It checks the customer's subscriptions again just before it hands back a Session, reused or new, and if one appeared, it expires that Session and refuses with `ALREADY_SUBSCRIBED`.
    - Business rule R24 states it.
 2. **The second pull request: option 3, the completion sweep.**
-   - Once the webhook has stored a completed subscription Checkout's subscription, it ends the customer's other open subscription Sessions created before the event. An event for a user this environment does not hold sweeps nothing, so one environment does not touch another's customers in TEST mode.
+   - Once the webhook has stored a completed subscription Checkout's subscription, it ends the customer's other open subscription Sessions created before the event. An event for a user this environment does not hold sweeps nothing, on its first delivery or a later one, so one environment does not touch another's customers in TEST mode.
    - It reads every page of the customer's open Sessions first, and sweeps before the acknowledgment email is sent. A Session that stays open, a failed listing, or more than ten pages fails the delivery, so Stripe sends it again, and the already-processed path sweeps again. One that completed too is a second subscription, and is logged as an error.
    - Business rule R25 states it. What remains is two Checkouts completed before the sweep reaches either; option 4 corrects that.
 3. **Next: option 5's alerts,** test first, by 2026-10-20.
@@ -224,7 +224,8 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
   - the adapter ends the other open subscription Sessions, keeps the completed one and any created after the event, leaves other modes alone, logs a second completion, and throws when it cannot list or end one.
   - CodeRabbit's first review added two cases: a second page of open Sessions, and a sweep before the acknowledgment that still lets it go when the sweep fails.
   - Its second review tightened three fixtures, among them that the sweep observes the subscription already stored.
-  - Twenty-one mutations each fail a test.
+  - Its fourth review found that a missing-user completion, also recorded as processed, would sweep on redelivery; the already-processed path now sweeps only when this environment holds the user's subscription.
+  - Twenty-three mutations each fail a test.
 - [ ] Tests fail first for options 4 and 5: the webhook's correction and its collection handling, and the alerts.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.

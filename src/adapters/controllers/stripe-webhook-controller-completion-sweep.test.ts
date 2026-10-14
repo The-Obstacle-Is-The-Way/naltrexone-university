@@ -132,6 +132,20 @@ describe('processStripeWebhook completion sweep', () => {
     expect(paymentGateway.otherCheckoutSessionInputs).toEqual([]);
   });
 
+  it('sweeps nothing when Stripe sends a missing-user completion again', async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = gatewayFor(completion('evt_foreign_again', userId));
+    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    harness.subscriptions.markUserMissing(userId);
+
+    // The first delivery is acknowledged and recorded as processed, so the
+    // second takes the already-processed path.
+    await processStripeWebhook(harness.deps, input);
+    await processStripeWebhook(harness.deps, input);
+
+    expect(paymentGateway.otherCheckoutSessionInputs).toEqual([]);
+  });
+
   it('does not sweep for an event that completes no subscription Checkout', async () => {
     const paymentGateway = gatewayFor({
       eventId: 'evt_updated',
