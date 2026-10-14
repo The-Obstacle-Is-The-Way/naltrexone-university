@@ -138,6 +138,12 @@ export type WebhookEventResult = {
     | 'customer.subscription.deleted'
     | (string & {});
   subscriptionUpdate?: SubscriptionObservation;
+  // BUG-343: a completed subscription Checkout, whose customer's other open
+  // subscription Sessions the webhook ends.
+  completedSubscriptionCheckout?: {
+    sessionId: string;
+    externalCustomerId: string;
+  };
   initialSubscriptionConsent?: RenewalTermsSnapshot & {
     checkoutSessionId: string;
     userId: string;
@@ -223,6 +229,18 @@ export interface PaymentGateway {
   listBlockingCustomerSubscriptions(input: {
     externalCustomerId: string;
   }): Promise<SubscriptionObservation[]>;
+
+  /**
+   * BUG-343: ends the customer's open subscription Checkout Sessions other
+   * than the one kept, and, when given, created before `createdBefore`, so
+   * none of them can create a second subscription. It rejects when one stays
+   * open, so the caller can retry.
+   */
+  expireOtherOpenCheckoutSessions(input: {
+    externalCustomerId: string;
+    keepSessionId: string;
+    createdBefore?: Date;
+  }): Promise<void>;
 
   /**
    * Verifies signature and normalizes the Stripe event for the use case/controller.

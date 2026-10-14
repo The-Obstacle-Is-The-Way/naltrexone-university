@@ -23,7 +23,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 with BUG-343.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343.
 
 ## Practice sessions
 
@@ -152,12 +152,21 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/adapters/controllers/stripe-webhook-controller.test.ts`: `does not reprocess an event completed between peek and lock`
 - `tests/integration/bug-regression-subscription-observation-version-fence.integration.test.ts`: `rejects the reverse-commit webhook observation and retries with current state`
 
-### R24. A checkout never hands back a Session once the customer holds a live subscription, including one that started while the checkout request ran: it expires that Session and refuses. A completion Stripe confirms after the final check is not covered (BUG-343).
+### R24. A checkout never hands back a Session once the customer holds a live subscription, including one that started while the checkout request ran: it expires that Session and refuses. A Session handed back before another Checkout completes stays completable until R25's sweep reaches it (BUG-343).
 
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses %s with ALREADY_SUBSCRIBED and leaves no open Session when the first Checkout completes after the subscription check`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it expires for another plan completed first`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it could not inspect completed before its expire`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED instead of reusing an open Session when another completed after the subscription check`
+
+### R25. When the webhook stores a completed subscription Checkout's subscription, it ends the customer's other open subscription Checkout pages created before that event. If one stays open, the event fails, and Stripe sends it again. A page completed before the sweep reaches it is logged as a second subscription, which BUG-343's option 4 will correct.
+
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `expires the customer's other open subscription Sessions and keeps the completed one`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `throws when an open Session cannot be expired, so the webhook is retried`
+- `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `asks the gateway to expire the customer's other open Checkout Sessions created before the event, after storing the subscription`
+- `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `keeps a Session created after the completion's event, which belongs to a later checkout`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `logs an error, and goes on, when another Session completed too`
 
 ## Account
 

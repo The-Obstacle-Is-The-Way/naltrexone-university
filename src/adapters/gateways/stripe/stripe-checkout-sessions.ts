@@ -931,6 +931,135 @@ async function refuseIfSubscriptionAppeared({
   );
 }
 
+// Stripe returns at most 100 Sessions a page. The sweep reads every page
+// before it expires anything, so the listing's cursor never points at a
+// Session it changed. Ten pages is far past any state this app creates; more
+// fails the sweep rather than leaving a Session unread.
+const OPEN_CHECKOUT_SESSION_SWEEP_PAGE_SIZE = 100;
+export const OPEN_CHECKOUT_SESSION_SWEEP_PAGE_LIMIT = 10;
+
+// BUG-343 option 3: once a subscription Checkout completes, any other open
+// subscription Session for the customer could still create a second
+// subscription until Stripe expires it, 24 hours after creation. The webhook
+// ends them, except any created after the completion's event, which belong
+// to a later checkout. Each expire is settled by the Session's status; one
+// that another tab completed meanwhile is a second subscription, which is
+// logged. A failed listing, more pages than the limit, or a Session that
+// stays open fails the sweep, so the webhook is retried.
+export async function expireOtherOpenSubscriptionCheckoutSessions({
+  stripe,
+  input,
+  logger,
+}: {
+  stripe: StripeClient;
+  input: {
+    externalCustomerId: string;
+    keepSessionId: string;
+    createdBefore?: Date | undefined;
+  };
+  logger: Logger;
+}): Promise<void> {
+  const listContext = {
+    externalCustomerId: input.externalCustomerId,
+    keptSessionId: input.keepSessionId,
+  };
+  const open: StripeCheckoutSession[] = [];
+  let startingAfter: string | undefined;
+  for (let page = 0; ; page += 1) {
+    if (page === OPEN_CHECKOUT_SESSION_SWEEP_PAGE_LIMIT) {
+      logger.error(
+        { ...listContext, pageLimit: OPEN_CHECKOUT_SESSION_SWEEP_PAGE_LIMIT },
+        'More open checkout sessions than the sweep reads after a completion',
+      );
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Too many open checkout sessions to sweep',
+      );
+    }
+    let listed: Awaited<
+      ReturnType<StripeClient['checkout']['sessions']['list']>
+    >;
+    try {
+      listed = await callStripeWithRetry({
+        operation: 'checkout.sessions.list',
+        fn: () =>
+          stripe.checkout.sessions.list({
+            customer: input.externalCustomerId,
+            status: 'open',
+            limit: OPEN_CHECKOUT_SESSION_SWEEP_PAGE_SIZE,
+            ...(startingAfter ? { starting_after: startingAfter } : {}),
+          }),
+        logger,
+      });
+    } catch (error) {
+      logger.error(
+        {
+          ...listContext,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+        'Failed to list open checkout sessions after a completion',
+      );
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Failed to list open checkout sessions',
+      );
+    }
+    open.push(...listed.data);
+    const last = listed.data.at(-1);
+    if (!listed.has_more || !last) break;
+    startingAfter = last.id;
+  }
+  const createdBeforeSeconds = input.createdBefore
+    ? input.createdBefore.getTime() / MS_PER_SECOND
+    : null;
+  const others = open.filter(
+    (session) =>
+      session.id !== input.keepSessionId &&
+      session.mode === 'subscription' &&
+      (createdBeforeSeconds === null ||
+        session.created === undefined ||
+        session.created <= createdBeforeSeconds),
+  );
+  for (const session of others) {
+    const context = {
+      externalCustomerId: input.externalCustomerId,
+      keptSessionId: input.keepSessionId,
+      sessionId: session.id,
+    };
+    let ended: EndedCheckoutSession;
+    try {
+      ended = await expireCheckoutSession({
+        stripe,
+        sessionId: session.id,
+        logger,
+      });
+    } catch (error) {
+      logger.error(
+        {
+          ...context,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+        'Failed to expire another open subscription checkout session',
+      );
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Failed to expire another open checkout session',
+      );
+    }
+    if (ended.status === 'complete') {
+      logger.error(
+        { ...context, sessionSubscriptionId: ended.subscriptionId },
+        'Another subscription Checkout completed for the same customer',
+      );
+    } else {
+      logger.warn(
+        context,
+        'Expired another open subscription checkout session after a completion',
+      );
+    }
+  }
+}
+
 export async function createStripeCheckoutSession({
   stripe,
   input,

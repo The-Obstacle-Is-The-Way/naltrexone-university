@@ -4,6 +4,7 @@ import {
   createStripeCustomer,
   createStripePortalSession,
   createStripeTrialPaymentMethodSetupSession,
+  expireOtherOpenSubscriptionCheckoutSessions,
   processStripeWebhookEvent,
 } from '@/src/adapters/gateways/stripe';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
@@ -196,6 +197,18 @@ export class StripePaymentGateway implements PaymentGateway {
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
       webhookE2EOwner: this.deps.webhookE2EOwner,
+    });
+  }
+
+  async expireOtherOpenCheckoutSessions(input: {
+    externalCustomerId: string;
+    keepSessionId: string;
+    createdBefore?: Date;
+  }): Promise<void> {
+    await expireOtherOpenSubscriptionCheckoutSessions({
+      stripe: this.deps.stripe,
+      input,
+      logger: this.deps.logger,
     });
   }
 

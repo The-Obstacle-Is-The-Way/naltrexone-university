@@ -3,6 +3,7 @@ export { stripeSubscriptionEndsByPeriodEnd } from './stripe-cancellation';
 export {
   createStripeCheckoutSession,
   createStripeTrialPaymentMethodSetupSession,
+  expireOtherOpenSubscriptionCheckoutSessions,
   SUBSCRIPTION_LIST_LIMIT,
 } from './stripe-checkout-sessions';
 export type {
