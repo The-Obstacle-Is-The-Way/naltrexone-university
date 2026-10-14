@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
@@ -29,7 +32,13 @@ describe('createStripeCheckoutSession live retrieval fallback', () => {
     });
 
     await expect(
-      createStripeCheckoutSession({ stripe, input, priceIds, logger }),
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+        operationalAlerts: new FakeOperationalAlerts(),
+      }),
     ).resolves.toEqual({ url: 'https://checkout.stripe.test/cs_fake_1' });
 
     expect(stripe.retrieveCalls).toEqual(['cs_fake_1']);
@@ -51,7 +60,13 @@ describe('createStripeCheckoutSession live retrieval fallback', () => {
     }));
 
     await expect(
-      createStripeCheckoutSession({ stripe, input, priceIds, logger }),
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+        operationalAlerts: new FakeOperationalAlerts(),
+      }),
     ).resolves.toEqual({ url: 'https://checkout.stripe.test/cs_fake_1' });
 
     expect(stripe.retrieveCalls).toEqual(['cs_fake_1']);

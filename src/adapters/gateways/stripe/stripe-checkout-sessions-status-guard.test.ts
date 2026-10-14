@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import type { StripeCheckoutSessionResponseStatus } from '@/src/adapters/shared/stripe-types';
 import type { CheckoutSessionInput } from '@/src/application/ports/gateways';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
@@ -47,6 +50,7 @@ async function createCheckout(
     input: harness.input,
     priceIds: PRICE_IDS,
     logger: harness.logger,
+    operationalAlerts: new FakeOperationalAlerts(),
     nowMs: harness.nowMs,
   });
 }

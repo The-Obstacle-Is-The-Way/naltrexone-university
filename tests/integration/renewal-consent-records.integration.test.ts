@@ -13,7 +13,10 @@ import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stri
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import {
   cleanupAfterEach,
@@ -286,6 +289,7 @@ describe('renewal consent record persistence', () => {
             annual: 'price_test_annual',
           },
           logger: new FakeLogger(),
+          operationalAlerts: new FakeOperationalAlerts(),
           now: () => new Date('2021-01-01T00:00:00Z'),
           listLocalSubscriptions: async () => [
             {

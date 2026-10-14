@@ -1,6 +1,7 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import type { StripeSubscriptionsClient } from '@/src/adapters/shared/stripe-types';
 import type { Logger } from '@/src/application/ports/logger';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import type {
   RenewalConsentRecordRepository,
   StripeCustomerRepository,
@@ -31,6 +32,8 @@ export type ReconcileStripeSubscriptionsDeps = {
   stripe: StripeSubscriptionsClient;
   priceIds: StripePriceIds;
   logger: Logger;
+  // BUG-343 option 5: duplicates found are a person's to act on.
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   now: () => Date;
   webhookE2EOwner?: string | undefined;
   listLocalSubscriptions: (

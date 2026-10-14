@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import {
   createStripeCheckoutSession,
@@ -45,6 +48,7 @@ describe('createStripeCheckoutSession trial params', () => {
       input: checkoutInput,
       priceIds,
       logger,
+      operationalAlerts: new FakeOperationalAlerts(),
       nowMs,
     });
   }

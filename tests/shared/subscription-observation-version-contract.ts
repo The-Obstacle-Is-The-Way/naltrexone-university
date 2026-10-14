@@ -221,6 +221,44 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
       },
     },
     {
+      // BUG-343 option 5: the webhook alerts when the guard keeps the stored
+      // subscription over one that is also entitled, so a lower-ranked
+      // entitled competitor must be refused the same way on both halves.
+      name: 'keeps the stored subscription over a lower-ranked entitled competitor',
+      async run(harness) {
+        const storedSubscriptionId = harness.externalSubscriptionId(
+          'guard_entitled_stored',
+        );
+        await harness.repository.upsert(
+          createUpsertInput(harness, storedSubscriptionId, null, {
+            currentPeriodEnd: new Date('2030-02-01T00:00:00.000Z'),
+          }),
+        );
+
+        const competitorSubscriptionId = harness.externalSubscriptionId(
+          'guard_entitled_competitor',
+        );
+        await expect(
+          harness.repository.upsert(
+            createUpsertInput(harness, competitorSubscriptionId, 1, {
+              currentPeriodEnd: new Date('2030-01-01T00:00:00.000Z'),
+            }),
+          ),
+        ).resolves.toMatchObject({
+          persisted: false,
+          reason: 'write_guard_rejected',
+          current: {
+            userId: harness.userId,
+            status: 'active',
+            currentPeriodEnd: new Date('2030-02-01T00:00:00.000Z'),
+          },
+        });
+        await expect(
+          harness.repository.findExternalSubscriptionIdByUserId(harness.userId),
+        ).resolves.toBe(storedSubscriptionId);
+      },
+    },
+    {
       name: 'rejects a stale expected version without mutating state',
       async run(harness) {
         const externalSubscriptionId = harness.externalSubscriptionId('stale');

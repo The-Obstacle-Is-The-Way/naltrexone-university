@@ -139,6 +139,7 @@ export async function runCheckoutSuccessProviderContract(
       webhookSecret: 'whsec_unused_by_checkout_contract',
       priceIds,
       logger,
+      operationalAlerts: new FakeOperationalAlerts(),
       resolveCheckoutDisclosure,
       sha256Hasher: new NobleSha256Hasher(),
     });

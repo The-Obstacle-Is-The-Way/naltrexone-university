@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
@@ -65,12 +68,14 @@ describe('createStripeCheckoutSession concurrency', () => {
         input: { ...input, trialPeriodDays: 7 },
         priceIds,
         logger,
+        operationalAlerts: new FakeOperationalAlerts(),
       }),
       createStripeCheckoutSession({
         stripe,
         input: { ...input, trialPeriodDays: 7 },
         priceIds,
         logger,
+        operationalAlerts: new FakeOperationalAlerts(),
       }),
     ]);
 
@@ -97,6 +102,7 @@ describe('createStripeCheckoutSession concurrency', () => {
         },
         priceIds,
         logger,
+        operationalAlerts: new FakeOperationalAlerts(),
       }),
       createStripeCheckoutSession({
         stripe,
@@ -107,6 +113,7 @@ describe('createStripeCheckoutSession concurrency', () => {
         },
         priceIds,
         logger,
+        operationalAlerts: new FakeOperationalAlerts(),
       }),
     ]);
 
