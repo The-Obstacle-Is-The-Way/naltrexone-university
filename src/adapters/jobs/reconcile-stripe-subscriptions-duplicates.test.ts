@@ -226,6 +226,52 @@ describe('reconcileStripeSubscriptions duplicate cancellation', () => {
     ]);
   });
 
+  // BUG-343 option 5: a duplicate is a person's to act on, refunded or not.
+  it('raises one duplicate-subscription alert for the run, counting the customers with duplicates', async () => {
+    const stripe = createDuplicatesStripe();
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_keep',
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('raises the duplicate-subscription alert in dry-run mode too, since the duplicate is still live', async () => {
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_keep'),
+      createUserSubscriptionFixture('sub_dup', { status: 'trialing' }),
+    ]);
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_keep',
+    });
+
+    await scenario.run({ dryRun: true });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('raises no alert when no customer has a duplicate', async () => {
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_keep'),
+    ]);
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_keep',
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([]);
+  });
+
   it('does not cancel duplicate blocking subscriptions in dry-run mode', async () => {
     const stripe = createStripeWithSubscriptions([
       createUserSubscriptionFixture('sub_keep'),

@@ -26,6 +26,10 @@ export const OPERATIONAL_ALERT_KINDS = [
   // DEBT-501 item 1: the Stripe reconcile run stopped before its last page,
   // and nothing resumes it, so later rows go unrepaired.
   'stripe_reconcile_stopped_early',
+  // BUG-343: a customer holds, or held, a second live Stripe subscription. A
+  // Checkout completed beside another, the webhook kept the stored one over an
+  // entitled competitor, or the daily reconcile found duplicates.
+  'stripe_duplicate_subscription',
   // A scheduled GitHub check, the alert watcher among them, has stopped.
   'scheduled_checks_stopped',
   // The check that the scheduled checks run needs a person: GitHub refused

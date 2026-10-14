@@ -13,6 +13,7 @@ import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapter
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
 import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
@@ -208,6 +209,7 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
           stripe,
           priceIds,
           logger: new FakeLogger(),
+          operationalAlerts: new FakeOperationalAlerts(),
           now: () => new Date('2026-07-11T00:00:00.000Z'),
           listLocalSubscriptions: async () => [
             {
@@ -292,6 +294,7 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
         stripe,
         priceIds,
         logger: new FakeLogger(),
+        operationalAlerts: new FakeOperationalAlerts(),
         now: () => new Date('2026-07-11T00:00:00.000Z'),
         listLocalSubscriptions: async () => [
           {

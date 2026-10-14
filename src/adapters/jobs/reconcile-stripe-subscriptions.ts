@@ -352,7 +352,7 @@ export async function reconcileStripeSubscriptions(
           );
         }
 
-        return { ok: true as const };
+        return { ok: true as const, hadDuplicates: duplicateIds.length > 0 };
       } catch (error) {
         const message = toErrorMessage(error);
         deps.logger.error(
@@ -378,6 +378,19 @@ export async function reconcileStripeSubscriptions(
       !result.ok,
   );
   const updated = results.length - failures.length;
+
+  // BUG-343 option 5: one alert per page that found duplicates, dry run or
+  // not, since the duplicate is live until it is cancelled. The log line
+  // beside each says which customer.
+  const customersWithDuplicates = results.filter(
+    (result) => result.ok && result.hadDuplicates,
+  ).length;
+  if (customersWithDuplicates > 0) {
+    await deps.operationalAlerts.raise({
+      kind: 'stripe_duplicate_subscription',
+      count: customersWithDuplicates,
+    });
+  }
 
   return {
     scanned: rows.length,
