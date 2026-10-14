@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
@@ -27,9 +30,11 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
   const fixedNowMs = 1_700_000_000_000;
   let logger: FakeLogger;
+  let operationalAlerts: FakeOperationalAlerts;
 
   beforeEach(() => {
     logger = new FakeLogger();
+    operationalAlerts = new FakeOperationalAlerts();
   });
 
   function createFake(): FakeStripeCheckoutClient {
@@ -45,6 +50,7 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
       input: checkoutInput,
       priceIds,
       logger,
+      operationalAlerts,
       nowMs: () => fixedNowMs,
     });
   }
@@ -281,6 +287,38 @@ describe('createStripeCheckoutSession when a Checkout completes in flight', () =
         msg: 'Checkout session completed while another live subscription existed',
       }),
     );
+  });
+
+  // BUG-343 option 5.
+  it('raises a duplicate-subscription alert when the Session it would hand back completed beside another live subscription', async () => {
+    const stripe = createFake();
+    onRecheck(stripe, async () => {
+      stripe.seedSubscription({ id: 'sub_other', customer, status: 'active' });
+      const [created] = await openSessionIds(stripe);
+      if (created) completeCheckout(stripe, created, 'active');
+    });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('raises no alert when the Session completed during the re-check holds the only live subscription', async () => {
+    const stripe = createFake();
+    onRecheck(stripe, async () => {
+      const [created] = await openSessionIds(stripe);
+      if (created) completeCheckout(stripe, created, 'active');
+    });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(operationalAlerts.raised).toEqual([]);
   });
 
   it('still refuses with ALREADY_SUBSCRIBED, and logs an error, when the re-check cannot expire the Session', async () => {

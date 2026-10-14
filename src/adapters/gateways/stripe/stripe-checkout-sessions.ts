@@ -17,6 +17,7 @@ import type {
   TrialPaymentMethodSetupSessionInput,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import { MS_PER_SECOND } from '@/src/domain/services';
 import { createStripeConsentStateSignature } from './stripe-consent-state';
 import { callStripeWithRetry } from './stripe-retry';
@@ -855,11 +856,13 @@ async function refuseIfSubscriptionAppeared({
   input,
   session,
   logger,
+  operationalAlerts,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
   session: StripeCheckoutSession;
   logger: Logger;
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
 }): Promise<void> {
   let blocking: BlockingSubscription[];
   try {
@@ -910,6 +913,10 @@ async function refuseIfSubscriptionAppeared({
         { ...context, sessionSubscriptionId: ended.subscriptionId },
         'Checkout session completed while another live subscription existed',
       );
+      await operationalAlerts.raise({
+        kind: 'stripe_duplicate_subscription',
+        count: 1,
+      });
     } else {
       logger.warn(
         { ...context, sessionSubscriptionId: ended.subscriptionId },
@@ -950,6 +957,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
   stripe,
   input,
   logger,
+  operationalAlerts,
 }: {
   stripe: StripeClient;
   input: {
@@ -958,6 +966,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
     createdBefore?: Date | undefined;
   };
   logger: Logger;
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
 }): Promise<void> {
   const listContext = {
     externalCustomerId: input.externalCustomerId,
@@ -1020,6 +1029,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
         session.created === undefined ||
         session.created <= createdBeforeSeconds),
   );
+  let completedElsewhere = 0;
   for (const session of others) {
     const context = {
       externalCustomerId: input.externalCustomerId,
@@ -1047,6 +1057,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
       );
     }
     if (ended.status === 'complete') {
+      completedElsewhere += 1;
       logger.error(
         { ...context, sessionSubscriptionId: ended.subscriptionId },
         'Another subscription Checkout completed for the same customer',
@@ -1058,6 +1069,13 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
       );
     }
   }
+  // BUG-343 option 5: each is a second subscription, a person's to correct.
+  if (completedElsewhere > 0) {
+    await operationalAlerts.raise({
+      kind: 'stripe_duplicate_subscription',
+      count: completedElsewhere,
+    });
+  }
 }
 
 export async function createStripeCheckoutSession({
@@ -1065,12 +1083,14 @@ export async function createStripeCheckoutSession({
   input,
   priceIds,
   logger,
+  operationalAlerts,
   nowMs = Date.now,
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
   priceIds: StripePriceIds;
   logger: Logger;
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   nowMs?: (() => number) | undefined;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
@@ -1166,6 +1186,7 @@ export async function createStripeCheckoutSession({
           input,
           session: existingSession,
           logger,
+          operationalAlerts,
         });
         return { url: existingUrl };
       }
@@ -1455,6 +1476,7 @@ export async function createStripeCheckoutSession({
     input,
     session: canonicalRecoveredSession,
     logger,
+    operationalAlerts,
   });
 
   if (!canonicalRecoveredSession.url) {
