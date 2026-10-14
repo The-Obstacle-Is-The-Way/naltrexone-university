@@ -10,7 +10,9 @@
 
 ## Summary
 
-Next.js's September 30 security release fixed seven advisories in 16.3.8. Two more, one critical and one high, were held back and will ship in a later release. When they ship, the 7-day release-age gate (`minimumReleaseAge: 10080`) keeps them out of this repository for a week unless an exception is taken.
+Next.js's September 30 security release fixed seven advisories in 16.3.8. Two more, one critical and one high, were held back. They shipped in 16.4.1 on 2026-10-14, as GHSA-673q-mjm6-r5xr and GHSA-p3m5-59mp-jv5r. The 7-day release-age gate (`minimumReleaseAge: 10080`) would have kept 16.4.1 out of this repository for a week, so it shipped under the exact-version exceptions decided below.
+
+*Corrected 2026-10-14: the two held-back fixes shipped in 16.4.1; the summary no longer calls them pending.*
 
 Nothing here would have noticed that release. The seven September 30 advisories stayed out of GitHub's advisory database for a week, so Dependabot raised no alert for any of them until 2026-10-08, and one is still missing. This repository learned of the release only because CodeRabbit searched the web while reviewing #1409. On 2026-10-07 the owner delegated both decisions below: when a fix may skip the gate, and how to watch for advisories.
 
