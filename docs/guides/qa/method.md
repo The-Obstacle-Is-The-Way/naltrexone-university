@@ -69,7 +69,7 @@ Rules of engagement (restating the standing mandates):
 ## When procedures run
 
 1. **Per PR (touched surfaces):** run the procedure(s) covering the UI you changed; attach representative screenshots to the PR (this carries out `AGENTS.md`'s rule that a PR shows screenshots of any changed UI).
-2. **Gated runs:** the procedures under `docs/guides/qa/` whose header says `Promotion gate: yes`, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them ([DEBT-465](../../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03), 2026-10-03).
+2. **Gated runs:** the procedures under `docs/guides/qa/` whose header says `Promotion gate: yes`, against the dev preview, before the production content bootstrap and before a promotion (dev → main) that changes their flows. A promotion that leaves those flows unchanged does not run them (DEBT-465, 2026-10-03).
 3. **Post-deploy smoke:** the production-safe subset, against `addictionboards.com`.
 
 ## Lifecycle and promotion

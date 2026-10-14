@@ -125,4 +125,4 @@ When building or modifying a question-viewing context, verify:
 - [Question Rendering Architecture](../architecture/question-rendering.md) — All 6 viewing contexts, component inventory, state flows
 - [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) — Canonical correctness/explanation exposure timing rules
 - [Practice Engine Frontend Layer](../architecture/practice-engine.md#the-frontend-layer) — Routes, hook architecture, data flow
-- [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Spec that established the navigation zone model (Implemented)
+- SPEC-030 — Spec that established the navigation zone model (Implemented)

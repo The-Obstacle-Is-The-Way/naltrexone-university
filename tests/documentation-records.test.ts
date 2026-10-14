@@ -10,6 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
+  archiveDestinations,
   auditDocumentation,
   auditRecordLifecycle,
   type DocumentationAudit,
@@ -229,8 +230,6 @@ describe('records folder and ledger', () => {
         'See [the record](../records/debt-001-example.md#why).',
       'docs/policies/legal/privacy-policy.md':
         'Evidence: [DEBT-001](../../records/debt-001-example.md).',
-      'docs/_archive/debt/debt-000-old.md':
-        '[DEBT-001](../../records/debt-001-example.md)',
     };
     expect(
       Object.entries(files).flatMap(([file, contents]) =>
@@ -283,24 +282,102 @@ describe('records folder and ledger', () => {
     ]);
   });
 
-  it('allows asset folders in retired folders until the archive goes', () => {
-    expect(
-      audit({ 'docs/debt/assets/debt-477/review.md': '# Receipt' })
-        .retiredRegisterFiles,
-    ).toEqual([]);
+  // DEBT-518 deleted the archive and the asset folders only it linked; the
+  // ledger and pinned commits keep that history retrievable.
+  it.each([
+    'docs/_archive/debt/debt-001-example.md',
+    'docs/_archive/notes.md',
+    'docs/debt/assets/debt-477/review.md',
+    'docs/bugs/assets/bug-308/receipt.md',
+    'docs/audits/assets/external-audit-2026-10-06/notes.md',
+  ])('reports %s, recreated where the archive purge deleted', (file) => {
+    expect(audit({ [file]: '# Back again' }).retiredRegisterFiles).toEqual([
+      file,
+    ]);
   });
 
-  it('reports Markdown in a records subfolder, other than the legacy asset folders', () => {
+  it("reports Markdown in a records subfolder, other than DEBT-414's assets", () => {
     expect(
       audit({
         'docs/records/old/bug-950-x.md': '**Status:** Resolved',
         'docs/records/assets/bug-337/receipt.md': '# New asset folder',
+        'docs/records/assets/inventory-2026-09-21/verification.md':
+          '# Deleted with the archive',
         'docs/records/assets/debt-414/note.md': '# Legacy asset',
       }).strayRegisterFiles,
     ).toEqual([
       'docs/records/assets/bug-337/receipt.md',
+      'docs/records/assets/inventory-2026-09-21/verification.md',
       'docs/records/old/bug-950-x.md',
     ]);
+  });
+
+  it('reports links, branch URLs and code-span paths into the deleted archive', () => {
+    const contents = [
+      '[DEBT-001](../_archive/debt/debt-001-example.md)',
+      '![Screenshot](../debt/assets/debt-477/review.png)',
+      '[Branch](https://github.com/o/r/blob/dev/docs/_archive/debt/debt-001-example.md#why)',
+      'Read `docs/bugs/assets/bug-308/receipt.md`.',
+      'Or `docs/_archive/notes.md`, a file at the top of the archive.',
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/guides/example.md', contents).map(
+        ({ line, reference }) => `${line}:${reference}`,
+      ),
+    ).toEqual([
+      '1:../_archive/debt/debt-001-example.md',
+      '3:../debt/assets/debt-477/review.png',
+      '5:https://github.com/o/r/blob/dev/docs/_archive/debt/debt-001-example.md#why',
+      '7:docs/bugs/assets/bug-308/receipt.md',
+      '9:docs/_archive/notes.md',
+    ]);
+  });
+
+  it('permits commit-pinned history, folder names and prose', () => {
+    const contents = [
+      `[Pinned](https://github.com/o/r/blob/${'a'.repeat(40)}/docs/_archive/debt/debt-001-example.md)`,
+      `Offline: \`git show ${'b'.repeat(12)}:docs/_archive/debt/debt-001-example.md\`.`,
+      'The purge deleted `docs/_archive/` and `docs/debt/assets/**`.',
+      'A quoted learning named docs/_archive/debt/debt-476-x.md in prose.',
+    ].join('\n\n');
+    expect(archiveDestinations('docs/guides/example.md', contents)).toEqual([]);
+  });
+
+  it('reports an unpinned URL or a second path inside a code span', () => {
+    const contents = [
+      'Fetch `https://github.com/o/r/blob/main/docs/_archive/debt/x.md`.',
+      `Run \`git show ${'a'.repeat(12)}:docs/_archive/debt/a.md && cat docs/_archive/debt/b.md\`.`,
+      '[Receipt](https://github.com/o/r/blob/dev/docs/records/assets/inventory-2026-09-21/verification.md)',
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/guides/example.md', contents).map(
+        ({ line }) => line,
+      ),
+    ).toEqual([1, 3, 5]);
+  });
+
+  it('accepts only a URL whose commit is its own revision', () => {
+    const sha = 'b'.repeat(40);
+    const contents = [
+      `[Tree](https://github.com/o/r/tree/${sha}/docs/_archive/debt)`,
+      `[Raw](https://raw.githubusercontent.com/o/r/${sha}/docs/_archive/debt/x.md)`,
+      `[Disguised](https://github.com/o/r/blob/main/docs/_archive/debt/x.md?x=/blob/${sha}/)`,
+      `[Redirect](https://example.com/?next=https://github.com/o/r/blob/${sha}/docs/_archive/debt/x.md)`,
+    ].join('\n\n');
+    expect(
+      archiveDestinations('docs/guides/example.md', contents).map(
+        ({ line }) => line,
+      ),
+    ).toEqual([5, 7]);
+  });
+
+  it('permits the ledger its retrieval paths', () => {
+    expect(
+      archiveDestinations(
+        RECORDS.ledger,
+        'Registers: `docs/_archive/bugs/register-frozen-2026-10-05.md`.\n\n- BUG-001 · X · Resolved · 2026-10-01 · docs/_archive/bugs/bug-001-x.md',
+      ),
+    ).toEqual([]);
   });
 
   it('reports a ledger list item that is not a well-formed entry', () => {
@@ -560,9 +637,19 @@ describe('repository records', () => {
     expect(result.duplicateLedgerIds).toEqual([]);
   });
 
-  it.each(
-    [...files.keys()].filter((file) => !file.startsWith('docs/_archive/')),
-  )('cites records by ID rather than linking them in %s', (file) => {
-    expect(recordLinks(file, files.get(file) ?? '')).toEqual([]);
-  });
+  // One case per document, as for record links: a single case parsing every
+  // document ran past Vitest's 10 s limit under CI's coverage run.
+  it.each([...files.keys()])(
+    'points nowhere into the deleted archive except through a pinned commit or a ledger retrieval path in %s',
+    (file) => {
+      expect(archiveDestinations(file, files.get(file) ?? '')).toEqual([]);
+    },
+  );
+
+  it.each([...files.keys()])(
+    'cites records by ID rather than linking them in %s',
+    (file) => {
+      expect(recordLinks(file, files.get(file) ?? '')).toEqual([]);
+    },
+  );
 });

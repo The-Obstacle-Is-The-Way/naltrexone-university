@@ -375,7 +375,7 @@ concurrent request waits, then fails with `CONFLICT` (reason
 `ApplicationConflictReasons.ConcurrentRequestInProgress`). Follow those executable contracts rather than
 the former partial action list.
 
-**Rate limiting.** [SPEC-017's current-state inventory](../_archive/specs/spec-017-rate-limiting.md#current-state)
+**Rate limiting.** SPEC-017's current-state inventory
 holds the audited policy-to-operation table as recounted on 2026-09-20 (14 policies
 covering 18 limited operations); it predates the Clerk Backend API call limits, the
 checkout-success limit and the Resend webhook limit. [rate-limits.ts](../../src/adapters/shared/rate-limits.ts)

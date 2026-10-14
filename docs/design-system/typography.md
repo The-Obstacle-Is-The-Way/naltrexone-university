@@ -183,7 +183,7 @@ DEBT-283 resolved the previously audited 13-file / 19-occurrence supporting-copy
 
 ### Pipeline 2 (Content): Compliant
 
-All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violations in `feedback.tsx` were resolved by [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) (PR #179, 2026-03-07).
+All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violations in `feedback.tsx` were resolved by DEBT-282 (PR #179, 2026-03-07).
 
 | Call Site | Expected Tier | Actual className | Status |
 |-----------|--------------|-----------------|--------|

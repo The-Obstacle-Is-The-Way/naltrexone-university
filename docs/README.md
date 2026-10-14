@@ -27,7 +27,3 @@ Apply the test to the document’s primary purpose. Colocated READMEs/contracts 
 9. A list the code can answer, a snapshot or a receipt: the code, a pull-request description, or nowhere.
 
 **Names** are lowercase kebab-case. Only ADRs and records carry IDs. A living document has no dates or versions in its name or headings.
-
-## Still Moving
-
-DEBT-518 deletes the rest, with the owner's approval: `_archive/`, which the ledger covers, and the asset folders under `audits/`, `bugs/` and `debt/`, once their remaining live links (ADR-001, ADR-021 and the E2E guide) are repointed.

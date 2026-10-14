@@ -80,12 +80,12 @@ Our Stripe gateway refuses a new checkout when Stripe lists a blocking subscript
 
 SSOT alignment:
 
-- `docs/_archive/specs/spec-011-paywall.md` describes syncing subscription state on `/checkout/success`.
+- SPEC-011 (paywall) describes syncing subscription state on `/checkout/success`.
 
 ---
 
 ## References
 
 - Stripe: Webhooks are eventually consistent; deliveries are not guaranteed to be immediate and can be retried.
-- `docs/_archive/specs/spec-011-paywall.md`
-- `docs/_archive/audits/audit-003-external-integrations.md` (Stripe section)
+- SPEC-011 (paywall)
+- AUDIT-003 (external integrations; Stripe section)

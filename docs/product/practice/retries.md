@@ -195,9 +195,9 @@ Core retry lineage behavior remains implemented across DEBT-265, DEBT-266, and D
 - Observability events are emitted for retry submissions, review hydration outcomes, and mixed-id normalization.
 - `GetPreviousAttempt` mixed-id contract is hardened (deterministic rejection at controller + use case).
 - Session-review retry marker persistence policy is explicitly accepted as visit-scoped (Option A).
-- Exam-answer secrecy gates are enforced across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, `SubmitAnswer`, and repository-backed status projections. BUG-235/236/237 and BUG-239 closed the active-exam visibility sweep, implicit latest-attempt readers included. The archived BUG-180/181/185 and BUG-186/187/191/192/193/195 family remains the regression lineage.
+- Exam-answer secrecy gates are enforced across `GetPreviousAttempt`, `GetPracticeSessionReview`, `GetNextQuestion`, `SubmitAnswer`, and repository-backed status projections. BUG-235/236/237 and BUG-239 closed the active-exam visibility sweep, implicit latest-attempt readers included. The closed BUG-180/181/185 and BUG-186/187/191/192/193/195 family remains the regression lineage.
 
-Retry lineage is structurally in place and the secrecy contract is now enforced, but the archived bug family must remain an explicit regression target.
+Retry lineage is structurally in place and the secrecy contract is now enforced, but the closed bug family must remain an explicit regression target.
 
 ---
 
@@ -221,10 +221,10 @@ Retry lineage is structurally in place and the secrecy contract is now enforced,
 
 ## 11. Related
 
-- [DEBT-265](../../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md)
-- [DEBT-266](../../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md)
-- [DEBT-267](../../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md)
+- DEBT-265
+- DEBT-266
+- DEBT-267
 - [Question Rendering Architecture](../../architecture/question-rendering.md)
 - [Exam Answer Secrecy Policy](./exam-answer-secrecy.md)
-- [SPEC-034](../../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md)
-- [SPEC-036](../../_archive/specs/spec-036-bookmark-review-mode-alignment.md)
+- SPEC-034
+- SPEC-036

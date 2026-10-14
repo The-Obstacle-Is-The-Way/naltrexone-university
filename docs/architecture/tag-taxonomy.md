@@ -212,8 +212,8 @@ History question filters:
 ## 6) Related Files
 
 - [content-taxonomy.md](../product/content-taxonomy.md)
-- `docs/_archive/brainstorming/bs-024-tag-taxonomy-cleanup.md`
-- `docs/_archive/specs/spec-033-tag-taxonomy-migration.md`
+- BS-024 (tag taxonomy cleanup)
+- SPEC-033 (tag taxonomy migration)
 - `lib/content/draft-taxonomy.ts`
 - `lib/content/schemas.ts`
 - `scripts/draft-question-import.ts`

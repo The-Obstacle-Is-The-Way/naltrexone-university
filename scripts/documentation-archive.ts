@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import Markdown from 'react-markdown';
@@ -12,18 +12,6 @@ export const RECORDS = {
   index: 'docs/records/README.md',
   ledger: 'docs/records/closed.md',
   pattern: /^(?:bug|debt)-\d+.*\.md$/i,
-};
-
-// The registers that once kept their own folders. Their archived records keep
-// a disposition until the archive is deleted, and their old folders hold no
-// record or index any more.
-export const REGISTERS = {
-  debt: /^(?:debt|fe)-\d+.*\.md$/i,
-  bugs: /^bug-\d+.*\.md$/i,
-  specs: /^spec-\d+.*\.md$/i,
-  brainstorming: /^bs-\d+.*\.md$/i,
-  audits: /^audit-\d+.*\.md$/i,
-  qa: /^qa-\d+.*\.md$/i,
 };
 
 type MarkdownNode = {
@@ -52,7 +40,6 @@ export type DocumentationLink = {
 export type DocumentationAudit = {
   duplicates: string[];
   closedLive: string[];
-  missingArchiveDispositions: string[];
   invalidNow: string[];
   strayRegisterFiles: string[];
   retiredRegisterFiles: string[];
@@ -69,48 +56,32 @@ export type DocumentationAudit = {
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
   recordLinks: DocumentationLink[];
-  brokenArchive: DocumentationLink[];
-  repairableArchive: ArchiveLinkRepair[];
+  archiveDestinations: ArchiveDestination[];
   oversized: string[];
   counts: { register: string; live: number; archived: number }[];
 };
 
+export type ArchiveDestination = {
+  file: string;
+  line: number;
+  reference: string;
+};
+
 // An index lists open records and the current position; its budget keeps it
-// a list rather than a history. Frozen register history in the archive is
-// parsed whole by the link audit, so its budget bounds that audit's cost.
+// a list rather than a history.
 export const REGISTER_INDEX_BUDGET_BYTES = 32 * 1024;
 // The Now stanza, with its list, states the current position in a few lines.
 export const NOW_STANZA_BUDGET_BYTES = 2 * 1024;
 // A Verifying check is meant to happen soon; a far-off date is reported.
 const VERIFYING_HORIZON_DAYS = 90;
-export const REGISTER_ARCHIVE_BUDGET_BYTES = 256 * 1024;
 
 // A live record's status is one line; its detail belongs in the record body.
 export const STATUS_MAX_CHARACTERS = 200;
 
-function isRegister(name?: string): name is keyof typeof REGISTERS {
-  return name !== undefined && Object.hasOwn(REGISTERS, name);
-}
-
-function registerFileBudget(file: string): number | undefined {
-  const parts = file.split('/');
-  if (file === RECORDS.index) return REGISTER_INDEX_BUDGET_BYTES;
-  if (
-    parts.length === 4 &&
-    parts[0] === 'docs' &&
-    parts[1] === '_archive' &&
-    isRegister(parts[2]) &&
-    /^register-.*\.md$/.test(parts[3] ?? '')
-  )
-    return REGISTER_ARCHIVE_BUDGET_BYTES;
-  return undefined;
-}
-
 // Beside the records index only open records and the ledger belong: change
 // history lives in git, and a closed record is a ledger line. Records get no
-// asset folders; DEBT-414's predate that rule and go when it closes.
-const LEGACY_RECORD_ASSETS =
-  /^docs\/records\/assets\/(?:debt-414|inventory-2026-09-21|active-audit-2026-09-21)\//;
+// asset folders; DEBT-414's folder predates that rule and goes when it closes.
+const LEGACY_RECORD_ASSETS = /^docs\/records\/assets\/debt-414\//;
 
 function isStrayRecordsFile(file: string): boolean {
   if (!file.startsWith(`${RECORDS.directory}/`)) return false;
@@ -125,28 +96,35 @@ function isStrayRecordsFile(file: string): boolean {
 
 // Markdown left, at any depth, in an old register folder or a folder the
 // ADR-023 layout retired missed the move. A clean merge of a branch that added
-// a guide there does not relocate it. Register asset folders stay until the
-// archive that links them is deleted.
-const RETIRED_LAYOUT_FOLDERS = [
+// a guide there does not relocate it. The archive and every register asset
+// folder were deleted (DEBT-518): the ledger and pinned commits keep that
+// history, so Markdown recreated there is reported.
+const RETIRED_FOLDERS = [
+  '_archive',
+  'audits',
+  'brainstorming',
+  'bugs',
+  'content',
+  'debt',
   'dev',
   'frontend',
+  'legal',
   'practice-engine',
-  'content',
+  'qa',
+  'security',
+  'specs',
   'tooling',
   'vendor-docs',
-  'specs',
-  'legal',
-  'security',
 ];
 
-function isRetiredRegisterFile(file: string): boolean {
-  const [docs, register, name, ...rest] = file.split('/');
-  if (docs !== 'docs' || name === undefined || !file.endsWith('.md')) {
-    return false;
-  }
-  if (RETIRED_LAYOUT_FOLDERS.includes(register ?? '')) return true;
-  if (!isRegister(register)) return false;
-  return !(name === 'assets' && rest.length > 0);
+function isRetiredFolderFile(file: string): boolean {
+  const [docs, folder, name] = file.split('/');
+  return (
+    docs === 'docs' &&
+    name !== undefined &&
+    file.endsWith('.md') &&
+    RETIRED_FOLDERS.includes(folder ?? '')
+  );
 }
 
 // A ledger line: ID · title · disposition · date · path, then optionally the
@@ -176,12 +154,6 @@ function canonicalId(value: string): string | undefined {
   return `${prefix.toUpperCase()}-${Number(digits)}${letter.toLowerCase()}`;
 }
 
-type ArchiveLinkRepair = DocumentationLink & {
-  replacementTarget: string;
-  replacementUrl: string;
-  kind: 'depth' | 'later-archive';
-};
-
 function decodedLinkPath(url: string): string | undefined {
   try {
     return decodeURIComponent(url.split(/[?#]/)[0] ?? '');
@@ -189,53 +161,6 @@ function decodedLinkPath(url: string): string | undefined {
     // Malformed encoding is an unresolvable link, never a guessed raw path.
     return undefined;
   }
-}
-
-export function archiveLinkRepairs(
-  links: DocumentationLink[],
-  exists: (file: string) => boolean,
-): ArchiveLinkRepair[] {
-  return links.flatMap((link) => {
-    if (!link.file.startsWith('docs/_archive/')) return [];
-    const destination = decodedLinkPath(link.url);
-    if (destination === undefined) return [];
-    const originalFile = link.file.replace('docs/_archive/', 'docs/');
-    const originalTarget = path.posix.normalize(
-      path.posix.join(path.posix.dirname(originalFile), destination),
-    );
-    const archived = (target: string) =>
-      target.replace(
-        /^docs\/(debt|bugs|specs|brainstorming|audits|qa)\//,
-        'docs/_archive/$1/',
-      );
-    const candidates = [
-      ...new Set([
-        originalTarget,
-        archived(originalTarget),
-        archived(link.target),
-      ]),
-    ].filter(
-      (target) =>
-        target !== '..' && !target.startsWith('../') && exists(target),
-    );
-    const target = candidates[0];
-    // No filename guessing: ambiguous and missing historical targets stay reported.
-    if (candidates.length !== 1 || !target) return [];
-    const suffix = link.url.match(/[?#].*$/)?.[0] ?? '';
-    return [
-      {
-        ...link,
-        replacementTarget: target,
-        replacementUrl:
-          path.posix
-            .relative(path.posix.dirname(link.file), target)
-            .split('/')
-            .map(encodeURIComponent)
-            .join('/') + suffix,
-        kind: target === originalTarget ? 'depth' : 'later-archive',
-      },
-    ];
-  });
 }
 
 function recordIdentity(value: string): string | undefined {
@@ -254,18 +179,21 @@ export function documentationLinks(
 }
 
 type StanzaLabel = { text: string; start: number; end: number };
-
-// One parse yields a file's links and its top-level labelled stanzas.
-function scanMarkdown(
-  file: string,
-  contents: string,
-): {
+type CodeSpan = { value: string; line: number };
+type MarkdownScan = {
   links: DocumentationLink[];
   absoluteLinks: DocumentationLink[];
+  codeSpans: CodeSpan[];
   labels: StanzaLabel[];
-} {
+};
+
+// One parse yields a file's links, its code spans and its top-level labelled
+// stanzas. The full audit parses each file once, apart from the records
+// index, which the lifecycle check parses a second time (BUG-339).
+function scanMarkdown(file: string, contents: string): MarkdownScan {
   const links: DocumentationLink[] = [];
   const absoluteLinks: DocumentationLink[] = [];
+  const codeSpans: CodeSpan[] = [];
   const labels: StanzaLabel[] = [];
   // Use the installed first-party application Markdown seam, including GFM
   // tables. Code examples are not links; definitions cover reference links.
@@ -354,6 +282,11 @@ function scanMarkdown(
               end: node.position?.end.offset ?? 0,
             });
           }
+          if (node.type === 'inlineCode' && node.value)
+            codeSpans.push({
+              value: node.value,
+              line: node.position?.start.line ?? 1,
+            });
           for (const child of node.children ?? [])
             visit(child, table, identity);
         }
@@ -361,7 +294,7 @@ function scanMarkdown(
       },
     ],
   });
-  return { links, absoluteLinks, labels };
+  return { links, absoluteLinks, codeSpans, labels };
 }
 
 function recordStatus(file: string, contents: string): string {
@@ -460,7 +393,6 @@ export function auditRecordLifecycle(
   const result: DocumentationAudit = {
     duplicates: [],
     closedLive: [],
-    missingArchiveDispositions: [],
     invalidNow: [],
     strayRegisterFiles: [],
     retiredRegisterFiles: [],
@@ -477,8 +409,7 @@ export function auditRecordLifecycle(
     missingRowTargets: [],
     brokenLive: [],
     recordLinks: [],
-    brokenArchive: [],
-    repairableArchive: [],
+    archiveDestinations: [],
     oversized: [],
     counts: [],
   };
@@ -487,11 +418,13 @@ export function auditRecordLifecycle(
   if (files.has(RECORDS.index) && !queueReviewDue(index))
     result.invalidQueueReview.push(RECORDS.index);
   for (const [file, contents] of files) {
-    const budget = registerFileBudget(file);
-    if (budget !== undefined && Buffer.byteLength(contents, 'utf8') > budget)
+    if (
+      file === RECORDS.index &&
+      Buffer.byteLength(contents, 'utf8') > REGISTER_INDEX_BUDGET_BYTES
+    )
       result.oversized.push(file);
     if (isStrayRecordsFile(file)) result.strayRegisterFiles.push(file);
-    if (isRetiredRegisterFile(file)) result.retiredRegisterFiles.push(file);
+    if (isRetiredFolderFile(file)) result.retiredRegisterFiles.push(file);
   }
 
   // The index states the current position in one Now stanza, replaced in
@@ -547,16 +480,6 @@ export function auditRecordLifecycle(
     ledgerIds.map((id) => canonicalId(id) ?? id.toUpperCase()),
   );
   const idOf = (file: string) => canonicalId(path.posix.basename(file)) ?? file;
-  for (const [register, pattern] of Object.entries(REGISTERS)) {
-    const archived = inFolder(`docs/_archive/${register}`, pattern);
-    for (const record of archived) {
-      closedIds.add(idOf(record));
-      const status = recordStatus(record, files.get(record) ?? '');
-      if (!CLOSED_STATUS.test(status) && !HISTORICAL_DISPOSITION.test(status))
-        result.missingArchiveDispositions.push(record);
-    }
-    result.counts.push({ register, live: 0, archived: archived.length });
-  }
 
   const live = inFolder(RECORDS.directory, RECORDS.pattern);
   const rows = scan.links.filter((link) => link.inTable);
@@ -633,7 +556,14 @@ export function brokenDocumentationLinks(
   contents: string,
   exists: (file: string) => boolean,
 ): DocumentationLink[] {
-  return documentationLinks(file, contents).filter(
+  return brokenLinksIn(scanMarkdown(file, contents), exists);
+}
+
+function brokenLinksIn(
+  scan: MarkdownScan,
+  exists: (file: string) => boolean,
+): DocumentationLink[] {
+  return scan.links.filter(
     (link) =>
       link.invalidEncoding ||
       link.target === '..' ||
@@ -647,14 +577,22 @@ export function brokenDocumentationLinks(
 // breaks the same way, unless it pins a commit.
 const ABSOLUTE_RECORD_LINK =
   /docs\/records\/(?:bug|debt)-\d+[^/?#]*\.md(?:[?#]|$)/i;
-const PINNED_COMMIT = /\/blob\/[0-9a-f]{40}\//i;
+// A GitHub URL is pinned only when its own revision is a full commit.
+const PINNED_URL =
+  /^https:\/\/(?:github\.com\/[^/]+\/[^/]+\/(?:blob|tree|raw)|raw\.githubusercontent\.com\/[^/]+\/[^/]+)\/[0-9a-f]{40}\//i;
 
 export function recordLinks(
   file: string,
   contents: string,
 ): DocumentationLink[] {
-  if (file === RECORDS.index || file.startsWith('docs/_archive/')) return [];
-  const { links, absoluteLinks } = scanMarkdown(file, contents);
+  return recordLinksIn(file, scanMarkdown(file, contents));
+}
+
+function recordLinksIn(
+  file: string,
+  { links, absoluteLinks }: MarkdownScan,
+): DocumentationLink[] {
+  if (file === RECORDS.index) return [];
   return [
     ...links.filter(
       (link) =>
@@ -663,9 +601,60 @@ export function recordLinks(
     ),
     ...absoluteLinks.filter(
       (link) =>
-        ABSOLUTE_RECORD_LINK.test(link.url) && !PINNED_COMMIT.test(link.url),
+        ABSOLUTE_RECORD_LINK.test(link.url) && !PINNED_URL.test(link.url),
     ),
   ].sort((a, b) => a.start - b.start);
+}
+
+// The archive purge deleted these folders (DEBT-518). A live document reaches
+// that history through the ledger's IDs or a URL pinned to a commit, never a
+// path that a branch or a recreated file could answer. Only destinations are
+// checked: a link, or a file path in a code span. Prose may name the folders.
+const DELETED_FOLDERS =
+  '(?:_archive|(?:bugs|debt|audits)/assets|records/assets/(?:inventory|active-audit)-2026-09-21)';
+const DELETED_FOLDER = new RegExp(`^docs/${DELETED_FOLDERS}/`);
+const DELETED_FOLDER_IN_URL = new RegExp(`/docs/${DELETED_FOLDERS}/`);
+// A path below a deleted folder. The folder's bare name, and a glob over it
+// such as `docs/_archive/**`, are not destinations.
+const DELETED_FILE =
+  /(?<![\w-])docs\/(?:_archive\/|(?:bugs|debt|audits)\/assets\/|records\/assets\/(?:inventory|active-audit)-2026-09-21\/)[\w.-]/g;
+// What pins a path in a code span: a commit URL's revision, or `<commit>:` as
+// `git show` takes it.
+const PINNED_BEFORE =
+  /(?:\/(?:blob|tree|raw)\/[0-9a-f]{40}\/|raw\.githubusercontent\.com\/[^/\s]+\/[^/\s]+\/[0-9a-f]{40}\/|\b[0-9a-f]{7,40}:)$/i;
+
+function namesUnpinnedDeletedFile(text: string): boolean {
+  return [...text.matchAll(DELETED_FILE)].some(
+    (match) => !PINNED_BEFORE.test(text.slice(0, match.index)),
+  );
+}
+
+export function archiveDestinations(
+  file: string,
+  contents: string,
+): ArchiveDestination[] {
+  return archiveDestinationsIn(file, scanMarkdown(file, contents));
+}
+
+function archiveDestinationsIn(
+  file: string,
+  { links, absoluteLinks, codeSpans }: MarkdownScan,
+): ArchiveDestination[] {
+  if (file === RECORDS.ledger) return [];
+  return [
+    ...links
+      .filter((link) => DELETED_FOLDER.test(link.target))
+      .map((link) => ({ file, line: link.line, reference: link.url })),
+    ...absoluteLinks
+      .filter(
+        (link) =>
+          DELETED_FOLDER_IN_URL.test(link.url) && !PINNED_URL.test(link.url),
+      )
+      .map((link) => ({ file, line: link.line, reference: link.url })),
+    ...codeSpans
+      .filter((span) => namesUnpinnedDeletedFile(span.value))
+      .map((span) => ({ file, line: span.line, reference: span.value })),
+  ].sort((a, b) => a.line - b.line);
 }
 
 export function auditDocumentation(
@@ -674,68 +663,12 @@ export function auditDocumentation(
 ): DocumentationAudit {
   const result = auditRecordLifecycle(files, exists);
   for (const [file, contents] of files) {
-    result.recordLinks.push(...recordLinks(file, contents));
-    for (const link of brokenDocumentationLinks(file, contents, exists)) {
-      const list = link.file.startsWith('docs/_archive/')
-        ? result.brokenArchive
-        : result.brokenLive;
-      list.push(link);
-    }
+    const scan = scanMarkdown(file, contents);
+    result.recordLinks.push(...recordLinksIn(file, scan));
+    result.archiveDestinations.push(...archiveDestinationsIn(file, scan));
+    result.brokenLive.push(...brokenLinksIn(scan, exists));
   }
-  result.repairableArchive = archiveLinkRepairs(result.brokenArchive, exists);
   return result;
-}
-
-export function repairArchiveLinks(
-  root: string,
-  repairs: ArchiveLinkRepair[],
-): void {
-  const edits = new Map<string, ArchiveLinkRepair[]>();
-  for (const repair of repairs) {
-    const fileEdits = edits.get(repair.file) ?? [];
-    fileEdits.push(repair);
-    edits.set(repair.file, fileEdits);
-  }
-  const rewritten = new Map<string, string>();
-  for (const [file, fileEdits] of edits) {
-    const original = readFileSync(path.join(root, file), 'utf8');
-    let contents = original;
-    for (const repair of fileEdits.toSorted((a, b) => b.start - a.start)) {
-      const span = original.slice(repair.start, repair.end);
-      const offset = span.lastIndexOf(repair.url);
-      if (offset < 0)
-        throw new Error(`Cannot safely rewrite ${file}:${repair.line}`);
-      const start = repair.start + offset;
-      contents =
-        contents.slice(0, start) +
-        repair.replacementUrl +
-        contents.slice(start + repair.url.length);
-    }
-    const expected = documentationLinks(file, original).map(
-      (link) =>
-        fileEdits.find((repair) => repair.start === link.start)
-          ?.replacementUrl ?? link.url,
-    );
-    const actual = documentationLinks(file, contents);
-    if (
-      actual.length !== expected.length ||
-      actual.some((link, i) => link.url !== expected[i])
-    )
-      throw new Error(
-        `Cannot safely rewrite ${file}: Markdown destinations changed unexpectedly`,
-      );
-    for (const repair of fileEdits) {
-      if (!existsSync(path.join(root, repair.replacementTarget)))
-        throw new Error(
-          `Repair target disappeared: ${repair.replacementTarget}`,
-        );
-    }
-    rewritten.set(file, contents);
-  }
-  // Validate every planned rewrite before any write; unsupported syntax cannot
-  // leave a partially repaired batch. Write failures still fail the command.
-  for (const [file, contents] of rewritten)
-    writeFileSync(path.join(root, file), contents);
 }
 
 // Files .gitignore excludes, such as local backups of question drafts, are not
@@ -773,8 +706,8 @@ function gitIgnored(root: string, names: readonly string[]): string[] {
 
 export function readDocumentationFiles(root: string): Map<string, string> {
   // Repository-authored documentation, not vendored skill packages or build
-  // artifacts. Numbered records are direct children of their register folder;
-  // indexes, templates, assets, living guides and ADRs are not open records.
+  // artifacts. Open records are direct children of the records folder; its
+  // index, the ledger, assets, living guides and ADRs are not open records.
   const names = globSync(
     [
       'docs/**/*.md',
@@ -813,18 +746,12 @@ export function readDocumentation(root: string): DocumentationAudit {
 export function runDocumentationCommand(
   root: string,
   report: (json: string) => void,
-  args: readonly string[] = [],
 ): number {
-  let result = readDocumentation(root);
-  if (args.includes('--repair-archive')) {
-    repairArchiveLinks(root, result.repairableArchive);
-    result = readDocumentation(root);
-  }
+  const result = readDocumentation(root);
   report(JSON.stringify(result, null, 2));
   return [
     result.duplicates,
     result.closedLive,
-    result.missingArchiveDispositions,
     result.invalidNow,
     result.strayRegisterFiles,
     result.retiredRegisterFiles,
@@ -839,9 +766,8 @@ export function runDocumentationCommand(
     result.missingRowTargets,
     result.brokenLive,
     result.recordLinks,
+    result.archiveDestinations,
     result.oversized,
-    result.repairableArchive,
-    result.brokenArchive.filter((link) => link.invalidEncoding),
   ].some((issues) => issues.length > 0)
     ? 1
     : 0;
@@ -851,9 +777,5 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  process.exitCode = runDocumentationCommand(
-    process.cwd(),
-    console.log,
-    process.argv.slice(2),
-  );
+  process.exitCode = runDocumentationCommand(process.cwd(), console.log);
 }

@@ -172,4 +172,4 @@ The fix for all of these is the same: **shuffle before selecting**. Repositories
 | [Architecture Layers](../../architecture/practice-engine.md) | Domain service inventory including shuffle and selection |
 | [Content Pipeline](../../architecture/content-pipeline.md) | How content batch structure creates DB insertion order |
 | [Retry Logic](./retries.md) | Reattempt semantics (ordering is independent of retry provenance) |
-| [BS-038](../../_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md) | Original audit that identified the ordering gap |
+| BS-038 | Original audit that identified the ordering gap |

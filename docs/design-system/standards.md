@@ -894,14 +894,13 @@ Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageMode
 | `usePracticeSessionQuestionFlow` | 449 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
 | `useQuestionFlowCore` | 290 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
-Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/design-system/contrast.md`.
+Contrast compliance (WCAG AA) is governed by `docs/design-system/contrast.md`; BS-042's audit found the gaps, and DEBT-279 resolved them.
 
 ### P3 — Fix as encountered
 
 | ID | Summary | File(s) |
 |----|---------|---------|
 | — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/design-system/pattern-registry.md` |
-| — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
 
 ---
 

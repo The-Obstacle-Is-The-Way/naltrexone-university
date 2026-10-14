@@ -11,16 +11,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
-  archiveLinkRepairs,
   auditDocumentation,
   auditRecordLifecycle,
   brokenDocumentationLinks,
   type DocumentationAudit,
   RECORDS,
-  REGISTER_ARCHIVE_BUDGET_BYTES,
   readDocumentation,
   readDocumentationFiles,
-  repairArchiveLinks,
   runDocumentationCommand,
 } from '../scripts/documentation-archive';
 
@@ -30,39 +27,19 @@ function audit(files: Record<string, string>) {
   );
 }
 
-function runArchiveCommand(root: string, args: string[] = []) {
+function runArchiveCommand(root: string) {
   return spawnSync(
     process.execPath,
     [
       '--import',
       import.meta.resolve('tsx'),
       path.resolve('scripts/documentation-archive.ts'),
-      ...args,
     ],
     { cwd: root, encoding: 'utf8', timeout: 14_000 },
   );
 }
 
 describe('documentation archive convention', () => {
-  it('reports a live/archive duplicate even when the live file is a pointer', () => {
-    expect(
-      audit({
-        'docs/records/debt-001-example.md': '# Archived pointer',
-        'docs/_archive/debt/debt-001-example.md': '# Canonical record',
-      }).duplicates,
-    ).toEqual(['docs/records/debt-001-example.md']);
-  });
-
-  it('detects the same numbered record after its title changes', () => {
-    expect(
-      audit({
-        'docs/records/debt-001-old-title.md': '# Active copy',
-        'docs/_archive/debt/debt-001-new-title.md': '# Archived copy',
-        'docs/records/bug-001-unrelated.md': '# Different record',
-      }).duplicates,
-    ).toEqual(['docs/records/debt-001-old-title.md']);
-  });
-
   it('does not accept an extra parent segment just because a file exists outside the repository', () => {
     expect(
       audit({
@@ -113,66 +90,13 @@ describe('documentation archive convention', () => {
     ).toEqual(['docs/records/debt-001-example.md']);
   });
 
-  it.each(['Active', 'Open', 'Ready', 'In Progress', 'Unclassified', ''])(
-    'reports an archived record without a recognized disposition: %s',
-    (status) => {
-      expect(
-        audit({
-          'docs/_archive/debt/debt-001-example.md': status
-            ? `**Status:** ${status}`
-            : '# No metadata',
-        }),
-      ).toMatchObject({
-        missingArchiveDispositions: ['docs/_archive/debt/debt-001-example.md'],
-      });
-    },
-  );
-
-  it.each([
-    'Resolved',
-    '✅ RESOLVED',
-    'Archived',
-    'Implemented',
-    'Closed',
-    'Complete (MVP)',
-    'Completed',
-    'Fixed',
-    'Fully Addressed',
-    'Deferred',
-    'Invalidated (false positive)',
-    'Superseded',
-    'Decided',
-    'Decomposed',
-    'Accepted risk',
-    'Parked',
-    'Won’t Fix',
-    'Reclassified',
-  ])('accepts the preserved archived disposition %s', (status) => {
-    expect(
-      audit({
-        'docs/_archive/debt/debt-001-example.md': `**Status:** ${status}`,
-      }),
-    ).toMatchObject({ missingArchiveDispositions: [] });
-  });
-
-  it('accepts an archived Resolution State without rewriting historical metadata', () => {
-    expect(
-      audit({
-        'docs/_archive/debt/debt-001-example.md':
-          '**Resolution State:** Fixed in PR #289',
-      }),
-    ).toMatchObject({ missingArchiveDispositions: [] });
-  });
-
   it('uses the current status rather than a later historical field', () => {
     expect(
       audit({
-        'docs/_archive/debt/debt-001-example.md':
+        'docs/records/debt-001-example.md':
           '**Status:** Open — earlier slice resolved\n\n**Resolution State:** Fixed previously',
-      }),
-    ).toMatchObject({
-      missingArchiveDispositions: ['docs/_archive/debt/debt-001-example.md'],
-    });
+      }).closedLive,
+    ).toEqual([]);
   });
 
   // Every form a CommonMark code block can take, so the audit's fast path
@@ -189,29 +113,24 @@ describe('documentation archive convention', () => {
     );
   });
 
-  it.each([
-    'docs/records/debt-001-example.md',
-    'docs/_archive/debt/debt-001-example.md',
-  ])(
-    'fails closed when the first status field in %s is a fenced example',
-    (file) => {
-      expect(() =>
-        audit({
-          [file]: '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
-        }),
-      ).toThrow(
-        `Status metadata inside a code example: ${file}; put the record disposition before examples`,
-      );
-    },
-  );
+  it('fails closed when the first status field is a fenced example', () => {
+    const file = 'docs/records/debt-001-example.md';
+    expect(() =>
+      audit({
+        [file]: '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
+      }),
+    ).toThrow(
+      `Status metadata inside a code example: ${file}; put the record disposition before examples`,
+    );
+  });
 
-  it('accepts historical metadata after an unrelated code block', () => {
+  it('reads the status after an unrelated code block', () => {
+    const file = 'docs/records/debt-001-example.md';
     expect(
       audit({
-        'docs/_archive/debt/debt-001-example.md':
-          '```ts\nconst example = true;\n```\n\n**Status:** Resolved',
-      }),
-    ).toMatchObject({ missingArchiveDispositions: [] });
+        [file]: '```ts\nconst example = true;\n```\n\n**Status:** Resolved',
+      }).closedLive,
+    ).toEqual([file]);
   });
 
   it('reports a missing register-row destination', () => {
@@ -237,9 +156,9 @@ describe('documentation archive convention', () => {
     expect(
       audit({
         'docs/records/debt-044-open.md': '# Open\n\n**Status:** Open',
-        'docs/_archive/debt/debt-042-closed.md': '# Closed',
+        'docs/records/debt-042-open.md': '# Open\n\n**Status:** Open',
         'docs/records/README.md':
-          '## Waiting\n\n| ID | Notes |\n| --- | --- |\n| [DEBT-042](../_archive/debt/debt-042-closed.md) | Residual [DEBT-044](./debt-044-open.md) |',
+          '## Waiting\n\n| ID | Notes |\n| --- | --- |\n| [DEBT-042](./debt-042-open.md) | Residual [DEBT-044](./debt-044-open.md) |',
       }).missingLiveRows,
     ).toEqual(['docs/records/debt-044-open.md']);
   });
@@ -251,16 +170,6 @@ describe('documentation archive convention', () => {
         'docs/records/README.md':
           '| ID | Title |\n| --- | --- |\n| DEBT-001 | [Debt](./debt-001-open.md) |',
       }).missingLiveRows,
-    ).toEqual([]);
-  });
-
-  it('accepts a real row with a working archived destination', () => {
-    expect(
-      audit({
-        'docs/records/README.md':
-          '| ID | Title |\n| --- | --- |\n| [DEBT-001](../_archive/debt/debt-001-example.md) | Done |',
-        'docs/_archive/debt/debt-001-example.md': '# Example',
-      }).missingRowTargets,
     ).toEqual([]);
   });
 
@@ -298,31 +207,20 @@ describe('documentation archive convention', () => {
     },
   );
 
-  it('keeps historical unresolvable archive links separate from live failures', () => {
+  it('reports malformed percent encoding even when a raw-path file exists', () => {
+    const file = 'docs/guide.md';
     const result = audit({
-      'docs/_archive/bugs/bug-001-example.md': '[Removed](../../../removed.ts)',
+      [file]: '[Malformed](./assets/100%.png)',
+      'docs/assets/100%.png': 'asset',
     });
-    expect(result.brokenLive).toEqual([]);
-    expect(result.brokenArchive).toHaveLength(1);
+    expect(result.brokenLive).toEqual([
+      expect.objectContaining({
+        file,
+        url: './assets/100%.png',
+        invalidEncoding: true,
+      }),
+    ]);
   });
-
-  it.each(['docs/guide.md', 'docs/_archive/bugs/bug-001-example.md'])(
-    'reports malformed percent encoding in %s even when a raw-path file exists',
-    (file) => {
-      const result = audit({
-        [file]: '[Malformed](./assets/100%.png)',
-        [path.posix.join(path.posix.dirname(file), 'assets/100%.png')]: 'asset',
-      });
-      expect([...result.brokenLive, ...result.brokenArchive]).toEqual([
-        expect.objectContaining({
-          file,
-          url: './assets/100%.png',
-          invalidEncoding: true,
-        }),
-      ]);
-      expect(result.repairableArchive).toEqual([]);
-    },
-  );
 
   it('reports malformed encoding in a register row instead of crashing', () => {
     expect(
@@ -332,21 +230,6 @@ describe('documentation archive convention', () => {
         'docs/records/bug-001-100%.md': '# Open record',
       }).missingRowTargets,
     ).toEqual(['docs/records/README.md:3 -> docs/records/bug-001-100%.md']);
-  });
-
-  it('does not offer archive repair for a broken link in a live record', () => {
-    const files = {
-      'docs/records/bug-001-example.md':
-        '[Moved](../specs/spec-001-example.md)',
-      'docs/_archive/specs/spec-001-example.md': '# Archived target',
-    };
-    const result = audit(files);
-    expect(result.brokenLive).toHaveLength(1);
-    expect(
-      archiveLinkRepairs(result.brokenLive, (file) =>
-        Object.hasOwn(files, file),
-      ),
-    ).toEqual([]);
   });
 });
 
@@ -386,18 +269,6 @@ describe('documentation archive command', () => {
       '**Status:** Open',
     ],
     [
-      'missing archived disposition',
-      'docs/_archive/debt/debt-001-example.md',
-      '# No disposition',
-      '**Status:** Resolved',
-    ],
-    [
-      'open archived',
-      'docs/_archive/debt/debt-001-example.md',
-      '**Status:** Open',
-      '**Status:** Deferred',
-    ],
-    [
       'duplicate Now',
       'docs/records/README.md',
       '**Now** — A\n\n**Now** — B',
@@ -422,6 +293,12 @@ describe('documentation archive command', () => {
       `**Status:** Open — ${'x'.repeat(200)}`,
       '**Status:** Open — short',
     ],
+    [
+      'a branch URL into the deleted archive',
+      'docs/guides/example.md',
+      '[Branch](https://github.com/o/r/blob/dev/docs/_archive/bugs/bug-001-x.md)',
+      `[Pinned](https://github.com/o/r/blob/${'a'.repeat(40)}/docs/_archive/bugs/bug-001-x.md)`,
+    ],
   ])(
     'fails the command solely for %s and passes after correction',
     (_kind, file, before, after) => {
@@ -441,8 +318,6 @@ describe('documentation archive command', () => {
         missingLiveRows: [],
         missingRowTargets: [],
         brokenLive: [],
-        brokenArchive: [],
-        repairableArchive: [],
       });
       writeFileSync(
         path.join(root, file),
@@ -455,207 +330,32 @@ describe('documentation archive command', () => {
   it('exits nonzero with a diagnostic for ambiguous fenced status metadata', () => {
     const root = fixture();
     populate(root, {
-      'docs/_archive/debt/debt-001-example.md':
+      'docs/records/debt-001-example.md':
         '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
     });
     const child = runArchiveCommand(root);
     expect(child.error).toBeUndefined();
     expect(child.status).toBe(1);
     expect(child.stderr).toContain(
-      'Status metadata inside a code example: docs/_archive/debt/debt-001-example.md',
+      'Status metadata inside a code example: docs/records/debt-001-example.md',
     );
   });
 
-  it('reports JSON and does not repair without the explicit command argument', () => {
+  it('reports malformed encoding as a failing CLI result without a crash or rewrite', () => {
     const root = fixture();
-    const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '**Status:** Resolved\n\n[Source](../../src/example.ts)';
-    populate(root, { [file]: original, 'src/example.ts': 'export {};' });
-    const output: string[] = [];
-    expect(runDocumentationCommand(root, (json) => output.push(json), [])).toBe(
-      1,
-    );
-    expect(typeof output[0]).toBe('string');
-    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
-  });
-
-  it.each(['docs/guide.md', 'docs/_archive/bugs/bug-001-example.md'])(
-    'reports malformed encoding in %s as a failing CLI result without a crash or rewrite',
-    (file) => {
-      const root = fixture();
-      const original = '**Status:** Resolved\n\n[Malformed](./assets/100%.png)';
-      populate(root, { [file]: original });
-      const child = runArchiveCommand(root, ['--repair-archive']);
-      expect(child.error).toBeUndefined();
-      expect(child.stderr).toBe('');
-      expect(child.status).toBe(1);
-      const result = JSON.parse(child.stdout);
-      expect([...result.brokenLive, ...result.brokenArchive]).toEqual([
-        expect.objectContaining({
-          url: './assets/100%.png',
-          invalidEncoding: true,
-        }),
-      ]);
-      expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
-    },
-  );
-
-  it('refuses the entire batch if a previously classified target disappears', () => {
-    const root = fixture();
-    const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '**Status:** Resolved\n\n[Source](../../src/example.ts)';
-    populate(root, { [file]: original, 'src/example.ts': 'export {};' });
-    const repairs = readDocumentation(root).repairableArchive;
-    rmSync(path.join(root, 'src/example.ts'));
-    expect(() => repairArchiveLinks(root, repairs)).toThrow(
-      'Repair target disappeared',
-    );
-    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
-  });
-
-  it.each([
-    ['depth', '../../src/example.ts', 'src/example.ts'],
-    [
-      'later archive',
-      '../../debt/debt-001-example.md',
-      'docs/_archive/debt/debt-001-example.md',
-    ],
-  ])('exits nonzero for a provable %s archive break', (_kind, url, target) => {
-    const root = fixture();
-    populate(root, {
-      'docs/_archive/bugs/bug-001-example.md': `**Status:** Resolved\n\n[Target](${url})`,
-      [target]: '# Existing target\n\n**Status:** Resolved',
-    });
-    expect(runDocumentationCommand(root, () => {})).toBe(1);
-    expect(runArchiveCommand(root).status).toBe(1);
-  });
-
-  it.each(['function', 'CLI'])(
-    'repairs only destinations and preserves historical text through the %s',
-    (entrypoint) => {
-      const root = fixture();
-      const file = 'docs/_archive/bugs/bug-001-example.md';
-      const original = [
-        '# Historical record',
-        '**Status:** Resolved',
-        '[Source](../../src/example.ts#L7)',
-        '[Later](../../debt/debt-001-example.md?view=raw#receipt)',
-        '![Asset](../../docs/assets/example.png)',
-        '[Already correct](../../../src/existing.ts)',
-        '[Reference][source]',
-        '',
-        '[source]: <../../src/example.ts> "Original title"',
-        '`[Example](../../not-a-link.md)`',
-      ].join('\n');
-      populate(root, {
-        [file]: original,
-        'src/example.ts': 'export {};',
-        'src/existing.ts': 'export {};',
-        'docs/assets/example.png': 'fixture',
-        'docs/_archive/debt/debt-001-example.md':
-          '# Existing record\n\n**Status:** Resolved',
-      });
-      if (entrypoint === 'function') {
-        expect(
-          runDocumentationCommand(root, () => {}, ['--repair-archive']),
-        ).toBe(0);
-      } else {
-        const child = runArchiveCommand(root, ['--repair-archive']);
-        expect(child.error).toBeUndefined();
-        expect(child.status).toBe(0);
-      }
-      expect(readFileSync(path.join(root, file), 'utf8')).toBe(
-        original
-          .replaceAll('../../src/example.ts', '../../../src/example.ts')
-          .replace(
-            '../../debt/debt-001-example.md',
-            '../debt/debt-001-example.md',
-          )
-          .replace('../../docs/assets/example.png', '../../assets/example.png'),
-      );
-      expect(readDocumentation(root).brokenArchive).toEqual([]);
-    },
-  );
-
-  it('leaves a historical missing target unchanged and reported', () => {
-    const root = fixture();
-    const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '**Status:** Resolved\n\n[Deleted](../../src/deleted.ts)';
+    const file = 'docs/guide.md';
+    const original = '[Malformed](./assets/100%.png)';
     populate(root, { [file]: original });
-    const child = runArchiveCommand(root, ['--repair-archive']);
-    expect(child.status).toBe(0);
-    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
-    expect(JSON.parse(child.stdout).brokenArchive).toHaveLength(1);
-  });
-
-  it.each([
-    ['file%23name.ts', 'file#name.ts'],
-    ['file%3Fname.ts', 'file?name.ts'],
-  ])('preserves encoded filename delimiters in %s', (encoded, filename) => {
-    const root = fixture();
-    const file = 'docs/_archive/bugs/bug-001-example.md';
-    populate(root, {
-      [file]: `**Status:** Resolved\n\n[Source](../../src/${encoded}?view=raw#L7)`,
-      [`src/${filename}`]: 'export {};',
-    });
-    expect(runDocumentationCommand(root, () => {}, ['--repair-archive'])).toBe(
-      0,
-    );
-    expect(readFileSync(path.join(root, file), 'utf8')).toBe(
-      `**Status:** Resolved\n\n[Source](../../../src/${encoded}?view=raw#L7)`,
-    );
-    expect(readDocumentation(root).brokenArchive).toEqual([]);
-  });
-
-  it('writes nothing when a proven repair has an unsupported source spelling', () => {
-    const root = fixture();
-    const first = 'docs/_archive/bugs/bug-001-example.md';
-    const unsupported = 'docs/_archive/bugs/bug-002-example.md';
-    const original = '**Status:** Resolved\n\n[Source](../../src/example.ts)';
-    populate(root, {
-      [first]: original,
-      [unsupported]:
-        '**Status:** Resolved\n\n[Escaped](../../src/part\\(one\\).ts)',
-      'src/example.ts': 'export {};',
-      'src/part(one).ts': 'export {};',
-    });
-    expect(() =>
-      runDocumentationCommand(root, () => {}, ['--repair-archive']),
-    ).toThrow('Cannot safely rewrite');
-    const child = runArchiveCommand(root, ['--repair-archive']);
+    const child = runArchiveCommand(root);
+    expect(child.error).toBeUndefined();
+    expect(child.stderr).toBe('');
     expect(child.status).toBe(1);
-    expect(child.stderr).toContain('Cannot safely rewrite');
-    expect(readFileSync(path.join(root, first), 'utf8')).toBe(original);
-  });
-
-  it('does not guess between two existing historical destinations', () => {
-    const root = fixture();
-    const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original =
-      '**Status:** Resolved\n\n[Ambiguous](../../docs/specs/spec-001-example.md)';
-    populate(root, {
-      [file]: original,
-      'docs/specs/spec-001-example.md': '# First candidate',
-      'docs/_archive/specs/spec-001-example.md':
-        '# Second candidate\n\n**Status:** Resolved',
-    });
-    runDocumentationCommand(root, () => {}, ['--repair-archive']);
-    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
-    expect(readDocumentation(root).repairableArchive).toEqual([]);
-  });
-
-  it('refuses an apparent URL replacement that actually changes a link title', () => {
-    const root = fixture();
-    const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original =
-      '**Status:** Resolved\n\n[Source](../../src/example.ts "../../src/example.ts")';
-    populate(root, {
-      [file]: original,
-      'src/example.ts': 'export {};',
-    });
-    expect(() =>
-      runDocumentationCommand(root, () => {}, ['--repair-archive']),
-    ).toThrow('Markdown destinations changed unexpectedly');
+    expect(JSON.parse(child.stdout).brokenLive).toEqual([
+      expect.objectContaining({
+        url: './assets/100%.png',
+        invalidEncoding: true,
+      }),
+    ]);
     expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
   });
 
@@ -663,22 +363,6 @@ describe('documentation archive command', () => {
     expect(() => readDocumentation(fixture())).toThrow(
       'Missing documentation records',
     );
-  });
-
-  it('exits nonzero for a register history file over its budget', () => {
-    const root = fixture();
-    const history = 'docs/_archive/debt/register-history-2026-09.md';
-    populate(root, {
-      [history]: 'a'.repeat(REGISTER_ARCHIVE_BUDGET_BYTES + 1),
-    });
-    const reports: DocumentationAudit[] = [];
-
-    expect(
-      runDocumentationCommand(root, (report) =>
-        reports.push(JSON.parse(report)),
-      ),
-    ).toBe(1);
-    expect(reports[0]?.oversized).toEqual([history]);
   });
 
   it('exits nonzero for a broken live link', () => {
@@ -716,15 +400,12 @@ describe('repository documentation', () => {
   const exists = (file: string) => existsSync(path.resolve(file));
   let result: DocumentationAudit;
 
-  // Lifecycle needs all record names/statuses, but only the six index ASTs.
-  // The register file budget bounds that work: about 2 s locally under
-  // coverage. The ceiling allows for slower, loaded CI runners; the default
-  // 15 s hook timeout is meant for hangs.
+  // Lifecycle reads every record's status, but parses only the index in full.
   beforeAll(() => {
     result = auditRecordLifecycle(files, exists);
-  }, 30_000);
+  });
 
-  it('has no record in both live and archived folders', () => {
+  it('lists no record ID twice across open records and the ledger', () => {
     expect(result.duplicates).toEqual([]);
   });
 
@@ -735,10 +416,6 @@ describe('repository documentation', () => {
   it('has working register rows for every live record', () => {
     expect(result.missingLiveRows).toEqual([]);
     expect(result.missingRowTargets).toEqual([]);
-  });
-
-  it('records a disposition in every archived numbered record', () => {
-    expect(result).toMatchObject({ missingArchiveDispositions: [] });
   });
 
   it('keeps one Now stanza and no Latest changelog in each index', () => {
@@ -761,27 +438,13 @@ describe('repository documentation', () => {
     expect(result.longStatus).toEqual([]);
   });
 
-  it('keeps every register index and history file within its size budget', () => {
+  it('keeps the records index within its size budget', () => {
     expect(result.oversized).toEqual([]);
   });
 
-  it.each(
-    [...files.keys()].filter((file) => !file.startsWith('docs/_archive/')),
-  )('resolves relative file links in %s', (file) => {
+  it.each([...files.keys()])('resolves relative file links in %s', (file) => {
     expect(
       brokenDocumentationLinks(file, files.get(file) ?? '', exists),
     ).toEqual([]);
-  });
-
-  it.each(
-    [...files.keys()].filter((file) => file.startsWith('docs/_archive/')),
-  )('has no mechanically repairable archive links in %s', (file) => {
-    const broken = brokenDocumentationLinks(
-      file,
-      files.get(file) ?? '',
-      exists,
-    );
-    expect(broken.filter((link) => link.invalidEncoding)).toEqual([]);
-    expect(archiveLinkRepairs(broken, exists)).toEqual([]);
   });
 });

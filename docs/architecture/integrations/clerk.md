@@ -180,7 +180,7 @@ If you see "Clerk: The `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` does not match the ke
 
 **Fix:** Ensure all Clerk env vars are from the same application and environment.
 
-See: BUG-040 (archived)
+See: BUG-040
 
 ---
 

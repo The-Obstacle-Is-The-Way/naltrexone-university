@@ -1,6 +1,6 @@
 # DEBT-518: Closed Records Outweigh the Code and Bury Current Truth
 
-**Status:** In Progress — the records step, the agent instructions and the layout are done; the archive's removal follows, which the owner approved on 2026-10-13
+**Status:** In Progress — the records step, the agent instructions, the layout and the archive's removal are done; the four splits and the three-record pilot follow
 **Priority:** P2
 **Date:** 2026-10-11
 **Resolved:** —
@@ -10,9 +10,9 @@
 
 ## Summary
 
-Every bug and debt item here is written up as a numbered Markdown record before it is fixed. A second agent challenges it, and once it ships it is moved to `docs/_archive/`. Writing first and challenging the write-up are the valuable part: on 2026-10-11 a reviewer's heads-up overturned a just-shipped design (DEBT-503 item 5), and a second agent's challenge corrected this record before review.
+Every bug and debt item here is written up as a numbered Markdown record before it is fixed. A second agent challenges it. Until the archive's removal, a shipped record moved to `docs/_archive/`. Writing first and challenging the write-up are the valuable part: on 2026-10-11 a reviewer's heads-up overturned a just-shipped design (DEBT-503 item 5), and a second agent's challenge corrected this record before review.
 
-Keeping every closed record in the working tree is not. The archive is now about twice the size of the production code, and it outnumbers the live documents in every search. Closing a record is a ceremony of its own, and record edits take review capacity that code needs.
+Keeping every closed record in the working tree is not. When this record was filed, the archive was about twice the size of the production code, and it outnumbered the live documents in every search. Closing a record is a ceremony of its own, and record edits take review capacity that code needs.
 
 This record measures the setup, sets out what each kind of document is for, compares the options, and plans a move to **records as working files**: written first, challenged on the branch, shipped with their fix, and deleted on close, leaving a one-line ledger entry. **The owner approved the plan on 2026-10-11, and widened it to every document in the repository,** with clean namespaces and names.
 
@@ -54,7 +54,7 @@ Measured 2026-10-11 on `dev` after #1464.
    - The register rows and the Now stanza are edited.
    - The guard checks all of it.
 
-   483 links point into the archive now.
+   When this record was filed, 483 links pointed into the archive.
 3. **Review capacity goes to bookkeeping.** A documentation-only PR spends an hourly CodeRabbit slot and a promotion. Record edits ride in almost every PR, and CodeRabbit has learned lasting rules from record text (DEBT-515). BUG-336, filed in the same PR as this record, shows the cost of a small fix: a record, a Verifying status, and a later move, all for a one-line change.
 4. **The format needs its own tooling:** 2,308 lines, and 188 lines of rules. Some of it stays under any model: the due check, the heading and asset-budget tests, and the guard's checks of the live registers. The part that moves closed files, rewrites their links for the new depth, and checks the archive and frozen histories goes.
 5. **It only grows.** 723 files arrived from February to May, then 56, 77, 3, 33 and 41 a month. The assets that only archived records link add about 51 MB beside its 9.3 MB.
@@ -188,9 +188,9 @@ The owner widened the plan from records to every document: the product spec, arc
 | `debt/assets/debt-414/f0{3,15}-consent-ruling-data.json` (moved 2026-10-13) | `policies/legal/consent-rulings/` (update `lib/pricing-data.test.ts`) |
 | `docs/{bugs,debt}/*` | `docs/records/` (flat); indexes merge into `records/README.md` |
 | `docs/audits/*` | AUDIT-015 closes: its order → records Now/Next, its trace-sample decision → BUG-331; the index is deleted |
-| `docs/_archive/**` + 20 archive-only asset folders | delete last, after the ledger and permalinks |
+| `docs/_archive/**` + 21 archive-only asset folders | deleted last (step 5), after the ledger and the lessons review |
 | Colocated Markdown: `app/(app)/app/practice/shared/idempotency-protocol-contract.md`, `app/fonts/README.md`, `content/questions/README.md`, `tests/shared/README.md`, `tests/test-helpers/README.md` | stay beside their code. The guard's link check widens to `app/**`, `content/**` and `tests/**`. The contract gets a link from `.claude/rules/frontend.md`, `tests/shared/README.md` its missing scope, and `content/questions/README.md` a format example that parses. |
-| Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (DEBT-414) | permalink, then delete with the purge; DEBT-414's own assets stay until it closes |
+| Asset folders that live docs link: `biome-architecture-2026-09-21` (ADR-001), `bugs/assets/content-release-audit-2026-10-02.md` (ADR-021), `helper-recovery-2026-09-21` (testing guide), `inventory-2026-09-21` and `active-audit-2026-09-21` (two register-wide audits of 2026-09-21, which DEBT-414 links) | permalinked, then deleted in step 5; DEBT-414's own folder, `records/assets/debt-414/`, stays until it closes |
 | Open GitHub issues citing doc paths (#423, #772, #883, #902, #903) | a comment on each with the new path, in the PR that moves it |
 | Every tracked file naming a moved path, e.g. `proxy.ts`, `src/application/use-cases/validate-feedback-context.ts`, workflows, watcher issue text | swept by `git grep` in the PR that moves the path; the guard rejects files recreated in retired folders; step 5, the archive's removal, adds rejection of unpinned live links into the archive, while preserving ledger retrieval paths, pinned history and immutable migration comments |
 
@@ -227,7 +227,7 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
    - Permanent links replace the remaining live links into the archive; most are gone with their files by then.
    - `docs/_archive/` is deleted, along with the asset folders only it links.
    - The guard rejects live, unpinned archive destinations and recreated archive files. It permits commit-pinned historical URLs, ledger retrieval paths, immutable applied-migration comments, and scanner fixtures; a blanket string ban would reject the history the ledger must retain.
-   - **Lessons review (2026-10-13).** Reviewers read the 237 archived records that live code, documents or rules cite, and the 3 assets live documents link. Of their lasting points, 174 were already live, 46 partly and 3 not at all; 18 records held none. The eleven high-ranked lessons, DEBT-437's accepted residual and DEBT-249's route rule moved into their live homes, and seven live statements the review found wrong were corrected. The remaining partial lessons wait for the owner's decision on broader extraction.
+   - **Lessons review (2026-10-13).** Reviewers read the 237 archived records that live code, documents or rules cite, and the 3 assets that live guides and ADRs link. Of their lasting points, 174 were already live, 46 partly and 3 not at all; 18 records held none. The eleven high-ranked lessons, DEBT-437's accepted residual and DEBT-249's route rule moved into their live homes, and seven live statements the review found wrong were corrected. The remaining partial lessons wait for the owner's decision on broader extraction.
    - A CodeRabbit deletion filter lands in a separate reviewed PR first, because the deletion spans 1,468 files, 1,466 of them in four folders. It names the four folders the purge empties rather than each file. CodeRabbit reads its configuration from the pull request's head, so the purge keeps the filter and the next pull request removes it. Review the deletion manifest, ledger reachability, extracted lessons and rewritten live links before filtering; verify the effective configuration and remaining file count against the actual plan limit. Remove the temporary filter afterwards so reintroduced files cannot silently escape review.
 6. **Pilot.** The next three records close under the model; the rules are adjusted once, from what they show.
 
@@ -252,8 +252,8 @@ Each PR must be coherent and pass its own checks. Keep moves in pure `git mv` co
 - [x] The owner approves the model (2026-10-11).
 - [x] Step 0: every live document has a disposition and a target path, and a second agent has challenged them (2026-10-11; ADR-023 and the mapping above).
 - [x] The ledger is complete: every archived record has a line, and every record ID cited in code resolves (2026-10-13: all 920 archived records have a line whose path matches, every file is retrievable at its last commit, and the only unresolved cited ID is a test fixture's).
-- [ ] Every Deferred row is self-contained, and no live link points into `docs/_archive/`.
-- [ ] The archive and the asset folders only it links are deleted, and a guard keeps the archive deleted.
+- [x] Every Waiting row, the former Deferred rows, is self-contained, and no unpinned live link points into `docs/_archive/` (2026-10-13: the guard reports no archive destination, and DEBT-460's Waiting row names its consumers instead of its archived checklist). Commit-pinned historical URLs, such as BUG-320's, remain.
+- [x] The archive and every register asset folder are deleted, and a guard keeps the archive deleted (2026-10-13: 1,468 files, among them the five assets live documents linked, whose links were pinned first; the guard rejects recreated Markdown and unpinned destinations, tested red first).
 - [x] The records index describes delete-on-close, `AGENTS.md` and `CLAUDE.md` point to it, and the guard enforces it: no closed record stays live, and every closure from the cutover carries its receipt (#1467 and #1471).
 - [x] Step 6: the live documents follow the target layout, and no hard-coded path points to an old location (2026-10-13: the guard reports no broken live link and no file in a retired folder; old paths remain only in history, applied migrations and fixtures).
 - [ ] Three records are closed under the model, and the reviewing agent reports no lost knowledge.

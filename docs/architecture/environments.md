@@ -92,7 +92,7 @@ These rules are enforced by the repo today:
 
 ### Stripe account rule
 
-Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md).
+Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in BUG-079.
 
 ### Stripe price ID rule
 
@@ -131,7 +131,7 @@ If Vercel Standard Protection is enabled for Preview deployments, Clerk and Stri
 
 Preview webhook targets must therefore be publicly reachable without Vercel login gates, or webhook testing must use another public endpoint.
 
-See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md).
+See BUG-080.
 
 ### Header-Safe `CRON_SECRET` Across Vercel Scopes
 
@@ -269,8 +269,8 @@ When changing environment configuration, verify all of the following:
 - [promote-to-production.md](../guides/release/promote-to-production.md)
 - [database-recovery.md](../guides/operations/database-recovery.md)
 - [Supply-chain policy: licences](../policies/supply-chain.md#licences)
-- [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
-- [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
+- BUG-079
+- BUG-080
 - [proxy.ts](../../proxy.ts)
 - [lib/env.ts](../../lib/env.ts)
 - [app/api/webhooks/clerk/route.ts](../../app/api/webhooks/clerk/route.ts)
