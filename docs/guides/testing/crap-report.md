@@ -1,7 +1,5 @@
 # Code Quality Metrics (CRAP Analysis)
 
-**Last Updated:** 2026-08-22
-
 CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, crap4j; originally expanded "Change Risk Analysis and Predictions" before the authors re-glossed it) — scores every function by combining the two numbers that are individually misleading but jointly decisive:
 
 ```text
@@ -89,7 +87,7 @@ The three coverage commands must come from the same working tree before recordin
 
 ## 3. A-priori hotspots (2026-08-13 audit; facts revalidated 2026-08-22)
 
-Candidates from the manual sweep of decision density, size, direct tests, and consequence, written before the script existed. These were **not** a measured ranking. The factual receipts below were corrected before implementation; the measured reconciliation follows the table. The pre-commit size check's exemption list in `scripts/check-file-size.sh` still contains 14 legacy files over 350 lines; three candidates below appear on it.
+Candidates from the manual sweep of decision density, size, direct tests, and consequence, written before the script existed. These were **not** a measured ranking. The factual receipts below were corrected before implementation; the measured reconciliation follows the table. The pre-commit size check's exemption list, in `scripts/check-file-size.sh`, then held 14 legacy files over 350 lines, three of them candidates below. The check was removed on 2026-08-27.
 
 | Candidate | Signal |
 |---|---|
