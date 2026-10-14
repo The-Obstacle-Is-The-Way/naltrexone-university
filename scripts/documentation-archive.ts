@@ -80,7 +80,7 @@ export const STATUS_MAX_CHARACTERS = 200;
 
 // Beside the records index only open records and the ledger belong: change
 // history lives in git, and a closed record is a ledger line. Records get no
-// asset folders; DEBT-414's predate that rule and go when it closes.
+// asset folders; DEBT-414's folder predates that rule and goes when it closes.
 const LEGACY_RECORD_ASSETS = /^docs\/records\/assets\/debt-414\//;
 
 function isStrayRecordsFile(file: string): boolean {
@@ -96,9 +96,9 @@ function isStrayRecordsFile(file: string): boolean {
 
 // Markdown left, at any depth, in an old register folder or a folder the
 // ADR-023 layout retired missed the move. A clean merge of a branch that added
-// a guide there does not relocate it. The archive, and the register asset
-// folders only it linked, were deleted (DEBT-518): the ledger and pinned
-// commits keep that history, so Markdown recreated there is reported.
+// a guide there does not relocate it. The archive and every register asset
+// folder were deleted (DEBT-518): the ledger and pinned commits keep that
+// history, so Markdown recreated there is reported.
 const RETIRED_FOLDERS = [
   '_archive',
   'audits',
@@ -188,7 +188,8 @@ type MarkdownScan = {
 };
 
 // One parse yields a file's links, its code spans and its top-level labelled
-// stanzas; the full audit parses each file once (BUG-339).
+// stanzas. The full audit parses each file once, apart from the records
+// index, which the lifecycle check parses a second time (BUG-339).
 function scanMarkdown(file: string, contents: string): MarkdownScan {
   const links: DocumentationLink[] = [];
   const absoluteLinks: DocumentationLink[] = [];

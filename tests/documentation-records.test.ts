@@ -640,7 +640,7 @@ describe('repository records', () => {
   // One case per document, as for record links: a single case parsing every
   // document ran past Vitest's 10 s limit under CI's coverage run.
   it.each([...files.keys()])(
-    'points nowhere into the deleted archive except through a pinned commit in %s',
+    'points nowhere into the deleted archive except through a pinned commit or a ledger retrieval path in %s',
     (file) => {
       expect(archiveDestinations(file, files.get(file) ?? '')).toEqual([]);
     },

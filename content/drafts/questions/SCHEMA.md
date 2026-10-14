@@ -704,4 +704,4 @@ Migrated all 948 questions from legacy format to structured `choices[]` YAML. Ch
 - Frontmatter key order canonicalized across all 170 files
 - All `text` and `explanation` values double-quoted
 
-The legacy format (with `answer`, `## Choices`, and wrong-answer bullets in the body) is no longer used. DEBT-338's Phase 2 implementation spec, a closed record, holds the full spec.
+The legacy format (with `answer`, `## Choices`, and wrong-answer bullets in the body) is no longer used. The content repository's DEBT-02 holds the full spec.

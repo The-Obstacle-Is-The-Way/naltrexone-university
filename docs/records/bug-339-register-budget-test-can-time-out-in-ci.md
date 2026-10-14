@@ -8,9 +8,9 @@
 
 ## Summary
 
-`tests/documentation-register-budget.test.ts` checks the byte budgets of the records index and the frozen register files. Each case ran the full documentation audit, which parses every file's Markdown for links. The at-budget case fed it five files, about 1 MB in all, and the audit parsed about 1.6 MB of Markdown, because it parses some files twice. Under CI's coverage run it took the case past Vitest's 10-second limit, and any pull request could fail on it.
+`tests/documentation-register-budget.test.ts` checked the byte budgets of the records index and the frozen register files. Each case ran the full documentation audit, which parses every file's Markdown for links. The at-budget case fed it five files, about 1 MB in all, and the audit parsed about 1.6 MB of Markdown, because it parsed some files twice. Under CI's coverage run it took the case past Vitest's 10-second limit, and any pull request could fail on it.
 
-*Corrected 2026-10-13: DEBT-518 step 5 deleted the frozen register files and their budget, so the test checks only the records index's budget, and the full audit parses each file once, not twice.*
+*Corrected 2026-10-13: DEBT-518 step 5 deleted the frozen register files and their budget, so the test checks only the records index's budget, and the full audit parses each file once, apart from the records index, which it parses twice.*
 
 ## Evidence
 

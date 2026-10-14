@@ -400,7 +400,7 @@ describe('repository documentation', () => {
   const exists = (file: string) => existsSync(path.resolve(file));
   let result: DocumentationAudit;
 
-  // Lifecycle reads every record's status, but parses only the index.
+  // Lifecycle reads every record's status, but parses only the index in full.
   beforeAll(() => {
     result = auditRecordLifecycle(files, exists);
   });
