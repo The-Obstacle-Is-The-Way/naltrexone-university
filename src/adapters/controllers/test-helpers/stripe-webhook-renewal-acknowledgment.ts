@@ -1,4 +1,5 @@
 import {
+  FakeOperationalAlerts,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
 } from '@/src/application/test-helpers/fakes';
@@ -13,9 +14,13 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(input?: {
 }): {
   createRenewalNoticeDeliveries: () => FakeRenewalNoticeDeliveryRepository;
   renewalNoticeDeliveries: FakeRenewalNoticeDeliveryRepository;
+  operationalAlerts: FakeOperationalAlerts;
   webhook: Pick<
     StripeWebhookDeps,
-    'appUrl' | 'sha256Hasher' | 'dispatchRenewalNoticeDelivery'
+    | 'appUrl'
+    | 'sha256Hasher'
+    | 'dispatchRenewalNoticeDelivery'
+    | 'operationalAlerts'
   >;
   transaction: Pick<
     StripeWebhookTransaction,
@@ -29,12 +34,15 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(input?: {
       sha256Hasher,
     );
   const renewalNoticeDeliveries = createRenewalNoticeDeliveries();
+  const operationalAlerts = new FakeOperationalAlerts();
   return {
     createRenewalNoticeDeliveries,
     renewalNoticeDeliveries,
+    operationalAlerts,
     webhook: {
       appUrl: 'https://addictionboards.com',
       sha256Hasher,
+      operationalAlerts,
       dispatchRenewalNoticeDelivery: input?.dispatchRenewalNoticeDelivery ?? {
         execute: async () => ({ outcome: 'claim_lost', delivery: null }),
       },

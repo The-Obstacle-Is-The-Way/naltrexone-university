@@ -10,6 +10,7 @@ import {
   expectSingleFailure,
   primaryUserId,
   row,
+  secondaryUserId,
 } from './test-helpers/reconcile-stripe-subscriptions-harness';
 
 // The local row points at sub_keep; sub_dup_2 has the latest period end and
@@ -224,6 +225,117 @@ describe('reconcileStripeSubscriptions duplicate cancellation', () => {
         msg: 'Duplicate Stripe subscriptions already canceled externally',
       },
     ]);
+  });
+
+  // BUG-343 option 5: a duplicate is a person's to act on, refunded or not.
+  it('raises one duplicate-subscription alert for the page, for a customer with duplicates', async () => {
+    const stripe = createDuplicatesStripe();
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_keep',
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('raises the duplicate-subscription alert in dry-run mode too, since the duplicate is still live', async () => {
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_keep'),
+      createUserSubscriptionFixture('sub_dup', { status: 'trialing' }),
+    ]);
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_keep',
+    });
+
+    await scenario.run({ dryRun: true });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('counts each customer with duplicates on the page', async () => {
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_keep_a'),
+      createUserSubscriptionFixture('sub_dup_a', { status: 'trialing' }),
+      createUserSubscriptionFixture('sub_keep_b', {
+        userId: secondaryUserId,
+        customerId: 'cus_456',
+      }),
+      createUserSubscriptionFixture('sub_dup_b', {
+        userId: secondaryUserId,
+        customerId: 'cus_456',
+        status: 'trialing',
+      }),
+    ]);
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      localSubscriptions: [
+        row(primaryUserId, 'sub_keep_a'),
+        row(secondaryUserId, 'sub_keep_b'),
+      ],
+    });
+
+    await scenario.run({ dryRun: true });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 2 },
+    ]);
+  });
+
+  it('still counts a customer whose duplicate cannot be cancelled', async () => {
+    const stripe = createLocalAndBetterStripe();
+    stripe.setSubscriptionCancelHook(() => {
+      throw Object.assign(new Error('Invalid API Key provided'), {
+        rawType: 'authentication_error',
+      });
+    });
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_local',
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('still counts a customer whose canonical subscription cannot be stored', async () => {
+    const stripe = createDuplicatesStripe();
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      localSubscriptions: [row(primaryUserId, 'sub_keep')],
+      transaction: async () => {
+        throw new Error('database unavailable');
+      },
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('raises no alert when no customer has a duplicate', async () => {
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_keep'),
+    ]);
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_keep',
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([]);
   });
 
   it('does not cancel duplicate blocking subscriptions in dry-run mode', async () => {

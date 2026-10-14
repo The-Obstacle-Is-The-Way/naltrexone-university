@@ -3,6 +3,7 @@ import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-he
 import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
@@ -117,6 +118,7 @@ export function createReconciliationTestScenario(input: {
   const renewalConsentRecords =
     input.renewalConsentRecords ?? new FakeRenewalConsentRecordRepository();
   const logger = new FakeLogger();
+  const operationalAlerts = new FakeOperationalAlerts();
   const listLocalSubscriptions =
     input.listLocalSubscriptions ??
     (async () => input.localSubscriptions ?? []);
@@ -132,6 +134,7 @@ export function createReconciliationTestScenario(input: {
         stripe: input.stripe,
         priceIds: { monthly: 'price_m', annual: 'price_a' },
         logger,
+        operationalAlerts,
         now: () => new Date('2026-08-07T12:00:00.000Z'),
         webhookE2EOwner: input.webhookE2EOwner,
         listLocalSubscriptions,
@@ -140,7 +143,7 @@ export function createReconciliationTestScenario(input: {
     );
   }
 
-  return { stripeCustomers, subscriptions, logger, run };
+  return { stripeCustomers, subscriptions, logger, operationalAlerts, run };
 }
 
 // One local row for the primary user pointing at the Subscription the case

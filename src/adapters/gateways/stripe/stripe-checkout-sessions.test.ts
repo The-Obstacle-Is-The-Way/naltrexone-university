@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import {
   createTestCheckoutRenewalMetadata,
   createTestRenewalTerms,
@@ -63,6 +66,7 @@ describe('createStripeCheckoutSession', () => {
       input: checkoutInput,
       priceIds,
       logger,
+      operationalAlerts: new FakeOperationalAlerts(),
       nowMs,
     });
   }

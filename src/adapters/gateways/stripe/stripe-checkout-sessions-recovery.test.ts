@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import {
   createStripeCheckoutSession,
@@ -44,6 +47,7 @@ describe('createStripeCheckoutSession recovery', () => {
       input: { ...input, ...overrides },
       priceIds,
       logger,
+      operationalAlerts: new FakeOperationalAlerts(),
       nowMs: () => fixedNowMs,
     });
   }

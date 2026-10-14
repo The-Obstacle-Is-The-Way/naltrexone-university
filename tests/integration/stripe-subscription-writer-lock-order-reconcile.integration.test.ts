@@ -14,6 +14,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeAuthGateway,
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
@@ -186,6 +187,7 @@ async function runReconciliationWriter(
       stripe: createReconciliationStripeClient(normalizedSubscription),
       priceIds,
       logger: new FakeLogger(),
+      operationalAlerts: new FakeOperationalAlerts(),
       now: () => new Date('2026-08-07T12:00:00.000Z'),
       listLocalSubscriptions: async () => [
         {
@@ -301,6 +303,7 @@ describe('Stripe subscription writer lock order', () => {
           stripe,
           priceIds,
           logger: new FakeLogger(),
+          operationalAlerts: new FakeOperationalAlerts(),
           now: () => new Date('2026-08-07T12:00:00.000Z'),
           listLocalSubscriptions: async () => [
             {

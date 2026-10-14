@@ -42,6 +42,20 @@ export function createGatewayFactories(input: {
     stripePriceIds,
   } = input;
 
+  const createOperationalAlerts = () =>
+    new CooldownOperationalAlerts({
+      rateLimiter: new DrizzleRateLimiter(
+        primitives.db,
+        primitives.now,
+        primitives.logger,
+      ),
+      send: sendOperationalAlertEvent,
+      logger: primitives.logger,
+      now: primitives.now,
+      localCooldown: processAlertCooldown,
+      keyPrefix: OPERATIONAL_ALERT_COOLDOWN_KEY_PREFIX,
+    });
+
   return {
     createAuthGateway: () =>
       new ClerkAuthGateway({
@@ -51,19 +65,7 @@ export function createGatewayFactories(input: {
         getClerkUserById,
         logger: primitives.logger,
       }),
-    createOperationalAlerts: () =>
-      new CooldownOperationalAlerts({
-        rateLimiter: new DrizzleRateLimiter(
-          primitives.db,
-          primitives.now,
-          primitives.logger,
-        ),
-        send: sendOperationalAlertEvent,
-        logger: primitives.logger,
-        now: primitives.now,
-        localCooldown: processAlertCooldown,
-        keyPrefix: OPERATIONAL_ALERT_COOLDOWN_KEY_PREFIX,
-      }),
+    createOperationalAlerts,
     createScheduledWorkflows: () =>
       createGithubScheduledWorkflows({
         repository: GITHUB_REPOSITORY,
@@ -78,6 +80,7 @@ export function createGatewayFactories(input: {
         webhookE2EOwner: primitives.env.STRIPE_WEBHOOK_E2E_OWNER,
         priceIds: stripePriceIds,
         logger: primitives.logger,
+        operationalAlerts: createOperationalAlerts(),
         resolveCheckoutDisclosure,
         sha256Hasher: primitives.sha256Hasher,
       }),
