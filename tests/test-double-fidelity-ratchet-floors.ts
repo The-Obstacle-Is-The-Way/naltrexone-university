@@ -183,9 +183,14 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
 // renewal-consent and lock-order reconcile suites) onto the maintained
 // FakeStripeCheckoutClient, so their three entries are removed: 29 sites
 // across 10 files.
+// 2026-10-14 UTC: BUG-343's completion sweep adds a PaymentGateway method, so
+// the webhook route suite moves its gateway stub and its stripe-events,
+// subscriptions and Stripe-customers stubs onto the maintained fakes; the
+// route only hands them to a mocked processStripeWebhook. Its rate-limiter
+// stubs stay, scripted through vi.fn. 7 to 3: 25 sites across 10 files.
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
-  ['app/api/stripe/webhook/route.test.ts', 7],
+  ['app/api/stripe/webhook/route.test.ts', 3],
   ['app/api/webhooks/clerk/route.test.ts', 2],
   ['app/pricing/page-actions.test.tsx', 3],
   ['app/pricing/page.test.tsx', 3],

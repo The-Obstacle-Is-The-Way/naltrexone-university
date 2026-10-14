@@ -634,10 +634,24 @@ async function processSubscriptionWebhook(
     });
   } catch (transactionError) {
     if (transactionError instanceof StripeWebhookAlreadyProcessed) {
-      // Another delivery committed this event first.
+      // Another delivery committed this event first. A completion's sweep
+      // runs again, since a failed sweep is what makes Stripe send it again,
+      // but only if this environment holds the user's subscription: a
+      // missing-user completion is recorded as processed too, and sweeps
+      // nothing.
+      if (
+        event.completedSubscriptionCheckout &&
+        (await deps.subscriptionVersions.findObservationVersionByUserId(
+          discoveredUserId,
+        )) !== null
+      ) {
+        await expireOtherOpenCheckoutSessions(deps, event);
+      }
       return;
     }
 
+    // Not this environment's user, so not its customer either: nothing is
+    // swept.
     if (isSubscriptionUserMissingError(transactionError)) {
       await persistAcknowledgedOutcome(deps, event, subscriptionUpdate);
       deps.logger.warn(
@@ -656,6 +670,17 @@ async function processSubscriptionWebhook(
     throw hasProcessingError ? processingError : transactionError;
   }
 
+  // The sweep goes first, so a slow acknowledgment send does not hold the
+  // customer's other Sessions open; a failed sweep still lets the
+  // acknowledgment go before it fails the delivery.
+  let sweepFailed = false;
+  let sweepError: unknown;
+  try {
+    await expireOtherOpenCheckoutSessions(deps, event);
+  } catch (error) {
+    sweepFailed = true;
+    sweepError = error;
+  }
   if (acknowledgmentDeliveryId) {
     await dispatchRenewalAcknowledgment(
       deps,
@@ -663,6 +688,26 @@ async function processSubscriptionWebhook(
       acknowledgmentDeliveryId,
     );
   }
+  if (sweepFailed) throw sweepError;
+}
+
+// BUG-343 option 3: once this environment has stored a completed
+// subscription Checkout's subscription, so the customer is its own, end the
+// customer's other open subscription Sessions created before the event; any
+// of them could otherwise create a second subscription for up to 24 hours. A
+// failure fails the delivery after the event is recorded as processed, so
+// Stripe sends it again and the already-processed path sweeps again.
+async function expireOtherOpenCheckoutSessions(
+  deps: StripeWebhookDeps,
+  event: StripeWebhookEvent,
+): Promise<void> {
+  const completion = event.completedSubscriptionCheckout;
+  if (!completion) return;
+  await deps.paymentGateway.expireOtherOpenCheckoutSessions({
+    externalCustomerId: completion.externalCustomerId,
+    keepSessionId: completion.sessionId,
+    ...(event.occurredAt ? { createdBefore: event.occurredAt } : {}),
+  });
 }
 
 async function processStripeWebhookWithinSpan(

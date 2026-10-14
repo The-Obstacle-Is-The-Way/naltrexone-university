@@ -33,6 +33,20 @@ function expandableId(value: string | { id: string }): string {
   return typeof value === 'string' ? value : value.id;
 }
 
+function completedSubscriptionCheckoutOf(
+  payload: unknown,
+): { sessionId: string; externalCustomerId: string } | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const session = payload as Record<string, unknown>;
+  if (session.mode !== 'subscription' || typeof session.id !== 'string') {
+    return null;
+  }
+  // Stripe sends the customer as an id; webhook payloads are not expanded.
+  return typeof session.customer === 'string'
+    ? { sessionId: session.id, externalCustomerId: session.customer }
+    : null;
+}
+
 function eventOccurredAt(event: { created?: number }): Date | undefined {
   const created = event.created;
   if (created === undefined || !Number.isInteger(created) || created <= 0) {
@@ -492,6 +506,15 @@ export async function processStripeWebhookEvent({
     eventId: event.id,
     type: event.type,
   };
+  // BUG-343 option 3: the webhook ends the customer's other open
+  // subscription Sessions once one completes.
+  const completedSubscriptionCheckout =
+    event.type === 'checkout.session.completed'
+      ? completedSubscriptionCheckoutOf(event.data.object)
+      : null;
+  if (completedSubscriptionCheckout) {
+    result.completedSubscriptionCheckout = completedSubscriptionCheckout;
+  }
 
   if (
     event.type === 'checkout.session.completed' &&

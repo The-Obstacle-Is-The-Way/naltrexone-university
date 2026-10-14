@@ -195,6 +195,42 @@ describe('FakePaymentGateway', () => {
     });
   });
 
+  // BUG-343: the webhook's completion sweep.
+  describe('expireOtherOpenCheckoutSessions', () => {
+    const sweep = {
+      externalCustomerId: 'cus_123',
+      keepSessionId: 'cs_kept',
+      createdBefore: new Date('2026-10-14T05:00:00.000Z'),
+    };
+
+    it('records each sweep and resolves', async () => {
+      const gateway = createGateway();
+
+      await expect(
+        gateway.expireOtherOpenCheckoutSessions(sweep),
+      ).resolves.toBeUndefined();
+
+      expect(gateway.otherCheckoutSessionInputs).toEqual([sweep]);
+    });
+
+    it('throws a configured error and still records the sweep', async () => {
+      const failure = new Error('stripe down');
+      const failing = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://fake/checkout',
+        portalUrl: 'https://fake/portal',
+        webhookResult: { eventId: 'evt_1', type: 'checkout.session.completed' },
+        otherCheckoutSessionsError: failure,
+      });
+
+      await expect(failing.expireOtherOpenCheckoutSessions(sweep)).rejects.toBe(
+        failure,
+      );
+
+      expect(failing.otherCheckoutSessionInputs).toEqual([sweep]);
+    });
+  });
+
   describe('createPortalSession', () => {
     it('returns configured portal URL and records input', async () => {
       const gateway = createGateway();
