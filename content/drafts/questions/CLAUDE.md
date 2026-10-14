@@ -6,6 +6,8 @@ Generate board-style questions for Addiction Psychiatry certification (NTX Unive
 
 Read the local files below in order. The `generate-questions` skill and `CDEBT-02` registry named in items 5–6 are upstream authoring references, not files shipped in this app repository; their original paths are retained for identification. Do not resolve them relative to this imported directory or claim to have read them here. Use `SCHEMA.md` and the quality checklist below for local work; obtain the owning content repository when an upstream rule or provenance decision is needed. IDs in that upstream registry belong to that repository, not this app’s closed-record ledger.
 
+`PLAN.md` and `NOTES.md` are local files, kept beside the question files and, like them, not tracked: they quote the proprietary questions, and this repository is public. A clone without the question content has neither.
+
 1. `CLAUDE.md` - workflow and critical reminders
 2. `SCHEMA.md` - complete active authoring contract, taxonomy, validation rules, and canonical quality checklist
 3. `PLAN.md` - inventory/progress tracker when you need current status or need to update checkboxes
