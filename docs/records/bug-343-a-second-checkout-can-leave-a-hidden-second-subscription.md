@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** Open — the test-mode reproduction, then the fix, after the documentation pull requests' promotion; due 2026-10-20
+**Status:** Open — reproduced in test mode on 2026-10-14; next the fix, test first, and the owner's Dashboard checks; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-13
 
@@ -14,18 +14,18 @@ BUG-245 (2026-06-13) named Stripe's Dashboard setting "limit customers to one su
 - it counts only `active`, `past_due`, `unpaid` and `paused` subscriptions, not `trialing`;
 - Stripe does not describe it as a check at completion.
 
-In this race the second page is first loaded after the first purchase completed. A returning customer is therefore likely redirected, if the setting is on. A first checkout carries a 7-day trial, though, and a trialing subscription is not counted, so the first-time path is unguarded.
+In this race the second page is first loaded after the first purchase completed. A returning customer would therefore be redirected, if the setting is on and works as documented. In the test-mode reproduction, Stripe did not redirect such a customer, and charged them twice. A first checkout carries a 7-day trial, though, and a trialing subscription is not counted, so the first-time path is unguarded.
 
 **Live customers already fall in the returning-customer group.** No sale has happened yet. But according to the owner (2026-10-13), real people have taken free trials in live mode, added no card, and seen them end.
 - A former trial user keeps a stored subscription row, so their next checkout carries no trial and charges at completion.
-- In this race, such a person's only guard against a second charge is Stripe's redirect, which is unverified.
+- In this race, such a person's only guard against a second charge is Stripe's redirect. It did not happen in test mode, whose setting was not checked, and it is unverified in live mode.
 - Any of them returning would be the first live sale.
 
 The window is a few Stripe calls long.
 
 ## Evidence
 
-Line references are at `a57f5c0f` (`dev` after #1482) unless a line says otherwise. Stripe's behaviour is quoted from its documentation, read on 2026-10-13. Nothing here was reproduced against Stripe; the test-mode reproduction is a verification step below.
+Line references are at `a57f5c0f` (`dev` after #1482) unless a line says otherwise. Stripe's behaviour is quoted from its documentation, read on 2026-10-13, except where the test-mode reproduction below (2026-10-14) observed it.
 
 ### The create path checks once, before it creates
 
@@ -43,7 +43,7 @@ Line references are at `a57f5c0f` (`dev` after #1482) unless a line says otherwi
   - If it is for a different plan, it expires it whatever the retrieved status (`:933-953`, key `expire_checkout_session:` at `:977`). A failure there is fatal too (`expireFailureIsFatal = true`, `:940-941`): the request fails with `STRIPE_ERROR` (`:1008-1011`).
   - **The exception: an error the adapter calls terminal.** `isAlreadyTerminalSessionError` (`:420-438`) requires Stripe's `rawType` `invalid_request_error`, and then either the code `resource_missing` (`:62-64`), or a message containing `'already complete'`, `'already expired'` or `'cannot be expired'` (`:65-69`). Such an error counts as success, and creation continues (`:985-997`).
   - When the retrieve itself failed, an expire failure is not fatal: the request continues with creation (`:954-969`, `:1012-1021`).
-- **Stripe documents no error code or message for it.** It says a Session "can be expired when it is in one of these statuses: `open`", and "Returns an error if the Checkout Session has already expired or isn't in an expireable state" ([Stripe: expire a Session](https://docs.stripe.com/api/checkout/sessions/expire)). The unit tests use only texts for an expired or missing Session (`stripe-checkout-sessions.test.ts:398-461`, `stripe-checkout-sessions-reconciliation.test.ts:83-88`). Whether expiring a completed Session matches the terminal patterns is unverified.
+- **Stripe documents no error code or message for it.** It says a Session "can be expired when it is in one of these statuses: `open`", and "Returns an error if the Checkout Session has already expired or isn't in an expireable state" ([Stripe: expire a Session](https://docs.stripe.com/api/checkout/sessions/expire)). The unit tests use only texts for an expired or missing Session (`stripe-checkout-sessions.test.ts:398-461`, `stripe-checkout-sessions-reconciliation.test.ts:83-88`). In test mode (2026-10-14), expiring a completed Session returned `invalid_request_error`, HTTP 400, no code, and the message "Only Checkout Sessions with a status in ["open"] can be expired. This Checkout Session has a status of `complete`." It contains none of the three patterns ("can be expired" is not "cannot be expired"), so the adapter treats it as a failure, not as terminal.
 - **It creates a Session keyed per plan.** The key is `checkout_session:${userId}:${plan}`, plus a trial suffix (`:492`), so two plans never share a key. When a trial request has handled an existing Session, a recovery key naming that Session takes precedence (`:533`, set at `:934-938` and `:955-959`, used at `:1113-1114`). For the same plan, B's create can replay A's: the live retrieve then finds A complete, and the recovery path creates B (`:1124-1183`). The use case's client key does not reach Stripe, because the gateway ignores its options argument (`src/adapters/gateways/stripe-payment-gateway.ts:66`).
 - **After the create, it reconciles open Sessions** (`reconcileOpenCheckoutSessionsAfterCreate`, `:625-692`).
   - It lists up to `OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT` (10) open Sessions (`:645-646`).
@@ -60,21 +60,31 @@ Two tabs, A and B. Tab A's Checkout page is open. B's request passes its subscri
 1. **Before B's open-Session list.** The list no longer returns A, because it is not open. B creates a fresh Session.
 2. **After that list returned A, before B's retrieve.** For the same plan, the retrieve finds A inactive, and B creates a fresh Session.
 3. **After the list, before B's expire reaches A.** This happens for a different plan, or the same plan on different terms. B's expire fails.
-   - If Stripe's error matches the terminal patterns, which is unverified, creation continues.
-   - Otherwise B's request fails with `STRIPE_ERROR`, and this interleaving closes.
+   - Stripe's error for a completed Session matches none of the terminal patterns (reproduced 2026-10-14), so B's request fails with `STRIPE_ERROR`, and this interleaving closes.
 4. **After the list, when B's retrieve has failed.** The expire is then non-fatal, so B is created whatever Stripe's error says (`:954-969`, `:1012-1021`).
 
 B's reconcile no longer sees A as open, so it keeps B, and B's request returns B's URL.
 
-**The window** runs from B's subscription list to B's handling of A. When A is the customer's only open Session, that is at most three Stripe calls (the open-Session list, the retrieve and the expire), each retried by `callStripeWithRetry`. The list returns one Session (`limit: 1`, `:836`), so any other open Session is reached only by the post-create reconcile. For that Session, whose terminal expire also counts as success (`:600`), the window runs through the create. The planning bounds at `:26-46` cover the recovery path.
+**The window** runs from B's subscription list to B's handling of A. When A is the customer's only open Session, that is at most three Stripe calls (the open-Session list, the retrieve and the expire), each retried by `callStripeWithRetry`. The list returns one Session (`limit: 1`, `:836`), so any other open Session is reached only by the post-create reconcile. If that Session completes before the reconcile expires it, the expire fails with the same unmatched error, and the request fails with `STRIPE_ERROR` after creating B. B then stays open, but its URL is not returned, and a retry stops at `ALREADY_SUBSCRIBED`. The planning bounds at `:26-46` cover the recovery path.
 
 **The tail.** B stays completable until Stripe's 24-hour default ends. Every later checkout stops at `ALREADY_SUBSCRIBED` before reaching the Session code, so nothing expires B.
 
 **Whether B can be completed** depends on Stripe's setting.
 - B's page is first loaded after A completed. Stripe: "You can redirect customers that already have an active subscription to the customer portal or your website to manage their subscription." It detects them "either [by] the Customer object (if you provide it in the Checkout Session) or the email address", and "Active subscriptions have the following four statuses: Active, PastDue, Unpaid, Paused" ([Stripe: limit customers to one subscription](https://docs.stripe.com/payments/checkout/limit-subscriptions.md?payment-ui=stripe-hosted)).
-- **A returning customer** (no trial): with the setting on and A `active`, B's page should redirect. Stripe does not say when it checks, and the redirect is unverified here.
+- **A returning customer** (no trial): with the setting on and A `active`, B's page should redirect. Stripe does not say when it checks. In test mode it did not redirect (see the reproduction below); whether the test-mode setting is on was not checked.
 - **A first-time customer**: A is `trialing`, which the setting does not count. B is completable, and completing it creates a second subscription.
 - **The setting has a precondition.** Stripe: "You need to keep the login link for the customer portal enabled to keep this feature enabled. Disabling the login link disables this feature, which means that customers can create multiple subscriptions."
+
+### The test-mode reproduction (2026-10-14)
+
+Stripe test mode, one disposable test customer per scenario, deleted afterwards; not the shared E2E customer.
+- **The set-up.** Two calls to the real adapter, `createStripeCheckoutSession`, with the same input (code unchanged since `a57f5c0f`; #1487 added comments only). B's Stripe client paused B after its subscription list returned none. A was then completed on Stripe's hosted page in a headless browser, and B resumed: interleaving 1.
+- **For a trial,** B's create replayed A's completed Session, and the recovery key created a fresh B. B's page loaded as Checkout and completed. The customer then held two `trialing` subscriptions.
+- **For a returning customer** (no trial, Stripe's test card), the same sequence left two `active` subscriptions and two paid invoices, $58 in all. Stripe did not redirect B, although A was `active` when B's page loaded. The test-mode setting was not checked: the Dashboard needs the owner's sign-in. If it is on, it did not stop B; if it is off, the reproduction shows nothing about the setting.
+- **Expiring the completed A** returned the error quoted under the create path, which the adapter does not treat as terminal.
+- **Webhook events** from the four completions went to the one test-mode endpoint, the `dev` Preview deployment, as the hosted Stripe lane's do.
+- **Cleanup:** the four subscriptions were cancelled and both customers deleted.
+- **Not reproduced:** interleavings 2 to 4, the login-link portal's card handling, and live mode.
 
 ### What the repository says about the setting
 
@@ -125,13 +135,13 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
 - **The concurrency tests** (`src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts:58`, `:86`) prove that same-plan creates collapse, and that different-plan creates leave one completable Session.
 - **The webhook tests** cover a rejected Checkout completion (`stripe-webhook-controller-subscription-writes.test.ts:231`) and a second canceled or unpaid subscription (`:248`, `:258`).
 - **The duplicate tests** (`src/adapters/jobs/reconcile-stripe-subscriptions-duplicates.test.ts:81-315`, eight cases) prove the cron's cancellation against fakes.
-- **The maintained fake diverges from Stripe.** `FakeStripeCheckoutClient.expire` marks any Session expired, a completed one included, without an error (`src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts:422-431`). Stripe refuses to expire a Session that is not `open`. The divergence is not listed in `docs/guides/testing/fake-contracts.md`. The fake's own expire cannot reproduce interleaving 3. A test can stage it only by injecting an error through `setExpireFault`, and the text of Stripe's real error is unverified.
+- **The maintained fake diverges from Stripe.** `FakeStripeCheckoutClient.expire` marks any Session expired, a completed one included, without an error (`src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts:422-431`). Stripe refuses to expire a Session that is not `open`. The divergence is not listed in `docs/guides/testing/fake-contracts.md`. The fake's own expire cannot reproduce interleaving 3. A test can stage it only by injecting an error through `setExpireFault`. Stripe's real error is now known (above).
 - **Not covered by any test:**
   - a Session completed while a checkout request is in flight;
   - an expire refused because the Session is complete;
   - a second *entitled* subscription arriving at the webhook, or written to Postgres for the same user;
   - the Dashboard redirect;
-  - two completed Sessions in Stripe test mode.
+  - two completed Sessions in Stripe test mode, reproduced by hand on 2026-10-14 but not as a test.
 
 ## Impact
 
@@ -170,7 +180,7 @@ B's reconcile no longer sees A as open, so it keeps B, and B's request returns B
    - Stripe's cancel stops collection of the customer's finalized invoices, so the cancel must not leave the kept subscription's invoices uncollected.
    - The daily reconcile stays as the backstop, with the same cancellation fixes.
 5. **Make it visible.** Alert when the write guard rejects a competing entitled subscription, when option 4's handler or the daily reconcile finds more than one live subscription, and when either cancels one (DEBT-505's alert path). BUG-321's sync does not run in this bug's tail, so it is not where this alert belongs.
-6. **Correct the fake.** Make `FakeStripeCheckoutClient.expire` refuse a Session that is not `open`, as Stripe does, and record the correction in the fake-contract register, so tests can observe the race.
+6. **Correct the fake.** Make `FakeStripeCheckoutClient.expire` refuse a Session that is not `open` with Stripe's real error, as reproduced, and record the correction in the fake-contract register, so tests can observe the race. The adapter's terminal patterns, which miss that error, are replaced by option 2's status check.
 7. **Shorten Session lifetime** with `expires_at`, 30 minutes at least. This narrows the tail, but a learner who leaves a page open longer must start again.
 8. **Make the app the only writer of subscriptions.** Collect the card with a setup-mode Checkout, then create the subscription from the server. This closes the race completely, but it changes the purchase page, the disclosures and the consent flow.
 
@@ -192,11 +202,9 @@ The proposal for review: options 2 to 6 together, each layer for the case the on
 
 - [x] An independent audit checked every statement against the code at `a57f5c0f` and Stripe's documentation (2026-10-13): 18 findings, four substantive, all folded into this text.
 - [x] A second independent audit of the corrected text (2026-10-13) judged it accurate enough to act on, and found 14 more corrections: the price-only branch, a fourth interleaving, the BUG-321 sync's scope, option 2's fail-closed rule and residual, the cancel's collection effect as an unverified reading, and the login-link portal. All are folded in.
-- [ ] In Stripe test mode, with a disposable test customer (not the shared E2E customer), a two-tab reproduction:
-  - captures Stripe's actual error for expiring a completed Session;
-  - shows whether the redirect stops B with the setting on;
-  - shows the race, or a guard this record missed, for a trial and for a returning customer;
-  - shows whether a card added through the login-link portal becomes the customer's default.
+- [x] In Stripe test mode, with disposable test customers, the race (interleaving 1) left two `trialing` subscriptions for a trial and two `active`, paid subscriptions for a returning customer. Expiring a completed Session returned an error the adapter does not treat as terminal (2026-10-14).
+- [ ] The owner checks whether "limit customers to one subscription" is on in test mode. If it is, the reproduction shows it does not stop B.
+- [ ] Whether a card added through the login-link portal becomes the customer's default.
 - [ ] Tests fail first for each chosen option: a Session completed in flight, an expire refused for a completed Session, the completion sweep, the webhook's correction and its collection handling, and the alerts.
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, with its proving tests.
 - [ ] After the fix ships, the test-mode reproduction ends with one live subscription.
