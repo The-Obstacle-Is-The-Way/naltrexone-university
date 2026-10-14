@@ -165,6 +165,8 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `throws when an open Session cannot be expired, so the webhook is retried`
 - `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `asks the gateway to expire the customer's other open Checkout Sessions created before the event, after storing the subscription`
 - `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `keeps a Session created after the completion's event, which belongs to a later checkout`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `logs an error, and goes on, when another Session completed too`
 
 ## Account
 
