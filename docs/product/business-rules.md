@@ -152,6 +152,12 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/adapters/controllers/stripe-webhook-controller.test.ts`: `does not reprocess an event completed between peek and lock`
 - `tests/integration/bug-regression-subscription-observation-version-fence.integration.test.ts`: `rejects the reverse-commit webhook observation and retries with current state`
 
+### R24. A checkout never hands back a Session once the customer holds a live subscription, including one that started while the checkout request ran: it expires that Session and refuses. A completion Stripe confirms after the final check is not covered (BUG-343).
+
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses %s with ALREADY_SUBSCRIBED and leaves no open Session when the first Checkout completes after the subscription check`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it expires for another plan completed first`
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-completed-in-flight.test.ts`: `refuses with ALREADY_SUBSCRIBED when the Session it could not inspect completed before its expire`
+
 ## Account
 
 ### R13. Deleting an account removes the learner's data and their Stripe customer; billing events that arrive later are acknowledged, not used to recreate anything.

@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** Open — reproduced in test mode on 2026-10-14; next the fix, test first, and the owner's Dashboard checks; due 2026-10-20
+**Status:** In Progress — the re-check after the create and the fake's expire ship first; next the completion sweep and alerts, and the owner's Dashboard checks; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-13
 
@@ -96,9 +96,9 @@ Stripe test mode, one disposable test customer per scenario, deleted afterwards;
   - its manual check, line 71, was never ticked: "two-tab monthly+annual repro yields one live subscription after the fix".
 - BUG-245 closed as Resolved on 2026-06-13 (`docs/records/closed.md:236`).
 - At `a57f5c0f` no live document mentions the setting.
-  - The lessons pull request, #1487 (not yet merged), adds a description to `docs/architecture/integrations/stripe.md` and a comment before `reconcileOpenCheckoutSessionsAfterCreate`.
-  - Two of their statements go further than this record. The comment says the setting "is not a check at completion", where Stripe only does not describe one. `stripe.md` says the owner turned it on in live mode, which rests on BUG-245's owner note.
-  - The fix pull request should correct both.
+  - The lessons pull request, #1487, added a description to `docs/architecture/integrations/stripe.md` and a comment before `reconcileOpenCheckoutSessionsAfterCreate`.
+  - Two of their statements went further than this record. The comment said the setting "is not a check at completion", where Stripe only does not describe one. `stripe.md` said the owner turned it on in live mode, which rests on BUG-245's owner note.
+  - The first fix pull request corrects both.
 - The live Dashboard state is not verified here: only the owner can see it.
 
 ### The second subscription is invisible
@@ -184,11 +184,17 @@ Stripe test mode, one disposable test customer per scenario, deleted afterwards;
 7. **Shorten Session lifetime** with `expires_at`, 30 minutes at least. This narrows the tail, but a learner who leaves a page open longer must start again.
 8. **Make the app the only writer of subscriptions.** Collect the card with a setup-mode Checkout, then create the subscription from the server. This closes the race completely, but it changes the purchase page, the disclosures and the consent flow.
 
-## Resolution (proposed)
+## Resolution (decided)
 
-Not decided. This record is audited before any choice, and no code changes until the documentation pull requests in flight are merged and promoted.
+Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for the case the one before cannot close, shipped in steps. The owner delegated engineering calls; the refund in option 4 stays the owner's decision.
 
-The proposal for review: options 2 to 6 together, each layer for the case the one before cannot close. Option 7 as a separate decision, and option 8 not now.
+1. **The first pull request: options 6 and 2.**
+   - The fake refuses to expire a Session that is not open, as Stripe does, proved against TEST mode by the contract's twelfth scenario.
+   - The adapter settles a refused expire by the Session's status instead of the message. It checks the customer's subscriptions again once the Session to hand back is settled, and if one appeared, it expires that Session and refuses with `ALREADY_SUBSCRIBED`.
+   - Business rule R24 states it.
+2. **Next: option 3, the completion sweep, then option 5's alerts,** each test first, by 2026-10-20.
+3. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
+4. **Option 7** stays a separate owner decision, and option 8 is not taken now.
 
 ## Owner Decisions
 
@@ -205,8 +211,10 @@ The proposal for review: options 2 to 6 together, each layer for the case the on
 - [x] In Stripe test mode, with disposable test customers, the race (interleaving 1) left two `trialing` subscriptions for a trial and two `active`, paid subscriptions for a returning customer. Expiring a completed Session returned an error the adapter does not treat as terminal (2026-10-14).
 - [ ] The owner checks whether "limit customers to one subscription" is on in test mode. If it is, the reproduction shows it does not stop B.
 - [ ] Whether a card added through the login-link portal becomes the customer's default.
-- [ ] Tests fail first for each chosen option: a Session completed in flight, an expire refused for a completed Session, the completion sweep, the webhook's correction and its collection handling, and the alerts.
-- [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, with its proving tests.
+- [x] Tests failed first for options 6 and 2 (2026-10-14): a Session completed in flight, for a trial and for a returning customer; interleavings 3 and 4; an expire refused for a Session already expired; and the re-check's failure cases. Eight mutations of the fix each fail a test. The provider contracts pass in TEST mode, `executed=14 passed=14 skipped=0`.
+- [ ] Tests fail first for options 3, 4 and 5: the completion sweep, the webhook's correction and its collection handling, and the alerts.
+- [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
+- [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.
 - [ ] After the fix ships, the test-mode reproduction ends with one live subscription.
 
 ## Related
