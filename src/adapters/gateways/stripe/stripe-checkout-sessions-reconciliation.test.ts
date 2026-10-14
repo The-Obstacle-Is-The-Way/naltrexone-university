@@ -74,20 +74,16 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     });
   }
 
-  it('treats already-terminal reconcile expire errors as idempotent success', async () => {
+  it('continues the reconcile when a superseded Session has already expired', async () => {
     const logger = new FakeLogger();
     const stripe = createFake();
     // Same second as the created Session: the tie goes to the larger id, so
     // the racer `cs_fake_2` is canonical and `cs_fake_1` is superseded.
     stageRacingSession(stripe, fixedNowMs);
-    // Stripe reports "already expired" only for a Session that is terminal,
-    // so the fault leaves the superseded Session expired before it throws.
+    // The superseded Session expires just before the reconcile expires it,
+    // so the fake refuses the expire as Stripe does (BUG-343).
     stripe.setExpireFault((sessionId) => {
       stripe.markExpired(sessionId);
-      throw Object.assign(
-        new Error('This checkout session has already expired'),
-        { rawType: 'invalid_request_error', code: 'resource_missing' },
-      );
     });
 
     await expect(createCheckout(stripe, logger)).resolves.toEqual({
@@ -108,7 +104,8 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          msg: 'Treating already-terminal checkout session expire error as success',
+          context: { sessionId: 'cs_fake_1', status: 'expired' },
+          msg: 'Checkout session had already ended when it was expired',
         }),
       ]),
     );

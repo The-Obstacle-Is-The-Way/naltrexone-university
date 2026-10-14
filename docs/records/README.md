@@ -2,11 +2,11 @@
 
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
-**Now** — 2026-10-13.
+**Now** — 2026-10-14.
 - **Verifying, by due date.** BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333 and BUG-337 10-21; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
-- **In progress.** DEBT-518, the documentation revamp: the records, the agent instructions, the layout and the archive's removal are done; the four splits and the pilot follow.
+- **In progress.** DEBT-518, the documentation revamp: the records, the agent instructions, the layout and the archive's removal are done; the four splits and the pilot follow. BUG-343, a hidden second subscription: the re-check before a Session is handed back ships first; the completion sweep and alerts follow, due 2026-10-20.
 - **Next.** DEBT-503 item 4, due 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
-- **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22), and keeping or turning off Link on Checkout (DEBT-501 item 7). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it, and the requeue command (DEBT-414 F23).
+- **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription (BUG-343). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it, and the requeue command (DEBT-414 F23).
 - **Held.** DEBT-514 holds lint-staged at 17.5.1.
 - **Owner decisions pending.** Skew Protection (BUG-319); the server's 5% trace sample (BUG-331); a production check for E592 (BUG-334); reporting Clerk JS's cookie race (BUG-333); pinning Clerk JS (DEBT-521, by 10-26); Clerk's verified-email setting (DEBT-502); DEBT-414's open items; the production content bootstrap (DEBT-483); the learnings backlog (DEBT-515).
 
@@ -34,6 +34,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [BUG-340](./bug-340-stripe-renamed-checkout-save-information-checkbox.md) | Stripe renamed Checkout's save-information checkbox, so the hosted smoke cannot submit | P2 | Verifying — the next scheduled hosted Checkout run on `main` passes after promotion; due 2026-10-19 |
 | [BUG-341](./bug-341-documentation-test-can-mark-the-clone-bare.md) | A documentation test run from a worktree's pre-push hook marks the clone bare | P2 | Verifying — promotion to `main`; due 2026-10-19 |
 | [BUG-342](./bug-342-user-repository-conflict-test-depends-on-the-clock.md) | A user-repository conflict test fails when its two writes share a millisecond | P3 | Verifying — promotion to `main`; due 2026-10-20 |
+| [BUG-343](./bug-343-a-second-checkout-can-leave-a-hidden-second-subscription.md) | A second checkout can leave a hidden second subscription | P2 | In Progress — the re-check after the create and the fake's expire ship first; next the completion sweep and alerts, and the owner's Dashboard checks; due 2026-10-20 |
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Open — engineering has F21, F22 and F23 left; the rest waits on the owner, counsel and a tax adviser |
 | [DEBT-500](./debt-500-vitest-5-coordinated-migration.md) | Vitest 5 needs a coordinated migration | P3 | Open — the grouped Dependabot PR #1451 is the migration vehicle; resolution decided in the record |
 | [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items |

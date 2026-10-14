@@ -621,6 +621,65 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
     },
   },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[11],
+    // BUG-343: the checkout adapter expires a superseded Session under one
+    // key per Session, so a repeat by another request replays the first
+    // answer. Any other expire of a Session that is not open is refused with
+    // no error code; Stripe's message names the status (`complete` is refused
+    // the same way, observed in TEST mode on 2026-10-14, but completing a
+    // Session needs the hosted page, so this case pins `expired`).
+    async run(harness) {
+      const session = await harness.sessions.create(
+        harness.subscriptionParams,
+        { idempotencyKey: idempotencyKey('expire_refusal') },
+      );
+      const expireKey = idempotencyKey('expire');
+
+      const expired = await harness.sessions.expire(session.id, undefined, {
+        idempotencyKey: expireKey,
+      });
+      expect(expired.status).toBe('expired');
+
+      const replayed = await harness.sessions.expire(session.id, undefined, {
+        idempotencyKey: expireKey,
+      });
+      expect(replayed.id).toBe(session.id);
+      expect(replayed.status).toBe('expired');
+
+      let refused: unknown;
+      try {
+        await harness.sessions.expire(session.id, undefined, {
+          idempotencyKey: idempotencyKey('expire_again'),
+        });
+      } catch (error) {
+        refused = error;
+      }
+      expect(readErrorField(refused, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(refused, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(refused, 'statusCode')).toBe(400);
+      expect(readErrorField(refused, 'code')).toBeUndefined();
+      expect(readErrorField(refused, 'message')).toBe(
+        'Only Checkout Sessions with a status in ["open"] can be expired. This Checkout Session has a status of `expired`.',
+      );
+
+      const missingId = `cs_test_debt472missing${randomUUID().replaceAll('-', '')}`;
+      let missing: unknown;
+      try {
+        await harness.sessions.expire(missingId);
+      } catch (error) {
+        missing = error;
+      }
+      expect(readErrorField(missing, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(missing, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(missing, 'code')).toBe('resource_missing');
+      expect(readErrorField(missing, 'statusCode')).toBe(404);
+      expect(readErrorField(missing, 'param')).toBe('session');
+      expect(readErrorField(missing, 'message')).toBe(
+        `No such checkout session: '${missingId}'`,
+      );
+    },
+  },
 ];
 
 export function runStripeCheckoutClientContract(

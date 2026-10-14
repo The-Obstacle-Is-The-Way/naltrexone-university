@@ -28,13 +28,6 @@ function expireCall(sessionId: string) {
   };
 }
 
-function alreadyTerminalError(message: string, code?: string): Error {
-  return Object.assign(new Error(message), {
-    rawType: 'invalid_request_error',
-    ...(code ? { code } : {}),
-  });
-}
-
 describe('createStripeCheckoutSession', () => {
   const appUserId = crypto.randomUUID();
   const input = {
@@ -260,7 +253,9 @@ describe('createStripeCheckoutSession', () => {
       url: sessionUrl('cs_fake_1'),
     });
 
+    // BUG-343: the same listing runs again once the Session is settled.
     expect(stripe.subscriptions.listCalls).toEqual([
+      { customer: 'cus_123', status: 'all', limit: SUBSCRIPTION_LIST_LIMIT },
       { customer: 'cus_123', status: 'all', limit: SUBSCRIPTION_LIST_LIMIT },
     ]);
     expect(stripe.createCalls).toHaveLength(1);
@@ -395,17 +390,23 @@ describe('createStripeCheckoutSession', () => {
     });
   });
 
-  it('treats already-terminal expire error as idempotent success and creates new session', async () => {
+  it('creates a new session when Stripe no longer holds the session it expires', async () => {
     const stripe = createFake();
     const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
     const seededCreates = stripe.createCalls.length;
-    // Stripe reports an already-terminal error only for a Session that is
-    // terminal, so the fault leaves the existing Session expired first.
+    // Stripe's 404 for a Session it does not hold (the contract's twelfth
+    // scenario); the fault leaves the Session expired so it is not reused.
     stripe.setExpireFault((sessionId) => {
       stripe.markExpired(sessionId);
-      throw alreadyTerminalError(
-        `No such checkout.session: '${existingId}'`,
-        'resource_missing',
+      throw Object.assign(
+        new Error(`No such checkout session: '${sessionId}'`),
+        {
+          type: 'StripeInvalidRequestError',
+          rawType: 'invalid_request_error',
+          code: 'resource_missing',
+          statusCode: 404,
+          param: 'session',
+        },
       );
     });
 
@@ -421,7 +422,8 @@ describe('createStripeCheckoutSession', () => {
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          msg: 'Treating already-terminal checkout session expire error as success',
+          context: { sessionId: existingId, status: 'missing' },
+          msg: 'Checkout session had already ended when it was expired',
         }),
       ]),
     );
@@ -434,15 +436,15 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
-  it('treats expire error as idempotent success via message fallback when code is absent', async () => {
+  it('creates a new session when the session it expires has already expired', async () => {
     const stripe = createFake();
     const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
     const seededCreates = stripe.createCalls.length;
-    // No `code` property: exercises the message-pattern fallback branch. The
-    // fault leaves the Session expired first, as Stripe's error implies.
+    // The Session expires just before the adapter expires it, so the fake
+    // refuses with Stripe's 400, which has no code (BUG-343); the adapter
+    // reads the Session's status instead of the message.
     stripe.setExpireFault((sessionId) => {
       stripe.markExpired(sessionId);
-      throw alreadyTerminalError('This checkout session has already expired');
     });
 
     await expect(createCheckout(stripe)).resolves.toEqual({
@@ -454,13 +456,14 @@ describe('createStripeCheckoutSession', () => {
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          msg: 'Treating already-terminal checkout session expire error as success',
+          context: { sessionId: existingId, status: 'expired' },
+          msg: 'Checkout session had already ended when it was expired',
         }),
       ]),
     );
   });
 
-  it('throws STRIPE_ERROR when the terminal message is present but rawType differs', async () => {
+  it('throws STRIPE_ERROR when an expire fails and the session is still open, whatever the message says', async () => {
     const stripe = createFake();
     const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
     const seededCreates = stripe.createCalls.length;
@@ -481,7 +484,7 @@ describe('createStripeCheckoutSession', () => {
     expect(logger.infoCalls).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          msg: 'Treating already-terminal checkout session expire error as success',
+          msg: 'Checkout session had already ended when it was expired',
         }),
       ]),
     );
@@ -531,7 +534,10 @@ describe('createStripeCheckoutSession', () => {
       url: sessionUrl('cs_fake_2'),
     });
 
+    // The refused pre-create expire is settled by reading the Session, which
+    // is still open, so the failure stands (BUG-343).
     expect(stripe.retrieveCalls.slice(seededRetrieves)).toEqual([
+      existingId,
       existingId,
       'cs_fake_2',
     ]);
