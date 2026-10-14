@@ -1,6 +1,5 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-09-24
 
 **Retry policy reverified:** 2026-09-20; the remaining sections were not fully re-audited on this date.
 
@@ -74,9 +73,9 @@ webServer: {
 - `pnpm test:e2e` selects both required projects and excludes every `stripe-hosted-*.spec.ts` file. `mobile-smoke` re-runs only the journeys tagged `@mobile-smoke` (public pages, the pricing CTA, a tutor session, quick practice and subscriber navigation) plus `mobile-layout.spec.ts`, which fails if a public (signed out and signed in) or subscriber page scrolls sideways at 375px or 360px; `chromium` ignores that probe
 - The isolated E2E server receives a test-only `CONSENT_STATE_SECRET` unless the environment sets one, so the trial banner's add-card action can sign its Checkout consent state; production and preview carry their own secret
 - The `stripe-hosted` project is an observational compatibility probe for Stripe-owned Checkout markup; it is scheduled/manual and never a pull-request or push check
-- The HTML report is configured with `open: 'never'`, so a locally recovered flaky run cannot hold the process open. CI never uploads it: every report carries Clerk development tokens from the setup steps ([BUG-328](../../_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md)). Both E2E workflows keep tracing local, and upload `test-results/` only after an E2E failure and a passing scan, described under CI below.
+- The HTML report is configured with `open: 'never'`, so a locally recovered flaky run cannot hold the process open. CI never uploads it: every report carries Clerk development tokens from the setup steps (BUG-328). Both E2E workflows keep tracing local, and upload `test-results/` only after an E2E failure and a passing scan, described under CI below.
 - Global setup signs in within a 30-second deadline. If an attempt fails, it signs out the session it created within a 20-second deadline (`tests/e2e/helpers/clerk-session-deadlines.ts`). The deadlines matter because Clerk's sign-in and sign-out run `page.evaluate`, which Playwright never times out. Setup reserves both once its preparation ends, which has a 60-second budget; preflight's two Clerk calls share one 30-second deadline within it. The `setup` and `cleanup` projects also bound page waits and navigations at 15 seconds.
-- The stored session's lifecycle ([BUG-330](../../_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md)):
+- The stored session's lifecycle (BUG-330):
   - **Testing token.** The setup project runs `clerkSetup()`, and only its sign-in installs the token's route. Signed-in tests restore the stored session without it, as Clerk's guide does; BUG-330 option 4 records why the token stays out of test contexts.
   - **Clerk trace.** Every signed-in test records Clerk's decisions on each page answer, its Frontend API answers, its cookies' names and times, and Clerk JS's session changes. If the page reaches sign-in, the test prints them once as `[E2E_CLERK_AUTH_TRACE]`, redacted (BUG-333). It finds Clerk's Frontend API from the publishable key, because `clerkSetup()` sets `CLERK_FAPI` only in the setup worker.
   - **Failed restore.** If a signed-in test cannot restore the stored session within 20 seconds, it fails with one error naming what Clerk's Frontend API answered (method, path, status, error codes and trace ID; never a token). That error is recorded in `test-results/.auth/`, and every later signed-in test fails with it at once.
@@ -94,7 +93,7 @@ The default is zero retries, including the required `chromium`, observational
 run; do not override retries to obtain green evidence. The shared session/bookmark
 success-path helpers also fail on the first visible product error within an
 attempt; explicit error-state tests use the state detector separately. The
-[DEBT-475 helper-recovery receipts](../../debt/assets/helper-recovery-2026-09-21/verification.md)
+[DEBT-475 helper-recovery receipts](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/68e50ded64935e3212803423c541a26517b6c674/docs/debt/assets/helper-recovery-2026-09-21/verification.md)
 record the red-first proof and replacement. Observational means
 non-blocking for merge, not permission to hide hosted-test failures.
 
@@ -216,7 +215,7 @@ rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME
 
 Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start Postgres` step runs.
 
-Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. Checkout Sessions created by the required redirect-boundary tests and by explicit hosted-smoke runs can remain deterministic recovery-chain rungs while Stripe retains their idempotency keys. [DEBT-466](../../_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md) and [DEBT-470](../../_archive/debt/debt-470-checkout-replay-tail-jump.md) retain provider-faithful blocking contract coverage for that traversal; do not rotate the user or drop the database volume to mask a traversal failure.
+Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. Checkout Sessions created by the required redirect-boundary tests and by explicit hosted-smoke runs can remain deterministic recovery-chain rungs while Stripe retains their idempotency keys. DEBT-466 and DEBT-470 retain provider-faithful blocking contract coverage for that traversal; do not rotate the user or drop the database volume to mask a traversal failure.
 
 The temporary local `assertLocalTrialCheckoutReplayCapacity()` guard and `[E2E_CHECKOUT_CHAIN_SATURATED]` push exception were removed when DEBT-470 landed the subscription tail jump. The 2026-08-17 characterization had found 11 current-tuple completed Sessions inside 24 hours against the old fallback cap 10. The structural fix now selects a unique exact-metadata tail through a bounded provider list and keeps the old rung walk only as a safe fallback; retained-chain length no longer defines the healthy exact-match path's recovery-create depth. Any failure before the Stripe-origin boundary remains blocking. Failures inside `stripe-hosted-*.spec.ts` are observational provider-compatibility failures, not evidence that a candidate commit is wrong. Stripe's 24-hour statement remains only the earliest pruning eligibility, not an exact deletion deadline.
 
@@ -359,71 +358,7 @@ agent-browser close
 
 ### Authenticated Exploration
 
-By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
-
-See [browser-automation.md](./browser-automation.md) for a focused quick reference and multiple auth options.
-
-1) Create a temporary script that signs in via Clerk and saves `storageState`:
-
-```ts
-// scripts/tmp-create-agent-browser-state.ts (do not commit)
-import { clerkSetup, clerk } from '@clerk/testing/playwright';
-import { config } from 'dotenv';
-import { chromium } from '@playwright/test';
-
-async function main() {
-  config({ path: '.env.local', quiet: true });
-  config({ path: '.env', quiet: true });
-
-  const baseURL = process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000';
-  const username = process.env.E2E_CLERK_USER_USERNAME;
-  const password = process.env.E2E_CLERK_USER_PASSWORD;
-
-  if (!username || !password) throw new Error('Missing Clerk E2E credentials');
-
-  await clerkSetup();
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ baseURL });
-  const page = await context.newPage();
-
-  await page.goto('/sign-in');
-  await clerk.signIn({
-    page,
-    signInParams: { strategy: 'password', identifier: username, password },
-  });
-
-  await page.goto('/app/dashboard');
-  await context.storageState({ path: '/tmp/agent-browser-state.json' });
-  await browser.close();
-}
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
-```
-
-2) Run it:
-
-```bash
-pnpm tsx scripts/tmp-create-agent-browser-state.ts
-```
-
-3) Use agent-browser with the saved state:
-
-```bash
-agent-browser --state /tmp/agent-browser-state.json open http://localhost:3000/app/dashboard
-```
-
-If you prefer to log in “by hand”, you can also use `--profile` to persist cookies across sessions:
-
-```bash
-agent-browser --profile /tmp/agent-browser-profile open http://localhost:3000/sign-in
-```
-
-**Command reference:** `.agents/skills/agent-browser/SKILL.md`
-
----
+Use a persistent `agent-browser` profile, signed in once by a person, as [browser automation](./browser-automation.md) describes. Do not use a saved Playwright `storageState` file with `agent-browser --state`: it fails silently, even for sites without Clerk.
 
 ## Webapp-Testing Skill
 
@@ -459,7 +394,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and all 398 browser tests run on every trigger because they need no provider credential. Before unit coverage, required CI runs `pnpm lint:doubles`; local `pnpm lint` invokes the same fail-closed test-double fidelity ratchet, while ordinary Vitest runs no longer pay for it through `globalSetup`. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone ([DEBT-473](../../_archive/debt/debt-473-green-without-evidence.md) F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Neither workflow uploads the HTML report, because every report carries Clerk development tokens from the setup steps ([BUG-328](../../_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md)). When their E2E step fails, both run `scripts/ci/scan-playwright-output.ts test-results`, and upload `test-results/` only if the scan passes it. The scan accepts only regular UTF-8 text files (`.md`, `.txt`, `.json`, `.log`) and refuses anything else, such as a zip, a report, an image or a symbolic link, instead of decoding it. It looks for the Clerk credential shapes in `tests/shared/clerk-credential-shapes.ts` after undoing percent-encoding and JSON `\u` escapes; E2E console redaction removes the same shapes from the text as logged. The shapes are a heuristic; the file-type allow-list is what bounds what can be published. The upload leaves out hidden files, which include the stored auth state in `.auth/`, and `**/trace.zip`; Playwright tracing is disabled in CI but uses `retain-on-failure` locally. `tests/ci-workflow.test.ts` requires, in every workflow, that no step names `playwright-report`, that only the scan and scan-gated uploads name `test-results`, and that every upload action passes the scan or is a listed exemption keyed by its artifact name and path. A step that publishes without naming either directory is left to review of workflow changes. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
+CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and all 398 browser tests run on every trigger because they need no provider credential. Before unit coverage, required CI runs `pnpm lint:doubles`; local `pnpm lint` invokes the same fail-closed test-double fidelity ratchet, while ordinary Vitest runs no longer pay for it through `globalSetup`. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone (DEBT-473 F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Neither workflow uploads the HTML report, because every report carries Clerk development tokens from the setup steps (BUG-328). When their E2E step fails, both run `scripts/ci/scan-playwright-output.ts test-results`, and upload `test-results/` only if the scan passes it. The scan accepts only regular UTF-8 text files (`.md`, `.txt`, `.json`, `.log`) and refuses anything else, such as a zip, a report, an image or a symbolic link, instead of decoding it. It looks for the Clerk credential shapes in `tests/shared/clerk-credential-shapes.ts` after undoing percent-encoding and JSON `\u` escapes; E2E console redaction removes the same shapes from the text as logged. The shapes are a heuristic; the file-type allow-list is what bounds what can be published. The upload leaves out hidden files, which include the stored auth state in `.auth/`, and `**/trace.zip`; Playwright tracing is disabled in CI but uses `retain-on-failure` locally. `tests/ci-workflow.test.ts` requires, in every workflow, that no step names `playwright-report`, that only the scan and scan-gated uploads name `test-results`, and that every upload action passes the scan or is a listed exemption keyed by its artifact name and path. A step that publishes without naming either directory is left to review of workflow changes. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
@@ -549,7 +484,7 @@ killall "Google Chrome"
 
 Use `resetBookmarksForE2EUser()` only when a test truly needs bookmark-only isolation and does not rely on session/attempt state.
 
-See [DEBT-293](../../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.md) for the full analysis and the resolved reset strategy.
+See DEBT-293 for the full analysis and the resolved reset strategy.
 
 ### Server actions hang / UI stuck on "Loading..."
 
@@ -583,7 +518,7 @@ See [DEBT-293](../../_archive/debt/debt-293-e2e-shared-state-structural-flakines
 - `createAction` try/catch wraps every server action
 - Error boundaries on every route
 
-**Client-side timeouts:** `lib/with-timeout.ts` wraps client-side server action calls (SPEC-029), preventing indefinite "Loading..." states. See [SPEC-029](../../_archive/specs/spec-029-dev-environment-resilience.md).
+**Client-side timeouts:** `lib/with-timeout.ts` wraps client-side server action calls (SPEC-029), preventing indefinite "Loading..." states. See SPEC-029.
 
 ---
 
@@ -591,7 +526,7 @@ See [DEBT-293](../../_archive/debt/debt-293-e2e-shared-state-structural-flakines
 
 - [react-component-tests.md](./react-component-tests.md) — React 19 + Vitest component testing setup
 - [CLAUDE.md](../../../CLAUDE.md) — Testing mandate and test locations
-- [SPEC-010](../../_archive/specs/spec-010-server-actions.md) — Controller testing patterns
+- SPEC-010 — Controller testing patterns
 - [Stripe vendor docs](../../architecture/integrations/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../../architecture/integrations/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)

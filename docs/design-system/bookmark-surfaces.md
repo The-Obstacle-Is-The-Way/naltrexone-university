@@ -1,7 +1,6 @@
 # Bookmark Surface Policy
 
-**Last Updated:** 2026-04-23
-**Related:** [BS-053](../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), BS-052 (bookmark icon toggle), [Bookmarks Dossier](../frontend/pages/bookmarks.md) (complete vertical-slice documentation), [DEBT-365](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) Concern 2 (closed 2026-04-23 as intentional-by-design — stage disambiguates `Mark for review` from `Bookmark`)
+**Related:** BS-053 (bookmark vs mark-for-review collision), BS-052 (bookmark icon toggle), DEBT-365 Concern 2 (closed 2026-04-23 as intentional-by-design — stage disambiguates `Mark for review` from `Bookmark`)
 
 ---
 
@@ -81,7 +80,7 @@ These are **intentionally separate concepts** and must never share the same visu
 | Aspect | Bookmark | Mark for Review |
 |--------|----------|-----------------|
 | **Scope** | Global — persists permanently | Session-scoped — dies with the exam |
-| **Storage** | `bookmarks` table | Session JSON `question_states` |
+| **Storage** | `bookmarks` table | `practice_session_question_states.marked_for_review` |
 | **Purpose** | "Study this later" | "Revisit before I submit" |
 | **Mental model** | Curation (learning) | Flagging (assessment) |
 | **Available in** | Reflection surfaces | Exam mode only |

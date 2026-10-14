@@ -1,7 +1,5 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret and production release-gate sections reverified 2026-09-19.
-
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
 It intentionally avoids hard-coding private dashboard values that the repo cannot self-verify, such as exact account IDs, branch hostnames, webhook secrets, or live price IDs. Those belong in the providers themselves. This document records the contract the codebase expects.
@@ -46,13 +44,13 @@ Owner ruling 2026-09-19, recorded 2026-09-20:
 
 - Keep secrets on their consuming steps, never at workflow/job scope. Required and hosted-checkout Build steps use real compiled public values (or documented credential-free fallbacks) and shape-valid server-only placeholders. Real TEST-mode provider/E2E credentials belong only on E2E; the scheduled provider-contract runner receives only its required Stripe inputs. Codecov gets only its upload token.
 - Typecheck, lint, unit, database migrate/seed, integration and browser steps receive no provider credential. Public values are not authentication secrets. Step scoping does not isolate a secret from dependency code executing within the authorized step.
-- SHA-pin every action, and pin every container image by digest; `tests/ci-workflow.test.ts` checks the images in every workflow (BUG-327). Four workflows currently exist: `tests/ci-workflow.test.ts` enumerates permitted secret consumers and verifies pins in CI and both Stripe workflows; `scripts/security-txt-renewal.test.ts` separately verifies the renewal workflow's pins and least-privilege permissions. Every added workflow needs the corresponding contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
+- SHA-pin every action, and pin every container image by digest; `tests/ci-service-images.test.ts` checks the images in every workflow, and that every workflow's Postgres digest matches `docker-compose.yml` (BUG-327, DEBT-516). `tests/ci-workflow.test.ts` verifies action pins in every workflow, and enumerates permitted secret consumers in CI, both Stripe workflows and the operational-alert watcher; `scripts/security-txt-renewal.test.ts` separately verifies the renewal workflow's pins and least-privilege permissions. Every added workflow needs the corresponding contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
 - Keep the Dependabot secret store empty and retain its E2E actor guard. Vercel does not build `dependabot/**` branches (`vercel.json`, BUG-327), so Preview secrets never reach unreviewed dependency code either. Do not run bot heads locally with shared credentials. Re-author a reviewed owner PR when PR-time E2E is needed. Revisit only after separate Stripe Sandbox and Clerk-instance isolation at the paying-customer/second-engineer trigger; see [Dependency Update Protocol](../guides/dependencies/updating-dependencies.md#dependabot-prs-and-secrets).
 - GitHub Actions has no consumer for `CRON_SECRET`. Its unused copy was deleted on 2026-09-20; API readback found zero matching secrets. This does not attest to Vercel rotation. Cron authentication validates the value actually consumed at request time, without making application startup depend on it.
 
 ### Deploy Migration Contract
 
-[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
+BUG-241 is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs the checked-in Drizzle migrations, between ledger checks, before `pnpm build` ([the exact command](../guides/database/migrations.md)), so they apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
 
 ---
 
@@ -94,7 +92,7 @@ These rules are enforced by the repo today:
 
 ### Stripe account rule
 
-Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md).
+Stripe live mode and test mode should remain on the same Stripe account. This avoids cross-account price/customer drift and matches the historical fix documented in BUG-079.
 
 ### Stripe price ID rule
 
@@ -133,7 +131,7 @@ If Vercel Standard Protection is enabled for Preview deployments, Clerk and Stri
 
 Preview webhook targets must therefore be publicly reachable without Vercel login gates, or webhook testing must use another public endpoint.
 
-See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md).
+See BUG-080.
 
 ### Header-Safe `CRON_SECRET` Across Vercel Scopes
 
@@ -237,7 +235,7 @@ Do not run migrations by relying on implicit `.env.local` resolution. Every data
 
 **Prevention**
 
-The Vercel Build Command runs `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds (set in `vercel.json`), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
+The Vercel Build Command applies the checked-in migrations before `pnpm build` for git-triggered Preview and Production builds ([the exact command](../guides/database/migrations.md)), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
 
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
@@ -270,9 +268,9 @@ When changing environment configuration, verify all of the following:
 
 - [promote-to-production.md](../guides/release/promote-to-production.md)
 - [database-recovery.md](../guides/operations/database-recovery.md)
-- [license-baseline.md](../dev/license-baseline.md)
-- [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
-- [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md)
+- [Supply-chain policy: licences](../policies/supply-chain.md#licences)
+- BUG-079
+- BUG-080
 - [proxy.ts](../../proxy.ts)
 - [lib/env.ts](../../lib/env.ts)
 - [app/api/webhooks/clerk/route.ts](../../app/api/webhooks/clerk/route.ts)

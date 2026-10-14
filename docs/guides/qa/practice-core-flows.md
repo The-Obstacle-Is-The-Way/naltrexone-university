@@ -1,15 +1,15 @@
-# Practice Core Flows (Tutor, Exam, Quick Practice)
+# Practice Core Flows (Tutor, Exam, Quick Practice, Review)
 
 **Status:** Draft
 **Created:** 2026-08-13
-**Surfaces:** `/app/practice`, `/app/practice/quick`, `/app/practice/[sessionId]`
+**Surfaces:** `/app/practice`, `/app/practice/quick`, `/app/practice/[sessionId]`, `/app/history`, `/app/bookmarks`, `/app/dashboard`, `/app/questions/[slug]`
 **Preconditions:** Local dev (`pnpm dev`) or a Vercel preview; an **entitled** user signed in and able to open `/app/dashboard` (do not assume the database-isolated `pnpm test:e2e` database seeded the database used by `pnpm dev`). No incomplete session at start (finish or abandon leftovers first — the starter blocks new sessions while one is open).
 **Execution modes:** Human in full. Playwright-assisted runs can execute all behavior steps but need human/vision review for the judgment checks. Agent modes can run the remaining tutor/quick steps, but steps 2 and 21 need `SegmentedControl`/`FilterChip` interaction and are marked `⚠ human/PW` (DEBT-323); pointer choice activation submits immediately, while keyboard/AT or the agent `eval` label-click fallback exposes a **Submit** button that needs the button-click fallback.
 **Estimated time:** 15–20 min
 **Promotion gate:** yes
 **Promoted to:** — (overlaps `practice.spec.ts`, `session-continuation.spec.ts`; this procedure keeps the judgment checks and the not-yet-automated edges)
 
-This procedure is written to absorb Flows A–C of the Core Flow Verification section in `docs/dev/stabilization-checklist.md` once it is Active (that section remains in place until then). Behavior contracts cited below live in `docs/product/practice/interaction-contracts.md` and `docs/product/practice/exam-answer-secrecy.md`.
+This procedure absorbed the stabilization checklist's core flows, including review, bookmarks and the dashboard (Flow D). Behavior contracts cited below live in `docs/product/practice/interaction-contracts.md` and `docs/product/practice/exam-answer-secrecy.md`.
 
 ---
 
@@ -21,7 +21,7 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 | 2 | ⚠ Narrow filters (e.g. one tag + "Unanswered") | Availability output updates to match the narrowed pool |
 | 3 | Restore or widen filters until at least 5 questions are available; with mode = Tutor and count = 5, press **Start session** | URL becomes `/app/practice/<sessionId>`; question 1 of 5 renders; **no timer is shown** (tutor has no clock) |
 | 4 | Activate a choice; if using keyboard/AT or the agent label-click fallback, press **Submit** when it appears | Verdict pill (`data-testid="verdict-pill"`) and the explanation render **immediately** after pointer activation or Submit — tutor mode always shows feedback on commit |
-| 5 | Check the question footer | Bookmark control **is present** (tutor = YES in `docs/design-system/bookmark-surfaces.md`); rating footer (helpful / not helpful) present |
+| 5 | Check the question footer, then activate the bookmark control | Bookmark control **is present** (tutor = YES in `docs/design-system/bookmark-surfaces.md`) and shows the question as bookmarked, for step 23; rating footer (helpful / not helpful) present |
 | 6 | Press **Next**, answer one more, then navigate away (e.g. Dashboard) mid-session | The question progress indicator advances; no error on leaving |
 | 7 | Return to `/app/practice` | **Continue session** card shows the session with its mode label and progress, with **Resume session** and abandon actions |
 | 8 | Press **Resume session** | Returns to the exact `/app/practice/<sessionId>` URL at the next unanswered question |
@@ -49,10 +49,19 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 | 20 | Activate a choice; if using keyboard/AT or the agent label-click fallback, press **Submit** when it appears | Verdict pill + explanation render (tutor-style feedback); **Next** loads another question |
 | 21 | ⚠ Switch the status filter (e.g. to "Incorrect") | Question pool and counts change accordingly |
 
+## Steps — Review, bookmarks and dashboard (⚠ human/PW: step 25 uses toggles)
+
+| # | Action | Expected |
+|---|--------|----------|
+| 22 | Go to `/app/history` | The Sessions and Questions tabs both render |
+| 23 | Go to `/app/bookmarks`; remove one bookmark | The list shows bookmarks, and the removed one disappears after confirming |
+| 24 | Go to `/app/dashboard` | Stats and recent activity render |
+| 25 | ⚠ Start a new exam session as in step 11, select an answer on Q1, and press **Next** so the draft is saved. Without submitting, open the dashboard, History, and Q1's page (`/app/questions/<slug>`), then abandon the session as in step 18 | No surface reveals correctness or explanations before the exam ends ([exam answer secrecy](../../product/practice/exam-answer-secrecy.md)) |
+
 ## Visual checks
 
 - [ ] Entire flow renders forced-dark; no light-mode leakage anywhere (DEBT-421 invariant)
-- [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/design-system/pattern-registry.md` I-3 / `docs/frontend/pages/quick-practice.md`
+- [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/design-system/pattern-registry.md` I-3
 - [ ] Action bar stays reachable on long questions (sticky bottom bar; whole-page scroll) — `docs/design-system/layout.md`
 - [ ] Focus rings on all interactive controls are the canonical ring — `docs/design-system/standards.md` §3
 - [ ] Question stem and choices render at the Primary content tier (`text-base`, 16px); the post-submit explanation is promoted to Primary per the Feedback Context Override — `docs/design-system/typography.md` § Content Tier System
@@ -66,3 +75,14 @@ Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feed
 ## On failure
 
 Behavioral defect → file a bug record in `docs/records/`, citing the step number and the governing contract doc. Visual drift → check the `docs/design-system/` policy first; undocumented pattern = Discoverability Rule finding, not a pass.
+
+## Correctness Hotspots
+
+The former stabilization checklist also required these checks; the UI flows above do not replace them:
+
+- latest-attempt timestamp ties preserve the missed-question result (BUG-074);
+- normalized question state persists correctly through concurrent updates;
+- session/question mutations preserve idempotency on retries;
+- exam secrecy holds across exact attempt/session IDs, latest-attempt hydration, retry provenance, session review, next-question reads and dashboard/history projections.
+
+Use the relevant automated regression suites for concurrency and data-state proof; a visual pass alone does not establish those invariants.

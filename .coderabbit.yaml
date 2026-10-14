@@ -187,6 +187,14 @@ reviews:
     # Review migration SQL; skip only drizzle-kit's generated snapshots and
     # journal (ADR-021 adds a migration per increment).
     - "!db/migrations/meta/**"
+    # Temporary, DEBT-518 step 5: the archive purge deletes 1,466 files here,
+    # far above CodeRabbit's per-review file limit. CodeRabbit reads this file
+    # from the pull request's head, so the purge keeps these lines and the
+    # pull request after it removes them.
+    - "!docs/_archive/**"
+    - "!docs/bugs/assets/**"
+    - "!docs/debt/assets/**"
+    - "!docs/audits/assets/**"
 
   # Focus on these tools
   tools:

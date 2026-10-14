@@ -1,8 +1,8 @@
 # Tag Taxonomy — Golden Spec
 
-> **Status:** Implemented (2026-02-18 via SPEC-033; re-verified 2026-03-17)
-> **Companion docs:** [tag-taxonomy-pipeline.md](../content/tag-taxonomy-pipeline.md),
-> [question-format-spec.md](../content/question-format-spec.md)
+> **Status:** Implemented (SPEC-033)
+> **Companion docs:** [the tag taxonomy's implementation](../architecture/tag-taxonomy.md).
+> The authoring format is owned by [the draft schema](../../content/drafts/questions/SCHEMA.md), the importer (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts`.
 >
 > This is the canonical taxonomy reference. Runtime implementation is aligned;
 > use this doc for slugs, display names, ordering, and migration intent.
@@ -151,7 +151,7 @@ Added treatment slugs:
 
 ---
 
-## Implementation Status (SPEC-033)
+## Implementation Status
 
 The migration defined by this doc is complete.
 
@@ -167,7 +167,7 @@ The migration defined by this doc is complete.
 
 ### Phase 2: Pipeline code
 
-- [x] `lib/content/draftTaxonomy.ts` aligned to canonical topic / substance /
+- [x] `lib/content/draft-taxonomy.ts` aligned to canonical topic / substance /
       treatment sets
 - [x] `scripts/import-draft-questions.ts` no longer assigns taxonomy from
       directory names
@@ -187,25 +187,20 @@ The migration defined by this doc is complete.
 - [x] `caffeine` removed from canonical draft taxonomy
 - [x] Legacy migration-only scripts retired
 - [x] Pipeline docs updated
-- [x] Coverage reports generated via `scripts/tag-census.ts` (script removed in DEBT-343; reports preserved in `docs/content/reports/`)
+- [x] Coverage reports generated via `scripts/tag-census.ts` (script removed in DEBT-343; the reports were deleted in DEBT-518, and their findings are under Coverage Tracking below)
 
 ---
 
 ## Coverage Tracking
 
-Use dated census reports for coverage analysis instead of relying on old
-migration-era expectations.
+Judge coverage from a census of the published questions, not from old
+migration-era expectations. The census reports and their script are gone; the
+last census's findings are below.
 
-Latest verified report:
-[tag-census-2026-03-17.md](../content/reports/tag-census-2026-03-17.md)
-
-As of 2026-03-17:
+The last census, on 2026-03-17, found:
 
 - Zero-count canonical slugs: substance `inhalants`
-- Low-count canonical slugs at the default `<= 3` threshold: none
-
-Historical snapshot:
-[tag-census-2026-02-18.md](../content/reports/tag-census-2026-02-18.md)
+- Low-count canonical slugs, with one to three questions (the default threshold of 3): none
 
 ---
 

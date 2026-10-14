@@ -1,7 +1,7 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^23.0.0
-**API Version:** `2026-09-30.endive` (outbound SDK requests only; webhook endpoints carry their own versions, see [Webhook Endpoint API Versions](#webhook-endpoint-api-versions))
+**Package:** `stripe` (version: `package.json`)
+**API Version:** `2026-09-30.endive`, pinned in `lib/stripe-api-version.ts` (outbound SDK requests only; webhook endpoints carry their own versions, see [Webhook Endpoint API Versions](#webhook-endpoint-api-versions))
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
 **Changelog:** https://docs.stripe.com/changelog
@@ -75,7 +75,9 @@ A major release can also remove a request field, and the SDK release that pins i
 
 ## Idempotent Requests
 
-Stripe saves the status code and response body from the first request made with an idempotency key, and later requests with the same key return that saved result. Stripe permits pruning only after a key is at least 24 hours old; it does not promise deletion at exactly 24 hours. Replayed create responses for short-lived resources therefore are not proof of current live state. The subscription Checkout adapter keeps deterministic provider keys for concurrency collapse and retrieves each created or replayed Session before deciding from its status and expiry. When that result is inactive, the adapter uses Stripe's newest-first Checkout Session list through a bounded full-metadata scan to seed the existing recovery key from one unique tail; an open tail is live-retrieved and reused only while active, while ambiguity or scan failure retains [DEBT-466](../../_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md)'s bounded deterministic walk. [DEBT-470](../../_archive/debt/debt-470-checkout-replay-tail-jump.md) records the provider-contract receipts and implementation bounds.
+Stripe saves the status code and response body from the first request made with an idempotency key, and later requests with the same key return that saved result. Stripe permits pruning only after a key is at least 24 hours old; it does not promise deletion at exactly 24 hours. Replayed create responses for short-lived resources therefore are not proof of current live state. The subscription Checkout adapter keeps deterministic provider keys for concurrency collapse and retrieves each created or replayed Session before deciding from its status and expiry. When that result is inactive, the adapter uses Stripe's newest-first Checkout Session list through a bounded full-metadata scan to seed the existing recovery key from one unique tail; an open tail is live-retrieved and reused only while active, while ambiguity or scan failure retains DEBT-466's bounded deterministic walk. DEBT-470 records the provider-contract receipts and implementation bounds.
+
+Two tabs can still open Sessions for different plans at the same moment. After each create, the adapter lists the customer's open Sessions (up to ten), keeps the newest still-active one that carries renewal metadata, and expires the other active ones (`reconcileOpenCheckoutSessionsAfterCreate`, BUG-245). The Stripe Dashboard's Checkout setting "limit customers to one subscription", which the owner turned on in live mode, redirects a customer who already holds an active, past-due, unpaid or paused subscription away from Checkout to manage it. Stripe documents it as that redirect, not as a check at completion, and its list of statuses leaves out `trialing`. Keep that setting on: nothing in this repository sets or checks it.
 
 **Docs:** https://docs.stripe.com/api/idempotent_requests
 

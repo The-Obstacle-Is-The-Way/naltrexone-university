@@ -11,8 +11,7 @@ reviewable exceptions:
 - a dependency needs to be tested against the policy before a real PR;
 - pnpm audit needs a documented advisory exception.
 
-The DEBT-394 record is archived at
-`docs/_archive/debt/debt-394-supply-chain-hardening.md`.
+DEBT-394 is closed; the ledger in `docs/records/closed.md` says where to read it.
 
 The policy is intentionally strict:
 
@@ -500,7 +499,7 @@ There are no current entries. The last three were the Solana mobile-wallet
 packages under `@clerk/ui` that declared `react-native`; they left the graph
 when Clerk UI 1.38 dropped its Solana adapters, and the extensions were
 removed with them
-([DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)). Remove an
+(DEBT-506). Remove an
 entry when its declaring package leaves the graph or upstream marks the peer
 optional itself; keep the `NEVER_INSTALLED` guard.
 
@@ -529,13 +528,13 @@ owner explicitly approves the dismissal; the record alone does not
 authorize it, and until that approval the alert stays open with the
 record linked rather than left to drift. The worked precedent is
 `stream-json` in
-[DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md) § F: the
+DEBT-476 § F: the
 patched line is ESM-only with renamed entry points that the sole consumer
 cannot load, the vulnerable functions sit on no import path the
 application can take, and forcing that two-major upgrade is not supported.
 The precedent ended upstream: Clerk UI 1.38 replaced its Solana adapters
 with Wallet Standard, which removed jayson and stream-json from the graph
-([DEBT-506](../_archive/debt/debt-506-dependabot-alert-triage-2026-10.md)), so the
+(DEBT-506), so the
 alerts close by upgrade rather than dismissal. Zero open alerts does not mean
 the installed package was removed. CI does not run `pnpm audit`, so such a
 case gets no `ignoreGhsas` entry.
@@ -566,3 +565,27 @@ If Vercel falls back to pnpm 10.x or fails before installing, stop and
 root-cause before merge. Possible fixes include an explicit install command
 or Corepack activation in Vercel configuration, but do not add those until
 the preview log proves they are necessary.
+
+## Licences
+
+A dependency's licence is reviewed when it is added, and a list is generated on demand with `pnpm licenses list --prod --long --json`, rather than kept as a snapshot that drifts.
+
+1. Add no direct dependency licensed `Unknown`, `FSL-*` or `LGPL-*` without an explicit review.
+2. A new licence bucket in that list is reviewed in the dependency PR that introduces it.
+3. A package that moves from a permissive licence to a restricted or unknown one is a dependency-hygiene finding, not a routine patch.
+4. No CI check enforces this; a licence allowlist check can be added if the list starts to move.
+
+Two licences are approved only within limits: `MPL-2.0` for the dependencies that already use it (a new direct dependency under it is reviewed), and `CC-BY-4.0` for data and metadata packages, not runtime code. The permissive licences approved without review are MIT, Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, BlueOak-1.0.0, Unlicense, 0BSD, CC0-1.0, `MIT OR Apache-2.0` and `MIT OR CC0-1.0`.
+
+### Accepted exceptions
+
+These transitive packages were reviewed at the versions shown and allowed in the production graph. The list records the scope of those reviews, not today's resolved graph: a new direct dependency under the same licence, or wider use of one of these, is reviewed again.
+
+| Licence | Package (reviewed version) | Why it is allowed |
+|---|---|---|
+| `FSL-1.1-Apache-2.0` | `sentry` 0.44.1 | Sentry's CLI, pulled in by `@sentry/bundler-plugins` under `@sentry/nextjs` 11 (DEBT-499, reviewed 2026-10-05). The app never invokes it and has no `withSentryConfig` build step. FSL restricts only competing use and becomes Apache-2.0 after two years. |
+| `LGPL-3.0-only` | `rpc-websockets` 9.3.9 | A transitive JSON-RPC and WebSocket package; review before any direct use. |
+| `LGPL-3.0-or-later` | `@img/sharp-libvips-darwin-arm64` 1.2.4 | The prebuilt libvips that `sharp` loads for image processing on macOS ARM. |
+| `Unknown` | `eyes` 0.1.8, `text-encoding-utf-8` 1.0.2 | Transitive utilities (value inspection, a UTF-8 Encoding API polyfill). Replace either if it becomes direct or critical at runtime. |
+
+Generate a fresh list for any dependency decision. Do not commit the raw JSON: it contains machine-local `node_modules` paths.

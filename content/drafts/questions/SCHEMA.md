@@ -10,7 +10,7 @@
 - `CLAUDE.md` or `AGENTS.md` -- quick-start workflow for the agent you are using
 - `PLAN.md` -- current inventory, integrity snapshot, and progress tracking
 - `NOTES.md` -- historical audits, parser-corruption file list, Prescriber's rewrite queue, archival reference material
-- `docs/debt/debt-338-seed-parser-silent-wrong-answer-section-corruption.md` -- parser hardening + Phase 2 roadmap
+- DEBT-338 (the seed parser's wrong-answer sections), a closed record -- parser hardening + Phase 2 roadmap
 
 ---
 
@@ -305,7 +305,7 @@ Pipeline behavior:
 
 ## Canonical Taxonomy
 
-**Code source of truth:** `lib/content/draftTaxonomy.ts`
+**Code source of truth:** `lib/content/draft-taxonomy.ts`
 
 ### Topic (13 values)
 
@@ -704,4 +704,4 @@ Migrated all 948 questions from legacy format to structured `choices[]` YAML. Ch
 - Frontmatter key order canonicalized across all 170 files
 - All `text` and `explanation` values double-quoted
 
-The legacy format (with `answer`, `## Choices`, and wrong-answer bullets in the body) is no longer used. See `docs/debt/DEBT-02-phase2-yaml-frontmatter-migration.md` for the full spec.
+The legacy format (with `answer`, `## Choices`, and wrong-answer bullets in the body) is no longer used. The content repository's DEBT-02 holds the full spec.

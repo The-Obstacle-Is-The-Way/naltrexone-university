@@ -1,6 +1,6 @@
 # ADR-016: Rate Limiting and Abuse Prevention
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-13 (keyed actions and retention; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-009 (Security Hardening), ADR-011 (API Design Principles)
@@ -135,3 +135,10 @@ Controllers call `rateLimiter.limit()` before executing the use case. On failure
 - `db/schema.ts` — `rate_limits` table
 - ADR-009 (Security Hardening) — defense-in-depth context
 - SPEC-017 — Rate Limiting specification
+
+## Amendment — 2026-10-13
+
+Corrections of fact. The decision is unchanged.
+
+- **Keyed actions are limited only on a fresh claim.** Section 5 described the order before idempotency keys. A controller action that runs through `executeIdempotent` passes its limiter as `beforeExecute`. With a key, `withIdempotency` runs it only for the request that wins a fresh claim, so a replay returns the stored outcome without spending quota, and a denial is never cached under the key (DEBT-424, BUG-259). Never call a limiter inside the idempotent `execute()` closure; route handlers (webhooks, health, cron) still limit before any business work, cron after checking its bearer token.
+- **Retention.** Rows are not "pruned periodically", as Mitigations says. `rate_limits` has one prune owner, `DrizzleRateLimiter.limit`: when a request opens a new window, it deletes, in a bounded batch and fail-open, rows whose window started more than a day ago (BUG-104, DEBT-448). A day is a target, not a hard maximum, and a window longer than a day is refused, since its counter would be pruned while still open.

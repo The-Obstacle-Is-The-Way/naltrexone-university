@@ -1,6 +1,5 @@
 # Pattern Registry
 
-**Last Updated:** 2026-09-29
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -9,8 +8,8 @@ Single source of truth for every visual pattern in the app. If a pattern isn't h
 - [Frontend Standards](./standards.md) — Component APIs, accessibility rules, hook architecture, file naming
 - [Design Principles](./layout.md) — Navigation zones, action bar composition, state persistence
 - [Contrast Policy](./contrast.md) — WCAG AA contrast targets and required-boundary rules
-- [BS-035](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — Audit that identified current divergences from this registry
-- [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) — Implementation plan and resolution history for frontend divergences
+- BS-035 — Audit that identified current divergences from this registry
+- DEBT-250 — Implementation plan and resolution history for frontend divergences
 
 ---
 
@@ -34,10 +33,10 @@ Lightweight map of the review-related surfaces that matter for routing and chrom
 
 | Surface | Route / Origin | Primary Renderer | Navigator Family | Exit Model | Owner Doc |
 |---------|----------------|------------------|------------------|------------|-----------|
-| Review & Submit | `/app/practice/[sessionId]` before final exam submit | `ExamReviewView` | None | In-session submit to post-exam review | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md) |
-| Post-Exam Review | `/app/practice/[sessionId]` after exam finalization | `PostExamReviewView` | `QuestionNavigator` (callback / in-memory) | In-session `View Summary` / `Finish review` | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md) |
-| Session Summary | `/app/practice/[sessionId]` after session completion | `SessionSummaryView` | None | Route exits to Practice / History; `Review your answers` currently routes into summary-origin standalone review (tracked in [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md)) | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md) |
-| Standalone Review — summary origin | `/app/questions/[slug]?from=summary&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to practice-session summary | [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md), BS-059 |
+| Review & Submit | `/app/practice/[sessionId]` before final exam submit | `ExamReviewView` | None | In-session submit to post-exam review | BS-061 |
+| Post-Exam Review | `/app/practice/[sessionId]` after exam finalization | `PostExamReviewView` | `QuestionNavigator` (callback / in-memory) | In-session `View Summary` / `Finish review` | BS-061 |
+| Session Summary | `/app/practice/[sessionId]` after session completion | `SessionSummaryView` | None | Route exit to Practice (`New Session`). After an exam, `Review Answers` and the breakdown rows re-enter Post-Exam Review in the session; after any other session, the breakdown rows open the summary-origin standalone review | BS-061 |
+| Standalone Review — summary origin | `/app/questions/[slug]?from=summary&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to practice-session summary | BS-061, BS-059 |
 | Standalone Review — history origin | `/app/questions/[slug]?from=history&mode=review&sessionId=...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to History | BS-059 |
 | Standalone Review — dashboard / bookmarks / practice origins | `/app/questions/[slug]?from=dashboard\|bookmarks\|practice...` | `QuestionView` in `question-page-client.tsx` | `ReviewQuestionNavigator` (`Link` / route) | Route back to origin-specific page | BS-059 |
 
@@ -180,7 +179,7 @@ group rounded-xl bg-foreground/5
 
 **Used in:** Practice starter Topic / Substance / Treatment filter containers
 
-**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; right-side metadata is conditional: when nothing is selected it shows `All included by default`, and when selections exist it shows `{N} selected`. Expanded sections render `({N} selected)` below the chip fieldset as subordinate footer metadata. The fill is supplementary rather than a required boundary. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `size-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See [DEBT-290](../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md), [DEBT-292](../_archive/debt/debt-292-filter-section-disclosure-indicator.md), and [DEBT-296](../_archive/debt/debt-296-filter-section-summary-hierarchy-swap.md).
+**Design rationale:** Applies the same tonal-fill elevation principle as the dashboard nested-row fix while preserving the wider practice filter spacing. The container owns the tonal surface, but the interactive hit area lives on the summary row: `<summary>` uses `rounded-lg px-4 py-3 transition-colors [&::-webkit-details-marker]:hidden` so the full visible header toggles the disclosure and Safari/WebKit does not render a duplicate native marker next to the custom chevron. Expanded content keeps its own `px-4 pb-3` wrapper below the summary. The `<summary>` label, disclosure behavior, pointer cursor, and keyboard focus ring identify the control; right-side metadata is conditional: when nothing is selected it shows `All included by default`, and when selections exist it shows `{N} selected`. Expanded sections render `({N} selected)` below the chip fieldset as subordinate footer metadata. The fill is supplementary rather than a required boundary. The `<summary>` row has no hover tint: an earlier `hover:bg-foreground/[0.03]` was imperceptible and was removed, so the chevron and pointer cursor carry the disclosure affordance. Secondary metadata on this surface uses `text-foreground/60` rather than `text-muted-foreground` to preserve AA contrast on `bg-foreground/5`. The chevron icon uses `size-4 text-foreground/60 transition-transform group-open:rotate-180` on a parent `<details class="group">`. See DEBT-290, DEBT-292, and DEBT-296.
 
 **Dashboard variant (borderless tonal fill):**
 ```
@@ -189,7 +188,7 @@ rounded-xl bg-foreground/5 p-3
 
 **Used in:** Dashboard unavailable activity rows, only for a question that no longer exists. A question no longer available uses F-11: its label for an answered row, and its heading for an omitted attempt (ADR-022).
 
-**Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) for the full design research.
+**Design rationale:** Matches the I-1 dashboard variant's borderless tonal fill approach for visual consistency within the same container. Static rows use the rest fill only — no hover or transition since the row is non-interactive. See DEBT-289 for the full design research.
 
 **Page-background sibling variant:**
 ```
@@ -198,7 +197,7 @@ rounded-2xl bg-foreground/[0.08] p-4
 
 **Used in:** History questions unavailable rows, only for a question that no longer exists, and bookmarks unavailable rows. A question no longer available uses F-11 in History: its label for an answered row, and its heading for an omitted attempt (ADR-022).
 
-**Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
+**Design rationale:** Matches the History questions clickable-row family while accounting for the darker page background. The unavailable state is communicated by the copy and metadata; the tonal fill keeps the row in the same visual family without reintroducing legacy border/shadow chrome. When a static sibling still contains a separate action button (for example, bookmark removal), the row itself stays non-interactive and the button remains the only action target. See DEBT-302 and DEBT-307.
 
 ### S-3: Menu Popover Surface
 
@@ -292,9 +291,9 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Used in:** Dashboard session rows, dashboard activity rows
 
-**Design rationale:** When a parent surface or surrounding layout already establishes hierarchy, bordered inner rows create visual noise. Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md)). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast.md) — row identification comes from text content, cursor, hover fill, and focus ring.
+**Design rationale:** When a parent surface or surrounding layout already establishes hierarchy, bordered inner rows create visual noise. Borderless tonal fill elevation follows Material Design 3's approach: rows are defined by fill shape only (`bg-foreground/5`), with hover producing a monotonic brightness lift (`hover:bg-foreground/[0.08]`). Both rest and hover use the same `foreground` color scale to avoid non-monotonic brightness (mixing scales causes hover inversion — see DEBT-289). The tonal fill is a supplementary hierarchy hint, not a required boundary per [Contrast Policy §3.2](./contrast.md) — row identification comes from text content, cursor, hover fill, and focus ring.
 
-**History sessions note:** History sessions reuse the same borderless tonal-fill family, but because they sit directly on `bg-background` and are disclosure-primary, the page-background adaptation is `rounded-xl bg-foreground/[0.08] p-3` with no row-level hover or `transition-colors`. The chevron, `cursor-pointer`, nested review Link, and focus ring communicate interaction while the raised rest fill supplies the hierarchy. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md).
+**History sessions note:** History sessions reuse the same borderless tonal-fill family, but because they sit directly on `bg-background` and are disclosure-primary, the page-background adaptation is `rounded-xl bg-foreground/[0.08] p-3` with no row-level hover or `transition-colors`. The chevron, `cursor-pointer`, nested review Link, and focus ring communicate interaction while the raised rest fill supplies the hierarchy. See DEBT-302.
 
 **Reuse candidate:** This variant is suitable for any nested-card list pattern where the parent surface already provides hierarchy, or for page-background hybrids that intentionally avoid adding a wrapping Card.
 
@@ -313,7 +312,7 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Used in:** History questions available rows, bookmarks available rows
 
-**Design rationale:** On page background, standalone rows need a stronger foreground-ramp rest fill than in-card rows to achieve the same perceived lift. `bg-foreground/[0.08]` at rest and `hover:bg-foreground/[0.12]` on hover keep the hover step visible against `bg-background` without reintroducing border/shadow chrome. The row reads as interactive via its content, hover lift, and focus ring. See [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) and [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md).
+**Design rationale:** On page background, standalone rows need a stronger foreground-ramp rest fill than in-card rows to achieve the same perceived lift. `bg-foreground/[0.08]` at rest and `hover:bg-foreground/[0.12]` on hover keep the hover step visible against `bg-background` without reintroducing border/shadow chrome. The row reads as interactive via its content, hover lift, and focus ring. See DEBT-302 and DEBT-307.
 
 **Default structure:** Entire row is a `<Link>` element.
 
@@ -350,7 +349,7 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 
 **Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
 
-**Behavior:** In tutor mode and Quick Practice, pointer activation on a choice commits the answer immediately by invoking the submit flow. Keyboard/AT radio selection (arrow keys, Space, or an activation synthesized without `pointerdown`) only selects the choice and exposes the action-bar `Submit` affordance; `Enter` in the choice fieldset commits that selected-uncommitted choice. In exam mode, selecting a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive reports pointer vs non-pointer origin, while mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` ([BS-064](../_archive/brainstorming/bs-064-radio-choice-modality-split.md)).
+**Behavior:** In tutor mode and Quick Practice, pointer activation on a choice commits the answer immediately by invoking the submit flow. Keyboard/AT radio selection (arrow keys, Space, or an activation synthesized without `pointerdown`) only selects the choice and exposes the action-bar `Submit` affordance; `Enter` in the choice fieldset commits that selected-uncommitted choice. In exam mode, selecting a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive reports pointer vs non-pointer origin, while mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` (BS-064).
 
 ### I-4: Filter Chip
 
@@ -602,6 +601,7 @@ Active exam sessions defer correctness until `Review & Submit`, so the footer is
 | First question | filled `Next` in `data-testid="exam-action-primary-group"` | none | No empty Previous placeholder; do not render Mark for review in the footer. |
 | Middle question | outline `Previous` + filled `Next` in `data-testid="exam-action-primary-group"` | none | Draft selections do not change footer labels. |
 | Final question | outline `Previous` + filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | Preserve the `aria-describedby` text: `Opens review and submit.` |
+| Only question (a one-question exam) | filled `Review & Submit` in `data-testid="exam-action-primary-group"` | none | No Previous; the same `aria-describedby` text. |
 
 All active exam footer buttons live in `data-testid="exam-action-primary-group"`; there is no footer right group. `data-testid="exam-action-cta-group"` and `data-testid="exam-action-secondary-group"` are intentionally absent after DEBT-380. Mark for review continues to live in the question header rail.
 
@@ -817,7 +817,7 @@ mb-1 text-xs font-medium uppercase tracking-wide text-foreground/60
 
 **Content:** Standard markdown paragraph content inside the callout.
 
-**Source:** `components/markdown/Markdown.tsx`
+**Source:** `components/markdown/markdown.tsx`
 
 ### F-8: Feedback Section Chips
 
@@ -929,7 +929,7 @@ Neutral: <Card role="status" data-tone="neutral" className="gap-0 p-4 text-sm">
   - **Contrast**, computed from `app/globals.css` and passing AA (4.5:1) in the product's dark theme:
     - `text-muted-foreground` measures 5.04:1 on the Dashboard row (`bg-foreground/5` on the card), 5.60:1 on the session breakdown (the card), and 5.13:1 on History's row (`bg-foreground/[0.08]` on the page), 4.61:1 when that row is hovered.
     - These are the pairs the same lines already use for their dates and for "Unanswered", so no new pair is added.
-  - **Light mode** is unfinished and switched off (`forcedTheme="dark"`, [DEBT-421](../_archive/debt/debt-421-light-mode-force-dark-vs-default-dark.md)). There, the same muted text measures 4.27:1 on the Dashboard row and 4.00:1 on History's row, and the existing `text-destructive` result measures 4.37:1 and 4.09:1. Light mode would need these rows' metadata in S-2's `text-foreground/60` (5.17:1 and 5.06:1) before it ships.
+  - **Light mode** is unfinished and switched off (`forcedTheme="dark"`, DEBT-421). There, the same muted text measures 4.27:1 on the Dashboard row and 4.00:1 on History's row, and the existing `text-destructive` result measures 4.37:1 and 4.09:1. Light mode would need these rows' metadata in S-2's `text-foreground/60` (5.17:1 and 5.06:1) before it ships.
 
 **Navigators** (post-exam review, the active session, and the exam's Review & Submit list): an item's accessible name includes its state's label, as in "Question 3: Retired, Unanswered". A result no score counts takes the Button `secondary` variant and no correctness badge, and its name reads "Not scored", as in "Question 2: Withdrawn, Not scored" (DEBT-498). The question page's session navigator does the same. `secondary` is the variant the exam navigator already gives an answered item: 14.57:1 in the dark theme (16.30:1 in light). The Review & Submit list also marks such an item "Won't be scored", and the submit warning counts only the unanswered items that would count if the exam ended now.
 
@@ -1008,7 +1008,7 @@ A superseded answer key is the case that matters. Without the notice, a review w
 - `role="status"` announces the notice politely; it is never focused automatically.
 - A stored grade is never regraded ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md)). An answer graded on a key corrected since leaves every score instead (F-13 names the reason), and the Incorrect practice filter offers its question again.
 
-**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, DEBT-484 phase 2b, and ADR-022 Decision 4 ([DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md) increment 4). In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`, each with its `keyCorrected` form). It renders nothing while every question has one revision.
+**Source:** ADR-021 §3, the 2026-09-30 phase 2b order, DEBT-484 phase 2b, and ADR-022 Decision 4 (DEBT-493 increment 4). In use: the standalone review page, post-exam review, and the active session page (`QuestionUpdateNotice`, variants `review` and `session`, each with its `keyCorrected` form). It renders nothing while every question has one revision.
 
 
 ### F-13: Unscored Disclosure (a score that leaves items out)
@@ -1234,7 +1234,7 @@ Patterns that are currently copy-pasted and should be extracted to shared consta
 
 ## Part 11: Known Divergences from This Registry
 
-Approved exceptions tracked in [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md):
+Approved exceptions tracked in DEBT-250:
 
 No active divergences in this inventory.
 
@@ -1332,7 +1332,7 @@ Two distinct stat card presentations:
 
 ### 12.5 Legal Document Surface
 
-Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from mirrored markdown content modules. Registered 2026-08-05 and redesigned 2026-08-08 under [DEBT-463](../_archive/debt/debt-463-legal-page-redesign.md).
+Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from mirrored markdown content modules. Registered 2026-08-05 and redesigned 2026-08-08 under DEBT-463.
 
 | Element | Classes |
 |---|---|

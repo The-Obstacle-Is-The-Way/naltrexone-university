@@ -1,6 +1,6 @@
 # ADR-015: Idempotency Strategy
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-08-14, 2026-08-15 and 2026-08-17 (Stripe forwarding, inline in Section 4) and 2026-10-13 (error caching, admission and claim fencing; see [Amendment](#amendment--2026-10-13))
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-006 (Error Handling Strategy), ADR-007 (Dependency Injection)
@@ -78,7 +78,7 @@ Short-lived redirect/session artifacts are the important exception. Stripe Billi
 
 When a controller elects to use an idempotency key, adapters forward it to Stripe via `PaymentGatewayRequestOptions.idempotencyKey`, ensuring both our DB and Stripe see the same deduplication key. Adapters must not invent deterministic fallback keys for operations where replaying a prior short-lived redirect/session URL would be semantically wrong.
 
-**Amendment (2026-08-14 — [DEBT-466](../_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md); extended 2026-08-15 — [DEBT-467](../_archive/debt/debt-467-trial-setup-checkout-stale-session-url-replay.md); reconciled 2026-08-17 — [DEBT-470](../_archive/debt/debt-470-checkout-replay-tail-jump.md)):** the default rule above and the Billing Portal example remain binding. BUG-245's subscription Checkout path is one deliberate, bounded exception: its caller UUID remains application-level idempotency while the Stripe adapter derives a deterministic provider key to collapse concurrent same-plan creates. DEBT-467 extends the same narrow license to the trial-payment-method setup path after adding strict live retrieval. These exceptions are licensed only while all of these conditions remain true:
+**Amendment (2026-08-14 — DEBT-466; extended 2026-08-15 — DEBT-467; reconciled 2026-08-17 — DEBT-470):** the default rule above and the Billing Portal example remain binding. BUG-245's subscription Checkout path is one deliberate, bounded exception: its caller UUID remains application-level idempotency while the Stripe adapter derives a deterministic provider key to collapse concurrent same-plan creates. DEBT-467 extends the same narrow license to the trial-payment-method setup path after adding strict live retrieval. These exceptions are licensed only while all of these conditions remain true:
 
 - every created or replayed Checkout Session on either exception path is retrieved after create so the adapter decides from live status rather than the saved create body. The policies deliberately split: subscription Checkout keeps its bounded, logged, test-pinned created-snapshot fallback when retrieval exhausts its retries or returns a mismatched id; after a matching-id retrieve, the shared merge may backfill nullable fields from the created snapshot, but trial setup requires a live status before that merge and fails closed on exhausted retrieval, mismatched id, or absent live status;
 - after an inactive primary result, subscription Checkout may select the unique newest full-renewal-metadata Session through a bounded, reverse-chronological provider-list scan before entering its named recovery ladder. An open listed candidate is live-retrieved and reused only while active; an ambiguous, malformed, incomplete, or failed scan falls back to the deterministic primary result and the bounded ladder. Trial setup does not use this scan and retains its own named, bounded strict-retrieval ladder;
@@ -120,7 +120,7 @@ The 2026-08-17 DEBT-470 reconciliation removes retained-chain length from the no
 - `src/adapters/shared/with-idempotency.test.ts` covers claim, replay, error replay, timeout, and concurrent scenarios.
 - `src/adapters/controllers/practice-controller.test.ts`, `src/adapters/controllers/question-controller.test.ts`, and `src/adapters/controllers/billing-controller.test.ts` verify reused idempotency keys return cached results and do not re-execute use cases.
 - `tests/integration/idempotency-key-repository.integration.test.ts` verifies the Postgres idempotency repository behavior end-to-end (`DrizzleIdempotencyKeyRepository`).
-- Controllers that accept `idempotencyKey` are documented in `docs/specs/master_spec.md`.
+- Controllers that accept `idempotencyKey` are documented in `docs/product/specification.md`.
 
 ---
 
@@ -134,3 +134,11 @@ The 2026-08-17 DEBT-470 reconciliation removes retained-chain length from the no
 - ADR-006 (Error Handling Strategy) — Error code propagation through cached errors
 - Stripe Docs — Billing Portal sessions: https://docs.stripe.com/customer-management/integrate-customer-portal
 - Stripe Docs — Idempotent requests: https://docs.stripe.com/api/idempotent_requests
+
+## Amendment — 2026-10-13
+
+Corrections of fact. The claim-execute-store decision is unchanged.
+
+- **An error is cached only when the action's policy says so.** Without a `shouldCacheError` policy, `withIdempotency` caches every error `execute()` throws, transient ones included, and replays it for the rest of the key's 24 hours (BUG-289). Every keyed action therefore passes a policy, and `executeIdempotent` also caches any `ZodError` that `execute()` throws, such as an output that fails its schema; invalid input never reaches it, because `createAction` validates input first. Nine actions take theirs from `src/adapters/controllers/shared/idempotency-error-policy.ts`, which caches a determinate outcome, one a retry would repeat, and aborts the claim on any other error so that a retry runs again. An outcome derived from state that can change, such as `ALREADY_SUBSCRIBED`, is not determinate. Answer submission also caches an indeterminate error, `INTERNAL_ERROR` or one from outside the application, unless persistence reports a certain rollback, as a fence against a duplicate attempt. The three practice-session lifecycle actions use `practice-session-idempotency-policy.ts`: ending or discarding a session caches no error, and finalizing exam answers caches every error but a concurrent state change, while the session page gives the next attempt a new key after any returned error but a conflict. This qualifies "on error → storeError()" in Section 2 and "Error replay" under Consequences.
+- **Rate limits run only on a fresh claim.** A keyed action passes its rate limit as the wrapper's `beforeExecute` hook, which runs only for the request that wins a fresh claim, so a replay returns the stored outcome whatever the caller's remaining quota (DEBT-424). A denial aborts that claim and is never stored under the key. A limiter inside `execute()` would cache `RATE_LIMITED` for the key's lifetime (BUG-259).
+- **Claims are fenced; execution is not.** Section 1's port summary predates the token: in `src/application/ports/idempotency-key-repository.ts`, `claim` returns the claim's `claimedAt` rather than a boolean, and `storeResult`, `storeError` and `abortClaim` take it and act only on that still-pending claim, so a late or aborted execution cannot overwrite a newer claim's outcome. Besides the `INSERT ... ON CONFLICT DO NOTHING` that Mitigations names, `claim` runs an `UPDATE` that takes over an expired key or an abandoned claim, one still pending with no error after `DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS` (60 seconds); each statement is atomic, and the pair is not one operation. A takeover does not stop an execution still running past that threshold: both can perform their side effects, and only the newer claim's outcome is stored. This qualifies "At-most-once execution" and "Serialized execution" under Consequences.

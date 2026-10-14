@@ -1,6 +1,5 @@
 # Migration Authoring
 
-**Last Updated:** 2026-08-29
 
 This guide is the durable review checklist for Drizzle migration files. It was `docs/dev/migration-authoring.md` until 2026-10-11, and two applied migrations, `0027` and `0028`, still cite that path; applied migrations never change. It
 complements [Deployment Procedure](../release/promote-to-production.md), which describes
@@ -128,16 +127,24 @@ Do not invoke the raw dependency CLI for repository work. It loads
 `drizzle.config.ts` directly and therefore does not provide the package entry's
 human acknowledgement boundary.
 
-Git-triggered Vercel Preview and Production deploys run a content/ledger
-pre-check, the checked-in migration journal, an exact post-check, and then the
-application build through the configured Build Command:
+Git-triggered Vercel Preview and Production deploys run the Build Command in
+`vercel.json`, which `vercel.test.ts` pins. It checks a configured Clerk JWT key
+against Clerk's published keys and fails on a mismatch. With no key set it skips
+the check, and when Clerk's keys cannot be read it logs that the key went
+unchecked; either way the build continues.
+It then runs a content/ledger pre-check, applies the
+checked-in migration journal, runs an exact post-check, and then builds:
 
 ```bash
-pnpm exec tsx scripts/verify-migration-ledger.ts pre \
+pnpm exec tsx scripts/check-clerk-jwt-key.ts \
+  && pnpm exec tsx scripts/verify-migration-ledger.ts pre \
   && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
   && pnpm exec tsx scripts/verify-migration-ledger.ts post \
   && pnpm build
 ```
+
+This guide is the only place that writes the command out; other documents link
+here.
 
 For any manual fallback or operator-run migration, pass the intended database
 explicitly:

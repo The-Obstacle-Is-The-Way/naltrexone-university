@@ -5,7 +5,7 @@
 
 This document defines the app's contrast targets and the engineering rules that follow from them.
 
-Use `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` for computed findings and evidence. This doc is normative: it describes what we are aiming for and what is allowed.
+The computed findings and evidence are in BS-042, a closed record. This doc is normative: it describes what we are aiming for and what is allowed.
 
 ---
 
@@ -35,13 +35,13 @@ Notes:
 
 | Element | Justification | Decided in |
 |---------|---------------|------------|
-| Shared tab-switch container (`tabSwitchContainerClasses`) | Active pill (`bg-primary`), text labels, `bg-muted` surface elevation, and grouped layout identify the control. The container border falls back to `border-border` (~1.13:1 vs `bg-muted` in dark mode) and is not required for identification. | [DEBT-280](../_archive/debt/debt-280-choice-button-dark-mode-surface-refinement.md) |
+| Shared tab-switch container (`tabSwitchContainerClasses`) | Active pill (`bg-primary`), text labels, `bg-muted` surface elevation, and grouped layout identify the control. The container border falls back to `border-border` (~1.13:1 vs `bg-muted` in dark mode) and is not required for identification. | DEBT-280 |
 
 ### Classified required boundaries
 
 | Element | Tokens | WCAG ratio | Justification | Decided in |
 |---------|--------|------------|---------------|------------|
-| Choice button neutral boundary (I-3) | `border-foreground/50 bg-background/50` rest, `hover:border-foreground/55 hover:bg-foreground/[0.06]` hover, `dark:border-foreground/40 dark:bg-background/50` rest, `dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]` hover | Light rest border ~`3.76:1` vs white rest surface, light hover border ~`3.93:1` vs hover fill, dark `border-foreground/30` fails at roughly `2.4-2.5:1` against `dark:bg-background/50`, dark `border-foreground/40` remains compliant at roughly `3.4-3.6:1` | The entire row is the clickable answer target inside `QuestionCard`, so the edge is a required SC 1.4.11 boundary. Light-mode `muted` opacity (`border-border/60`, `bg-muted/20`) was insufficient on white/card surfaces, so the required boundary stays foreground-based while the rest fill shifts to a clean `bg-background/50`. In dark mode the rest surface is recessed via `dark:bg-background/50`, but the boundary still must remain compliant. | [DEBT-313](../_archive/debt/debt-313-choice-button-dark-surface-and-badge-visibility.md) |
+| Choice button neutral boundary (I-3) | `border-foreground/50 bg-background/50` rest, `hover:border-foreground/55 hover:bg-foreground/[0.06]` hover, `dark:border-foreground/40 dark:bg-background/50` rest, `dark:hover:border-foreground/50 dark:hover:bg-foreground/[0.05]` hover | Light rest border ~`3.76:1` vs white rest surface, light hover border ~`3.93:1` vs hover fill, dark `border-foreground/30` fails at roughly `2.4-2.5:1` against `dark:bg-background/50`, dark `border-foreground/40` remains compliant at roughly `3.4-3.6:1` | The entire row is the clickable answer target inside `QuestionCard`, so the edge is a required SC 1.4.11 boundary. Light-mode `muted` opacity (`border-border/60`, `bg-muted/20`) was insufficient on white/card surfaces, so the required boundary stays foreground-based while the rest fill shifts to a clean `bg-background/50`. In dark mode the rest surface is recessed via `dark:bg-background/50`, but the boundary still must remain compliant. | DEBT-313 |
 
 ### Classified supplementary fills (not required boundaries)
 
@@ -49,16 +49,16 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 
 | Element | Tokens | WCAG ratio (dark) | Justification | Decided in |
 |---------|--------|-------------------|---------------|------------|
-| Dashboard nested rows (I-1 variant) | `bg-foreground/5` rest, `hover:bg-foreground/[0.08]` hover | 1.11:1 rest, 1.21:1 hover (vs card #121212) | Borderless tonal fill following Material Design 3. Rows are identified by text content, pointer cursor, hover brightness lift, and focus ring — fill is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
-| Dashboard unavailable rows (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Static tonal fill matching interactive row rest state for visual consistency. Row is identified by its text content. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
-| Dashboard badge pills (mode/difficulty) | `bg-foreground/[0.06] border-0 text-foreground/60` | Fill 1.14:1 (vs card), text 5.94:1 (AA pass) | Borderless fill-only badge. Text contrast is the required boundary (AA-compliant at 5.94:1); the fill shape is supplementary. | [DEBT-289](../_archive/debt/debt-289-dashboard-nested-card-surface-strategy.md) |
-| History sessions rows | `bg-foreground/[0.08]` | 1.16:1 (vs page #090909) | Disclosure-primary tonal fill on page background. The row is identified by text content, chevron affordance, cursor, nested Link, and focus ring — fill is supplementary. | [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) |
-| History available question rows | `bg-foreground/[0.08]` rest, `hover:bg-foreground/[0.12]` hover | 1.16:1 rest, 1.28:1 hover (vs page #090909) | Standalone navigation rows on page background need a stronger foreground-ramp step than in-card rows. Identification still comes from text content, hover lift, and focus ring — fill is supplementary. | [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) |
-| History unavailable question rows | `bg-foreground/[0.08]` | 1.16:1 (vs page #090909) | Static tonal fill matching the available-row family so unavailable rows read as sibling surfaces rather than legacy cards. | [DEBT-302](../_archive/debt/debt-302-history-row-fill-and-affordance-cleanup.md) |
-| Bookmarks available rows (I-2 multi-action variant) | `bg-foreground/[0.08]` rest, `hover:bg-foreground/[0.12]` hover | 1.16:1 rest, 1.28:1 hover (vs page #090909) | Standalone bookmark rows on page background share the History Questions foreground ramp, but use delegated container activation because the row also contains a separate Remove button. Identification comes from text content, pointer cursor, hover lift, explicit title Link, Remove button, and focus rings — fill is supplementary. | [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) |
-| Bookmarks unavailable rows (S-2 page-background sibling variant) | `bg-foreground/[0.08]` | 1.16:1 (vs page #090909) | Static tonal fill matching the available bookmark-row family so unavailable rows remain visual siblings without reviving card borders. The unavailable copy and Remove button communicate the state/action; the fill is supplementary. | [DEBT-307](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) |
-| Practice filter containers (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Borderless tonal fill for Topic/Substance/Treatment `<details>` containers. The control is identified by summary label, selected-count text, disclosure behavior, pointer cursor, and focus ring; the fill is supplementary. | [DEBT-290](../_archive/debt/debt-290-practice-filter-tonal-fill-elevation.md) |
-| Practice filter chips rest fill (I-4 variant) | `bg-foreground/[0.07] text-foreground/80` rest, `hover:bg-foreground/[0.12] hover:text-foreground` hover | Fill 1.21:1 dark / 1.16:1 light (vs practice filter container), text 8.18:1 dark / 9.67:1 light | Borderless tonal-fill toggle. The fill is supplementary; identification comes from text, cursor, hover fill/text lift, focus ring, and `aria-pressed`. `text-foreground/80` keeps normal-text contrast well above AA while letting unselected chips recede against selected `bg-primary` chips. | [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md), [DEBT-295](../_archive/debt/debt-295-filter-chip-unselected-text-weight.md), [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md), [DEBT-377](../_archive/debt/debt-377-practice-starter-chip-emphasis-and-hierarchy.md) |
+| Dashboard nested rows (I-1 variant) | `bg-foreground/5` rest, `hover:bg-foreground/[0.08]` hover | 1.11:1 rest, 1.21:1 hover (vs card #121212) | Borderless tonal fill following Material Design 3. Rows are identified by text content, pointer cursor, hover brightness lift, and focus ring — fill is supplementary. | DEBT-289 |
+| Dashboard unavailable rows (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Static tonal fill matching interactive row rest state for visual consistency. Row is identified by its text content. | DEBT-289 |
+| Dashboard badge pills (mode/difficulty) | `bg-foreground/[0.06] border-0 text-foreground/60` | Fill 1.14:1 (vs card), text 5.94:1 (AA pass) | Borderless fill-only badge. Text contrast is the required boundary (AA-compliant at 5.94:1); the fill shape is supplementary. | DEBT-289 |
+| History sessions rows | `bg-foreground/[0.08]` | 1.16:1 (vs page #090909) | Disclosure-primary tonal fill on page background. The row is identified by text content, chevron affordance, cursor, nested Link, and focus ring — fill is supplementary. | DEBT-302 |
+| History available question rows | `bg-foreground/[0.08]` rest, `hover:bg-foreground/[0.12]` hover | 1.16:1 rest, 1.28:1 hover (vs page #090909) | Standalone navigation rows on page background need a stronger foreground-ramp step than in-card rows. Identification still comes from text content, hover lift, and focus ring — fill is supplementary. | DEBT-302 |
+| History unavailable question rows | `bg-foreground/[0.08]` | 1.16:1 (vs page #090909) | Static tonal fill matching the available-row family so unavailable rows read as sibling surfaces rather than legacy cards. | DEBT-302 |
+| Bookmarks available rows (I-2 multi-action variant) | `bg-foreground/[0.08]` rest, `hover:bg-foreground/[0.12]` hover | 1.16:1 rest, 1.28:1 hover (vs page #090909) | Standalone bookmark rows on page background share the History Questions foreground ramp, but use delegated container activation because the row also contains a separate Remove button. Identification comes from text content, pointer cursor, hover lift, explicit title Link, Remove button, and focus rings — fill is supplementary. | DEBT-307 |
+| Bookmarks unavailable rows (S-2 page-background sibling variant) | `bg-foreground/[0.08]` | 1.16:1 (vs page #090909) | Static tonal fill matching the available bookmark-row family so unavailable rows remain visual siblings without reviving card borders. The unavailable copy and Remove button communicate the state/action; the fill is supplementary. | DEBT-307 |
+| Practice filter containers (S-2 variant) | `bg-foreground/5` | 1.11:1 (vs card #121212) | Borderless tonal fill for Topic/Substance/Treatment `<details>` containers. The control is identified by summary label, selected-count text, disclosure behavior, pointer cursor, and focus ring; the fill is supplementary. | DEBT-290 |
+| Practice filter chips rest fill (I-4 variant) | `bg-foreground/[0.07] text-foreground/80` rest, `hover:bg-foreground/[0.12] hover:text-foreground` hover | Fill 1.21:1 dark / 1.16:1 light (vs practice filter container), text 8.18:1 dark / 9.67:1 light | Borderless tonal-fill toggle. The fill is supplementary; identification comes from text, cursor, hover fill/text lift, focus ring, and `aria-pressed`. `text-foreground/80` keeps normal-text contrast well above AA while letting unselected chips recede against selected `bg-primary` chips. | DEBT-294, DEBT-295, DEBT-309, DEBT-377 |
 
 ---
 
@@ -67,8 +67,8 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 ### 3.1 Text
 
 - Informational text MUST meet 4.5:1 (normal text), including: labels, timestamps, metadata, helper text, and inactive navigation items.
-- Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. BS-042's failures were resolved by [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md).
-- **Dark small-text tokens ([BUG-309](../_archive/bugs/bug-309-dark-theme-small-text-contrast.md), 2026-09-29).** `components/theme-dark-text-contrast.test.ts` measures each pairing on every surface the text sits on, rounded to the 8-bit colors the browser paints:
+- Do not use `text-muted-foreground` for `text-xs`/`text-sm` on dark surfaces if it fails 4.5:1 in that context. BS-042's failures were resolved by DEBT-279.
+- **Dark small-text tokens (BUG-309, 2026-09-29).** `components/theme-dark-text-contrast.test.ts` measures each pairing on every surface the text sits on, rounded to the 8-bit colors the browser paints:
   - `--destructive` `0 91% 71%`: at least 5.56:1 on the page, the card, the foreground-ramp rows and their hovers, and the destructive tints.
   - `--muted-foreground` `0 0% 55%`: at least 4.62:1 on the rows, their hovers and `bg-muted`.
   - Light text on the dark destructive fills: at least 5.09:1, at rest (`/60`) and on the Button's dark hover (`/50`).
@@ -93,7 +93,7 @@ Tonal fill elevation used as a supplementary hierarchy hint, not a required boun
 
 ## 4. Evidence and Audits
 
-- Computed findings and screenshots belong in: `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md`
+- Computed findings and screenshots go on the pull request; the first audit's are in BS-042.
 - When a contrast change is proposed, include:
   - Token values involved (`app/globals.css`)
   - The component/pattern and file path

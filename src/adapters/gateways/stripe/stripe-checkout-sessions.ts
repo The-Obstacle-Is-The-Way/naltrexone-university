@@ -622,6 +622,16 @@ async function expireSupersededCheckoutSession({
   }
 }
 
+// Two tabs can each create a Session, for different plans, before either sees
+// the other. After every create, list the customer's open Sessions (up to
+// OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT), keep the newest still-active one that
+// carries renewal metadata, the new Session or a listed one, and expire the
+// other active ones, those without that metadata included. Sessions this
+// request already expired or set aside are skipped. No database lock is held
+// across these Stripe calls, on purpose (BUG-245). Stripe's Dashboard setting
+// "limit customers to one subscription" only redirects a customer who already
+// holds an active subscription away from Checkout; it is not a check at
+// completion, and this repository neither sets nor checks it.
 async function reconcileOpenCheckoutSessionsAfterCreate({
   stripe,
   input,

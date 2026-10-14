@@ -1,9 +1,7 @@
 # Practice Engine: Content Pipeline (Authored Content → Rendered UI)
 
-> **Parent:** [Practice Engine Index](../practice-engine/index.md)
+> **Parent:** [Documentation map](../README.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
-> **Last Verified:** 2026-03-17
-> **Import workflow updated:** 2026-09-20 — clean staging; other architectural/format sections retain their earlier verification scope.
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -98,10 +96,20 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 
 ### Sources of Truth
 
-- **Draft question format:** `docs/content/question-format-spec.md` — single source of truth for authoring
+- **Draft question format:** `content/drafts/questions/SCHEMA.md`, mirrored from the content repository, where it is edited; the importer's schema (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts` decide what is accepted
 - **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/product/content-taxonomy.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parse-mdx-question.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
+
+### Rules the Importer Enforces Beyond SCHEMA.md
+
+The mirrored SCHEMA.md leaves these out, so they are recorded here until the content repository's copy says them:
+
+- `source` must be a kebab-case identifier, not just non-empty (`scripts/draft-question-import.ts`).
+- A QID may appear only once across the imported files; a duplicate stops the import (`scripts/import-draft-questions.ts`).
+- Every question except the synthetic seed fixtures needs a nonempty terminal Reference (`scripts/seed/question-parser.ts`).
+- Choice labels must be unique within a question, but their order is not enforced (`lib/content/schemas.ts`).
+- A diagnosis tag's display name is its slug in title case, for example `opioid-use-disorder` becomes "Opioid Use Disorder" (`diagnosisDisplayNameFromSlug`).
 
 ### Pipeline Scripts
 
@@ -184,9 +192,10 @@ Required citation for the explanation.
 
 Draft question sets live under `content/drafts/questions/**` and are imported from files named `recall.md` and `vignettes.md` (the importer scans only these filenames). Each file contains multiple question blocks. Each block:
 
-- Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `answer`
+- Starts with YAML frontmatter containing `qid`, `type`, `difficulty`, `substances`, `topics`, `source`, and `choices[]`
+  - `choices[]`: two to five, each with a unique `label` A–E, `text` and `correct`; exactly one is correct, and each wrong choice, and only a wrong one, carries an `explanation`
   - Optional: `treatments[]`, `diagnoses[]` for more specific tagging (mapped to MDX `kind: treatment|diagnosis`)
-- Uses headings in this order: `## Question` (or `## Stem`), `## Choices`, `## Explanation`
+- Uses headings in this order: `## Question` (or `## Stem`), then `## Explanation`; a `## Choices` heading is rejected, since the choices live in the frontmatter
 - Must begin with `---` then `qid:` on the next line (`splitDraftQuestionsFile()` looks for `^---\\nqid:`)
 
 Notes:
@@ -220,7 +229,7 @@ that tree, delete old output, withdraw database rows, or run seed. Preserve the
 current imported tree while generating and checking its replacement. A failed
 write can leave an incomplete **staging** directory; successful parsing alone is
 not a completed artifact. No atomic release/rollback interface is provided here.
-See [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
+See DEBT-483.
 
 The managed environment seed (`pnpm db:seed:all`) follows the same boundary through
 `scripts/prepare-seed-corpus.ts`. It imports into a fresh `content/.import-staging-*`
@@ -277,7 +286,7 @@ Because labels are validated as `A`–`E` and then sorted, `sortOrder` is effect
 
 ### Publishing Rule
 
-The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. A question no longer published is labeled by its state, derived from its status, its withdrawals and its unlifted holds: withdrawn, under review or retired ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), implemented by [DEBT-493](../_archive/debt/debt-493-learner-scores-and-labels-when-content-changes.md)). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
+The app selects and shows new questions only when they are **published**: `DrizzleQuestionRepository`'s selection, count and public lookups include `questions.status = 'published'`. A learner's own session item or attempt resolves its bound revision whatever the status. A question no longer published is labeled by its state, derived from its status, its withdrawals and its unlifted holds: withdrawn, under review or retired ([ADR-022](../adr/adr-022-learner-scores-and-labels-when-content-changes.md), implemented by DEBT-493). If you import drafts with the default `status=draft`, those questions will seed successfully but will not appear in `/app/practice` until you re-import as `published` (or edit the generated MDX status).
 
 ### Placeholder Questions
 
@@ -336,14 +345,14 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-q
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
 
-Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#the-release-builder-phase-4c-ii--2026-10-01)).
+Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published (DEBT-483).
 
-**What a release removes ([DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
+**What a release removes (DEBT-489).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
 - **A member stays in the release** if its file is `published`.
 - **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `archived`, or the withdrawal command, for content that must never return.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
-- **A revert is named ([DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md)).** A file whose content matches an earlier revision moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so it is not refused, but its plan names each revert; it also archives questions added since.
+- **A revert is named (DEBT-492).** A file whose content matches an earlier revision moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so it is not refused, but its plan names each revert; it also archives questions added since.
 
 **Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
 
@@ -355,7 +364,7 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 
 Activation recomputes the plan under its own locks and refuses a different one. So a hold, a withdrawal, a lift, or anything else between preview and apply that changes one of those sets means a fresh preview. Tags are outside the plan: they are not versioned, so a tag change does not change it. A rollback is previewed and applied the same way, and still honors current holds and withdrawals: a withdrawal is permanent.
 
-**Every activation is attributed ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md)).**
+**Every activation is attributed (DEBT-490).**
 - **The receipt.** An activation, a rollback and the bootstrap each record their `--reason` and `--authority` on an immutable receipt, as the withdrawal and hold commands record theirs.
 - **Withdrawals.** A withdrawal made by an `archived` removal records the activation's authority, and its reason names the release.
 - **Holds.** A hold's or a lift's re-application of the active release records the hold's own decision.
@@ -441,7 +450,7 @@ All four callers produce **shuffled** labels for their outputs. This was unified
 
 ## 8. Frontend Rendering
 
-**Markdown rendering:** `components/markdown/Markdown.tsx`
+**Markdown rendering:** `components/markdown/markdown.tsx`
 - Uses `react-markdown` with `remark-gfm` (GitHub Flavored Markdown) and `rehype-sanitize` (XSS protection)
 - Renders at view time on the client, not at build time
 - `skipHtml` flag prevents raw HTML from rendering
@@ -522,9 +531,9 @@ Both bugs identified during the BS-011 audit have been fixed:
 
 That conclusion applied to the 2026-03-17 audit. The historical-identity gap is
 closed: question revisions and history binding shipped under
-[DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md), resolved 2026-09-30.
+DEBT-484, resolved 2026-09-30.
 Current withdrawal and release gaps remain tracked in
-[DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
+DEBT-483.
 
 ---
 
@@ -575,7 +584,7 @@ Before seeding, ensure the target database schema is up to date:
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
 
-The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). Neither Preview nor production has one yet (migration 0049's production notice counted no activation receipts), and bootstrapping production is the owner's decision ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#releases-and-activation-phase-4b--2026-10-01)).
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). Neither Preview nor production has one yet (migration 0049's production notice counted no activation receipts), and bootstrapping production is the owner's decision (DEBT-483).
 
 ---
 

@@ -57,4 +57,4 @@ Before creating new types, check:
 - `src/application/ports/` for port interfaces
 - `src/application/test-helpers/fakes/` for existing fakes
 
-## ADRs: `docs/adr/` (`docs/adr/index.md` lists each ADR and its status)
+## ADRs: `docs/adr/` (`docs/adr/README.md` lists each ADR and its status)

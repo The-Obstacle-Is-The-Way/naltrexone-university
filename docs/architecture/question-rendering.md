@@ -1,7 +1,6 @@
 # Question Rendering Architecture
 
 > **Type:** Current-Implementation Reference
-> **Last Verified:** 2026-04-25
 > **Scope:** How questions are rendered, navigated, and state-managed across all viewing contexts in the current shipped implementation
 > **Important:** [Interaction Contracts](../product/practice/interaction-contracts.md) remains the canonical click-by-click UI contract when surface details conflict.
 
@@ -134,7 +133,7 @@ PracticeSessionPage (server)
                  ├─ End session button (top-right)
                  ├─ QuestionCard (shared)
                  ├─ Feedback (shared) — shown immediately after submit
-                 └─ Action bar: [← Previous] [Submit] [Next Question] [Bookmark]
+                 └─ Action bar: [← Previous] [Submit] [Next] [Bookmark]
 ```
 
 **State management:**
@@ -144,8 +143,8 @@ PracticeSessionPage (server)
 - `submitResult: SubmitAnswerOutput | null` — correctness + explanation data
 - `sessionInfo: { mode, index, total, isMarkedForReview, latestSelectedChoiceId, latestIsCorrect }`
 
-**Data flow for "Next Question":**
-1. User clicks "Next Question"
+**Data flow for "Next":**
+1. User clicks "Next"
 2. `onNextQuestion()` → `loadNextQuestion()` (`app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts`, which calls `runLoadQuestionFlow()` in `app/(app)/app/practice/shared/question-flow-actions.ts`)
 3. State cleared: `setSelectedChoiceId(null)`, `setSubmitResult(null)` (`app/(app)/app/practice/shared/question-flow-actions.ts:47-48`)
 4. Server action `getNextQuestion({ sessionId })` fetches next question
@@ -158,11 +157,11 @@ PracticeSessionPage (server)
 Same component tree as Tutor, differentiated by `sessionInfo.mode === 'exam'`:
 
 **Differences from Tutor:**
-- `correctChoiceId` forced to `null` (`app/(app)/app/practice/components/practice-view.tsx:277-279`) — no green/red highlighting during exam
-- Feedback hidden: `feedbackResult` is gated behind `!isExamMode` (`app/(app)/app/practice/components/practice-view.tsx:285-288`)
-- No per-question `Submit` button. The active exam footer is `[Previous] [Next] [Mark for review]` on non-terminal questions and `[Previous] [Review & Submit] [Mark for review]` on the last question.
+- `correctChoiceId` forced to `null` (`PracticeView` in `app/(app)/app/practice/components/practice-view.tsx`) — no green/red highlighting during exam
+- Feedback hidden: `feedbackResult` is gated behind `!isExamMode` (`PracticeView`, same file)
+- No per-question `Submit` button. The active exam footer (`ExamActionBar`) is `[Next]` on the first question, `[Previous] [Next]` on middle questions, `[Previous] [Review & Submit]` on the last question, and `[Review & Submit]` alone in a one-question exam.
 - Draft answer state is persisted on navigation boundaries and when entering the review stage
-- "Mark for review" button visible (`app/(app)/app/practice/components/practice-view.tsx:243-252`)
+- "Mark for review" button in the question header rail (`data-testid="question-header-actions"` in `app/(app)/app/practice/components/practice-view.tsx`)
 - Last exam question swaps the bottom-bar label to `Review & Submit`; that click saves any pending draft and enters the exam review stage
 - QuestionNavigator does **not** reveal correctness in exam mode (answered buttons are labeled "Answered", not "Correct/Incorrect")
 
@@ -278,7 +277,7 @@ QuickPracticePage (server)
             ├─ Top-right link: "Back to Practice"
             ├─ QuestionCard (shared)
             ├─ Feedback (shared) — shown immediately after submit
-            └─ Action bar: [Submit] [Next Question] [Bookmark]
+            └─ Action bar: [Submit] [Next] [Bookmark]
 ```
 
 ---
@@ -377,7 +376,7 @@ The codebase has two navigators that look similar but serve different contexts:
 │         ├─ loadState: LoadState                                     │
 │         └─ canSubmit: boolean                                       │
 │                                                                     │
-│  On "Next Question":                                                │
+│  On "Next":                                                         │
 │    question-flow-actions.ts:                                        │
 │      setSelectedChoiceId(null)  ──► cleared before fetch            │
 │      setSubmitResult(null)      ──► cleared before fetch            │
@@ -516,18 +515,18 @@ The remaining inline action bars on the question-review route are still separate
 
 | Document | Relevance |
 |----------|-----------|
-| [Frontend Layer](../practice-engine/frontend-layer.md) | Routes, hook architecture, data flow |
+| [Frontend Layer](./practice-engine.md#the-frontend-layer) | Routes, hook architecture, data flow |
 | [Practice Modes](../product/practice/modes.md) | Tutor vs Exam behavior differences |
 | [Exam Answer Secrecy Policy](../product/practice/exam-answer-secrecy.md) | Canonical correctness/explanation exposure timing contract |
 | [Retry Logic](../product/practice/retries.md) | Retry/reattempt SSOT including provenance, hydration states, and inline session-review retry contract |
 | [Frontend Standards](../design-system/standards.md) | Component inventory (Appendix) |
-| [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md) | Session review navigation (implemented) |
-| [SPEC-028 Status Filter](../_archive/specs/spec-028-status-filter-segmented-control.md) | Status filter segmented control (implemented) |
-| [SPEC-028 Review Navigator](../_archive/specs/spec-028-review-question-navigator.md) | Review question navigator (implemented) |
-| [DEBT-217](../_archive/debt/debt-217-history-back-link-loses-tab-and-filter-state.md) | History back link state preservation |
-| [DEBT-265](../_archive/debt/debt-265-retry-lineage-and-review-practice-unification.md) | Retry lineage and inline session-review retry implementation contract |
-| [DEBT-266](../_archive/debt/debt-266-retry-observability-and-session-review-marker-persistence.md) | Retry observability + marker-persistence policy (resolved) |
-| [DEBT-267](../_archive/debt/debt-267-get-previous-attempt-identifier-contract-hardening.md) | Mixed `attemptId + sessionId` contract hardening (resolved) |
+| SPEC-027 | Session review navigation (implemented) |
+| SPEC-028 Status Filter | Status filter segmented control (implemented) |
+| SPEC-028 Review Navigator | Review question navigator (implemented) |
+| DEBT-217 | History back link state preservation |
+| DEBT-265 | Retry lineage and inline session-review retry implementation contract |
+| DEBT-266 | Retry observability + marker-persistence policy (resolved) |
+| DEBT-267 | Mixed `attemptId + sessionId` contract hardening (resolved) |
 
 ---
 

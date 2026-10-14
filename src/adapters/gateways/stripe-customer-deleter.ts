@@ -34,6 +34,10 @@ export function isMissingStripeCustomerError(error: unknown): boolean {
 
 /**
  * Fulfill the account-deletion obligation at its Stripe lifecycle owner.
+ * Delete the Customer; never just cancel its subscriptions. A Checkout
+ * Session opened before the deletion can still complete for up to 24 hours
+ * and would start a subscription nothing here tracks. Deleting the Customer
+ * cancels its subscriptions and blocks new ones (BUG-288).
  * Resolved deleted-customer objects and missing-customer 404s are both
  * idempotent done-states.
  */

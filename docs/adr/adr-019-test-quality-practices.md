@@ -63,7 +63,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 
 ## Amendment — 2026-10-03
 
-Decided under the owner's 2026-10-03 delegation, after a review of what each part adds to the test estate. The rationale is in [DEBT-465](../_archive/debt/debt-465-test-quality-practices-adoption.md#decision--2026-10-03).
+Decided under the owner's 2026-10-03 delegation, after a review of what each part adds to the test estate. The rationale is in DEBT-465.
 
 - **Parts 1 and 2 are adopted** and in production: the CRAP report, and mutation testing at 100% across the domain and application layers.
 - **Part 3 (Gherkin acceptance tests) is not adopted.**
@@ -75,6 +75,8 @@ Decided under the owner's 2026-10-03 delegation, after a review of what each par
 ## Amendment — 2026-10-12
 
 The UI QA register that Part 4 created at `docs/qa/` was retired by DEBT-518's records step (#1467). Its procedures now live in `docs/guides/qa/`, without QA-NNN IDs, and the method is `docs/guides/qa/method.md`. The text above keeps the register's original description. Part 4's decision is unchanged.
+
+Two paths in the text above moved with DEBT-518's layout step (2026-10-12): `docs/dev/stabilization-checklist.md` was absorbed into `docs/guides/qa/practice-core-flows.md`, and `docs/dev/index.md` was replaced by `docs/README.md`.
 
 ## References
 

@@ -1,6 +1,6 @@
 # ADR-005: Payment Boundary
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-13 (where the contracts live, see [Amendment](#amendment--2026-10-13); the gateways exist, see [Amendment](#amendment--2026-10-13-the-gateways-exist))
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-002 (Domain Model)
@@ -63,7 +63,7 @@ Payment processing lives in the **Frameworks & Drivers** layer. Our domain deals
 The domain uses `SubscriptionPlan` (`monthly` / `annual`). Stripe price IDs are configuration and are mapped at the adapter boundary.
 
 - Stripe price IDs are stored in env (currently `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` / `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`).
-- The mapping between plan ↔ price ID lives in adapters config (`src/adapters/config/stripe-prices.ts`) and is referenced by adapters (see `docs/_archive/specs/spec-009-payment-gateway.md`).
+- The mapping between plan ↔ price ID lives in adapters config (`src/adapters/config/stripe-prices.ts`) and is referenced by adapters (see SPEC-009).
 - Price IDs may be persisted in `stripe_subscriptions.price_id` for audit/debug, but they MUST NOT appear in domain entities.
 
 ### Stripe Customer Mapping (1:1)
@@ -79,9 +79,9 @@ This keeps Stripe identifiers out of the domain model while still supporting ide
 
 To avoid drift, the canonical interfaces and implementation guidance live in:
 
-- `docs/_archive/specs/spec-004-application-ports.md` (`PaymentGateway`, repositories)
-- `docs/_archive/specs/spec-009-payment-gateway.md` (Stripe adapter rules)
-- `docs/specs/master_spec.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
+- SPEC-004 (`PaymentGateway`, repositories)
+- SPEC-009 (Stripe adapter rules)
+- `docs/product/specification.md` Section 4.4.2 (webhook idempotency via `stripe_events`)
 
 This ADR records the boundary decision; specs above define the exact contracts and behaviors.
 
@@ -181,3 +181,18 @@ describe('StripePaymentGateway', () => {
 - Stripe API Documentation
 - Stripe Webhook Best Practices
 - Clean Architecture, Chapter 26: The Main Component
+
+## Amendment — 2026-10-13
+
+Where the contracts live, from DEBT-518's layout review. The decision is unchanged.
+
+SPEC-004 and SPEC-009, which the "Payment Ports and Implementations" section names as the source of truth, are closed and archived; they record the contracts as they were specified. The current contracts are the code:
+- the `PaymentGateway` port in `src/application/ports/gateways.ts`;
+- the Stripe adapter in `src/adapters/gateways/stripe/`;
+- for webhook idempotency through `stripe_events`, the product specification (`docs/product/specification.md`), Section 4.4.2.
+
+The text above keeps its original references.
+
+## Amendment — 2026-10-13: the gateways exist
+
+The implementation note under the Compliance Checklist is out of date: the `AuthGateway` and `PaymentGateway` adapters are built, in `src/adapters/gateways/clerk-auth-gateway.ts` and `src/adapters/gateways/stripe-payment-gateway.ts`, which composes the modules in `src/adapters/gateways/stripe/`. The decision is unchanged.

@@ -22,7 +22,7 @@ import { DAY_MS } from '@/src/domain/services/time-constants';
 import { AllDifficulties } from '@/src/domain/value-objects/question-difficulty';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
-// DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
+// Biome's line limit covers test files only; DEBT-224 keeps 300 lines as the design guideline.
 // It is a deep module (Ousterhout) with a single responsibility: define the complete relational schema contract (enums, tables, relations, and inferred types) as one SSOT.
 // Splitting would scatter tightly coupled table, relation, and type definitions, making schema changes easier to miss and increasing migration drift risk.
 // Reviewed in DEBT-224 audit (2026-02-18).
@@ -579,6 +579,12 @@ export const operationalAlertDrills = pgTable('operational_alert_drills', {
 });
 
 // pending_stripe_cancellations (legacy physical name for customer-cleanup obligations)
+// Each row is a deleted account's outstanding Stripe Customer deletion. It
+// keeps stripe_customer_id because the user, stripe_customers and
+// stripe_subscriptions rows are already gone: the scheduled drain works from
+// this row alone, and reconcile can never see the orphan. event_id cascades
+// from clerk_events, so a future clerk_events prune must skip events that
+// still own a row here, or it silently erases the obligation (BUG-246).
 export const pendingStripeCancellations = pgTable(
   'pending_stripe_cancellations',
   {

@@ -1,12 +1,12 @@
 # Clerk Vendor Documentation
 
-**Package:** `@clerk/nextjs` ^7.0.7
-**API Version:** `2024-10-01`
+**Package:** `@clerk/nextjs` (version: `package.json`)
+**API Version:** chosen by `@clerk/backend` (`SUPPORTED_BAPI_VERSION`); not pinned in code
 **Dashboard:** https://dashboard.clerk.com
 **Docs:** https://clerk.com/docs
 **Changelog:** https://clerk.com/changelog
 
-**Package version note:** Reconciled against `package.json` on 2026-03-28. Upgraded from v6 (Core 2) to v7 (Core 3) via `@clerk/upgrade` CLI.
+**Upgrade history:** upgraded from v6 (Core 2) to v7 (Core 3) with the `@clerk/upgrade` CLI on 2026-03-28.
 Clerk API-version tracking remains vendor-managed rather than pinned in local
 runtime code.
 
@@ -15,10 +15,10 @@ runtime code.
 ## API Version
 
 Clerk uses date-based API versioning. Specify via:
-- Header: `Clerk-API-Version: 2024-10-01`
-- Query param: `?__clerk_api_version=2024-10-01`
+- Header: `Clerk-API-Version: <date>`
+- Query param: `?__clerk_api_version=<date>`
 
-**Current version:** `2024-10-01`
+The app sets neither. `@clerk/backend` sends the version it supports (`SUPPORTED_BAPI_VERSION` in its build), so a Clerk SDK upgrade can move it: read the SDK's changelog for API-version changes when upgrading.
 
 **SDK release cycle:** ~6 months for major releases with potential breaking changes.
 
@@ -62,10 +62,7 @@ export default clerkMiddleware(async (auth, request) => {
 });
 ```
 
-**Public routes** (from `lib/public-routes.ts`):
-- `/`, `/pricing(.*)`, `/sign-in(.*)`, `/sign-up(.*)`
-- `/checkout/success(.*)`, `/api/health(.*)`
-- `/api/stripe/webhook(.*)`, `/api/webhooks/clerk(.*)`
+**Public routes** are listed in `PUBLIC_ROUTE_PATTERNS` (`lib/public-routes.ts`). The public resources in `PUBLIC_RESOURCE_PATHS` (`security.txt`, `robots.txt`, the sitemap and the Open Graph image) skip Clerk entirely, and every other route the proxy matches is protected. `/checkout/success` is protected on purpose: Clerk restores the session after Stripe's redirect, and `session_id` must survive Clerk's sign-in and handshake redirects (DEBT-249).
 
 ---
 
@@ -75,7 +72,7 @@ We generate CSP headers via **Clerk middleware**, not `next.config.ts`.
 
 **Why:**
 - Next.js requires inline scripts for runtime bootstrapping unless you implement a nonce/hash strategy.
-- Clerk + Stripe require specific CSP allowances (e.g., `worker-src blob:` and Stripe frames).
+- Clerk requires specific CSP allowances (e.g., `worker-src blob:`).
 - Static CSP in `next.config.ts` is brittle and can conflict with Clerk’s requirements.
 
 ### Current Implementation
@@ -88,6 +85,8 @@ We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) wit
 - Sentry CSP reporting is wired via `reportTo` and `report-uri` when the endpoint is configured
 
 **Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. DEBT-420 records the current decision: do **not** enforce Clerk strict nonce CSP on this stack because Next 16 PPR/Cache Components serve prerendered shell scripts without the per-request nonce; if enforcement is prioritized later, use a separate non-nonce host-allowlist CSP design.
+
+Our directives are merged into Clerk's defaults: they add sources, and only a `'none'` value replaces a default directive. Billing redirects to Stripe-hosted pages and loads no Stripe.js, so our directives add no Stripe hosts (Clerk's defaults already carry some); adding Stripe.js, Elements or embedded Checkout means revisiting it. Before any enforcing policy, check `form-action` against the billing redirects (DEBT-332).
 
 ### Server Components
 
@@ -131,7 +130,7 @@ const [user] = await res.json();
 | Event | Handler | Purpose |
 |-------|---------|---------|
 | `user.updated` | `/api/webhooks/clerk` | Sync user data (email changes). Since DEBT-503 item 1, this is how a signed-in user's stored email stays current; checkout and trial card setup also refresh it. To recover a missed update, replay the event from the Clerk Dashboard. |
-| `user.deleted` | `/api/webhooks/clerk` | Cancel Stripe subscriptions, delete user data |
+| `user.deleted` | `/api/webhooks/clerk` | Delete user data, then the Stripe customer, which cancels its subscriptions |
 
 **Note:** We do NOT handle `user.created`. Users are created lazily on first authenticated request. After that, a request reads the row by Clerk ID with no Backend API call, unless it needs the current email: checkout and trial card setup still refresh it from Clerk (DEBT-503 item 1).
 
@@ -181,7 +180,7 @@ If you see "Clerk: The `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` does not match the ke
 
 **Fix:** Ensure all Clerk env vars are from the same application and environment.
 
-See: BUG-040 (archived)
+See: BUG-040
 
 ---
 

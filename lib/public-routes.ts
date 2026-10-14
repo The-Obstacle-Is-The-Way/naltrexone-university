@@ -26,6 +26,11 @@ export const PUBLIC_PAGE_POLICY = {
   { matchScope: 'exact' | 'prefix'; indexable: boolean }
 >;
 
+// /checkout/success stays protected, so Clerk's middleware restores the session
+// after Stripe's redirect before the page syncs the subscription. Its
+// session_id must survive Clerk's sign-in and handshake redirects, which
+// proxy.test.ts pins; leave Clerk's force-redirect environment variables unset,
+// since they would override redirect_url (DEBT-249).
 export const PUBLIC_ROUTE_PATTERNS = [
   ...Object.entries(PUBLIC_PAGE_POLICY).map(([path, policy]) =>
     policy.matchScope === 'exact' ? path : `${path}(.*)`,

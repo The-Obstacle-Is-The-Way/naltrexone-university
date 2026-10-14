@@ -1,6 +1,6 @@
-# Logging
+# Observability
 
-**Last Updated:** 2026-10-06
+Logging, Sentry error monitoring and the operational alerts. [ADR-008](../adr/adr-008-logging-observability.md) and [ADR-026](../adr/adr-026-error-monitoring-with-sentry.md) record why it is built this way.
 
 ## Source of truth
 
@@ -222,5 +222,5 @@ If Sentry shows a sudden flood of garbage events, or the month's usage jumps:
 1. In the project's inbound filters, block the source IP addresses.
 2. In the flooded project, create a new client key: for the browser project set it as `NEXT_PUBLIC_SENTRY_DSN`, for the server project as `SENTRY_DSN` (sensitive), in Vercel. Redeploy, then revoke the old key. A flood in the server project means its key leaked.
 
-This is a monitoring outage, not a data breach. Escalate to the [incident response procedure](../security/incident-response-and-breach-notification.md) only if the events carry personal data.
+This is a monitoring outage, not a data breach. Escalate to the [incident response procedure](../policies/security/incident-response-and-breach-notification.md) only if the events carry personal data.
 

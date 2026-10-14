@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
-**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 ([DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#verified-closeout--2026-09-30-utc), resolved). Phase 4 is in production as of 2026-10-02 ([DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#verified-closeout--2026-10-02-utc), resolved), built in steps from its [design](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md#phase-4-design--2026-10-01). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md)'s fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` ([DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md)) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred. [DEBT-492](../_archive/debt/debt-492-release-safety-before-production-bootstrap.md) closed the release-safety gaps, and [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md) records each decision; both are released, so the bootstrap, the owner's call, waits on nothing in engineering.
+**Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 (DEBT-484, resolved). Phase 4 is in production as of 2026-10-02 (DEBT-483, resolved), built in steps from its design (DEBT-483). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. DEBT-489's fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` (DEBT-490) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred. DEBT-492 closed the release-safety gaps, and DEBT-490 records each decision; both are released, so the bootstrap, the owner's call, waits on nothing in engineering.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
@@ -12,11 +12,11 @@
 
 Two P1 records describe the same missing structure.
 
-- [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md): a question is one mutable row. Its stem, explanation, reference and choices are overwritten in place by the seed. An attempt stores only `question_id` and a `selected_choice_id`, so it cannot say which content the learner answered.
+- DEBT-484: a question is one mutable row. Its stem, explanation, reference and choices are overwritten in place by the seed. An attempt stores only `question_id` and a `selected_choice_id`, so it cannot say which content the learner answered.
   - The #951 guard refuses substantive rewrites once graded history exists. It does not store revisions.
   - It does not protect a learner who is viewing an ungraded item while the seed changes it.
   - It does not make a withdrawn question reviewable, because every history read filters on `status = 'published'`.
-- [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md): content becomes visible question by question. The seed commits per question, and withdrawal is an explicit per-QID command. There is no release identity, no all-or-nothing activation and no rollback that respects revocations.
+- DEBT-483: content becomes visible question by question. The seed commits per question, and withdrawal is an explicit per-QID command. There is no release identity, no all-or-nothing activation and no rollback that respects revocations.
 
 The content repository's SPEC-007 defines the cross-repository release interface: an immutable, hash-addressed manifest; staging and one atomic activation; explicit withdrawals and holds; a revocation overlay; rollback. It assigns *verification and activation* to the app. This record decides the app's side of that contract.
 
@@ -28,22 +28,22 @@ Constraints:
 
 **Phase 4 implementation boundary (2026-10-02 audit).** Decisions 4–6 describe
 the target interface; #1290–#1300, with the DEBT-489 and DEBT-490 changes since, implement the current command path documented
-in [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md).
+in DEBT-483.
 Selection still reads materialized `questions.status` and `current_revision_id`,
 not release items directly. Activation checks the caller's expected active
 release and, except for a previously activated rollback target, its parent.
-Since [DEBT-489](../_archive/debt/debt-489-release-removes-omitted-questions.md#fix--2026-10-02),
+Since DEBT-489,
 a new release must account for every question the active release names,
 unless it is withdrawn, as an item or a named removal, and an operator's apply is bound
 to the plan its preview printed. A hold's or lift's re-application of the active release is not plan-bound. Staging does
 not move existing revision pointers and records no withdrawal; only tags
-change the live bank before activation. Since [DEBT-490](../_archive/debt/debt-490-release-decisions-record-no-reason-or-authority.md),
+change the live bank before activation. Since DEBT-490,
 each activation's immutable receipt records its reason and authority.
 Withdrawals exclude the whole question across revisions; holds exclude one
 revision. The emergency QID command writes the withdrawal and archives the
 question directly, without a minimal manifest. The database triggers reject
 updates to releases, items, withdrawals and activation receipts, but do not prohibit owner DELETE.
-The [independent audit](../bugs/assets/content-release-audit-2026-10-02.md)
+The [independent audit](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/c8bd69185c7fcb8dcf0481d6cb8e3f66d2fb0a91/docs/bugs/assets/content-release-audit-2026-10-02.md)
 records reproductions, fixes and verification limits. These boundaries do not
 claim SPEC-007 completion or clinical scoring-policy approval.
 
@@ -105,7 +105,7 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 
 ### Phase 2b order: the update notice before appending (2026-09-30)
 
-Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. It then adds the same notice to an active session's items, since a session keeps its bound revision. Only then does a PR make the writers append-only; migration `0042` did so on 2026-09-30. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md#phase-2b-plan-decided-2026-09-30).
+Once the seed appends, an answer-key correction is a new revision, and a review shows the revision the learner answered. Without a notice, that review would present a superseded key as correct. So phase 2b first adds an update notice to reviews of an answered revision that is no longer current, following the erratum practice beside §3's retraction practice. It then adds the same notice to an active session's items, since a session keeps its bound revision. Only then does a PR make the writers append-only; migration `0042` did so on 2026-09-30. Scoring is unchanged: an attempt keeps its grade. The plan and its receipts are in DEBT-484.
 
 ### Why phase 1 mirrors instead of appending (2026-09-28)
 
@@ -157,6 +157,6 @@ No driver for it has been identified. The one benefit cited, telling held, remov
 
 ## Related
 
-- [DEBT-483](../_archive/debt/debt-483-content-withdrawal-and-release-rollback.md), [DEBT-484](../_archive/debt/debt-484-question-rewrite-history-identity.md)
+- DEBT-483, DEBT-484
 - [Migration Authoring](../guides/database/migrations.md)
 - Content repository: SPEC-005, SPEC-007, ADR-001 (repository boundary)
