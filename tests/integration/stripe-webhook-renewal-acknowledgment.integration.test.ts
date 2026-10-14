@@ -128,6 +128,7 @@ function createDeps(input: {
   );
   return {
     paymentGateway,
+    operationalAlerts: new FakeOperationalAlerts(),
     subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
     logger: new FakeLogger(),
     now: () => now,

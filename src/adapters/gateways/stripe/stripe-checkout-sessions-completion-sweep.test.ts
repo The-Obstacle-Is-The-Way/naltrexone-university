@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import {
   expireOtherOpenSubscriptionCheckoutSessions,
   OPEN_CHECKOUT_SESSION_SWEEP_PAGE_LIMIT,
@@ -13,9 +16,11 @@ import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-cl
 describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
   const customer = 'cus_sweep';
   let logger: FakeLogger;
+  let operationalAlerts: FakeOperationalAlerts;
 
   beforeEach(() => {
     logger = new FakeLogger();
+    operationalAlerts = new FakeOperationalAlerts();
   });
 
   const createdMs = 1_700_000_000_000;
@@ -63,6 +68,7 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
         ...(createdBefore ? { createdBefore } : {}),
       },
       logger,
+      operationalAlerts,
     });
   }
 
@@ -129,6 +135,58 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
       }),
     );
     expect(await statusOf(stripe, third)).toBe('expired');
+  });
+
+  // BUG-343 option 5.
+  it('raises one duplicate-subscription alert counting the other Sessions that completed too', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    const second = await openSession(stripe);
+    const third = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+    stripe.setExpireFault((sessionId) => {
+      if (sessionId === second) stripe.markComplete(second, 'sub_second');
+      if (sessionId === third) stripe.markComplete(third, 'sub_third');
+    });
+
+    await sweep(stripe, completed);
+
+    expect(operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 2 },
+    ]);
+  });
+
+  it('raises the alert for a Session that completed even when a later one fails the sweep', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    const second = await openSession(stripe);
+    const third = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+    // Sessions are swept newest first: the third completes, the second's
+    // expire then fails.
+    stripe.setExpireFault((sessionId) => {
+      if (sessionId === third) stripe.markComplete(third, 'sub_third');
+      if (sessionId === second) throw new Error('expire failed');
+    });
+
+    await expect(sweep(stripe, completed)).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+    });
+
+    expect(operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
+  it('raises no alert when every other Session is expired', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+
+    await sweep(stripe, completed);
+
+    expect(operationalAlerts.raised).toEqual([]);
   });
 
   it('throws when an open Session cannot be expired, so the webhook is retried', async () => {

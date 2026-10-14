@@ -8,6 +8,7 @@ import type {
 import { SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS } from '@/src/application/shared/persist-subscription-observation';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
@@ -79,6 +80,7 @@ function createDeps(input: {
     stripe: input.stripe,
     priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
     logger: new FakeLogger(),
+    operationalAlerts: new FakeOperationalAlerts(),
     now: () => new Date('2026-08-07T12:00:00.000Z'),
     listLocalSubscriptions: async () => [
       {

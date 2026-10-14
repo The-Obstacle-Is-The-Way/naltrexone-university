@@ -134,6 +134,7 @@ function createHarness(input?: {
   const logger = new FakeLogger();
   const deps: StripeWebhookDeps = {
     paymentGateway,
+    operationalAlerts: new FakeOperationalAlerts(),
     subscriptionVersions: subscriptions,
     logger,
     now: () => now,

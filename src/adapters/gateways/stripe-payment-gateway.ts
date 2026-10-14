@@ -27,6 +27,7 @@ import type {
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { listStripeBlockingCustomerSubscriptions } from './stripe/stripe-customer-subscriptions';
 import { callStripeWithRetry } from './stripe/stripe-retry';
@@ -41,6 +42,8 @@ export type StripePaymentGatewayDeps = {
   consentStateSecret?: string | undefined;
   priceIds: StripePriceIds;
   logger: Logger;
+  // BUG-343 option 5: a second live subscription is a person's to correct.
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   webhookE2EOwner?: string | undefined;
   // DEBT-414 F15: verifies a consent text carried as its SHA-256.
   resolveCheckoutDisclosure: CheckoutDisclosureResolver;
@@ -73,6 +76,7 @@ export class StripePaymentGateway implements PaymentGateway {
       input,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
+      operationalAlerts: this.deps.operationalAlerts,
     });
   }
 
@@ -209,6 +213,7 @@ export class StripePaymentGateway implements PaymentGateway {
       stripe: this.deps.stripe,
       input,
       logger: this.deps.logger,
+      operationalAlerts: this.deps.operationalAlerts,
     });
   }
 

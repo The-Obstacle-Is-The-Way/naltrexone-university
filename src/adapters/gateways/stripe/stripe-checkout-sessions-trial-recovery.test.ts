@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeOperationalAlerts,
+} from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
@@ -33,6 +36,7 @@ describe('createStripeCheckoutSession trial replacement idempotency', () => {
       input,
       priceIds,
       logger: new FakeLogger(),
+      operationalAlerts: new FakeOperationalAlerts(),
       nowMs,
     });
   }

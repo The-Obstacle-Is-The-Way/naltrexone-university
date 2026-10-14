@@ -44,6 +44,7 @@ export function createReconcileStripeSubscriptionsCronHandler(
         annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
       },
       logger: container.logger,
+      operationalAlerts: container.createOperationalAlerts(),
       now: container.now,
       webhookE2EOwner: container.env.STRIPE_WEBHOOK_E2E_OWNER,
       listLocalSubscriptions: async ({ limit, offset }) => {

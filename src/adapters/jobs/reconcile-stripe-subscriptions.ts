@@ -82,6 +82,10 @@ export async function reconcileStripeSubscriptions(
     rows,
     safeConcurrency,
     async (row) => {
+      // BUG-343 option 5: set when an observation finds duplicates, before
+      // their write or cancel, so a row whose write or cancel fails still
+      // counts toward the alert.
+      let hadDuplicates = false;
       try {
         const retrieveObservation = async () => {
           // Phase 1: normalize the local row's Stripe subscription and validate user identity.
@@ -228,6 +232,9 @@ export async function reconcileStripeSubscriptions(
             );
           }
 
+          // Known as soon as an observation finds them, and kept across
+          // retries, so a write that fails later still counts.
+          hadDuplicates ||= duplicateIds.length > 0;
           return {
             canonical,
             duplicateIds,
@@ -352,12 +359,14 @@ export async function reconcileStripeSubscriptions(
           );
         }
 
-        return { ok: true as const };
+        return { ok: true as const, hadDuplicates };
       } catch (error) {
         const message = toErrorMessage(error);
         deps.logger.error(
           {
             stripeSubscriptionId: row.stripeSubscriptionId,
+            userId: row.userId,
+            hadDuplicates,
             error: projectSafeErrorDiagnostics(error),
           },
           'Stripe subscription reconciliation failed',
@@ -366,18 +375,41 @@ export async function reconcileStripeSubscriptions(
           ok: false as const,
           stripeSubscriptionId: row.stripeSubscriptionId,
           error: message,
+          hadDuplicates,
         };
       }
     },
   );
 
-  const failures = results.filter(
-    (
-      result,
-    ): result is { ok: false; stripeSubscriptionId: string; error: string } =>
-      !result.ok,
-  );
+  const failures = results
+    .filter(
+      (
+        result,
+      ): result is {
+        ok: false;
+        stripeSubscriptionId: string;
+        error: string;
+        hadDuplicates: boolean;
+      } => !result.ok,
+    )
+    .map(({ stripeSubscriptionId, error }) => ({
+      stripeSubscriptionId,
+      error,
+    }));
   const updated = results.length - failures.length;
+
+  // BUG-343 option 5: one alert per page that found duplicates, dry run or
+  // not, and whether or not their cancel succeeded, since a duplicate is live
+  // until it is cancelled. The log line beside each says which customer.
+  const customersWithDuplicates = results.filter(
+    (result) => result.hadDuplicates,
+  ).length;
+  if (customersWithDuplicates > 0) {
+    await deps.operationalAlerts.raise({
+      kind: 'stripe_duplicate_subscription',
+      count: customersWithDuplicates,
+    });
+  }
 
   return {
     scanned: rows.length,

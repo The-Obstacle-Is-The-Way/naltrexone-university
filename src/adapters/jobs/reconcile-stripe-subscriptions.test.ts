@@ -433,6 +433,8 @@ describe('reconcileStripeSubscriptions batch processing and persistence', () => 
     expect(scenario.logger.errorCalls).toContainEqual({
       context: {
         stripeSubscriptionId: subscription.id,
+        userId: primaryUserId,
+        hadDuplicates: false,
         error: {
           name: 'ApplicationError',
           code: 'INTERNAL_ERROR',
