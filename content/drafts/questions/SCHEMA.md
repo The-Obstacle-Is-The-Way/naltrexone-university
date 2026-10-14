@@ -8,8 +8,8 @@
 
 **Read This With:**
 - `CLAUDE.md` or `AGENTS.md` -- quick-start workflow for the agent you are using
-- `PLAN.md` -- current inventory, integrity snapshot, and progress tracking
-- `NOTES.md` -- historical audits, parser-corruption file list, Prescriber's rewrite queue, archival reference material
+- `PLAN.md` -- current inventory, integrity snapshot, and progress tracking (local and untracked, like the question files)
+- `NOTES.md` -- historical audits, parser-corruption file list, Prescriber's rewrite queue, archival reference material (local and untracked, like the question files)
 - DEBT-338 (the seed parser's wrong-answer sections), a closed record -- parser hardening + Phase 2 roadmap
 
 ---
