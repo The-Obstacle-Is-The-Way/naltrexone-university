@@ -307,6 +307,23 @@ describe('reconcileStripeSubscriptions duplicate cancellation', () => {
     ]);
   });
 
+  it('still counts a customer whose canonical subscription cannot be stored', async () => {
+    const stripe = createDuplicatesStripe();
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      localSubscriptions: [row(primaryUserId, 'sub_keep')],
+      transaction: async () => {
+        throw new Error('database unavailable');
+      },
+    });
+
+    await scenario.run({ dryRun: false });
+
+    expect(scenario.operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
   it('raises no alert when no customer has a duplicate', async () => {
     const stripe = createStripeWithSubscriptions([
       createUserSubscriptionFixture('sub_keep'),

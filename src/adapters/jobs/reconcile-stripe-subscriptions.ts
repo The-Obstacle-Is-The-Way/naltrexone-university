@@ -82,8 +82,9 @@ export async function reconcileStripeSubscriptions(
     rows,
     safeConcurrency,
     async (row) => {
-      // BUG-343 option 5: known before the cancel, so a row whose cancel
-      // fails still counts toward the alert.
+      // BUG-343 option 5: set when an observation finds duplicates, before
+      // their write or cancel, so a row whose write or cancel fails still
+      // counts toward the alert.
       let hadDuplicates = false;
       try {
         const retrieveObservation = async () => {
@@ -231,6 +232,9 @@ export async function reconcileStripeSubscriptions(
             );
           }
 
+          // Known as soon as an observation finds them, and kept across
+          // retries, so a write that fails later still counts.
+          hadDuplicates ||= duplicateIds.length > 0;
           return {
             canonical,
             duplicateIds,
@@ -295,7 +299,6 @@ export async function reconcileStripeSubscriptions(
           keptSubscriptionId,
           localSubscriptionUpdate,
         } = observation;
-        hadDuplicates = duplicateIds.length > 0;
         const alreadyCanceledDuplicateIds: string[] = [];
 
         if (duplicateIds.length > 0) {
