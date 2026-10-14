@@ -218,6 +218,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
     string,
     TrackedCheckoutSession
   >();
+  private readonly savedExpireResponsesByIdempotencyKey = new Map<
+    string,
+    StripeCheckoutSession
+  >();
   private readonly savedParamsByIdempotencyKey = new Map<
     string,
     CheckoutSessionCreateParams
@@ -419,6 +423,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
           ? cloneSession(await this.retrieveOverride(snapshot))
           : snapshot;
       },
+      // Expires an open Session once and saves the answer under its key, so
+      // a repeat with that key replays it. Any other expire of a Session that
+      // is not open is refused with Stripe's 400, and an unknown id with its
+      // 404; the contract's twelfth scenario proves both against TEST mode.
       expire: async (sessionId, _params, options) => {
         this.expireCalls.push({
           sessionId,
@@ -427,8 +435,45 @@ export class FakeStripeCheckoutClient implements StripeClient {
         if (this.expireFault) {
           await this.expireFault(sessionId, options);
         }
+        const idempotencyKey = options?.idempotencyKey;
+        const saved = idempotencyKey
+          ? this.savedExpireResponsesByIdempotencyKey.get(idempotencyKey)
+          : undefined;
+        if (saved) return cloneSession(saved);
+        const session = this.liveSessionsById.get(sessionId);
+        if (!session) {
+          throw Object.assign(
+            new Error(`No such checkout session: '${sessionId}'`),
+            {
+              type: 'StripeInvalidRequestError',
+              rawType: 'invalid_request_error',
+              code: 'resource_missing',
+              statusCode: 404,
+              param: 'session',
+            },
+          );
+        }
+        if (session.status !== 'open') {
+          throw Object.assign(
+            new Error(
+              `Only Checkout Sessions with a status in ["open"] can be expired. This Checkout Session has a status of \`${session.status}\`.`,
+            ),
+            {
+              type: 'StripeInvalidRequestError',
+              rawType: 'invalid_request_error',
+              statusCode: 400,
+            },
+          );
+        }
         this.markExpired(sessionId);
-        return this.getLiveSession(sessionId);
+        const expired = this.getLiveSession(sessionId);
+        if (idempotencyKey) {
+          this.savedExpireResponsesByIdempotencyKey.set(
+            idempotencyKey,
+            cloneSession(expired),
+          );
+        }
+        return expired;
       },
     },
   };

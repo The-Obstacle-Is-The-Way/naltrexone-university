@@ -61,7 +61,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 
 ### Live Stripe Provider Contracts (TEST Mode)
 
-The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its eleven live Stripe cases are reported as skipped. To request all eleven cases explicitly, use the dedicated fail-closed entry point:
+The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its fourteen live Stripe cases are reported as skipped. To request all fourteen cases explicitly, use the dedicated fail-closed entry point:
 
 ```bash
 pnpm test:stripe-provider
