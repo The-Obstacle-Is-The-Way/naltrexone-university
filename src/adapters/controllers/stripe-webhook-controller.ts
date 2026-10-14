@@ -16,6 +16,7 @@ import {
 } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { OperationalAlerts } from '@/src/application/ports/operational-alerts';
 import type {
   RenewalConsentRecordRepository,
   RenewalNoticeDeliveryRepository,
@@ -36,6 +37,7 @@ import {
 } from '@/src/application/use-cases';
 import type { RenewalConsentRecord } from '@/src/domain/entities';
 import { DAY_MS } from '@/src/domain/services';
+import { isEntitledStatus } from '@/src/domain/value-objects';
 
 export type StripeWebhookInput = {
   rawBody: string;
@@ -54,6 +56,8 @@ export type StripeWebhookTransaction = {
 
 export type StripeWebhookDeps = {
   paymentGateway: PaymentGateway;
+  // BUG-343 option 5: a second live subscription is a person's to correct.
+  operationalAlerts: Pick<OperationalAlerts, 'raise'>;
   subscriptionVersions: Pick<
     SubscriptionRepository,
     'findObservationVersionByUserId'
@@ -519,6 +523,10 @@ async function processSubscriptionWebhook(
   let processingError: unknown;
   let hasProcessingError = false;
   let acknowledgmentDeliveryId: string | null = null;
+  // Set inside the write transaction; read once it commits.
+  const kept: { overEntitledCompetitor: StripeSubscriptionUpdate | null } = {
+    overEntitledCompetitor: null,
+  };
   const discoveredUserId = subscriptionUpdate.userId;
   const initialConsent = event.initialSubscriptionConsent;
   const retrieveSubscriptionUpdate =
@@ -587,6 +595,16 @@ async function processSubscriptionWebhook(
             if (!write.persisted && write.reason === 'version_conflict') {
               return write;
             }
+            // BUG-343 option 5: the write guard kept the stored subscription
+            // over one that is also entitled, so the user holds two.
+            kept.overEntitledCompetitor =
+              !write.persisted &&
+              write.reason === 'write_guard_rejected' &&
+              isEntitledStatus(nextSubscriptionUpdate.status) &&
+              nextSubscriptionUpdate.currentPeriodEnd.getTime() >
+                deps.now().getTime()
+                ? nextSubscriptionUpdate
+                : null;
 
             if (write.persisted) {
               await stripeCustomers.insert(
@@ -668,6 +686,24 @@ async function processSubscriptionWebhook(
     }
 
     throw hasProcessingError ? processingError : transactionError;
+  }
+
+  const competitor = kept.overEntitledCompetitor;
+  if (competitor) {
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        userId: competitor.userId,
+        stripeCustomerId: competitor.externalCustomerId,
+        externalSubscriptionId: competitor.externalSubscriptionId,
+        status: competitor.status,
+      },
+      'Kept the stored subscription over an entitled competing one',
+    );
+    await deps.operationalAlerts.raise({
+      kind: 'stripe_duplicate_subscription',
+      count: 1,
+    });
   }
 
   // The sweep goes first, so a slow acknowledgment send does not hold the

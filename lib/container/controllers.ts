@@ -24,6 +24,7 @@ export function createControllerFactories(input: {
   return {
     createStripeWebhookDeps: () => ({
       paymentGateway: gateways.createPaymentGateway(),
+      operationalAlerts: gateways.createOperationalAlerts(),
       subscriptionVersions: repositories.createSubscriptionRepository(),
       logger: primitives.logger,
       now: primitives.now,
