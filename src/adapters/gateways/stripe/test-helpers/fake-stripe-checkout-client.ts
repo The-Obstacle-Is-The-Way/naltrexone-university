@@ -156,9 +156,10 @@ type ExpireCall = {
   options?: StripeRequestOptions | undefined;
 };
 
-// An expire fault runs after the call is recorded and before the Session is
-// marked expired; it injects a caller-supplied error by throwing. Like the
-// create fault it models no Stripe fault shape and is not contract-tested.
+// An expire fault runs after the call is recorded and before the fake
+// answers. It injects a caller-supplied error by throwing, or changes the
+// Session (completing or expiring it) so the fake's own refusal answers. Like
+// the create fault it models no Stripe fault shape and is not contract-tested.
 type ExpireFault = (
   sessionId: string,
   options?: StripeRequestOptions,
@@ -217,6 +218,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
   private readonly savedResponsesByIdempotencyKey = new Map<
     string,
     TrackedCheckoutSession
+  >();
+  private readonly savedExpireResponsesByIdempotencyKey = new Map<
+    string,
+    StripeCheckoutSession
   >();
   private readonly savedParamsByIdempotencyKey = new Map<
     string,
@@ -419,6 +424,12 @@ export class FakeStripeCheckoutClient implements StripeClient {
           ? cloneSession(await this.retrieveOverride(snapshot))
           : snapshot;
       },
+      // Expires an open Session once and saves the answer under its key, so
+      // a repeat with that key replays it. Any other expire of a Session that
+      // is not open is refused with Stripe's 400 naming its status, and an
+      // unknown id with its 404. The contract's twelfth scenario proves the
+      // replay, the refusal of an expired Session and the 404 against TEST
+      // mode; Stripe refused a completed Session the same way by hand.
       expire: async (sessionId, _params, options) => {
         this.expireCalls.push({
           sessionId,
@@ -427,8 +438,45 @@ export class FakeStripeCheckoutClient implements StripeClient {
         if (this.expireFault) {
           await this.expireFault(sessionId, options);
         }
+        const idempotencyKey = options?.idempotencyKey;
+        const saved = idempotencyKey
+          ? this.savedExpireResponsesByIdempotencyKey.get(idempotencyKey)
+          : undefined;
+        if (saved) return cloneSession(saved);
+        const session = this.liveSessionsById.get(sessionId);
+        if (!session) {
+          throw Object.assign(
+            new Error(`No such checkout session: '${sessionId}'`),
+            {
+              type: 'StripeInvalidRequestError',
+              rawType: 'invalid_request_error',
+              code: 'resource_missing',
+              statusCode: 404,
+              param: 'session',
+            },
+          );
+        }
+        if (session.status !== 'open') {
+          throw Object.assign(
+            new Error(
+              `Only Checkout Sessions with a status in ["open"] can be expired. This Checkout Session has a status of \`${session.status}\`.`,
+            ),
+            {
+              type: 'StripeInvalidRequestError',
+              rawType: 'invalid_request_error',
+              statusCode: 400,
+            },
+          );
+        }
         this.markExpired(sessionId);
-        return this.getLiveSession(sessionId);
+        const expired = this.getLiveSession(sessionId);
+        if (idempotencyKey) {
+          this.savedExpireResponsesByIdempotencyKey.set(
+            idempotencyKey,
+            cloneSession(expired),
+          );
+        }
+        return expired;
       },
     },
   };
@@ -730,8 +778,18 @@ export class FakeStripeCheckoutClient implements StripeClient {
     this.setupIntents.seeded.push(structuredClone(intent));
   }
 
-  markComplete(sessionId: string): void {
+  // A completed subscription-mode Session names the Subscription it created;
+  // a case passes that id when it stages the completion. It is synthetic.
+  markComplete(sessionId: string, subscriptionId?: string): void {
     this.setTerminalState(sessionId, 'complete');
+    if (subscriptionId === undefined) return;
+    const session = this.liveSessionsById.get(sessionId);
+    if (session) {
+      this.liveSessionsById.set(sessionId, {
+        ...session,
+        subscription: subscriptionId,
+      });
+    }
   }
 
   markExpired(sessionId: string): void {
