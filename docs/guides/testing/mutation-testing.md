@@ -1,7 +1,5 @@
 # Mutation Testing (StrykerJS)
 
-**Last Updated:** 2026-10-14
-
 Mutation testing primarily audits the **tests** by changing the code: Stryker seeds small faults ("mutants" — `<=` → `<`, `&&` → `||`, deleted statements, flipped booleans) into production source, runs selected tests against each, and reports which mutants the suite **killed** (a test failed) versus which **survived** (every selected test still passed). A surviving mutant is either a behavior change no test noticed or an equivalent change; triage distinguishes the two. The **mutation score** = detected ÷ valid mutants.
 
 Coverage says a line was *executed*; mutation tests whether selected behavior changes are detected. Under this repo's TDD mandate, that is a mechanical audit that the tests actually constrain behavior. The repo has already done this by hand once: the DEBT-423 resolution verified its test rewrite with "temporary mutation checks proved red-on-behavior plus green-on-refactor." Stryker automates that approach for its supported mutators. Proposed by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 2.
