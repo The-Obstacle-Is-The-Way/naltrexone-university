@@ -30,6 +30,7 @@ function createPaymentGatewayStub(): PaymentGateway {
     setTrialSubscriptionDefaultPaymentMethod: async () => undefined,
     createPortalSession: async () => ({ url: 'https://stripe/portal' }),
     listBlockingCustomerSubscriptions: async () => [],
+    expireOtherOpenCheckoutSessions: async () => undefined,
     processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
   };
 }

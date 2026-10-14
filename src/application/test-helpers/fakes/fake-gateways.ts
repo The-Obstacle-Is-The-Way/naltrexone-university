@@ -129,6 +129,10 @@ export class FakePaymentGateway implements PaymentGateway {
   readonly blockingCustomerSubscriptionInputs: Array<{
     externalCustomerId: string;
   }> = [];
+  readonly otherCheckoutSessionInputs: Array<{
+    externalCustomerId: string;
+    keepSessionId: string;
+  }> = [];
 
   private readonly externalCustomerId: string;
   private readonly checkoutUrl: string;
@@ -139,6 +143,7 @@ export class FakePaymentGateway implements PaymentGateway {
   private readonly checkoutError: Error | undefined;
   private readonly blockingCustomerSubscriptions: SubscriptionObservation[];
   private readonly blockingCustomerSubscriptionsError: Error | undefined;
+  private readonly otherCheckoutSessionsError: Error | undefined;
 
   constructor(input: {
     externalCustomerId: string;
@@ -151,6 +156,8 @@ export class FakePaymentGateway implements PaymentGateway {
     checkoutError?: Error;
     blockingCustomerSubscriptions?: SubscriptionObservation[];
     blockingCustomerSubscriptionsError?: Error;
+    // BUG-343: a completion sweep that fails.
+    otherCheckoutSessionsError?: Error;
   }) {
     this.externalCustomerId = input.externalCustomerId;
     this.checkoutUrl = input.checkoutUrl;
@@ -163,6 +170,7 @@ export class FakePaymentGateway implements PaymentGateway {
       input.blockingCustomerSubscriptions ?? [];
     this.blockingCustomerSubscriptionsError =
       input.blockingCustomerSubscriptionsError;
+    this.otherCheckoutSessionsError = input.otherCheckoutSessionsError;
   }
 
   async createCustomer(
@@ -192,6 +200,14 @@ export class FakePaymentGateway implements PaymentGateway {
       throw this.blockingCustomerSubscriptionsError;
     }
     return this.blockingCustomerSubscriptions;
+  }
+
+  async expireOtherOpenCheckoutSessions(input: {
+    externalCustomerId: string;
+    keepSessionId: string;
+  }): Promise<void> {
+    this.otherCheckoutSessionInputs.push(input);
+    if (this.otherCheckoutSessionsError) throw this.otherCheckoutSessionsError;
   }
 
   async createTrialPaymentMethodSetupSession(

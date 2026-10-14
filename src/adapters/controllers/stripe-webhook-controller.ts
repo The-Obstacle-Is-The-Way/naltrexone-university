@@ -707,6 +707,17 @@ async function processStripeWebhookWithinSpan(
   let hasProcessingError = false;
 
   try {
+    // BUG-343 option 3: before the subscription is stored, end the
+    // customer's other open subscription Sessions, so none of them can create
+    // a second subscription. A failure fails the delivery, and Stripe sends
+    // it again; each Session's expire is keyed, so a repeat is harmless.
+    if (event.completedSubscriptionCheckout) {
+      await deps.paymentGateway.expireOtherOpenCheckoutSessions({
+        externalCustomerId:
+          event.completedSubscriptionCheckout.externalCustomerId,
+        keepSessionId: event.completedSubscriptionCheckout.sessionId,
+      });
+    }
     if (event.trialPaymentMethodSetupCompletion) {
       await processTrialPaymentMethodSetupWebhook(
         deps,

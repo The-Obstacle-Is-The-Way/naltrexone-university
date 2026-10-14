@@ -252,6 +252,44 @@ describe('processStripeWebhookEvent', () => {
     ]);
   });
 
+  // BUG-343 option 3: the webhook ends the customer's other open
+  // subscription Sessions, so the result names the completed one.
+  it('names the completed subscription Checkout and its customer', async () => {
+    const stripe = createStripe({
+      event: consentCheckoutEvent(
+        'evt_checkout_sweep',
+        'cs_checkout_123',
+        fullRenewalMetadata,
+      ),
+      subscriptionIds: ['sub_123'],
+    });
+
+    const result = await processEvent(stripe);
+
+    expect(result.completedSubscriptionCheckout).toEqual({
+      sessionId: 'cs_checkout_123',
+      externalCustomerId: 'cus_123',
+    });
+  });
+
+  it('names no completed subscription Checkout for an expired one', async () => {
+    const stripe = createStripe({
+      event: {
+        ...consentCheckoutEvent(
+          'evt_checkout_expired',
+          'cs_checkout_123',
+          fullRenewalMetadata,
+        ),
+        type: 'checkout.session.expired',
+      },
+      subscriptionIds: ['sub_123'],
+    });
+
+    const result = await processEvent(stripe);
+
+    expect(result.completedSubscriptionCheckout).toBeUndefined();
+  });
+
   it('returns the exact accepted renewal snapshot for a consent-bearing subscription Checkout completion', async () => {
     const stripe = createStripe({
       event: consentCheckoutEvent(

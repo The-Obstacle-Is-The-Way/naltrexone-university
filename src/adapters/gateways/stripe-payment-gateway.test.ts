@@ -138,6 +138,34 @@ describe('StripePaymentGateway', () => {
     });
   });
 
+  // BUG-343 option 3: the webhook's completion sweep.
+  it("expires the customer's other open subscription Checkout Sessions", async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const params = {
+      mode: 'subscription' as const,
+      customer: 'cus_123',
+      line_items: [{ price: TEST_PRICE_IDS.monthly, quantity: 1 }],
+      success_url: 'https://app/success',
+      cancel_url: 'https://app/cancel',
+    };
+    const completed = await stripe.checkout.sessions.create(params, {
+      idempotencyKey: 'seed-completed',
+    });
+    const other = await stripe.checkout.sessions.create(params, {
+      idempotencyKey: 'seed-other',
+    });
+    stripe.markComplete(completed.id, 'sub_123');
+
+    await createGateway(stripe).expireOtherOpenCheckoutSessions({
+      externalCustomerId: 'cus_123',
+      keepSessionId: completed.id,
+    });
+
+    await expect(
+      stripe.checkout.sessions.retrieve(other.id),
+    ).resolves.toMatchObject({ status: 'expired' });
+  });
+
   it('keeps trial consent Session creation fail-closed until the dedicated secret is configured', async () => {
     const stripe = new FakeStripeCheckoutClient();
     const gateway = new StripePaymentGateway({

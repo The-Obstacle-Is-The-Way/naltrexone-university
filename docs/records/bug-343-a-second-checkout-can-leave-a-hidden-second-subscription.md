@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** In Progress — the re-check after the create and the fake's expire ship first; next the completion sweep and alerts, and the owner's Dashboard checks; due 2026-10-20
+**Status:** In Progress — the re-check (#1492) and the completion sweep ship; next the alerts, option 4 after the owner's refund decision, and the Dashboard checks; due 2026-10-20
 **Priority:** P2
 **Date:** 2026-10-13
 
@@ -194,9 +194,13 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
    - The fake refuses to expire a Session that is not open, as Stripe does. The contract's twelfth scenario proves this against TEST mode for an expired Session; the reproduction observed the same refusal for a completed one.
    - The adapter settles a refused expire by the Session's status instead of the message. It checks the customer's subscriptions again just before it hands back a Session, reused or new, and if one appeared, it expires that Session and refuses with `ALREADY_SUBSCRIBED`.
    - Business rule R24 states it.
-2. **Next: option 3, the completion sweep, then option 5's alerts,** each test first, by 2026-10-20.
-3. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
-4. **Option 7** stays a separate owner decision, and option 8 is not taken now.
+2. **The second pull request: option 3, the completion sweep.**
+   - When a subscription Checkout completes, the webhook ends the customer's other open subscription Sessions before it stores the subscription.
+   - A Session that stays open fails the delivery, so Stripe sends it again. One that completed too is a second subscription, and is logged as an error.
+   - Business rule R25 states it. What remains is two Checkouts completed before the sweep reaches either; option 4 corrects that.
+3. **Next: option 5's alerts,** test first, by 2026-10-20.
+4. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
+5. **Option 7** stays a separate owner decision, and option 8 is not taken now.
 
 ## Owner Decisions
 
@@ -214,7 +218,8 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
 - [ ] The owner checks whether "limit customers to one subscription" is on in test mode. If it is, the reproduction shows it does not stop B.
 - [ ] Whether a card added through the login-link portal becomes the customer's default.
 - [x] Tests for options 6 and 2 (2026-10-14): a Session completed in flight, for a trial and for a returning customer; interleavings 3 and 4; a reused Session; an expire refused for a Session already expired; and the re-check's outcomes, its failed listing and its failed expire. The first nine failed before the fix; the rest were added after it, and twelve mutations of the fix each fail a test. The provider contracts pass in TEST mode, `executed=14 passed=14 skipped=0`.
-- [ ] Tests fail first for options 3, 4 and 5: the completion sweep, the webhook's correction and its collection handling, and the alerts.
+- [x] Tests failed first for option 3 (2026-10-14): the processor names a completed subscription Checkout; the webhook sweeps before storing, and a failed sweep fails the delivery; the adapter ends the other open subscription Sessions, keeps the completed one, leaves other modes alone, logs a second completion and throws on one it cannot end. Eight mutations each fail a test.
+- [ ] Tests fail first for options 4 and 5: the webhook's correction and its collection handling, and the alerts.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.
 - [ ] After the fix ships, the test-mode reproduction ends with one live subscription.
