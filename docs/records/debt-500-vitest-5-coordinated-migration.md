@@ -4,7 +4,7 @@
 **Priority:** P3
 **Date:** 2026-10-05
 **Resolved:** —
-**Verification receipts:** #1478; #1481; [Verification](#verification)
+**Verification receipts:** #1478; #1481; #1502; [Verification](#verification)
 
 *Corrected 2026-10-14: Dependabot's grouped #1451 was not the vehicle. Its typecheck failed, and it closed unmerged once #1478, a repository-owned PR with the same dependency changes, carried the migration.*
 
@@ -29,12 +29,14 @@ Dependabot opened #1370 on 2026-10-05, bumping `vitest` from 4.1.11 to 5.0.1 on 
   - CRAP, coverage maps from every lane.
 - **Stryker on Vitest 5.** Two runs of the mutation workflow on `main`, the scheduled one on 2026-10-12 and one dispatched on 2026-10-14, mutated the same 91 files and 2,931 mutants:
 
-  | Run | Vitest | Score | Killed | Timed out | Survived |
-  |---|---|---|---|---|---|
-  | 2026-10-12 | 4 | 99.65% | 2,854 | 30 | 9 |
-  | 2026-10-14 | 5 | 3.70% | 104 | 3 | 2,786 |
+  | Run | Vitest | Score | Killed | Timed out | Survived | No coverage | Ignored |
+  |---|---|---|---|---|---|---|---|
+  | 2026-10-12 | 4 | 99.65% | 2,854 | 30 | 9 | 1 | 37 |
+  | 2026-10-14 | 5 | 3.70% | 104 | 3 | 2,786 | 1 | 37 |
 
-  - **Why mutants survived.** Each of the 2,786 survivors had covering tests and ran none of them. The runner selects a mutant's tests through a `testNamePattern` built from their names, joining each suite chain with a space. Vitest 5 matches the pattern against the chain joined with `' > '` ([migration guide](https://vitest.dev/guide/migration/#testnamepattern-matches-the-joined-full-name), "`testNamePattern` Matches the `>`-Joined Full Name"), so no test matches. The 104 kills were static mutants, which run without the filter.
+  The score is killed plus timed out over every mutant but the ignored ones.
+
+  - **Why mutants survived.** Each of the 2,786 survivors had covering tests and ran none of them. The runner selects a mutant's tests through a `testNamePattern` built from their names, joining each suite chain with a space. Vitest 5 matches the pattern against the chain joined with `' > '` ([migration guide](https://vitest.dev/guide/migration/#testnamepattern-matches-the-joined-full-name), "`testNamePattern` Matches the `>`-Joined Full Name"), so the pattern matches no test inside a `describe`. A top-level test's name has no chain and still matches, but every survivor's covering tests were nested. The 104 kills were static mutants, which run without the filter.
   - **What it was not.** The job passed, because the run reports a score and never fails on one. Runner 10.0.0 has the same bug.
 
 ## Impact

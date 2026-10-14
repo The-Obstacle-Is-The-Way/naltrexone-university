@@ -1,5 +1,5 @@
 diff --git a/dist/src/stryker-setup.js b/dist/src/stryker-setup.js
-index aecfacbe47b285c272c47e54b3d66a716adfdc41..de9f42737d5f7e53fbf0b49ef8e01dd86eeaa619 100644
+index aecfacbe47b285c272c47e54b3d66a716adfdc41..9c168805e6d57d32cd3d95eb201f0b3adcba51c5 100644
 --- a/dist/src/stryker-setup.js
 +++ b/dist/src/stryker-setup.js
 @@ -63,7 +63,9 @@ function collectTestName({ name, suite, }) {
@@ -8,13 +8,13 @@ index aecfacbe47b285c272c47e54b3d66a716adfdc41..de9f42737d5f7e53fbf0b49ef8e01dd8
      }
 -    return nameParts.join(' ').trim();
 +    // Vitest 5 matches testNamePattern against the suite chain joined with
-+    // ' > ' (stryker-js#6210); a space-joined name matches no test.
++    // ' > ' (stryker-js#6210); a space-joined name matches no nested test.
 +    return nameParts.join(' > ').trim();
  }
  function toRawTestId(test) {
      return `${test.file?.filepath ?? 'unknown.js'}#${collectTestName(test)}`;
 diff --git a/dist/src/test-helpers.js b/dist/src/test-helpers.js
-index 56cc786f30c524ae18ce87eef1a67fdf26b703c5..fecfa5893e30e143d8f37232446f1ea1cee5aa8c 100644
+index 56cc786f30c524ae18ce87eef1a67fdf26b703c5..f984d90a1c8c58ec4b24637f0b80382e9d280e4b 100644
 --- a/dist/src/test-helpers.js
 +++ b/dist/src/test-helpers.js
 @@ -8,7 +8,9 @@ export function collectTestName({ name, suite, }) {
@@ -23,7 +23,7 @@ index 56cc786f30c524ae18ce87eef1a67fdf26b703c5..fecfa5893e30e143d8f37232446f1ea1
      }
 -    return nameParts.join(' ').trim();
 +    // Vitest 5 matches testNamePattern against the suite chain joined with
-+    // ' > ' (stryker-js#6210); a space-joined name matches no test.
++    // ' > ' (stryker-js#6210); a space-joined name matches no nested test.
 +    return nameParts.join(' > ').trim();
  }
  export function toRawTestId(test) {

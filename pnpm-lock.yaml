@@ -18,7 +18,7 @@ overrides:
 packageExtensionsChecksum: sha256-jYft4/Fbdor9ktMfjbaQIFLqL6/HPNc1s+dqOnZr588=
 
 patchedDependencies:
-  '@stryker-mutator/vitest-runner@9.6.1': 6d7d5c2ce0344eed65bab42d85a9b73b3754cb37776d23d2274bf0915a75203a
+  '@stryker-mutator/vitest-runner@9.6.1': ea5ed2139402b4bcead8a8a6803b44214c825e0b8f19457b841b08af03df0880
 
 importers:
 
@@ -138,7 +138,7 @@ importers:
         version: 9.6.1(@types/node@24.19.1)
       '@stryker-mutator/vitest-runner':
         specifier: 9.6.1
-        version: 9.6.1(patch_hash=6d7d5c2ce0344eed65bab42d85a9b73b3754cb37776d23d2274bf0915a75203a)(@stryker-mutator/core@9.6.1(@types/node@24.19.1))(vitest@5.0.3)
+        version: 9.6.1(patch_hash=ea5ed2139402b4bcead8a8a6803b44214c825e0b8f19457b841b08af03df0880)(@stryker-mutator/core@9.6.1(@types/node@24.19.1))(vitest@5.0.3)
       '@types/istanbul-lib-coverage':
         specifier: 2.0.6
         version: 2.0.6
@@ -6558,7 +6558,7 @@ snapshots:
 
   '@stryker-mutator/util@9.6.1': {}
 
-  '@stryker-mutator/vitest-runner@9.6.1(patch_hash=6d7d5c2ce0344eed65bab42d85a9b73b3754cb37776d23d2274bf0915a75203a)(@stryker-mutator/core@9.6.1(@types/node@24.19.1))(vitest@5.0.3)':
+  '@stryker-mutator/vitest-runner@9.6.1(patch_hash=ea5ed2139402b4bcead8a8a6803b44214c825e0b8f19457b841b08af03df0880)(@stryker-mutator/core@9.6.1(@types/node@24.19.1))(vitest@5.0.3)':
     dependencies:
       '@stryker-mutator/api': 9.6.1
       '@stryker-mutator/core': 9.6.1(@types/node@24.19.1)
