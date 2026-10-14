@@ -318,6 +318,7 @@ describe('records folder and ledger', () => {
       '![Screenshot](../debt/assets/debt-477/review.png)',
       '[Branch](https://github.com/o/r/blob/dev/docs/_archive/debt/debt-001-example.md#why)',
       'Read `docs/bugs/assets/bug-308/receipt.md`.',
+      'Or `docs/_archive/notes.md`, a file at the top of the archive.',
     ].join('\n\n');
     expect(
       archiveDestinations('docs/guides/example.md', contents).map(
@@ -328,6 +329,7 @@ describe('records folder and ledger', () => {
       '3:../debt/assets/debt-477/review.png',
       '5:https://github.com/o/r/blob/dev/docs/_archive/debt/debt-001-example.md#why',
       '7:docs/bugs/assets/bug-308/receipt.md',
+      '9:docs/_archive/notes.md',
     ]);
   });
 

@@ -613,9 +613,10 @@ const DELETED_FOLDERS =
   '(?:_archive|(?:bugs|debt|audits)/assets|records/assets/(?:inventory|active-audit)-2026-09-21)';
 const DELETED_FOLDER = new RegExp(`^docs/${DELETED_FOLDERS}/`);
 const DELETED_FOLDER_IN_URL = new RegExp(`/docs/${DELETED_FOLDERS}/`);
-// A file, not a folder name or a glob, under a deleted folder.
+// A path below a deleted folder. The folder's bare name, and a glob over it
+// such as `docs/_archive/**`, are not destinations.
 const DELETED_FILE =
-  /(?<![\w-])docs\/(?:_archive\/[\w.-]+\/|(?:bugs|debt|audits)\/assets\/|records\/assets\/(?:inventory|active-audit)-2026-09-21\/)[\w.-]/g;
+  /(?<![\w-])docs\/(?:_archive\/|(?:bugs|debt|audits)\/assets\/|records\/assets\/(?:inventory|active-audit)-2026-09-21\/)[\w.-]/g;
 // What pins a path in a code span: a commit URL's revision, or `<commit>:` as
 // `git show` takes it.
 const PINNED_BEFORE =

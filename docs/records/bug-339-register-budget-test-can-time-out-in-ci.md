@@ -17,7 +17,7 @@
 - **The failure.** #1465's CI on 2026-10-12 (run 38217589321) failed "accepts register files at their budgets and ignores other large files" with `Test timed out in 10000ms`. #1465 does not touch the guard or the test. Another session found it and traced the cost.
 - **Always close to the limit.** In "Unit tests with coverage", the file took 4.0 to 10.6 s in every CI run checked since 2026-10-08, against 0.7 s locally without coverage. That run was the only such failure among the 27 failed CI runs since 2026-10-01. The test failed twice more the same day, after this fix was written: on #1470 (run 38230303349, 10.3 s) and on #1472's first attempt (run 38231553954).
 - **Locally, under coverage:** the at-budget case took 3.5 s, and the three others 0.1 to 0.15 s each.
-- **Why so much parsing.** The budget check is in `auditRecordLifecycle`, which parses only the index. `auditDocumentation` adds a link parse of every file, and parses each live file twice: once for record links and once for broken links.
+- **Why so much parsing.** The budget check is in `auditRecordLifecycle`, which parses only the index. `auditDocumentation` adds a link parse of every file, and at filing it parsed each live file twice: once for record links and once for broken links.
 
 ## Impact
 
