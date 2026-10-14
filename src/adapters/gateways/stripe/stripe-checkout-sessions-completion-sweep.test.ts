@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
-import { expireOtherOpenSubscriptionCheckoutSessions } from './stripe-checkout-sessions';
+import {
+  expireOtherOpenSubscriptionCheckoutSessions,
+  OPEN_CHECKOUT_SESSION_SWEEP_PAGE_LIMIT,
+} from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 // BUG-343 option 3: once a subscription Checkout completes, any other open
@@ -182,20 +185,36 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
     });
   });
 
-  it('logs an error when more open Sessions exist than one page holds', async () => {
+  it('expires the other Sessions on every page Stripe returns', async () => {
     const stripe = createFake();
     const completed = await openSession(stripe);
     stripe.markComplete(completed, 'sub_completed');
+    const others: string[] = [];
     for (let index = 0; index < 101; index += 1) {
-      await openSession(stripe);
+      others.push(await openSession(stripe));
     }
 
     await sweep(stripe, completed);
 
-    expect(logger.errorCalls).toContainEqual(
-      expect.objectContaining({
-        msg: 'More open checkout sessions than one page after a completion',
-      }),
+    const statuses = await Promise.all(
+      others.map((sessionId) => statusOf(stripe, sessionId)),
     );
+    expect(new Set(statuses)).toEqual(new Set(['expired']));
+  });
+
+  it('throws STRIPE_ERROR, expiring nothing, when the open Sessions run past the page limit', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+    const pages = OPEN_CHECKOUT_SESSION_SWEEP_PAGE_LIMIT;
+    for (let index = 0; index < pages * 100 + 1; index += 1) {
+      await openSession(stripe);
+    }
+
+    await expect(sweep(stripe, completed)).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+    });
+
+    expect(stripe.expireCalls).toEqual([]);
   });
 });

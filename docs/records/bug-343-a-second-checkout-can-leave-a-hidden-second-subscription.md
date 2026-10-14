@@ -196,7 +196,7 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
    - Business rule R24 states it.
 2. **The second pull request: option 3, the completion sweep.**
    - Once the webhook has stored a completed subscription Checkout's subscription, it ends the customer's other open subscription Sessions created before the event. An event for a user this environment does not hold sweeps nothing, so one environment does not touch another's customers in TEST mode.
-   - A Session that stays open fails the delivery, so Stripe sends it again, and the already-processed path sweeps again. One that completed too is a second subscription, and is logged as an error.
+   - It reads every page of the customer's open Sessions first, and sweeps before the acknowledgment email is sent. A Session that stays open, a failed listing, or more than ten pages fails the delivery, so Stripe sends it again, and the already-processed path sweeps again. One that completed too is a second subscription, and is logged as an error.
    - Business rule R25 states it. What remains is two Checkouts completed before the sweep reaches either; option 4 corrects that.
 3. **Next: option 5's alerts,** test first, by 2026-10-20.
 4. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
@@ -222,7 +222,8 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
   - the processor names a completed subscription Checkout;
   - the webhook sweeps after storing, a failed sweep fails the delivery and a redelivery sweeps again, and a user this environment does not hold sweeps nothing;
   - the adapter ends the other open subscription Sessions, keeps the completed one and any created after the event, leaves other modes alone, logs a second completion, and throws when it cannot list or end one.
-  - Sixteen mutations each fail a test.
+  - CodeRabbit's first review added two cases: a second page of open Sessions, and a sweep before the acknowledgment that still lets it go when the sweep fails.
+  - Twenty mutations each fail a test.
 - [ ] Tests fail first for options 4 and 5: the webhook's correction and its collection handling, and the alerts.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.

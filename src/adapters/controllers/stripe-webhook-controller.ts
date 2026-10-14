@@ -660,6 +660,17 @@ async function processSubscriptionWebhook(
     throw hasProcessingError ? processingError : transactionError;
   }
 
+  // The sweep goes first, so a slow acknowledgment send does not hold the
+  // customer's other Sessions open; a failed sweep still lets the
+  // acknowledgment go before it fails the delivery.
+  let sweepFailed = false;
+  let sweepError: unknown;
+  try {
+    await expireOtherOpenCheckoutSessions(deps, event);
+  } catch (error) {
+    sweepFailed = true;
+    sweepError = error;
+  }
   if (acknowledgmentDeliveryId) {
     await dispatchRenewalAcknowledgment(
       deps,
@@ -667,7 +678,7 @@ async function processSubscriptionWebhook(
       acknowledgmentDeliveryId,
     );
   }
-  await expireOtherOpenCheckoutSessions(deps, event);
+  if (sweepFailed) throw sweepError;
 }
 
 // BUG-343 option 3: once this environment has stored a completed

@@ -76,6 +76,7 @@ function createHarness(input?: {
   findUserById?: StripeWebhookTransaction['users']['findById'];
   userId?: string;
   webhookResult?: WebhookEventResult;
+  paymentGateway?: (webhookResult: WebhookEventResult) => FakePaymentGateway;
   providerResult?:
     | { status: 'accepted'; providerEventId: string }
     | { status: 'transient_failure'; failureCode: string };
@@ -101,12 +102,15 @@ function createHarness(input?: {
     ...(input?.providerResult ? { results: [input.providerResult] } : {}),
   };
   const emailGateway = new FakeTransactionalEmailGateway(emailGatewayInput);
-  const paymentGateway = new FakePaymentGateway({
-    externalCustomerId: 'cus_123',
-    checkoutUrl: 'https://stripe/checkout',
-    portalUrl: 'https://stripe/portal',
-    webhookResult: input?.webhookResult ?? checkoutEvent(userId),
-  });
+  const webhookResult = input?.webhookResult ?? checkoutEvent(userId);
+  const paymentGateway =
+    input?.paymentGateway?.(webhookResult) ??
+    new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult,
+    });
   const providerDispatch = new DispatchRenewalNoticeDeliveryUseCase(
     renewalDeliveries,
     emailGateway,
@@ -193,6 +197,90 @@ function createHarness(input?: {
     userId,
   };
 }
+
+// BUG-343 option 3: the completion sweep runs before the acknowledgment is
+// sent, so a slow send does not hold the customer's other Sessions open, and
+// a failed sweep still lets the acknowledgment go before the delivery fails.
+class SweepObservingPaymentGateway extends FakePaymentGateway {
+  sentBeforeSweep: number | null = null;
+
+  constructor(
+    webhookResult: WebhookEventResult,
+    private readonly sentSoFar: () => number,
+    otherCheckoutSessionsError?: Error,
+  ) {
+    super({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult,
+      ...(otherCheckoutSessionsError ? { otherCheckoutSessionsError } : {}),
+    });
+  }
+
+  override async expireOtherOpenCheckoutSessions(
+    input: Parameters<FakePaymentGateway['expireOtherOpenCheckoutSessions']>[0],
+  ): Promise<void> {
+    this.sentBeforeSweep = this.sentSoFar();
+    return super.expireOtherOpenCheckoutSessions(input);
+  }
+}
+
+function completedCheckoutEvent(userId: string): WebhookEventResult {
+  return {
+    ...checkoutEvent(userId),
+    completedSubscriptionCheckout: {
+      sessionId: 'cs_123',
+      externalCustomerId: 'cus_123',
+    },
+  };
+}
+
+describe('Stripe webhook renewal acknowledgment and the completion sweep', () => {
+  it("sweeps the customer's other Sessions before sending the acknowledgment", async () => {
+    const observed: { gateway?: SweepObservingPaymentGateway } = {};
+    const userId = crypto.randomUUID();
+    const harness = createHarness({
+      userId,
+      webhookResult: completedCheckoutEvent(userId),
+      paymentGateway: (webhookResult) => {
+        observed.gateway = new SweepObservingPaymentGateway(
+          webhookResult,
+          () => harness.emailGateway.sendInputs.length,
+        );
+        return observed.gateway;
+      },
+    });
+
+    await processStripeWebhook(harness.deps, {
+      rawBody: 'raw',
+      signature: 'sig',
+    });
+
+    expect(observed.gateway?.sentBeforeSweep).toBe(0);
+    expect(harness.emailGateway.sendInputs).toHaveLength(1);
+  });
+
+  it('still sends the acknowledgment when the sweep fails, then fails the delivery', async () => {
+    const userId = crypto.randomUUID();
+    const harness = createHarness({
+      userId,
+      webhookResult: completedCheckoutEvent(userId),
+      paymentGateway: (webhookResult) =>
+        new SweepObservingPaymentGateway(
+          webhookResult,
+          () => harness.emailGateway.sendInputs.length,
+          new Error('expire failed'),
+        ),
+    });
+
+    await expect(
+      processStripeWebhook(harness.deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toThrow('expire failed');
+
+    expect(harness.emailGateway.sendInputs).toHaveLength(1);
+  });
+});
 
 describe('Stripe webhook renewal acknowledgment', () => {
   it('commits the consent and acknowledgment together before provider dispatch', async () => {
