@@ -319,22 +319,9 @@ agent-browser wait --load networkidle
 agent-browser snapshot -i  # Check result
 ```
 
-## Example: Authentication with saved state
+## Example: Authentication
 
-```bash
-# Login once
-agent-browser open https://app.example.com/login
-agent-browser snapshot -i
-agent-browser fill @e1 "username"
-agent-browser fill @e2 "password"
-agent-browser click @e3
-agent-browser wait --url "**/dashboard"
-agent-browser state save auth.json
-
-# Later sessions: load saved state
-agent-browser state load auth.json
-agent-browser open https://app.example.com/dashboard
-```
+In this project, sign in through the persistent profile described in "Project Note: Clerk-authenticated local apps" above. The upstream example saves and reloads state with `agent-browser state save` and `state load`; that is unreliable with Clerk, and `AGENTS.md` says to use `--profile`, never `--state`.
 
 ## Sessions (parallel browsers)
 
@@ -372,32 +359,26 @@ agent-browser record stop                 # Save recording
 
 ## Deep-dive documentation
 
-For detailed patterns and best practices, see:
+For detailed patterns and best practices, see the CLI repository's references. They are not vendored here; the links pin its commit `1165952d` (read on 2026-10-14). Where they reuse saved state, this project's Clerk note above applies instead.
 
 | Reference | Description |
 | --------- | ----------- |
-| [references/snapshot-refs.md](references/snapshot-refs.md) | Ref lifecycle, invalidation rules, troubleshooting |
-| [references/session-management.md](references/session-management.md) | Parallel sessions, state persistence, concurrent scraping |
-| [references/authentication.md](references/authentication.md) | Login flows, OAuth, 2FA handling, state reuse |
-| [references/video-recording.md](references/video-recording.md) | Recording workflows for debugging and documentation |
-| [references/proxy-support.md](references/proxy-support.md) | Proxy configuration, geo-testing, rotating proxies |
+| [references/snapshot-refs.md](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/references/snapshot-refs.md) | Ref lifecycle, invalidation rules, troubleshooting |
+| [references/session-management.md](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/references/session-management.md) | Parallel sessions, state persistence, concurrent scraping |
+| [references/authentication.md](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/references/authentication.md) | Login flows, OAuth, 2FA handling, state reuse |
+| [references/video-recording.md](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/references/video-recording.md) | Recording workflows for debugging and documentation |
+| [references/proxy-support.md](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/references/proxy-support.md) | Proxy configuration, geo-testing, rotating proxies |
 
 ## Ready-to-use templates
 
-Executable workflow scripts for common patterns:
+The CLI repository's workflow scripts for common patterns. They are not vendored here, so read them through the pinned links; `authenticated-session.sh` reuses saved state, which this project does not use with Clerk.
 
 | Template | Description |
 | -------- | ----------- |
-| [templates/form-automation.sh](templates/form-automation.sh) | Form filling with validation |
-| [templates/authenticated-session.sh](templates/authenticated-session.sh) | Login once, reuse state |
-| [templates/capture-workflow.sh](templates/capture-workflow.sh) | Content extraction with screenshots |
+| [templates/form-automation.sh](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/templates/form-automation.sh) | Form filling with validation |
+| [templates/authenticated-session.sh](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/templates/authenticated-session.sh) | Login once, reuse state |
+| [templates/capture-workflow.sh](https://github.com/vercel-labs/agent-browser/blob/1165952d74ceed98fdc2dd97190ad41f44dd0e24/skill-data/core/templates/capture-workflow.sh) | Content extraction with screenshots |
 
-Usage:
-```bash
-./templates/form-automation.sh https://example.com/form
-./templates/authenticated-session.sh https://app.example.com/login
-./templates/capture-workflow.sh https://example.com ./output
-```
 
 ## HTTPS Certificate Errors
 
