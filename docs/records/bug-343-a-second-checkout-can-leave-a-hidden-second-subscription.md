@@ -195,8 +195,8 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
    - The adapter settles a refused expire by the Session's status instead of the message. It checks the customer's subscriptions again just before it hands back a Session, reused or new, and if one appeared, it expires that Session and refuses with `ALREADY_SUBSCRIBED`.
    - Business rule R24 states it.
 2. **The second pull request: option 3, the completion sweep.**
-   - When a subscription Checkout completes, the webhook ends the customer's other open subscription Sessions before it stores the subscription.
-   - A Session that stays open fails the delivery, so Stripe sends it again. One that completed too is a second subscription, and is logged as an error.
+   - Once the webhook has stored a completed subscription Checkout's subscription, it ends the customer's other open subscription Sessions created before the event. An event for a user this environment does not hold sweeps nothing, so one environment does not touch another's customers in TEST mode.
+   - A Session that stays open fails the delivery, so Stripe sends it again, and the already-processed path sweeps again. One that completed too is a second subscription, and is logged as an error.
    - Business rule R25 states it. What remains is two Checkouts completed before the sweep reaches either; option 4 corrects that.
 3. **Next: option 5's alerts,** test first, by 2026-10-20.
 4. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
@@ -218,7 +218,11 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
 - [ ] The owner checks whether "limit customers to one subscription" is on in test mode. If it is, the reproduction shows it does not stop B.
 - [ ] Whether a card added through the login-link portal becomes the customer's default.
 - [x] Tests for options 6 and 2 (2026-10-14): a Session completed in flight, for a trial and for a returning customer; interleavings 3 and 4; a reused Session; an expire refused for a Session already expired; and the re-check's outcomes, its failed listing and its failed expire. The first nine failed before the fix; the rest were added after it, and twelve mutations of the fix each fail a test. The provider contracts pass in TEST mode, `executed=14 passed=14 skipped=0`.
-- [x] Tests failed first for option 3 (2026-10-14): the processor names a completed subscription Checkout; the webhook sweeps before storing, and a failed sweep fails the delivery; the adapter ends the other open subscription Sessions, keeps the completed one, leaves other modes alone, logs a second completion and throws on one it cannot end. Eight mutations each fail a test.
+- [x] Tests for option 3 (2026-10-14), the first nine failing before the code:
+  - the processor names a completed subscription Checkout;
+  - the webhook sweeps after storing, a failed sweep fails the delivery and a redelivery sweeps again, and a user this environment does not hold sweeps nothing;
+  - the adapter ends the other open subscription Sessions, keeps the completed one and any created after the event, leaves other modes alone, logs a second completion, and throws when it cannot list or end one.
+  - Sixteen mutations each fail a test.
 - [ ] Tests fail first for options 4 and 5: the webhook's correction and its collection handling, and the alerts.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.

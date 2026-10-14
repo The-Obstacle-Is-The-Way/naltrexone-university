@@ -634,10 +634,14 @@ async function processSubscriptionWebhook(
     });
   } catch (transactionError) {
     if (transactionError instanceof StripeWebhookAlreadyProcessed) {
-      // Another delivery committed this event first.
+      // Another delivery committed this event first. A completion's sweep
+      // runs again: a failed sweep is what makes Stripe send it again.
+      await expireOtherOpenCheckoutSessions(deps, event);
       return;
     }
 
+    // Not this environment's user, so not its customer either: nothing is
+    // swept.
     if (isSubscriptionUserMissingError(transactionError)) {
       await persistAcknowledgedOutcome(deps, event, subscriptionUpdate);
       deps.logger.warn(
@@ -663,6 +667,26 @@ async function processSubscriptionWebhook(
       acknowledgmentDeliveryId,
     );
   }
+  await expireOtherOpenCheckoutSessions(deps, event);
+}
+
+// BUG-343 option 3: once this environment has stored a completed
+// subscription Checkout's subscription, so the customer is its own, end the
+// customer's other open subscription Sessions created before the event; any
+// of them could otherwise create a second subscription for up to 24 hours. A
+// failure fails the delivery after the event is recorded as processed, so
+// Stripe sends it again and the already-processed path sweeps again.
+async function expireOtherOpenCheckoutSessions(
+  deps: StripeWebhookDeps,
+  event: StripeWebhookEvent,
+): Promise<void> {
+  const completion = event.completedSubscriptionCheckout;
+  if (!completion) return;
+  await deps.paymentGateway.expireOtherOpenCheckoutSessions({
+    externalCustomerId: completion.externalCustomerId,
+    keepSessionId: completion.sessionId,
+    ...(event.occurredAt ? { createdBefore: event.occurredAt } : {}),
+  });
 }
 
 async function processStripeWebhookWithinSpan(
@@ -707,17 +731,6 @@ async function processStripeWebhookWithinSpan(
   let hasProcessingError = false;
 
   try {
-    // BUG-343 option 3: before the subscription is stored, end the
-    // customer's other open subscription Sessions, so none of them can create
-    // a second subscription. A failure fails the delivery, and Stripe sends
-    // it again; each Session's expire is keyed, so a repeat is harmless.
-    if (event.completedSubscriptionCheckout) {
-      await deps.paymentGateway.expireOtherOpenCheckoutSessions({
-        externalCustomerId:
-          event.completedSubscriptionCheckout.externalCustomerId,
-        keepSessionId: event.completedSubscriptionCheckout.sessionId,
-      });
-    }
     if (event.trialPaymentMethodSetupCompletion) {
       await processTrialPaymentMethodSetupWebhook(
         deps,

@@ -272,6 +272,28 @@ describe('processStripeWebhookEvent', () => {
     });
   });
 
+  it('names no completed subscription Checkout without a customer id', async () => {
+    const stripe = createStripe({
+      event: {
+        id: 'evt_checkout_no_customer',
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs_checkout_123',
+            mode: 'subscription',
+            customer: null,
+            subscription: 'sub_123',
+          },
+        },
+      },
+      subscriptionIds: ['sub_123'],
+    });
+
+    const result = await processEvent(stripe);
+
+    expect(result.completedSubscriptionCheckout).toBeUndefined();
+  });
+
   it('names no completed subscription Checkout for an expired one', async () => {
     const stripe = createStripe({
       event: {

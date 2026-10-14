@@ -41,17 +41,9 @@ function completedSubscriptionCheckoutOf(
   if (session.mode !== 'subscription' || typeof session.id !== 'string') {
     return null;
   }
-  const { customer } = session;
-  const externalCustomerId =
-    typeof customer === 'string'
-      ? customer
-      : typeof customer === 'object' &&
-          customer !== null &&
-          typeof (customer as Record<string, unknown>).id === 'string'
-        ? ((customer as Record<string, unknown>).id as string)
-        : null;
-  return externalCustomerId
-    ? { sessionId: session.id, externalCustomerId }
+  // Stripe sends the customer as an id; webhook payloads are not expanded.
+  return typeof session.customer === 'string'
+    ? { sessionId: session.id, externalCustomerId: session.customer }
     : null;
 }
 

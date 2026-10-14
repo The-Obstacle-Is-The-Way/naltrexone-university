@@ -232,12 +232,14 @@ export interface PaymentGateway {
 
   /**
    * BUG-343: ends the customer's open subscription Checkout Sessions other
-   * than the one kept, so none of them can create a second subscription. It
-   * rejects when one stays open, so the caller can retry.
+   * than the one kept, and, when given, created before `createdBefore`, so
+   * none of them can create a second subscription. It rejects when one stays
+   * open, so the caller can retry.
    */
   expireOtherOpenCheckoutSessions(input: {
     externalCustomerId: string;
     keepSessionId: string;
+    createdBefore?: Date;
   }): Promise<void>;
 
   /**

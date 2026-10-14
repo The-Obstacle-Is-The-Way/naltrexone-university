@@ -5,19 +5,20 @@ import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-help
 import { processStripeWebhook } from './stripe-webhook-controller';
 import { createStripeWebhookTestHarness } from './test-helpers/stripe-webhook-controller-harness';
 
-// BUG-343 option 3: a completed subscription Checkout ends the customer's
-// other open subscription Sessions before its subscription is stored, and a
-// failure fails the delivery so Stripe sends it again.
+// BUG-343 option 3: once a completed subscription Checkout's subscription is
+// stored, the webhook asks the gateway to end the customer's other open
+// subscription Sessions. A failure fails the delivery, so Stripe sends it
+// again; an event for a user this environment does not hold sweeps nothing.
 describe('processStripeWebhook completion sweep', () => {
   const input = { rawBody: '{}', signature: 'sig' };
+  const occurredAt = new Date('2026-10-14T05:00:00.000Z');
 
-  function completion(eventId: string): WebhookEventResult {
+  function completion(eventId: string, userId: string): WebhookEventResult {
     return {
       eventId,
       type: 'checkout.session.completed',
-      subscriptionUpdate: createTestWebhookSubscriptionUpdate({
-        userId: crypto.randomUUID(),
-      }),
+      occurredAt,
+      subscriptionUpdate: createTestWebhookSubscriptionUpdate({ userId }),
       completedSubscriptionCheckout: {
         sessionId: 'cs_completed',
         externalCustomerId: 'cus_test',
@@ -38,33 +39,53 @@ describe('processStripeWebhook completion sweep', () => {
     });
   }
 
-  it("expires the customer's other open Checkout Sessions when a subscription Checkout completes", async () => {
-    const paymentGateway = gatewayFor(completion('evt_completed'));
+  it("asks the gateway to expire the customer's other open Checkout Sessions created before the event, after storing the subscription", async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = gatewayFor(completion('evt_completed', userId));
     const harness = createStripeWebhookTestHarness({ paymentGateway });
 
     await processStripeWebhook(harness.deps, input);
 
     expect(paymentGateway.otherCheckoutSessionInputs).toEqual([
-      { externalCustomerId: 'cus_test', keepSessionId: 'cs_completed' },
+      {
+        externalCustomerId: 'cus_test',
+        keepSessionId: 'cs_completed',
+        createdBefore: occurredAt,
+      },
     ]);
+    expect(await harness.subscriptions.findByUserId(userId)).not.toBeNull();
   });
 
-  it('records the delivery as failed, before storing anything, when the sweep fails', async () => {
-    const event = completion('evt_sweep_failed');
-    const paymentGateway = gatewayFor(event, new Error('expire failed'));
-    const harness = createStripeWebhookTestHarness({ paymentGateway });
+  it('fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again', async () => {
+    const userId = crypto.randomUUID();
+    const event = completion('evt_sweep_failed', userId);
+    const failing = gatewayFor(event, new Error('expire failed'));
+    const harness = createStripeWebhookTestHarness({ paymentGateway: failing });
 
     await expect(processStripeWebhook(harness.deps, input)).rejects.toThrow(
       'expire failed',
     );
+    const [[, stored] = []] = harness.stripeEvents.snapshot();
+    expect(stored?.processedAt).not.toBeNull();
 
-    const [[eventId, stored] = []] = harness.stripeEvents.snapshot();
-    expect(eventId).toBe('evt_sweep_failed');
-    expect(stored?.processedAt).toBeNull();
-    expect(stored?.error).toEqual(expect.any(String));
-    const userId = event.subscriptionUpdate?.userId;
-    if (!userId) throw new Error('Expected a subscription update');
-    expect(await harness.subscriptions.findByUserId(userId)).toBeNull();
+    const redelivered = gatewayFor(event);
+    await processStripeWebhook(
+      { ...harness.deps, paymentGateway: redelivered },
+      input,
+    );
+
+    expect(redelivered.otherCheckoutSessionInputs).toHaveLength(1);
+  });
+
+  it('sweeps nothing for a user this environment does not hold', async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = gatewayFor(completion('evt_foreign', userId));
+    const harness = createStripeWebhookTestHarness({ paymentGateway });
+    harness.subscriptions.markUserMissing(userId);
+
+    await processStripeWebhook(harness.deps, input);
+
+    expect(paymentGateway.otherCheckoutSessionInputs).toEqual([]);
   });
 
   it('does not sweep for an event that completes no subscription Checkout', async () => {

@@ -132,6 +132,7 @@ export class FakePaymentGateway implements PaymentGateway {
   readonly otherCheckoutSessionInputs: Array<{
     externalCustomerId: string;
     keepSessionId: string;
+    createdBefore?: Date;
   }> = [];
 
   private readonly externalCustomerId: string;
@@ -205,6 +206,7 @@ export class FakePaymentGateway implements PaymentGateway {
   async expireOtherOpenCheckoutSessions(input: {
     externalCustomerId: string;
     keepSessionId: string;
+    createdBefore?: Date;
   }): Promise<void> {
     this.otherCheckoutSessionInputs.push(input);
     if (this.otherCheckoutSessionsError) throw this.otherCheckoutSessionsError;

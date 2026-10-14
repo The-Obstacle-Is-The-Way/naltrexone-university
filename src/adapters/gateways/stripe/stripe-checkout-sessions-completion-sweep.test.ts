@@ -15,6 +15,14 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
     logger = new FakeLogger();
   });
 
+  const createdMs = 1_700_000_000_000;
+  let fakeNowMs = createdMs;
+
+  function createFake(): FakeStripeCheckoutClient {
+    fakeNowMs = createdMs;
+    return new FakeStripeCheckoutClient(() => fakeNowMs);
+  }
+
   async function openSession(
     stripe: FakeStripeCheckoutClient,
     options: { customer?: string; mode?: 'subscription' | 'payment' } = {},
@@ -39,16 +47,24 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
     return (await stripe.checkout.sessions.retrieve(sessionId)).status;
   }
 
-  function sweep(stripe: FakeStripeCheckoutClient, keepSessionId: string) {
+  function sweep(
+    stripe: FakeStripeCheckoutClient,
+    keepSessionId: string,
+    createdBefore?: Date,
+  ) {
     return expireOtherOpenSubscriptionCheckoutSessions({
       stripe,
-      input: { externalCustomerId: customer, keepSessionId },
+      input: {
+        externalCustomerId: customer,
+        keepSessionId,
+        ...(createdBefore ? { createdBefore } : {}),
+      },
       logger,
     });
   }
 
   it("expires the customer's other open subscription Sessions and keeps the completed one", async () => {
-    const stripe = new FakeStripeCheckoutClient();
+    const stripe = createFake();
     const completed = await openSession(stripe);
     const second = await openSession(stripe);
     const third = await openSession(stripe);
@@ -66,7 +82,7 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
   });
 
   it('does not expire the completed Session while Stripe still lists it as open', async () => {
-    const stripe = new FakeStripeCheckoutClient();
+    const stripe = createFake();
     const completed = await openSession(stripe);
 
     await sweep(stripe, completed);
@@ -75,7 +91,7 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
   });
 
   it('leaves an open Session that cannot create a subscription', async () => {
-    const stripe = new FakeStripeCheckoutClient();
+    const stripe = createFake();
     const completed = await openSession(stripe);
     const payment = await openSession(stripe, { mode: 'payment' });
     stripe.markComplete(completed, 'sub_completed');
@@ -86,7 +102,7 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
   });
 
   it('logs an error, and goes on, when another Session completed too', async () => {
-    const stripe = new FakeStripeCheckoutClient();
+    const stripe = createFake();
     const completed = await openSession(stripe);
     const second = await openSession(stripe);
     const third = await openSession(stripe);
@@ -113,7 +129,7 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
   });
 
   it('throws when an open Session cannot be expired, so the webhook is retried', async () => {
-    const stripe = new FakeStripeCheckoutClient();
+    const stripe = createFake();
     const completed = await openSession(stripe);
     await openSession(stripe);
     stripe.markComplete(completed, 'sub_completed');
@@ -124,5 +140,62 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
     await expect(sweep(stripe, completed)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
     });
+  });
+
+  it('warns for each other Session it expires', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    const second = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+
+    await sweep(stripe, completed);
+
+    expect(logger.warnCalls).toContainEqual(
+      expect.objectContaining({
+        context: expect.objectContaining({ sessionId: second }),
+        msg: 'Expired another open subscription checkout session after a completion',
+      }),
+    );
+  });
+
+  it("keeps a Session created after the completion's event, which belongs to a later checkout", async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+    const eventAt = new Date(createdMs);
+    fakeNowMs = createdMs + 60_000;
+    const later = await openSession(stripe);
+
+    await sweep(stripe, completed, eventAt);
+
+    expect(await statusOf(stripe, later)).toBe('open');
+  });
+
+  it('throws STRIPE_ERROR when the open Sessions cannot be listed', async () => {
+    const stripe = createFake();
+    stripe.setListHook(() => {
+      throw new Error('list failed');
+    });
+
+    await expect(sweep(stripe, 'cs_completed')).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+    });
+  });
+
+  it('logs an error when more open Sessions exist than one page holds', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+    for (let index = 0; index < 101; index += 1) {
+      await openSession(stripe);
+    }
+
+    await sweep(stripe, completed);
+
+    expect(logger.errorCalls).toContainEqual(
+      expect.objectContaining({
+        msg: 'More open checkout sessions than one page after a completion',
+      }),
+    );
   });
 });

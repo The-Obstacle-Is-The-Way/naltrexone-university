@@ -7,32 +7,24 @@ import type {
 } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { ApplicationError } from '@/src/application/errors';
-import type {
-  PaymentGateway,
-  RateLimiter,
-} from '@/src/application/ports/gateways';
+import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeLogger,
+  FakePaymentGateway,
   FakeRenewalConsentRecordRepository,
+  FakeStripeCustomerRepository,
+  FakeStripeEventRepository,
+  FakeSubscriptionRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
 
-function createPaymentGatewayStub(): PaymentGateway {
-  return {
-    createCustomer: async () => ({ externalCustomerId: 'cus_123' }),
-    createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
-    createTrialPaymentMethodSetupSession: async () => ({
-      sessionId: 'cs_setup',
-      url: 'https://stripe/setup',
-    }),
-    attachTrialPaymentMethod: async () => undefined,
-    detachTrialPaymentMethod: async () => undefined,
-    setTrialSubscriptionDefaultPaymentMethod: async () => undefined,
-    createPortalSession: async () => ({ url: 'https://stripe/portal' }),
-    listBlockingCustomerSubscriptions: async () => [],
-    expireOtherOpenCheckoutSessions: async () => undefined,
-    processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
-  };
+function createPaymentGateway(): FakePaymentGateway {
+  return new FakePaymentGateway({
+    externalCustomerId: 'cus_123',
+    checkoutUrl: 'https://stripe/checkout',
+    portalUrl: 'https://stripe/portal',
+    webhookResult: { eventId: 'evt_1', type: 'test' },
+  });
 }
 
 function createTestDeps() {
@@ -50,25 +42,9 @@ function createTestDeps() {
     pruneExpiredWindows,
   };
   const tx = {
-    stripeEvents: {
-      claim: async () => true,
-      peek: async () => ({ processedAt: null, error: null }),
-      lock: async () => ({ processedAt: null, error: null }),
-      markProcessed: async () => undefined,
-      markFailed: async () => undefined,
-      pruneProcessedBefore: async () => 0,
-    },
-    subscriptions: {
-      findByUserId: async () => null,
-      findExternalSubscriptionIdByUserId: async () => null,
-      findObservationVersionByUserId: async () => null,
-      findByExternalSubscriptionId: async () => null,
-      upsert: async () => ({ persisted: true }) as const,
-    },
-    stripeCustomers: {
-      findByUserId: async () => null,
-      insert: async () => undefined,
-    },
+    stripeEvents: new FakeStripeEventRepository(),
+    subscriptions: new FakeSubscriptionRepository(),
+    stripeCustomers: new FakeStripeCustomerRepository(),
     trialPaymentMethodSetupOperations:
       new FakeTrialPaymentMethodSetupOperationRepository(),
     renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
@@ -77,7 +53,7 @@ function createTestDeps() {
 
   const logger = new FakeLogger();
   const deps: StripeWebhookDeps = {
-    paymentGateway: createPaymentGatewayStub(),
+    paymentGateway: createPaymentGateway(),
     subscriptionVersions: tx.subscriptions,
     logger,
     now: () => new Date('2026-02-01T00:00:00.000Z'),
@@ -299,7 +275,7 @@ describe('POST /api/stripe/webhook', () => {
     );
 
     const deps: StripeWebhookDeps = {
-      paymentGateway: createPaymentGatewayStub(),
+      paymentGateway: createPaymentGateway(),
       subscriptionVersions: {
         findObservationVersionByUserId: async () => null,
       },

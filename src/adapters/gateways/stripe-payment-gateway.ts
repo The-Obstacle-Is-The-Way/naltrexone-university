@@ -203,6 +203,7 @@ export class StripePaymentGateway implements PaymentGateway {
   async expireOtherOpenCheckoutSessions(input: {
     externalCustomerId: string;
     keepSessionId: string;
+    createdBefore?: Date;
   }): Promise<void> {
     await expireOtherOpenSubscriptionCheckoutSessions({
       stripe: this.deps.stripe,
