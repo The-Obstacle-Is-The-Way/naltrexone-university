@@ -1030,51 +1030,56 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
         session.created <= createdBeforeSeconds),
   );
   let completedElsewhere = 0;
-  for (const session of others) {
-    const context = {
-      externalCustomerId: input.externalCustomerId,
-      keptSessionId: input.keepSessionId,
-      sessionId: session.id,
-    };
-    let ended: EndedCheckoutSession;
-    try {
-      ended = await expireCheckoutSession({
-        stripe,
+  try {
+    for (const session of others) {
+      const context = {
+        externalCustomerId: input.externalCustomerId,
+        keptSessionId: input.keepSessionId,
         sessionId: session.id,
-        logger,
+      };
+      let ended: EndedCheckoutSession;
+      try {
+        ended = await expireCheckoutSession({
+          stripe,
+          sessionId: session.id,
+          logger,
+        });
+      } catch (error) {
+        logger.error(
+          {
+            ...context,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          'Failed to expire another open subscription checkout session',
+        );
+        throw new ApplicationError(
+          'STRIPE_ERROR',
+          'Failed to expire another open checkout session',
+        );
+      }
+      if (ended.status === 'complete') {
+        completedElsewhere += 1;
+        logger.error(
+          { ...context, sessionSubscriptionId: ended.subscriptionId },
+          'Another subscription Checkout completed for the same customer',
+        );
+      } else {
+        logger.warn(
+          context,
+          'Expired another open subscription checkout session after a completion',
+        );
+      }
+    }
+  } finally {
+    // BUG-343 option 5: each is a second subscription, a person's to
+    // correct. Raised even when a later Session fails the sweep: the retry
+    // lists only open Sessions, so it would never count this one again.
+    if (completedElsewhere > 0) {
+      await operationalAlerts.raise({
+        kind: 'stripe_duplicate_subscription',
+        count: completedElsewhere,
       });
-    } catch (error) {
-      logger.error(
-        {
-          ...context,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        },
-        'Failed to expire another open subscription checkout session',
-      );
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Failed to expire another open checkout session',
-      );
     }
-    if (ended.status === 'complete') {
-      completedElsewhere += 1;
-      logger.error(
-        { ...context, sessionSubscriptionId: ended.subscriptionId },
-        'Another subscription Checkout completed for the same customer',
-      );
-    } else {
-      logger.warn(
-        context,
-        'Expired another open subscription checkout session after a completion',
-      );
-    }
-  }
-  // BUG-343 option 5: each is a second subscription, a person's to correct.
-  if (completedElsewhere > 0) {
-    await operationalAlerts.raise({
-      kind: 'stripe_duplicate_subscription',
-      count: completedElsewhere,
-    });
   }
 }
 

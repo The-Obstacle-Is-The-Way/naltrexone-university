@@ -1,6 +1,6 @@
 # BUG-343: A Second Checkout Can Leave a Hidden Second Subscription
 
-**Status:** In Progress — the re-check (#1492), the sweep (#1494) and the alerts ship; option 4 waits for the owner's refund decision, and the Dashboard checks; due 2026-10-20
+**Status:** Blocked — the owner's refund decision for option 4, and the owner's check of the Dashboard's one-subscription setting; follow-up due 2026-10-21
 **Priority:** P2
 **Date:** 2026-10-13
 
@@ -200,7 +200,7 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
    - Business rule R25 states it. What remains is two Checkouts completed before the sweep reaches either; option 4 corrects that.
 3. **The third pull request: option 5, the alerts.**
    - One alert kind, `stripe_duplicate_subscription`, carries a count.
-   - It is raised by the re-check when the Session it would hand back completed beside another live subscription, by the sweep for each other Session that completed too, by the webhook when the write guard keeps the stored subscription over an entitled competitor (now logged as well), and by the daily reconcile for the customers it found with duplicates, dry run or not.
+   - It is raised by the re-check when the Session it would hand back completed beside another live subscription, by the sweep for each other Session that completed too, by the webhook when the write guard keeps the stored subscription over an entitled competitor (now logged as well), and by the daily reconcile for the customers it found with duplicates, dry run or not, and whether or not their cancel succeeded. The sweep raises what it counted even when a later Session fails it, since its retry lists only open Sessions.
    - The runbook in `docs/architecture/observability.md` says what to do.
    - While production keeps two live webhook endpoints (until about 2026-10-20), each event arrives twice. Overlapping sweeps share each Session's expire key and settle by status, so they converge; a concurrent-idempotency refusal can make one endpoint's delivery answer 500 once before Stripe's retry succeeds.
 4. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
@@ -230,7 +230,7 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
   - Its second review tightened three fixtures, among them that the sweep observes the subscription already stored.
   - Its fourth review found that a missing-user completion, also recorded as processed, would sweep on redelivery; the already-processed path now sweeps only when this environment holds the user's subscription.
   - Twenty-three mutations each fail a test.
-- [x] Tests failed first for option 5 (2026-10-14): the reconcile's alert, dry run or not; the re-check's and the sweep's, with no alert when nothing else is live; and the webhook's, for an entitled competitor only. Eleven mutations each fail a test.
+- [x] Tests failed first for option 5 (2026-10-14): the reconcile's alert, dry run or not; the re-check's and the sweep's, with no alert when nothing else is live; and the webhook's, for an entitled competitor only. The pre-review sweep added a failed cancel, a page with two such customers, a sweep that fails after a completion, and the webhook over the real write guard, a stored entitled write included. Fourteen mutations each fail a test.
 - [ ] Tests fail first for option 4: the webhook's correction and its collection handling.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.

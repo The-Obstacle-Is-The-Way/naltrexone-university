@@ -156,6 +156,28 @@ describe('expireOtherOpenSubscriptionCheckoutSessions', () => {
     ]);
   });
 
+  it('raises the alert for a Session that completed even when a later one fails the sweep', async () => {
+    const stripe = createFake();
+    const completed = await openSession(stripe);
+    const second = await openSession(stripe);
+    const third = await openSession(stripe);
+    stripe.markComplete(completed, 'sub_completed');
+    // Sessions are swept newest first: the third completes, the second's
+    // expire then fails.
+    stripe.setExpireFault((sessionId) => {
+      if (sessionId === third) stripe.markComplete(third, 'sub_third');
+      if (sessionId === second) throw new Error('expire failed');
+    });
+
+    await expect(sweep(stripe, completed)).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+    });
+
+    expect(operationalAlerts.raised).toEqual([
+      { kind: 'stripe_duplicate_subscription', count: 1 },
+    ]);
+  });
+
   it('raises no alert when every other Session is expired', async () => {
     const stripe = createFake();
     const completed = await openSession(stripe);
