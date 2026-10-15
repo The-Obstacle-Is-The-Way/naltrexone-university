@@ -15,7 +15,12 @@ On 2026-10-15, promotion #1523 merged, carrying #1522's twelve dependency update
 
 CI ran only on `pull_request` and on `push` to `main`, so nothing could run it on that commit. The promotion guide's manual route was also out of reach. It deploys with `vercel deploy --prod --skip-domain` and promotes only after `main`'s `test` passes on the exact commit, and that check could not exist.
 
-The only recovery was another change through review and promotion, which takes hours because CodeRabbit's single review slot is shared by every session.
+The recovery left was another change through review and promotion, which takes hours, because CodeRabbit's single review slot is shared by every session.
+
+Recovered the same day, with the owner's approval, by a manual release of that commit.
+- A draft PR whose head was the commit gave it a passing `test`, with E2E.
+- An API deployment from GitHub's copy waited, staged, for a promotion.
+- Production has served the commit since 23:38:33Z. The receipts are on #1523.
 
 ## Evidence
 
@@ -40,7 +45,11 @@ The only recovery was another change through review and promotion, which takes h
    - **It has to be bound to the dropped commit.** It must name its SHA and be refused unless that SHA is still `main`'s head. On a branch, or once `main` has moved on, it would spend an E2E run on the shared Clerk test user for no release.
    - **It must not cancel a push run.** Push runs on `main` share its concurrency group, and one may be a newer promotion's release check.
    - *Recommended.*
-3. **Also replace the owner-approved CLI deploy with a Git-sourced one,** such as a Vercel deploy hook. Not pursued: no evidence shows that a Deployment Check holds such a deployment's alias.
+3. **Deploy from GitHub's copy instead of a local checkout.** Vercel's API creates a production deployment from a `gitSource` (repository, ref and SHA). #1523's release on 2026-10-15 tested it:
+   - the Deployment Check held it `STAGED`, "Waiting for checks to complete";
+   - it never released itself, because `test` had passed 25 s before it existed, and it needed the promote step;
+   - its promotion created no GitHub `Production` deployment, so the route ends by recording one.
+   - *Adopted as the guide's step 3,* with the CLI upload as the fallback.
 4. **Detect the lag on a schedule.** An hourly job reads `main`'s head and opens an issue for the owner if the head is 45 minutes old with no passing CI run on `main`, or no successful GitHub deployment to Vercel's `Production` environment.
    - Vercel reports each production release there, so this catches all three incidents with only the Actions token, and no Vercel credential.
    - A manual run counts as CI.
@@ -50,7 +59,7 @@ The only recovery was another change through review and promotion, which takes h
 
 ## Resolution (decided)
 
-Options 2 and 4:
+Options 2, 3 and 4:
 - **The trigger.** `.github/workflows/ci.yml` gains `workflow_dispatch` with a required `sha` input, and E2E runs for it.
   - A first step fails the run unless it is on `main` and `main`'s head is that SHA.
   - A manual run waits for a push run in its concurrency group instead of cancelling it.
@@ -59,17 +68,22 @@ Options 2 and 4:
   - It leaves an open issue alone while the head is new or CI is still running.
   - It reads the head from the commit list, because a single commit's response carries every file's patch.
   - Its test pins its schedule and its least-privilege permissions.
-- **The guide.** Promote to production describes the watch, and has a step: confirm CI's push run in the first minute, and run CI by hand when it is missing.
-- **Still the owner's.** The manual run cannot deploy: Vercel builds production only on a push it hears about. The fast route therefore still needs the owner's approval of a CLI deploy. Without the owner, the next promotion releases the code. Whether agents may deploy `main`'s head from Git without asking each time is the owner's decision.
+- **The guide.** Promote to production describes the watch and has these steps:
+  - confirm CI's push run in the first minute;
+  - run CI by hand when it is missing;
+  - deploy from GitHub's copy, promote once `test` has passed, and record the release.
+- **Still the owner's.** The manual run cannot deploy: Vercel builds production only on a push it hears about. The fast route therefore still needs the owner's approval of each manual deploy. Without the owner, the next promotion releases the code.
+  - On 2026-10-15 the owner kept that approval per incident, and declined a standing permission for agents.
 
 ## Verification
 
 - [x] Red first: the trigger, concurrency and E2E-condition cases in `tests/ci-workflow.test.ts` all failed against `main`'s workflow.
-- [ ] Before merge: a manual run on this branch fails at its refusal step.
+- [x] Before merge: a manual run on this branch failed at its refusal step, and skipped every later step.
+- [x] The deployment from GitHub's copy, on #1523's release: the Deployment Check held it staged, the promote step released it, and no GitHub `Production` deployment followed.
 - [ ] After promotion: a scheduled run of the production release watch on `main` succeeds and opens no issue (due 2026-10-17).
 - [ ] After promotion, while no other E2E run is active: `gh workflow run ci.yml --ref main -f sha=<main's head>` passes, with E2E executed, and a run naming a stale SHA is refused. Record whether the commit's status rollup lists the manual run's `test` (due 2026-10-17).
 
 ## Related
 
 - BUG-259 (#509) and #1367: no production deployment for a promotion, with CI present.
-- #1528, whose promotion carries #1523's code to production.
+- #1531, the release check that let #1523's merge commit be released by hand.

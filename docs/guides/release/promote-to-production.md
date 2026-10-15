@@ -146,9 +146,20 @@ If no deployment appears within about ten minutes:
    - The run fails at its first step unless `<sha>` is still `main`'s head. Once `main` has moved on, the newer commit's own push run is the one to release.
    - It runs E2E as a push does. If a push run on `main` is in progress, the manual run waits for it rather than cancelling it.
    - Read its result with `gh run list --workflow ci.yml --event workflow_dispatch --branch main --limit 1 --json headSha,status,conclusion`. Its `test` is not in the commit's status rollup, so the Deployment Check is not shown to see it, and steps 3 and 4 remain the release route.
-3. With the owner's approval, deploy that exact commit from a clean checkout as a production deployment with domain assignment skipped (`vercel deploy --prod --skip-domain`). The Deployment Check is not shown to hold a CLI-created deployment's alias.
-4. Only after `main`'s `test` has passed on that exact commit, in the push run or the manual one, promote the staged deployment (`vercel promote <deployment>`). That is a normal promotion of a checked commit, not **Force Promote**. #509 used `vercel deploy --prod`, which assigns the domains at once.
-5. Record the release on GitHub. A CLI deployment creates no GitHub deployment, so the production release watch would keep its issue open, and reopen it every hour if it were closed by hand:
+   - Before the manual run existed, #1531 got the same evidence another way. A draft PR into `dev` whose head is the commit itself, with no change added, gets a pull_request run that reports `test` on that SHA, in its rollup. Close it unmerged afterwards.
+3. With the owner's approval, create a production deployment of that exact commit from GitHub's copy, through Vercel's API, so nothing is uploaded from a local checkout. Use the CLI token, and never print it. The team and project IDs are in `.vercel/project.json` (`orgId`, `projectId`):
+
+   ```sh
+   curl -X POST "https://api.vercel.com/v13/deployments?teamId=<orgId>" -H "Authorization: Bearer $VERCEL_TOKEN" -H 'Content-Type: application/json' \
+     -d '{"name":"naltrexone-university","project":"<projectId>","target":"production","gitSource":{"type":"github","repoId":1146859391,"ref":"main","sha":"<sha>"}}'
+   ```
+
+   - **The Deployment Check holds it.** On 2026-10-15 it built, then stayed `STAGED`, and the commit's Vercel status read "Waiting for checks to complete" (DEBT-523).
+   - **The CLI route** stays as the fallback: `vercel deploy --prod --skip-domain` from a clean checkout. The Deployment Check is not shown to hold a CLI-created deployment's alias.
+4. Only after `main`'s `test` has passed on that exact commit, promote the staged deployment with `vercel promote <deployment>`, or `POST /v10/projects/<projectId>/promote/<deployment>`. That is a normal promotion of a checked commit, not **Force Promote**.
+   - **A `test` that passed before the deployment existed never releases it.** On 2026-10-15 the deployment was still staged 29 minutes after it was created, and the promote step released it at once.
+   - #509 used `vercel deploy --prod`, which assigns the domains at once.
+5. Record the release on GitHub. Neither route creates a GitHub `Production` deployment: the promoted API deployment of 2026-10-15 left none. Without one, the production release watch keeps its issue open, and reopens it every hour if it is closed by hand:
 
    ```sh
    id=$(echo '{"ref":"<sha>","environment":"Production","auto_merge":false,"required_contexts":[],"description":"Released with vercel promote"}' \
