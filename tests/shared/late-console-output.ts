@@ -9,7 +9,17 @@ function describeArgument(argument: unknown): string {
     return JSON.stringify(argument) ?? String(argument);
   } catch {
     // A circular value cannot be serialised; its string form still names it.
+    return describeUnserialisable(argument);
+  }
+}
+
+function describeUnserialisable(argument: unknown): string {
+  try {
     return String(argument);
+  } catch {
+    // A null-prototype object has no string form, and describing it must not
+    // throw inside the console call it wraps; its tag still names its kind.
+    return Object.prototype.toString.call(argument);
   }
 }
 

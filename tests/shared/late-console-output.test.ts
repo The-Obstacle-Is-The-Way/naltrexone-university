@@ -5,11 +5,11 @@ import {
 } from './late-console-output';
 
 function createRecordingSink() {
-  const written: string[] = [];
+  const forwarded: { method: keyof ConsoleSink; args: unknown[] }[] = [];
   const record =
     (method: keyof ConsoleSink) =>
     (...args: unknown[]) => {
-      written.push(`${method}: ${args.join(' ')}`);
+      forwarded.push({ method, args });
     };
   const sink: ConsoleSink = {
     debug: record('debug'),
@@ -18,7 +18,7 @@ function createRecordingSink() {
     log: record('log'),
     warn: record('warn'),
   };
-  return { sink, written };
+  return { sink, forwarded };
 }
 
 describe('failOnLateConsoleOutput', () => {
@@ -66,13 +66,26 @@ describe('failOnLateConsoleOutput', () => {
   });
 
   it('still writes each late call through, so its output stays in the log', async () => {
-    const { sink, written } = createRecordingSink();
+    const { sink, forwarded } = createRecordingSink();
 
     await failOnLateConsoleOutput(async () => {
       sink.info('late info');
     }, sink).catch(() => undefined);
 
-    expect(written).toEqual(['info: late info']);
+    expect(forwarded).toEqual([{ method: 'info', args: ['late info'] }]);
+  });
+
+  it('forwards and names a late argument that has no string form', async () => {
+    const { sink, forwarded } = createRecordingSink();
+    const bare: Record<string, unknown> = Object.create(null);
+    bare.self = bare;
+
+    await expect(
+      failOnLateConsoleOutput(async () => {
+        sink.warn('late', bare);
+      }, sink),
+    ).rejects.toThrow('console.warn: late [object Object]');
+    expect(forwarded).toEqual([{ method: 'warn', args: ['late', bare] }]);
   });
 
   it('restores the console methods once the work settles, even when it fails', async () => {
