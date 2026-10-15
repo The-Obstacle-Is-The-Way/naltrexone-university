@@ -147,7 +147,8 @@ describe('createUpstreamReads', () => {
       () => '',
       async () =>
         Response.json({
-          versions: { '10.0.0': {}, '10.1.0': {} },
+          // A manifest without a publish time cannot be dated, so it is skipped.
+          versions: { '10.0.0': {}, '10.0.2': {}, '10.1.0': {} },
           time: {
             created: '2020-01-01T00:00:00Z',
             modified: '2026-11-09T12:00:01Z',
@@ -161,18 +162,75 @@ describe('createUpstreamReads', () => {
 
     expect(await reads.releases(watch.npmPackage)).toEqual([before, after]);
   });
+
+  it('rejects a GitHub response that is not an object', async () => {
+    const reads = createUpstreamReads(() => '[]');
+
+    await expect(reads.landings(watch)).rejects.toThrow(
+      'Invalid GitHub response: repos/stryker-mutator/stryker-js/issues/6210',
+    );
+  });
+
+  it('fails when the npm registry does not answer', async () => {
+    const reads = createUpstreamReads(
+      () => '',
+      async () => new Response(null, { status: 503 }),
+    );
+
+    await expect(reads.releases(watch.npmPackage)).rejects.toThrow(
+      'npm registry request failed',
+    );
+  });
+
+  it('rejects an npm registry document without versions and times', async () => {
+    const reads = createUpstreamReads(
+      () => '',
+      async () => Response.json({ name: watch.npmPackage }),
+    );
+
+    await expect(reads.releases(watch.npmPackage)).rejects.toThrow(
+      'Invalid npm registry response',
+    );
+  });
 });
 
 describe('runUpstreamFixWatch', () => {
-  it('fails the run, saying so, when an upstream read fails', async () => {
+  function capture() {
     const lines: string[] = [];
+    return {
+      lines,
+      output: {
+        log: (line: string) => lines.push(line),
+        error: (line: string) => lines.push(line),
+      },
+    };
+  }
+
+  it('logs what it did with each watch’s alert', async () => {
+    const { lines, output } = capture();
 
     const code = await runUpstreamFixWatch(
-      async () => {
+      new MemoryReads([merged], [after]),
+      new MemoryIssues(),
+      output,
+    );
+
+    expect(code).toBe(0);
+    expect(lines).toEqual([
+      'Upstream fix released: stryker-mutator/stryker-js#6210 (DEBT-500): created',
+    ]);
+  });
+
+  it('fails the run, saying so, when an upstream read fails', async () => {
+    const { lines, output } = capture();
+    const failing: UpstreamReads = {
+      landings: async () => {
         throw new Error('HTTP 404');
       },
-      { log: (line) => lines.push(line), error: (line) => lines.push(line) },
-    );
+      releases: async () => [],
+    };
+
+    const code = await runUpstreamFixWatch(failing, new MemoryIssues(), output);
 
     expect(code).toBe(1);
     expect(lines).toEqual(['Upstream fix watch failed: HTTP 404']);

@@ -112,13 +112,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function gh(args: string[]): string {
-  // Credentials come only from the workflow's scoped GH_TOKEN; never log them.
-  return execFileSync('gh', args, { encoding: 'utf8', timeout: 30_000 });
-}
-
 export function createUpstreamReads(
-  run: (args: string[]) => string = gh,
+  run: (args: string[]) => string,
   load: typeof fetch = fetch,
 ): UpstreamReads {
   const read = (path: string): Record<string, unknown> => {
@@ -171,21 +166,17 @@ export function createUpstreamReads(
 }
 
 export async function runUpstreamFixWatch(
-  check: () => Promise<{ title: string; sync: AlertIssueSync }[]> = () =>
-    watchUpstreamFixes(
-      UPSTREAM_FIX_WATCHES,
-      createUpstreamReads(),
-      // GitHub notifies an assignee whatever their watch setting.
-      createGithubAlertIssues(
-        undefined,
-        process.env.GITHUB_REPOSITORY_OWNER ?? null,
-      ),
-    ),
+  reads: UpstreamReads,
+  issues: AlertIssues,
   output: Pick<Console, 'log' | 'error'> = console,
 ): Promise<number> {
   try {
-    for (const { title, sync } of await check())
-      output.log(`${title}: ${sync}`);
+    const synced = await watchUpstreamFixes(
+      UPSTREAM_FIX_WATCHES,
+      reads,
+      issues,
+    );
+    for (const { title, sync } of synced) output.log(`${title}: ${sync}`);
     return 0;
   } catch (error) {
     output.error(
@@ -196,9 +187,23 @@ export async function runUpstreamFixWatch(
 }
 
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
+/* v8 ignore start */
+function gh(args: string[]): string {
+  // Credentials come only from the workflow's scoped GH_TOKEN; never log them.
+  return execFileSync('gh', args, { encoding: 'utf8', timeout: 30_000 });
+}
+
 // No top-level await: tsx runs this repository's scripts as CommonJS.
 if (import.meta.url === executedPath) {
-  void runUpstreamFixWatch().then((code) => {
+  void runUpstreamFixWatch(
+    createUpstreamReads(gh),
+    // GitHub notifies an assignee whatever their watch setting.
+    createGithubAlertIssues(
+      undefined,
+      process.env.GITHUB_REPOSITORY_OWNER ?? null,
+    ),
+  ).then((code) => {
     process.exitCode = code;
   });
 }
+/* v8 ignore stop */

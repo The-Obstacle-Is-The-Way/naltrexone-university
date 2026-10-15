@@ -66,8 +66,18 @@ describe('checkMutationReport', () => {
     expect(result.unrecorded).toEqual(['src/a.ts#5']);
   });
 
-  it('rejects a report that is not a Stryker mutation report', () => {
-    expect(() => checkMutationReport({ files: [] })).toThrow(
+  it.each([
+    ['files that are not keyed by path', { files: [] }],
+    [
+      'a file without a mutant list',
+      { files: { 'src/a.ts': { mutants: {} } } },
+    ],
+    [
+      'a mutant without a status',
+      { files: { 'src/a.ts': { mutants: [{ id: '1' }] } } },
+    ],
+  ])('rejects a report with %s', (_shape, invalid) => {
+    expect(() => checkMutationReport(invalid)).toThrow(
       'Invalid mutation report',
     );
   });
@@ -114,6 +124,25 @@ describe('runMutationReportIntegrity', () => {
       '2 of 2 mutants survived without running a test',
     );
     expect(lines.join('\n')).toContain('src/a.ts#1');
+  });
+
+  it('shows five untested survivors and marks the rest as omitted', () => {
+    const { lines, output } = capture();
+    const survivors = ['1', '2', '3', '4', '5', '6'].map((id) => ({
+      id,
+      status: 'Survived',
+      testsCompleted: 0,
+    }));
+
+    runMutationReportIntegrity(
+      () => JSON.stringify(report({ 'src/a.ts': survivors })),
+      output,
+    );
+
+    expect(lines.join('\n')).toContain(
+      'Examples: src/a.ts#1, src/a.ts#2, src/a.ts#3, src/a.ts#4, src/a.ts#5, …',
+    );
+    expect(lines.join('\n')).not.toContain('src/a.ts#6');
   });
 
   it('fails when the report does not record how many tests a survivor ran', () => {

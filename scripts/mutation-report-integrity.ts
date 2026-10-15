@@ -57,7 +57,7 @@ function examples(names: string[]): string {
 }
 
 export function runMutationReportIntegrity(
-  read: () => string = () => readFileSync(REPORT_PATH, 'utf8'),
+  read: () => string,
   output: Pick<Console, 'log' | 'error'> = console,
 ): number {
   let check: MutationReportCheck;
@@ -90,6 +90,10 @@ export function runMutationReportIntegrity(
 }
 
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
+/* v8 ignore start */
 if (import.meta.url === executedPath) {
-  process.exitCode = runMutationReportIntegrity();
+  process.exitCode = runMutationReportIntegrity(() =>
+    readFileSync(REPORT_PATH, 'utf8'),
+  );
 }
+/* v8 ignore stop */
