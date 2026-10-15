@@ -87,6 +87,24 @@ describe('watchUpstreamFixes', () => {
     expect(body).toContain('#1500');
   });
 
+  it('compares times as instants, so a release in the landing’s second still follows it', async () => {
+    const issues = new MemoryIssues();
+    // GitHub gives whole seconds; npm gives milliseconds.
+    const landing: Landing = { ...merged, at: '2026-11-02T10:00:00Z' };
+    const sameSecond: Release = {
+      version: '10.1.0',
+      at: '2026-11-02T10:00:00.500Z',
+    };
+
+    await watchUpstreamFixes(
+      [watch],
+      new MemoryReads([landing], [sameSecond]),
+      issues,
+    );
+
+    expect(issues.issues).toHaveLength(1);
+  });
+
   it('dates the fix from its earliest landing', async () => {
     const issues = new MemoryIssues();
     const closed: Landing = {

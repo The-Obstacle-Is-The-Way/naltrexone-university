@@ -42,6 +42,12 @@ export const UPSTREAM_FIX_WATCHES: readonly UpstreamFixWatch[] = [
 export type Landing = { what: string; at: string };
 export type Release = { version: string; at: string };
 
+// GitHub writes whole seconds and npm milliseconds, so the ISO strings do not
+// sort as text; compare the instants.
+function byTime(a: { at: string }, b: { at: string }): number {
+  return Date.parse(a.at) - Date.parse(b.at);
+}
+
 export type UpstreamReads = {
   landings(watch: UpstreamFixWatch): Promise<Landing[]>;
   // Published, non-withdrawn versions with their release times.
@@ -72,14 +78,12 @@ export async function checkWatch(
   watch: UpstreamFixWatch,
   reads: UpstreamReads,
 ): Promise<string | null> {
-  const landings = (await reads.landings(watch)).sort((a, b) =>
-    a.at.localeCompare(b.at),
-  );
+  const landings = (await reads.landings(watch)).sort(byTime);
   const landed = landings[0];
   if (!landed) return null;
   // A pre-release is not what pnpm installs by default.
   const releases = (await reads.releases(watch.npmPackage)).filter(
-    ({ version, at }) => !version.includes('-') && at > landed.at,
+    (release) => !release.version.includes('-') && byTime(release, landed) > 0,
   );
   return releases.length > 0 ? describeAlert(watch, landings, releases) : null;
 }
@@ -160,7 +164,7 @@ export function createUpstreamReads(
           const at = time[version];
           return typeof at === 'string' ? [{ version, at }] : [];
         })
-        .sort((a, b) => a.at.localeCompare(b.at));
+        .sort(byTime);
     },
   };
 }

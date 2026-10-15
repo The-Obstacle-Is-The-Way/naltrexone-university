@@ -66,6 +66,23 @@ describe('checkMutationReport', () => {
     expect(result.unrecorded).toEqual(['src/a.ts#5']);
   });
 
+  it('treats a negative or fractional test count as unrecorded, since neither shows a test completed', () => {
+    const result = checkMutationReport(
+      report({
+        'src/a.ts': [
+          { id: '1', status: 'Survived', testsCompleted: -1 },
+          { id: '2', status: 'Survived', testsCompleted: 0.5 },
+        ],
+      }),
+    );
+
+    expect(result).toEqual({
+      mutants: 2,
+      untested: [],
+      unrecorded: ['src/a.ts#1', 'src/a.ts#2'],
+    });
+  });
+
   it.each([
     ['files that are not keyed by path', { files: [] }],
     [
@@ -158,7 +175,7 @@ describe('runMutationReportIntegrity', () => {
 
     expect(code).toBe(1);
     expect(lines.join('\n')).toContain(
-      '1 survivors have no testsCompleted count',
+      '1 survivors have no valid testsCompleted count',
     );
   });
 

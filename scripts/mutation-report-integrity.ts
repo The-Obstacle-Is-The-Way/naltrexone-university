@@ -18,7 +18,7 @@ export type MutationReportCheck = {
   mutants: number;
   // `file#id` of each survivor that ran no test.
   untested: string[];
-  // `file#id` of each survivor whose test count the report leaves out.
+  // `file#id` of each survivor whose test count is missing or not a count.
   unrecorded: string[];
 };
 
@@ -43,9 +43,11 @@ export function checkMutationReport(report: unknown): MutationReportCheck {
       result.mutants++;
       if (mutant.status !== 'Survived') continue;
       const name = `${file}#${String(mutant.id)}`;
-      if (typeof mutant.testsCompleted !== 'number')
+      const count = mutant.testsCompleted;
+      // Only a whole, non-negative count says how many tests completed.
+      if (typeof count !== 'number' || !Number.isInteger(count) || count < 0)
         result.unrecorded.push(name);
-      else if (mutant.testsCompleted === 0) result.untested.push(name);
+      else if (count === 0) result.untested.push(name);
     }
   }
   return result;
@@ -84,7 +86,7 @@ export function runMutationReportIntegrity(
     );
   if (unrecorded.length > 0)
     output.error(
-      `${unrecorded.length} survivors have no testsCompleted count, so this check cannot tell whether they ran a test. Examples: ${examples(unrecorded)}`,
+      `${unrecorded.length} survivors have no valid testsCompleted count, so this check cannot tell whether they ran a test. Examples: ${examples(unrecorded)}`,
     );
   return 1;
 }
