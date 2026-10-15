@@ -4,7 +4,7 @@ import {
   closeReviewedIssues,
   raiseUpstreamAdvisories,
   ruledOutByReview,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 import {
   advisory,
   MemoryIssues,

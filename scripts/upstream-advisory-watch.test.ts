@@ -16,7 +16,7 @@ import {
   WATCH_START,
   watchedRepositories,
   watchUpstreamAdvisories,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 import {
   advisory,
   apiAdvisory,
@@ -672,7 +672,7 @@ describe('upstream advisory workflow', () => {
       if (step.uses) expect(step.uses).toMatch(/@[a-f0-9]{40}$/);
     }
     expect(workflow.jobs.watch.steps.at(-1)).toMatchObject({
-      run: 'node scripts/upstream-advisory-watch.ts',
+      run: 'node scripts/upstream-advisory-watch.mts',
       env: {
         GH_TOKEN: `${'$'}{{ github.token }}`,
         GH_REPO: `${'$'}{{ github.repository }}`,

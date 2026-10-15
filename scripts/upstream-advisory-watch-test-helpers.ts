@@ -6,7 +6,7 @@ import type {
   DependencyVersions,
   ReviewedAdvisory,
   UpstreamAdvisory,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 
 export class MemoryIssues implements AdvisoryIssues {
   issues: (AdvisoryIssue & {

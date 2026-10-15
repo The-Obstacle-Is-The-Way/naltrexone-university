@@ -6,7 +6,7 @@ import {
   listUpstreamAdvisories,
   RateLimited,
   RepositoryNotFound,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 import { advisory, apiAdvisory } from './upstream-advisory-watch-test-helpers';
 
 // The GitHub adapters: advisory listing, issues, and GitHub's database.
