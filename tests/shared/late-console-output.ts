@@ -1,4 +1,22 @@
-const CONSOLE_METHODS = ['debug', 'error', 'info', 'log', 'warn'] as const;
+// Every Console method that writes. Each sends its output through the same
+// channel, so any of them can fail the run during worker shutdown.
+export const CONSOLE_METHODS = [
+  'assert',
+  'count',
+  'debug',
+  'dir',
+  'dirxml',
+  'error',
+  'group',
+  'groupCollapsed',
+  'info',
+  'log',
+  'table',
+  'timeEnd',
+  'timeLog',
+  'trace',
+  'warn',
+] as const;
 
 export type ConsoleSink = Pick<Console, (typeof CONSOLE_METHODS)[number]>;
 
@@ -23,6 +41,16 @@ function describeUnserialisable(argument: unknown): string {
   }
 }
 
+// The methods' signatures differ, so assigning one through a union key needs
+// a key that names the method's own type.
+function setMethod<K extends keyof ConsoleSink>(
+  sink: ConsoleSink,
+  method: K,
+  value: ConsoleSink[K],
+): void {
+  sink[method] = value;
+}
+
 /**
  * Waits for `settle`, then fails if anything wrote to the console meanwhile.
  *
@@ -41,19 +69,21 @@ export async function failOnLateConsoleOutput(
     (method) => [method, sink[method]] as const,
   );
   for (const [method, original] of originals) {
-    sink[method] = (...args: unknown[]) => {
-      lateCalls.push(
-        `console.${method}: ${args.map(describeArgument).join(' ')}`,
-      );
-      original.apply(sink, args);
-    };
+    setMethod(sink, method, (...args: unknown[]) => {
+      // console.assert writes only when its assertion fails.
+      if (method !== 'assert' || !args[0])
+        lateCalls.push(
+          `console.${method}: ${args.map(describeArgument).join(' ')}`,
+        );
+      Reflect.apply(original, sink, args);
+    });
   }
 
   try {
     await settle();
   } finally {
     for (const [method, original] of originals) {
-      sink[method] = original;
+      setMethod(sink, method, original);
     }
   }
 

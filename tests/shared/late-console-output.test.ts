@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  CONSOLE_METHODS,
   type ConsoleSink,
   failOnLateConsoleOutput,
 } from './late-console-output';
@@ -12,10 +13,20 @@ function createRecordingSink() {
       forwarded.push({ method, args });
     };
   const sink: ConsoleSink = {
+    assert: record('assert'),
+    count: record('count'),
     debug: record('debug'),
+    dir: record('dir'),
+    dirxml: record('dirxml'),
     error: record('error'),
+    group: record('group'),
+    groupCollapsed: record('groupCollapsed'),
     info: record('info'),
     log: record('log'),
+    table: record('table'),
+    timeEnd: record('timeEnd'),
+    timeLog: record('timeLog'),
+    trace: record('trace'),
     warn: record('warn'),
   };
   return { sink, forwarded };
@@ -88,6 +99,33 @@ describe('failOnLateConsoleOutput', () => {
     expect(forwarded).toEqual([{ method: 'warn', args: ['late', bare] }]);
   });
 
+  it('records a late call to every console method that writes', async () => {
+    const { sink } = createRecordingSink();
+
+    const result = failOnLateConsoleOutput(async () => {
+      sink.assert(false, 'late assert');
+      for (const method of CONSOLE_METHODS)
+        if (method !== 'assert') sink[method]('late');
+    }, sink);
+
+    await expect(result).rejects.toThrow(
+      `${CONSOLE_METHODS.length} console calls came after this file's last test`,
+    );
+    for (const method of CONSOLE_METHODS)
+      await expect(result).rejects.toThrow(`console.${method}: `);
+  });
+
+  it('ignores a console.assert that holds, which writes nothing', async () => {
+    const { sink, forwarded } = createRecordingSink();
+
+    await expect(
+      failOnLateConsoleOutput(async () => {
+        sink.assert(true, 'holds');
+      }, sink),
+    ).resolves.toBeUndefined();
+    expect(forwarded).toEqual([{ method: 'assert', args: [true, 'holds'] }]);
+  });
+
   it('restores the console methods once the work settles, even when it fails', async () => {
     const { sink } = createRecordingSink();
     const originals = { ...sink };
@@ -101,15 +139,18 @@ describe('failOnLateConsoleOutput', () => {
     expect({ ...sink }).toEqual(originals);
   });
 
-  it('catches a console call from a dynamic import still loading when the file ends', async () => {
+  it('catches console calls from a dynamic import still loading when the file ends', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'dir').mockImplementation(() => undefined);
 
     const loading = import('./late-console-output-probe');
+    const result = failOnLateConsoleOutput(() => vi.dynamicImportSettled());
 
-    await expect(
-      failOnLateConsoleOutput(() => vi.dynamicImportSettled()),
-    ).rejects.toThrow(
+    await expect(result).rejects.toThrow(
       'console.warn: late-console-output-probe evaluated while the file ended',
+    );
+    await expect(result).rejects.toThrow(
+      'console.dir: {"probe":"late-console-output-probe"}',
     );
     await loading;
   });
