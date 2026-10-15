@@ -122,7 +122,7 @@ Integration tests are part of every PR and every push to `main`.
 
 ## Test Files
 
-The suites are the `*.integration.test.ts` files in `tests/integration/`; each file's name, with its top-level `describe` or contract runner, says what it covers. Some, such as `tag-taxonomy-census.integration.test.ts`, need the seed data described above.
+The suites are the `*.integration.test.ts` files in `tests/integration/`; each file's name, with its top-level `describe` or contract runner, says what it covers. Some, such as `tag-taxonomy-census.integration.test.ts`, need the seed data described above. Apart from a suite that checks the seed itself, like the census, a suite creates the rows it asserts on rather than relying on seeded questions.
 
 ---
 

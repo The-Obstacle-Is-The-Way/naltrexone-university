@@ -166,6 +166,10 @@ export function headPushedAt(input: unknown, head: string): string {
   return new Date(Math.min(...created)).toISOString();
 }
 
+// Only a GitHub check run counts, for `test` and `codecov/patch` alike: a
+// commit status named `test` must not stand in for the Actions job. If Codecov
+// moves to commit statuses, decide that on its own rather than accepting
+// statuses here in advance.
 export function hasSuccessfulCheckRun(nodes: CheckNodes, name: string) {
   return nodes.some(
     (check) =>

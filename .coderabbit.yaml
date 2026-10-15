@@ -45,6 +45,12 @@ reviews:
   # positive, a scanner's policy, or a checklist for files no rule covers. Do not
   # restate a rule here; a second copy drifts from the first.
   path_instructions:
+    # Known false positives anywhere in TypeScript.
+    - path: "**/*.{ts,tsx,mts}"
+      instructions: |
+        `RegExp.prototype.exec` is not `child_process.exec`: check the receiver
+        before raising a command-injection finding on an `.exec()` call.
+
     # Application Layer - Use cases and ports
     - path: "src/application/**"
       instructions: |
@@ -107,6 +113,15 @@ reviews:
         Client components must have 'use client' directive.
         Use composition root pattern - wire dependencies at entry points.
 
+    # Known false positive: Next.js 16 checks a route module's exports
+    # structurally and serves only its HTTP method handlers, and the build
+    # passes with the cron routes' handler factories exported.
+    - path: "app/**/route.ts"
+      instructions: |
+        A route module may export a handler factory, such as
+        createSendRenewalNoticesCronHandler, beside its HTTP method handlers
+        and route config. Do not flag the extra export as invalid.
+
     # Database schema
     - path: "db/**"
       instructions: |
@@ -125,7 +140,17 @@ reviews:
         (FOREIGN KEY adds on growing tables use NOT VALID, with VALIDATE
         later); data-mutating statements log affected-row counts with
         RAISE NOTICE; and constraint names match the exported constants in
-        db/schema.ts.
+        db/schema.ts. A `placeholder-` slug alone does not prove a question
+        row is synthetic: scripts/seed/question-parser.ts also requires its
+        file to be in content/questions/placeholder/, and the database stores
+        no source path, so authored rows can share the prefix (BUG-315).
+
+    # No rule file covers ADRs; ADR-023 itself says how they change.
+    - path: "docs/adr/**"
+      instructions: |
+        Review a change to an accepted ADR against section 5 of
+        docs/adr/adr-023-documentation-organisation.md, which says how an
+        accepted ADR may change.
 
     # DEBT-515: record conventions live in docs/records/README.md, reviewed
     # with the code. A learning stored from #285 (2026-04-25) told CodeRabbit
