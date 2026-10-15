@@ -1,6 +1,6 @@
 # BUG-344: The Advisory Watcher Fails Every Run While a New Advisory's Issue Is Open
 
-**Status:** Open
+**Status:** Verifying — a scheduled run of the watcher on `main` passes with the fix; due 2026-10-17
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -82,7 +82,7 @@ Option 2, test-first.
 - [x] Root cause reproduced with the Actions token, under three permission sets (2026-10-15).
 - [x] The five open advisory issues assessed against `main` and closed, each with its evidence (2026-10-15).
 - [x] The fix lands test-first: the lookup, outcome and runner tests failed red, then passed (2026-10-15).
-- [ ] A run of the fixed watcher, dispatched on the fix branch while an advisory issue is open, passes and leaves that issue open.
+- [x] A run of the fixed watcher, dispatched on the fix branch while an advisory issue is open, passes and leaves that issue open: #1505, reopened for it and closed again after (2026-10-15).
 - [ ] A scheduled run on `main` passes after promotion.
 
 ## Related

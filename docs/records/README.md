@@ -3,8 +3,8 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-10-15.
-- **Verifying, by due date.** BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333 and BUG-337 10-21; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
-- **In progress.** BUG-344 and DEBT-522, with the sweep of build, test and CI warnings that found them. DEBT-518, the documentation revamp: the records, the agent instructions, the layout and the archive's removal are done; the four splits and the pilot follow.
+- **Verifying, by due date.** BUG-344 and DEBT-522 10-17; BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333 and BUG-337 10-21; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
+- **In progress.** DEBT-518, the documentation revamp: the records, the agent instructions, the layout and the archive's removal are done; the four splits and the pilot follow.
 - **Next.** DEBT-503 item 4, due 2026-10-21. DEBT-509: remove `next` 16.4.1's age-gate exceptions after 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 2026-10-21). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it, and the requeue command (DEBT-414 F23).
 - **Held.** DEBT-514 holds lint-staged at 17.5.1.
@@ -35,7 +35,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [BUG-341](./bug-341-documentation-test-can-mark-the-clone-bare.md) | A documentation test run from a worktree's pre-push hook marks the clone bare | P2 | Verifying — promotion to `main`; due 2026-10-19 |
 | [BUG-342](./bug-342-user-repository-conflict-test-depends-on-the-clock.md) | A user-repository conflict test fails when its two writes share a millisecond | P3 | Verifying — promotion to `main`; due 2026-10-20 |
 | [BUG-343](./bug-343-a-second-checkout-can-leave-a-hidden-second-subscription.md) | A second checkout can leave a hidden second subscription | P2 | Blocked — the owner's refund decision for option 4, and the owner's check of the Dashboard's one-subscription setting; follow-up due 2026-10-21 |
-| [BUG-344](./bug-344-advisory-watcher-fails-while-a-new-advisory-is-open.md) | The advisory watcher fails every run while a new advisory's issue is open | P2 | Open — the Actions token gets 403, not 404, for an advisory GitHub has not added yet; fix in progress |
+| [BUG-344](./bug-344-advisory-watcher-fails-while-a-new-advisory-is-open.md) | The advisory watcher fails every run while a new advisory's issue is open | P2 | Verifying — a scheduled run of the watcher on `main` passes with the fix; due 2026-10-17 |
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | Public legal pages, renewal consent, and security-program closure | P1 | Open — engineering has F21, F22 and F23 left; the rest waits on the owner, counsel and a tax adviser |
 | [DEBT-501](./debt-501-billing-operations-resilience.md) | Billing operations can leave payers without access as the service grows or changes | P2 | Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items |
 | [DEBT-502](./debt-502-account-identity-and-action-hardening.md) | Rare account states can lock a person out, and payment actions expose test seams | P3 | Open — decided per item |
@@ -54,7 +54,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [DEBT-519](./debt-519-fake-contract-register-misses-adapter-owned-fakes.md) | The fake-contract register misses adapter-owned fakes | P3 | Open — make the register scan discover adapter-owned fakes, red first, then add `FakeStripePortalConfigurations` |
 | [DEBT-520](./debt-520-repository-layout-trigger-has-fired.md) | ADR-013's repository-layout trigger has fired without a decision | P4 | Open — decide whether the repositories stay flat or move into aggregate folders, and record it as an ADR |
 | [DEBT-521](./debt-521-clerk-js-loads-unpinned-from-clerks-cdn.md) | Clerk JS loads unpinned from Clerk's CDN, so a Clerk release can change sign-in without a deploy | P3 | Open — owner decision: pin Clerk JS and its UI bundle to lockfile versions, or keep them floating; due 2026-10-26 |
-| [DEBT-522](./debt-522-partial-prefetching-is-unset.md) | Partial Prefetching is unset, so every build warns | P3 | Open — `partialPrefetching: false` ends the warning; `true`, accepted once Next.js forces it, renders each link prefetch per visitor; fix in progress |
+| [DEBT-522](./debt-522-partial-prefetching-is-unset.md) | Partial Prefetching is unset, so every build warns | P3 | Verifying — Vercel's production build prints no `partialPrefetching` warning; due 2026-10-17 |
 
 ## Waiting
 

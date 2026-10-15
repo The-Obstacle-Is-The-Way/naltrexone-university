@@ -1,6 +1,6 @@
 # DEBT-522: Partial Prefetching Is Unset, So Every Build Warns
 
-**Status:** Open
+**Status:** Verifying — Vercel's production build prints no `partialPrefetching` warning; due 2026-10-17
 **Priority:** P3
 **Date:** 2026-10-15
 
