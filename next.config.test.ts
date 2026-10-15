@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vitest';
 import nextConfig from './next.config';
 
 describe('next.config', () => {
-  // Next 16.3 type checks builds through the canonical `typescript` package's
-  // CLI by default. With TypeScript 7 under its real name that CLI exists, so
-  // no opt-out may return, and type errors must still fail the build.
-  // DEBT-522: left unset, Next.js warns on every build. `true` turns each
-  // link's prefetch into a per-visitor server render, because the root
-  // layout reads the CSP nonce from headers() on every route.
+  // DEBT-522: left unset, Next.js warns on every build. `true` waits until
+  // Next.js forces it: it turns each link's prefetch into a per-visitor
+  // server render, because the root layout reads the CSP nonce from headers().
   it('keeps prefetches prerendered by turning Partial Prefetching off explicitly', () => {
     expect(nextConfig).toMatchObject({
       cacheComponents: true,
@@ -15,6 +12,9 @@ describe('next.config', () => {
     });
   });
 
+  // Next 16.3 type checks builds through the canonical `typescript` package's
+  // CLI by default. With TypeScript 7 under its real name that CLI exists, so
+  // no opt-out may return, and type errors must still fail the build.
   it('type checks builds through the default TypeScript CLI with no bypass', () => {
     expect(nextConfig.experimental?.useTypeScriptCli).toBeUndefined();
     expect(nextConfig.typescript?.ignoreBuildErrors).not.toBe(true);

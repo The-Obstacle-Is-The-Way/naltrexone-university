@@ -4,7 +4,7 @@
 **Priority:** P3
 **Date:** 2026-10-15
 
-Corrected 2026-10-15: the challenge showed that `true` makes link prefetches render per visitor here, and a measurement confirmed it. The resolution changed from `true` to `false`, and the option dates from 16.3, not 16.4.
+Corrected 2026-10-15: the challenge showed that `true` makes link prefetches render per visitor here, and a measurement confirmed it. The resolution changed from `true` to `false`, and the option dates from 16.3, not 16.4. A review that afternoon then weighed the cost: a few function invocations per visitor, cached for the session. So the record accepts `true` when Next.js forces it, and drops the move of the nonce read.
 
 ---
 
@@ -37,24 +37,25 @@ Left unset, the option acts like `false`. Next.js says both features will be on 
   | `true` | 12 of 22 | 10, five per page (`next-router-prefetch: 3`, `Cache-Control: private, no-store`) |
 
   With `true`, the per-segment prefetches for `/pricing`, `/sign-in`, `/sign-up`, `/privacy` and `/terms` became runtime prefetches. `/privacy` and `/terms` render no per-request content of their own, so the root layout's `headers()` read is what makes them per visitor. The route table printed by `next build` was the same for all three settings.
-- **What a runtime prefetch costs.** On Vercel, a response marked `private, no-store` is rendered by a function on every request. Each page view would add one function invocation per linked route, about five, for every visitor. Production runs on the Hobby plan until the first live sale (DEBT-512).
+- **What a runtime prefetch costs.** On Vercel, a response marked `private, no-store` is rendered by a function. The client caches each route's shell for the visitor's session. So the cost is one function invocation per linked route, about five here, the first time a visitor sees a page that links to them, and none after that. Every page view already invokes a function, because each page streams its nonce-bound content per request. Production runs on the Hobby plan until the first live sale (DEBT-512).
 
 ## Impact
 
 - One seven-line warning on every build, in every environment, hiding new warnings.
-- Next.js 17 turns Partial Prefetching on for every app. If the nonce read still sits in every route's shell then, each link prefetch becomes a server render per visitor, during a major-version upgrade.
+- Next.js 17 turns Partial Prefetching on for every app. Here that adds a few function invocations per visitor, a small multiple of what each page view already costs.
 
 ## Options
 
-1. **Set `false`.** The warning goes. Prefetches stay prerendered, which the measurement shows is identical to unset. The adoption still has to happen before Next.js 17, and Next.js plans to warn about `false` too.
-2. **Set `true` now.** The warning goes and the app adopts the behaviour Next.js 17 makes permanent. But each page view adds about five function invocations per visitor, for no feature the app needs today.
+1. **Set `false`.** The warning goes, and prefetching is unchanged: the measurement shows it identical to unset. Next.js plans to warn about `false` before Next.js 17.
+2. **Set `true` now.** The warning goes, and the app takes on Next.js 17's behaviour early. It costs a few function invocations per visitor for no feature the app needs today, and a behaviour change does not belong in a warning fix.
 3. **Leave it unset.** The warning stays, and nothing else changes.
+4. **Take the nonce read out of the shell every route shares, so that `true` stays prerendered.** This is the standard place for a CSP nonce in Next.js, and the saving is a few cheap renders per visitor. Not worth the change at this app's scale.
 
 ## Resolution (decided)
 
 Option 1, test-first. `next.config.test.ts` pins `partialPrefetching: false`, and a comment beside the setting gives the reason.
 
-What remains is adopting Partial Prefetching before Next.js 17, with each route's shell still prerendered. That means taking the nonce read out of the shell that every route shares, and then measuring that prefetches stay prerendered, as above. It waits for its trigger: Next.js 17 published, or Next.js warning about `false`. When this record closes, that tail becomes a Waiting row.
+When Next.js forces the change, accept it. When it warns about `false`, or at the Next.js 17 upgrade, whichever comes first, set `true` and accept the cost measured above. Revisit option 4 only if function usage approaches the hosting plan's allowance. Both triggers announce themselves in every build, so no Waiting row is needed.
 
 ## Verification
 
