@@ -54,7 +54,7 @@ function setMethod<K extends keyof ConsoleSink>(
 /**
  * Waits for `settle`, then fails if anything wrote to the console meanwhile.
  *
- * Vitest's setup file runs this after each file's last test with
+ * vitest.unit.setup.ts runs this after each unit-lane file's last test with
  * `vi.dynamicImportSettled()`. Work a test starts and never awaits, such as a
  * page's deferred section loading the real container, can otherwise log while
  * the worker shuts down, and that fails the whole run with
@@ -65,17 +65,25 @@ export async function failOnLateConsoleOutput(
   sink: ConsoleSink = console,
 ): Promise<void> {
   const lateCalls: string[] = [];
+  // Node's console writes some methods through others (count through log,
+  // trace through error), so only the outermost call is recorded.
+  let depth = 0;
   const originals = CONSOLE_METHODS.map(
     (method) => [method, sink[method]] as const,
   );
   for (const [method, original] of originals) {
     setMethod(sink, method, (...args: unknown[]) => {
       // console.assert writes only when its assertion fails.
-      if (method !== 'assert' || !args[0])
+      if (depth === 0 && (method !== 'assert' || !args[0]))
         lateCalls.push(
           `console.${method}: ${args.map(describeArgument).join(' ')}`,
         );
-      Reflect.apply(original, sink, args);
+      depth++;
+      try {
+        Reflect.apply(original, sink, args);
+      } finally {
+        depth--;
+      }
     });
   }
 

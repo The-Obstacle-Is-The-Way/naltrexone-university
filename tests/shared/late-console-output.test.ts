@@ -1,3 +1,5 @@
+import { Console } from 'node:console';
+import { Writable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CONSOLE_METHODS,
@@ -37,12 +39,14 @@ describe('failOnLateConsoleOutput', () => {
     vi.restoreAllMocks();
   });
 
-  it('resolves when the work still settling writes nothing', async () => {
+  it('resolves when the work still settling writes nothing, and restores the methods', async () => {
     const { sink } = createRecordingSink();
+    const originals = { ...sink };
 
     await expect(
       failOnLateConsoleOutput(async () => undefined, sink),
     ).resolves.toBeUndefined();
+    expect({ ...sink }).toEqual(originals);
   });
 
   it('rejects, naming every console call the settling work made', async () => {
@@ -113,6 +117,28 @@ describe('failOnLateConsoleOutput', () => {
     );
     for (const method of CONSOLE_METHODS)
       await expect(result).rejects.toThrow(`console.${method}: `);
+  });
+
+  it('counts a call once when Node’s console writes it through another method', async () => {
+    const written: string[] = [];
+    const stream = new Writable({
+      write(chunk, _encoding, done) {
+        written.push(String(chunk));
+        done();
+      },
+    });
+    const real = new Console({ stdout: stream, stderr: stream });
+
+    const result = failOnLateConsoleOutput(async () => {
+      real.count('late');
+      real.trace('late trace');
+      real.assert(false, 'late assert');
+    }, real);
+
+    await expect(result).rejects.toThrow(
+      /^3 console calls came after this file's last test/,
+    );
+    expect(written.join('')).toContain('late: 1');
   });
 
   it('ignores a console.assert that holds, which writes nothing', async () => {
