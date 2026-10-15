@@ -120,6 +120,11 @@ pnpm add -D jsdom
 
 ([React act() documentation](https://react.dev/reference/react/act))
 
+The setup file also fails any file whose unawaited work writes to the console after its last test (`tests/shared/late-console-output.ts`). It waits for pending dynamic imports first.
+- **Why.** A console call while the worker shuts down fails the whole run with `EnvironmentTeardownError` and names no test. PR #1522's CI failed this way.
+- **The usual cause.** `renderToStaticMarkup` shows a `Suspense` fallback but still starts the deferred async component behind it, such as a page section that loads the real container.
+- **The fix.** Pass the component a slot or dependencies that start no work. Or keep Clerk off with `vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'true')`, if that path loads nothing. Otherwise, `await vi.dynamicImportSettled()` inside the test, while its environment is still set.
+
 ### 3. Per-file Environment Directive
 
 Every `.test.tsx` file must start with:

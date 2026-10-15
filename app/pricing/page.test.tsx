@@ -540,6 +540,11 @@ describe('app/pricing', () => {
     expect(
       doc.querySelector('header a[href="/sign-in"]')?.textContent?.trim(),
     ).toBe('Sign in');
+
+    // The deferred view has started loading the real container. Let it
+    // finish while this file's environment defaults are still set, not after
+    // afterAll restores them.
+    await vi.dynamicImportSettled();
   });
 
   it('renders exactly one main landmark through the full pricing page', async () => {
