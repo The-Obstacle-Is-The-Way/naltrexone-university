@@ -51,6 +51,8 @@ function signingKey() {
         sid: 'sess_sdk',
         sub: 'user_sdk',
         iss: `https://${FRONTEND_API}`,
+        // Clerk names the origin that requested the token.
+        azp: 'https://example.com',
         iat: now - 120,
         nbf: now - 130,
         exp: now + expiresInSeconds,
@@ -177,6 +179,7 @@ describe('Clerk calls the real middleware fails silently', () => {
   });
 
   it('names nothing for a signed-in visitor', async () => {
+    const warned = vi.spyOn(console, 'warn');
     const key = signingKey();
 
     const { request, response } = await clerkAnswerTo(
@@ -190,5 +193,8 @@ describe('Clerk calls the real middleware fails silently', () => {
       response.headers.get('x-middleware-request-x-clerk-auth-status'),
     ).toBe('signed-in');
     expect(clerkCallFailure(request, response)).toBeNull();
+    // Clerk warns about a session token unlike its own, which a later
+    // version will reject.
+    expect(warned).not.toHaveBeenCalled();
   });
 });
