@@ -45,7 +45,7 @@ A throwaway workflow, dispatched on a branch that was then deleted, called the A
 
 The list endpoint returns the same advisory object, with `github_reviewed_at` and `vulnerabilities[].vulnerable_version_range`.
 
-### The code (before the fix)
+### The code before the fix (at `8354159a`)
 
 - `githubAdvisoryDatabase().find` returns `null` only when `gh` reports `(HTTP 404)`, and rethrows anything else (`scripts/upstream-advisory-watch.ts:706-721`).
 - Raising calls `database.find(...).catch(() => null)`: "A database that cannot be read rules nothing out, so the issue opens" (`:282-283`).
@@ -53,7 +53,7 @@ The list endpoint returns the same advisory object, with `github_reviewed_at` an
 
 ### Why the tests and dry runs missed it
 
-- The unit test models "GitHub's database has neither advisory yet" as `gh: Not Found (HTTP 404)` (`scripts/upstream-advisory-watch.test.ts:536-540`), which is what a person's token gets.
+- The unit test modelled "GitHub's database has neither advisory yet" as `gh: Not Found (HTTP 404)` (`scripts/upstream-advisory-watch.test.ts:536-540` at `8354159a`), which is what a person's token gets.
 - Local dry runs use a person's token too.
 - Only a hosted run sees the Actions token's answer, and none had looked an advisory up before 2026-10-14.
 
@@ -81,7 +81,7 @@ Option 2, test-first.
 
 - [x] Root cause reproduced with the Actions token, under three permission sets (2026-10-15).
 - [x] The five open advisory issues assessed against `main` and closed, each with its evidence (2026-10-15).
-- [ ] The fix lands test-first: a red test for the 403 path, then green.
+- [x] The fix lands test-first: the lookup, outcome and runner tests failed red, then passed (2026-10-15).
 - [ ] A run of the fixed watcher, dispatched on the fix branch while an advisory issue is open, passes and leaves that issue open.
 - [ ] A scheduled run on `main` passes after promotion.
 

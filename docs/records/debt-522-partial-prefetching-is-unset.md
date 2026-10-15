@@ -60,7 +60,7 @@ When Next.js forces the change, accept it. When it warns about `false`, or at th
 ## Verification
 
 - [x] Each setting measured against a local production build, and `true`'s cost traced to the root layout's `headers()` read (2026-10-15).
-- [ ] `next.config.ts` sets `partialPrefetching: false`, test-first, and the local build and `next start` print no warning.
+- [x] `next.config.ts` sets `partialPrefetching: false`, test-first, and the local build and `next start` print no warning (2026-10-15).
 - [ ] CI's build and E2E web server print no `partialPrefetching` warning.
 - [ ] After promotion, Vercel's production build prints none.
 
