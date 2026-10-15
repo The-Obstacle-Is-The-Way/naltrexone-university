@@ -247,6 +247,7 @@ describe('watching several repositories', () => {
       failed: [],
       ruledOut: [],
       closed: [],
+      unreviewed: [],
       read: 1,
       unreadable: ['broken/repo'],
       unwatched: [],
@@ -371,6 +372,7 @@ describe('watching several repositories', () => {
       failed: [],
       ruledOut: [],
       closed: [],
+      unreviewed: [],
       read: 0,
       unreadable: ['gone/direct', 'nodejs/undici'],
       unwatched: ['substack/node-commondir'],
@@ -419,6 +421,7 @@ describe('watch command outcome', () => {
     failed: [],
     ruledOut: [],
     closed: [],
+    unreviewed: [],
     read: 3,
     unreadable: [],
     unwatched: [],
@@ -500,6 +503,24 @@ describe('watch command outcome', () => {
     ]);
   });
 
+  // BUG-344: a review lookup GitHub refused read as a failed issue write.
+  it('names an advisory whose review it could not read, and returns nonzero', async () => {
+    const { messages, errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({ ...quiet, unreviewed: ['GHSA-aaaa-bbbb-cccc'] }),
+        sink,
+      ),
+    ).toBe(1);
+    expect(messages).toEqual([
+      'Upstream advisories raised: none',
+      'Repositories read: 3',
+    ]);
+    expect(errors).toEqual([
+      'Could not read GitHub’s review of: GHSA-aaaa-bbbb-cccc',
+    ]);
+  });
+
   it('reports the advisories GitHub’s review ruled out and the issues it closed', async () => {
     const { messages, errors, sink } = output();
     expect(
@@ -534,10 +555,8 @@ describe('watch command outcome', () => {
     vi.stubGlobal('fetch', registry);
     const run = vi.mocked(execFileSync).mockImplementation((_file, args) => {
       // GitHub's database has neither advisory yet.
-      if (args?.[0] === 'api' && args[1]?.startsWith('advisories/'))
-        throw Object.assign(new Error('Command failed'), {
-          stderr: 'gh: Not Found (HTTP 404)\n',
-        });
+      if (args?.[0] === 'api' && args[1]?.startsWith('advisories?'))
+        return '[]';
       const path = args?.[3] ?? '';
       if (
         path ===
@@ -599,9 +618,9 @@ describe('watch command outcome', () => {
       /`package\.json` pins `next` at `[^`]+`, and `pnpm-lock\.yaml` resolves `[^`]+`/,
     );
     expect(creates[0]?.slice(6)).toEqual(['--assignee', 'repo-owner']);
-    expect(calls.filter((args) => args[1]?.startsWith('advisories/'))).toEqual([
-      ['api', 'advisories/GHSA-aaaa-bbbb-cccc'],
-      ['api', 'advisories/GHSA-hhhh-hhhh-hhhh'],
+    expect(calls.filter((args) => args[1]?.startsWith('advisories'))).toEqual([
+      ['api', 'advisories?ghsa_id=GHSA-aaaa-bbbb-cccc'],
+      ['api', 'advisories?ghsa_id=GHSA-hhhh-hhhh-hhhh'],
     ]);
   });
 

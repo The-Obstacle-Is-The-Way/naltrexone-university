@@ -708,21 +708,21 @@ export function githubAdvisoryDatabase(run: typeof gh = gh): AdvisoryDatabase {
     async find(ghsaId) {
       // The identifier becomes an API path.
       if (!GHSA_ID.test(ghsaId)) throw new Error('Invalid GHSA ID');
-      let response: string;
-      try {
-        response = run(['api', `advisories/${ghsaId}`]);
-      } catch (error) {
-        if (
-          isRecord(error) &&
-          typeof error.stderr === 'string' &&
-          error.stderr.includes('(HTTP 404)')
-        )
-          return null;
-        throw error;
-      }
       const invalid = () =>
         new Error('Invalid GitHub advisory database response');
-      const advisory: unknown = JSON.parse(response);
+      // BUG-344: `advisories/{id}` answers the Actions token 403, not 404,
+      // for an advisory the database does not have yet. The list answers
+      // both kinds of token alike, with [] for one. Unasked, it leaves out
+      // malware advisories, which no repository publishes.
+      const listed: unknown = JSON.parse(
+        run(['api', `advisories?ghsa_id=${ghsaId}`]),
+      );
+      if (!Array.isArray(listed)) throw invalid();
+      if (listed.length === 0) return null;
+      // Another advisory's review must never close this one's issue.
+      const advisory: unknown = listed.find(
+        (entry: unknown) => isRecord(entry) && entry.ghsa_id === ghsaId,
+      );
       if (
         !isRecord(advisory) ||
         !isOptionalString(advisory.github_reviewed_at ?? null) ||
@@ -761,7 +761,13 @@ const ADVISORY_ISSUE = /^Upstream security advisory (GHSA(?:-[0-9a-z]{4}){3}) /;
 const REVIEW_CLOSE_MARKER =
   '<!-- upstream-advisory-watch: closed after GitHub review -->';
 
-export type CloseOutcome = { closed: string[]; failed: string[] };
+// `unreviewed`: advisories whose review could not be read. `failed`: issues
+// that could not be closed.
+export type CloseOutcome = {
+  closed: string[];
+  failed: string[];
+  unreviewed: string[];
+};
 
 // An issue opens on the upstream advisory's own word. Once GitHub's review,
 // the data Dependabot reads, rules out every locked version, the issue is
@@ -773,14 +779,21 @@ export async function closeReviewedIssues(
   locked: ReadonlyMap<string, readonly string[]>,
   database: AdvisoryDatabase,
 ): Promise<CloseOutcome> {
-  const outcome: CloseOutcome = { closed: [], failed: [] };
+  const outcome: CloseOutcome = { closed: [], failed: [], unreviewed: [] };
   for (const issue of await issues.list()) {
     const ghsaId =
       issue.state === 'OPEN' ? ADVISORY_ISSUE.exec(issue.title)?.[1] : null;
     if (!ghsaId) continue;
+    let review: ReviewedAdvisory | null;
     try {
-      const evidence = ruledOutByReview(await database.find(ghsaId), locked);
-      if (!evidence) continue;
+      review = await database.find(ghsaId);
+    } catch {
+      outcome.unreviewed.push(ghsaId);
+      continue;
+    }
+    const evidence = ruledOutByReview(review, locked);
+    if (!evidence) continue;
+    try {
       const comments = await issues.comments(issue.number);
       if (comments.some((body) => body.includes(REVIEW_CLOSE_MARKER))) continue;
       await issues.close(
@@ -816,6 +829,7 @@ const LEFT_TO_DEPENDABOT: ReadonlySet<string> = new Set(['medium', 'low']);
 
 export type WatchOutcome = RaiseOutcome & {
   closed: string[];
+  unreviewed: string[];
   read: number;
   unreadable: string[];
   unwatched: string[];
@@ -893,6 +907,7 @@ export async function watchUpstreamAdvisories(
     ...raised,
     failed: [...raised.failed, ...reviewed.failed],
     closed: reviewed.closed,
+    unreviewed: reviewed.unreviewed,
     read,
     unreadable,
     unwatched,
@@ -929,8 +944,16 @@ export async function runUpstreamAdvisoryWatch(
   output: Pick<Console, 'log' | 'error'> = console,
 ): Promise<number> {
   try {
-    const { raised, failed, ruledOut, closed, read, unreadable, unwatched } =
-      await check();
+    const {
+      raised,
+      failed,
+      ruledOut,
+      closed,
+      unreviewed,
+      read,
+      unreadable,
+      unwatched,
+    } = await check();
     output.log(
       `Upstream advisories raised: ${raised.length > 0 ? raised.join(', ') : 'none'}`,
     );
@@ -947,9 +970,15 @@ export async function runUpstreamAdvisoryWatch(
       );
     if (failed.length > 0)
       output.error(`Could not open or close issues for: ${failed.join(', ')}`);
+    if (unreviewed.length > 0)
+      output.error(
+        `Could not read GitHub’s review of: ${unreviewed.join(', ')}`,
+      );
     if (unreadable.length > 0)
       output.error(`Could not read advisories for: ${unreadable.join(', ')}`);
-    return failed.length > 0 || unreadable.length > 0 ? 1 : 0;
+    return failed.length > 0 || unreviewed.length > 0 || unreadable.length > 0
+      ? 1
+      : 0;
   } catch (error) {
     output.error(
       error instanceof RateLimited
