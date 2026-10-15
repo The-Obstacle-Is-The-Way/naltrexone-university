@@ -1,10 +1,12 @@
 # DEBT-509: Pending Next.js Security Fixes Have No Watcher
 
-**Status:** Open — the two Next.js fixes ship in 16.4.1 under exact-version exceptions; remove them after 2026-10-21; waiting for `vite` 8.3.3 and one watcher check; due 2026-10-22
+**Status:** Open — the two Next.js fixes ship in 16.4.1 under exact-version exceptions; remove them after 2026-10-21; waiting for one watcher check; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
 **Verification receipts:** —
+
+Corrected 2026-10-15: the watcher entry point is now `.mts`, and #1522/#1523 satisfied the Vite upgrade check.
 
 ---
 
@@ -73,7 +75,7 @@ For the two pending Next.js fixes:
 
 ## Watcher — Added 2026-10-07
 
-[Advisories Dependabot cannot see](../policies/supply-chain.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.ts` every three hours.
+[Advisories Dependabot cannot see](../policies/supply-chain.md#advisories-dependabot-cannot-see) describes it. `.github/workflows/upstream-advisory-watch.yml` runs `scripts/upstream-advisory-watch.mts` every three hours.
 
 - **What it watches.** The repository of every direct dependency, listed in the script's `DEPENDENCY_REPOSITORIES` map from each package's npm `repository` field: 41 repositories for 54 dependencies. Only `server-only`, a marker package, names none. A test fails CI when `package.json` and the map disagree, so a new dependency cannot go unwatched. Since 2026-10-08 it also watches the repositories behind every other package in `pnpm-lock.yaml`, resolved when it runs; see below.
 - **What it opens.** One issue per advisory published since 2026-10-01; the September 30 set is triaged here. Each issue copies the advisory's facts and ranges verbatim, because ranges can be malformed, and gives `package.json`'s pin for each affected package. An issue of any state settles its advisory, so a closed, triaged issue is never reopened.
@@ -117,7 +119,7 @@ Close when the watcher has a successful scheduled run that reads the indirect de
 - [x] A scheduled run on `main` succeeds after the indirect change, within the 15-minute timeout and the token's 1,000 requests an hour: run 38089084777, 392 repositories in 1m54s, not refused (2026-10-10).
 - [ ] The first issue closed after GitHub's review carries correct evidence.
 - [x] The first critical or high issue confirms the owner receives the assignment notification: GitHub's notification inbox holds #1509 and #1510 with reason `assign` (2026-10-15).
-- [ ] `vite` 8.3.3 or later lands after 2026-10-13T04:10:19Z.
+- [x] `vite` 8.3.4 landed in #1522 and was promoted in #1523 after the release-age deadline (2026-10-15).
 - [x] Both pending advisories are published and assessed: GHSA-673q-mjm6-r5xr and GHSA-p3m5-59mp-jv5r, fixed in 16.4.1 (2026-10-14).
 - [x] The fix is in production: promotion #1513, served since 2026-10-15T02:18Z (2026-10-15).
 - [ ] The age-gate exceptions for 16.4.1 are removed after 2026-10-21.

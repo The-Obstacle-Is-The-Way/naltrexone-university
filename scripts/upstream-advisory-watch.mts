@@ -250,6 +250,8 @@ function describeAdvisory(
 export type RaiseOutcome = {
   raised: string[];
   failed: string[];
+  // Lookup failures must be reported even if the new issue is not yet listed.
+  unreviewed: string[];
   // Already reviewed by GitHub, with no locked version affected. Dependabot
   // reads the same review, so no issue opens; each run checks again.
   ruledOut: string[];
@@ -266,7 +268,12 @@ export async function raiseUpstreamAdvisories(
   const fresh = advisories.filter(
     (advisory) => Date.parse(advisory.publishedAt) >= startAt,
   );
-  const outcome: RaiseOutcome = { raised: [], failed: [], ruledOut: [] };
+  const outcome: RaiseOutcome = {
+    raised: [],
+    failed: [],
+    ruledOut: [],
+    unreviewed: [],
+  };
   if (fresh.length === 0) return outcome;
   // An issue of any state settles its advisory: a closed one was triaged.
   // Without this list nothing can be deduplicated, so its failure fails all.
@@ -280,7 +287,10 @@ export async function raiseUpstreamAdvisories(
       continue;
     handled.add(advisory.ghsaId);
     // A database that cannot be read rules nothing out, so the issue opens.
-    const review = await database.find(advisory.ghsaId).catch(() => null);
+    const review = await database.find(advisory.ghsaId).catch(() => {
+      outcome.unreviewed.push(advisory.ghsaId);
+      return null;
+    });
     if (ruledOutByReview(review, dependencies.locked)) {
       outcome.ruledOut.push(advisory.ghsaId);
       continue;
@@ -829,7 +839,6 @@ const LEFT_TO_DEPENDABOT: ReadonlySet<string> = new Set(['medium', 'low']);
 
 export type WatchOutcome = RaiseOutcome & {
   closed: string[];
-  unreviewed: string[];
   read: number;
   unreadable: string[];
   unwatched: string[];
@@ -907,7 +916,7 @@ export async function watchUpstreamAdvisories(
     ...raised,
     failed: [...raised.failed, ...reviewed.failed],
     closed: reviewed.closed,
-    unreviewed: reviewed.unreviewed,
+    unreviewed: [...new Set([...raised.unreviewed, ...reviewed.unreviewed])],
     read,
     unreadable,
     unwatched,

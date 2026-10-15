@@ -228,16 +228,26 @@ describe('advisories GitHub has already reviewed', () => {
     const database = reviewedAs(['next', '< 16.3.0']);
     expect(
       await raiseUpstreamAdvisories([advisory()], manifest, issues, database),
-    ).toEqual({ raised: [], failed: [], ruledOut: ['GHSA-aaaa-bbbb-cccc'] });
+    ).toEqual({
+      raised: [],
+      failed: [],
+      ruledOut: ['GHSA-aaaa-bbbb-cccc'],
+      unreviewed: [],
+    });
     expect(issues.issues).toEqual([]);
     // The lockfile later resolves an affected version.
     const affected = { ...manifest, locked: new Map([['next', ['16.2.0']]]) };
     expect(
       await raiseUpstreamAdvisories([advisory()], affected, issues, database),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
+    ).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
+      ruledOut: [],
+      unreviewed: [],
+    });
   });
 
-  it('raises the advisory when GitHub’s database cannot be read', async () => {
+  it('raises the advisory and records that GitHub’s database could not be read', async () => {
     const issues = new MemoryIssues();
     expect(
       await raiseUpstreamAdvisories([advisory()], manifest, issues, {
@@ -245,6 +255,11 @@ describe('advisories GitHub has already reviewed', () => {
           throw new Error('HTTP 502');
         },
       }),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
+    ).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
+      ruledOut: [],
+      unreviewed: ['GHSA-aaaa-bbbb-cccc'],
+    });
   });
 });

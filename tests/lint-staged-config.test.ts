@@ -19,6 +19,8 @@ describe('lint-staged', () => {
       (/^\*\.\{(.+)\}$/.exec(pattern)?.[1] ?? '').split(','),
     );
 
+    // Equality alone also passes when both tools skip the plain-node scripts.
+    expect(biomeExtensions).toContain('mts');
     expect(stagedExtensions.toSorted()).toEqual(biomeExtensions.toSorted());
   });
 });

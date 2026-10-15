@@ -2,9 +2,9 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  // DEBT-522: off until Next.js forces it on. On, each link's prefetch is a
-  // per-visitor server render, since the root layout reads the CSP nonce from
-  // headers(); that cost is accepted once Next.js warns about `false`.
+  // DEBT-522: off until Next.js forces it on. On, route-shell prefetches can
+  // need a server render because the root layout reads the nonce from headers().
+  // The client reuses valid shells; accept this work when Next.js warns about false.
   partialPrefetching: false,
   // Playwright uses 127.0.0.1 by default while Next dev server initializes on
   // localhost; allow both to avoid cross-origin dev warnings and future blocks.

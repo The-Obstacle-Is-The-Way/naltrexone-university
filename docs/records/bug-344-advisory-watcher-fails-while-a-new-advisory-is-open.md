@@ -4,6 +4,8 @@
 **Priority:** P2
 **Date:** 2026-10-15
 
+Corrected 2026-10-15: a refused lookup while raising must also fail the run, even when the immediately following issue listing has not caught up.
+
 ---
 
 ## Summary
@@ -12,7 +14,7 @@ The upstream advisory watcher (DEBT-509) failed all four of its runs from 2026-1
 
 With the Actions token, GitHub's endpoint for one global advisory, `GET /advisories/{ghsa_id}`, answers **403 "Resource not accessible by integration"** for an advisory that is not in GitHub's database. A person's token gets 404 for the same request. The watcher treats only 404 as "not in the database", so with the Actions token every lookup of a new advisory threw.
 
-- **Raising swallowed the error.** It opens the issue whenever a lookup fails, so the issues opened.
+- **Raising swallowed the error.** It opens the issue whenever a lookup fails, so the issues opened. If the immediately following listing had not caught up with that new issue, no close-sweep lookup ran for it and the command could pass without reporting the refused lookup.
 - **The close sweep did not.** On every run it re-checks each open advisory issue against GitHub's review. Each failed lookup failed the run, for as long as any new advisory's issue stayed open, which is the normal state between raising an advisory and triaging it.
 - **The failure named the wrong step.** It printed "Could not open or close issues for: …", so the 403 read as a failed issue write.
 
@@ -75,12 +77,13 @@ The list endpoint returns the same advisory object, with `github_reviewed_at` an
 Option 2, test-first.
 - `find` reads `advisories?ghsa_id=` and returns `null` for an empty list. It does not ask for malware advisories (Option 2).
 - The unit test models the database's answer as the list endpoint gives it, so it is the answer both token kinds get.
-- A failed review lookup in the close sweep is reported as a failed lookup, not a failed issue write, so the message names the failing call.
+- A failed review lookup while raising or in the close sweep is reported as a failed lookup, not a failed issue write, and makes the run return 1. Raising still opens the advisory issue. The two phases report each advisory only once; failure reporting does not depend on when a new issue appears in the listing.
 
 ## Verification
 
 - [x] Root cause reproduced with the Actions token, under three permission sets (2026-10-15).
 - [x] The five open advisory issues assessed against `main` and closed, each with its evidence (2026-10-15).
+- [x] A refused lookup while raising fails the command and leaves the alert open, whether or not the new issue is immediately listed; regression reproduced red, then green (2026-10-15).
 - [x] The fix lands test-first: the lookup, outcome and runner tests failed red, then passed (2026-10-15).
 - [x] A run of the fixed watcher, dispatched on the fix branch while an advisory issue is open, passes and leaves that issue open: #1505, reopened for it and closed again after (2026-10-15).
 - [ ] A scheduled run on `main` passes after promotion.

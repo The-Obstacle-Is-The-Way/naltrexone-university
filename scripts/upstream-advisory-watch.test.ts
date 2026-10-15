@@ -39,8 +39,13 @@ describe('raising upstream advisories', () => {
   it('opens one issue for an advisory published after the watch start', async () => {
     const issues = new MemoryIssues();
     expect(
-      await raiseUpstreamAdvisories([advisory()], manifest, issues),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
+      await raiseUpstreamAdvisories([advisory()], manifest, issues, unreviewed),
+    ).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
+      ruledOut: [],
+      unreviewed: [],
+    });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
     ]);
@@ -54,7 +59,7 @@ describe('raising upstream advisories', () => {
         manifest,
         issues,
       ),
-    ).toEqual({ raised: [], failed: [], ruledOut: [] });
+    ).toEqual({ raised: [], failed: [], ruledOut: [], unreviewed: [] });
     expect(issues.issues).toEqual([]);
     expect(WATCH_START).toBe('2026-10-01T00:00:00Z');
   });
@@ -73,7 +78,7 @@ describe('raising upstream advisories', () => {
       });
       expect(
         await raiseUpstreamAdvisories([advisory()], manifest, issues),
-      ).toEqual({ raised: [], failed: [], ruledOut: [] });
+      ).toEqual({ raised: [], failed: [], ruledOut: [], unreviewed: [] });
       expect(issues.issues).toHaveLength(1);
     },
   );
@@ -174,8 +179,18 @@ describe('raising upstream advisories', () => {
   it('raises each new advisory once when the same run lists it twice', async () => {
     const issues = new MemoryIssues();
     expect(
-      await raiseUpstreamAdvisories([advisory(), advisory()], manifest, issues),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
+      await raiseUpstreamAdvisories(
+        [advisory(), advisory()],
+        manifest,
+        issues,
+        unreviewed,
+      ),
+    ).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
+      ruledOut: [],
+      unreviewed: [],
+    });
     expect(issues.issues).toHaveLength(1);
   });
 
@@ -207,11 +222,13 @@ describe('raising upstream advisories', () => {
         [advisory(), advisory({ ghsaId: 'GHSA-dddd-eeee-ffff' })],
         manifest,
         issues,
+        unreviewed,
       ),
     ).toEqual({
       raised: ['GHSA-dddd-eeee-ffff'],
       failed: ['GHSA-aaaa-bbbb-cccc'],
       ruledOut: [],
+      unreviewed: [],
     });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-dddd-eeee-ffff (critical): next',
@@ -230,6 +247,40 @@ describe('raising upstream advisories', () => {
 });
 
 describe('watching several repositories', () => {
+  // BUG-344's hosted logs show newly created issues can be missing from the
+  // next listing. Reporting a refused lookup must not depend on that listing.
+  it.each([false, true])(
+    'reports a refused review and fails after raising, with new issues visible: %s',
+    async (visible) => {
+      const issues = new MemoryIssues();
+      if (!visible) issues.list = async () => [];
+      const errors: string[] = [];
+
+      const code = await runUpstreamAdvisoryWatch(
+        () =>
+          watchUpstreamAdvisories(
+            { direct: ['vercel/next.js'], indirect: [] },
+            manifest,
+            issues,
+            async () => [advisory()],
+            {
+              find: async () => {
+                throw new Error('HTTP 403');
+              },
+            },
+          ),
+        { log: () => {}, error: (message) => errors.push(message) },
+      );
+
+      expect(issues.issues).toHaveLength(1);
+      expect(issues.issues[0]?.state).toBe('OPEN');
+      expect(code).toBe(1);
+      expect(errors).toEqual([
+        'Could not read GitHub’s review of: GHSA-aaaa-bbbb-cccc',
+      ]);
+    },
+  );
+
   it('raises what it can read and names the repositories it could not', async () => {
     const issues = new MemoryIssues();
     const outcome = await watchUpstreamAdvisories(

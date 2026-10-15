@@ -3,8 +3,8 @@ import nextConfig from './next.config';
 
 describe('next.config', () => {
   // DEBT-522: left unset, Next.js warns on every build. `true` waits until
-  // Next.js forces it: it turns each link's prefetch into a per-visitor
-  // server render, because the root layout reads the CSP nonce from headers().
+  // Next.js forces it: route-shell prefetches can need a server render
+  // because the root layout reads the CSP nonce from headers().
   it('keeps prefetches prerendered by turning Partial Prefetching off explicitly', () => {
     expect(nextConfig).toMatchObject({
       cacheComponents: true,
