@@ -4,13 +4,25 @@ on:
   pull_request:
   push:
     branches: [main]
+  # DEBT-523: for a push to main that GitHub never processed, which leaves
+  # the commit with no CI run and no deployment. The run's result is the
+  # evidence for the manual release route in
+  # docs/guides/release/promote-to-production.md (No production deployment at all).
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "The full SHA of main's head, the commit whose push GitHub dropped"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  # A manual run waits for a push run on main instead of cancelling it: that
+  # push run may be a newer promotion's release check.
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   test:
@@ -25,6 +37,17 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
     steps:
+      # A manual run is only for main's dropped commit. On a branch, or once
+      # main has moved on, it would spend a full E2E run on the shared Clerk
+      # test user for no release.
+      - name: Refuse a manual run off main's dropped commit
+        if: github.event_name == 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.sha != inputs.sha)
+        env:
+          REQUESTED_SHA: ${{ inputs.sha }}
+        run: |
+          echo "::error title=Manual CI runs only on main's head::This run is on ${GITHUB_REF} at ${GITHUB_SHA}, and the requested commit is ${REQUESTED_SHA}. Dispatch on main with main's current head SHA."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -128,8 +151,10 @@ jobs:
       - name: E2E smoke
         id: e2e_smoke
         # Dependabot PRs do not receive repository secrets, even when their branch
-        # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+        # lives in this repository. Keep E2E on for pushes, manual runs on main
+        # (evidence for a production release, as a push run is) and human
+        # same-repo PRs.
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: pnpm test:e2e
         env:
           NEXT_PUBLIC_SKIP_CLERK: 'false'
