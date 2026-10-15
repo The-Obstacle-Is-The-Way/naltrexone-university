@@ -235,6 +235,9 @@ knowledge_base:
   # reject it in CodeRabbit's app; one left alone applies when the 30 days end,
   # with no notice, so the weekly coderabbit-learnings-review workflow lists
   # them in a GitHub issue. Reviewer rules belong in AGENTS.md, through a PR.
+  # Not opt_out: it deletes accurate learnings too, turns off the other
+  # knowledge-base features, and CodeRabbit does not document its reach. A
+  # stale learning is deleted in CodeRabbit's app instead.
   learnings:
     scope: auto
     approval_delay: 30
