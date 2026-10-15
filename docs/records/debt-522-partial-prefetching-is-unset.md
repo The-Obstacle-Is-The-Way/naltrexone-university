@@ -4,54 +4,67 @@
 **Priority:** P3
 **Date:** 2026-10-15
 
+Corrected 2026-10-15: the challenge showed that `true` makes link prefetches render per visitor here, and a measurement confirmed it. The resolution changed from `true` to `false`, and the option dates from 16.3, not 16.4.
+
 ---
 
 ## Summary
 
-Next.js 16.4 added `partialPrefetching`. Partial Prefetching changes what a `<Link>` downloads ahead of a click: one shared shell of the destination route, instead of the cached page render. This app enables `cacheComponents` and never set the new option. So every `next build` and `next start` prints a seven-line warning asking for `true` or `false`.
+Next.js 16.3 added `partialPrefetching`. Partial Prefetching changes what a `<Link>` downloads ahead of a click: one shared shell of the destination route, instead of the cached page render. Next.js 16.4 began warning when an app enables `cacheComponents` and leaves the option unset, as this app did. So every `next build` and `next start` printed a seven-line warning asking for `true` or `false`.
 
-The warning prints in local builds, in CI's build and E2E web server, and in every Vercel production build. Left unset, the option acts like `false`, the old prefetch behaviour. Next.js says both features will be on everywhere in the next major release and the option removed. Leaving it unset would therefore change navigation in the middle of the Next.js 17 upgrade, untested.
+The warning printed in local builds, in CI's build and E2E web server, and in every Vercel production build. A warning on every build hides new ones: a real problem printed next to it looks like the same noise.
 
-A warning on every build also hides new ones: a real problem printed next to it looks like the same noise.
+Left unset, the option acts like `false`. Next.js says both features will be on everywhere in the next major release, and the option removed. Turning it on here, though, is not free.
+- Every route's shell reads request headers, because the root layout reads the CSP nonce from `headers()`.
+- With the option on, a shell that reads headers is fetched by a per-visitor request, which the server renders.
+- So each link's prefetch stops being a prerendered file and becomes a server render, once per visitor and route.
 
 ## Evidence
 
-- **The warning's condition.** `next` 16.4.1 warns when `cacheComponents` is on and `partialPrefetching` is `undefined` (`node_modules/next/dist/server/config.js:454-460`). Its text: "The only reason to set `partialPrefetching` to `false` is if you're migrating an older Cache Components app. … Both Cache Components and Partial Prefetching will be enabled everywhere in the next major release, and the old configurations will be removed." A TODO beside it plans a warning for `false` too, before Next.js 17 (`:452-453`).
-- **Where it prints.**
+- **The warning's condition.** `next` 16.4.1 warns when `cacheComponents` is on and `partialPrefetching` is `undefined` (`node_modules/next/dist/server/config.js:454-461`). Its text: "The only reason to set `partialPrefetching` to `false` is if you're migrating an older Cache Components app. … Both Cache Components and Partial Prefetching will be enabled everywhere in the next major release, and the old configurations will be removed." A TODO beside it plans a warning for `false` too, before Next.js 17 (`:452-453`). The option's documentation dates it to 16.3.0. This app ran 16.3.8 before 16.4.1 without the warning.
+- **Where it printed.**
   - The local `pnpm build` (2026-10-15).
   - CI's build step and its E2E web server on `main` after #1519.
   - Vercel's production build of `main` at `8354159a`. That build log has no other warning; the database lines in it are notices from migrations that skip what already exists.
-- **This app has no legacy full prefetches.** Next.js's adoption guide (`node_modules/next/dist/docs/01-app/02-guides/adopting-partial-prefetching.md`) has existing apps first review every `<Link>` whose prefetch is effectively `true`. Those links lose their uncached dynamic content when the flag goes on. It adds: "New projects can enable the flag without this audit because they have no legacy full prefetches to migrate." This app has none either:
-  - no `<Link>` in `app/`, `components/`, `src/` or `lib/` sets `prefetch`;
-  - no code calls `router.prefetch`.
-- **What else changes.** A default `<Link>` prefetches the destination's shared shell instead of its cached page render. Content that reads URL data (`params`, `searchParams`) outside a `<Suspense>` boundary is left out of that shell and streams after the click. Seven pages read URL data: billing, bookmarks, history, the practice session, the question page, checkout success, and pricing. Next.js reports such reads only as development hints, "instant navigation" insights, which never block a build.
+- **No link uses a legacy full prefetch.** No `<Link>` in the repository sets `prefetch`, and nothing calls `router.prefetch`. Next.js's adoption guide therefore has no full prefetch here to migrate (`node_modules/next/dist/docs/01-app/02-guides/adopting-partial-prefetching.md`).
+- **Every route reads headers.** The root layout wraps every page in `<Suspense>` around `NonceBoundProviders`, which reads `headers().get('x-nonce')` (`app/layout.tsx:67-74`, `:95-97`). The option's documentation: "Routes that read `cookies()` or `headers()` produce an App Shell that includes session data. The framework auto-detects this and caches the shell per session on the client." Next.js's prefetch scheduler: "Routes without Partial Prefetching never use runtime requests for prefetches" (`node_modules/next/dist/client/components/segment-cache/scheduler.js:674`).
+- **Measured (2026-10-15, local production builds served by `next start`).** A browser loaded `/` and then `/pricing`, scrolled each page, and recorded every prefetch request:
+
+  | Setting | Prefetches answered from the prerender | Prefetches rendered on request |
+  |---|---|---|
+  | unset | 22 of 22 | 0 |
+  | `false` | 22 of 22 | 0 |
+  | `true` | 12 of 22 | 10, five per page (`next-router-prefetch: 3`, `Cache-Control: private, no-store`) |
+
+  With `true`, the per-segment prefetches for `/pricing`, `/sign-in`, `/sign-up`, `/privacy` and `/terms` became runtime prefetches. `/privacy` and `/terms` render no per-request content of their own, so the root layout's `headers()` read is what makes them per visitor. The route table printed by `next build` was the same for all three settings.
+- **What a runtime prefetch costs.** On Vercel, a response marked `private, no-store` is rendered by a function on every request. Each page view would add one function invocation per linked route, about five, for every visitor. Production runs on the Hobby plan until the first live sale (DEBT-512).
 
 ## Impact
 
 - One seven-line warning on every build, in every environment, hiding new warnings.
-- An untested behaviour change waiting in the Next.js 17 upgrade.
+- Next.js 17 turns Partial Prefetching on for every app. If the nonce read still sits in every route's shell then, each link prefetch becomes a server render per visitor, during a major-version upgrade.
 
 ## Options
 
-1. **Set `false`.** This silences the warning and keeps the old prefetch, but only defers the change to Next.js 17. Next.js plans to warn about `false` before then, and calls it a migration setting.
-2. **Set `true` now.** This adopts the behaviour Next.js 17 makes permanent, on our schedule. With no legacy full prefetches, the guide's audit has nothing to migrate.
-3. **Leave it unset.** The warning stays, and the change still arrives with Next.js 17.
+1. **Set `false`.** The warning goes. Prefetches stay prerendered, which the measurement shows is identical to unset. The adoption still has to happen before Next.js 17, and Next.js plans to warn about `false` too.
+2. **Set `true` now.** The warning goes and the app adopts the behaviour Next.js 17 makes permanent. But each page view adds about five function invocations per visitor, for no feature the app needs today.
+3. **Leave it unset.** The warning stays, and nothing else changes.
 
 ## Resolution (decided)
 
-Option 2, test-first.
-- A unit test pins `partialPrefetching: true` beside `cacheComponents: true` in `next.config.test.ts`.
-- The full gate and E2E show that navigation still works and that builds no longer print the warning.
-- Where one of the seven pages reads URL data outside `<Suspense>`, moving that read inside would let more of the page arrive with the shell. That is an optional speed-up, not part of this fix. Each page stays correct without it, and Next.js marks it only in development.
+Option 1, test-first. `next.config.test.ts` pins `partialPrefetching: false`, and a comment beside the setting gives the reason.
+
+What remains is adopting Partial Prefetching before Next.js 17, with each route's shell still prerendered. That means taking the nonce read out of the shell that every route shares, and then measuring that prefetches stay prerendered, as above. It waits for its trigger: Next.js 17 published, or Next.js warning about `false`. When this record closes, that tail becomes a Waiting row.
 
 ## Verification
 
-- [ ] `next.config.ts` sets `partialPrefetching: true`, test-first.
-- [ ] The local build prints no `partialPrefetching` warning, and the full gate and E2E pass.
+- [x] Each setting measured against a local production build, and `true`'s cost traced to the root layout's `headers()` read (2026-10-15).
+- [ ] `next.config.ts` sets `partialPrefetching: false`, test-first, and the local build and `next start` print no warning.
 - [ ] CI's build and E2E web server print no `partialPrefetching` warning.
-- [ ] After promotion, Vercel's production build prints none, and navigation from `/` to `/pricing` and into the app works in production.
+- [ ] After promotion, Vercel's production build prints none.
 
 ## Related
 
 - BUG-344: found in the same sweep of build, test and CI output.
-- DEBT-509: the Next.js 16.4.1 upgrade that brought this option.
+- DEBT-512: production's hosting plan, where function invocations count.
+- DEBT-509: the Next.js 16.4.1 upgrade, which brought the warning.

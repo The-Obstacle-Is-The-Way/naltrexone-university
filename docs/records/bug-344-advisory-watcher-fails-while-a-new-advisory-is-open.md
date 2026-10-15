@@ -29,7 +29,7 @@ With the Actions token, GitHub's endpoint for one global advisory, `GET /advisor
 
 - **The 403s come from the lookup, not from issue writes.** In the 17:17 run, each of the first three 403s is logged about a second before GitHub created that advisory's issue (#1503 at 17:20:23Z, #1504 at 17:20:26Z, #1505 at 17:20:30Z). That matches raising, which looks an advisory up and then creates its issue. The run's other 403 is the close sweep's lookup for #1503. The sweep's list did not yet include #1504 and #1505, which were seconds old.
 - **The failures track open advisory issues.** Each run's failures name advisories whose issues were open at that point. After the five were triaged and closed on 2026-10-15, nothing was left for the sweep to fail on.
-- **The first hosted lookup came on 2026-10-14.** The review lookup arrived on 2026-10-08 (DEBT-509). From then until 2026-10-14 12:00Z, every run raised nothing, logged no 403, and found no open advisory issue to check, so no hosted run had looked an advisory up. The 2026-10-11 12:58Z failure is unrelated: a GitHub 502 while reading one repository's advisories, which the watcher reported as designed.
+- **The first hosted lookup came on 2026-10-14.** The review lookup was written on 2026-10-08 (DEBT-509) and first ran in a scheduled run on 2026-10-10. From then until 2026-10-14 12:00Z, every run raised nothing, logged no 403, and found no open advisory issue to check, so no hosted run had looked an advisory up. The 2026-10-11 12:58Z failure is unrelated: a GitHub 502 while reading one repository's advisories, which the watcher reported as designed.
 
 ### The probe (2026-10-15)
 
@@ -67,13 +67,13 @@ The list endpoint returns the same advisory object, with `github_reviewed_at` an
 ## Options
 
 1. **Treat 403 like 404.** Rejected: a 403 also means a token or permission problem. The watcher could no longer tell "not in the database" from "lost access", and lost access would pass silently.
-2. **Look the advisory up with the list endpoint,** `GET /advisories?ghsa_id={id}`. It returns `[]` for an advisory not in the database and `[advisory]` for one that is, with either kind of token. Any other answer is then a real failure, and still fails the run.
+2. **Look the advisory up with the list endpoint,** `GET /advisories?ghsa_id={id}`. It returns `[]` for an advisory not in the database and `[advisory]` for one that is, with either kind of token. Any other answer is then a real failure, and still fails the run. Unless asked, the list leaves out malware advisories: GHSA-r7f7-6833-rxh9 answers 200 from the single endpoint and `[]` from the list. The gap fails safe. The watcher reads advisories that maintainers publish in their repositories, which are not malware advisories; and a missing review rules nothing out, so the issue stays open.
 3. **Give the job a personal access token.** Rejected: it adds a long-lived secret only to change a status code, and the list endpoint needs none.
 
 ## Resolution (decided)
 
 Option 2, test-first.
-- `find` reads `advisories?ghsa_id=` and returns `null` for an empty list.
+- `find` reads `advisories?ghsa_id=` and returns `null` for an empty list. It does not ask for malware advisories (Option 2).
 - The unit test models the database's answer as the list endpoint gives it, so it is the answer both token kinds get.
 - A failed review lookup in the close sweep is reported as a failed lookup, not a failed issue write, so the message names the failing call.
 
