@@ -1,6 +1,6 @@
 # DEBT-523: A Push to Main That GitHub Drops Has No Way to Run Its Checks
 
-**Status:** Verifying — a manual CI run on `main` executes and passes E2E on `main`'s exact head; due 2026-10-17
+**Status:** Verifying — on `main`, a manual CI run passes with E2E on the exact head, and the hourly release watch runs clean; due 2026-10-17
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -29,6 +29,7 @@ The only recovery was another change through review and promotion, which takes h
 
 - **Production silently lags `main`.** Today that held twelve dependency updates, including Clerk and Sentry patches, out of production for hours.
 - **The third time.** #509 (BUG-259) and #1367 had no production deployment either, but in those Vercel alone skipped, and CI ran. This is the first time GitHub dropped the push itself.
+- **Nothing reported it.** Each time, production lagged until someone happened to check the commit. No job compares `main`'s head with what production serves.
 
 ## Options
 
@@ -40,21 +41,32 @@ The only recovery was another change through review and promotion, which takes h
    - **It must not cancel a push run.** Push runs on `main` share its concurrency group, and one may be a newer promotion's release check.
    - *Recommended.*
 3. **Also replace the owner-approved CLI deploy with a Git-sourced one,** such as a Vercel deploy hook. Not pursued: no evidence shows that a Deployment Check holds such a deployment's alias.
-4. **Post a `test` commit status from a workflow,** so the Deployment Check sees the manual run. Rejected: a status set with the Actions token counts as coming from GitHub Actions, the ruleset's required source, so a workflow could then pass any head's required check.
+4. **Detect the lag on a schedule.** An hourly job reads `main`'s head and opens an issue for the owner if the head is 45 minutes old with no passing CI run on `main`, or no successful GitHub deployment to Vercel's `Production` environment.
+   - Vercel reports each production release there, so this catches all three incidents with only the Actions token, and no Vercel credential.
+   - A manual run counts as CI.
+   - A CLI release creates no GitHub deployment, so the guide's manual route ends by recording one.
+   - *Recommended, with option 2.*
+5. **Post a `test` commit status from a workflow,** so the Deployment Check sees the manual run. Rejected: a status set with the Actions token counts as coming from GitHub Actions, the ruleset's required source, so a workflow could then pass any head's required check.
 
 ## Resolution (decided)
 
-Option 2:
+Options 2 and 4:
 - **The trigger.** `.github/workflows/ci.yml` gains `workflow_dispatch` with a required `sha` input, and E2E runs for it.
   - A first step fails the run unless it is on `main` and `main`'s head is that SHA.
   - A manual run waits for a push run in its concurrency group instead of cancelling it.
 - **The tests.** `tests/ci-workflow.test.ts` pins the triggers, the input, the refusal, the concurrency setting and E2E's condition.
-- **The guide.** Promote to production has a step: confirm CI's push run in the first minute, and run CI by hand when it is missing.
+- **The watch.** `.github/workflows/production-release-watch.yml` runs `scripts/production-release-watch.ts` hourly and keeps one issue, assigned to the owner, open while production does not serve `main`'s head.
+  - It leaves an open issue alone while the head is new or CI is still running.
+  - It reads the head from the commit list, because a single commit's response carries every file's patch.
+  - Its test pins its schedule and its least-privilege permissions.
+- **The guide.** Promote to production describes the watch, and has a step: confirm CI's push run in the first minute, and run CI by hand when it is missing.
+- **Still the owner's.** The manual run cannot deploy: Vercel builds production only on a push it hears about. The fast route therefore still needs the owner's approval of a CLI deploy. Without the owner, the next promotion releases the code. Whether agents may deploy `main`'s head from Git without asking each time is the owner's decision.
 
 ## Verification
 
 - [x] Red first: the trigger, concurrency and E2E-condition cases in `tests/ci-workflow.test.ts` all failed against `main`'s workflow.
 - [ ] Before merge: a manual run on this branch fails at its refusal step.
+- [ ] After promotion: a scheduled run of the production release watch on `main` succeeds and opens no issue (due 2026-10-17).
 - [ ] After promotion, while no other E2E run is active: `gh workflow run ci.yml --ref main -f sha=<main's head>` passes, with E2E executed, and a run naming a stale SHA is refused. Record whether the commit's status rollup lists the manual run's `test` (due 2026-10-17).
 
 ## Related

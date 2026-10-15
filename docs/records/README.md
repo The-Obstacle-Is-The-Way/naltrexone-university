@@ -53,7 +53,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [DEBT-519](./debt-519-fake-contract-register-misses-adapter-owned-fakes.md) | The fake-contract register misses adapter-owned fakes | P3 | Open — make the register scan discover adapter-owned fakes, red first, then add `FakeStripePortalConfigurations` |
 | [DEBT-520](./debt-520-repository-layout-trigger-has-fired.md) | ADR-013's repository-layout trigger has fired without a decision | P4 | Open — decide whether the repositories stay flat or move into aggregate folders, and record it as an ADR |
 | [DEBT-521](./debt-521-clerk-js-loads-unpinned-from-clerks-cdn.md) | Clerk JS loads unpinned from Clerk's CDN, so a Clerk release can change sign-in without a deploy | P3 | Open — owner decision: pin Clerk JS and its UI bundle to lockfile versions, or keep them floating; due 2026-10-26 |
-| [DEBT-523](./debt-523-a-dropped-push-to-main-has-no-way-to-run-its-checks.md) | A push to `main` that GitHub drops has no way to run its checks | P2 | Verifying — a manual CI run on `main` executes and passes E2E on `main`'s exact head; due 2026-10-17 |
+| [DEBT-523](./debt-523-a-dropped-push-to-main-has-no-way-to-run-its-checks.md) | A push to `main` that GitHub drops has no way to run its checks | P2 | Verifying — on `main`, a manual CI run passes with E2E on the exact head, and the hourly release watch runs clean; due 2026-10-17 |
 
 ## Waiting
 
