@@ -83,6 +83,16 @@ describe('checkMutationReport', () => {
     });
   });
 
+  it('rejects a status Stryker does not define, rather than skipping a near-miss survivor', () => {
+    expect(() =>
+      checkMutationReport(
+        report({
+          'src/a.ts': [{ id: '1', status: 'Survive', testsCompleted: 0 }],
+        }),
+      ),
+    ).toThrow('Invalid mutation report: unknown mutant status "Survive"');
+  });
+
   it.each([
     ['files that are not keyed by path', { files: [] }],
     [

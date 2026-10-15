@@ -13,6 +13,18 @@ import { pathToFileURL } from 'node:url';
 const REPORT_PATH = 'reports/mutation/mutation.json';
 // Enough examples to locate the fault without flooding the log.
 const EXAMPLES_SHOWN = 5;
+// mutation-testing-report-schema 3.7.3's MutantStatus. A status outside it
+// fails the check, so a misspelt "Survived" cannot pass unchecked.
+const MUTANT_STATUSES: ReadonlySet<string> = new Set([
+  'Killed',
+  'Survived',
+  'NoCoverage',
+  'CompileError',
+  'RuntimeError',
+  'Timeout',
+  'Ignored',
+  'Pending',
+]);
 
 export type MutationReportCheck = {
   mutants: number;
@@ -40,6 +52,10 @@ export function checkMutationReport(report: unknown): MutationReportCheck {
     for (const mutant of entry.mutants) {
       if (!isRecord(mutant) || typeof mutant.status !== 'string')
         throw new Error('Invalid mutation report');
+      if (!MUTANT_STATUSES.has(mutant.status))
+        throw new Error(
+          `Invalid mutation report: unknown mutant status "${mutant.status}"`,
+        );
       result.mutants++;
       if (mutant.status !== 'Survived') continue;
       const name = `${file}#${String(mutant.id)}`;
