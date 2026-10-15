@@ -45,6 +45,11 @@ jobs:
       - name: Run Stryker
         run: pnpm exec stryker run --force
 
+      # The score never fails the run (ADR-019), but a survivor that ran no
+      # test means the report measured nothing, as on 2026-10-14 (DEBT-500).
+      - name: Check the report's integrity
+        run: pnpm exec tsx scripts/mutation-report-integrity.ts
+
       - name: Upload mutation report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
