@@ -53,6 +53,18 @@ describe('failOnLateConsoleOutput', () => {
     await expect(result).rejects.toThrow('console.warn: late warning');
   });
 
+  it('names a value it cannot serialise by its string form', async () => {
+    const { sink } = createRecordingSink();
+    const circular: { self?: unknown } = {};
+    circular.self = circular;
+
+    await expect(
+      failOnLateConsoleOutput(async () => {
+        sink.log('late', circular, undefined);
+      }, sink),
+    ).rejects.toThrow('console.log: late [object Object] undefined');
+  });
+
   it('still writes each late call through, so its output stays in the log', async () => {
     const { sink, written } = createRecordingSink();
 
