@@ -1,10 +1,10 @@
 # DEBT-515: CodeRabbit Learns Lasting Rules From Agents Speaking as the Owner
 
-**Status:** Verifying — after promotion, the first weekly learnings issue opens and new learnings wait for approval; due 2026-10-23
+**Status:** Verifying — every check is recorded, and the record closes with #1529; due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-09
-**Resolved:** —
-**Verification receipts:** —
+**Resolved:** 2026-10-15
+**Verification receipts:** [#1443](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1443); [#1529](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1529); [Verification](#verification)
 
 ---
 
@@ -45,20 +45,24 @@ No defect is known to have shipped because of a learning. The cost is assurance.
   3. #1438: "a fixing PR can set its debt record and register entry to `Verifying …`" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1438#discussion_r4232035464)). AGENTS.md now says this.
   4. #1430: "…Errors, DOM nodes, and class instances are intentionally left to Sentry's own serialisation…" ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1430#discussion_r4221572828)). It is stale and contradicts the code.
 - **Prune, found 2026-10-10.** A learning from #285 (2026-04-25), on `docs/bugs/bug-236-…`, says a bug record keeps `Status: Open` with a `Resolution State` field until after merge, and that a fixing PR must never set its record's status or archive it. the records index's Statuses rule says the opposite. CodeRabbit still listed it under "Learnings used" on #1456 ([reply](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1456#discussion_r4238713688)), and it shaped one finding in a round that also caught a stale summary. It predates the 30-day hold, so nothing listed it.
-  - **For the owner:** delete it at app.coderabbit.ai/learnings. Search for "Resolution State".
-  - **In the repository:** `.coderabbit.yaml` now gives `docs/records/**` path instructions that cite the records rules and override any stored learning. AGENTS.md's CodeRabbit Learnings section says what to do with the next learning that contradicts it.
+  - **For the owner:** delete it at app.coderabbit.ai/learnings. Search for "Resolution State". Done 2026-10-15, with the backlog below.
+  - **In the repository:** `.coderabbit.yaml` now gives `docs/records/**` path instructions that cite the records rules and override any stored learning. Review and Merge's "Reading Findings" says what to do with the next learning that contradicts it.
   - **The pattern.** Stale backlog learnings are the risk the hold cannot reach. This is a second one, after #1430's, so it strengthens the case for triaging the backlog's 72 flagged learnings, or resetting the knowledge base.
 - **Backlog, the owner's call.** The 250 learnings recorded before the hold applied at once. The owner either triages the 72 flagged ones in CodeRabbit's app, or resets the knowledge base: `knowledge_base.opt_out: true` deletes every stored learning, and turning it off again starts a clean, held one. A reset also loses the accurate learnings that keep CodeRabbit from repeating false positives, so triage comes first.
-- **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. The records index's Now stanza lists it among the owner's decisions; it becomes a Waiting row when this record closes.
+  - **Triaged 2026-10-15.** CodeRabbit's app held 436 learnings for this repository: 398 applied and 38 pending. Triage worked from CodeRabbit's replies on GitHub, checking each learning against the current tree, and matched the app's list by text; the 3 that did not match were one-off notes. 23 were worth keeping; the rest were stale, wrong, about one PR, redundant with a repository rule, or told CodeRabbit to stop raising something no rule backs. Examples: one said migrations go unreviewed, one said a replayed keyed action may answer `RATE_LIMITED`, where ADR-016 has a replay return its stored outcome without the limiter, and 23 suppressed one import-style finding file by file.
+  - **Removed, not reset.** CodeRabbit documents only that the opt-out "removes any existing stored knowledge base data", not its reach, and the same organization holds 123 learnings for the owner's other repositories. The app's own bulk delete, filtered to this repository, has a scope anyone can see. So the owner disapproved the 38 pending learnings and bulk-deleted all 398 applied ones for this repository, keepers included.
+  - **Kept in the repository.** #1529 writes 22 of the 23 keepers into code comments, `.claude/rules/`, `.coderabbit.yaml` and the integration-test guide; the 23rd was already a code comment. It also puts two owner rulings in `AGENTS.md`, settling disputes the deleted learnings had argued file by file: either import style is fine, and new text uses US English.
+- **Deferred: an account for agents.** It needs the owner's account, credentials and possibly a CodeRabbit seat. It moves to a Waiting row when this record closes.
 
 ## Verification
 
 - [x] On live GitHub data, the new check refuses #1437, #1438 and #1436 as they stood on 2026-10-09, whose descriptions do not link their learning replies, and names every reply. It finds none on #1411 or on promotion #1442.
 - [x] On live data on 2026-10-09, a dry run of the weekly job found 95 learnings recorded in the past eight days, 30 of them flagged, and its issue body was 43,913 characters, inside GitHub's limit.
 - [x] The four learnings above are gone from CodeRabbit's app (2026-10-10). The owner deleted each one, and a search for each now returns nothing. The app then held 520 learnings, 83 of them created that week.
-- [ ] The owner deletes #285's "Resolution State" learning, and the next review of a pull request that sets a record to Verifying raises no finding asking for `Status: Open`.
-- [ ] After promotion, the first scheduled run opens the learnings issue.
-- [ ] After promotion, the next learning CodeRabbit records waits for the owner's approval instead of applying at once.
+- [x] The owner deletes #285's "Resolution State" learning. On 2026-10-15 the owner deleted it with every learning stored for this repository. CodeRabbit's app then listed none for this repository and no pending approvals; the 123 left belong to the owner's other repositories.
+- [x] The next review of a pull request that sets a record to Verifying raises no finding asking for `Status: Open`. Superseded by direct evidence: this check stood in for a deletion nobody could see. CodeRabbit's app now shows the learning gone, with none left for this repository, and the `docs/records/**` path instructions override any learning. A later finding of that kind is answered as Review and Merge's "Reading Findings" says.
+- [x] After promotion, the first scheduled run opens the learnings issue. GitHub started the run scheduled for 13:29Z on 2026-10-12 at 21:46Z, as it starts this repository's schedules hours late. The run opened [#1476](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/1476), assigned to the owner, listing 73 learnings, 30 of them flagged, in 36,076 characters, and ending with its marker.
+- [x] After promotion, the next learning CodeRabbit records waits for the owner's approval instead of applying at once. All 14 replies that recorded learnings from #1443's merge to 21:41Z on 2026-10-12 read "Learnings added — pending approval".
 
 ## Related
 
