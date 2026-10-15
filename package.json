@@ -41,7 +41,7 @@
     "db:seed:prod": "tsx scripts/seed-production.ts"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs,json}": [
+    "*.{js,jsx,ts,tsx,mjs,mts,cjs,json}": [
       "biome check --write --no-errors-on-unmatched"
     ]
   },
