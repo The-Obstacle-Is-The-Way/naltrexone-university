@@ -3,7 +3,7 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-10-14.
-- **Verifying, by due date.** BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333 and BUG-337 10-21; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
+- **Verifying, by due date.** DEBT-523 10-17; BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333 and BUG-337 10-21; BUG-331, BUG-332, DEBT-508 and DEBT-510 10-22; DEBT-515 10-23; DEBT-516 10-24; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
 - **In progress.** DEBT-518, the documentation revamp: the records, the agent instructions, the layout and the archive's removal are done; the four splits and the pilot follow.
 - **Next.** DEBT-503 item 4, due 2026-10-21. DEBT-509: remove `next` 16.4.1's age-gate exceptions after 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 2026-10-21). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502) and DEBT-511 on it, and the requeue command (DEBT-414 F23).
@@ -53,6 +53,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [DEBT-519](./debt-519-fake-contract-register-misses-adapter-owned-fakes.md) | The fake-contract register misses adapter-owned fakes | P3 | Open — make the register scan discover adapter-owned fakes, red first, then add `FakeStripePortalConfigurations` |
 | [DEBT-520](./debt-520-repository-layout-trigger-has-fired.md) | ADR-013's repository-layout trigger has fired without a decision | P4 | Open — decide whether the repositories stay flat or move into aggregate folders, and record it as an ADR |
 | [DEBT-521](./debt-521-clerk-js-loads-unpinned-from-clerks-cdn.md) | Clerk JS loads unpinned from Clerk's CDN, so a Clerk release can change sign-in without a deploy | P3 | Open — owner decision: pin Clerk JS and its UI bundle to lockfile versions, or keep them floating; due 2026-10-26 |
+| [DEBT-523](./debt-523-a-dropped-push-to-main-has-no-way-to-run-its-checks.md) | A push to `main` that GitHub drops has no way to run its checks | P2 | Verifying — a manual CI run on `main` executes and passes E2E on `main`'s exact head; due 2026-10-17 |
 
 ## Waiting
 
