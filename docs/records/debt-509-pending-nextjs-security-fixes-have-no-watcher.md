@@ -1,6 +1,6 @@
 # DEBT-509: Pending Next.js Security Fixes Have No Watcher
 
-**Status:** Open — rule decided; the watcher covers every repository behind `pnpm-lock.yaml`, and its scheduled runs read them; waiting for `vite` 8.3.3 and the two pending Next.js fixes
+**Status:** Open — the two Next.js fixes ship in 16.4.1 under exact-version exceptions; remove them after 2026-10-21; waiting for `vite` 8.3.3 and two watcher checks; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -10,7 +10,9 @@
 
 ## Summary
 
-Next.js's September 30 security release fixed seven advisories in 16.3.8. Two more, one critical and one high, were held back and will ship in a later release. When they ship, the 7-day release-age gate (`minimumReleaseAge: 10080`) keeps them out of this repository for a week unless an exception is taken.
+Next.js's September 30 security release fixed seven advisories in 16.3.8. Two more, one critical and one high, were held back. They shipped in 16.4.1 on 2026-10-14, as GHSA-673q-mjm6-r5xr and GHSA-p3m5-59mp-jv5r. The 7-day release-age gate (`minimumReleaseAge: 10080`) would have kept 16.4.1 out of this repository for a week, so it shipped under the exact-version exceptions decided below.
+
+*Corrected 2026-10-14: the two held-back fixes shipped in 16.4.1; the summary no longer calls them pending.*
 
 Nothing here would have noticed that release. The seven September 30 advisories stayed out of GitHub's advisory database for a week, so Dependabot raised no alert for any of them until 2026-10-08, and one is still missing. This repository learned of the release only because CodeRabbit searched the web while reviewing #1409. On 2026-10-07 the owner delegated both decisions below: when a fix may skip the gate, and how to watch for advisories.
 
@@ -28,6 +30,7 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
   *Corrected 2026-10-08: 16.3.8 moved from #1409 to DEBT-506's follow-up PR, by agreement between the sessions holding them; #1409 was stalled behind `dev`.*
 
   *Corrected 2026-10-09: Dependabot did not close #1425. GitHub closed it when #1442 merged, because #1442's description reads "closes #1425".*
+- **The two held-back advisories, published 2026-10-14.** Next.js published GHSA-673q-mjm6-r5xr (critical) at 17:47:07Z and GHSA-p3m5-59mp-jv5r (high) at 17:47:43Z, both fixed in 16.4.1 (npm, 17:43:55Z). The watcher raised them at 21:49Z as #1509 and #1510, assigned to the owner. Neither has a Dependabot alert, and `pnpm audit` reports neither.
 
 ## Exposure to the Seven Published Advisories
 
@@ -42,6 +45,17 @@ Checked on 2026-10-07 against `dev` at `3cf3b85c`.
 | GHSA-39w2-rjm5-chcv | Low | `next dev` only | Local development runs `next dev` | Developer machines only, until DEBT-506's follow-up PR takes 16.3.8 |
 
 No production surface is affected, so DEBT-506's follow-up PR takes 16.3.8 through the normal gate, without an exception.
+
+## Exposure to the Two Held-Back Advisories
+
+Assessed 2026-10-14 against `main` at `0976386f`, which runs `next` 16.3.8.
+
+| Advisory | Severity | Affected when | This app | Verdict |
+|---|---|---|---|---|
+| GHSA-673q-mjm6-r5xr | Critical | App Router with Cache Components and a `'use cache'` function that returns multiple typed arrays; remote code execution, unauthenticated | `cacheComponents: true`, with nine `'use cache'` functions in `components/marketing/` and `app/pricing/pricing-view-skeleton.tsx`; each renders JSX, and no application code uses a typed array | Probably not reachable. The advisory gives no workaround and says to upgrade even without such functions |
+| GHSA-p3m5-59mp-jv5r | High | App Router with at least one Server Action; crafted requests exhaust the process's CPU | Server Actions in 11 files | Affected |
+
+Both are urgent under the playbook: the high advisory's configuration matches this app, and the critical one's text cannot rule exposure out. So 16.4.1 ships the same day, with exact-version exceptions for `next`, `@next/env` and the eight `@next/swc-*` packages, all published 2026-10-14 between 17:28Z and 17:44Z. The exceptions come out after 2026-10-21, once every version is older than seven days.
 
 ## Response When the Pending Fixes Ship — Decided 2026-10-07
 
@@ -104,5 +118,6 @@ Close when the watcher has a successful scheduled run that reads the indirect de
 - [ ] The first issue closed after GitHub's review carries correct evidence.
 - [ ] The first critical or high issue confirms the owner receives the assignment notification.
 - [ ] `vite` 8.3.3 or later lands after 2026-10-13T04:10:19Z.
-- [ ] Both pending advisories are published and assessed.
+- [x] Both pending advisories are published and assessed: GHSA-673q-mjm6-r5xr and GHSA-p3m5-59mp-jv5r, fixed in 16.4.1 (2026-10-14).
 - [ ] The fix is in production, or this record says why it does not apply.
+- [ ] The age-gate exceptions for 16.4.1 are removed after 2026-10-21.
