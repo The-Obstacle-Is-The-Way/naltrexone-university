@@ -14,7 +14,7 @@ The upstream advisory watcher (DEBT-509) failed all four of its runs from 2026-1
 
 With the Actions token, GitHub's endpoint for one global advisory, `GET /advisories/{ghsa_id}`, answers **403 "Resource not accessible by integration"** for an advisory that is not in GitHub's database. A person's token gets 404 for the same request. The watcher treats only 404 as "not in the database", so with the Actions token every lookup of a new advisory threw.
 
-- **Raising swallowed the error.** It opens the issue whenever a lookup fails, so the issues opened. If the immediately following listing had not caught up with that new issue, no close-sweep lookup ran for it and the command could pass without reporting the refused lookup.
+- **Raising swallowed the error.** It opens the issue whenever a lookup fails, so the issues opened. If the immediately following listing had not caught up with that new issue, no close-sweep lookup ran for it and the command could pass without reporting the refused lookup. The 04:48 run shows the lag: it raised GHSA-59pf-q495-3c99, and only the next run's sweep reported that advisory's lookup.
 - **The close sweep did not.** On every run it re-checks each open advisory issue against GitHub's review. Each failed lookup failed the run, for as long as any new advisory's issue stayed open, which is the normal state between raising an advisory and triaging it.
 - **The failure named the wrong step.** It printed "Could not open or close issues for: …", so the 403 read as a failed issue write.
 
