@@ -21,9 +21,11 @@ export const SCHEDULED_WATCHES = [
 ] as const;
 export type ScheduledWatch = (typeof SCHEDULED_WATCHES)[number];
 
-// From 2026-10-08 to 2026-10-16, the advisory watch's longest gap between
-// scheduled runs was 10.4 hours, so a day without one means its schedule
-// has stopped.
+// A day without a successful scheduled run means the watch is not watching:
+// its schedule stopped, or every run failed. From 2026-10-08 to 2026-10-16
+// the advisory watch's longest gap between scheduled runs was 10.4 hours,
+// so a working schedule does not trip it; its 47.5 hours of failed runs that
+// week (BUG-344) would have.
 const WATCH_SCHEDULE_STALE_MS = 24 * 60 * 60 * 1000;
 
 export type ScheduledWorkflow = {

@@ -259,7 +259,8 @@ describe('createGithubScheduledWorkflows', () => {
 
   it.each([
     ["the watcher's runs", WATCHER_RUNS],
-    ["a watch's scheduled runs", RELEASE_WATCH_RUNS],
+    ["the release watch's scheduled runs", RELEASE_WATCH_RUNS],
+    ["the advisory watch's scheduled runs", ADVISORY_WATCH_RUNS],
   ])('rejects as unreadable when %s are refused', async (_case, refused) => {
     const { fetchImpl } = github({
       [`${BASE}?per_page=100`]: json(workflowsBody),

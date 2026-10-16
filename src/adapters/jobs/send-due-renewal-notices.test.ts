@@ -28,16 +28,19 @@ const now = new Date('2026-08-07T12:00:00.000Z');
 type AnnualRenewals = SendDueRenewalNoticesJobDeps['renewalQueries'];
 
 // DEBT-505, DEBT-523: the watcher and the watches all ran lately.
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
 function runningScheduledChecks(): ScheduledWorkflowsStatus {
-  const createdAt = new Date(now.getTime() - 30 * 86_400_000);
+  const createdAt = new Date(now.getTime() - 30 * DAY_MS);
   return {
     workflows: [OPERATIONAL_ALERT_WATCHER_WORKFLOW, ...SCHEDULED_WATCHES].map(
       (path) => ({ path, state: 'active', createdAt }),
     ),
-    watcherLastSuccessAt: new Date(now.getTime() - 86_400_000),
+    watcherLastSuccessAt: new Date(now.getTime() - DAY_MS),
     watchLastScheduledSuccessAt: {
-      [PRODUCTION_RELEASE_WATCH_WORKFLOW]: new Date(now.getTime() - 3_600_000),
-      [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: new Date(now.getTime() - 3_600_000),
+      [PRODUCTION_RELEASE_WATCH_WORKFLOW]: new Date(now.getTime() - HOUR_MS),
+      [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: new Date(now.getTime() - HOUR_MS),
     },
   };
 }

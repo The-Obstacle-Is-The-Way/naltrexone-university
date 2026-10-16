@@ -94,7 +94,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 
 The owner chose Vercel's built-in [GitHub Deployment Checks](https://vercel.com/docs/deployment-checks#github-checks), not a custom deployment runner. The feature is [available to GitHub-connected projects](https://vercel.com/changelog/block-vercel-deployment-promotions-with-github-actions); the 2026-09-19 read-only check confirmed this project's Hobby plan, GitHub link, `main` production branch, and enabled automatic production aliasing. This setting is operator-managed in Vercel, not encoded by `ci.yml`.
 
-Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. No other workflow has a job named `test`; renaming it, or adding another, means revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. A manual CI run's `test` (below) is not in the commit's status rollup, so this check does not see it.
+Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. No other workflow has a job named `test`; renaming it, or adding another, means revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. A manual CI run's `test` (below) is a check run on the same commit, so this check tracks it too, although the commit's status rollup lists only the push run's. On 2026-10-16, after a release, the production deployment's check recorded the commit's latest `test` check run, a manual run's. So a manual run that fails, a refused one included, can turn a held deployment's check red until a later `test` passes. Whether a passing manual run releases a held deployment by itself has not been observed.
 
 No workflow may post a `test` commit status to stand in for one. The ruleset requires `test` from GitHub Actions (integration 15368), and a status set with a workflow's Actions token counts as that source. So such a step could pass any head's required check, reviewed or not.
 
@@ -137,7 +137,7 @@ The hourly **production release watch** (`.github/workflows/production-release-w
 - The issue stays open while the head has no passing CI run on `main`, a push run or a manual one, or no successful GitHub deployment to Vercel's `Production` environment.
 - It closes once the head, or a newer one, is released.
 - **Hourly is the schedule, not the guarantee.** GitHub starts scheduled runs late under load, and drops some.
-  - On 2026-10-16 the watch's first scheduled slot, 12:23Z, never ran.
+  - On 2026-10-16 the watch reached `main` at 11:20Z, and GitHub had started none of its scheduled runs by 15:00Z.
   - From 2026-10-12 to 2026-10-16, this repository's daily jobs started 4 to 10 hours late, and the three-hourly advisory watch ran about half its slots.
   - Expect the issue within hours of a missed release. Within minutes, the first-minute check below is what catches it.
 
@@ -157,7 +157,7 @@ If the commit has no `Vercel` commit status within about ten minutes, Vercel has
    - The run fails at its first step unless `<sha>` is a full SHA and still `main`'s head when that step runs. Once `main` has moved on, the newer commit's own push run is the one to release.
    - It runs E2E as a push does. If a push run on `main` is in progress, the manual run waits for it rather than canceling it. Any later push-event run, a re-run included, cancels the manual run; dispatch it again if `<sha>` is still `main`'s head.
    - Find the run by its commit, `gh run list --workflow ci.yml --event workflow_dispatch --branch main --commit <sha> --json databaseId,headSha,status,conclusion`, and follow it with `gh run watch --exit-status <databaseId>`. A newer manual run for another commit then cannot stand in for it.
-   - Its `test` is not in the commit's status rollup. On `28c24cf3` on 2026-10-16, manual run 38896511344 passed, and the rollup still listed only the push run's `test`. So the Deployment Check cannot see it, and steps 3 and 4 remain the release route.
+   - Its `test` is a check run on the commit, which the Deployment Check tracks (above), though the commit's status rollup omits it. Whether it releases a held deployment by itself is not observed, so steps 3 and 4 remain the release route.
    - Before the manual run existed, #1531 got weaker evidence another way: a draft PR into `dev` whose head was the commit itself. Its pull_request run tests the commit merged with `dev`, and the release watch counts only runs on `main`. Use the manual run instead.
 3. Only after CI has passed on the exact commit on `main`, and with the owner's approval, create a production deployment of that commit. The build applies the production migration (the database caveat below), so it must not start before `test` has passed. Deploy from GitHub's copy, through Vercel's API, so nothing is uploaded from a local checkout. Use the CLI token, and never print it. The team and project IDs are in `.vercel/project.json` (`orgId`, `projectId`):
 

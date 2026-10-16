@@ -58,7 +58,8 @@ function withWorkflow(
 ) {
   const workflows = status().workflows;
   const workflow = workflows.find((candidate) => candidate.path === path);
-  if (workflow) change(workflow);
+  if (!workflow) throw new Error(`No such workflow in the fixture: ${path}`);
+  change(workflow);
   return workflows;
 }
 
@@ -345,6 +346,24 @@ describe('checkScheduledChecksRunning', () => {
       await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
       expect(alerts.raised).toEqual([
         { kind: 'scheduled_checks_stopped', count: 1 },
+      ]);
+    });
+
+    // The count is the number of stopped checks, not whether any stopped.
+    it('counts each stopped watch and a stale watcher separately', async () => {
+      const { deps, alerts } = setup(async () =>
+        status({
+          watcherLastSuccessAt: ago(4 * DAY_MS),
+          watchLastScheduledSuccessAt: {
+            [PRODUCTION_RELEASE_WATCH_WORKFLOW]: ago(2 * DAY_MS),
+            [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: null,
+          },
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
+      expect(alerts.raised).toEqual([
+        { kind: 'scheduled_checks_stopped', count: 3 },
       ]);
     });
 
