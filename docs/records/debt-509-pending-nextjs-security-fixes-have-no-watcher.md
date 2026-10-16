@@ -1,6 +1,6 @@
 # DEBT-509: Pending Next.js Security Fixes Have No Watcher
 
-**Status:** Open — the two Next.js fixes ship in 16.4.1 under exact-version exceptions; remove them after 2026-10-21; waiting for one watcher check; due 2026-10-22
+**Status:** Open — the two Next.js fixes ship in 16.4.1 under exact-version exceptions; remove them after 2026-10-21; waiting for the watcher's first close after GitHub's review; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
