@@ -37,7 +37,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
 | [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03 and 2026-10-05) | 2026-10-03 |
 | [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted (amended 2026-10-11) | 2026-10-11 |
-| [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted | 2026-10-11 |
+| [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted (amended 2026-10-16) | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
 | [ADR-026](./adr-026-error-monitoring-with-sentry.md) | Error Monitoring with Sentry | Accepted (amended 2026-10-13) | 2026-10-12 |
 | [ADR-027](./adr-027-free-trial-renewal-consent-and-notices.md) | Free Trial, Renewal Consent and Renewal Notices | Proposed (until counsel review, issue #902) | 2026-10-12 |
@@ -216,7 +216,7 @@ One kind of document per folder under `docs/`, chosen by a first-match placement
 
 ### ADR-024: Review, Merge and Promotion
 
-Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge, and agents never ask it to record a learning. Production waits for `main`'s CI through Vercel Deployment Checks.
+Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge. Agents never ask it to record a learning, and, as amended 2026-10-16, keep commenting through the owner's account. Production waits for `main`'s CI through Vercel Deployment Checks.
 
 ### ADR-025: Test Doubles by Shape or Behaviour
 
