@@ -32,4 +32,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: node scripts/security-txt-renewal.ts
+        run: node scripts/security-txt-renewal.mts

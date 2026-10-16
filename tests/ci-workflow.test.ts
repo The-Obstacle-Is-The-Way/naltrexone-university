@@ -621,6 +621,28 @@ describe('Codecov configuration', () => {
     expect(report.run).toContain('::warning');
     expect(report.run).toContain('GITHUB_STEP_SUMMARY');
   });
+
+  // The unit, integration and browser lanes each write a coverage-final.json.
+  // Uploaded by name with search off, none can drop out unnoticed: the unit
+  // report used to arrive only through the uploader's search. Its default
+  // plugins generate Xcode, gcov and coverage.py reports, none of which this
+  // repository has, and each run warned that their tools were missing.
+  it('uploads the three lanes’ reports by name, with no search and no report-generating plugin', () => {
+    const upload = findParsedStep(
+      CI_WORKFLOW_PATH,
+      'Upload coverage to Codecov',
+    );
+
+    expect(upload.with).toMatchObject({
+      files: [
+        './coverage/coverage-final.json',
+        './coverage/integration/coverage-final.json',
+        './coverage/browser/coverage-final.json',
+      ].join(','),
+      disable_search: true,
+      plugins: 'noop',
+    });
+  });
 });
 
 describe('Stripe-hosted Checkout smoke workflow', () => {
