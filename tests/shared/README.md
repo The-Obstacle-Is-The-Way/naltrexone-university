@@ -9,6 +9,7 @@ Scope:
 - Clerk webhook event builders that default from the recorded `tests/fixtures/clerk` payloads (`clerk-events`)
 - A real Next `NextRequest`/`NextFetchEvent` pair for invoking the proxy (`next-proxy-invocation`)
 - The Clerk credential shapes that E2E console redaction removes and the CI failure-output scan refuses (`clerk-credential-shapes`)
+- The guard `vitest.unit.setup.ts` runs after each unit-lane file's last test: it fails the file when anything writes to the console while the file's pending dynamic imports settle (`late-console-output`)
 - Helpers that are suite-agnostic and can be used by unit, browser, integration, or E2E tests
 
 Rules:
