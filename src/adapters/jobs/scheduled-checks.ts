@@ -108,8 +108,8 @@ export type ScheduledChecksOutcome =
  * inactivity, or when the watcher is not active or has not succeeded for
  * three days. DEBT-523: GitHub can also stop a schedule without notice, so
  * it alerts when a watch is missing or not active, or has had no successful
- * scheduled run for a day. A read that needs a person alerts too, since an expired or
- * missing token would otherwise stop the check silently. An outage, or a rate
+ * scheduled run for a day. A read that needs a person alerts too, since an
+ * expired or missing token would otherwise stop the check silently. An outage, or a rate
  * limit despite the token, passes and is only logged: GitHub unreachable from
  * Vercel for days is the one silent case left. It never throws: the renewal
  * job it runs in must not fail because of it.

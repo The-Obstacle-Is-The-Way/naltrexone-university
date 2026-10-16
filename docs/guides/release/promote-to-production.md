@@ -137,7 +137,7 @@ The hourly **production release watch** (`.github/workflows/production-release-w
 - The issue stays open while the head has no passing CI run on `main`, a push run or a manual one, or no successful GitHub deployment to Vercel's `Production` environment.
 - It closes once the head, or a newer one, is released.
 - **Hourly is the schedule, not the guarantee.** GitHub starts scheduled runs late under load, and drops some.
-  - On 2026-10-16 the watch reached `main` at 11:20Z, and GitHub had started none of its scheduled runs by 15:00Z.
+  - On 2026-10-16 the watch reached `main` at 11:20Z, and its first scheduled run came at 15:24Z. No run came for the three slots before that.
   - From 2026-10-12 to 2026-10-16, this repository's daily jobs started 4 to 10 hours late, and the three-hourly advisory watch ran about half its slots.
   - Expect the issue within hours of a missed release. Within minutes, the first-minute check below is what catches it.
 

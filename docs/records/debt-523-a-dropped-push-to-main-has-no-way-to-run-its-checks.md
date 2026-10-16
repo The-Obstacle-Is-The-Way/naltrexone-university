@@ -1,6 +1,6 @@
 # DEBT-523: A Push to Main That GitHub Drops Has No Way to Run Its Checks
 
-**Status:** Verifying — a scheduled release-watch run on `main` passes, due 2026-10-17; then the release watch's first week of scheduled gaps, dated in the record
+**Status:** Verifying — the release watch's first week of scheduled gaps stays under a day, with no `scheduled_checks_stopped` for either watch; due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -29,7 +29,7 @@ Recovered the same day, with the owner's approval, by a manual release of that c
 - **Not GitHub's status page.** githubstatus.com showed no incident.
 - **Not the repository's settings.** #1519's promotion and #1522's merge into `dev` each got their suites within two seconds.
 - **The receipts,** with SHAs, are on #1523.
-- **The watch's schedule runs hours late.** On 2026-10-16 the watch reached `main` at 11:20Z. GitHub started none of its 12:23Z, 13:23Z or 14:23Z slots, while a dispatched run passed.
+- **The watch's schedule runs hours late.** On 2026-10-16 the watch reached `main` at 11:20Z. Its first scheduled run came at 15:24Z, for the 15:23Z slot; none came for the three slots before it. A dispatched run had passed meanwhile.
   - That lateness is normal here. This repository's daily jobs start 4 to 10 hours late. The three-hourly advisory watch gets about 3.6 of its 8 slots a day, with gaps of up to 10.4 hours.
   - Nothing in the repository blocks the schedule. The workflow is `active` on `main`, the default branch, and its cron is quoted and valid. The repository is public, not a fork or archived, and Actions is enabled. Its runners are the standard ones, free for public repositories, and none of the last day's runs was refused a start.
 
@@ -100,7 +100,7 @@ Options 2, 3 and 4:
   - What they do prove: without the comparison with the re-read head, the moved-on and unreadable cases fail.
 - [x] Before merge: a manual run on this branch failed at its refusal step. Every later step was skipped except the two that always run, `Evidence summary` and `Postgres log`.
 - [x] The deployment from GitHub's copy, on #1523's release: the Deployment Check held it staged, the promote step released it, and no GitHub `Production` deployment followed.
-- [ ] After promotion: a scheduled run of the production release watch on `main` succeeds and opens no issue (due 2026-10-17).
+- [x] After promotion: a scheduled run of the production release watch on `main` succeeds and opens no issue. The first, at 15:24Z on 2026-10-16, found production serving `main`'s head, and no issue exists.
 - [x] After promotion, while no other E2E run was active, on "Promote #1530"'s merge commit:
   - a manual run naming a stale SHA was refused at its first step;
   - one naming the head passed, with E2E executed;
@@ -111,7 +111,7 @@ Options 2, 3 and 4:
   - The boundary cases pass against either version: just under a day, a new watch's first day, and a watch counted once.
   - A later case pins the alert's count, three for two stopped watches and a stale watcher. It fails if the count becomes one for any number of stopped watches.
 - [x] Before merge, read live through the gateway on 2026-10-16: the advisory watch's last successful scheduled run was that morning. The release watch had none yet, still within its first day, so the check read `running`.
-- [ ] On 2026-10-23: the release watch's first week of gaps between scheduled runs stays under 24 hours, the renewal job raised no `scheduled_checks_stopped` for either watch, and option 7 is reconsidered.
+- [ ] On 2026-10-23: the release watch's first week of gaps between scheduled runs stays under 24 hours, and the renewal job raised no `scheduled_checks_stopped` for either watch. Option 7 is reconsidered with those gaps.
 
 ## Related
 
