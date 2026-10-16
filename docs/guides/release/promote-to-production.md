@@ -156,13 +156,13 @@ If no deployment appears within about ten minutes:
    ```
 
    - **The Deployment Check holds it.** On 2026-10-15 it built, then stayed `STAGED`, and the commit's Vercel status read "Waiting for checks to complete" (DEBT-523).
-   - **The CLI route** stays as the fallback. It uploads the directory it runs in, so run it from a fresh clone switched to exactly `<sha>`, the full SHA whose `test` passed. Then nothing else is uploaded, such as another commit or a local `.env.local`. Stop if either check fails:
+   - **The CLI route** stays as the fallback. It uploads the directory it runs in, so run it from a fresh clone switched to exactly `<sha>`, the full SHA whose `test` passed. Then nothing else is uploaded, such as another commit or a local `.env.local`. The command is one `&&` chain, so the deploy runs only if every step before it succeeds:
 
      ```sh
-     git clone https://github.com/The-Obstacle-Is-The-Way/naltrexone-university.git release-check && cd release-check
-     git switch --detach <sha>
-     test "$(git rev-parse HEAD)" = <sha> && test -z "$(git status --porcelain)" && echo "clean at <sha>"
-     VERCEL_ORG_ID=<orgId> VERCEL_PROJECT_ID=<projectId> vercel deploy --prod --skip-domain
+     git clone https://github.com/The-Obstacle-Is-The-Way/naltrexone-university.git release-check && cd release-check &&
+       git switch --detach <sha> &&
+       test "$(git rev-parse HEAD)" = <sha> && test -z "$(git status --porcelain)" &&
+       VERCEL_ORG_ID=<orgId> VERCEL_PROJECT_ID=<projectId> vercel deploy --prod --skip-domain
      ```
 
      The Deployment Check is not shown to hold a CLI-created deployment's alias.
@@ -173,11 +173,13 @@ If no deployment appears within about ten minutes:
 
    ```sh
    id=$(echo '{"ref":"<sha>","environment":"Production","auto_merge":false,"required_contexts":[],"description":"Released with vercel promote"}' \
-     | gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments --input - --jq .id)
-   gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments/$id/statuses -f state=success -f environment_url=https://addictionboards.com -F auto_inactive=false
+     | gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments --input - --jq .id) && [ -n "$id" ] &&
+     gh api "repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments/$id/statuses" -f state=success -f environment_url=https://addictionboards.com -F auto_inactive=false
    ```
 
-   `auto_inactive=false` leaves the statuses of Vercel's earlier production deployments as they are.
+   - **One chain.** The status is posted only once the deployment exists.
+   - **`required_contexts` is empty** because the release has already passed `test`. This call records the release; it does not deploy.
+   - **`auto_inactive=false`** leaves the statuses of Vercel's earlier production deployments as they are.
 
 Without the owner, the next promotion's merge commit releases the same code once its push is processed.
 
