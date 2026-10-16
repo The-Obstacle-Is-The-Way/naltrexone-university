@@ -312,6 +312,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-328 · Public Playwright Reports Still Carry Clerk Development-Instance Tokens · Resolved · 2026-10-06 · docs/_archive/bugs/bug-328-playwright-reports-embed-clerk-dev-tokens.md
 - BUG-330 · Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires · Resolved · 2026-10-10 · docs/_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md
 - BUG-335 · The Merge Guard Mistakes a Merged-In `main` Commit for the Approved Head · Resolved · 2026-10-10 · docs/_archive/bugs/bug-335-merge-guard-mistakes-a-merged-in-main-commit-for-the-approved-head.md
+- BUG-344 · The Advisory Watcher Fails Every Run While a New Advisory's Issue Is Open · Resolved · 2026-10-16 · docs/records/bug-344-advisory-watcher-fails-while-a-new-advisory-is-open.md · #1540 · d4681072b174b50db088f7dd102d6e2e12920a81
 
 ## Debt
 
@@ -818,6 +819,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-513 · Error Text Reaches Sentry as Written · Resolved · 2026-10-10 · docs/_archive/debt/debt-513-error-text-reaches-sentry-as-written.md
 - DEBT-515 · CodeRabbit Learns Lasting Rules From Agents Speaking as the Owner · Resolved · 2026-10-15 · docs/records/debt-515-coderabbit-learns-rules-from-agents.md · #1529 · 18902d03bc354bb16e1ac32db54adc5ed3207175
 - DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd619520a1f156675d390492ea097a
+- DEBT-522 · Partial Prefetching Is Unset, So Every Build Warns · Resolved · 2026-10-16 · docs/records/debt-522-partial-prefetching-is-unset.md · #1540 · 72bbd5655715d11967b7a82d1dc71a2008398bf7
 
 ## Frontend (FE prefix, retired)
 
