@@ -147,6 +147,11 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
           };
         }
 
+        // Every accepted write bumps the version, even one that changes
+        // nothing: the version fences Stripe observations (BUG-287), so a
+        // refresh that read it before this write must not persist after it.
+        // The webhook's consent, acknowledgment and termination steps also
+        // depend on persisted: true.
         const nextVersion = (storedVersion ?? 0) + 1;
         await tx
           .insert(stripeSubscriptions)

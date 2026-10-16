@@ -35,6 +35,9 @@ function getNumberProp(value: unknown, key: string): number | null {
   return typeof record[key] === 'number' ? record[key] : null;
 }
 
+// Production Stripe and Clerk calls retry on this, including Stripe writes
+// that rely on idempotency keys, so widen it only for a production reason, in
+// its own review. A test-only transient belongs in that test's own predicate.
 export function isTransientExternalError(error: unknown): boolean {
   const code = getStringProp(error, 'code');
   if (
