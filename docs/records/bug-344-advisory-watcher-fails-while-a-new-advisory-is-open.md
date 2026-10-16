@@ -1,6 +1,6 @@
 # BUG-344: The Advisory Watcher Fails Every Run While a New Advisory's Issue Is Open
 
-**Status:** Verifying — a scheduled run of the watcher on `main` passes with the fix; due 2026-10-17
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-17
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -86,7 +86,7 @@ Option 2, test-first.
 - [x] A refused lookup while raising fails the command and leaves the alert open, whether or not the new issue is immediately listed; regression reproduced red, then green (2026-10-15).
 - [x] The fix lands test-first: the lookup, outcome and runner tests failed red, then passed (2026-10-15).
 - [x] A run of the fixed watcher, dispatched on the fix branch while an advisory issue is open, passes and leaves that issue open: #1505, reopened for it and closed again after (2026-10-15).
-- [ ] A scheduled run on `main` passes after promotion.
+- [x] A scheduled run on `main` passes after promotion. Promotion #1535 put the fix on `main`. Scheduled run 38894350933, on `28c24cf3` at 2026-10-16T11:31Z, passed with advisory issues #1524–#1527 open, and it raised #1537, #1538 and #1539. It logged no 403. Its one 404 was a deleted repository's advisories, which the watcher skips by design; the last failing run, 38851671722, logged the same 404 and four 403s.
 
 ## Related
 
