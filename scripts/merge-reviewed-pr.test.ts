@@ -8,6 +8,7 @@ import {
 import {
   commentPage,
   HEAD,
+  HEAD_BRANCH,
   learningReply,
   MAIN,
   OLD_HEAD,
@@ -430,6 +431,65 @@ describe('merge command', () => {
     expect(vi.mocked(execFileSync).mock.calls[3]?.[1]).toEqual([
       'api',
       `repos/The-Obstacle-Is-The-Way/naltrexone-university/compare/dev...${HEAD}`,
+    ]);
+  });
+
+  // Promotion #1533: a merged PR's branch is deleted, and GraphQL then reports its
+  // check suites with no branch; the push times come from REST instead.
+  it('dates the approved head from REST once the head branch is deleted', () => {
+    const suite = (createdAt: string) => ({
+      pageInfo: { hasNextPage: false },
+      nodes: [{ createdAt, branch: null }],
+    });
+    const pr = {
+      ...pullRequest(pushedAt('2026-09-22T04:00:00Z')),
+      headRefName: HEAD_BRANCH,
+      pushes: {
+        pageInfo: { hasPreviousPage: false },
+        nodes: [
+          {
+            commit: {
+              oid: OLD_HEAD,
+              checkSuites: suite('2026-09-22T02:00:00Z'),
+            },
+          },
+          { commit: { oid: HEAD, checkSuites: suite('2026-09-22T04:00:00Z') } },
+        ],
+      },
+    };
+    const restSuites = (createdAt: string) =>
+      JSON.stringify({
+        total_count: 1,
+        check_suites: [{ head_branch: HEAD_BRANCH, created_at: createdAt }],
+      });
+    const files = [
+      { filename: 'src/example.ts', status: 'modified', patch: '-a\n+b' },
+    ];
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce(restSuites('2026-09-22T02:00:00Z'))
+      .mockReturnValueOnce(restSuites('2026-09-22T04:00:00Z'))
+      .mockReturnValueOnce(compared(files))
+      .mockReturnValueOnce(compared(files))
+      .mockReturnValueOnce(compareWithMain());
+
+    const receipt = runMergeReviewedPr(['987'], () => {});
+
+    expect(receipt).toMatchObject({ carriedFrom: OLD_HEAD, head: HEAD });
+    expect(
+      vi
+        .mocked(execFileSync)
+        .mock.calls.slice(2, 4)
+        .map((call) => call[1]),
+    ).toEqual([
+      [
+        'api',
+        `${REPO}/commits/${OLD_HEAD}/check-suites?app_id=15368&per_page=100`,
+      ],
+      ['api', `${REPO}/commits/${HEAD}/check-suites?app_id=15368&per_page=100`],
     ]);
   });
 
