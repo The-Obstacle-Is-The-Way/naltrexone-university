@@ -156,7 +156,16 @@ If no deployment appears within about ten minutes:
    ```
 
    - **The Deployment Check holds it.** On 2026-10-15 it built, then stayed `STAGED`, and the commit's Vercel status read "Waiting for checks to complete" (DEBT-523).
-   - **The CLI route** stays as the fallback: `vercel deploy --prod --skip-domain` from a clean checkout. The Deployment Check is not shown to hold a CLI-created deployment's alias.
+   - **The CLI route** stays as the fallback. It uploads the directory it runs in, so run it from a fresh clone switched to exactly `<sha>`, the full SHA whose `test` passed. Then nothing else is uploaded, such as another commit or a local `.env.local`. Stop if either check fails:
+
+     ```sh
+     git clone https://github.com/The-Obstacle-Is-The-Way/naltrexone-university.git release-check && cd release-check
+     git switch --detach <sha>
+     test "$(git rev-parse HEAD)" = <sha> && test -z "$(git status --porcelain)" && echo "clean at <sha>"
+     VERCEL_ORG_ID=<orgId> VERCEL_PROJECT_ID=<projectId> vercel deploy --prod --skip-domain
+     ```
+
+     The Deployment Check is not shown to hold a CLI-created deployment's alias.
 4. Only after `main`'s `test` has passed on that exact commit, promote the staged deployment with `vercel promote <deployment>`, or `POST /v10/projects/<projectId>/promote/<deployment>`. That is a normal promotion of a checked commit, not **Force Promote**.
    - **A `test` that passed before the deployment existed never releases it.** On 2026-10-15 the deployment was still staged 29 minutes after it was created, and the promote step released it at once.
    - #509 used `vercel deploy --prod`, which assigns the domains at once.
