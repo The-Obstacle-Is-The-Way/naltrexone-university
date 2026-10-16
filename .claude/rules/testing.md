@@ -82,6 +82,7 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 5. Descriptive names: `it('returns isCorrect=false when incorrect choice selected')`
 6. Prefer semantic assertions over exact utility-class strings
 7. In Vitest tests (unit, jsdom and Browser Mode), load heavy or dynamic imports once in `beforeAll`, not inside each `it()`, and add no per-test timeout overrides (`it(..., 10_000)`, `{ timeout: 15_000 }`): the Vitest configs set the timeout policy. Playwright E2E keeps its own policy in `docs/guides/testing/e2e-tests.md`: assertion-level waits first, and every non-default timeout explained beside it.
+8. No `skip`, `skipIf`, `runIf`, `only`, `todo` or Playwright `fixme`, conditional or not, unless `tests/skip-policy-source-scan-allowances.ts` lists it with its reason. `tests/skip-policy-source-scan.test.ts` fails otherwise, so don't suggest one without that allowance.
 
 ### Styling Assertions
 
@@ -106,6 +107,7 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 | Hook (async/interactive) | `*.browser.spec.tsx` colocated | `pnpm test:browser` |
 | Integration | `tests/integration/*.integration.test.ts` | `pnpm test:integration` |
 | E2E | `tests/e2e/*.spec.ts` | `pnpm test:e2e` |
+| Repository policy (suites that check the repository's own files, even through a script) | `tests/*.test.ts`; a script's own unit tests sit beside it | `pnpm test` |
 
 ## Test Support Locations
 

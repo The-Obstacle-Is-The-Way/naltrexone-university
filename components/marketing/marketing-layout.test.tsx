@@ -55,6 +55,8 @@ describe('MarketingLayout', () => {
     const originalTimeZone = process.env.TZ;
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:30:00.000Z'));
+    // Node applies a TZ set at run time to later Date calls (POSIX since
+    // Node 13), so this runs the layout in a non-UTC zone.
     process.env.TZ = 'America/New_York';
 
     try {

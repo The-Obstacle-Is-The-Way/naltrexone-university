@@ -328,7 +328,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .element(screen.getByTestId('summary-mode'))
       .toMatchTextContent(/^$/);
 
-    screen.unmount();
+    await screen.unmount();
     recoverySummary.resolve(
       ok({
         sessionId: BROWSER_SESSION_ID,

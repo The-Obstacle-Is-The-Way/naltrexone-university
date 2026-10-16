@@ -52,6 +52,11 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **A bare `catch {}`** is allowed only for a suppressed secondary failure (telemetry, best-effort cleanup that keeps the original error, a parse fallback), with a comment. UI error-reporting helpers live in `app/(app)/app/shared/`; add a shared logger-safety helper to `src/` only once three or more sibling files need the same wrapper.
 - **Decisions** are in [`docs/adr/`](docs/adr/README.md); read the relevant ADR before changing what it decided.
 
+## Style
+
+- **Imports:** the `@/...` alias and relative paths are both fine; follow the file's neighbors. Only `src/domain/` production code (Biome enforces it) and helpers inside `tests/e2e/` must be relative. Reviews do not flag import style; which layer may import which is not style, and `.claude/rules/architecture.md` still governs it.
+- **Spelling:** US English in new or changed text, and reviews flag British spellings there. Respell older text only where you are editing it anyway, and never respell a file name, anchor, command, quotation or legal text the owner adopted.
+
 ## Testing
 
 - **Vitest, never Jest.** Unit tests sit beside their source as `*.test.ts(x)`. Integration tests: `tests/integration/*.integration.test.ts`. E2E: `tests/e2e/*.spec.ts`.
@@ -64,7 +69,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
   TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
   ```
 
-- **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Use relative imports for helpers inside `tests/e2e/`. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).
+- **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).
 
 ## Rules for Particular Files
 
