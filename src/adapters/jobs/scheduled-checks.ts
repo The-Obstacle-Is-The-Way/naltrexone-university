@@ -8,6 +8,24 @@ export const OPERATIONAL_ALERT_WATCHER_WORKFLOW =
 // The watcher runs daily; three days allows for a GitHub Actions outage.
 const WATCHER_STALE_MS = 3 * 24 * 60 * 60 * 1000;
 
+/** DEBT-523: the watch that checks that production serves `main`'s head. */
+export const PRODUCTION_RELEASE_WATCH_WORKFLOW =
+  '.github/workflows/production-release-watch.yml';
+/** DEBT-509: the watch that reads upstream security advisories. */
+export const UPSTREAM_ADVISORY_WATCH_WORKFLOW =
+  '.github/workflows/upstream-advisory-watch.yml';
+/** The watches whose schedules the renewal job checks (DEBT-523). */
+export const SCHEDULED_WATCHES = [
+  PRODUCTION_RELEASE_WATCH_WORKFLOW,
+  UPSTREAM_ADVISORY_WATCH_WORKFLOW,
+] as const;
+export type ScheduledWatch = (typeof SCHEDULED_WATCHES)[number];
+
+// From 2026-10-08 to 2026-10-16, the advisory watch's longest gap between
+// scheduled runs was 10.4 hours, so a day without one means its schedule
+// has stopped.
+const WATCH_SCHEDULE_STALE_MS = 24 * 60 * 60 * 1000;
+
 export type ScheduledWorkflow = {
   path: string;
   /** GitHub's state: `active`, `disabled_inactivity`, `disabled_manually`… */
@@ -19,6 +37,12 @@ export type ScheduledWorkflowsStatus = {
   workflows: ScheduledWorkflow[];
   /** When the alert watcher last ran successfully, or null if never. */
   watcherLastSuccessAt: Date | null;
+  /**
+   * When each watch's latest successful scheduled run was created, or null
+   * if it has none. A manual run does not count: it would hide a stopped
+   * schedule.
+   */
+  watchLastScheduledSuccessAt: Record<ScheduledWatch, Date | null>;
 };
 
 export type ScheduledWorkflowsUnreadableReason =
@@ -80,7 +104,9 @@ export type ScheduledChecksOutcome =
  * the GitHub watcher checks the job through Sentry, so either one stopping is
  * reported by the other. It alerts when any workflow is disabled for
  * inactivity, or when the watcher is not active or has not succeeded for
- * three days. A read that needs a person alerts too, since an expired or
+ * three days. DEBT-523: GitHub can also stop a schedule without notice, so
+ * it alerts when a watch is missing or not active, or has had no successful
+ * scheduled run for a day. A read that needs a person alerts too, since an expired or
  * missing token would otherwise stop the check silently. An outage, or a rate
  * limit despite the token, passes and is only logged: GitHub unreachable from
  * Vercel for days is the one silent case left. It never throws: the renewal
@@ -126,9 +152,22 @@ export async function checkScheduledChecksRunning(deps: {
     deps.now().getTime() -
       (status.watcherLastSuccessAt ?? watcher.createdAt).getTime() >
       WATCHER_STALE_MS;
-  if (disabledForInactivity.length === 0 && !watcherStale) return 'running';
+  // A watch disabled for inactivity is already counted above.
+  const schedulesStopped = SCHEDULED_WATCHES.filter((path) => {
+    const watch = status.workflows.find((workflow) => workflow.path === path);
+    if (watch?.state === 'disabled_inactivity') return false;
+    if (watch?.state !== 'active') return true;
+    const since = status.watchLastScheduledSuccessAt[path] ?? watch.createdAt;
+    return deps.now().getTime() - since.getTime() > WATCH_SCHEDULE_STALE_MS;
+  });
+  if (
+    disabledForInactivity.length === 0 &&
+    !watcherStale &&
+    schedulesStopped.length === 0
+  )
+    return 'running';
   deps.logger.error(
-    { disabledForInactivity, watcherStale },
+    { disabledForInactivity, watcherStale, schedulesStopped },
     'Scheduled checks stopped',
   );
   const watcherCounted =
@@ -136,7 +175,10 @@ export async function checkScheduledChecksRunning(deps: {
     !disabledForInactivity.includes(OPERATIONAL_ALERT_WATCHER_WORKFLOW);
   await deps.alerts.raise({
     kind: 'scheduled_checks_stopped',
-    count: disabledForInactivity.length + (watcherCounted ? 1 : 0),
+    count:
+      disabledForInactivity.length +
+      (watcherCounted ? 1 : 0) +
+      schedulesStopped.length,
   });
   return 'stopped';
 }

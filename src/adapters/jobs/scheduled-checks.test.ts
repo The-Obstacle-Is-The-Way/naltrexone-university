@@ -6,9 +6,11 @@ import {
 import {
   checkScheduledChecksRunning,
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  PRODUCTION_RELEASE_WATCH_WORKFLOW,
   type ScheduledWorkflowsStatus,
   ScheduledWorkflowsUnavailable,
   ScheduledWorkflowsUnreadable,
+  UPSTREAM_ADVISORY_WATCH_WORKFLOW,
 } from './scheduled-checks';
 
 // DEBT-505: GitHub disables a public repository's scheduled workflows after
@@ -17,6 +19,7 @@ import {
 // checks the job through Sentry, so either one stopping is reported.
 const now = new Date('2026-10-20T09:00:00Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 const ago = (ms: number) => new Date(now.getTime() - ms);
 
 function status(
@@ -30,14 +33,33 @@ function status(
         createdAt: ago(30 * DAY_MS),
       },
       {
-        path: '.github/workflows/upstream-advisory-watch.yml',
+        path: UPSTREAM_ADVISORY_WATCH_WORKFLOW,
+        state: 'active',
+        createdAt: ago(30 * DAY_MS),
+      },
+      {
+        path: PRODUCTION_RELEASE_WATCH_WORKFLOW,
         state: 'active',
         createdAt: ago(30 * DAY_MS),
       },
     ],
     watcherLastSuccessAt: ago(DAY_MS),
+    watchLastScheduledSuccessAt: {
+      [PRODUCTION_RELEASE_WATCH_WORKFLOW]: ago(2 * HOUR_MS),
+      [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: ago(5 * HOUR_MS),
+    },
     ...overrides,
   };
+}
+
+function withWorkflow(
+  path: string,
+  change: (workflow: ScheduledWorkflowsStatus['workflows'][number]) => void,
+) {
+  const workflows = status().workflows;
+  const workflow = workflows.find((candidate) => candidate.path === path);
+  if (workflow) change(workflow);
+  return workflows;
 }
 
 function setup(read: () => Promise<ScheduledWorkflowsStatus>) {
@@ -71,10 +93,9 @@ describe('checkScheduledChecksRunning', () => {
     expect(logger.errorCalls).toEqual([
       {
         context: {
-          disabledForInactivity: [
-            '.github/workflows/upstream-advisory-watch.yml',
-          ],
+          disabledForInactivity: [UPSTREAM_ADVISORY_WATCH_WORKFLOW],
           watcherStale: false,
+          schedulesStopped: [],
         },
         msg: 'Scheduled checks stopped',
       },
@@ -207,5 +228,146 @@ describe('checkScheduledChecksRunning', () => {
     expect(alerts.raised).toEqual([
       { kind: 'scheduled_checks_stopped', count: 1 },
     ]);
+  });
+
+  // DEBT-523: GitHub can stop a schedule without notice, and a watch that
+  // never runs reads like one with nothing to report.
+  describe("a watch's schedule", () => {
+    it('raises an alert when a watch has had no successful scheduled run for a day', async () => {
+      const { deps, alerts, logger } = setup(async () =>
+        status({
+          watchLastScheduledSuccessAt: {
+            ...status().watchLastScheduledSuccessAt,
+            [PRODUCTION_RELEASE_WATCH_WORKFLOW]: ago(DAY_MS + 60_000),
+          },
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
+      expect(alerts.raised).toEqual([
+        { kind: 'scheduled_checks_stopped', count: 1 },
+      ]);
+      expect(logger.errorCalls).toEqual([
+        {
+          context: {
+            disabledForInactivity: [],
+            watcherStale: false,
+            schedulesStopped: [PRODUCTION_RELEASE_WATCH_WORKFLOW],
+          },
+          msg: 'Scheduled checks stopped',
+        },
+      ]);
+    });
+
+    it('raises nothing for a watch whose last scheduled success was just under a day ago', async () => {
+      const { deps, alerts } = setup(async () =>
+        status({
+          watchLastScheduledSuccessAt: {
+            ...status().watchLastScheduledSuccessAt,
+            [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: ago(DAY_MS - 60_000),
+          },
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('running');
+      expect(alerts.raised).toEqual([]);
+    });
+
+    // A watch added in the last day may not have been scheduled yet.
+    it('allows a new watch a day for its first scheduled success', async () => {
+      const { deps, alerts } = setup(async () =>
+        status({
+          workflows: withWorkflow(
+            PRODUCTION_RELEASE_WATCH_WORKFLOW,
+            (watch) => {
+              watch.createdAt = ago(20 * HOUR_MS);
+            },
+          ),
+          watchLastScheduledSuccessAt: {
+            ...status().watchLastScheduledSuccessAt,
+            [PRODUCTION_RELEASE_WATCH_WORKFLOW]: null,
+          },
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('running');
+      expect(alerts.raised).toEqual([]);
+    });
+
+    it('raises an alert when a watch older than a day never succeeded on schedule', async () => {
+      const { deps, alerts } = setup(async () =>
+        status({
+          watchLastScheduledSuccessAt: {
+            ...status().watchLastScheduledSuccessAt,
+            [PRODUCTION_RELEASE_WATCH_WORKFLOW]: null,
+          },
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
+      expect(alerts.raised).toEqual([
+        { kind: 'scheduled_checks_stopped', count: 1 },
+      ]);
+    });
+
+    it.each(['disabled_manually', 'deleted'])(
+      'raises an alert when a watch is %s',
+      async (state) => {
+        const { deps, alerts } = setup(async () =>
+          status({
+            workflows: withWorkflow(
+              UPSTREAM_ADVISORY_WATCH_WORKFLOW,
+              (watch) => {
+                watch.state = state;
+              },
+            ),
+          }),
+        );
+
+        await expect(checkScheduledChecksRunning(deps)).resolves.toBe(
+          'stopped',
+        );
+        expect(alerts.raised).toEqual([
+          { kind: 'scheduled_checks_stopped', count: 1 },
+        ]);
+      },
+    );
+
+    it('raises an alert when a watch workflow is gone', async () => {
+      const { deps, alerts } = setup(async () =>
+        status({
+          workflows: status().workflows.filter(
+            (workflow) => workflow.path !== PRODUCTION_RELEASE_WATCH_WORKFLOW,
+          ),
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
+      expect(alerts.raised).toEqual([
+        { kind: 'scheduled_checks_stopped', count: 1 },
+      ]);
+    });
+
+    it('counts a watch once when it is itself disabled for inactivity', async () => {
+      const { deps, alerts } = setup(async () =>
+        status({
+          workflows: withWorkflow(
+            PRODUCTION_RELEASE_WATCH_WORKFLOW,
+            (watch) => {
+              watch.state = 'disabled_inactivity';
+            },
+          ),
+          watchLastScheduledSuccessAt: {
+            ...status().watchLastScheduledSuccessAt,
+            [PRODUCTION_RELEASE_WATCH_WORKFLOW]: ago(3 * DAY_MS),
+          },
+        }),
+      );
+
+      await expect(checkScheduledChecksRunning(deps)).resolves.toBe('stopped');
+      expect(alerts.raised).toEqual([
+        { kind: 'scheduled_checks_stopped', count: 1 },
+      ]);
+    });
   });
 });

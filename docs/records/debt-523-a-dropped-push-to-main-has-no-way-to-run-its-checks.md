@@ -1,6 +1,6 @@
 # DEBT-523: A Push to Main That GitHub Drops Has No Way to Run Its Checks
 
-**Status:** In Progress — the renewal job's alarm for a stopped watch schedule; a scheduled run of the release watch on `main` also remains, due 2026-10-17
+**Status:** Verifying — a scheduled release-watch run on `main` passes, due 2026-10-17; the watches' first week of scheduled gaps stays under a day, due 2026-10-23
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -86,7 +86,7 @@ Options 2, 3 and 4:
   - confirm CI's push run in the first minute;
   - run CI by hand when it is missing;
   - deploy from GitHub's copy, promote once `test` has passed, and record the release.
-- **The watches are watched (option 6, in progress).** The renewal job's check gains the release watch and the advisory watch, each with a 24-hour window, and `docs/architecture/observability.md`'s runbook covers a stopped schedule. *Corrected 2026-10-16: hourly is the watch's schedule, not a guarantee. GitHub starts its runs hours late, and can stop them.*
+- **The watches are watched (option 6).** The renewal job's check gains the release watch and the advisory watch, each with a 24-hour window, and `docs/architecture/observability.md`'s runbook covers a stopped schedule. *Corrected 2026-10-16: hourly is the watch's schedule, not a guarantee. GitHub starts its runs hours late, and can stop them.*
 - **Still the owner's.** The manual run cannot deploy: Vercel builds production only on a push it hears about. The fast route therefore still needs the owner's approval of each manual deploy. Without the owner, the next promotion releases the code.
   - On 2026-10-15 the owner kept that approval per incident, and declined a standing permission for agents.
 
@@ -104,9 +104,9 @@ Options 2, 3 and 4:
   - one naming the head passed, with E2E executed;
   - **the status rollup does not list the manual run.** It lists only the push run's `test`, so a manual run is release evidence, not a release.
 - [x] A dispatched run of the release watch on `main` passed, and found production serving `main`'s head.
-- [ ] Red first: the renewal job's tests for a stopped watch schedule fail before its check reads the two watches.
-- [ ] Before merge: a live read through the gateway returns each watch's last scheduled run from GitHub.
-- [ ] On 2026-10-23: the release watch's first week of gaps between scheduled runs stays under 24 hours, and option 7 is reconsidered.
+- [x] Red first: ten new cases in the renewal job's check and its GitHub read failed before the check read the two watches. They cover a day without a successful scheduled run, a new watch's first day, a missing or inactive watch, a watch counted once, a refused read, and dating a run by its creation.
+- [x] Before merge, read live through the gateway on 2026-10-16: the advisory watch's last successful scheduled run was that morning. The release watch had none yet, still within its first day, so the check read `running`.
+- [ ] On 2026-10-23: the release watch's first week of gaps between scheduled runs stays under 24 hours, the renewal job raised no `scheduled_checks_stopped` for either watch, and option 7 is reconsidered.
 
 ## Related
 
