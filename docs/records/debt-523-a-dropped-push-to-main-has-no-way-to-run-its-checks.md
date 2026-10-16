@@ -1,6 +1,6 @@
 # DEBT-523: A Push to Main That GitHub Drops Has No Way to Run Its Checks
 
-**Status:** Verifying — on `main`, a manual CI run passes with E2E on the exact head, and the hourly release watch runs clean; due 2026-10-17
+**Status:** Verifying — a scheduled run of the hourly release watch on `main` passes and opens no issue; due 2026-10-17
 **Priority:** P2
 **Date:** 2026-10-15
 
@@ -86,7 +86,11 @@ Options 2, 3 and 4:
 - [x] Before merge: a manual run on this branch failed at its refusal step. Every later step was skipped except the two that always run, `Evidence summary` and `Postgres log`.
 - [x] The deployment from GitHub's copy, on #1523's release: the Deployment Check held it staged, the promote step released it, and no GitHub `Production` deployment followed.
 - [ ] After promotion: a scheduled run of the production release watch on `main` succeeds and opens no issue (due 2026-10-17).
-- [ ] After promotion, while no other E2E run is active: `gh workflow run ci.yml --ref main -f sha=<main's head>` passes, with E2E executed, and a run naming a stale SHA is refused. Record whether the commit's status rollup lists the manual run's `test` (due 2026-10-17).
+- [x] After promotion, while no other E2E run was active, on `main`'s head `28c24cf3` ("Promote #1530", #1536), 2026-10-16:
+  - Run 38896460826, naming the stale SHA `d037c106`, was refused at its first step. Only `Evidence summary` and `Postgres log` ran after it, as they always do.
+  - Run 38896511344, naming `28c24cf3`, passed from 11:51Z to 12:04Z, and its `E2E smoke` step ran and passed.
+  - **The rollup does not list the manual run.** The commit's status rollup lists only the push run's `test` (run 38893109390), `Vercel` and `codecov/patch`. A manual run's `test` is release evidence for the guide's route, not a release.
+- [x] A dispatched run of the release watch on `main`, 38907194969 at 13:21Z, passed and reported `none`: production served `main`'s head `ff24721e`, and no issue was open.
 
 ## Related
 
