@@ -1,6 +1,6 @@
 # DEBT-522: Partial Prefetching Is Unset, So Every Build Warns
 
-**Status:** Verifying — Vercel's production build prints no `partialPrefetching` warning; due 2026-10-17
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-17
 **Priority:** P3
 **Date:** 2026-10-15
 
@@ -64,7 +64,7 @@ When Next.js forces the change, accept it. When it warns about `false`, or at th
 - [x] Each setting measured against a local production build, and `true`'s cost traced to the root layout's `headers()` read (2026-10-15).
 - [x] `next.config.ts` sets `partialPrefetching: false`, test-first, and the local build and `next start` print no warning (2026-10-15).
 - [x] CI's build and E2E web server print no `partialPrefetching` warning: CI run 38753590863, independently read on 2026-10-15.
-- [ ] After promotion, Vercel's production build prints none.
+- [x] After promotion, Vercel's production build prints none. Promotion #1535 put `main` at `d037c106`. Its production build, `dpl_HDPckGz8KqAfLE1MPAH9VeJjrcet`, prints no `partialPrefetching` warning and no other warning: its 111-line log has no `⚠`. The previous production build, `dpl_F2gGo6yp2KraaMm4qGo7d91bDYSw` of `3a4c5d55`, printed the warning at 2026-10-16T03:03:56Z. The new build took the production domains after `main`'s `test` passed (2026-10-16).
 
 ## Related
 

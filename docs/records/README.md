@@ -53,7 +53,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [DEBT-519](./debt-519-fake-contract-register-misses-adapter-owned-fakes.md) | The fake-contract register misses adapter-owned fakes | P3 | Open — make the register scan discover adapter-owned fakes, red first, then add `FakeStripePortalConfigurations` |
 | [DEBT-520](./debt-520-repository-layout-trigger-has-fired.md) | ADR-013's repository-layout trigger has fired without a decision | P4 | Open — decide whether the repositories stay flat or move into aggregate folders, and record it as an ADR |
 | [DEBT-521](./debt-521-clerk-js-loads-unpinned-from-clerks-cdn.md) | Clerk JS loads unpinned from Clerk's CDN, so a Clerk release can change sign-in without a deploy | P3 | Open — owner decision: pin Clerk JS and its UI bundle to lockfile versions, or keep them floating; due 2026-10-26 |
-| [DEBT-522](./debt-522-partial-prefetching-is-unset.md) | Partial Prefetching is unset, so every build warns | P3 | Verifying — Vercel's production build prints no `partialPrefetching` warning; due 2026-10-17 |
+| [DEBT-522](./debt-522-partial-prefetching-is-unset.md) | Partial Prefetching is unset, so every build warns | P3 | Verifying — every check is recorded, and the record closes; due 2026-10-17 |
 
 ## Waiting
 
