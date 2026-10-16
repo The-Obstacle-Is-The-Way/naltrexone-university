@@ -153,7 +153,7 @@ database; on 2026-10-08 neither had GHSA-h694-7cp9-m8p3 or the three Vite
 advisories.
 
 - `.github/workflows/upstream-advisory-watch.yml` runs
-  `scripts/upstream-advisory-watch.ts` every three hours. It reads the published
+  `scripts/upstream-advisory-watch.mts` every three hours. It reads the published
   advisories of every repository behind `pnpm-lock.yaml`, 393 on 2026-10-09,
   and opens one issue per advisory published since 2026-10-01.
 - GitHub starts this repository's scheduled runs hours late, and can drop
