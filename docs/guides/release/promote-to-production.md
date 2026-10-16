@@ -94,7 +94,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 
 The owner chose Vercel's built-in [GitHub Deployment Checks](https://vercel.com/docs/deployment-checks#github-checks), not a custom deployment runner. The feature is [available to GitHub-connected projects](https://vercel.com/changelog/block-vercel-deployment-promotions-with-github-actions); the 2026-09-19 read-only check confirmed this project's Hobby plan, GitHub link, `main` production branch, and enabled automatic production aliasing. This setting is operator-managed in Vercel, not encoded by `ci.yml`.
 
-Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. No other workflow has a job named `test`; renaming it, or adding another, means revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. Preview deployments are not blocked by this production-only check.
+Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. No other workflow has a job named `test`; renaming it, or adding another, means revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. A manual CI run's `test` (below) is not expected in the commit's status rollup, so this check is not shown to see it. Preview deployments are not blocked by this production-only check.
 
 **Configuration receipt (2026-09-19 21:28:31Z):** the project's Checks V2 API returned one GitHub-source check named `test`, with `externalCheckName=test`, `targets=[production]`, `requires=build-ready`, `blocks=deployment-alias`, and `timeout=3600`. Automatic production aliasing remained enabled. Configuration alone is not release evidence; the first enforcement receipt follows.
 
@@ -108,16 +108,93 @@ The deleted `deploy` job only echoed a message. Its success never proved that pr
 
 On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
 
-**No production deployment at all.** Twice, Vercel created no deployment for a promotion's merge commit:
+**No production deployment at all.** Three times, a promotion's merge commit got no production deployment:
 - promotion #509 on 2026-06-24 (BUG-259);
-- promotion #1367 on 2026-10-05.
+- promotion #1367 on 2026-10-05;
+- promotion #1523 on 2026-10-15.
 
-In each case, the commit had no Vercel status on GitHub, no deployment was listed for its SHA, and its tree matched a `dev` preview that had just built. Not every such promotion is skipped (#1365 deployed), so the trigger is not known on our side. Production keeps serving the previous release. That is harmless when the promotion changes no application code, but otherwise production silently lags `main`.
+In the first two, Vercel alone skipped:
+- the commit had no Vercel status on GitHub, and no deployment was listed for its SHA;
+- its tree matched a `dev` preview that had just built;
+- not every such promotion is skipped (#1365 deployed), so the trigger is not known on our side.
 
-The release watch must therefore find a deployment for the exact merge SHA, not merely a ready one. If none appears within about ten minutes:
+In the third, GitHub never processed the push at all (DEBT-523):
+- no check suite was created for it, so there was no CI run, no `test` check and no Vercel deployment;
+- GitHub's activity listing for `main` has no entry for the merge;
+- githubstatus.com showed no incident;
+- the promotion before it had its suites within two seconds.
+
+Either way, production keeps serving the previous release. That is harmless when the promotion changes no application code, but otherwise production silently lags `main`.
+
+The release watch must therefore find a deployment for the exact merge SHA, not merely a ready one.
+
+The hourly **production release watch** (`.github/workflows/production-release-watch.yml`, DEBT-523) checks the same thing without anyone watching.
+- Once `main`'s head is 45 minutes old, it keeps one issue open, titled "Production is not serving main's head" and assigned to the owner.
+- The issue stays open while the head has no passing CI run on `main`, a push run or a manual one, or no successful GitHub deployment to Vercel's `Production` environment.
+- It closes once the head, or a newer one, is released.
+
+When you promote, confirm in the first minute that CI's push run exists for the merge SHA. Use the full SHA: a short one matches no run. A count of check suites would not do, since a scheduled workflow later adds one:
+
+```sh
+sha=$(gh pr view <PR> --json mergeCommit --jq .mergeCommit.oid)
+gh run list --commit "$sha" --workflow ci.yml --event push --json databaseId,status
+```
+
+`[]` means CI has no push run for the commit, and GitHub may have dropped the push.
+
+If the commit has no `Vercel` commit status within about ten minutes, Vercel has not started a deployment. GitHub's `Production` deployment record appears only at promotion, so it is no signal here. Count the statuses with `gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/commits/<sha>/statuses --jq '[.[] | select(.context=="Vercel")] | length'`; `0` means none. Then:
 1. Confirm the project's Git link, ignore settings and the status pages.
-2. With the owner's approval, deploy that exact commit from a clean checkout as a production deployment with domain assignment skipped (`vercel deploy --prod --skip-domain`). The Deployment Check is not shown to hold a CLI-created deployment's alias.
-3. Only after `main`'s `test` check has passed on that exact commit, promote the staged deployment (`vercel promote <deployment>`). That is a normal promotion of a checked commit, not **Force Promote**. #509 used `vercel deploy --prod`, which assigns the domains at once.
+2. If CI has no push run for the commit, run it by hand: `gh workflow run ci.yml --ref main -f sha=<sha>`.
+   - First check that no run of any workflow is in progress or queued. Both `gh run list --status in_progress` and `gh run list --status queued` must list nothing. E2E shares one Clerk test user, and the daily hosted-Checkout smoke uses it too.
+   - The run fails at its first step unless `<sha>` is a full SHA and still `main`'s head when that step runs. Once `main` has moved on, the newer commit's own push run is the one to release.
+   - It runs E2E as a push does. If a push run on `main` is in progress, the manual run waits for it rather than canceling it. Any later push-event run, a re-run included, cancels the manual run; dispatch it again if `<sha>` is still `main`'s head.
+   - Find the run by its commit, `gh run list --workflow ci.yml --event workflow_dispatch --branch main --commit <sha> --json databaseId,headSha,status,conclusion`, and follow it with `gh run watch --exit-status <databaseId>`. A newer manual run for another commit then cannot stand in for it.
+   - Expect its `test` to be missing from the commit's status rollup. On #1519's promotion commit, the rollup lists only the push run's `test` and two statuses, although that commit also has a manual run of another workflow and three scheduled runs (DEBT-523). So the Deployment Check is not shown to see it, and steps 3 and 4 remain the release route.
+   - Before the manual run existed, #1531 got weaker evidence another way: a draft PR into `dev` whose head was the commit itself. Its pull_request run tests the commit merged with `dev`, and the release watch counts only runs on `main`. Use the manual run instead.
+3. Only after CI has passed on the exact commit on `main`, and with the owner's approval, create a production deployment of that commit. The build applies the production migration (the database caveat below), so it must not start before `test` has passed. Deploy from GitHub's copy, through Vercel's API, so nothing is uploaded from a local checkout. Use the CLI token, and never print it. The team and project IDs are in `.vercel/project.json` (`orgId`, `projectId`):
+
+   ```sh
+   curl --fail-with-body -sS -X POST "https://api.vercel.com/v13/deployments?teamId=<orgId>" -H "Authorization: Bearer ${VERCEL_TOKEN:?}" -H 'Content-Type: application/json' \
+     -d '{"name":"naltrexone-university","project":"<projectId>","target":"production","gitSource":{"type":"github","repoId":1146859391,"ref":"main","sha":"<sha>"}}' \
+     -o deployment.json && jq -r '.id, .url' deployment.json
+   ```
+
+   - **The output.** It prints the deployment's `id` (`dpl_…`), which step 4 promotes, and its URL. `curl` fails on an HTTP error, and `${VERCEL_TOKEN:?}` stops it if the token is unset.
+   - **The Deployment Check holds it.** On 2026-10-15 it built, then stayed `STAGED`, and the commit's Vercel status read "Waiting for checks to complete" (DEBT-523).
+   - **The CLI route** stays as the fallback. It uploads the directory it runs in, so run it from a fresh clone switched to exactly `<sha>`, the full SHA whose `test` passed. Then nothing else is uploaded, such as another commit or a local `.env.local`. The command is one `&&` chain, so the deploy runs only if every step before it succeeds:
+
+     ```sh
+     git clone https://github.com/The-Obstacle-Is-The-Way/naltrexone-university.git release-check && cd release-check &&
+       git switch --detach <sha> &&
+       test "$(git rev-parse HEAD)" = <sha> && test -z "$(git status --porcelain)" &&
+       VERCEL_ORG_ID=<orgId> VERCEL_PROJECT_ID=<projectId> vercel deploy --prod --skip-domain
+     ```
+
+     It prints the deployment's URL. `vercel inspect <url> --scope <orgId>` gives its ID. The Deployment Check is not shown to hold a CLI-created deployment's alias.
+4. Promote the staged deployment only while `<sha>` is still `main`'s head and CI has passed on it on `main`. The promote ignores the Deployment Check: on 2026-10-15 it released a deployment whose check still read "Waiting for checks to complete". So the two tests in this chain are the gate. `<databaseId>` is CI's push run on `<sha>`, or step 2's manual run:
+
+   ```sh
+   test "$(git ls-remote https://github.com/The-Obstacle-Is-The-Way/naltrexone-university.git refs/heads/main | cut -f1)" = <sha> &&
+     test "$(gh run view <databaseId> -R The-Obstacle-Is-The-Way/naltrexone-university --json workflowName,headBranch,headSha,conclusion --jq '[.workflowName,.headBranch,.headSha,.conclusion] | join(" ")')" = "CI main <sha> success" &&
+     curl --fail-with-body -sS -X POST "https://api.vercel.com/v10/projects/<projectId>/promote/<deployment>?teamId=<orgId>" -H "Authorization: Bearer ${VERCEL_TOKEN:?}"
+   ```
+
+   - **A normal promotion.** This releases a checked commit; it is not **Force Promote**.
+   - **A `test` that passed before the deployment existed never releases it.** On 2026-10-15 the deployment was still staged 29 minutes after it was created, and the promote step released it at once.
+   - #509 used `vercel deploy --prod`, which assigns the domains at once.
+5. Record the release on GitHub, and only after step 4's promote succeeds: the record clears the release watch's issue. Neither route creates a GitHub `Production` deployment: the promoted API deployment of 2026-10-15 left none. Without one, the watch keeps its issue open, and reopens it every hour if it is closed by hand:
+
+   ```sh
+   id=$(echo '{"ref":"<sha>","environment":"Production","auto_merge":false,"required_contexts":[],"description":"Released with vercel promote"}' \
+     | gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments --input - --jq .id) && [ -n "$id" ] &&
+     gh api "repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments/$id/statuses" -f state=success -f environment_url=https://addictionboards.com -F auto_inactive=false
+   ```
+
+   - **One chain.** The status is posted only once the deployment exists.
+   - **`required_contexts` is empty** because the release has already passed `test`. This call records the release; it does not deploy.
+   - **`auto_inactive=false`** leaves the statuses of Vercel's earlier production deployments as they are. Their GitHub deployments are not marked as production environments, so the default would mark them inactive.
+
+Without the owner, the next promotion's merge commit releases the same code once its push is processed.
 
 **Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. DEBT-445 Part 3 already established the [deployed-code compatibility contract](../database/migrations.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
 

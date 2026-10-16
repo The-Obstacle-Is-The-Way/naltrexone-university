@@ -15,7 +15,7 @@ How a feature PR gets reviewed and merged into `dev`. The rules are in [`AGENTS.
 - **When CodeRabbit reviews.** `.coderabbit.yaml` sets `auto_incremental_review: false`, so a push starts no review. CodeRabbit reviews by itself when a PR opens ready or a draft is marked ready; otherwise only when asked with `@coderabbitai full review`.
 - **Fix in one push.** Push every fix together, then request the review. Do not move a PR back to draft and ready again.
 - **Avoid force-pushes and rebases.** Its FAQ lists them as review events, so they may spend a review.
-- **Dependabot spends nothing.** CodeRabbit skips bot authors and reviews their PRs only when asked.
+- **Dependabot PRs get no review.** On the current plan, CodeRabbit refuses a bot-authored PR without a review seat, even when asked (#1520). Their updates ship as a repo-owned bundle, which spends one review ([Updating Dependencies](../dependencies/updating-dependencies.md#bundling-overlapping-dependabot-prs)).
 
 ## Reading Findings
 

@@ -190,9 +190,9 @@ describe('CI workflow', () => {
     expect(fidelityIndex).toBeLessThan(unitIndex);
   });
 
-  it('withholds shared E2E credentials from Dependabot PRs while retaining main-push E2E', () => {
+  it('withholds shared E2E credentials from Dependabot PRs while retaining E2E for main pushes and manual runs', () => {
     expect(findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').if).toBe(
-      `github.event_name == 'push' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
+      `github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
     );
   });
 
@@ -620,6 +620,28 @@ describe('Codecov configuration', () => {
     expect(report.if).toContain("steps.codecov.outcome == 'failure'");
     expect(report.run).toContain('::warning');
     expect(report.run).toContain('GITHUB_STEP_SUMMARY');
+  });
+
+  // The unit, integration and browser lanes each write a coverage-final.json.
+  // Uploaded by name with search off, none can drop out unnoticed: the unit
+  // report used to arrive only through the uploader's search. Its default
+  // plugins generate Xcode, gcov and coverage.py reports, none of which this
+  // repository has, and each run warned that their tools were missing.
+  it('uploads the three lanes’ reports by name, with no search and no report-generating plugin', () => {
+    const upload = findParsedStep(
+      CI_WORKFLOW_PATH,
+      'Upload coverage to Codecov',
+    );
+
+    expect(upload.with).toMatchObject({
+      files: [
+        './coverage/coverage-final.json',
+        './coverage/integration/coverage-final.json',
+        './coverage/browser/coverage-final.json',
+      ].join(','),
+      disable_search: true,
+      plugins: 'noop',
+    });
   });
 });
 

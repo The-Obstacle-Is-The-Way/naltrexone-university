@@ -6,7 +6,7 @@ import {
   listUpstreamAdvisories,
   RateLimited,
   RepositoryNotFound,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 import { advisory, apiAdvisory } from './upstream-advisory-watch-test-helpers';
 
 // The GitHub adapters: advisory listing, issues, and GitHub's database.
@@ -17,12 +17,6 @@ afterEach(() => {
 });
 
 const watcher = { login: 'github-actions[bot]' };
-
-const notFound = () => {
-  throw Object.assign(new Error('Command failed'), {
-    stderr: 'gh: Not Found (HTTP 404)\n',
-  });
-};
 
 describe('GitHub advisory source', () => {
   it('reads every page of a watched repository’s published advisories', async () => {
@@ -377,18 +371,25 @@ describe('GitHub advisory database', () => {
     const commands: string[][] = [];
     const found = await githubAdvisoryDatabase((args) => {
       commands.push(args);
-      return JSON.stringify({
-        ghsa_id: 'GHSA-aaaa-bbbb-cccc',
-        github_reviewed_at: '2026-10-08T20:30:00Z',
-        vulnerabilities: [
-          {
-            package: { ecosystem: 'npm', name: 'brace-expansion' },
-            vulnerable_version_range: '>= 4.0.0, < 5.0.9',
-          },
-        ],
-      });
+      return JSON.stringify([
+        {
+          ghsa_id: 'GHSA-aaaa-bbbb-cccc',
+          github_reviewed_at: '2026-10-08T20:30:00Z',
+          vulnerabilities: [
+            {
+              package: { ecosystem: 'npm', name: 'brace-expansion' },
+              vulnerable_version_range: '>= 4.0.0, < 5.0.9',
+            },
+          ],
+        },
+      ]);
     }).find('GHSA-aaaa-bbbb-cccc');
-    expect(commands).toEqual([['api', 'advisories/GHSA-aaaa-bbbb-cccc']]);
+    // BUG-344: the list answers the Actions token as it answers a person's.
+    // The single-advisory path answers it 403, not 404, for an advisory
+    // the database does not have yet.
+    expect(commands).toEqual([
+      ['api', 'advisories?ghsa_id=GHSA-aaaa-bbbb-cccc'],
+    ]);
     expect(found).toEqual({
       reviewed: true,
       vulnerabilities: [
@@ -403,27 +404,65 @@ describe('GitHub advisory database', () => {
 
   it('reports an unreviewed advisory as unreviewed', async () => {
     const found = await githubAdvisoryDatabase(() =>
-      JSON.stringify({
-        ghsa_id: 'GHSA-aaaa-bbbb-cccc',
-        github_reviewed_at: null,
-        vulnerabilities: [],
-      }),
+      JSON.stringify([
+        {
+          ghsa_id: 'GHSA-aaaa-bbbb-cccc',
+          github_reviewed_at: null,
+          vulnerabilities: [],
+        },
+      ]),
     ).find('GHSA-aaaa-bbbb-cccc');
     expect(found).toEqual({ reviewed: false, vulnerabilities: [] });
   });
 
   it('returns null for an advisory the database does not have yet', async () => {
     expect(
-      await githubAdvisoryDatabase(notFound).find('GHSA-aaaa-bbbb-cccc'),
+      await githubAdvisoryDatabase(() => '[]').find('GHSA-aaaa-bbbb-cccc'),
     ).toBeNull();
   });
 
+  it('fails, rather than calling the advisory absent, when GitHub refuses the lookup', async () => {
+    await expect(
+      githubAdvisoryDatabase(() => {
+        throw Object.assign(new Error('Command failed'), {
+          stderr: 'gh: Resource not accessible by integration (HTTP 403)\n',
+        });
+      }).find('GHSA-aaaa-bbbb-cccc'),
+    ).rejects.toThrow('Command failed');
+  });
+
   it('refuses an identifier that is not a GHSA ID, since it becomes an API path', async () => {
-    const run = vi.fn(() => '{}');
+    const run = vi.fn(() => '[]');
     await expect(
       githubAdvisoryDatabase(run).find('../repos/x/y'),
     ).rejects.toThrow('Invalid GHSA ID');
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it('refuses a list without the advisory, rather than reading another’s review', async () => {
+    await expect(
+      githubAdvisoryDatabase(() =>
+        JSON.stringify([
+          {
+            ghsa_id: 'GHSA-zzzz-zzzz-zzzz',
+            github_reviewed_at: '2026-10-08T20:30:00Z',
+            vulnerabilities: [],
+          },
+        ]),
+      ).find('GHSA-aaaa-bbbb-cccc'),
+    ).rejects.toThrow('Invalid GitHub advisory database response');
+  });
+
+  it('refuses a database response that is not a list', async () => {
+    await expect(
+      githubAdvisoryDatabase(() =>
+        JSON.stringify({
+          ghsa_id: 'GHSA-aaaa-bbbb-cccc',
+          github_reviewed_at: null,
+          vulnerabilities: [],
+        }),
+      ).find('GHSA-aaaa-bbbb-cccc'),
+    ).rejects.toThrow('Invalid GitHub advisory database response');
   });
 
   it.each([
@@ -441,12 +480,14 @@ describe('GitHub advisory database', () => {
   ])('refuses a malformed database response %j', async (overrides) => {
     await expect(
       githubAdvisoryDatabase(() =>
-        JSON.stringify({
-          ghsa_id: 'GHSA-aaaa-bbbb-cccc',
-          github_reviewed_at: null,
-          vulnerabilities: [],
-          ...overrides,
-        }),
+        JSON.stringify([
+          {
+            ghsa_id: 'GHSA-aaaa-bbbb-cccc',
+            github_reviewed_at: null,
+            vulnerabilities: [],
+            ...overrides,
+          },
+        ]),
       ).find('GHSA-aaaa-bbbb-cccc'),
     ).rejects.toThrow('Invalid GitHub advisory database response');
   });

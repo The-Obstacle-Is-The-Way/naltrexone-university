@@ -4,13 +4,28 @@ on:
   pull_request:
   push:
     branches: [main]
+  # DEBT-523: for a push to main that GitHub never processed, which leaves
+  # the commit with no CI run and no deployment. The run's result is the
+  # evidence for the manual release route in
+  # docs/guides/release/promote-to-production.md (No production deployment at all).
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "The full SHA of main's head, the commit whose push GitHub dropped"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  # A manual run waits for an in-progress push run on main instead of
+  # canceling it: that push run may be a newer promotion's release check.
+  # Any later push-event run, a re-run included, cancels a manual one. Usually
+  # main has then moved on, and the newer head's push run is the release
+  # check; otherwise dispatch the manual run again.
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   test:
@@ -25,6 +40,32 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
     steps:
+      # A manual run is only for main's dropped commit. On a branch, or once
+      # main has moved on, it would spend a full E2E run on the shared Clerk
+      # test user for no release. The run's SHA is fixed at dispatch, and the
+      # run can then wait behind a push run, so main's head is read again
+      # here. The repository is public, so the read needs no credential, and
+      # an unreadable head refuses the run.
+      - name: Refuse a manual run off main's dropped commit
+        if: github.event_name == 'workflow_dispatch'
+        timeout-minutes: 2
+        env:
+          GIT_TERMINAL_PROMPT: '0'
+          REQUESTED_SHA: ${{ inputs.sha }}
+        run: |
+          # The input is printed in a workflow command below, so it must be a
+          # full SHA first: a newline in it could start a command of its own.
+          if ! [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error title=Manual CI runs only on main's head::The sha input is not a full 40-character commit SHA."
+            exit 1
+          fi
+          main_head=$(git ls-remote "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1) || main_head=''
+          if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_SHA" = "$REQUESTED_SHA" ] && [ "$main_head" = "$REQUESTED_SHA" ]; then
+            exit 0
+          fi
+          echo "::error title=Manual CI runs only on main's head::This run is on ${GITHUB_REF} at ${GITHUB_SHA}, the requested commit is ${REQUESTED_SHA}, and main's head is ${main_head:-unreadable}. Dispatch on main with main's current head SHA."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -98,7 +139,12 @@ jobs:
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/**/coverage-final.json
+          # Each lane's report by name, and nothing else: with search on, the
+          # glob missed the unit report and only the search found it.
+          files: ./coverage/coverage-final.json,./coverage/integration/coverage-final.json,./coverage/browser/coverage-final.json
+          disable_search: true
+          # No Xcode, gcov or coverage.py reports to generate.
+          plugins: noop
           fail_ci_if_error: true
 
       - name: Report a failed Codecov upload
@@ -128,8 +174,10 @@ jobs:
       - name: E2E smoke
         id: e2e_smoke
         # Dependabot PRs do not receive repository secrets, even when their branch
-        # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+        # lives in this repository. Keep E2E on for pushes, manual runs on main
+        # (evidence for a production release, as a push run is) and human
+        # same-repo PRs.
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: pnpm test:e2e
         env:
           NEXT_PUBLIC_SKIP_CLERK: 'false'

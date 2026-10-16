@@ -16,7 +16,7 @@ import {
   WATCH_START,
   watchedRepositories,
   watchUpstreamAdvisories,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 import {
   advisory,
   apiAdvisory,
@@ -39,8 +39,13 @@ describe('raising upstream advisories', () => {
   it('opens one issue for an advisory published after the watch start', async () => {
     const issues = new MemoryIssues();
     expect(
-      await raiseUpstreamAdvisories([advisory()], manifest, issues),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
+      await raiseUpstreamAdvisories([advisory()], manifest, issues, unreviewed),
+    ).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
+      ruledOut: [],
+      unreviewed: [],
+    });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-aaaa-bbbb-cccc (critical): next',
     ]);
@@ -54,7 +59,7 @@ describe('raising upstream advisories', () => {
         manifest,
         issues,
       ),
-    ).toEqual({ raised: [], failed: [], ruledOut: [] });
+    ).toEqual({ raised: [], failed: [], ruledOut: [], unreviewed: [] });
     expect(issues.issues).toEqual([]);
     expect(WATCH_START).toBe('2026-10-01T00:00:00Z');
   });
@@ -73,7 +78,7 @@ describe('raising upstream advisories', () => {
       });
       expect(
         await raiseUpstreamAdvisories([advisory()], manifest, issues),
-      ).toEqual({ raised: [], failed: [], ruledOut: [] });
+      ).toEqual({ raised: [], failed: [], ruledOut: [], unreviewed: [] });
       expect(issues.issues).toHaveLength(1);
     },
   );
@@ -174,8 +179,18 @@ describe('raising upstream advisories', () => {
   it('raises each new advisory once when the same run lists it twice', async () => {
     const issues = new MemoryIssues();
     expect(
-      await raiseUpstreamAdvisories([advisory(), advisory()], manifest, issues),
-    ).toEqual({ raised: ['GHSA-aaaa-bbbb-cccc'], failed: [], ruledOut: [] });
+      await raiseUpstreamAdvisories(
+        [advisory(), advisory()],
+        manifest,
+        issues,
+        unreviewed,
+      ),
+    ).toEqual({
+      raised: ['GHSA-aaaa-bbbb-cccc'],
+      failed: [],
+      ruledOut: [],
+      unreviewed: [],
+    });
     expect(issues.issues).toHaveLength(1);
   });
 
@@ -207,11 +222,13 @@ describe('raising upstream advisories', () => {
         [advisory(), advisory({ ghsaId: 'GHSA-dddd-eeee-ffff' })],
         manifest,
         issues,
+        unreviewed,
       ),
     ).toEqual({
       raised: ['GHSA-dddd-eeee-ffff'],
       failed: ['GHSA-aaaa-bbbb-cccc'],
       ruledOut: [],
+      unreviewed: [],
     });
     expect(issues.issues.map((issue) => issue.title)).toEqual([
       'Upstream security advisory GHSA-dddd-eeee-ffff (critical): next',
@@ -230,6 +247,40 @@ describe('raising upstream advisories', () => {
 });
 
 describe('watching several repositories', () => {
+  // BUG-344's hosted logs show newly created issues can be missing from the
+  // next listing. Reporting a refused lookup must not depend on that listing.
+  it.each([false, true])(
+    'reports a refused review and fails after raising, with new issues visible: %s',
+    async (visible) => {
+      const issues = new MemoryIssues();
+      if (!visible) issues.list = async () => [];
+      const errors: string[] = [];
+
+      const code = await runUpstreamAdvisoryWatch(
+        () =>
+          watchUpstreamAdvisories(
+            { direct: ['vercel/next.js'], indirect: [] },
+            manifest,
+            issues,
+            async () => [advisory()],
+            {
+              find: async () => {
+                throw new Error('HTTP 403');
+              },
+            },
+          ),
+        { log: () => {}, error: (message) => errors.push(message) },
+      );
+
+      expect(issues.issues).toHaveLength(1);
+      expect(issues.issues[0]?.state).toBe('OPEN');
+      expect(code).toBe(1);
+      expect(errors).toEqual([
+        'Could not read GitHub’s review of: GHSA-aaaa-bbbb-cccc',
+      ]);
+    },
+  );
+
   it('raises what it can read and names the repositories it could not', async () => {
     const issues = new MemoryIssues();
     const outcome = await watchUpstreamAdvisories(
@@ -247,6 +298,7 @@ describe('watching several repositories', () => {
       failed: [],
       ruledOut: [],
       closed: [],
+      unreviewed: [],
       read: 1,
       unreadable: ['broken/repo'],
       unwatched: [],
@@ -371,6 +423,7 @@ describe('watching several repositories', () => {
       failed: [],
       ruledOut: [],
       closed: [],
+      unreviewed: [],
       read: 0,
       unreadable: ['gone/direct', 'nodejs/undici'],
       unwatched: ['substack/node-commondir'],
@@ -419,6 +472,7 @@ describe('watch command outcome', () => {
     failed: [],
     ruledOut: [],
     closed: [],
+    unreviewed: [],
     read: 3,
     unreadable: [],
     unwatched: [],
@@ -500,6 +554,24 @@ describe('watch command outcome', () => {
     ]);
   });
 
+  // BUG-344: a review lookup GitHub refused read as a failed issue write.
+  it('names an advisory whose review it could not read, and returns nonzero', async () => {
+    const { messages, errors, sink } = output();
+    expect(
+      await runUpstreamAdvisoryWatch(
+        async () => ({ ...quiet, unreviewed: ['GHSA-aaaa-bbbb-cccc'] }),
+        sink,
+      ),
+    ).toBe(1);
+    expect(messages).toEqual([
+      'Upstream advisories raised: none',
+      'Repositories read: 3',
+    ]);
+    expect(errors).toEqual([
+      'Could not read GitHub’s review of: GHSA-aaaa-bbbb-cccc',
+    ]);
+  });
+
   it('reports the advisories GitHub’s review ruled out and the issues it closed', async () => {
     const { messages, errors, sink } = output();
     expect(
@@ -534,10 +606,8 @@ describe('watch command outcome', () => {
     vi.stubGlobal('fetch', registry);
     const run = vi.mocked(execFileSync).mockImplementation((_file, args) => {
       // GitHub's database has neither advisory yet.
-      if (args?.[0] === 'api' && args[1]?.startsWith('advisories/'))
-        throw Object.assign(new Error('Command failed'), {
-          stderr: 'gh: Not Found (HTTP 404)\n',
-        });
+      if (args?.[0] === 'api' && args[1]?.startsWith('advisories?'))
+        return '[]';
       const path = args?.[3] ?? '';
       if (
         path ===
@@ -599,9 +669,9 @@ describe('watch command outcome', () => {
       /`package\.json` pins `next` at `[^`]+`, and `pnpm-lock\.yaml` resolves `[^`]+`/,
     );
     expect(creates[0]?.slice(6)).toEqual(['--assignee', 'repo-owner']);
-    expect(calls.filter((args) => args[1]?.startsWith('advisories/'))).toEqual([
-      ['api', 'advisories/GHSA-aaaa-bbbb-cccc'],
-      ['api', 'advisories/GHSA-hhhh-hhhh-hhhh'],
+    expect(calls.filter((args) => args[1]?.startsWith('advisories'))).toEqual([
+      ['api', 'advisories?ghsa_id=GHSA-aaaa-bbbb-cccc'],
+      ['api', 'advisories?ghsa_id=GHSA-hhhh-hhhh-hhhh'],
     ]);
   });
 
@@ -653,7 +723,7 @@ describe('upstream advisory workflow', () => {
       if (step.uses) expect(step.uses).toMatch(/@[a-f0-9]{40}$/);
     }
     expect(workflow.jobs.watch.steps.at(-1)).toMatchObject({
-      run: 'node scripts/upstream-advisory-watch.ts',
+      run: 'node scripts/upstream-advisory-watch.mts',
       env: {
         GH_TOKEN: `${'$'}{{ github.token }}`,
         GH_REPO: `${'$'}{{ github.repository }}`,
