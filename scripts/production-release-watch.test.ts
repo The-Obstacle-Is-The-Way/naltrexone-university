@@ -109,7 +109,7 @@ describe('watchProductionRelease', () => {
     expect(result).toBe('none');
   });
 
-  it('raises a passing head with no successful production deployment, saying how to record a CLI release', async () => {
+  it('raises a passing head with no successful production deployment, saying how to record a manual release', async () => {
     const { issues } = await watch(
       new MemoryReads([passed], ['failure']),
       LATE,
@@ -119,7 +119,7 @@ describe('watchProductionRelease', () => {
       'no successful production deployment',
     );
     expect(issues.issues[0]?.body).toContain(
-      'record the release on GitHub, as the guide’s last step says',
+      "If it was released through the guide's manual route, record the release on GitHub, as the guide's last step says.",
     );
   });
 
@@ -161,41 +161,48 @@ function statusesPath(deploymentId: number): string {
 }
 
 describe('createReleaseReads', () => {
-  const runsPath = `repos/{owner}/{repo}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=20`;
+  const runsPath = `repos/{owner}/{repo}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=100`;
+  const deploymentsPath = `repos/{owner}/{repo}/deployments?sha=${SHA}&environment=Production&per_page=100`;
   const responses: Record<string, unknown> = {
     'repos/{owner}/{repo}/commits?sha=main&per_page=1': [
       { sha: SHA, commit: { committer: { date: '2026-10-15T15:44:17Z' } } },
     ],
-    [runsPath]: {
-      workflow_runs: [
-        {
-          event: 'push',
-          head_branch: 'main',
-          status: 'completed',
-          conclusion: 'failure',
-        },
-        {
-          event: 'workflow_dispatch',
-          head_branch: 'main',
-          status: 'queued',
-          conclusion: null,
-        },
-        {
-          event: 'pull_request',
-          head_branch: 'dev',
-          status: 'completed',
-          conclusion: 'success',
-        },
-        {
-          event: 'workflow_dispatch',
-          head_branch: 'feature',
-          status: 'completed',
-          conclusion: 'success',
-        },
-      ],
-    },
-    [`repos/{owner}/{repo}/deployments?sha=${SHA}&environment=Production&per_page=20`]:
-      [{ id: 7 }, { id: 8 }, { id: 9 }],
+    // Lists come as every page, as `gh api --paginate --slurp` returns them.
+    [runsPath]: [
+      {
+        workflow_runs: [
+          {
+            event: 'push',
+            head_branch: 'main',
+            status: 'completed',
+            conclusion: 'failure',
+          },
+        ],
+      },
+      {
+        workflow_runs: [
+          {
+            event: 'workflow_dispatch',
+            head_branch: 'main',
+            status: 'queued',
+            conclusion: null,
+          },
+          {
+            event: 'pull_request',
+            head_branch: 'dev',
+            status: 'completed',
+            conclusion: 'success',
+          },
+          {
+            event: 'workflow_dispatch',
+            head_branch: 'feature',
+            status: 'completed',
+            conclusion: 'success',
+          },
+        ],
+      },
+    ],
+    [deploymentsPath]: [[{ id: 7 }, { id: 8 }], [{ id: 9 }]],
     // Every page of statuses, oldest first: GitHub does not document the order.
     [statusesPath(7)]: [
       [{ id: 71, state: 'in_progress', created_at: '2026-10-15T15:45:00Z' }],
@@ -222,7 +229,7 @@ describe('createReleaseReads', () => {
     });
   });
 
-  it('keeps only main’s push and manual CI runs of a commit', async () => {
+  it('keeps only main’s push and manual CI runs of a commit, from every page', async () => {
     expect(await reads.mainCiRuns(SHA)).toEqual([
       failed,
       { status: 'queued', conclusion: null },
@@ -236,21 +243,18 @@ describe('createReleaseReads', () => {
     ]);
   });
 
-  it('reads every page of a deployment’s statuses', async () => {
+  it('asks gh for every page of the run, deployment and status lists', async () => {
     const calls: string[][] = [];
     const recording = createReleaseReads((args) => {
       calls.push(args);
       return JSON.stringify(responses[args.at(-1) ?? '']);
     });
 
+    await recording.mainCiRuns(SHA);
     await recording.productionDeploymentStates(SHA);
 
-    expect(calls).toContainEqual([
-      'api',
-      '--paginate',
-      '--slurp',
-      statusesPath(7),
-    ]);
+    for (const path of [runsPath, deploymentsPath, statusesPath(7)])
+      expect(calls).toContainEqual(['api', '--paginate', '--slurp', path]);
   });
 
   it('rejects a head that is not a full commit SHA', async () => {
@@ -287,11 +291,13 @@ describe('createReleaseReads', () => {
 
   it('rejects a run without a status', async () => {
     const broken = createReleaseReads(() =>
-      JSON.stringify({
-        workflow_runs: [
-          { event: 'push', head_branch: 'main', conclusion: 'success' },
-        ],
-      }),
+      JSON.stringify([
+        {
+          workflow_runs: [
+            { event: 'push', head_branch: 'main', conclusion: 'success' },
+          ],
+        },
+      ]),
     );
 
     await expect(broken.mainCiRuns(SHA)).rejects.toThrow(
@@ -308,7 +314,7 @@ describe('createReleaseReads', () => {
   });
 
   it('rejects a deployment without an id', async () => {
-    const broken = createReleaseReads(() => JSON.stringify([{ sha: SHA }]));
+    const broken = createReleaseReads(() => JSON.stringify([[{ sha: SHA }]]));
 
     await expect(broken.productionDeploymentStates(SHA)).rejects.toThrow(
       'Invalid GitHub response',
@@ -318,7 +324,7 @@ describe('createReleaseReads', () => {
   it('rejects a deployment status list that is not a list of pages', async () => {
     const broken = createReleaseReads((args) =>
       JSON.stringify(
-        args.at(-1)?.includes('/statuses') ? [{ state: 'x' }] : [{ id: 7 }],
+        args.at(-1)?.includes('/statuses') ? [{ state: 'x' }] : [[{ id: 7 }]],
       ),
     );
 
@@ -332,7 +338,7 @@ describe('createReleaseReads', () => {
       JSON.stringify(
         args.at(-1)?.includes('/statuses')
           ? [[{ state: 'success', created_at: '2026-10-15T15:47:00Z' }]]
-          : [{ id: 7 }],
+          : [[{ id: 7 }]],
       ),
     );
 
@@ -342,12 +348,12 @@ describe('createReleaseReads', () => {
   });
 
   // An unreadable status could be the newest one, so it is not skipped.
-  it('rejects a deployment status without a time', async () => {
+  it('rejects a deployment status whose time is not a timestamp string', async () => {
     const broken = createReleaseReads((args) =>
       JSON.stringify(
         args.at(-1)?.includes('/statuses')
-          ? [[{ id: 71, state: 'success' }]]
-          : [{ id: 7 }],
+          ? [[{ id: 71, state: 'success', created_at: 2026 }]]
+          : [[{ id: 7 }]],
       ),
     );
 

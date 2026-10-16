@@ -53,6 +53,12 @@ jobs:
           GIT_TERMINAL_PROMPT: '0'
           REQUESTED_SHA: ${{ inputs.sha }}
         run: |
+          # The input is printed in a workflow command below, so it must be a
+          # full SHA first: a newline in it could start a command of its own.
+          if ! [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error title=Manual CI runs only on main's head::The sha input is not a full 40-character commit SHA."
+            exit 1
+          fi
           main_head=$(git ls-remote "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1) || main_head=''
           if [ "$GITHUB_REF" = refs/heads/main ] && [ "$GITHUB_SHA" = "$REQUESTED_SHA" ] && [ "$main_head" = "$REQUESTED_SHA" ]; then
             exit 0

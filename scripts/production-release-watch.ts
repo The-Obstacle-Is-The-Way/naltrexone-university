@@ -23,9 +23,8 @@ export const RELEASE_GRACE_MS = 45 * 60 * 1000;
 
 // The GitHub deployment environment Vercel reports production releases to.
 const PRODUCTION_ENVIRONMENT = 'Production';
-const LIST_LIMIT = 20;
-// GitHub's largest page; every page of a deployment's statuses is read.
-const STATUS_PAGE_SIZE = 100;
+// GitHub's largest page. Every page of each list is read, so none is cut short.
+const PAGE_SIZE = 100;
 const FULL_SHA = /^[0-9a-f]{40}$/;
 // A pull request's runs test another commit, the merge with its base.
 const MAIN_EVENTS: ReadonlySet<unknown> = new Set([
@@ -80,7 +79,7 @@ async function findReleaseProblem(
   if (!states.includes('success'))
     return {
       kind: 'problem',
-      text: `CI passed, but GitHub lists no successful production deployment of ${subject}. Vercel may have skipped it. If it was released through the guide's CLI route, record the release on GitHub, as the guide’s last step says.`,
+      text: `CI passed, but GitHub lists no successful production deployment of ${subject}. Vercel may have skipped it. If it was released through the guide's manual route, record the release on GitHub, as the guide's last step says.`,
     };
   return { kind: 'released' };
 }
@@ -135,7 +134,10 @@ function newestStatusState(
       typeof status.state !== 'string'
     )
       throw invalid();
-    const at = Date.parse(String(status.created_at));
+    const at =
+      typeof status.created_at === 'string'
+        ? Date.parse(status.created_at)
+        : Number.NaN;
     if (Number.isNaN(at)) throw invalid();
     if (
       !newest ||
@@ -180,12 +182,17 @@ export function createReleaseReads(
       return { sha: commit.sha, committedAt };
     },
     async mainCiRuns(sha) {
-      const path = `repos/{owner}/{repo}/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=${LIST_LIMIT}`;
-      const response = read(path);
-      if (!isRecord(response) || !Array.isArray(response.workflow_runs))
+      const path = `repos/{owner}/{repo}/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=${PAGE_SIZE}`;
+      const pages = readEveryPage(path);
+      if (
+        !Array.isArray(pages) ||
+        !pages.every(
+          (page) => isRecord(page) && Array.isArray(page.workflow_runs),
+        )
+      )
         throw invalid(path);
       const runs: CiRun[] = [];
-      for (const entry of response.workflow_runs) {
+      for (const entry of pages.flatMap((page) => page.workflow_runs)) {
         if (!isRecord(entry) || typeof entry.status !== 'string')
           throw invalid(path);
         if (entry.head_branch !== 'main' || !MAIN_EVENTS.has(entry.event))
@@ -199,14 +206,15 @@ export function createReleaseReads(
       return runs;
     },
     async productionDeploymentStates(sha) {
-      const path = `repos/{owner}/{repo}/deployments?sha=${sha}&environment=${PRODUCTION_ENVIRONMENT}&per_page=${LIST_LIMIT}`;
-      const deployments = read(path);
-      if (!Array.isArray(deployments)) throw invalid(path);
+      const path = `repos/{owner}/{repo}/deployments?sha=${sha}&environment=${PRODUCTION_ENVIRONMENT}&per_page=${PAGE_SIZE}`;
+      const pages = readEveryPage(path);
+      if (!Array.isArray(pages) || !pages.every(Array.isArray))
+        throw invalid(path);
       const states: string[] = [];
-      for (const deployment of deployments) {
+      for (const deployment of pages.flat()) {
         if (!isRecord(deployment) || typeof deployment.id !== 'number')
           throw invalid(path);
-        const statusPath = `repos/{owner}/{repo}/deployments/${deployment.id}/statuses?per_page=${STATUS_PAGE_SIZE}`;
+        const statusPath = `repos/{owner}/{repo}/deployments/${deployment.id}/statuses?per_page=${PAGE_SIZE}`;
         const state = newestStatusState(readEveryPage(statusPath), () =>
           invalid(statusPath),
         );

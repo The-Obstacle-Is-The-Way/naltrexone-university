@@ -165,8 +165,10 @@ If no deployment appears within about ten minutes:
    ```sh
    id=$(echo '{"ref":"<sha>","environment":"Production","auto_merge":false,"required_contexts":[],"description":"Released with vercel promote"}' \
      | gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments --input - --jq .id)
-   gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments/$id/statuses -f state=success -f environment_url=https://addictionboards.com
+   gh api repos/The-Obstacle-Is-The-Way/naltrexone-university/deployments/$id/statuses -f state=success -f environment_url=https://addictionboards.com -F auto_inactive=false
    ```
+
+   `auto_inactive=false` leaves the statuses of Vercel's earlier production deployments as they are.
 
 Without the owner, the next promotion's merge commit releases the same code once its push is processed.
 

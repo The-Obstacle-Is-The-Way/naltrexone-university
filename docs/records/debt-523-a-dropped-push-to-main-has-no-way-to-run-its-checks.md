@@ -53,7 +53,7 @@ Recovered the same day, with the owner's approval, by a manual release of that c
 4. **Detect the lag on a schedule.** An hourly job reads `main`'s head and opens an issue for the owner if the head is 45 minutes old with no passing CI run on `main`, or no successful GitHub deployment to Vercel's `Production` environment.
    - Vercel reports each production release there, so this catches all three incidents with only the Actions token, and no Vercel credential.
    - A manual run counts as CI.
-   - A CLI release creates no GitHub deployment, so the guide's manual route ends by recording one.
+   - Neither manual release, through the API or the CLI, creates a GitHub deployment, so the guide's manual route ends by recording one.
    - *Recommended, with option 2.*
 5. **Post a `test` commit status from a workflow,** so the Deployment Check sees the manual run. Rejected: a status set with the Actions token counts as coming from GitHub Actions, the ruleset's required source, so a workflow could then pass any head's required check.
 
@@ -61,14 +61,14 @@ Recovered the same day, with the owner's approval, by a manual release of that c
 
 Options 2, 3 and 4:
 - **The trigger.** `.github/workflows/ci.yml` gains `workflow_dispatch` with a required `sha` input, and E2E runs for it.
-  - A first step fails the run unless it is on `main` at that SHA, and `main`'s head, read again when the step runs, is still that SHA. The run's SHA is fixed at dispatch, and the run can wait behind a push run.
+  - A first step fails the run unless the input is a full SHA, the run is on `main` at that SHA, and `main`'s head, read again when the step runs, is still that SHA. The run's SHA is fixed at dispatch, and the run can wait behind a push run.
   - A manual run waits for an in-progress push run in its concurrency group instead of canceling it. Any later push-event run, a re-run included, cancels the manual run. Usually `main` has then moved on, and the newer head's push run is the release check; otherwise the manual run is dispatched again.
 - **The tests.** `tests/ci-manual-run.test.ts` pins the triggers, the input and the concurrency setting, and runs the refusal step's script against a stand-in `git`. `tests/ci-workflow.test.ts` pins E2E's condition.
 - **The watch.** `.github/workflows/production-release-watch.yml` runs `scripts/production-release-watch.ts` hourly. It keeps one issue, assigned to the owner, open while `main`'s head has no passing CI run on `main` or no successful GitHub deployment to `Production`.
   - CI is checked first, so a head that production already serves still raises the issue if CI never passed on it.
   - It leaves an open issue alone while the head is new or CI is still running.
   - It reads the head from the commit list, because a single commit's response carries every file's patch.
-  - It reads every page of each deployment's statuses and takes the newest by time, then by ID, since GitHub does not document their order. A status it cannot read fails the run rather than being skipped.
+  - It reads every page of each list: CI runs, deployments and each deployment's statuses. It takes a deployment's newest status by time, then by ID, since GitHub does not document their order. A status it cannot read fails the run rather than being skipped.
   - Its test pins its schedule and its least-privilege permissions.
 - **The guide.** Promote to production describes the watch and has these steps:
   - confirm CI's push run in the first minute;
@@ -79,7 +79,7 @@ Options 2, 3 and 4:
 
 ## Verification
 
-- [x] Red first: the trigger, concurrency and E2E-condition cases in `tests/ci-workflow.test.ts` all failed against `main`'s workflow.
+- [x] Red first: the trigger, concurrency and E2E-condition cases in `tests/ci-workflow.test.ts` all failed against `main`'s workflow. The trigger and concurrency cases have since moved to `tests/ci-manual-run.test.ts`.
 - [x] After review: `tests/ci-manual-run.test.ts` runs the refusal step's script against a stand-in `git`. It lets a run on `main`'s current head go on. It refuses a run on another branch, at another commit, after `main` has moved on, or when `main`'s head cannot be read.
   - The first version kept its whole check in the step's `if:`, which a test of the script cannot run. So these cases were not a reproduction of its gap.
   - What they do prove: without the comparison with the re-read head, the moved-on and unreadable cases fail.

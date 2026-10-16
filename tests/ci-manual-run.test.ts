@@ -72,7 +72,7 @@ describe("CI's manual run on main", () => {
     expect(workflow.jobs?.test?.steps?.[0]?.name).toBe(REFUSAL_STEP);
   });
 
-  it('lets a manual run wait for a push run on main instead of cancelling it', () => {
+  it('lets a manual run wait for a push run on main instead of canceling it', () => {
     expect(readCiWorkflow().concurrency).toEqual({
       group: `\${{ github.workflow }}-\${{ github.head_ref || github.ref }}`,
       'cancel-in-progress': `\${{ github.event_name != 'workflow_dispatch' }}`,
@@ -94,10 +94,12 @@ describe("CI's manual run on main", () => {
     function runRefusal({
       ref = 'refs/heads/main',
       sha = DROPPED_COMMIT,
+      requested = DROPPED_COMMIT,
       mainHead = DROPPED_COMMIT,
     }: {
       ref?: string;
       sha?: string;
+      requested?: string;
       mainHead?: string;
     }) {
       // A run step with no shell runs as `bash -e` on Linux runners.
@@ -113,7 +115,7 @@ describe("CI's manual run on main", () => {
             GITHUB_SHA: sha,
             GITHUB_SERVER_URL: 'https://github.com',
             GITHUB_REPOSITORY: REPOSITORY,
-            REQUESTED_SHA: DROPPED_COMMIT,
+            REQUESTED_SHA: requested,
             FAKE_MAIN_HEAD: mainHead,
           },
         },
@@ -142,6 +144,16 @@ describe("CI's manual run on main", () => {
 
     it("refuses when main's head cannot be read", () => {
       expect(runRefusal({ mainHead: '' }).status).toBe(1);
+    });
+
+    // The input reaches a workflow command, so a newline in it could start one.
+    it('refuses a requested SHA that is not a full commit SHA, without printing it', () => {
+      const { status, output } = runRefusal({
+        requested: `${DROPPED_COMMIT}\n::warning::injected`,
+      });
+
+      expect(status).toBe(1);
+      expect(output).not.toContain('::warning::injected');
     });
   });
 });
