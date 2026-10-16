@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { PRICING_DATA } from '@/lib/pricing-data';
 
 vi.mock('server-only', () => ({}));
@@ -22,6 +30,18 @@ beforeAll(async () => {
 });
 
 describe('components/marketing/marketing-home', () => {
+  // Without slots, the shell defaults to the deferred auth nav and CTA. A
+  // static render shows their fallbacks, but React still starts them. With
+  // Clerk on, they would load the real container after the test ended, and
+  // its environment check would write to the console as the worker shut down.
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'true');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   async function renderDoc() {
     const element = await MarketingHomeShell({
       authNavSlot: <div>AuthNav</div>,

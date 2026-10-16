@@ -522,6 +522,10 @@ describe('app/pricing', () => {
 
     const element = await pagePromise;
     const html = renderToStaticMarkup(element);
+    // The deferred view has started loading the real container. Let it
+    // finish while this file's environment defaults are still set, not after
+    // afterAll restores them, and before an assertion can end the test.
+    await vi.dynamicImportSettled();
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const pricingFallback = doc.querySelector(
       '[data-testid="pricing-loading-root"]',
