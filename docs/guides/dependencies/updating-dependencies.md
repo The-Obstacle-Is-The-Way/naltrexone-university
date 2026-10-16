@@ -24,6 +24,8 @@ For grouped minor/patch Dependabot PRs:
 2. Confirm the group does not include a known special-case tool. `@biomejs/biome` is intentionally split from the catch-all group because lint-rule shifts can block otherwise-good package updates.
 3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, the hosted gate omits E2E (see below) and the head must not be run locally with shared credentials; review the diff and changelogs and merge with the E2E gap disclosed. Treat the later promotion-PR E2E as evidence only for `dev`-targeted version updates; default-branch security updates have no promotion PR and receive only the post-merge `main` run, plus any separate fix PRs required to make the base truthful.
 4. Merge only when GitHub Actions, Codecov and CodeRabbit are clean on the latest head, and Vercel too for a branch it deploys. Vercel does not deploy Dependabot branches (BUG-327), so they have no Vercel status to wait for.
+   - CodeRabbit gives a Dependabot PR no approval on the current plan. It refuses, even when asked: "This PR was authored by a bot without an assigned CodeRabbit review seat" (#1520, 2026-10-15). The merge guard can carry an approval from an earlier head ([Review and Merge](../release/review-and-merge.md#the-merge-guard)), but a Dependabot PR opened on this plan has no approval on any head to carry, so the guard cannot pass it.
+   - Ship every Dependabot PR as a [repo-owned bundle](#bundling-overlapping-dependabot-prs), even a single one: #1522 re-authored #1520.
 
 If one package in a group causes an unrelated failure, split or defer that package. Do not let a style-tool or test-runner change hold unrelated patch updates hostage.
 
@@ -33,7 +35,10 @@ PRs #805 and #829 set the pattern: when Dependabot PRs overlap, one repo-owned b
 
 ### Decision rule
 
-- Bundle when two or more open Dependabot PRs were generated from the same parent and merging one would invalidate the others' lockfiles, or when a source PR needs a repo-owned companion fix (#805's Next config pin, #829's Stripe CLI assertion and Biome schema).
+- Bundle in three cases:
+  - two or more open Dependabot PRs were generated from the same parent, and merging one would invalidate the others' lockfiles;
+  - a source PR needs a repo-owned companion fix (#805's Next config pin, #829's Stripe CLI assertion and Biome schema);
+  - CodeRabbit will not review the source PR, which on the current plan is every Dependabot PR (step 4 above).
 - The isolation rules above still apply. Runtime-contract majors and dev-tooling majors keep their own PRs. A billing-sensitive package such as `stripe` joins a bundle only with its own recorded audit, as in #829.
 - Leave the source PRs open and unmerged. Close them as superseded only after the bundle has exact-head CodeRabbit approval.
 - Never hand-merge or textually merge `pnpm-lock.yaml`. pnpm generates the bundle lockfile; the verifier below only reads it.
@@ -89,6 +94,8 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    pnpm install --frozen-lockfile
    node --import tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    ```
+
+   The verifier needs at least two sources. For a single-source PR, pass its base again as the second, `--source 'refs/pr/N^'`. It changes nothing, so the union stays exactly the source PR's. #1522 passed `origin/dev`, which matched the base only because #1520's parent was `dev`'s head.
 
    If the frozen install fails, stop: the lockfile does not match `package.json`, so go back to step 5. Run the verifier through `node --import tsx`, not `pnpm exec`. Steps 4 and 5 leave `node_modules` stale, and `pnpm exec` then runs a plain `pnpm install` first (pnpm's `verify-deps-before-run`), which can rewrite `pnpm-lock.yaml` before the verifier reads it.
 
