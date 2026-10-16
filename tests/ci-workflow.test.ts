@@ -190,9 +190,9 @@ describe('CI workflow', () => {
     expect(fidelityIndex).toBeLessThan(unitIndex);
   });
 
-  it('withholds shared E2E credentials from Dependabot PRs while retaining main-push E2E', () => {
+  it('withholds shared E2E credentials from Dependabot PRs while retaining E2E for main pushes and manual runs', () => {
     expect(findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').if).toBe(
-      `github.event_name == 'push' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
+      `github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
     );
   });
 
