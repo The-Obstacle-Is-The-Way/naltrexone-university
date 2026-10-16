@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  PRODUCTION_RELEASE_WATCH_WORKFLOW,
   ScheduledWorkflowsUnavailable,
   ScheduledWorkflowsUnreadable,
+  UPSTREAM_ADVISORY_WATCH_WORKFLOW,
 } from '@/src/adapters/jobs/scheduled-checks';
 import { createGithubScheduledWorkflows } from './github-scheduled-workflows';
 
@@ -11,6 +13,13 @@ import { createGithubScheduledWorkflows } from './github-scheduled-workflows';
 const REPOSITORY = 'owner/repo';
 const BASE = `https://api.github.com/repos/${REPOSITORY}/actions/workflows`;
 const WATCHER_RUNS = `${BASE}/operational-alert-watcher.yml/runs?status=success&per_page=1`;
+// DEBT-523: only a successful scheduled run shows a watch's schedule fires.
+const RELEASE_WATCH_RUNS = `${BASE}/production-release-watch.yml/runs?event=schedule&status=success&per_page=1`;
+const ADVISORY_WATCH_RUNS = `${BASE}/upstream-advisory-watch.yml/runs?event=schedule&status=success&per_page=1`;
+const noWatchRuns = () => ({
+  [RELEASE_WATCH_RUNS]: json({ workflow_runs: [] }),
+  [ADVISORY_WATCH_RUNS]: json({ workflow_runs: [] }),
+});
 
 const workflowsBody = {
   total_count: 2,
@@ -43,11 +52,17 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status });
 
 describe('createGithubScheduledWorkflows', () => {
-  it("reads every workflow's state and the watcher's last successful run", async () => {
+  it("reads every workflow's state, the watcher's last successful run and each watch's last successful scheduled run", async () => {
     const { fetchImpl } = github({
       [`${BASE}?per_page=100`]: json(workflowsBody),
       [WATCHER_RUNS]: json({
         workflow_runs: [{ created_at: '2026-10-19T11:37:00Z' }],
+      }),
+      [RELEASE_WATCH_RUNS]: json({
+        workflow_runs: [{ created_at: '2026-10-19T16:23:00Z' }],
+      }),
+      [ADVISORY_WATCH_RUNS]: json({
+        workflow_runs: [{ created_at: '2026-10-19T14:02:00Z' }],
       }),
     });
 
@@ -71,6 +86,10 @@ describe('createGithubScheduledWorkflows', () => {
         },
       ],
       watcherLastSuccessAt: new Date('2026-10-19T11:37:00Z'),
+      watchLastScheduledSuccessAt: {
+        [PRODUCTION_RELEASE_WATCH_WORKFLOW]: new Date('2026-10-19T16:23:00Z'),
+        [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: new Date('2026-10-19T14:02:00Z'),
+      },
     });
   });
 
@@ -78,6 +97,7 @@ describe('createGithubScheduledWorkflows', () => {
     const answers = () => ({
       [`${BASE}?per_page=100`]: json(workflowsBody),
       [WATCHER_RUNS]: json({ workflow_runs: [] }),
+      ...noWatchRuns(),
     });
     const anonymous = github(answers());
     const withToken = github(answers());
@@ -117,6 +137,7 @@ describe('createGithubScheduledWorkflows', () => {
       const { fetchImpl } = github({
         [`${BASE}?per_page=100`]: json(workflowsBody),
         [WATCHER_RUNS]: runs,
+        ...noWatchRuns(),
       });
 
       const status = await createGithubScheduledWorkflows({
@@ -133,6 +154,7 @@ describe('createGithubScheduledWorkflows', () => {
     const { fetchImpl, requests } = github({
       [`${BASE}?per_page=100`]: answer,
       [WATCHER_RUNS]: json({ workflow_runs: [] }),
+      ...noWatchRuns(),
     });
     return {
       requests,
@@ -235,10 +257,16 @@ describe('createGithubScheduledWorkflows', () => {
     },
   );
 
-  it("rejects as unreadable when the watcher's runs are refused", async () => {
+  it.each([
+    ["the watcher's runs", WATCHER_RUNS],
+    ["the release watch's scheduled runs", RELEASE_WATCH_RUNS],
+    ["the advisory watch's scheduled runs", ADVISORY_WATCH_RUNS],
+  ])('rejects as unreadable when %s are refused', async (_case, refused) => {
     const { fetchImpl } = github({
       [`${BASE}?per_page=100`]: json(workflowsBody),
-      [WATCHER_RUNS]: new Response(null, { status: 401 }),
+      [WATCHER_RUNS]: json({ workflow_runs: [] }),
+      ...noWatchRuns(),
+      [refused]: new Response(null, { status: 401 }),
     });
 
     await expect(
@@ -292,6 +320,7 @@ describe('createGithubScheduledWorkflows', () => {
           },
         ],
       }),
+      ...noWatchRuns(),
     });
 
     const status = await createGithubScheduledWorkflows({
@@ -303,5 +332,58 @@ describe('createGithubScheduledWorkflows', () => {
     expect(status.watcherLastSuccessAt).toEqual(
       new Date('2026-10-19T08:00:00Z'),
     );
+  });
+
+  it('reads a watch with no successful scheduled run, or none on the default branch yet, as never succeeded', async () => {
+    for (const runs of [
+      json({ workflow_runs: [] }),
+      new Response(null, { status: 404 }),
+    ]) {
+      const { fetchImpl } = github({
+        [`${BASE}?per_page=100`]: json(workflowsBody),
+        [WATCHER_RUNS]: json({ workflow_runs: [] }),
+        ...noWatchRuns(),
+        [RELEASE_WATCH_RUNS]: runs,
+      });
+
+      const status = await createGithubScheduledWorkflows({
+        repository: REPOSITORY,
+        token: undefined,
+        fetchImpl,
+      }).read();
+
+      expect(
+        status.watchLastScheduledSuccessAt[PRODUCTION_RELEASE_WATCH_WORKFLOW],
+      ).toBeNull();
+    }
+  });
+
+  // A re-run keeps its run's event and creation time but starts later, so
+  // dating by the start would let a re-run of an old run hide a stopped
+  // schedule.
+  it("dates a watch's last scheduled success by when the scheduler created the run", async () => {
+    const { fetchImpl } = github({
+      [`${BASE}?per_page=100`]: json(workflowsBody),
+      [WATCHER_RUNS]: json({ workflow_runs: [] }),
+      ...noWatchRuns(),
+      [RELEASE_WATCH_RUNS]: json({
+        workflow_runs: [
+          {
+            created_at: '2026-10-17T12:23:00Z',
+            run_started_at: '2026-10-19T08:00:00Z',
+          },
+        ],
+      }),
+    });
+
+    const status = await createGithubScheduledWorkflows({
+      repository: REPOSITORY,
+      token: 'read-token',
+      fetchImpl,
+    }).read();
+
+    expect(
+      status.watchLastScheduledSuccessAt[PRODUCTION_RELEASE_WATCH_WORKFLOW],
+    ).toEqual(new Date('2026-10-17T12:23:00Z'));
   });
 });
