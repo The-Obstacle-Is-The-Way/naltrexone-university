@@ -34,7 +34,8 @@ test('hook updates state correctly', async () => {
 ## Key differences from jsdom tests
 
 - Runs in **real Chromium** via Playwright (not jsdom)
-- `expect.element()` has **built-in retry-ability** (no manual polling)
+- `expect.element()` has **built-in retry-ability**: prefer it for a locator. `expect.poll()` is right for a value no locator reaches, such as a spy's call count
+- `unmount()` returns a Promise: await it, like `render()` and `rerender()`, so React's cleanup finishes and an unmount error fails this test
 - `toHaveTextContent` matches the whole text exactly (Vitest 5). For a partial or RegExp match, including `.not`, use `toMatchTextContent`
 - No `// @vitest-environment jsdom` directive needed
 - Config: `vitest.browser.config.mts`

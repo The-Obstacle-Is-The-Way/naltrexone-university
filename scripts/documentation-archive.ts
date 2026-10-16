@@ -347,6 +347,9 @@ const HISTORICAL_DISPOSITION =
 
 const VERIFYING_STATUS = /^verifying\b/i;
 const LIVE_STATUS_WORD = /^(?:open|in progress|blocked|verifying)\b/i;
+// Deliberately loose, so that a malformed date ("due 10-23") fails the
+// validation below instead of escaping the weekly due check. Do not narrow it
+// to whole dates; a status that schedules nothing avoids "due" before a digit.
 const SCHEDULING_ATTEMPT = /\bdue \d/i;
 const OPEN_STATUS =
   /^(?:open|in progress|blocked|verifying)(?:$|\s+[—–-]\s+.+)/i;
