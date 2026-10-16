@@ -39,8 +39,8 @@ Recovered the same day, with the owner's approval, by a manual release of that c
 ## Options
 
 1. **Wait for the next promotion.** No change, but each occurrence costs a review slot and a promotion, and production lags meanwhile.
-2. **Let CI be run by hand on `main`.** `workflow_dispatch` gives the dropped commit a full CI run, E2E included, within one run's time. That run is the evidence the guide's owner-approved route needs, which deploys with the CLI and promotes once `test` has passed on the exact commit.
-   - **It cannot release by itself.** A manual run's `test` is not in the commit's status rollup, which lists only push and pull-request runs. The challenge found this on #1519's promotion commit, where a manual and a scheduled run are absent. So Vercel's Deployment Check is not shown to see it.
+2. **Let CI be run by hand on `main`.** `workflow_dispatch` gives the dropped commit a full CI run, E2E included, within one run's time. That run is the evidence the guide's owner-approved route needs, which deploys the commit and promotes it once `test` has passed on that exact commit.
+   - **It cannot release by itself.** A manual run's `test` is not expected in the commit's status rollup. The challenge found this on #1519's promotion commit, `8354159a`. Its rollup lists only the push run's `test` and two statuses, although the commit also has a manual run of the upstream fix watch (run 38697824855) and three scheduled runs. So Vercel's Deployment Check is not shown to see it. CI's own manual run is checked after promotion (Verification).
    - **It has to run E2E,** as a push run does, since it is the release evidence.
    - **It has to be bound to the dropped commit.** It must name its SHA and be refused unless that SHA is still `main`'s head. On a branch, or once `main` has moved on, it would spend an E2E run on the shared Clerk test user for no release.
    - **It must not cancel a push run.** Push runs on `main` share its concurrency group, and one may be a newer promotion's release check.
@@ -61,10 +61,11 @@ Recovered the same day, with the owner's approval, by a manual release of that c
 
 Options 2, 3 and 4:
 - **The trigger.** `.github/workflows/ci.yml` gains `workflow_dispatch` with a required `sha` input, and E2E runs for it.
-  - A first step fails the run unless it is on `main` and `main`'s head is that SHA.
-  - A manual run waits for a push run in its concurrency group instead of cancelling it.
-- **The tests.** `tests/ci-workflow.test.ts` pins the triggers, the input, the refusal, the concurrency setting and E2E's condition.
-- **The watch.** `.github/workflows/production-release-watch.yml` runs `scripts/production-release-watch.ts` hourly and keeps one issue, assigned to the owner, open while production does not serve `main`'s head.
+  - A first step fails the run unless it is on `main` at that SHA, and `main`'s head, read again when the step runs, is still that SHA. The run's SHA is fixed at dispatch, and the run can wait behind a push run.
+  - A manual run waits for an in-progress push run in its concurrency group instead of canceling it. Any later push-event run, a re-run included, cancels the manual run. Usually `main` has then moved on, and the newer head's push run is the release check; otherwise the manual run is dispatched again.
+- **The tests.** `tests/ci-manual-run.test.ts` pins the triggers, the input and the concurrency setting, and runs the refusal step's script against a stand-in `git`. `tests/ci-workflow.test.ts` pins E2E's condition.
+- **The watch.** `.github/workflows/production-release-watch.yml` runs `scripts/production-release-watch.ts` hourly. It keeps one issue, assigned to the owner, open while `main`'s head has no passing CI run on `main` or no successful GitHub deployment to `Production`.
+  - CI is checked first, so a head that production already serves still raises the issue if CI never passed on it.
   - It leaves an open issue alone while the head is new or CI is still running.
   - It reads the head from the commit list, because a single commit's response carries every file's patch.
   - Its test pins its schedule and its least-privilege permissions.
@@ -78,7 +79,10 @@ Options 2, 3 and 4:
 ## Verification
 
 - [x] Red first: the trigger, concurrency and E2E-condition cases in `tests/ci-workflow.test.ts` all failed against `main`'s workflow.
-- [x] Before merge: a manual run on this branch failed at its refusal step, and skipped every later step.
+- [x] After review: `tests/ci-manual-run.test.ts` runs the refusal step's script against a stand-in `git`. It lets a run on `main`'s current head go on. It refuses a run on another branch, at another commit, after `main` has moved on, or when `main`'s head cannot be read.
+  - The first version kept its whole check in the step's `if:`, which a test of the script cannot run. So these cases were not a reproduction of its gap.
+  - What they do prove: without the comparison with the re-read head, the moved-on and unreadable cases fail.
+- [x] Before merge: a manual run on this branch failed at its refusal step. Every later step was skipped except the two that always run, `Evidence summary` and `Postgres log`.
 - [x] The deployment from GitHub's copy, on #1523's release: the Deployment Check held it staged, the promote step released it, and no GitHub `Production` deployment followed.
 - [ ] After promotion: a scheduled run of the production release watch on `main` succeeds and opens no issue (due 2026-10-17).
 - [ ] After promotion, while no other E2E run is active: `gh workflow run ci.yml --ref main -f sha=<main's head>` passes, with E2E executed, and a run naming a stale SHA is refused. Record whether the commit's status rollup lists the manual run's `test` (due 2026-10-17).

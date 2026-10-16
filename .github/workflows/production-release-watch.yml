@@ -4,8 +4,9 @@ name: Production release watch
 # the push of promotion #1523's merge commit, leaving it with no CI run and no
 # deployment, and Vercel created no production deployment for #509 and #1367.
 # Hourly, this job keeps one issue, assigned to the repository owner, open
-# while main's head has no passing CI push run or no successful production
-# deployment. The checks are in scripts/production-release-watch.ts.
+# while main's head has no passing CI run on main, a push run or a manual one,
+# or no successful production deployment. The checks are in
+# scripts/production-release-watch.ts.
 
 on:
   schedule:

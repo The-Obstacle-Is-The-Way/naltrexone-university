@@ -48,9 +48,7 @@ type WorkflowJob = {
 
 type WorkflowDocument = {
   defaults?: RunDefaults;
-  concurrency?: Record<string, string>;
   jobs?: Record<string, WorkflowJob>;
-  on?: Record<string, unknown>;
 };
 
 function readCiWorkflow(): string {
@@ -196,38 +194,6 @@ describe('CI workflow', () => {
     expect(findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').if).toBe(
       `github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
     );
-  });
-
-  it('runs by hand only on the main commit it names, so a push GitHub drops can still get a full CI run', () => {
-    const workflow = readParsedWorkflow(CI_WORKFLOW_PATH);
-    const refusal = findParsedStep(
-      CI_WORKFLOW_PATH,
-      "Refuse a manual run off main's dropped commit",
-    );
-    const steps = workflow.jobs?.test?.steps ?? [];
-
-    expect(Object.keys(workflow.on ?? {})).toEqual([
-      'pull_request',
-      'push',
-      'workflow_dispatch',
-    ]);
-    expect(workflow.on?.workflow_dispatch).toMatchObject({
-      inputs: { sha: { required: true, type: 'string' } },
-    });
-    expect(refusal.if).toBe(
-      "github.event_name == 'workflow_dispatch' && (github.ref != 'refs/heads/main' || github.sha != inputs.sha)",
-    );
-    expect(refusal.env).toEqual({ REQUESTED_SHA: `\${{ inputs.sha }}` });
-    expect(refusal.run).not.toContain('${{');
-    expect(refusal.run).toContain('exit 1');
-    expect(steps[0]?.name).toBe(refusal.name);
-  });
-
-  it('lets a manual run wait for a push run on main instead of cancelling it', () => {
-    expect(readParsedWorkflow(CI_WORKFLOW_PATH).concurrency).toEqual({
-      group: `\${{ github.workflow }}-\${{ github.head_ref || github.ref }}`,
-      'cancel-in-progress': `\${{ github.event_name != 'workflow_dispatch' }}`,
-    });
   });
 
   it('reports the decided shared-credential boundary when Dependabot E2E is skipped', () => {

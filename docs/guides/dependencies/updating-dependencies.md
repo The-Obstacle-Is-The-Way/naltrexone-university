@@ -95,7 +95,7 @@ The example bundles #826, #827 and #828, which is how #829 was built.
    node --import tsx scripts/verify-lockfile-union.ts --base 'refs/pr/826^' --source refs/pr/826 --source refs/pr/827 --source refs/pr/828 --candidate pnpm-lock.yaml
    ```
 
-   The verifier needs at least two sources. For a single source PR, pass its base again as the second, `--source 'refs/pr/N^'`. It changes nothing, so the union stays exactly the source PR's. #1522 passed `origin/dev`, which matched the base only because #1520's parent was `dev`'s head.
+   The verifier needs at least two sources. For a single-source PR, pass its base again as the second, `--source 'refs/pr/N^'`. It changes nothing, so the union stays exactly the source PR's. #1522 passed `origin/dev`, which matched the base only because #1520's parent was `dev`'s head.
 
    If the frozen install fails, stop: the lockfile does not match `package.json`, so go back to step 5. Run the verifier through `node --import tsx`, not `pnpm exec`. Steps 4 and 5 leave `node_modules` stale, and `pnpm exec` then runs a plain `pnpm install` first (pnpm's `verify-deps-before-run`), which can rewrite `pnpm-lock.yaml` before the verifier reads it.
 
