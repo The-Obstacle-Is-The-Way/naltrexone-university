@@ -107,6 +107,10 @@ describe('renewal notice cron route', () => {
     );
   });
 
+  // The only guard on this wiring: the handler's zero-argument run seam
+  // cannot see it, and the cron integration test does not assert it. A
+  // checkout consent revision must not change the notice's version, which is
+  // part of its deduplication identity.
   it('uses the stable notice version independently of checkout consent revisions', () => {
     const source = readFileSync(new URL('./route.ts', import.meta.url), 'utf8');
     expect(source).toContain(

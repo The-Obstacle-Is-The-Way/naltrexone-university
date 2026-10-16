@@ -40,7 +40,7 @@ describe('CheckoutSuccessRedirect (browser)', () => {
   it('cancels the pending redirect when unmounted (manual navigation)', async () => {
     const screen = await render(<CheckoutSuccessRedirect />);
 
-    screen.unmount();
+    await screen.unmount();
     await vi.advanceTimersByTimeAsync(CHECKOUT_SUCCESS_REDIRECT_DELAY_MS * 2);
 
     expect(replaceMock).not.toHaveBeenCalled();

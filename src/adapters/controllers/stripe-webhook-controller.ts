@@ -367,6 +367,9 @@ async function processTrialPaymentMethodSetupWebhook(
         amountCents: claimed.amountCents,
         currency: claimed.currency,
         frequency: claimed.frequency,
+        // setupSnapshotMatches holds the terms to the signed snapshot, but
+        // the trial end and deadline come from the live subscription, since
+        // the snapshot's dates can drift (DEBT-414).
         trialEndsAt:
           subscription.status === 'inTrial'
             ? subscription.currentPeriodEnd
@@ -669,7 +672,8 @@ async function processSubscriptionWebhook(
     }
 
     // Not this environment's user, so not its customer either: nothing is
-    // swept.
+    // swept. The warning follows the acknowledgment: if that write fails,
+    // its error is the one thrown and logged (DEBT-458).
     if (isSubscriptionUserMissingError(transactionError)) {
       await persistAcknowledgedOutcome(deps, event, subscriptionUpdate);
       deps.logger.warn(

@@ -82,6 +82,9 @@ test.describe
         completedSession: {
           status: 'complete',
           mode: 'subscription',
+          // Stripe reports this cardless trial's completed Session (the Stripe
+          // CLI's payment_page_confirm fixture) as paid, not
+          // no_payment_required.
           paymentStatus: 'paid',
           usesConfiguredPrice: true,
           isTestMode: true,

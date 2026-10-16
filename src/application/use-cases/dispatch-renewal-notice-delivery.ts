@@ -58,6 +58,8 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       );
     }
 
+    // Corrupt evidence ends the delivery before the provider is called: the
+    // payload cannot be trusted, and left queued it would fail on every retry.
     const expectedProviderKey = getRenewalNoticeProviderIdempotencyKey(
       delivery.id,
     );

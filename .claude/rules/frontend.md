@@ -126,6 +126,8 @@ import { ROUTES } from '@/lib/routes';
 <Link href="/app/dashboard">Dashboard</Link>
 ```
 
+A test may assert a public path as a literal: production reads `ROUTES`, so a test that read it too would pass with a wrong constant.
+
 
 ## Component patterns
 
@@ -133,11 +135,6 @@ import { ROUTES } from '@/lib/routes';
 - Extract custom hooks into `hooks/` subdirectories
 - Use `components/ui/` shadcn primitives, don't reinvent
 - Server Components by default; add `'use client'` only when needed
-
-## Imports
-
-- Use `@/...` alias for all imports
-- `lib/` for core utilities (auth, Stripe, env, DB)
 
 ## Key files
 

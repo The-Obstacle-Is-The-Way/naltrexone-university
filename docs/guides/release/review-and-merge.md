@@ -30,7 +30,7 @@ How a feature PR gets reviewed and merged into `dev`. The rules are in [`AGENTS.
   - if a candidate cannot be classified, fail closed by reporting a violation;
   - widen a resolver only when a governing requirement names the behaviour, or a false positive in the current tree blocks legitimate work.
 - **Learnings.** CodeRabbit can turn a chat reply into a stored rule for every later review. Never ask it to record one. If it records one anyway ("Learnings added"), link that reply from the PR description; the merge guard refuses until you do.
-- **A finding that rests on a stored learning** contradicting the repository's rules is declined, quoting the "Learnings used" entry. The rule then goes into `.coderabbit.yaml`'s path instructions, which outrank stored learnings, and the learning goes on DEBT-515's prune list.
+- **A finding that rests on a stored learning** contradicting the repository's rules is declined, quoting the "Learnings used" entry. The rule then goes into `.coderabbit.yaml`'s path instructions, which outrank stored learnings, and the learning is named for the owner to delete at app.coderabbit.ai/learnings: in the PR description, and under Owner decisions pending in the records index's Now until it is gone.
 - **A rate limit is a hard stop.** Wait the full cooldown, then ask for a fresh review of the latest head. A green `CodeRabbit` status, a partial review or an acknowledgement is not an approval.
 
 ## The Merge Guard
