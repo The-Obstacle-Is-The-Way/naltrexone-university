@@ -1,9 +1,11 @@
 import {
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  PRODUCTION_RELEASE_WATCH_WORKFLOW,
   type ScheduledWorkflow,
   type ScheduledWorkflows,
   ScheduledWorkflowsUnavailable,
   ScheduledWorkflowsUnreadable,
+  UPSTREAM_ADVISORY_WATCH_WORKFLOW,
 } from '@/src/adapters/jobs/scheduled-checks';
 import { validateHeaderSecret } from '@/src/adapters/shared/header-secret';
 
@@ -110,6 +112,32 @@ export function createGithubScheduledWorkflows(deps: {
     }
   };
 
+  // The latest successful run in one runs query, dated by `at`, or null
+  // when there is none or the workflow is not on the default branch yet.
+  const lastSuccess = async (
+    workflowPath: string,
+    query: string,
+    at: (run: Record<string, unknown>) => unknown,
+  ): Promise<Date | null> => {
+    const file = workflowPath.split('/').at(-1);
+    const runs = await get(`workflows/${file}/runs?${query}`);
+    if (runs.status === 404) {
+      await runs.body?.cancel();
+      return null;
+    }
+    const [latest] = list(record(await answer(runs)).workflow_runs);
+    return latest === undefined ? null : date(at(record(latest)));
+  };
+  // DEBT-523: only a scheduled run shows that a watch's schedule fires. A
+  // re-run keeps its run's event and creation time but starts later, so the
+  // creation time keeps a re-run of an old run from hiding a stop.
+  const lastScheduledSuccess = (workflowPath: string) =>
+    lastSuccess(
+      workflowPath,
+      'event=schedule&status=success&per_page=1',
+      (run) => run.created_at,
+    );
+
   return {
     read: async () => {
       if (!tokenUsable)
@@ -128,24 +156,24 @@ export function createGithubScheduledWorkflows(deps: {
         listed.total_count > workflows.length
       )
         throw new UnexpectedShape();
-      const watcherFile = OPERATIONAL_ALERT_WATCHER_WORKFLOW.split('/').at(-1);
-      const runs = await get(
-        `workflows/${watcherFile}/runs?status=success&per_page=1`,
-      );
-      // No such workflow on the default branch yet: it has never succeeded.
-      if (runs.status === 404) {
-        await runs.body?.cancel();
-        return { workflows, watcherLastSuccessAt: null };
-      }
-      const [lastSuccess] = list(record(await answer(runs)).workflow_runs);
-      if (lastSuccess === undefined)
-        return { workflows, watcherLastSuccessAt: null };
       // A re-run keeps the run's creation time; its start time is the try
       // that succeeded.
-      const run = record(lastSuccess);
+      const watcherLastSuccessAt = await lastSuccess(
+        OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+        'status=success&per_page=1',
+        (run) => run.run_started_at ?? run.created_at,
+      );
       return {
         workflows,
-        watcherLastSuccessAt: date(run.run_started_at ?? run.created_at),
+        watcherLastSuccessAt,
+        watchLastScheduledSuccessAt: {
+          [PRODUCTION_RELEASE_WATCH_WORKFLOW]: await lastScheduledSuccess(
+            PRODUCTION_RELEASE_WATCH_WORKFLOW,
+          ),
+          [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: await lastScheduledSuccess(
+            UPSTREAM_ADVISORY_WATCH_WORKFLOW,
+          ),
+        },
       };
     },
   };

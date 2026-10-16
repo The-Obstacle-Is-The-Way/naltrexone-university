@@ -7,7 +7,13 @@ import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
 import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
 import { operationalAlertDrillCycle } from './operational-alert-drill';
-import { OPERATIONAL_ALERT_WATCHER_WORKFLOW } from './scheduled-checks';
+import {
+  OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  PRODUCTION_RELEASE_WATCH_WORKFLOW,
+  SCHEDULED_WATCHES,
+  type ScheduledWorkflowsStatus,
+  UPSTREAM_ADVISORY_WATCH_WORKFLOW,
+} from './scheduled-checks';
 import {
   SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
@@ -20,6 +26,36 @@ import {
 const now = new Date('2026-08-07T12:00:00.000Z');
 
 type AnnualRenewals = SendDueRenewalNoticesJobDeps['renewalQueries'];
+
+// DEBT-505, DEBT-523: the watcher and the watches all ran lately.
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+function runningScheduledChecks(): ScheduledWorkflowsStatus {
+  const createdAt = new Date(now.getTime() - 30 * DAY_MS);
+  return {
+    workflows: [OPERATIONAL_ALERT_WATCHER_WORKFLOW, ...SCHEDULED_WATCHES].map(
+      (path) => ({ path, state: 'active', createdAt }),
+    ),
+    watcherLastSuccessAt: new Date(now.getTime() - DAY_MS),
+    watchLastScheduledSuccessAt: {
+      [PRODUCTION_RELEASE_WATCH_WORKFLOW]: new Date(now.getTime() - HOUR_MS),
+      [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: new Date(now.getTime() - HOUR_MS),
+    },
+  };
+}
+
+// Only the alert watcher has stopped: its workflow is gone.
+function watcherGone(): ScheduledWorkflowsStatus {
+  const running = runningScheduledChecks();
+  return {
+    ...running,
+    workflows: running.workflows.filter(
+      (workflow) => workflow.path !== OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+    ),
+    watcherLastSuccessAt: null,
+  };
+}
 
 function createDeps(): {
   deps: SendDueRenewalNoticesJobDeps;
@@ -107,16 +143,7 @@ function createDeps(): {
       alerts,
       // DEBT-505: GitHub's scheduled checks all run, by default.
       scheduledWorkflows: {
-        read: async () => ({
-          workflows: [
-            {
-              path: OPERATIONAL_ALERT_WATCHER_WORKFLOW,
-              state: 'active',
-              createdAt: new Date(now.getTime() - 30 * 86_400_000),
-            },
-          ],
-          watcherLastSuccessAt: new Date(now.getTime() - 86_400_000),
-        }),
+        read: async () => runningScheduledChecks(),
       },
       alertDrillCycles: {
         claim: async () => false,
@@ -704,7 +731,7 @@ describe('the scheduled checks', () => {
   it('reports a stopped watcher and raises its alert', async () => {
     const { deps, alerts } = createDeps();
     deps.scheduledWorkflows = {
-      read: async () => ({ workflows: [], watcherLastSuccessAt: null }),
+      read: async () => watcherGone(),
     };
 
     const result = await sendDueRenewalNotices(
@@ -722,7 +749,7 @@ describe('the scheduled checks', () => {
   it('checks before the notices, so a failing notice query does not skip it', async () => {
     const { deps, alerts, listDue } = createDeps();
     deps.scheduledWorkflows = {
-      read: async () => ({ workflows: [], watcherLastSuccessAt: null }),
+      read: async () => watcherGone(),
     };
     listDue.mockRejectedValueOnce(new Error('query failed'));
 
