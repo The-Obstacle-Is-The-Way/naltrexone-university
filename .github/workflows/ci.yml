@@ -133,7 +133,12 @@ jobs:
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/**/coverage-final.json
+          # Each lane's report by name, and nothing else: with search on, the
+          # glob missed the unit report and only the search found it.
+          files: ./coverage/coverage-final.json,./coverage/integration/coverage-final.json,./coverage/browser/coverage-final.json
+          disable_search: true
+          # No Xcode, gcov or coverage.py reports to generate.
+          plugins: noop
           fail_ci_if_error: true
 
       - name: Report a failed Codecov upload

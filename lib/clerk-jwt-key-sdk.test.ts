@@ -28,6 +28,8 @@ function signingKey() {
           sid: 'sess_sdk',
           sub: 'user_sdk',
           iss: `https://${FRONTEND_API}`,
+          // Clerk names the origin that requested the token.
+          azp: 'https://example.com',
           iat: now - 10,
           nbf: now - 20,
           exp: now + 60,
@@ -75,6 +77,7 @@ describe('a configured Clerk JWT key', () => {
   });
 
   it('verifies a signed-in visitor without calling Clerk', async () => {
+    const warned = vi.spyOn(console, 'warn');
     const key = signingKey();
     const jwtKey = parseClerkJwtKey(key.pem.trim().replaceAll('\n', '\\n'));
     if (!jwtKey) throw new Error('Expected a parsed key');
@@ -85,6 +88,9 @@ describe('a configured Clerk JWT key', () => {
       response.headers.get('x-middleware-request-x-clerk-auth-status'),
     ).toBe('signed-in');
     expect(clerkCalls).toBe(0);
+    // Clerk warns about a session token unlike its own, which a later
+    // version will reject.
+    expect(warned).not.toHaveBeenCalled();
   });
 
   // The risk of a static key: one that is not Clerk's signs every visitor

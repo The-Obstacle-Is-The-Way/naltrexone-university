@@ -9,7 +9,7 @@ import {
   lockfilePackages,
   registryRepository,
   watchedRepositories,
-} from './upstream-advisory-watch';
+} from './upstream-advisory-watch.mjs';
 
 // What the watch reads: package.json's dependencies, the packages in
 // pnpm-lock.yaml, and the repository each one publishes advisories from.

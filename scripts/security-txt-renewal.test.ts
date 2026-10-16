@@ -8,7 +8,7 @@ import {
   type RenewalIssue,
   type RenewalIssues,
   runSecurityTxtRenewal,
-} from './security-txt-renewal';
+} from './security-txt-renewal.mjs';
 
 vi.mock('node:child_process', () => ({ execFileSync: vi.fn() }));
 
@@ -354,7 +354,7 @@ describe('renewal workflow', () => {
       if (step.uses) expect(step.uses).toMatch(/@[a-f0-9]{40}$/);
     }
     expect(workflow.jobs.renewal.steps.at(-1)).toMatchObject({
-      run: 'node scripts/security-txt-renewal.ts',
+      run: 'node scripts/security-txt-renewal.mts',
       env: {
         GH_TOKEN: `${'$'}{{ github.token }}`,
         GH_REPO: `${'$'}{{ github.repository }}`,
