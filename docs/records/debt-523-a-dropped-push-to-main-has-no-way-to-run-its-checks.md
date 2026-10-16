@@ -68,6 +68,7 @@ Options 2, 3 and 4:
   - CI is checked first, so a head that production already serves still raises the issue if CI never passed on it.
   - It leaves an open issue alone while the head is new or CI is still running.
   - It reads the head from the commit list, because a single commit's response carries every file's patch.
+  - It reads every page of each deployment's statuses and takes the newest by time, then by ID, since GitHub does not document their order. A status it cannot read fails the run rather than being skipped.
   - Its test pins its schedule and its least-privilege permissions.
 - **The guide.** Promote to production describes the watch and has these steps:
   - confirm CI's push run in the first minute;

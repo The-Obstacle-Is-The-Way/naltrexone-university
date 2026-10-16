@@ -156,6 +156,10 @@ describe('watchProductionRelease', () => {
   });
 });
 
+function statusesPath(deploymentId: number): string {
+  return `repos/{owner}/{repo}/deployments/${deploymentId}/statuses?per_page=100`;
+}
+
 describe('createReleaseReads', () => {
   const runsPath = `repos/{owner}/{repo}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=20`;
   const responses: Record<string, unknown> = {
@@ -191,14 +195,24 @@ describe('createReleaseReads', () => {
       ],
     },
     [`repos/{owner}/{repo}/deployments?sha=${SHA}&environment=Production&per_page=20`]:
-      [{ id: 7 }, { id: 8 }],
-    'repos/{owner}/{repo}/deployments/7/statuses?per_page=1': [
-      { state: 'success' },
+      [{ id: 7 }, { id: 8 }, { id: 9 }],
+    // Every page of statuses, oldest first: GitHub does not document the order.
+    [statusesPath(7)]: [
+      [{ id: 71, state: 'in_progress', created_at: '2026-10-15T15:45:00Z' }],
+      [{ id: 72, state: 'success', created_at: '2026-10-15T15:47:00Z' }],
     ],
-    'repos/{owner}/{repo}/deployments/8/statuses?per_page=1': [],
+    [statusesPath(8)]: [[]],
+    // Newest first, with two statuses in one second: the later ID is current.
+    [statusesPath(9)]: [
+      [
+        { id: 93, state: 'failure', created_at: '2026-10-15T15:50:00Z' },
+        { id: 92, state: 'success', created_at: '2026-10-15T15:50:00Z' },
+        { id: 91, state: 'in_progress', created_at: '2026-10-15T15:46:00Z' },
+      ],
+    ],
   };
   const reads = createReleaseReads((args) =>
-    JSON.stringify(responses[args[1] ?? '']),
+    JSON.stringify(responses[args.at(-1) ?? '']),
   );
 
   it('reads main’s head from the commit list, which carries no file patches', async () => {
@@ -215,8 +229,28 @@ describe('createReleaseReads', () => {
     ]);
   });
 
-  it('reads the latest state of each production deployment, skipping one with no status', async () => {
-    expect(await reads.productionDeploymentStates(SHA)).toEqual(['success']);
+  it('reads each production deployment’s newest status by its time, whatever the order and paging, skipping one with no status', async () => {
+    expect(await reads.productionDeploymentStates(SHA)).toEqual([
+      'success',
+      'failure',
+    ]);
+  });
+
+  it('reads every page of a deployment’s statuses', async () => {
+    const calls: string[][] = [];
+    const recording = createReleaseReads((args) => {
+      calls.push(args);
+      return JSON.stringify(responses[args.at(-1) ?? '']);
+    });
+
+    await recording.productionDeploymentStates(SHA);
+
+    expect(calls).toContainEqual([
+      'api',
+      '--paginate',
+      '--slurp',
+      statusesPath(7),
+    ]);
   });
 
   it('rejects a head that is not a full commit SHA', async () => {
@@ -281,15 +315,44 @@ describe('createReleaseReads', () => {
     );
   });
 
-  it('rejects a deployment status list that is not a list', async () => {
+  it('rejects a deployment status list that is not a list of pages', async () => {
     const broken = createReleaseReads((args) =>
       JSON.stringify(
-        args[1]?.includes('/statuses') ? { state: 'x' } : [{ id: 7 }],
+        args.at(-1)?.includes('/statuses') ? [{ state: 'x' }] : [{ id: 7 }],
       ),
     );
 
     await expect(broken.productionDeploymentStates(SHA)).rejects.toThrow(
-      'Invalid GitHub response: repos/{owner}/{repo}/deployments/7/statuses?per_page=1',
+      `Invalid GitHub response: ${statusesPath(7)}`,
+    );
+  });
+
+  it('rejects a deployment status without an ID', async () => {
+    const broken = createReleaseReads((args) =>
+      JSON.stringify(
+        args.at(-1)?.includes('/statuses')
+          ? [[{ state: 'success', created_at: '2026-10-15T15:47:00Z' }]]
+          : [{ id: 7 }],
+      ),
+    );
+
+    await expect(broken.productionDeploymentStates(SHA)).rejects.toThrow(
+      `Invalid GitHub response: ${statusesPath(7)}`,
+    );
+  });
+
+  // An unreadable status could be the newest one, so it is not skipped.
+  it('rejects a deployment status without a time', async () => {
+    const broken = createReleaseReads((args) =>
+      JSON.stringify(
+        args.at(-1)?.includes('/statuses')
+          ? [[{ id: 71, state: 'success' }]]
+          : [{ id: 7 }],
+      ),
+    );
+
+    await expect(broken.productionDeploymentStates(SHA)).rejects.toThrow(
+      `Invalid GitHub response: ${statusesPath(7)}`,
     );
   });
 });

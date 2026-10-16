@@ -24,6 +24,8 @@ export const RELEASE_GRACE_MS = 45 * 60 * 1000;
 // The GitHub deployment environment Vercel reports production releases to.
 const PRODUCTION_ENVIRONMENT = 'Production';
 const LIST_LIMIT = 20;
+// GitHub's largest page; every page of a deployment's statuses is read.
+const STATUS_PAGE_SIZE = 100;
 const FULL_SHA = /^[0-9a-f]{40}$/;
 // A pull request's runs test another commit, the merge with its base.
 const MAIN_EVENTS: ReadonlySet<unknown> = new Set([
@@ -117,10 +119,40 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// GitHub does not document the order of a deployment's statuses, so the
+// current one is the newest by time, then by ID. An unreadable status could be
+// the newest, so it fails the read instead of being skipped.
+function newestStatusState(
+  pages: unknown,
+  invalid: () => Error,
+): string | null {
+  if (!Array.isArray(pages) || !pages.every(Array.isArray)) throw invalid();
+  let newest: { id: number; state: string; at: number } | null = null;
+  for (const status of pages.flat()) {
+    if (
+      !isRecord(status) ||
+      typeof status.id !== 'number' ||
+      typeof status.state !== 'string'
+    )
+      throw invalid();
+    const at = Date.parse(String(status.created_at));
+    if (Number.isNaN(at)) throw invalid();
+    if (
+      !newest ||
+      at > newest.at ||
+      (at === newest.at && status.id > newest.id)
+    )
+      newest = { id: status.id, state: status.state, at };
+  }
+  return newest?.state ?? null;
+}
+
 export function createReleaseReads(
   run: (args: string[]) => string,
 ): ReleaseReads {
   const read = (path: string): unknown => JSON.parse(run(['api', path]));
+  const readEveryPage = (path: string): unknown =>
+    JSON.parse(run(['api', '--paginate', '--slurp', path]));
   const invalid = (path: string) =>
     new Error(`Invalid GitHub response: ${path}`);
   return {
@@ -174,12 +206,11 @@ export function createReleaseReads(
       for (const deployment of deployments) {
         if (!isRecord(deployment) || typeof deployment.id !== 'number')
           throw invalid(path);
-        const statusPath = `repos/{owner}/{repo}/deployments/${deployment.id}/statuses?per_page=1`;
-        const statuses = read(statusPath);
-        if (!Array.isArray(statuses)) throw invalid(statusPath);
-        const latest: unknown = statuses[0];
-        if (isRecord(latest) && typeof latest.state === 'string')
-          states.push(latest.state);
+        const statusPath = `repos/{owner}/{repo}/deployments/${deployment.id}/statuses?per_page=${STATUS_PAGE_SIZE}`;
+        const state = newestStatusState(readEveryPage(statusPath), () =>
+          invalid(statusPath),
+        );
+        if (state !== null) states.push(state);
       }
       return states;
     },
