@@ -14,7 +14,7 @@ export default defineConfig({
     },
     include: ['**/*.test.ts', '**/*.test.tsx'],
     exclude: ['node_modules', '.next', 'db/migrations', 'tests/integration/**'],
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: ['./vitest.setup.ts', './vitest.unit.setup.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
     },
