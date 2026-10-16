@@ -55,7 +55,7 @@ The list endpoint returns the same advisory object, with `github_reviewed_at` an
 
 ### Why the tests and dry runs missed it
 
-- The unit test modelled "GitHub's database has neither advisory yet" as `gh: Not Found (HTTP 404)` (`scripts/upstream-advisory-watch.test.ts:536-540` at `8354159a`), which is what a person's token gets.
+- The unit test modeled "GitHub's database has neither advisory yet" as `gh: Not Found (HTTP 404)` (`scripts/upstream-advisory-watch.test.ts:536-540` at `8354159a`), which is what a person's token gets.
 - Local dry runs use a person's token too.
 - Only a hosted run sees the Actions token's answer, and none had looked an advisory up before 2026-10-14.
 
