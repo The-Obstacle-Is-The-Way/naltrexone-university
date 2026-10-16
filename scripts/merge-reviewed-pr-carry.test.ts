@@ -3,9 +3,11 @@ import {
   type CarryEvidence,
   checkFeatureMerge,
   headPushedAsOf,
+  restoreDeletedBranchNames,
 } from './merge-reviewed-pr';
 import {
   HEAD,
+  HEAD_BRANCH,
   MAIN,
   OLD_HEAD,
   pullRequest,
@@ -423,5 +425,120 @@ describe('head as of an approval', () => {
       headPushedAsOf(olderCommits, '2026-09-22T03:00:00Z'),
     ).toBeUndefined();
     expect(headPushedAsOf(moreSuites, '2026-09-22T03:00:00Z')).toBeUndefined();
+  });
+});
+
+// Promotion #1533: deleting a merged PR's branch nulls its name on the GraphQL check
+// suites, so none of the PR's pushes counted; REST keeps head_branch.
+describe('push times after the head branch is deleted', () => {
+  // The PR's heads as GraphQL reports them once the branch is gone.
+  const deletedBranchPushes = (...heads: [string, string][]) => ({
+    headRefName: HEAD_BRANCH,
+    pushes: {
+      pageInfo: { hasPreviousPage: false },
+      nodes: heads.map(([oid, createdAt]) => ({
+        commit: {
+          oid,
+          checkSuites: {
+            pageInfo: { hasNextPage: false },
+            nodes: [{ createdAt, branch: null }],
+          },
+        },
+      })),
+    },
+  });
+  const restSuites = (
+    suites: { head_branch: string; created_at: string }[],
+    total = suites.length,
+  ) => JSON.stringify({ total_count: total, check_suites: suites });
+
+  it('finds no head from GraphQL alone once the branch is deleted', () => {
+    expect(
+      headPushedAsOf(
+        deletedBranchPushes(
+          [OLD_HEAD, '2026-09-22T02:00:00Z'],
+          [HEAD, '2026-09-22T04:00:00Z'],
+        ),
+        '2026-09-22T03:00:00Z',
+      ),
+    ).toBeUndefined();
+  });
+
+  it("reads a deleted branch's push times from REST, which keeps its name", () => {
+    const read: string[] = [];
+    const restored = restoreDeletedBranchNames(
+      deletedBranchPushes(
+        [OLD_HEAD, '2026-09-22T02:00:00Z'],
+        [HEAD, '2026-09-22T04:00:00Z'],
+      ),
+      (oid) => {
+        read.push(oid);
+        return restSuites([
+          {
+            head_branch: HEAD_BRANCH,
+            created_at:
+              oid === OLD_HEAD
+                ? '2026-09-22T02:00:00Z'
+                : '2026-09-22T04:00:00Z',
+          },
+        ]);
+      },
+    );
+
+    expect(read).toEqual([OLD_HEAD, HEAD]);
+    expect(headPushedAsOf(restored, '2026-09-22T03:00:00Z')).toBe(OLD_HEAD);
+  });
+
+  it('reads nothing for commits whose suites still name their branch', () => {
+    const live = pushes(
+      [OLD_HEAD, '2026-09-22T02:00:00Z'],
+      [HEAD, '2026-09-22T04:00:00Z'],
+    );
+
+    const restored = restoreDeletedBranchNames(live, () => {
+      throw new Error('unexpected read');
+    });
+
+    expect(restored).toEqual(live);
+  });
+
+  // BUG-335 still holds: main's promotion commit keeps its own branch name.
+  it("still ignores a merged-in commit's suites from another branch", () => {
+    const restored = restoreDeletedBranchNames(
+      deletedBranchPushes(
+        [OLD_HEAD, '2026-09-22T02:00:00Z'],
+        [MAIN, '2026-09-22T02:30:00Z'],
+      ),
+      (oid) =>
+        restSuites([
+          oid === MAIN
+            ? { head_branch: 'main', created_at: '2026-09-22T02:30:00Z' }
+            : { head_branch: HEAD_BRANCH, created_at: '2026-09-22T02:00:00Z' },
+        ]),
+    );
+
+    expect(headPushedAsOf(restored, '2026-09-22T03:00:00Z')).toBe(OLD_HEAD);
+  });
+
+  it('treats a REST suite list longer than one page as truncated', () => {
+    const restored = restoreDeletedBranchNames(
+      deletedBranchPushes([OLD_HEAD, '2026-09-22T02:00:00Z']),
+      () =>
+        restSuites(
+          [{ head_branch: HEAD_BRANCH, created_at: '2026-09-22T02:00:00Z' }],
+          101,
+        ),
+    );
+
+    expect(headPushedAsOf(restored, '2026-09-22T03:00:00Z')).toBeUndefined();
+  });
+
+  it('rejects a REST response that is not a suite list', () => {
+    expect(() =>
+      restoreDeletedBranchNames(
+        deletedBranchPushes([OLD_HEAD, '2026-09-22T02:00:00Z']),
+        () => JSON.stringify({ message: 'Not Found' }),
+      ),
+    ).toThrow();
   });
 });

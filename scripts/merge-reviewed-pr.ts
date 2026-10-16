@@ -117,6 +117,69 @@ const pushesSchema = z.object({
   }),
 });
 
+// GitHub Actions' app ID: the check suites that date a push, in both APIs.
+const ACTIONS_APP_ID = 15368;
+// REST lists at most this many check suites per page.
+const REST_SUITE_PAGE = 100;
+
+const restCheckSuitesSchema = z.object({
+  total_count: z.number().int().nonnegative(),
+  check_suites: z.array(
+    z.object({
+      head_branch: z.string().nullable(),
+      created_at: z.iso.datetime(),
+    }),
+  ),
+});
+
+function readRestCheckSuites(oid: string): string {
+  return gh([
+    'api',
+    `repos/${REPOSITORY}/commits/${oid}/check-suites?app_id=${ACTIONS_APP_ID}&per_page=${REST_SUITE_PAGE}`,
+  ]);
+}
+
+// Once a branch is deleted, as it is when its PR merges, GraphQL
+// reports each of its check suites with no branch, so none of the PR's pushes
+// would date its heads. REST keeps the suite's head_branch, so a commit with
+// such a suite has its suites read again from REST. Promotion #1533's
+// verification refused a valid carried approval without this.
+export function restoreDeletedBranchNames(
+  pullRequest: unknown,
+  readSuites: (oid: string) => string,
+): unknown {
+  const parsed = pushesSchema.safeParse(pullRequest);
+  if (!parsed.success) return pullRequest;
+  const nodes = parsed.data.pushes.nodes;
+  const unnamed = (node: (typeof nodes)[number]) =>
+    node.commit.checkSuites.nodes.some((suite) => suite.branch === null);
+  if (!nodes.some(unnamed)) return pullRequest;
+  const restored = nodes.map((node) => {
+    if (!unnamed(node)) return node;
+    const rest = restCheckSuitesSchema.parse(
+      JSON.parse(readSuites(node.commit.oid)),
+    );
+    return {
+      commit: {
+        oid: node.commit.oid,
+        checkSuites: {
+          pageInfo: {
+            hasNextPage: rest.total_count > rest.check_suites.length,
+          },
+          nodes: rest.check_suites.map((suite) => ({
+            createdAt: suite.created_at,
+            branch:
+              suite.head_branch === null ? null : { name: suite.head_branch },
+          })),
+        },
+      },
+    };
+  });
+  return Object.assign({}, pullRequest, {
+    pushes: { ...parsed.data.pushes, nodes: restored },
+  });
+}
+
 // The PR head when an approval was submitted: the commit whose first push is
 // the latest at or before then. GitHub's repointed approval no longer names
 // that head. A push landing while CodeRabbit is still reviewing would be
@@ -565,13 +628,13 @@ const query = `query($number:Int!) {
       pushes: commits(last:100) {
         pageInfo { hasPreviousPage }
         nodes { commit { oid
-          checkSuites(first:20, filterBy:{appId:15368}) {
+          checkSuites(first:20, filterBy:{appId:${ACTIONS_APP_ID}}) {
             pageInfo { hasNextPage } nodes { createdAt branch { name } }
           }
         } }
       }
       commits(last:1) { nodes { commit { oid
-        checkSuites(first:20, filterBy:{appId:15368}) {
+        checkSuites(first:20, filterBy:{appId:${ACTIONS_APP_ID}}) {
           pageInfo { hasNextPage } nodes { createdAt }
         }
         statusCheckRollup {
@@ -621,7 +684,13 @@ export function readMergeEvidence(number: string) {
       `repos/${REPOSITORY}/pulls/${number}/reviews?per_page=100`,
     ]),
   );
-  return { pullRequest: response.data.repository.pullRequest, reviewPages };
+  return {
+    pullRequest: restoreDeletedBranchNames(
+      response.data.repository.pullRequest,
+      readRestCheckSuites,
+    ),
+    reviewPages,
+  };
 }
 
 // GitHub's compare API lists at most 300 files; a list that long may be
