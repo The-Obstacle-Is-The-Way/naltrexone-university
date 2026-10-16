@@ -15,7 +15,10 @@ import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 import { operationalAlertDrillCycle } from '@/src/adapters/jobs/operational-alert-drill';
 import {
   OPERATIONAL_ALERT_WATCHER_WORKFLOW,
+  PRODUCTION_RELEASE_WATCH_WORKFLOW,
+  SCHEDULED_WATCHES,
   type ScheduledWorkflows,
+  UPSTREAM_ADVISORY_WATCH_WORKFLOW,
 } from '@/src/adapters/jobs/scheduled-checks';
 import { FakeTransactionalEmailGateway } from '@/src/application/test-helpers/fakes';
 import { DAY_MS } from '@/src/domain/services';
@@ -41,17 +44,18 @@ const CRON_SECRET = 'debt468-cron-integration-only';
 const MONTHLY_PRICE_ID = 'price_debt468_monthly';
 const ANNUAL_PRICE_ID = 'price_debt468_annual';
 const NOW = new Date('2026-08-16T12:00:00.000Z');
-// DEBT-505: tests never call GitHub; here its scheduled checks all run.
+// DEBT-505, DEBT-523: tests never call GitHub; here its scheduled checks,
+// the watcher and the watches all run.
 const runningScheduledWorkflows: ScheduledWorkflows = {
   read: async () => ({
-    workflows: [
-      {
-        path: OPERATIONAL_ALERT_WATCHER_WORKFLOW,
-        state: 'active',
-        createdAt: NOW,
-      },
-    ],
+    workflows: [OPERATIONAL_ALERT_WATCHER_WORKFLOW, ...SCHEDULED_WATCHES].map(
+      (path) => ({ path, state: 'active', createdAt: NOW }),
+    ),
     watcherLastSuccessAt: NOW,
+    watchLastScheduledSuccessAt: {
+      [PRODUCTION_RELEASE_WATCH_WORKFLOW]: NOW,
+      [UPSTREAM_ADVISORY_WATCH_WORKFLOW]: NOW,
+    },
   }),
 };
 
