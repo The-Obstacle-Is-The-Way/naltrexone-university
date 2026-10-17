@@ -1,6 +1,6 @@
 # BUG-349: The Fake Consent Repository Keeps a Later Termination That Postgres Ignores
 
-**Status:** Open — choose the termination rule, keep it in one place, and add the fake↔real scenario that fails today
+**Status:** Open — align the fake and domain with DEBT-414's first-wins rule, compute retention once, and add the fake↔real scenario that fails today
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -15,7 +15,7 @@ When a subscription terminates, its renewal-consent records get a termination ti
 
 For a later replay, the fake moves the termination and retention forward; Postgres keeps the first. Retention is also computed twice: Postgres interval arithmetic in SQL, and `setUTCFullYear` in the domain. For a termination on 29 February, the two give retain-until dates a day apart.
 
-Tests split along the same line. The integration test pins first-wins, including a later replay. The fake's test of the same name stops at an earlier replay, where both agree. The fake-contract register lists no divergence for this fake.
+Production's rule was chosen: DEBT-414's hardening (`1aa4c814`, #751) added the null check and a later-replay assertion, and left the domain function and the fake keeping the latest time. Tests split along the same line. The integration test pins first-wins, including a later replay. The fake's test of the same name stops at an earlier replay, where both agree. The fake-contract register's row for this fake is a dated waiver claiming no parity, and its divergence list omits this one.
 
 The fake suite and production run different rules, the problem DEBT-472 and DEBT-519 exist to prevent.
 
@@ -35,7 +35,7 @@ The fake suite and production run different rules, the problem DEBT-472 and DEBT
 **The tests:**
 - The integration test pins first-wins with a later replay (`tests/integration/renewal-consent-records.integration.test.ts`).
 - The fake's test (`fake-renewal-consent-record-repository.test.ts`) stops before that case.
-- `docs/guides/testing/fake-contracts.md` lists the consent fake with no divergence.
+- `docs/guides/testing/fake-contracts.md:66`: a dated waiver (2026-08-23) for the consent fake; its known divergences omit this one.
 
 **The callers** pass two different clocks:
 - the Stripe event time (`stripe-webhook-controller.ts`);
@@ -54,12 +54,12 @@ The fake suite and production run different rules, the problem DEBT-472 and DEBT
 
 ## Impact
 
-A use-case test on the fake can pass with a retention date production would never write. Production rarely sees two termination observations for one subscription, and the error is at most a year of retention, erring long. P3. The broader pattern matters more: a rule copied into a fake drifts unless one scenario runs against both.
+A use-case test on the fake can pass with a retention date production would never write: the fake's date runs later than production's by the gap between the two observations. Production's own behavior is right, and it rarely sees two termination observations for one subscription. P3, under DEBT-472's fidelity yardstick. The broader pattern matters more: a rule copied into a fake drifts unless one scenario runs against both.
 
 ## Options
 
-1. **Decide the rule, then keep one copy.**
-   - First-wins is the natural reading of "terminated at": a subscription ends once.
+1. **Keep production's rule, in one copy.**
+   - First-wins is DEBT-414's rule, and the natural reading of "terminated at": a subscription ends once.
    - Delete the dead `GREATEST`, and compute retention in one place: in SQL from shared constants, or in the domain with the adapter writing the result.
    - Make the fake match.
    - Add a fake↔real scenario table for consent termination, and for the three copied rules above.
