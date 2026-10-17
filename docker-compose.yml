@@ -1,5 +1,6 @@
 # Local development database for integration tests
-# Usage: docker compose up -d
+# Usage: pnpm db:test:up, which resolves this clone's project name and ports;
+# a bare `docker compose up` fails without DB_TEST_POOLER_PORT.
 # Matches CI's database: the same image digest, credentials and health check
 # as scripts/ci/start-postgres.sh (DEBT-516).
 
@@ -16,6 +17,35 @@ services:
       - '${DB_TEST_PORT:-5434}:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d addiction_boards_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgbouncer:
+    # edoburu/pgbouncer v1.25.2-p0, multi-architecture image index.
+    image: edoburu/pgbouncer@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      AUTH_TYPE: scram-sha-256
+      # Wildcard databases and auth_query preserve each test role as the
+      # backend user; forcing postgres here would hide privilege defects.
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 10000
+      DEFAULT_POOL_SIZE: 90
+      MAX_PREPARED_STATEMENTS: 1000
+      QUERY_WAIT_TIMEOUT: 120
+      # Reproduce BUG-345's observed ignored startup bounds. Neon's public
+      # configuration documents transaction mode, not its exact ignore list.
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits,options,statement_timeout,lock_timeout,idle_in_transaction_session_timeout
+    ports:
+      - '127.0.0.1:${DB_TEST_POOLER_PORT:?Use the local test target resolver}:5432'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d postgres']
       interval: 5s
       timeout: 5s
       retries: 10

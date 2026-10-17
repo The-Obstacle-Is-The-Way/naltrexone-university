@@ -28,10 +28,12 @@ describe('createLocalTestDbCommandPlan', () => {
           '--wait-timeout',
           '60',
           'db',
+          'pgbouncer',
         ],
         env: {
           COMPOSE_PROJECT_NAME: 'naltrexone-test-dbcli',
           DB_TEST_PORT: '55438',
+          DB_TEST_POOLER_PORT: expect.any(String),
           DATABASE_URL:
             'postgresql://postgres:postgres@127.0.0.1:55438/addiction_boards_test',
           LOCAL_TEST_INSTANCE: 'dbcli',
@@ -68,6 +70,7 @@ describe('createLocalTestDbCommandPlan', () => {
         '--wait-timeout',
         '60',
         'db',
+        'pgbouncer',
       ],
     ]);
   });

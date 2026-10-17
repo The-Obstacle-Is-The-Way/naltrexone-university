@@ -8,6 +8,27 @@ import {
 } from './resolve-local-test-target';
 
 describe('resolveLocalTestTarget', () => {
+  it('assigns a separate stable pooler port per clone and honors its override', () => {
+    const first = resolveLocalTestTarget({ cwd: '/repo/clone-a', env: {} });
+    const again = resolveLocalTestTarget({ cwd: '/repo/clone-a', env: {} });
+    const other = resolveLocalTestTarget({ cwd: '/repo/clone-b', env: {} });
+
+    expect(first.poolerPort).toMatch(/^\d+$/);
+    expect(first.poolerPort).toBe(again.poolerPort);
+    expect(first.poolerPort).not.toBe(other.poolerPort);
+    expect(first.poolerPort).not.toBe(first.dbPort);
+    expect(first.poolerPort).not.toBe(first.appPort);
+    expect(createLocalTestTargetEnv(first).DB_TEST_POOLER_PORT).toBe(
+      first.poolerPort,
+    );
+    expect(
+      resolveLocalTestTarget({ env: { DB_TEST_POOLER_PORT: '45432' } })
+        .poolerPort,
+    ).toBe('45432');
+    expect(() =>
+      resolveLocalTestTarget({ env: { DB_TEST_POOLER_PORT: '70000' } }),
+    ).toThrow('DB_TEST_POOLER_PORT must be an integer TCP port');
+  });
   it('derives a stable per-worktree target without using the global default ports', () => {
     const first = resolveLocalTestTarget({
       cwd: '/Users/ray/Desktop/github/naltrexone-university',
@@ -60,6 +81,7 @@ describe('resolveLocalTestTarget', () => {
       composeProjectName: 'naltrexone-test-bug-245',
       dbHost: '127.0.0.1',
       dbPort: '55434',
+      poolerPort: expect.any(String),
       dbName: 'addiction_boards_test',
       databaseUrl:
         'postgresql://postgres:postgres@127.0.0.1:55434/addiction_boards_test',
@@ -154,6 +176,7 @@ describe('createLocalTestTargetEnv', () => {
     expect(createLocalTestTargetEnv(target)).toEqual({
       COMPOSE_PROJECT_NAME: 'naltrexone-test-docs',
       DB_TEST_PORT: '55436',
+      DB_TEST_POOLER_PORT: expect.any(String),
       DATABASE_URL:
         'postgresql://postgres:postgres@127.0.0.1:55436/addiction_boards_test',
       LOCAL_TEST_INSTANCE: 'docs',
@@ -185,6 +208,7 @@ describe('formatLocalTestTargetOutput', () => {
         'COMPOSE_PROJECT_NAME=naltrexone-test-docs',
         'DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55436/addiction_boards_test',
         'DB_TEST_PORT=55436',
+        `DB_TEST_POOLER_PORT=${target.poolerPort}`,
         'LOCAL_TEST_INSTANCE=docs',
         'NEXT_PUBLIC_APP_URL=http://127.0.0.1:3319',
         'PORT=3319',

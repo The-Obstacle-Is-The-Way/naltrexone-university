@@ -820,6 +820,7 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - DEBT-515 · CodeRabbit Learns Lasting Rules From Agents Speaking as the Owner · Resolved · 2026-10-15 · docs/records/debt-515-coderabbit-learns-rules-from-agents.md · #1529 · 18902d03bc354bb16e1ac32db54adc5ed3207175
 - DEBT-517 · Alerts #77 and #81 Wait on Fixes That Are Not Coming · Resolved · 2026-10-12 · docs/records/debt-517-alerts-77-and-81-wait-on-fixes-that-are-not-coming.md · #1470 · a6c330ef26cd619520a1f156675d390492ea097a
 - DEBT-522 · Partial Prefetching Is Unset, So Every Build Warns · Resolved · 2026-10-16 · docs/records/debt-522-partial-prefetching-is-unset.md · #1540 · 72bbd5655715d11967b7a82d1dc71a2008398bf7
+- DEBT-524 · Fixing the Open Records One by One Leaves Their Shared Causes in Place · Decomposed · 2026-10-17 · docs/records/debt-524-the-open-records-share-structural-causes.md · #1549 · 1d2ffa0351a225f85021817e049512f5d972c5da
 
 ## Frontend (FE prefix, retired)
 

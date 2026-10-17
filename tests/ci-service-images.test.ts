@@ -54,6 +54,61 @@ function startSteps() {
 }
 
 describe('CI container images', () => {
+  it('starts the pinned transaction pooler on a resolver port before integration tests', () => {
+    const ci = workflowJobs().find(
+      ({ file }) => file === '.github/workflows/ci.yml',
+    );
+    const steps = ci?.job.steps ?? [];
+    const pooler = steps.findIndex((step) =>
+      step.run?.includes('docker compose up -d --no-deps --wait'),
+    );
+    const integration = steps.findIndex(
+      (step) => step.run === 'pnpm test:integration:coverage',
+    );
+    expect(pooler).toBeGreaterThanOrEqual(0);
+    expect(pooler).toBeLessThan(integration);
+    // One resolver call, and no `export X="$(…)"`: export's own status masks
+    // a failed command substitution, so the step would run on empty values.
+    expect(
+      steps[pooler]?.run?.match(/resolve-local-test-target\.ts/g),
+    ).toHaveLength(1);
+    expect(steps[pooler]?.run).not.toMatch(/export \w+="\$\(/);
+    expect(steps[pooler]?.run).toContain('${COMPOSE_PROJECT_NAME:?');
+    expect(steps[pooler]?.run).toContain('${DB_TEST_POOLER_PORT:?');
+    expect(steps[pooler]?.run).toContain('GITHUB_ENV');
+    expect(steps[pooler]?.run).toContain(
+      'docker compose up --no-start --no-deps pgbouncer',
+    );
+    expect(steps[pooler]?.run).toContain(
+      `docker network connect --alias db "\${COMPOSE_PROJECT_NAME}_default" postgres`,
+    );
+    expect(steps[pooler]?.['timeout-minutes']).toBeGreaterThan(0);
+    const compose = parse(readFileSync('docker-compose.yml', 'utf8')) as {
+      services: {
+        pgbouncer: { image: string; environment: Env; ports: string[] };
+      };
+    };
+    expect(compose.services.pgbouncer.image).toMatch(
+      /^edoburu\/pgbouncer@sha256:[0-9a-f]{64}$/,
+    );
+    expect(compose.services.pgbouncer.environment.POOL_MODE).toBe(
+      'transaction',
+    );
+    expect(
+      compose.services.pgbouncer.environment.IGNORE_STARTUP_PARAMETERS?.split(
+        ',',
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        'statement_timeout',
+        'lock_timeout',
+        'idle_in_transaction_session_timeout',
+      ]),
+    );
+    expect(compose.services.pgbouncer.ports[0]).toContain(
+      'DB_TEST_POOLER_PORT',
+    );
+  });
   // BUG-327: a mutable tag can change what runs between two runs of the same
   // commit, so every image a workflow declares is pinned by digest.
   it('pins every service, job-container and docker:// step image by digest', () => {

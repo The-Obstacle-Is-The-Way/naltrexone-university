@@ -14,7 +14,9 @@ From a fresh local test database, all four steps are required. Skipping any step
 pnpm db:test:up
 ```
 
-This resolves the current clone's local test target, then runs Docker Compose with that target's project name and `DB_TEST_PORT`. Different clones get different Compose projects and host ports by default.
+This resolves the current clone's local test target, then starts Postgres and PgBouncer with that target's project name, `DB_TEST_PORT` and `DB_TEST_POOLER_PORT`. Different clones get different Compose projects and host ports by default.
+
+PgBouncer runs in transaction mode. It ignores the three timeout startup parameters to reproduce BUG-345's observed Neon behavior; this is not a claim to reproduce Neon's undisclosed configuration in full. `db-pooler-timeouts.integration.test.ts` creates its own disposable database and ordinary role, runs the managed migration entry point through the pooler, and proves server defaults and SQLSTATEs. Only its local fixture pool is recycled. The rest of the integration suite continues to use direct Postgres.
 
 Readiness uses Compose `--wait --wait-timeout 60`; local E2E delegates to the same command and never migrates after a failed readiness check. There is no second Docker inspection/polling layer.
 
@@ -91,7 +93,7 @@ If the database gets into a bad state:
 pnpm db:test:reset
 ```
 
-This runs `docker compose -p <resolved-project> down -v` and then starts the resolved `db` service again. You'll need to re-run migrations and seeding (steps 2-3) afterward.
+This runs `docker compose -p <resolved-project> down -v` and then starts the resolved `db` and `pgbouncer` services again. You'll need to re-run migrations and seeding (steps 2-3) afterward.
 
 ---
 
@@ -101,10 +103,11 @@ This runs `docker compose -p <resolved-project> down -v` and then starts the res
 |-------------|------|---------|
 | **Local** | Per-clone derived port | `scripts/resolve-local-test-target.ts` exports `DB_TEST_PORT` into `pnpm db:test:*` and local integration/E2E wrappers |
 | **CI** | 5432 | `Start Postgres` step (`scripts/ci/start-postgres.sh`) in `.github/workflows/ci.yml` |
+| **Transaction pooler, local and CI** | Per-clone derived port | The same resolver exports `DB_TEST_POOLER_PORT`; CI starts only the Compose pooler and attaches its existing Postgres container to that network as `db` |
 
 The committed `.env.test` file deliberately contains no `DATABASE_URL`. Local wrappers inject the resolver-owned target, and CI opts into its runner-local database with `INTEGRATION_USE_EXISTING_DATABASE=true`. A raw Vitest invocation with no explicit database therefore fails closed instead of guessing a shared local target.
 
-To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To force a specific DB port, set `DB_TEST_PORT` and use `pnpm exec tsx scripts/resolve-local-test-target.ts database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
+To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To override ports, set `DB_TEST_PORT` or `DB_TEST_POOLER_PORT` before both startup and testing; use `pnpm exec tsx scripts/resolve-local-test-target.ts database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
 
 ---
 
@@ -112,9 +115,10 @@ To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. T
 
 GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 container on every run, in its `Start Postgres` step (`scripts/ci/start-postgres.sh`), from the first of Docker Hub, ECR Public and Google's mirror that serves the pinned digest. It does not depend on local Docker state. The pipeline runs:
 
-1. `pnpm db:migrate` — applies migrations to the CI database
-2. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks
-3. `pnpm test:integration:coverage` — runs all integration tests with coverage
+1. Start the digest-pinned Compose transaction pooler on the resolver's port, using the existing CI Postgres container.
+2. `pnpm db:migrate` — applies migrations to the CI database
+3. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks
+4. `pnpm test:integration:coverage` — runs all integration tests with coverage, including the pooled timeout and managed-migration proofs
 
 Integration tests are part of every PR and every push to `main`.
 
@@ -134,7 +138,7 @@ The test setup checks database connectivity before running any tests. If you see
 
 1. Is Docker running? Check with `docker ps`
 2. Inspect the resolved target with `pnpm exec tsx scripts/resolve-local-test-target.ts env`
-3. Is the Compose service running for that project? Check with `docker compose -p <COMPOSE_PROJECT_NAME> ps`
+3. Is the Compose service running for that project? Check with `docker ps --filter label=com.docker.compose.project=<COMPOSE_PROJECT_NAME>`. A bare `docker compose ps` fails without `DB_TEST_POOLER_PORT`, because Compose interpolates the whole file for every command
 4. If not, restart: `pnpm db:test:up`
 5. If the container exists but tables are missing: re-run migrations (see above)
 
@@ -144,7 +148,7 @@ A wrong database port fails without saying why: `drizzle-kit` prints no connecti
 
 **Stale containers on wrong ports/projects**
 
-If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> docker compose down` or remove the specific container intentionally. Do not remove another clone's active project. Run `pnpm exec tsx scripts/resolve-local-test-target.ts env` to confirm the project for this clone, then `pnpm db:test:up`.
+If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> DB_TEST_POOLER_PORT=1 docker compose down` or remove the specific container intentionally. `down` publishes no port, so any value satisfies the file's required variable. Do not remove another clone's active project. Run `pnpm exec tsx scripts/resolve-local-test-target.ts env` to confirm the project for this clone, then `pnpm db:test:up`.
 
 **Wrong DATABASE_URL (explicit passthrough only)**
 
