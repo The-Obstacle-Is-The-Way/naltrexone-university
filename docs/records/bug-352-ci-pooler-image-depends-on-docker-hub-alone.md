@@ -1,6 +1,6 @@
 # BUG-352: CI's Pooler Image Depends on Docker Hub Alone
 
-**Status:** Open — pull CI's PgBouncer image with the failover Postgres has, and guard every image the workflows pull; due 2026-10-24
+**Status:** Open — decided: pull both CI images through one failover helper, with a guard over every workflow image; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -41,7 +41,13 @@ The gap was known before merging. It shipped as DEBT-516's last open item and as
   | Codecov upload | `continue-on-error`, so it never fails `test` |
   | pnpm and every package | The npm registry. Vercel's build depends on it too: a different class, out of scope here |
 
-- **Nothing refreshes the pin.** It is `v1.25.2-p0`. Upstream's repository moved to PgBouncer 1.26.0 on 2026-09-30, and Docker Hub has a `v1.26.0-p0` tag; its `latest` tag is a third digest. Dependabot has no Docker or Compose ecosystem here. The [dependency update protocol](../guides/dependencies/updating-dependencies.md) has a refresh section for CI's Postgres image but none for PgBouncer. So no duty refreshes the digest, or checks again which registries serve it.
+- **Nothing refreshes the pin.** It is `v1.25.2-p0`. Upstream's repository moved to PgBouncer 1.26.0 on 2026-09-30, and Docker Hub has a `v1.26.0-p0` tag; its `latest` tag is a third digest. PgBouncer 1.26.1 followed on 2026-10-14, and no `edoburu/pgbouncer` tag carries it yet. Dependabot has no Docker or Compose ecosystem here. The [dependency update protocol](../guides/dependencies/updating-dependencies.md) has a refresh section for CI's Postgres image but none for PgBouncer. So no duty refreshes the digest, or checks again which registries serve it.
+- **The pin's advisories.** PgBouncer [1.26.0](https://www.postgresql.org/about/news/pgbouncer-1260-released-fixes-three-cves-3385/) and [1.26.1](https://github.com/pgbouncer/pgbouncer/releases/tag/pgbouncer_1_26_1) fix six CVEs that reach `v1.25.2`: denial of service, and in one, SCRAM impersonation by someone who already knows a listed user's password. None bears on CI's stand-in.
+  - It listens only on `127.0.0.1` of a throwaway runner or a developer's machine.
+  - It holds test data behind the well-known `postgres` password.
+  - The startup-`options` loop needs `options` missing from `ignore_startup_parameters`, and the compose file lists it.
+
+  1.26.0 also changed how tracked parameters interact with `ignore_startup_parameters`, the behavior the stand-in models, and 1.26.1 fixed part of that.
 
 ## Impact
 
@@ -55,61 +61,82 @@ Production keeps serving, and no data is at risk. Recovery is a re-run once Dock
 ## Options
 
 1. **Pull every image the workflows start through DEBT-516's failover.** This reuses a tested mechanism, needs no secrets, and works for Dependabot and fork pull requests. For PgBouncer, the failover is Docker Hub, then Google's mirror.
-2. **Configure the runner's Docker daemon to use `mirror.gcr.io` as a registry mirror.** That is Google's documented use, and it covers every Docker Hub pull with no Compose change. The setting is one the daemon reloads without a restart, but it must be in place before the first pull. The daemon then prefers the mirror, so GitHub's exempt Docker Hub path is no longer first. A stalled mirror can use up a bounded pull before Docker Hub is tried. And it departs from DEBT-516's explicit, tested ordering.
+2. **Configure the runner's Docker daemon to use `mirror.gcr.io` as a registry mirror.** That is Google's documented use, and it covers every Docker Hub pull with no Compose change. The setting is one the daemon reloads without a restart, but it must be in place before the first pull. The daemon then prefers the mirror on every attempt, so GitHub's exempt Docker Hub path is no longer first, and a hanging mirror can use up every bounded attempt before Docker Hub is tried. It also departs from DEBT-516's explicit, tested ordering.
 3. **Retry Docker Hub only.** This covers a blip, but not an outage like the half hour on 2026-10-09.
 4. **Add the owner's own GHCR copy as an independent third source.** This is DEBT-516's option 5. It is owner-controlled and runs on the runners' own platform. It costs a package, a copy step that can write, and a copy on every refresh.
 5. **Keep the image in an Actions cache as a fallback** (`docker save`, keyed by digest). It is GitHub-hosted and needs no credential. But a cache entry unused for 7 days is evicted, and a loaded image may carry no registry digest, so the step would need its own integrity check of the image ID.
 6. **Move the pooler suite to a job that is not required.** That takes the risk off the required path, but it makes BUG-345's only regression guard advisory.
 7. **Accept the risk.** The guarantee DEBT-516 decided would stay broken, although the repository already has a tested mechanism for it.
 
-## Resolution (proposed)
+## Resolution (decided)
 
-The proposal is option 1, with a guard that keeps every image the workflows pull on failover. Option 4 waits for evidence that the mirror is unreliable for this image.
+**Decided:** option 1, on 2026-10-17, chosen from first principles at the owner's request. It is built in its own pull request.
 
-- **One failover helper.**
-  - Move `start-postgres.sh`'s pull loop into `scripts/ci/pull-image.sh`. Given a label, a digest and an ordered list of repositories, it pulls `<repository>@<digest>` from the first that serves it:
-    - two attempts per registry, 10 seconds apart, each stopped at 60 seconds;
-    - a log line `<label> image pulled from <registry>`, as a notice.
-  - `start-postgres.sh` calls the helper with its three registries. Its behavior and its messages stay as they are, so `scripts/ci/start-postgres.test.ts` passes unchanged.
-  - It hands back the reference it pulled without its caller capturing its output, for example as a sourced function that sets a variable. Captured output would swallow its notices.
-- **PgBouncer through the helper.**
-  - A new step, before `Start transaction pooler`, pulls the pin from `docker.io/edoburu/pgbouncer` and then `mirror.gcr.io/edoburu/pgbouncer`.
-  - It writes the repository that served it to `$GITHUB_ENV` as `PGBOUNCER_IMAGE_REPOSITORY`.
-  - The digest is the step's `PGBOUNCER_IMAGE_DIGEST`, as Postgres's is.
-  - The step is bounded at 7 minutes. Refusing both registries takes at most 2 × (70 + 10 + 70) = 300 seconds.
+**Why option 1.**
+- **It fixes the cause, not the instance.** DEBT-516's guarantee lived in one image's script and one image's test, so the next image bypassed it. Option 1 moves the guarantee into one mechanism that every image uses. It adds a guard over every image a workflow pulls, so a new image cannot bypass it unnoticed.
+- **Refactor first, then change behavior.** Extracting the helper must leave `start-postgres.sh`'s tests passing unchanged. Only then does PgBouncer start using the helper.
+- **Each source stays bounded and independent.** A stalled registry is cut off at its own time limit before the next is tried. That is DEBT-516's lesson from the hung pulls on 2026-10-09.
+  - Option 2 fails this. A hanging mirror would stall every attempt, since the daemon tries the mirror before Docker Hub each time.
+  - Option 2 also makes the behavior implicit, untestable here, and silent about which registry served.
+- **No new write path or package without evidence.** Options 4 and 5 add machinery for a failure, Docker Hub failing while the mirror lacks the digest, that has not occurred. Option 4 has a named trigger below.
+- **The regression guard stays blocking.** Option 6 would make BUG-345's only proof advisory. Option 3 does not survive an outage, and option 7 keeps a known defect.
+
+**What gets built.**
+- **One failover helper, `scripts/ci/pull-image.sh`.**
+  - It defines `pull_image <label> <digest> <repository>...`, which pulls `<repository>@<digest>` from the first repository that serves it and sets `PULLED_IMAGE` to that reference. Run as a script, `bash scripts/ci/pull-image.sh --env <NAME> <label> <digest> <repository>...`, it also appends `<NAME>=<repository that served>` to `$GITHUB_ENV`.
+  - Per repository, it makes two attempts, 10 seconds apart, each stopped at 60 seconds.
+  - Its messages:
+    - `::notice::<label> image pulled from <registry>` on success;
+    - `::warning::Could not pull <label> from <registry>; trying the next registry.` before moving on;
+    - `::error::No registry served <name>@<digest>.` when all refuse, with a non-zero exit.
+  - It rejects a digest that is not `sha256:` and 64 hex digits, and a call naming fewer than two repositories.
+  - It never returns the reference through captured output, which would swallow its notices.
+- **`start-postgres.sh` uses it.** It sources the helper and calls it with its three registries. Its behavior, its messages and `POSTGRES_PULL_TIMEOUT_SECONDS` stay as they are, so `scripts/ci/start-postgres.test.ts` passes unchanged.
+- **A `Pull PgBouncer` step**, right after `Start Postgres`, bounded at 7 minutes. Refusing both registries takes at most 2 × (70 + 10 + 70) = 300 seconds.
+  - Its `PGBOUNCER_IMAGE_DIGEST` holds the pin.
+  - It runs `bash scripts/ci/pull-image.sh --env PGBOUNCER_IMAGE_REPOSITORY PgBouncer "$PGBOUNCER_IMAGE_DIGEST" docker.io/edoburu/pgbouncer mirror.gcr.io/edoburu/pgbouncer`.
 - **Compose runs what was pulled.**
   - `docker-compose.yml`'s image becomes `${PGBOUNCER_IMAGE_REPOSITORY:-edoburu/pgbouncer}@sha256:7d7a27d9…`. The digest stays literal, and local use is unchanged.
-  - The name has to vary because Docker cannot tag a digest reference. An image pulled from the mirror is known locally only by the mirror's name, so Compose must be given that name. Checked on 2026-10-17 with Docker 29.8: after a pull from the mirror, the same digest under its Docker Hub name is `No such image`, and `docker tag` refuses a digest reference.
-  - Both `docker compose up` calls add `--pull never`, so Compose can never fall back to an unannounced Docker Hub pull.
-- **The guard, red first.** It generalizes DEBT-516's guard from Postgres to every image a workflow pulls:
-  - no workflow `run` step calls `docker pull`, `docker run`, `docker create` or `docker compose pull` directly; images come only through `scripts/ci/pull-image.sh`;
-  - every `docker compose up`, `create` or `run` in a workflow passes `--pull never`;
-  - each Compose service a workflow starts has an image of the form `${<NAME>_IMAGE_REPOSITORY:-<repository>}@sha256:<64 hex>`, whose digest equals the one the workflow pulls through the helper.
+  - The name has to vary because Docker cannot tag a digest reference. An image pulled from the mirror is known locally only by the mirror's name. Checked on 2026-10-17 with Docker 29.8: after a pull from the mirror, the same digest under its Docker Hub name is `No such image`, and `docker tag` refuses a digest reference.
+  - Both `docker compose up` calls in `Start transaction pooler` add `--pull never`, so Compose can never fall back to an unannounced Docker Hub pull.
+- **The guard, red first, in `tests/ci-service-images.test.ts`.**
+  - No workflow `run` step calls `docker pull`, `docker run`, `docker create` or `docker compose pull` directly.
+  - Every `docker compose up`, `create` or `run` in a workflow passes `--pull never`.
+  - Each Compose service a workflow starts has an image of the form `${<NAME>_IMAGE_REPOSITORY:-<repository>}@sha256:<64 hex>`. Its digest equals the one that workflow pulls through the helper, which also sets `<NAME>_IMAGE_REPOSITORY`.
+  - Every helper call, in a workflow or in `scripts/ci/`, names at least two repositories.
 
   Today's `ci.yml` fails the second and third rules.
-- **A refresh duty.** Add a "CI's PgBouncer Image" section to the dependency update protocol:
-  - **When:** refresh on a PgBouncer security release, or when the pooler behavior that BUG-345's suite models changes.
+- **The helper's own tests,** with `start-postgres.test.ts`'s fake Docker CLI. They show:
+  - the fall to the mirror when Docker Hub refuses, and when it hangs;
+  - the `$GITHUB_ENV` line;
+  - the error when both refuse;
+  - the refusal of a single repository.
+- **A "CI's PgBouncer Image" section in the dependency update protocol.**
+  - **When:** on a PgBouncer security release or behavior change that bears on transaction pooling or ignored startup parameters, or on an advisory against the image.
   - **How:** resolve the digest from Docker Hub's `edoburu/pgbouncer:<version>` tag only, and confirm each registry serves it with `docker buildx imagetools inspect --raw`.
-  - **Where:** change the workflow's digest and `docker-compose.yml` together; the test keeps them equal.
+  - **Where:** change `PGBOUNCER_IMAGE_DIGEST` and `docker-compose.yml` together; the test keeps them equal.
 
-  Whether to move to `v1.26.0-p0` is that duty's first decision, not this fix's.
-- **Out of scope:**
-  - the npm registry, which every install needs, Vercel's build included;
-  - a clone's first local pull, which comes from Docker Hub once and is then cached.
-- **The residual.** There are two sources. Google's mirror keeps only what it has cached, and a direct pull from it is outside Google's documented use, as it already is for Postgres.
-  - If a refresh finds the mirror lacks the new digest, the refresh pull request says so.
-  - If Docker Hub ever fails while the mirror lacks the digest, adopt option 4.
+**The version stays `v1.25.2-p0` in this fix.** Moving it is the duty's first use, in its own pull request, once `edoburu/pgbouncer` publishes a tag with PgBouncer 1.26.1 or later.
+- 1.26.0 changed how tracked parameters interact with `ignore_startup_parameters`, which is the behavior this stand-in models. 1.26.1 restored part of it, and upstream says more fixes follow.
+- That pull request passes BUG-345's pooler suite unchanged, or records what differs.
+- If this record is otherwise done first, that refresh becomes a Waiting row whose trigger is the tag appearing on Docker Hub.
+
+**Out of scope.**
+- The npm registry, which every install needs, Vercel's build included.
+- A clone's first local pull, which comes from Docker Hub once and is then cached.
+
+**The residual.** There are two sources. Google's mirror keeps only what it has cached, and a direct pull from it is outside Google's documented use, as it already is for Postgres.
+- A refresh lands only once both registries serve its digest.
+- Adopt option 4 if Docker Hub fails while the mirror lacks the pinned digest, or if a refresh waits more than 14 days for the mirror.
 
 ## Verification
 
 - [ ] The guard fails on today's `ci.yml`, then passes with the fix.
-- [ ] A test with a fake Docker CLI shows each of these:
-  - the PgBouncer pull falls to the mirror when Docker Hub refuses or hangs;
-  - Compose then runs the mirror's reference with `--pull never`;
-  - the step fails with `No registry served` when both registries refuse.
+- [ ] The helper's tests pass, and `scripts/ci/start-postgres.test.ts` passes unchanged.
 - [ ] Locally, with the image removed and pulled from the mirror alone, Compose with `PGBOUNCER_IMAGE_REPOSITORY=mirror.gcr.io/edoburu/pgbouncer` and `--pull never` starts the pooler from the mirror's copy.
-- [ ] The pull request's CI logs `PgBouncer image pulled from <registry>`, and the pooler suite passes.
+- [ ] The fixing pull request's CI logs `PgBouncer image pulled from <registry>`, and the pooler suite passes.
 - [ ] After promotion, `main`'s CI logs the notice for both images.
+- [ ] The pin moves to PgBouncer 1.26.1 or later under the new duty, or a Waiting row holds that refresh with its trigger.
 
 ## Related
 
