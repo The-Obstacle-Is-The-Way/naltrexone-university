@@ -1,6 +1,6 @@
 # ADR-024: Review, Merge and Promotion
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-10-16)
 **Date:** 2026-10-11, recording the owner's decisions of 2026-09-19 to 2026-10-09
 **Decision Makers:** The owner. These rulings were written into `AGENTS.md` as dated paragraphs; ADR-023 moved decisions out of agent instructions, so they are recorded here with their dates, and `AGENTS.md` keeps only the rules.
 
@@ -59,3 +59,9 @@ The repository is public, the owner is its only human, and AI agents write and r
 - [Deployment Procedure](../guides/release/promote-to-production.md#8-promoting-dev-to-main): promotion and the production gate.
 - [ADR-020](./adr-020-coverage-patch-gate.md): when the `codecov/patch` status blocks a merge.
 - [ADR-023](./adr-023-documentation-organisation.md): why these decisions left `AGENTS.md`.
+
+## Amendment — 2026-10-16
+
+**Agents keep commenting through the owner's GitHub account.** Because they do, CodeRabbit cannot tell an agent's reply from the owner's ruling. DEBT-515 left the owner one question: whether agents should get a GitHub account of their own. On 2026-10-16 the owner declined. Decision 6's controls are therefore the lasting answer, not a stopgap until such an account exists:
+- agents never ask CodeRabbit to record a learning, and one it records anyway is linked from the PR description;
+- each new learning waits 30 days for the owner, and the weekly issue lists them.
