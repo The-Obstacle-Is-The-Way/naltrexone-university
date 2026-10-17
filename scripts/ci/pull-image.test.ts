@@ -11,10 +11,8 @@ import {
 } from '@/tests/shared/fake-docker-cli';
 
 const DIGEST = `sha256:${'a'.repeat(64)}`;
-const REPOSITORIES = [
-  'docker.io/edoburu/pgbouncer',
-  'mirror.gcr.io/edoburu/pgbouncer',
-];
+const DOCKER_HUB = 'docker.io/edoburu/pgbouncer';
+const REPOSITORIES = [DOCKER_HUB, 'mirror.gcr.io/edoburu/pgbouncer'];
 const roots: string[] = [];
 afterAll(() =>
   Promise.all(roots.map((root) => rm(root, { recursive: true, force: true }))),
@@ -28,11 +26,12 @@ async function run({
 } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'pull-image-'));
   roots.push(root);
-  for (const [name, source] of [
+  const commands: [string, string][] = [
     ['docker', FAKE_DOCKER],
     ['sleep', FAKE_SLEEP],
-    ...(!HOST_HAS_TIMEOUT ? [['timeout', FAKE_TIMEOUT]] : []),
-  ]) {
+  ];
+  if (!HOST_HAS_TIMEOUT) commands.push(['timeout', FAKE_TIMEOUT]);
+  for (const [name, source] of commands) {
     await writeFile(join(root, name), source);
     await chmod(join(root, name), 0o755);
   }
@@ -148,7 +147,7 @@ describe('pull-image.sh', () => {
     },
   );
   it('refuses one repository before Docker', async () => {
-    const result = await run({ repositories: [REPOSITORIES[0]] });
+    const result = await run({ repositories: [DOCKER_HUB] });
     expect(result.status).toBe(2);
     expect(result.calls).toEqual([]);
   });

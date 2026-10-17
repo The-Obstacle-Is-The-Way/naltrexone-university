@@ -1,6 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import {
+  helperRepositoryErrors,
+  workflowImageErrors,
+} from '@/tests/shared/ci-image-policy';
 import { workflowFiles, workflowImages } from '@/tests/shared/workflow-files';
 
 const START_POSTGRES = 'bash scripts/ci/start-postgres.sh';
@@ -54,6 +58,74 @@ function startSteps() {
 }
 
 describe('CI container images', () => {
+  // BUG-352: a second image bypassed Postgres-only failover protection.
+  const composeSource = readFileSync('docker-compose.yml', 'utf8');
+  const policy = () =>
+    workflowFiles().map((file) => ({
+      file,
+      ...workflowImageErrors(readFileSync(file, 'utf8'), composeSource),
+    }));
+
+  it('allows no workflow to pull or directly start an image outside failover', () => {
+    expect(
+      policy().flatMap(({ file, direct }) =>
+        direct.map((error) => ({ file, error })),
+      ),
+    ).toEqual([]);
+  });
+
+  it('requires --pull never on every workflow Compose up, create or run', () => {
+    expect(
+      policy().flatMap(({ file, pullPolicy }) =>
+        pullPolicy.map((error) => ({ file, error })),
+      ),
+    ).toEqual([]);
+  });
+
+  it('ties every workflow Compose service to its preceding bounded helper pull', () => {
+    expect(
+      policy().flatMap(({ file, compose }) =>
+        compose.map((error) => ({ file, error })),
+      ),
+    ).toEqual([]);
+  });
+
+  it('names at least two registry repositories in every workflow and CI script helper call', () => {
+    const scripts = globSync('scripts/ci/**/*.sh').flatMap((file) =>
+      helperRepositoryErrors(
+        // The helper's CLI forwards already supplied arguments; its tests
+        // prove the same minimum-repository validation. All callers are literal.
+        file === 'scripts/ci/pull-image.sh'
+          ? readFileSync(file, 'utf8').replace(
+              /^ {2}pull_image "\$@" \|\| exit \$\?$/m,
+              '',
+            )
+          : readFileSync(file, 'utf8'),
+      ).map((error) => ({
+        file,
+        error,
+      })),
+    );
+    expect([
+      ...policy().flatMap(({ file, repositories }) =>
+        repositories.map((error) => ({ file, error })),
+      ),
+      ...scripts,
+    ]).toEqual([]);
+  });
+
+  it('pins one PgBouncer digest across its workflow pull and Compose', () => {
+    const pull = workflowJobs()
+      .find(({ file }) => file === '.github/workflows/ci.yml')
+      ?.job.steps?.find((step) => step.name === 'Pull PgBouncer');
+    const digest = pull?.env?.PGBOUNCER_IMAGE_DIGEST;
+    expect(digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    const compose = parse(composeSource) as {
+      services: { pgbouncer: { image: string } };
+    };
+    expect(compose.services.pgbouncer.image.split('@')[1]).toBe(digest);
+  });
+
   it('starts the pinned transaction pooler on a resolver port before integration tests', () => {
     const ci = workflowJobs().find(
       ({ file }) => file === '.github/workflows/ci.yml',
@@ -77,7 +149,7 @@ describe('CI container images', () => {
     expect(steps[pooler]?.run).toContain('${DB_TEST_POOLER_PORT:?');
     expect(steps[pooler]?.run).toContain('GITHUB_ENV');
     expect(steps[pooler]?.run).toContain(
-      'docker compose up --no-start --no-deps pgbouncer',
+      'docker compose up --no-start --no-deps --pull never pgbouncer',
     );
     expect(steps[pooler]?.run).toContain(
       `docker network connect --alias db "\${COMPOSE_PROJECT_NAME}_default" postgres`,
@@ -89,7 +161,7 @@ describe('CI container images', () => {
       };
     };
     expect(compose.services.pgbouncer.image).toMatch(
-      /^edoburu\/pgbouncer@sha256:[0-9a-f]{64}$/,
+      /^\$\{PGBOUNCER_IMAGE_REPOSITORY:-edoburu\/pgbouncer\}@sha256:[0-9a-f]{64}$/,
     );
     expect(compose.services.pgbouncer.environment.POOL_MODE).toBe(
       'transaction',
