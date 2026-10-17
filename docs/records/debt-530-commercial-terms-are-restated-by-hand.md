@@ -1,6 +1,6 @@
 # DEBT-530: Commercial Terms Are Restated by Hand in Each Place That Shows Them
 
-**Status:** Open — one offer module that the server reads and the copy is built from, with tests tying every live copy to it
+**Status:** Open — one offer module that the server reads and the copy is built from, with tests tying every live copy to it; one blocking-status list under DEBT-501's billing contract
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -13,13 +13,14 @@ Several commercial terms have no single owner. Each is typed by hand where it ap
 - the plan amounts;
 - the yearly saving;
 - the support address;
-- the terms version and its effective date.
+- the terms version and its effective date;
+- which subscription statuses block a new checkout.
 
 They agree today: $29 and $199, a 7-day trial, 12 × 29 − 199 = 149, and one address. But each change to an offer must find every copy, and the only fence (the consent text's hash) catches a change to the wording, not to what the server grants.
 
-Two related checks are owned elsewhere:
-- **The Stripe price.** Whether Stripe charges the amount shown is DEBT-501 item 2's step 5: checkout refuses a configured price whose amount or interval differs from `lib/pricing-data.ts`.
-- **The offer's blocking statuses.** These are DEBT-524's Finding 1. The pricing page's fall-through in `determineNonEntitledReason` is a fourth, implicit copy of those lists: it offers "Manage billing" for every status it does not name, while checkout refuses on an explicit list. They agree for all eight statuses today.
+The blocking statuses are kept in three explicit lists, and the pricing page's fall-through in `determineNonEntitledReason` is a fourth, implicit copy: it offers "Manage billing" for every status it does not name, while checkout refuses on an explicit list. They agree for all eight statuses today. DEBT-524 found the three lists and closed on 2026-10-17 without placing them in a live record; this record owns them.
+
+Whether Stripe charges the amount shown is owned elsewhere: DEBT-501 item 2's step 5, where checkout refuses a configured price whose amount or interval differs from `lib/pricing-data.ts`.
 
 The billing page's cancellation date, a live presentation defect in the same area, is BUG-350.
 
@@ -55,6 +56,13 @@ The billing page's cancellation date, a live presentation defect in the same are
 - `TERMS_VERSION = '2026-08-09'` (`lib/pricing-data.ts:13`) and `effectiveDate: 'August 9, 2026'` (`terms-content.ts:6`) are not linked.
 - The content hash covers only the body.
 
+**Blocking statuses:**
+- The domain's list: `BlockingCheckoutSubscriptionStatuses` (`src/domain/value-objects/subscription-status.ts:40-41`).
+- Checkout's Stripe-side list: `BLOCKING_SUBSCRIPTION_STATUSES` (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:58-65`).
+- Reconcile's list: `BLOCKING_STATUSES` (`src/adapters/jobs/reconcile-stripe-subscriptions.ts:22-29`).
+- The fall-through: `determineNonEntitledReason` returns `manage_billing` for any status it does not name (`src/domain/services/entitlement.ts:23-32`). The pricing page reads that reason.
+- The two Stripe-side lists name Stripe's statuses; the domain's names ours, and the status mapping joins them.
+
 **Email copy:**
 - The notice and acknowledgment emails each carry their own footer and `formatAmount`: `src/application/use-cases/send-due-renewal-notices.ts` and `send-renewal-acknowledgment.ts`.
 - The footers already differ in punctuation and in how the refund line is introduced.
@@ -78,20 +86,22 @@ A change to the trial length, a plan's amount or the support address made in one
    - The checkout use case reads it, and the live copy is built from it.
    - Frozen consent texts and legal pages stay literal; a test ties each to the module.
    - The two email footers share one helper.
+   - The blocking statuses become one domain list that checkout, reconcile and the pricing page's reason read. It is a billing rule, so it follows DEBT-501's shared billing contract (adopted 2026-10-17): the contract is defined first, then the list is extracted.
 2. **Tests only:** keep every literal, and add tests that compare each copy with `FREE_TRIAL_DAYS`, `amountCents` and `SUPPORT_EMAIL`. This is cheaper, and it leaves the constants scattered.
 
 ## Resolution (proposed)
 
-Option 1, with the next offer or copy change, red first: a test that fails when any live copy states a trial length, amount or address other than the module's.
+Option 1, with the next offer or copy change, red first: a test that fails when any live copy states a trial length, amount or address other than the module's. The blocking-status list moves with DEBT-501's contract, in the first implementation of its item 2 or BUG-343 option 4.
 
 ## Verification
 
 - [ ] Trial days, amounts, saving and support address each have one source, and tests tie every copy to it.
 - [ ] The terms version and effective date are derived from one value.
+- [ ] One list decides which statuses block a new checkout; checkout, reconcile and the pricing page read it, and a test covers all eight statuses.
 
 ## Related
 
-- DEBT-501: item 2's step 5 owns the Stripe price check.
-- DEBT-524: the blocking-status lists, which this adds a fourth copy to.
+- DEBT-501: item 2's step 5 owns the Stripe price check; its shared billing contract governs the blocking-status list.
+- DEBT-524 (closed): found the three blocking-status lists.
 - BUG-350: the billing page's cancellation date.
 - DEBT-414: renewal consent.

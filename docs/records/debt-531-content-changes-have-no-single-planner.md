@@ -1,4 +1,4 @@
-# DEBT-525: Content Changes Have No Single Planner, and the Production Seed Can Undo a Correction the Release Builder Refuses
+# DEBT-531: Content Changes Have No Single Planner, and the Production Seed Can Undo a Correction the Release Builder Refuses
 
 **Status:** Open — owner decides the content bootstrap (DEBT-483) or a revert check in the seed; check stored revisions are canonical first
 **Priority:** P3
@@ -80,7 +80,7 @@ For holds, choose per-revision or per-question scope everywhere, amending the AD
 
 The owner decides option 1's timing. If the bootstrap is more than a few weeks away, do option 2 now, red first with a seed test that refuses a stale file. Either way, run the canonical-hash query before the bootstrap.
 
-This record takes over DEBT-446's Waiting row (Part 3b), whose freshness gap it covers, so the row leaves Waiting in this change. Its trigger had not strictly fired: the release builder is a second writer, but the pointer lock orders it. The reasons to act now are new: ADR-022 made a window's answers stay out of scores, and the builder already has the rule the seed lacks. DEBT-524's Finding 1 judged the two-writer period covered by DEBT-483; this record names the rule that differs within it.
+This record takes over DEBT-446's Waiting row (Part 3b), whose freshness gap it covers, so the row leaves Waiting in this change. Its trigger had not strictly fired: the release builder is a second writer, but the pointer lock orders it. The reasons to act now are new: ADR-022 made a window's answers stay out of scores, and the builder already has the rule the seed lacks. DEBT-524's Finding 1 judged the two-writer period covered by DEBT-483, and DEBT-524 closed on 2026-10-17 without placing the content transition in a live record. This record owns it: the rule that differs between the two writers, and the point where the seed stops writing production.
 
 ## Verification
 
@@ -92,5 +92,5 @@ This record takes over DEBT-446's Waiting row (Part 3b), whose freshness gap it 
 
 - DEBT-483 (Waiting): the production content bootstrap.
 - DEBT-446 (closed; its Waiting row moves here): the seed's missing freshness check.
-- DEBT-524: Finding 1's view of the content transition.
+- DEBT-524 (closed): Finding 1's view of the content transition, which this record now owns.
 - DEBT-492, BUG-281, BUG-314 (closed).

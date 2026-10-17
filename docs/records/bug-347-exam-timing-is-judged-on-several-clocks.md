@@ -46,7 +46,7 @@ I found this by reading the code; I did not reproduce it in a browser.
 **Other clocks in the same lifecycle (minor):**
 - `practice_sessions.started_at` is the database's `now()`, which is the transaction's start (`db/schema.ts:1053-1055`).
   - The insert is followed, in the same transaction, by `FOR SHARE` question locks (`drizzle-practice-session-repository.ts:612-639`). A wait on a content activation therefore shortens the exam.
-  - That wait is intended and tested, and it lasts seconds against 72 seconds per question. If BUG-345 holds, the lock timeout does not apply through the pooler, so the wait has no bound.
+  - That wait is intended and tested, and it lasts seconds against 72 seconds per question. Through the pooler, its 5-second lock timeout comes from BUG-345's fix, migration 0052, which production verifies after promotion.
 - `ended_at` comes from the app clock (`drizzle-practice-session-repository.ts:845`). The code concedes that `answered_at`, from the database clock, can be later (`:853-856`; DEBT-437 accepted this).
 - `attempts.answered_at` is the database default on submit, and the app clock or the deadline on exam finalize (`finalize-exam-answers.ts:208,238`). "Latest attempt" ranks across both.
 
@@ -89,5 +89,5 @@ BUG-251's Abandon decision stands. Whether SPEC-039's "Expired active reads" sho
 ## Related
 
 - BUG-346: the session summary's score label.
-- BUG-345: pooled lock waits.
+- BUG-345: the pooled lock timeout that bounds the start's wait.
 - BUG-251 and DEBT-437 (closed): the Abandon decision and the accepted `answered_at` residual.

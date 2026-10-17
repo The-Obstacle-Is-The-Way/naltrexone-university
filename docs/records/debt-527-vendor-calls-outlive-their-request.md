@@ -10,11 +10,11 @@
 
 Each layer that calls Stripe or Clerk decides its own timeout and retries, and none of them knows the request's time limit.
 
-- **Stripe's SDK defaults apply.** The client sets neither `timeout` nor `maxNetworkRetries`, so each try may run 80 seconds, and the SDK retries twice. Our wrapper adds up to three attempts around that, and the circuit breaker counts outages with its own classifier. One 5xx can become nine HTTP requests.
+- **Stripe's SDK defaults apply.** The client sets neither `timeout` nor `maxNetworkRetries`, so each try may run 80 seconds, and the SDK retries twice. Our wrapper adds up to three attempts around that, and the circuit breaker counts outages with its own classifier. One 5xx can become nine HTTP requests. The success page skips the wrapper, so its retries never reach the breaker.
 - **The request paths cannot wait that long.** Every request path that calls Stripe runs under a 30-second `maxDuration`. A hung call is killed with its function long before the SDK's timeout raises, so on these paths a hang never reaches the breaker. The user sees a platform timeout instead of our error.
 - **Clerk has no time bound.** `isTransientClerkError` retries 429s with no timeout and no breaker.
 
-DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second timeout and one network retry). The same function's customer deletes keep the SDK's defaults; DEBT-501 and DEBT-524's Finding 3 already record that. This record covers the request paths.
+DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second timeout and one network retry). The same function's customer deletes keep the SDK's defaults; DEBT-501 item 1's Budget bullet owns their bound. This record covers the request paths.
 
 ## Evidence
 
@@ -22,6 +22,7 @@ DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second 
 - `lib/stripe.ts`: `new Stripe(key, { apiVersion, typescript })`, with no timeout or retries.
 - SDK 23.0.0's defaults: `node_modules/stripe/cjs/stripe.core.js:102` (`DEFAULT_TIMEOUT = 80000`) and `cjs/platform/PlatformFunctions.js:52-53` (2 network retries).
 - Our wrapper: `src/adapters/gateways/stripe/stripe-retry.ts:38-64` wraps calls in `retry` with `DEFAULT_RETRY_OPTIONS` and `isTransientExternalError`. It sits inside a breaker that counts `isStripeOutage` (`:12-20`), which DEBT-501 item 6 narrowed to outages for every call.
+- The success page calls the SDK through the generic `retry`, not `callStripeWithRetry` (`app/(marketing)/checkout/success/checkout-success-sync.tsx:205-215,251-258`), so its failures never count toward the breaker. DEBT-524 noted this and closed without placing it; this record owns it.
 - `maxDuration = 30` on every request path that calls Stripe:
   - `app/pricing/page.tsx:32`
   - `app/(app)/app/billing/page.tsx:16`
@@ -42,7 +43,7 @@ DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second 
 - BUG-313: Clerk retries missed dropped connections.
 - DEBT-501 item 1 (reconcile's subscription requests) and item 6 (the breaker counts only outages, for every call).
 - BUG-320 and BUG-332: provisioning retries.
-- DEBT-524: notes that the success page's retry bypasses the breaker.
+- DEBT-524 (closed): first noted the success page's breaker bypass.
 
 ## Impact
 
@@ -53,6 +54,7 @@ During a slow Stripe incident, pricing, checkout, billing, the webhook and the s
 1. **A per-vendor client policy set at construction.**
    - Each caller passes its remaining budget; the client derives the per-try timeout and network retries from it.
    - Our wrapper stops retrying when the budget is spent.
+   - The success page calls Stripe through the same wrapper as every other path.
    - ADR-018 gains the rule.
 
    Design the retry classifiers together with the SDK's retry setting. The SDK retries 409s and `stripe-should-retry` responses that our wrapper does not, and it retries a closed connection once even at zero network retries. So making our wrapper retry connection errors would stack on the SDK's own retries. Item 6 kept the breaker's classifier separate deliberately.
@@ -66,6 +68,7 @@ Option 2 first, as a quick win, proven through the real SDK as DEBT-501 item 1 w
 
 - [ ] A Stripe call on a 30-second path times out within its budget, through the real SDK.
 - [ ] ADR-018 states the SDK retry and timeout policy, and how it composes with our retries.
+- [ ] The success page's Stripe calls go through the shared wrapper and its breaker.
 
 ## Related
 
