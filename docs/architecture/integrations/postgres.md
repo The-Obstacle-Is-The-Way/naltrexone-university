@@ -9,7 +9,9 @@ copy connection configuration or dependency versions that can drift.
 - [`lib/db.ts`](../../../lib/db.ts) owns the application connection singleton,
   postgres.js pool options, and Drizzle wiring.
 - [`lib/db-connection-options.ts`](../../../lib/db-connection-options.ts) owns the
-  PostgreSQL startup/session parameters used by application connections.
+  intended PostgreSQL connection bounds. Migration
+  [`0052_bug345_role_timeouts.sql`](../../../db/migrations/0052_bug345_role_timeouts.sql)
+  installs them as role defaults; the pooled integration test rejects drift.
 - [`package.json`](../../../package.json) owns the supported `db:*` command entry
   points and their target-safety wrappers.
 - [Migration Authoring](../../guides/database/migrations.md) owns migration file,
@@ -35,11 +37,86 @@ per-instance postgres.js pool size, but it does not reject a direct Neon
 hostname. Current Vercel/Neon values and connection headroom remain
 owner-verifiable provider state, not facts proven by this repository.
 
-The development singleton limits hot-reload connection proliferation.
-Database-side application session bounds limit abandoned transactions, lock
-waits, and long-running statements after user-visible timers return. Those
-application parameters do **not** prove equivalent coverage for Drizzle Kit's
-migration transaction.
+The development singleton limits hot-reload connection proliferation. Timeout
+startup options alone do not establish bounds through Neon's transaction pooler:
+pooled `SHOW` on production and dev returned disabled statement/lock timeouts on
+2026-10-16 (BUG-345).
+
+Migration 0052 sets the connecting role's defaults in the current database:
+30 seconds per statement, 5 seconds per lock wait and 60 seconds idle inside a
+transaction. An ordinary role can set its own user-settable defaults. They apply
+on **backend login**, including standalone queries and clients that import no
+application options. Existing backends retain their old settings. Neither these
+limits nor the application pool's size bounds connection acquisition or the total
+duration of an actively working multi-statement transaction.
+
+The application retains startup options for direct connections. Server defaults
+provide the pooled guarantee after rollout verification. A direct connection can
+override defaults with startup options; transaction-local overrides work through
+the pooler and must run on the connection doing the work. Rolling back to an
+earlier savepoint also rolls back `SET LOCAL`.
+
+## Processes Using the Application Role
+
+Inventory, 2026-10-17: all repository production clients use the explicit
+`DATABASE_URL` or the managed seed's named-environment resolution. The same role
+inherits the three defaults regardless of entry point.
+
+| Process and source | Why the defaults fit |
+| --- | --- |
+| Pages, actions, webhooks and crons through `lib/db.ts` | These are the application's existing intended bounds. Database waits must not consume a whole invocation. Provider and job deadlines remain separate. |
+| Vercel build: `vercel.json`, `scripts/internal/run-managed-db-migrate.ts`, `scripts/database-process.ts`, `drizzle.config.ts`; human `db:migrate` | Drizzle Kit creates its own client. The pooled integration test captures all three values inside its actual migration transaction and observes `55P03` under a held ledger lock. Accept the five-second lock bound: fail the deployment instead of queueing requests behind a waiting migration. The 30-second statement limit also fails an unplanned long rewrite. |
+| Pre/post-build ledger checks, `scripts/verify-migration-ledger.ts` | Bounded metadata/shape reads; no intentional idle transaction. |
+| `db:seed`, managed `db:seed:all`/`db:seed:prod`, `scripts/seed.ts` and `scripts/seed/question-syncer.ts` | Read and prepare files before per-question transactions. Each statement and lock wait is bounded; the whole seed may take longer than 30 seconds. |
+| `scripts/content-release/{stage-release,activate-release,bootstrap-release,hold-questions}.ts`, shared `command-support.ts`, and `scripts/seed/withdraw-questions.ts` | Prepare input before database work. Release transactions serialize on the release pointer and issue successive SQL statements, without operator prompts or provider calls inside them. The lock limit prevents a release waiting indefinitely behind another writer. |
+| `scripts/export-question-feedback.ts` | One joined read; file formatting/output follows the query. A slow export fails rather than keeping an unbounded query alive. |
+| `db:studio`, `scripts/db-studio.ts`, and manual clients using this role | Individual operations inherit the bounds, including an interactive transaction left idle. Studio does not justify an unbounded default. `db:generate` uses local schema files and does not need a database session. |
+
+No current process requires a higher bound. This is a source/workload decision,
+not a production-capacity measurement. Seed, content-release and runtime paths
+retain their integration checks. If a future reviewed operation needs more,
+prove that need and set a bounded `SET LOCAL` inside its own transaction before
+the work. Do not raise the role default. A migration needing such an override
+must put it inside Drizzle's migration transaction, not on a separate client.
+
+## BUG-345 Rollout and Verification
+
+1. Review and merge the migration with its tests. Every pushed PR head already
+   migrates the shared Preview database during Vercel's build (DEBT-445). This
+   change does not authorize a manual migration against any Neon branch.
+2. Promote normally. The build applies 0052 as its current role in its current
+   database. It changes no application tables and is compatible with the prior
+   application, which already requests these bounds. The session applying the
+   migration retains its prior settings; subsequent backend logins inherit the
+   new ones. A rebuild or application-client reconnect alone does not prove that
+   PgBouncer replaced its backends.
+3. Allow the provider's normal backend renewal, then have the owner or an
+   explicitly authorized operator check production through its pooled URL.
+   Open several clients concurrently. Inside each `sql.begin('read only', ...)`,
+   issue only `SHOW transaction_read_only`, `SHOW statement_timeout`,
+   `SHOW lock_timeout` and `SHOW idle_in_transaction_session_timeout`.
+   Keep each transaction open until all clients have read, then release them;
+   this samples several occupied backends rather than repeatedly borrowing one.
+   Require `on`, `30s`, `5s` and `1min` (60 seconds) on every sample. Repeat the
+   batch after normal traffic has exercised the deployment. Record date,
+   connection count and values only, never a URL or credential. These samples
+   establish the observed backends, not an exhaustive census of the pool.
+4. If any sample retains old values, leave BUG-345 open. The owner must arrange
+   any required Neon-side backend recycle using the provider's supported
+   procedure and assess its connection-disruption risk, then repeat the checks.
+   No agent may restart an endpoint or terminate production backends as part of
+   this rollout. Do not assume a particular Neon backend lifetime or that local
+   PgBouncer's admin commands are available there.
+5. BUG-345's deadline is three days after promotion. October 20, 2026 is
+   provisional; the promotion change must set the actual date plus three days
+   in the record and index. Close only after the pooled production receipt.
+
+**Rollback:** a code rollback alone leaves role defaults in place. Prefer a
+reviewed fix-forward transaction-local override for a proven exceptional
+operation. If the defaults themselves must be reverted, use another reviewed
+migration with `ALTER ROLE CURRENT_USER IN DATABASE … RESET` for each setting,
+then verify new backends again. That restores inherited defaults, including the
+original missing-bound risk; never silently reset them by hand.
 
 ## Operator Rules
 

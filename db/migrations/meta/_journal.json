@@ -365,6 +365,13 @@
       "when": 1791474695537,
       "tag": "0051_debt505_operational_alert_drills",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792251404832,
+      "tag": "0052_bug345_role_timeouts",
+      "breakpoints": true
     }
   ]
 }

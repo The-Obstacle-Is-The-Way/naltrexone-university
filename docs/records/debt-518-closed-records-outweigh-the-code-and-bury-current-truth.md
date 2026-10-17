@@ -102,6 +102,8 @@ Measured 2026-10-11 on `dev` after #1464.
    - Living guides, policies and the product specification stay live.
    - Specs, brainstorming and audits follow the record rule.
 
+**Adopted 2026-10-17 (DEBT-524 step 8):** apply this check during the remaining three-record pilot and its one-month review: measure process upkeep, then retire a check only with equivalent evidence for the failure it detects or explicit owner acceptance of the remaining risk. Keep dated due checks and positive closure evidence. BUG-323 requires execution proof and DEBT-505 requires alert delivery; quiet logs cannot replace either. DEBT-512 owns the corresponding check at the Pro upgrade. The pilot's acceptance includes recording any retired control, its replacement proof or the owner's decision; it does not reopen DEBT-515's decided account policy.
+
 ### Scope, Widened 2026-10-11
 
 The owner widened the plan from records to every document: the product spec, architecture notes, ADRs, guides, policies, the frontend standards, and the instructions agents load (`AGENTS.md`, `CLAUDE.md`, `.claude/rules/`).

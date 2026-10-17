@@ -875,5 +875,5 @@ The security review of recent work (AUDIT-013) found two renewal-evidence gaps t
 - **Options.**
   1. An operator script, `scripts/requeue-renewal-notice.ts`, taking the delivery ID, a reason and `--confirmed-no-send`, behind the explicit `DATABASE_URL` and `DB_TARGET_ACK` boundary the other database commands use, with the operator name from the environment. It is small, and it is auditable through the use case.
   2. A protected route. It adds an authenticated admin surface the product does not otherwise need.
-- **Recommended:** option 1.
+- **Decided 2026-10-17 (DEBT-524 step 4):** option 1. Test the operator entry point through the existing use case: unknown outcomes require confirmation that no send occurred, and requeue preserves the operator, reason and audit fields. Keep ADR-027's confirmation boundary; do not replace it with direct database updates.
 - **Due:** before the first live renewal notice can be due, with DEBT-502 and DEBT-511. No live subscription exists yet, and a new subscriber's first notice comes about eleven months after purchase (DEBT-511), so no date can be set today. The pull request in which DEBT-501 item 7 records the first live purchase gives F23 a `due` date 35 days before that subscription's first renewal notice.

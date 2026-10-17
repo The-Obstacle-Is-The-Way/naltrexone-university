@@ -95,6 +95,17 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
+      - name: Start transaction pooler
+        timeout-minutes: 3
+        run: |
+          export COMPOSE_PROJECT_NAME="$(node --import tsx --input-type=module -e 'import { resolveLocalTestTarget } from "./scripts/resolve-local-test-target.ts"; process.stdout.write(resolveLocalTestTarget().composeProjectName)')"
+          export DB_TEST_POOLER_PORT="$(node --import tsx --input-type=module -e 'import { resolveLocalTestTarget } from "./scripts/resolve-local-test-target.ts"; process.stdout.write(resolveLocalTestTarget().poolerPort)')"
+          printf 'DB_TEST_POOLER_PORT=%s\n' "$DB_TEST_POOLER_PORT" >> "$GITHUB_ENV"
+          docker compose up --no-start --no-deps pgbouncer
+          # Postgres was started separately with registry failover above.
+          docker network connect --alias db "${COMPOSE_PROJECT_NAME}_default" postgres
+          docker compose up -d --no-deps --wait --wait-timeout 60 pgbouncer
+
       - name: Typecheck
         run: pnpm typecheck
 

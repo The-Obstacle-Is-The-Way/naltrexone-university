@@ -204,6 +204,8 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
    - The runbook in `docs/architecture/observability.md` says what to do.
    - While production keeps two live webhook endpoints (until about 2026-10-20), each event arrives twice. Overlapping sweeps share each Session's expire key and settle by status, so they converge; a concurrent-idempotency refusal can make one endpoint's delivery answer 500 once before Stripe's retry succeeds.
 4. **Option 4 waits for the owner's decision on refunds.** Until it ships, the daily reconcile stays the only code that corrects a duplicate.
+   - **Adopted 2026-10-17 (DEBT-524 steps 2–4):** when that decision permits implementation, use DEBT-501's shared authority/version/deletion contract before extracting observation code. Keep ADR-014's request sync read-only and ADR-027's consent evidence specific to the webhook; amend either ADR before changing its behavior. Provider completion remains outside application locks, so one local writer is not the duplicate fix.
+   - Include retry-safe correction and the decided compensation, consent termination and kept-invoice collection behavior in the real-provider and real-Postgres proofs below. Preserve the pre-sale gate and the existing 2026-10-21 owner follow-up; this adds no preliminary refactor.
 5. **Option 7** stays a separate owner decision, and option 8 is not taken now.
 
 ## Owner Decisions
@@ -231,7 +233,7 @@ Decided on 2026-10-14, after the reproduction: options 2 to 6, each layer for th
   - Its fourth review found that a missing-user completion, also recorded as processed, would sweep on redelivery; the already-processed path now sweeps only when this environment holds the user's subscription.
   - Twenty-three mutations each fail a test.
 - [x] Tests failed first for option 5 (2026-10-14): the reconcile's alert, dry run or not; the re-check's and the sweep's, with no alert when nothing else is live; and the webhook's, for an entitled competitor only. The pre-review sweep added a failed cancel, a page with two such customers, a sweep that fails after a completion, and the webhook over the real write guard, a stored entitled write included. CodeRabbit's first review added a failed write after duplicates were found, and a contract scenario, run against the fake and Postgres, pinning that the write guard refuses a lower-ranked entitled competitor. Fifteen mutations each fail a test.
-- [ ] Tests fail first for option 4: the webhook's correction and its collection handling.
+- [ ] Tests fail first for option 4: real Stripe contract and real-Postgres cases prove the canonical survivor, retry-safe cancellation and decided compensation, consent termination, and continued collection of the kept subscription's invoices. Repeat the hosted-completion reproduction below; application locks alone cannot prove it.
 - [x] Business rule R24 states that a checkout never hands back a Session once the customer holds a live subscription, with its proving tests (2026-10-14).
 - [ ] A business rule states that a customer holds at most one live subscription, and what happens to a duplicate, once option 4 ships.
 - [ ] After the fix ships, the test-mode reproduction ends with one live subscription.
