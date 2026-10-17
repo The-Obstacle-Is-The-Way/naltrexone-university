@@ -83,7 +83,7 @@ All eight checks passed on 2026-10-17, including a local rehearsal of CI's separ
 
 **Rollout:** use the normal Preview build and promotion; every pushed PR head migrates the shared Preview database (DEBT-445). Do not manually migrate a Neon branch. Existing pooled backends must renew before the defaults apply. The operations guide defines repeated, concurrent production `SHOW` checks inside read-only transactions, and the conditional owner step if Neon-side recycling is required. No such production action is delegated. A code rollback does not reset role defaults; a necessary reset needs a reviewed follow-up migration and fresh-backend verification.
 
-**Deadline:** October 20 is provisional, approved by the owner on 2026-10-17. The promotion change must update both status lines to the actual promotion date plus three days. Keep the record open until production's pooled samples show all three intended values.
+**Deadline:** three days after promotion, as the owner's 2026-10-17 instruction set it. October 20 assumes promotion on 2026-10-17; if promotion slips, a follow-up change moves both status lines to the actual promotion date plus three days. Keep the record open until production's pooled samples show all three intended values.
 
 ## Verification
 

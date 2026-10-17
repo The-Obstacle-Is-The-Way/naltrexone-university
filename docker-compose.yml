@@ -1,5 +1,6 @@
 # Local development database for integration tests
-# Usage: docker compose up -d
+# Usage: pnpm db:test:up, which resolves this clone's project name and ports;
+# a bare `docker compose up` fails without DB_TEST_POOLER_PORT.
 # Matches CI's database: the same image digest, credentials and health check
 # as scripts/ci/start-postgres.sh (DEBT-516).
 

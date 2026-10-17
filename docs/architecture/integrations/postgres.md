@@ -107,9 +107,10 @@ must put it inside Drizzle's migration transaction, not on a separate client.
    No agent may restart an endpoint or terminate production backends as part of
    this rollout. Do not assume a particular Neon backend lifetime or that local
    PgBouncer's admin commands are available there.
-5. BUG-345's deadline is three days after promotion. October 20, 2026 is
-   provisional; the promotion change must set the actual date plus three days
-   in the record and index. Close only after the pooled production receipt.
+5. BUG-345's deadline is three days after promotion. October 20, 2026 assumes
+   promotion on 2026-10-17; if promotion slips, a follow-up change sets the
+   actual date plus three days in the record and index. Close only after the
+   pooled production receipt.
 
 **Rollback:** a code rollback alone leaves role defaults in place. Prefer a
 reviewed fix-forward transaction-local override for a proven exceptional
