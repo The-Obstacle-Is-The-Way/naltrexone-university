@@ -1,6 +1,6 @@
 # DEBT-516: CI's Database Image Depends on One Registry
 
-**Status:** Verifying — every check is recorded, the pooler image's item moved to BUG-352, and the record closes with BUG-352's pull request; due 2026-10-24
+**Status:** Verifying — every check is recorded, the pooler image's item moved to BUG-352, and the record closes with #1552; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** 2026-10-17
