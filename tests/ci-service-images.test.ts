@@ -73,7 +73,7 @@ describe('CI container images', () => {
       'docker compose up --no-start --no-deps pgbouncer',
     );
     expect(steps[pooler]?.run).toContain(
-      'docker network connect --alias db "${COMPOSE_PROJECT_NAME}_default" postgres',
+      `docker network connect --alias db "\${COMPOSE_PROJECT_NAME}_default" postgres`,
     );
     expect(steps[pooler]?.['timeout-minutes']).toBeGreaterThan(0);
     const compose = parse(readFileSync('docker-compose.yml', 'utf8')) as {
