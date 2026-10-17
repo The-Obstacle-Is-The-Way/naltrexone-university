@@ -1,55 +1,57 @@
 # BUG-351: The Production Seed Can Silently Restore a Corrected Answer Key, and the Release Builder's Guard Misses Part of the Same Case
 
-**Status:** Open — fix designed, not built. Owner checks production's live answer keys against the content repository by 2026-10-24; until the fix, refresh drafts from its `main` before any production seed
+**Status:** Open — owner compares live keys with a pinned content-main commit; due 2026-10-24. Proposed planner and provenance rules need implementation and the stated decision amendments
 **Priority:** P2
 **Date:** 2026-10-17
 
 ---
 
+Corrected 2026-10-17: bounded the exposure claim, distinguished stored revisions from publication history, corrected the diagnostic query, and replaced the incomplete ordering and resume design.
+
 ## Summary
 
-A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. The release builder, which production will use after the bootstrap (DEBT-483), refuses only part of the same case. It also refuses the correct content after a repair. So the bootstrap alone does not fix this.
+A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. The release builder, which production will use after the bootstrap (DEBT-483), refuses only part of the same case. It can also refuse the correct content after a repair. So the bootstrap alone does not fix this.
 
-Reproduced on 2026-10-17 on a disposable local database, with the public placeholder question:
+Reproduced on 2026-10-17 on a disposable local database, with the public placeholder question; independently repeated with entirely synthetic content through the same seed, builder and activation functions:
 - **1–2. Seed and correct.** Seed key A, then the corrected key B: R1 (key A), then R2 (key B), live.
 - **3. Stale seed.** Seed the stale file again. The seed prints `updated=1 (new revisions=1)` and puts R3 (key A) live. Nothing warns or refuses.
 - **4. Repair.** Seed the correction again: R4 (key B), live.
 - **5. Bootstrap.** Bootstrap a release from what is live.
-- **6. Correct content refused.** Stage the correct, unchanged content (key B). The builder refuses it as a move "back to an earlier revision". Its unordered `.limit(1)` returned R2, not the live R4, on every run.
+- **6. Correct content refused.** Stage the correct, unchanged content (key B). The builder refuses it as a move "back to an earlier revision". Its unordered `.limit(1)` returned R2, not the live R4, in the reproduction. With no ordering, that choice is not guaranteed.
   - Naming it with `--revert` stages R2, so activation would move the live revision from R4 to the identical R2. Learners who answered R4 would then see a spurious "updated" notice.
 - **7. Exact stale copy refused.** Stage the stale file exactly as once stored: refused, as designed.
 - **8. Edited stale copy accepted.** Stage a stale file with key A and one unrelated edit. The builder stages it as a new revision, and the activation preview lists it under "Update to a newer revision (1)".
 
 **The cause, from first principles.**
-- **No version comes with the input.** The content repository is the source of truth, but production is written from a copy on the operator's disk. That copy carries no version, so no writer can tell older content from newer.
-- **Both writers can test only equality.** The seed compares the file with the live revision only, so any difference wins: last-writer-wins, with the operator's disk as the writer.
-- **The builder sees only stored revisions.** It also asks whether the file equals a stored revision, so a stale key with any other change passes.
+- **No enforced source version comes with the input.** The intended authoring source is the content repository. The managed production seed imports a local copy without a commit-bound provenance check. A content hash proves equality, not which source came later.
+- **Neither writer establishes source freshness.** The seed compares the file with the live revision only, so a changed file becomes current at the next successful write. This is last-writer-wins behavior, not timestamp-based conflict resolution or proof that the content is newer.
+- **The builder sees only stored revisions.** It also asks whether the file equals a stored revision, so a stale key with a change to revision-hashed fields that matches no stored revision can pass. Status/tag-only changes do not alter that hash.
 - **Append-only revisions keep a record, not a guard.** They record R3; they do not prevent it.
 
-**What learners see while the stale key is live.** ADR-022 Decision 4 judges every answer against the live key, so the regression inverts it:
+**What learners see while the stale key is live.** ADR-022 Decision 4 compares the graded revision's key with the current key when deriving score eligibility and notices. It does not regrade the stored answer. For otherwise eligible answers, a regression reverses which key counts:
 - **Correct answers are disowned.**
   - Learners who answered the correction (R2) are told "The answer to this question was corrected after you answered". Their attempt is shown ungraded, and the Incorrect filter re-offers the question.
   - The "Practice the corrected question" link opens the stale key.
 - **Open sessions turn on correct learners.** In sessions bound to R2, tutor feedback reads "Not scored". It labels the correct answer "Answer before the correction" and withholds its explanation.
-- **Old wrong grades count again.** Answers graded on the original wrong key (R1) count again, and learners who chose that key drop out of the Incorrect filter.
+- **Old wrong grades count again.** Answers graded on the original key (R1) can count again if the fair-chance and availability rules also allow them. When such an answer is the learner's latest attempt and was stored as correct, the Incorrect practice filter no longer re-offers it.
 - **New answers are taught the wrong key.** They are graded on it, and its explanation teaches it.
 
 **What a repair leaves behind.** Seeding the correction again (R4) restores R2's learners, as Decision 4 designs.
-- **The window's answers stay on R3.** They are excluded from scores, with the "corrected" notice.
+- **The window's answers stay on R3.** While the current key differs, they are excluded from scores, with the "corrected" notice.
 - **Window sessions take the corrected path.** Sessions bound to R3 show their items "Not scored", label the stale key "Answer before the correction", and withhold its explanation. Tutor sessions have no deadline, so this can last indefinitely.
 - **What learners were taught in the window cannot be undone.**
-- **The history now blocks the builder.** The A→B→A→B history makes it refuse the correct content (step 6). That teaches the operator to pass `--revert` routinely, which defeats the guard.
+- **The history can now block the builder.** The unordered match can refuse correct content (step 6). Requiring `--revert` for an unchanged input encourages unnecessary overrides; no operator behavior was measured.
 
 ## Evidence
 
 **The seed:**
-- `scripts/seed/question-syncer.ts:257-266` compares the file with the current revision only, and appends a revision when they differ. `question-revision-writer.ts:77` makes it current at once.
+- `scripts/seed/question-syncer.ts:257-266` compares the file with the current revision only, and appends a revision when they differ. `scripts/seed/question-revision-writer.ts:74-82` makes it current at once.
 - The report is counts only (`scripts/seed/seed-summary.ts`).
 - `pnpm db:seed:prod -- --plan` prints only the target database (`scripts/seed-environment-targets.ts:100-103`). There is no content preview.
 - The production seed imports `content/drafts/questions` with `--status published` (`scripts/prepare-seed-corpus.ts:24`, `scripts/import-draft-questions.ts:20`). That folder is untracked, and a manual copy refreshes it.
-- `pnpm db:seed` with an acknowledged production URL seeds `content/questions/imported` as it stands, without importing.
+- `pnpm db:seed` reads the configured MDX corpus under `content/questions/` without importing drafts; `imported/` is part of that corpus. Its remote-target acknowledgment is a separate protection from content freshness.
 - Each question is its own transaction, so a refusal partway through a run leaves the earlier questions written.
-- Nothing else writes production content: CI seeds placeholders into its own database, the Vercel build only migrates, and `db:seed:all` excludes production.
+- The checked-in CI seed uses its test database, the Vercel build runs migrations, and `db:seed:all` excludes its resolved production target. This does not prove which commands or direct SQL have run on production. Supported release activation, rollback, holds and withdrawals also change content availability; they must participate in the publication boundary below.
 
 **The builder:**
 - `scripts/content-release/release-builder.ts:57-78`: `revisionForContent` matches a file to a revision by stored hash, `.limit(1)` with no order (`:76`), and nothing makes `(question, content_hash)` unique.
@@ -61,31 +63,26 @@ Reproduced on 2026-10-17 on a disposable local database, with the public placeho
 - `components/question/question-update-notice.tsx`, `components/question/ungraded-review.ts` and `components/question/feedback-ungraded.tsx:138-143` hold the notices, the labels and the withheld explanation.
 - `src/adapters/repositories/drizzle-practice-session-repository.ts:624-639`: a session binds each question's revision when it starts.
 
-**The documents:** `docs/architecture/content-pipeline.md:54-56,63,87` says drafts never reach production ("It never touches `content/drafts/`"; "Nothing reads from here automatically"). The production seed reads them.
+**The documents:** `docs/architecture/content-pipeline.md:56` correctly describes the bare seed's direct input, but `:63,87` incorrectly generalize that drafts are decoupled until a separate manual import. The managed production seed imports them automatically before invoking the bare seed.
 
-**Exposure**, measured read-only on 2026-10-17 by parsing answer keys and printing counts only:
-- **Today's copies.** Every clone's drafts equal the content repository at `690ecf2`, a 2026-03-31 commit on its development line. HEAD (`f74cb62`) differs from that in one question, not in its key. Every clone's `content/questions/imported` agrees with HEAD on all 948 keys. A production seed today would restore no key.
-- **The content repository's two lines disagreed for six months.**
-  - Its `main` stayed at `e94ac0d` (2026-03-28) until the merge `bbb454d` on 2026-09-20.
-  - That tree differs from HEAD in 165 questions under ADR-022's key definition, 93 of them with a different correct letter. These are rewrites: nearly every one also changed its stem and explanation. Whether any older key is clinically wrong is unmeasured.
-  - So a copy taken from `main` in that period carried 165 older keys.
-- **Revision history is short.** Revisions exist since migration 0039 (2026-09-28), and the seed has appended instead of overwriting only since `3ac01fc8` (2026-09-30). Which key set production received, and in what order, before then is unrecorded.
-- **One backup per clone parses.** Each clone keeps five backup folders in `content/drafts/` (20 in all).
-  - The four from 2026-03-05 to 2026-03-28 fail today's importer.
-  - `questions-backup-20260331` equals `e94ac0d` and passes the importer. Restored as the drafts folder, it would publish those 165 older keys.
+**Exposure**, independently remeasured on 2026-10-17 using the app importer/parser and counts only. Historical trees were read with `git archive` in disposable scratch directories; no content-repository files were changed.
+- **The four named app clones:** `naltrexone-university`, `-1`, `-2` and `-3`. Each has 948 valid draft questions and 948 valid imported questions. Their answer keys match the pinned content-main snapshot used for this review. The draft content matches the March development snapshot; one non-key question change separates it from the review snapshot. This proves agreement with that source, **not** agreement with the unqueried production database.
+- **The two source lines differed.** The September merge's first parent is the March 28 main snapshot and its second parent is the March 31 development snapshot. Comparing March main with the review snapshot gives 165 different correct-label/text keys, including 93 different correct labels. Of those 165, 163 also changed both stem and explanation. These are content differences, not 165 established clinical errors. The commits and parsing method are pinned in the PR description.
+- **Backups remain an exposure.** There are five backup folders in each of the four clones, 20 total. Four per clone fail the current parser for all 948 questions. Each March 31 backup contains 948 valid questions and its question-file bytes match the March main snapshot. Restoring it would supply 165 keys different from the review snapshot; the effect on production is unknown until compared with its live keys.
+- **History has a boundary.** Migration 0039 introduced revision storage on September 28; append-only writes arrived with `3ac01fc8` on September 30. These are code dates, not verified production migration times. Earlier overwrites cannot be reconstructed from the current revision tables alone.
 
-**History:**
-- DEBT-446 (closed): parked the seed's freshness check until a second writer appeared. Its Waiting row's gap is this defect.
-- DEBT-492: added the builder's revert refusal, judging that no other writer was live.
-- DEBT-531: the two writers' different rules. This record takes the live defect, and its fix is DEBT-531's first piece.
+**History and ownership:**
+- DEBT-446 Part 3b parked planning and freshness machinery until a recorded stale-clone overwrite or a second independent source writer. A local reproduction proves reachability, not a production incident. The seed and builder are mutually exclusive on a database with an active release; two programs alone do not establish that second trigger. Reopening the parked scope therefore needs an explicit owner amendment, justified by this reproduction and the later scoring rules.
+- DEBT-492's “none is live” statement concerned its release-only gaps before bootstrap. It did not claim that the direct seed was safe. Its stored-revision check remains incomplete for the cases above.
+- BUG-351 owns the stale-input defect, duplicate-match defect, provenance and reviewed publication plan. DEBT-531 owns remaining content-comparison and hold-scope decisions. DEBT-483 keeps bootstrap timing and the managed seed's transition.
 
 ## Impact
 
-A board-preparation bank that teaches a wrong answer harms the people relying on it. This one would also tell learners who answered correctly that they were wrong. Nothing automatic stops it; only operator discipline does.
+If an older key is clinically wrong, publishing it can teach that answer and suppress correctly graded attempts while the keys differ. The UI says those attempts are ungraded; it does not regrade them as wrong. Restoring the intended key restores eligible earlier scores, but cannot undo what a learner saw.
 
-No copy restores a key today. The exposure returns with the next answer-key correction, a copy from the wrong line or commit, or a restored backup. Whether production already holds an older key set is unknown until the owner's check.
+Production's current keys, source baseline and past seed history were not queried. Current working copies agree with the pinned authoring snapshot, while valid backups differ. Neither “no exposure” nor “production is wrong” follows from those counts.
 
-P2: high harm, an operator-triggered path with no guard and no warning, and no current exposure in the copies.
+P2: a reachable, operator-triggered content regression with a manual workaround: verify a pinned source against live content and review the proposed changes before seeding. The record does not establish a production incident or the clinical validity of either key set.
 
 ## Options
 
@@ -98,112 +95,111 @@ P2: high harm, an operator-triggered path with no guard and no warning, and no c
 
    Do these now as mitigations. They depend on memory, and the next copy or agent repeats the mistake.
 
-### The fix (option 1, designed, not built)
+### The fix (option 1, proposed, not built)
 
-**The invariant:** production content moves only forward along the content repository's `main`. An answer key that a later live revision replaced never returns without a named revert, whatever the source.
+**The invariant:** source admission is ordered and content publication applies only a reviewed plan against the state it reviewed. A previously replaced key requires explicit review before returning. This is a syntactic warning about a possible regression, not a clinical verdict: a stem correction, repaired mistake or deliberate return can legitimately restore an earlier key.
 
-Each layer closes a gap the others leave:
-- **Provenance** stops a stale copy, whether or not its key was ever stored. It cannot stop a regression made in the source itself, such as a bad merge.
-- **The key rule** stops that second case, but sees only keys this database stored.
-- **The plan** puts every remaining key change in front of a person. A wrong but new key needs human judgment, because no rule can tell it from a real correction.
+The layers cover different failures:
+- **Provenance** rejects unversioned inputs and source snapshots older than the admitted baseline. It cannot detect an erroneous edit or bad merge in a later commit, or prove that the initial baseline was correct.
+- **Key-history checks** flag known returns. A stale key never published in this database, or changed enough to be a new key, can evade that check.
+- **Review** covers every material content change, including stems, distractors and explanations with an unchanged correct-label/text key. Reviewing only key changes leaves those regressions unexamined. No layer proves clinical correctness.
 
-**1. Read the source, not a copy.**
-- **The input.** Production content comes from a named commit on the content repository's `main`, read from git (`git archive`), not from the untracked drafts folder. The drafts folder stays an authoring workspace for local use only.
-- **The checks.**
-  - The writer refuses a commit outside `main`'s first-parent line.
-  - Production records the last commit it applied, and the writer refuses a commit that does not descend from it, unless that is a named revert.
-  - The record and the check sit in the same transaction, under the release-pointer lock.
-  - `main`'s first-parent line is a total order, so "newer" is well defined, and the development-line divergence above cannot recur.
-- **Precedent.** This is the provenance discipline of a deployment pipeline: deploy only what was built from a known commit (Humble and Farley's *Continuous Delivery*). It works like a fencing token (Kleppmann, *Designing Data-Intensive Applications*, ch. 8): the store holds the last marker, and a stale writer is turned away.
-- **Interfaces.** The cross-repository release interface (the content repository's SPEC-007, behind ADR-021) records the commit. ADR-021 is amended.
+**1. Read an immutable source and preserve its order.**
+- Read a named content-main commit with `git archive`; bind its repository identity, full commit, input manifest and importer/canonicalization versions. Local drafts remain an authoring input, not a production admission artifact. Exercise the same admission implementation in tests using a synthetic local Git repository and local database; no production-only switch may bypass it in tests.
+- Pin the main tip used for validation. Require both the admitted baseline and candidate on that tip's first-parent chain, and require the candidate to be at or after the baseline on that chain. A second-parent feature commit becomes admissible through its reviewed merge result. First-parent traversal orders one fixed lineage; it is not a semantic freshness guarantee, and a moved or rewritten branch must not silently redefine the baseline.
+- Record source admission separately from what is currently published. A reviewed rollback under ADR-021 may publish an earlier release, but must not lower the admission watermark and make stale writers admissible again. Prefer a new descendant commit for a source repair; a lineage reset needs an explicit owner decision.
+- Establish the initial baseline by comparing a pinned source with live content. Do not label existing rows with a guessed source commit. An empty or unprovable history cannot safely supply an ancestry check.
+- This follows the reproducible-artifact discipline in Humble and Farley's *Continuous Delivery*, chapter 5, [Deployment Pipeline patterns](https://continuousdelivery.com/implementing/patterns/). A Git hash is **not** a fencing token. Kleppmann's [fencing example](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) requires an increasing token checked by the resource on every write. Here, use database transactions and a monotonic content generation for concurrency; use Git ancestry for source admission.
+- Amend ADR-021's admission contract and coordinate the content repository's SPEC-007, which already proposes `corpus_commit` and `input_manifest_hash`; do not claim those fields are absent or implemented today.
 
-**2. One planner, two thin writers.**
-- **What it does.** A pure function classifies each incoming question against that question's history:
-  - **insert;**
-  - **unchanged:** equal to the live revision;
-  - **forward:** new content;
-  - **revert:** equal to an earlier live revision;
-  - **key regression:** an answer key that a later live revision replaced;
-  - **conflict:** reactivating an archived or withdrawn question.
-- **The seed and the builder become adapters over it,** so they cannot disagree again. That is DEBT-531's single planner, built first for the rule that harms learners.
-- **Live revisions only.** A revision counts as live if the seed wrote it (every seed revision went live, and the seed refuses once a release is active) or an activated release names it. Staged revisions that never went live do not count, so they cannot make a real correction look like a regression.
-- **The key comparison** uses ADR-022's key fields, each correct choice's label and text, canonicalized the way the seed canonicalizes content. A stale key whose only stored copy is a legacy, non-canonical first revision still matches. Scoring keeps its raw comparison; DEBT-531 owns that difference.
-- **Content equality** is decided on canonical fields recomputed from the stored rows, not the stored hash, which DEBT-531 notes may not be canonical.
-- **The live revision wins a tie.** Equal to the live revision means unchanged, even when an older revision is also equal. This fixes step 6 and removes the unordered `.limit(1)`.
-- **Deliberate returns are named reverts.** A repair after a regression, and a deliberate return to an earlier key, both go through a named revert with a reason and authority, recorded as an activation's are (DEBT-490).
+**2. One classifier, with publication facts supplied by adapters.**
+- A pure classifier takes canonical incoming fields, current state and evidenced publication history. It returns content outcomes (insert, unchanged, forward edit, prior-content return), key-change/possible-regression flags, and separate availability conflicts. A key regression can also be a forward edit; these are not exclusive cases.
+- The seed and builder use it. Activation rechecks the relevant rules, including releases staged before the fix and explicit rollbacks. Testing only staging leaves those publication paths outside the guard.
+- Prefer the current revision when canonical content is equal, then match other revisions deterministically. Equality does not authorize status/tag changes or override a withdrawal. Preserve immutable stored bytes and hashes; canonical comparison is derived data. DEBT-531 owns whether scoring's raw key comparison should change, through ADR-022.
+- Do not infer “was published” from “the seed wrote it,” a current pointer, or membership in an activated release. Seeds write drafts and archives (`question-syncer.ts:167-193,265-279`); staging creates a draft with a current pointer (`release-builder.ts:196-217`); activation excludes held and withdrawn members (`release-activation.ts:502-530`). A synthetic draft seed stored one revision while publishing zero questions.
+- Record actual eligible publication transitions and their order at the write boundary, including rollback and hold/lift effects. Revision creation numbers are not publication order. Preserve uncertainty about earlier history; use a reviewed baseline and treat unproven historical matches as review candidates rather than known live regressions.
+- Compare correct labels/text after the seed's canonicalization for the warning. A named return records the reviewed changes, reason and authority. It permits a legitimate repair; it cannot revive a permanent withdrawal. Retired or held content follows its distinct policy, with the ADR-021/022 hold decision left to DEBT-531.
 
-**3. Plan, then apply, for every writer.**
-- **The plan.** Each writer prints a per-question plan naming every revert, key regression, conflict and forward change that changes the answer key. A key change is never folded into a count.
-- **The plan id binds the inputs:** the source commit and every input file's hash. An apply runs only the plan an operator reviewed. Activation already works this way (DEBT-489).
-- **Refusals happen before any write.** Every refusal is found in the planning pass, so a refused plan writes nothing.
-- **Optimistic concurrency at apply.** The plan records each question's live revision. Each per-question transaction re-checks it after taking the release-pointer lock, and stops if it moved. This is Fowler's Optimistic Offline Lock, or compare-and-set (Kleppmann, ch. 7, "Preventing Lost Updates").
-  - A stop leaves the earlier questions applied. Running the same plan again skips them as unchanged and continues, so an apply is resumable rather than atomic. One transaction over every question would hold row locks that block learners' session starts (DEBT-492).
+**3. Bind planning and application to one state.**
+- The plan binds source identity, all input hashes, tool/contract versions, target database identity, the active release and monotonic content generation, current revision/status/overlay inputs, and the full proposed result. The operator reviews material changes privately; public logs and PR receipts contain counts only. Approvals for returns bind to this exact plan.
+- Read a consistent snapshot for planning. At apply, take the existing release-pointer lock, revalidate the generation and all admission/eligibility conditions, and commit the check and write together. Advance the generation on every supported mutation that can change the plan, including withdrawal, hold/lift and rollback, so a change away and back cannot look unchanged.
+- This is [Optimistic Offline Lock](https://martinfowler.com/eaaCatalog/optimisticOfflineLock.html) (*Patterns of Enterprise Application Architecture*, chapter 16), with compare-and-set as discussed in *Designing Data-Intensive Applications*, **first edition**, chapter 7, “Preventing Lost Updates.” A pointer comparison alone does not prove that no intervening change occurred.
+- **Release path:** preserve ADR-021's atomic activation and the existing staging transaction. Do not replace these with per-question commits. DEBT-489's plan already binds manifest/parent, prior active release and publication/removal sets (`release-activation.ts:450-481`); source provenance and generation extend it, rather than duplicating it. Staging must account for its existing live tag writes (DEBT-531).
+- **Direct seed, if it remains:** preflight predictable refusals before the first write. Its existing per-question commit model can still stop after partial progress because of a concurrent change or database failure. Keep a durable active-plan identity and per-question completion receipts, checked under the pointer lock; reject competing applies and bootstrap until that plan completes or an explicit reconciliation abandons it. Resume skips only a matching receipt whose post-state still holds, never arbitrary “unchanged” content. Advance the source watermark only when the complete plan finishes. A resumed plan encountering foreign changes must stop for a new review.
+- A single seed transaction would avoid partial progress but hold question-row locks across the corpus; DEBT-492 proves the analogous staging lock can block session starts. Measure that alternative before selecting it. If the owner can retire the direct writer before shipping this fix, option 2 avoids inventing a second resumable publication mechanism. Neither option is complete without the shared admission and activation checks.
 
-**4. Correct the content pipeline document.**
-- Say that the production seed reads the drafts, until part 1 retires that path.
-- Name the content repository's `main` as the source.
-- Say what the plan shows.
+**4. Correct the content pipeline document with implementation.**
+- Distinguish bare MDX seeding from the managed command's automatic draft import.
+- Name the pinned content-main source and the admission contract.
+- Explain the review plan, rollback, partial-apply boundary if retained, and the uncertain historical baseline.
 
-**Red first:**
-- Seed A, B, then A: refused as a key regression naming the question, with no revision appended and nothing else written.
-- The same with a named revert, reason and authority: appended, and the decision recorded. A repair after a regression goes the same way.
-- A seed from a commit that does not descend from the last applied commit is refused, and so is a commit off `main`'s first-parent line.
-- A seed whose content equals an earlier live revision, with no key change, is refused as a revert.
-- Builder after A→B→A→B: the correct content is unchanged, not a revert (step 6).
-- Builder with a stale key never stored verbatim: refused as a key regression (step 8).
-- A revision that was staged but never live does not make a later forward change a regression.
-- One table of cases runs through both writers, and they classify every case identically.
-- An apply refuses when a question's live revision moved after the preview, and a rerun of the same plan completes the rest.
+**Red first, through the actual writer and activation functions:**
+- A→B→A is flagged before writes; an authorized return and a subsequent legitimate repair work and record their decisions.
+- Current canonical content after A→B→A→B is unchanged despite duplicate historical revisions.
+- A stale key with unrelated edits is flagged when evidenced in publication history. A new key and a stem-only regression both appear for review, without claiming automatic clinical detection.
+- Draft-only, archive-only and never-published staged revisions cannot become false evidence of an earlier publication. Held members of activated releases are excluded too.
+- The same classifier cases run through both writers. Published, retired, held and withdrawn states keep distinct rules.
+- Source candidates before the baseline, off the pinned first-parent chain, and after a lineage rewrite that removes the admitted baseline from the pinned first-parent chain are refused. A reviewed rollback does not rewind source admission. Initial migration requires the reviewed baseline.
+- A plan is rejected after an intervening revision, status, tag, withdrawal, hold/lift or rollback, including a change away and back. Test a previously staged release at activation.
+- Failure before writes leaves no writes; failure after some direct-seed commits is reported as partial. A same-plan resume uses receipts, refuses foreign changes and excludes a competing plan or bootstrap. Release activation remains atomic.
 
 ## Resolution (proposed)
 
-**Now, for the owner** (no code):
-- **By 2026-10-24,** compare production's live answer keys with the content repository's HEAD, in a read-only transaction, printing counts only. This is the decisive check: the bootstrap adopts whatever is live, and history before 2026-09-30 was overwritten.
-- Run the query under Verification once, as a second check.
-- Before any production seed, refresh `content/drafts/questions` from the content repository's `main`.
-- Move each clone's `questions-backup-20260331` out of `content/drafts/`. Engineering does not delete them; they are not its work.
+**Owner, due 2026-10-24:** compare production's published current keys with one pinned commit on the content repository's `main`, in a read-only transaction, emitting counts of missing, extra and differing keys. Include the source commit and content generation/active-release identity if available in the private receipt. This review makes no remote database connection.
 
-**Next, engineering:** parts 2–4 of option 1, red first, in one change. Then part 1, with ADR-021's amendment and the content repository's SPEC-007 change. If the owner schedules the bootstrap first, use option 2's split instead.
+Run the diagnostic below as a separate historical check. A mismatch needs investigation, not an automatic new record per question or a clinical verdict. Keep findings here until a distinct defect warrants its own owner.
+
+Before any production seed, verify and refresh drafts from the intended pinned main snapshot and review the changes against live content. Move each March 31 backup out of `content/drafts/` only with its owner's direction; this review changes none of them.
+
+**Engineering after the required decisions:** obtain the explicit DEBT-446 Part 3b amendment and agree the ADR-021/SPEC-007 admission change. Select option 1 or 2 with the owner based on bootstrap timing (DEBT-483). Implement the shared classifier, admission, publication revalidation and review plan as one coherent production path, red first. Do not ship only a key-history guard while calling freshness solved.
 
 ## Verification
 
-- [ ] The owner's comparison of production's live answer keys with the content repository's HEAD is recorded here as counts. Any mismatch becomes its own record before the bootstrap.
-- [ ] A seed of a stale key, or of an earlier live revision, is refused before any write. A named revert records its reason and authority.
-- [ ] A seed from a commit that does not descend from the last applied one is refused.
-- [ ] The builder treats content equal to the live revision as unchanged after an A→B→A→B history, and refuses a stale key never stored verbatim.
-- [ ] Both writers classify one shared case table identically.
-- [ ] Each writer prints a per-question plan naming every key change, and applies only a reviewed plan id.
-- [ ] `docs/architecture/content-pipeline.md` says what the production seed reads, and names the content repository's `main` as the source.
-- [ ] The owner has run this query on production once. It lists revisions whose answer key returned to an earlier one after a change.
-  - It sees only history since 2026-09-28, and it counts repairs too. Read each hit with its revision's date and the attempts graded on it.
-  - The probe's history (regression, repair, staged copy) returns 3, 1, 1, 0.
+- [ ] The owner's pinned-source comparison is recorded as counts, with unknown historical provenance stated.
+- [ ] DEBT-446's amendment and ADR-021/SPEC-007 coordination are recorded; bootstrap timing stays the owner's decision under DEBT-483.
+- [ ] The shared cases above pass through real seed/builder/activation paths on a disposable local database, including explicit repairs and rollback.
+- [ ] Admission cannot move backward, and publication cannot apply a stale reviewed plan.
+- [ ] The selected transaction/resume design is proved under concurrent changes and injected failures.
+- [ ] `docs/architecture/content-pipeline.md` describes the implemented input and publication paths.
+- [ ] The owner runs this **candidate-recurrence diagnostic** once. It compares raw correct-label/text keys in revision-creation order, matching ADR-022's fields. It does not establish publication order, clinical error or an incident.
+  - Staged revisions and repairs count. Re-activating an old revision creates no revision and can be missed. History predating append-only storage is incomplete. Published-current and answered-attempt counts narrow the candidates; an attempt proves use, not that its key was clinically wrong.
+  - The synthetic regression/repair/staged-copy case returns 3 candidates, 1 question, 1 published current candidate, 0 bound attempts, 0 answered attempts and 0 malformed keys. The third candidate was never activated.
 
   ```sql
-  begin transaction read only;
+  begin transaction isolation level repeatable read read only;
   with keyed as (
     select r.id, r.question_id, r.revision_number,
-      string_agg(c.label || chr(31) || c.text_md, chr(30) order by c.label, c.text_md) as answer_key
+      count(c.id) filter (where c.is_correct) as key_choices,
+      coalesce(jsonb_agg(jsonb_build_array(c.label, c.text_md)
+        order by c.label, c.text_md) filter (where c.is_correct), '[]'::jsonb) as answer_key
     from question_revisions r
-    join choices c on c.question_revision_id = r.id and c.is_correct
+    left join choices c on c.question_revision_id = r.id
     group by r.id, r.question_id, r.revision_number
   ), stepped as (
-    select *, lag(answer_key) over (partition by question_id order by revision_number) as previous_key
+    select *,
+      lag(answer_key) over (partition by question_id order by revision_number) as previous_key,
+      lag(key_choices) over (partition by question_id order by revision_number) as previous_key_choices
     from keyed
-  ), returned as (
+  ), candidates as (
     select s.id, s.question_id from stepped s
-    where s.previous_key <> s.answer_key
+    where s.key_choices = 1 and s.previous_key_choices = 1
+      and s.previous_key <> s.answer_key
       and exists (
         select 1 from keyed k
         where k.question_id = s.question_id
           and k.revision_number < s.revision_number
-          and k.answer_key = s.answer_key
+          and k.key_choices = 1 and k.answer_key = s.answer_key
       )
   )
   select
-    (select count(*) from returned) as returned_revisions,
-    (select count(distinct question_id) from returned) as questions,
-    (select count(*) from returned join questions q on q.current_revision_id = returned.id) as live_now,
-    (select count(*) from attempts a where a.question_revision_id in (select id from returned)) as attempts_graded_on_them;
+    (select count(*) from candidates) as candidate_revisions,
+    (select count(distinct question_id) from candidates) as questions,
+    (select count(*) from candidates c join questions q on q.current_revision_id = c.id
+      where q.status = 'published') as published_current_candidates,
+    (select count(*) from attempts a where a.question_revision_id in (select id from candidates)) as attempts_bound,
+    (select count(*) from attempts a where a.selected_choice_id is not null
+      and a.question_revision_id in (select id from candidates)) as answered_attempts_bound,
+    (select count(*) from keyed where key_choices <> 1) as malformed_key_revisions;
   rollback;
   ```
 

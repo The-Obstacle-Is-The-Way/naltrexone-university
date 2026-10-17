@@ -6,6 +6,8 @@
 
 ---
 
+Corrected 2026-10-17: distinguished the rejected domain return-type change from a nullable response projection.
+
 ## Summary
 
 Each screen decides for itself when a session's score is a percentage and when it is a dash, and the rules already disagree.
@@ -20,7 +22,7 @@ Two tests pin the opposite outputs for that same input.
 The decided rules already give the answer, and it is 0%:
 - **DEBT-221** shows a dash only when the denominator is 0.
 - **BUG-164 and SPEC-038 FR-1** made the tutor denominator the item count, now `scored`. FR-1 says tutor rows must not show `0/0 correct (—)`.
-- **History** dropped its extra clause in SPEC-038's first phase (`18b24d2a`), which added the "0%" test.
+- **History** dropped its extra clause in SPEC-038's first phase (`18b24d2a`), which changed the existing zero-answer test from a dash to "0%".
 - **The dashboard and summary** kept DEBT-221's older `answered > 0` clause, so the split was never closed.
 
 This is the family BUG-163 and BUG-164 fixed: one session, different accuracy per screen.
@@ -57,7 +59,7 @@ A learner sees two different scores for one session. No data is wrong, only its 
 ## Options
 
 1. **One shared score presenter that every screen calls, and drop the `answered > 0` clause.** *Recommended:* it applies the rules already decided, and gives the next change one place to land.
-2. **The server returns `accuracy: number | null`.** DEBT-221 rejected this to preserve SPEC-003's API; nothing since has changed that reason.
+2. **Return an explicit score-display value at the response boundary.** This changes the response contract and requires its consumers to migrate. DEBT-221 rejected making the domain's `computeAccuracy` nullable to preserve SPEC-003; a nullable response projection is a different proposal. A shared presenter fixes the demonstrated split without changing that API.
 
 ## Resolution (proposed)
 

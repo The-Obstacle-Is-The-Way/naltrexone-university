@@ -1,21 +1,23 @@
 # DEBT-531: Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently
 
-**Status:** Open — BUG-351's content-change planner is the first piece; then one definition of same content and one hold scope; the owner decides the bootstrap (DEBT-483)
+**Status:** Open — reconcile content normalization and hold scope through ADR-021/022; BUG-351 owns the planner and proposed freshness amendment, and DEBT-483 owns bootstrap timing
 **Priority:** P3
 **Date:** 2026-10-17
 
 ---
+
+Corrected 2026-10-17: preserved immutable history and semantic projections, corrected hold/tag claims, and retained DEBT-446 and DEBT-483 decision ownership.
 
 ## Summary
 
 Two programs write question content, and they apply different rules to the same file.
 
 - **The release builder** refuses a bundle that moves a question back to an earlier revision, unless `--revert` names it (DEBT-492).
-- **The direct seed** compares a file only with the current revision. Different content becomes a new revision and goes live at once.
+- **The direct seed** compares a file only with the current revision. Different content becomes a new current revision; it is live only when its question is published.
 
-Production content still goes through the direct seed: no release is active (DEBT-483). Its input is each clone's local, untracked drafts folder, which can be an older snapshot than the content repository.
+The last recorded production state in DEBT-483 is unbootstrapped, with direct seeding still available; this review did not query the current release pointer. The managed production seed imports the local untracked drafts folder, which can lag the source. Bare seeding reads the existing MDX output instead.
 
-The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. "Same content" has three definitions, and a hold's scope has two owners.
+The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. Whole-revision equality uses different normalization at the seed and builder. Score eligibility deliberately compares a narrower key projection, with raw text. Hold scope also differs between activation and availability.
 
 ## Evidence
 
@@ -27,69 +29,72 @@ The live defect this split causes is BUG-351: a stale seed restores a corrected 
   - The drafts' question folders are untracked (`.gitignore:63-66`).
 - `release-activation.ts:127-134`: the seed may write whenever no release is active.
 
-**"Same content" is defined three ways:**
+**Whole-revision equality and answer-key projection have different purposes and inconsistent normalization:**
 - The seed canonicalizes both sides before comparing (`scripts/seed/question-parser.ts:158-181`; guarded by `tests/integration/seed-revision-append.integration.test.ts:149-188`).
 - The builder compares the stored `content_hash` (`release-builder.ts:62-76`). That hash covers the stored bytes, which may not be canonical; migration `0039` hashed the legacy columns as they were for every first revision. `a622027e` (2026-10-01) moved the builder off the seed's canonical comparison.
 - Answer-key correction compares the raw label and text (`src/domain/services/answer-key.ts:8-15` and its SQL twin, `src/adapters/repositories/shared/score-eligibility-sql.ts:104-108`).
 
-So, after bootstrap, any stored revision that is not canonical has two effects:
-- A bundle with no real change stages a new revision.
-- A whitespace-only difference in the correct choice marks past attempts "answer corrected".
+The consequences need distinct preconditions:
+- The builder can append a revision for canonical input equal in meaning to a noncanonical stored revision **if no stored raw hash matches it**. A canonical duplicate elsewhere in history can instead be reused.
+- When an append changes raw correct-choice label/text only by normalization, ADR-022's raw comparison marks older answers corrected. Whitespace only in the stem does not do that. This can also occur before bootstrap if another substantive seed edit appends canonical choices from a legacy revision.
+- Whole-content identity must not be collapsed into the key projection: a stem-only edit can change the revision without changing its key. Reusing normalization is a separate decision from merging those meanings.
 
-Separately, `revisionForContent` takes `.limit(1)` with no order, and nothing makes `(question, content_hash)` unique (`db/schema.ts`). BUG-351 reproduced the result: after an A→B→A→B history, the builder refuses the live content as a revert.
+BUG-351 owns the duplicate-hash `.limit(1)` defect and deterministic current-match preference. This record owns whether key normalization should change scoring: amend ADR-022 Decision 4 explicitly and prove the SQL/domain twins agree. Put any shared pure normalizer inward; domain code must not import `lib/content`.
 
-Whether production holds such rows is unverified. One read-only query recomputing canonical hashes would settle it.
+Production prevalence is unknown. A read-only census should separately count noncanonical revision fields and correct-choice normalization changes; neither count alone establishes a clinical error. Stored bytes/hashes remain immutable.
 
 **A hold's scope has two owners:**
 - Activation treats a hold as excluding one revision (`release-activation.ts:99-104`; ADR-021 decision 5).
 - Availability and scoring treat a hold on any revision of a question as "under review" once the question is not published (`drizzle-question-repository.ts:403-413`; `score-eligibility-sql.ts:28-32`; `question-availability.ts:42-49`).
 - A lift reaches only the revision the active release publishes (`release-holds.ts:59-97`).
-- So a hold on R1, after a release publishes R2, can no longer be lifted with the tools. If the question is later retired, that forgotten hold labels it "Under review" and drops past scores on it. DEBT-492 gap 3 noted the dormant hold and left it.
+- So a hold on R1, after a release publishes R2, cannot be lifted directly while another revision is active, or while the active release omits the question. Reactivating a release that names R1 makes it liftable, a disruptive workaround documented in `docs/architecture/content-pipeline.md:359`. If the question is later retired, that forgotten hold labels it "Under review" and drops past scores on it. DEBT-492 gap 3 noted the dormant hold and left it.
 - The two readings come from two decisions: ADR-021 decision 5 (per revision) and ADR-022 Decision 1 ("an unlifted hold on a revision of the question"). Choosing one amends the other. The gap is dormant until the bootstrap, since holds need an active release.
 
 **Smaller items:**
-- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:323-343`; `release-manifest.ts`). ADR-021 decision 1 chose this; the consequences are not written down.
+- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:323-343`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
 - Feedback records `question_id`, an optional `attempt_id` and an optional `practice_session_id`, but no revision (`db/schema.ts:1340-1361`). A report with neither an attempt nor a session cannot say which revision it concerned.
 - Question status, tag kind and the slug pattern are each retyped in several places (`db/schema.ts`, the domain value objects, `lib/content/schemas.ts`, `scripts/draft-question-import.ts`). They agree today; DEBT-453 consolidated only difficulty.
 
 **History:**
 - BUG-281 and DEBT-484: rewrites under graded history.
-- DEBT-486, DEBT-487 and DEBT-489: the importer and the seed disagreeing.
-- DEBT-492: the builder's revert refusal, with a "none is live" judgment that missed the seed.
+- DEBT-486: validation disagreement. DEBT-487: frontmatter-order splitting omitted content. DEBT-489: release removal by omission.
+- DEBT-492: revert protection scoped to release staging; direct-seed freshness remained outside that fix. Its “none is live” judgment concerned release-only gaps before bootstrap.
 - BUG-314: content writers had no shared lock order.
 - DEBT-494: scores changing with content.
 
 ## Impact
 
 The answer-key harm is BUG-351's, at P2. What remains here is latent:
-- After the bootstrap, a non-canonical stored revision makes a bundle with no real change stage a new revision, and makes a whitespace-only difference mark past attempts "answer corrected".
+- Under the preconditions above, normalization can append needless revisions or mark older keys corrected. The key-comparison effect is not restricted to post-bootstrap databases; current production prevalence is unverified.
 - A forgotten hold can label a retired question "Under review" and drop past scores on it.
 
 P3.
 
 ## Options
 
-1. **One content planner** used by both writers. BUG-351's fix builds it for reverts and answer-key regressions, with canonical comparison and a deterministic match. Extend it to the remaining definitions of "same content". *Recommended:* the bootstrap alone does not remove the split, because the builder keeps its own gaps (BUG-351 steps 6 and 8).
+1. **Shared normalization with distinct semantic comparisons.** BUG-351 owns the planner, including deterministic current-match preference. Whole-revision equality and ADR-022's key-only comparison remain distinct. Decide normalization for each field, amend ADR-022 if score eligibility changes, and test the domain/SQL counterparts. *Recommended:* the bootstrap alone does not remove the split, because the builder keeps its own gaps (BUG-351 steps 6 and 8).
 2. **Bootstrap releases in production (DEBT-483).** The seed then refuses production, and the builder's rules become the only path. Run the canonical-hash check first. The decision and its timing are the owner's. Bootstrap after BUG-351's planner, so the remaining writer has its rule.
 
-For holds, choose per-revision or per-question scope everywhere, amending the ADR that loses, and let a lift reach any revision.
+For holds, choose and document a coherent relationship between revision-level activation exclusion and question-level availability. This is an ADR-021/022 decision, not a mechanical deduplication. Preserve the clinical caution and score effects in the selected policy, and allow a direct lift of a named held revision without rolling the release back.
 
 ## Resolution (proposed)
 
-BUG-351's fix first: it is this record's planner, red first on its reproduction. Then the owner decides the bootstrap's timing, and the canonical-hash query runs before it.
+BUG-351 owns the proposed shared planner and source-admission amendment. This record owns normalization and hold semantics, with their explicit ADR-021/022 amendments. DEBT-483 alone owns bootstrap timing, the managed seed's transition and release zero; its owner check comes first.
 
-DEBT-446's Waiting row (Part 3b) leaves Waiting in this change. Its freshness gap is BUG-351's live defect, which BUG-351's provenance check and planner close. Its trigger had not strictly fired: the release builder is a second writer, but the pointer lock orders it. The reasons to act now are new: ADR-022 made a window's answers stay out of scores, and BUG-351 showed that the builder's own rule is partial. DEBT-524's Finding 1 judged the two-writer period covered by DEBT-483, and DEBT-524 closed on 2026-10-17 without placing the content transition in a live record. This record owns it: the rules that differ between the two writers, and the point where the seed stops writing production.
+DEBT-446 Part 3b remains parked unless its trigger is established or the owner explicitly amends it. The local stale-seed reproduction does not prove a production incident, and mutually exclusive seed/builder programs do not establish a second independent source author. The new evidence supports **proposing** an amendment, not silently declaring that decision superseded. Preserve its Waiting row with BUG-351 as the proposed follow-up. DEBT-524's closed content discussion cited DEBT-483; it did not assign bootstrap ownership here.
+
+Feedback without attempt/session context cannot identify the reported revision, and vocabulary definitions remain repeated. These inspected facts are preserved as follow-up candidates, not additional acceptance requirements or evidence that all copies currently disagree. Any independently confirmed defect needs its own bounded owner.
 
 ## Verification
 
-- [ ] Both writers plan through one module (BUG-351), and it decides "same content" one way.
-- [ ] A read-only query shows every stored revision's hash equals its canonical hash, or the mismatches are rewritten before bootstrap.
-- [ ] A hold has one scope in activation, availability and scoring, and any hold can be lifted.
+- [ ] BUG-351's planner consumes the agreed normalization while preserving separate whole-revision and key-projection meanings; SQL/domain score cases agree under the amended ADR-022.
+- [ ] A read-only census counts noncanonical fields without changing stored bytes or hashes. Approved content changes append revisions; historical rows are never rewritten to satisfy canonical comparison.
+- [ ] ADR-021/022 explicitly define hold scope across activation, availability and scoring; a named old hold can be lifted directly, with retirement/rollback cases tested.
 
 ## Related
 
 - BUG-351: the live defect, its reproduction and the planner's design.
 - DEBT-483 (Waiting): the production content bootstrap.
-- DEBT-446 (closed; its Waiting row left with this record): the seed's missing freshness check, now BUG-351's defect.
-- DEBT-524 (closed): Finding 1's view of the content transition, which this record now owns.
+- DEBT-446 (closed, Part 3b still Waiting): the parked freshness decision; BUG-351 proposes an owner amendment.
+- DEBT-524 (closed): Finding 1's view of the content transition, whose operational owner remains DEBT-483.
 - DEBT-492, BUG-281, BUG-314 (closed).
