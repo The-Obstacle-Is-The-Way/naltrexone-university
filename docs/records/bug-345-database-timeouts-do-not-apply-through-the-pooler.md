@@ -72,9 +72,9 @@ Not decided. Choose the smallest policy that covers the intended workload and pr
 
 ## Verification
 
-- [x] The challenger repeated the dev observation on 2026-10-16 through the `.env.local` pooled URL, inside `sql.begin("read only")`: read-only `on`, bounds `0`, `0`, `5min`; `TimeZone` `GMT`. Only `SHOW` statements ran inside the transaction.
-- [x] The initial reviewer read production's pooled settings on 2026-10-16. The follow-up retained that receipt without another production connection. The unsupported October 11 observation was removed.
-- [x] On 2026-10-17, checked PostgreSQL's startup-option documentation and clarified option 1's migration tradeoff.
+- [x] Production's pooled settings read on 2026-10-16 with `SHOW` inside a read-only transaction: `0`, `0`, `5min`; `TimeZone` `GMT`.
+- [x] Neon dev's pooled settings read twice on 2026-10-16, the second time by the challenger, through the `.env.local` pooled URL inside `sql.begin("read only")`: read-only `on` and the same values. Only `SHOW` statements ran.
+- [x] On 2026-10-17, option 1's migration tradeoff checked against PostgreSQL's startup-option documentation.
 - [ ] Red first for the chosen fix: reproduce the mismatch through a representative transaction pooler, then prove effective settings and the three timeout outcomes on a disposable target. Keep load/lock/cancellation tests off the shared Neon dev branch unless separately authorized.
 - [ ] Prove coverage of standalone queries, every outer transaction and nested rollback as applicable to the chosen option. Check existing versus fresh backend sessions.
 - [ ] If defaults affect migrations, prove the actual managed Drizzle Kit connection's intended bounds and migration behavior; explicitly resolve DEBT-447's parked decision before rollout.
