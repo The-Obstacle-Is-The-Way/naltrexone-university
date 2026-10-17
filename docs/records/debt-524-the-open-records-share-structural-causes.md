@@ -1,6 +1,6 @@
 # DEBT-524: Fixing the Open Records One by One Leaves Their Shared Causes in Place
 
-**Status:** Open — owner decides shared billing rules, tests of deployed paths and recovery additions; existing gates and deadlines remain
+**Status:** Decomposed — owner adopted option 2 and steps 1–8 on 2026-10-17; every action has an owning record and its existing gate or trigger
 **Priority:** P2
 **Date:** 2026-10-16
 
@@ -122,7 +122,9 @@ Separate caller fixes can leave billing rules, historical terms and recovery cov
 
 Test-resource isolation, measured process simplification and a performance baseline can proceed independently under their owning records.
 
-## Resolution (proposed; the owner decides)
+## Resolution (decided)
+
+**Owner decision, 2026-10-17:** adopt option 2 and steps 1–8 below as written. The architecture does not need a rewrite first. The assessment closes as Decomposed in #1549; implementation and production checks remain with their owning records.
 
 1. **Fix BUG-345 independently.** Prove the fix through a transaction pooler and decide migration bounds explicitly. Runtime startup options do not configure the build's separate migration client.
 2. **Define shared billing rules before extracting them.** Specify fact authority, version fences, deletion lock order and each caller's consent/cancellation permissions. Amend ADR-014/ADR-027 if behavior changes. Distinguish ADR-002's local one-row invariant from correcting Stripe duplicates. Share observation and persistence policy where needed; keep SDK normalization and retries in adapters. Preserve different side effects. Any broader import guard needs a demonstrated rule to protect.
@@ -133,7 +135,18 @@ Test-resource isolation, measured process simplification and a performance basel
 7. **Build the performance baseline now.** Measure route/query latency, transaction/lock and pool waits, recovery progress and representative cardinalities; decide retention. Use existing instrumentation subject to BUG-331's decision. Rendering, scoring, caching and index changes follow their existing triggers and current query plans.
 8. **Review process changes under DEBT-518 and DEBT-512.** Retire a check with equivalent evidence or explicit owner acceptance of the remaining risk. Pro alone does not replace independent alert/schedule detection. Positive-verification obligations still require positive evidence.
 
-Existing plans, deadlines and authorization remain in force.
+Existing plans, deadlines and authorization remain in force. The adopted work is assigned as follows; existing verification items are reused rather than copied into new checklists.
+
+| Step | Owning record and concrete trigger or deadline |
+| --- | --- |
+| 1 | BUG-345: migration 0052 and the real pooled/managed-migration tests in #1549. Production's repeated pooled `SHOW` check follows promotion; due October 20 provisionally, reset to promotion plus three days. DEBT-447's migration-lock Waiting item is proved and removed. |
+| 2 | DEBT-501: define the authority/version/deletion/caller-permission contract in the first implementation of item 2 or BUG-343 option 4, before extracting shared code. BUG-343's option 4 now carries the same constraint. |
+| 3 | DEBT-501's existing AUDIT-015 order and pre-sale gates remain, including item 3's trigger. BUG-343 retains its owner refund decision and October 21 follow-up. DEBT-414's owner decisions remain untouched. |
+| 4 | DEBT-501 item 1: when its stopped-early trigger fires, prove missing-row discovery/residuals, fair progress and reserved cleanup time. BUG-343 owns duplicate correction/compensation after the owner's decision, before sale. DEBT-414 F23 adopts the operator script and its confirmation/audit proof by its existing renewal deadline. |
+| 5 | DEBT-502 and DEBT-511: shared resolver and verified destinations by the existing 35-days-before-renewal deadline; preserve retries and ADR-004, and test fallback/deletion if `user.created` is added. |
+| 6 | BUG-345's pooled proof; BUG-321's existing provider-contract test due October 20; BUG-343 option 4's real-provider/real-Postgres proof when its owner decision permits work; BUG-319 and BUG-323's existing deployed-path checks due October 19; DEBT-519's existing red-first discovery guard before registering the missing fake. DEBT-508 evaluates per-run Clerk users, instance budget and non-overlap controls by October 22. DEBT-514's worktree/staging safeguard and BUG-341's sanitized subprocess verification remain separate existing obligations. |
+| 7 | DEBT-525: representative performance baseline at the start of the performance pass, before selecting changes. It preserves privacy/collection decisions and every rendering/scoring/cache/index trigger. |
+| 8 | DEBT-518: equivalent proof or explicit owner risk acceptance during the remaining pilot and one-month review. DEBT-512: the same check at the Pro upgrade, preserving independent detection and positive-verification obligations. |
 
 ## Verification
 
@@ -141,5 +154,6 @@ Existing plans, deadlines and authorization remain in force.
 - [x] Further challenge against the dev snapshot above, the intervening diff, all Active records and relevant historical decisions; corrected unsupported counts/causes and added deployment-boundary, durable-fact and recovery-budget findings.
 - [x] BUG-345 re-observed on Neon dev using only `SHOW` inside `sql.begin("read only")`.
 - [x] On 2026-10-17, incorporated the second review's corrections and #1547/#1548. Retained the initial reviewer's 2026-10-16 production timeout and region observations; no new production connection or credential read.
-- [ ] Owner decides whether to adopt the narrow billing seam and additions to the existing records. No new release gate is adopted by this assessment alone.
-- [ ] Before closure, place each adopted action in its record: billing/recovery in DEBT-501 and BUG-343; identity/notices in DEBT-502/DEBT-511/DEBT-414; tests in their defect records and DEBT-508/DEBT-519; performance in the existing measurement-triggered work; process in DEBT-518/DEBT-512. Record declined proposals as decisions.
+- [x] Owner adopted option 2 and Resolution steps 1–8 as written on 2026-10-17. Existing release gates and owner decisions remain in force.
+- [x] Every adopted action has its owner and trigger in the table above. New additions are in those records; existing exact plans are reused. DEBT-525 received a second-agent challenge with no substantiated finding. No implementation or production proof is implied by this decomposition.
+- [x] A second agent challenged the final step ownership, transferred additions and BUG-345 proof/rollout on 2026-10-17. The only finding was an index table gap, corrected during closure.
