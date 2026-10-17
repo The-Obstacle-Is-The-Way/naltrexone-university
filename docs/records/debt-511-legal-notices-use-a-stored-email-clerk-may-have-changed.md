@@ -102,7 +102,7 @@ DEBT-503 item 1 widens the gap slightly. It stops refreshing the email on every 
    - Ownership conflicts need no prerequisite: until DEBT-502 item 1 automates the repair, the owner replays the stale owner's `user.updated` from the Clerk Dashboard ([runbook](../architecture/environments.md#a-missed-clerk-webhook-leaves-a-stale-email-or-a-deleted-users-row)), which moves that owner's address, and the held notice goes out on the next run.
    - Then this record. DEBT-503 item 1 may ship earlier, under the timing in Impact.
 
-**Decided 2026-10-08 (AUDIT-015):** the send-time lookup is built on DEBT-502's identity resolver, not beside it.
+**Decided 2026-10-08 (AUDIT-015):** the send-time lookup is built on DEBT-502's identity resolver, not beside it. The owner reaffirmed this plan and its existing renewal deadline on 2026-10-17 through DEBT-524 step 5. The existing verification cases below own the verified-destination proof; this creates no second resolver or duplicate work item.
 
 ## Verification
 

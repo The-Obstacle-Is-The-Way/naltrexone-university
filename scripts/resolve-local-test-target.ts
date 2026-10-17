@@ -9,6 +9,7 @@ export type LocalTestTarget = {
   composeProjectName: string;
   dbHost: '127.0.0.1';
   dbPort: string;
+  poolerPort: string;
   dbName: 'addiction_boards_test';
   databaseUrl: string;
   appHost: '127.0.0.1';
@@ -34,6 +35,7 @@ const LOCAL_TEST_DB_NAME = 'addiction_boards_test';
 const LOCAL_TEST_APP_HOST = '127.0.0.1';
 const LOCAL_TEST_APP_BASE_PORT = 3100;
 const LOCAL_TEST_DB_BASE_PORT = 55400;
+const LOCAL_TEST_POOLER_BASE_PORT = 45400;
 const LOCAL_TEST_PORT_SLOTS = 10_000;
 const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes']);
 
@@ -63,6 +65,11 @@ export function resolveLocalTestTarget({
     keys: ['LOCAL_TEST_APP_PORT', 'E2E_APP_PORT', 'PORT'],
     fallbackPort: LOCAL_TEST_APP_BASE_PORT + offset,
   });
+  const poolerPort = resolvePort({
+    env,
+    keys: ['DB_TEST_POOLER_PORT'],
+    fallbackPort: LOCAL_TEST_POOLER_BASE_PORT + offset,
+  });
   const composeProjectName = `naltrexone-test-${instanceId}`;
   const databaseUrl = `postgresql://${LOCAL_TEST_DB_USER}:${LOCAL_TEST_DB_PASSWORD}@${LOCAL_TEST_DB_HOST}:${dbPort}/${LOCAL_TEST_DB_NAME}`;
   const appUrl = `http://${LOCAL_TEST_APP_HOST}:${appPort}`;
@@ -72,6 +79,7 @@ export function resolveLocalTestTarget({
     composeProjectName,
     dbHost: LOCAL_TEST_DB_HOST,
     dbPort,
+    poolerPort,
     dbName: LOCAL_TEST_DB_NAME,
     databaseUrl,
     appHost: LOCAL_TEST_APP_HOST,
@@ -87,6 +95,7 @@ export function createLocalTestTargetEnv(
     COMPOSE_PROJECT_NAME: target.composeProjectName,
     DATABASE_URL: target.databaseUrl,
     DB_TEST_PORT: target.dbPort,
+    DB_TEST_POOLER_PORT: target.poolerPort,
     LOCAL_TEST_INSTANCE: target.instanceId,
     NEXT_PUBLIC_APP_URL: target.appUrl,
     PORT: target.appPort,

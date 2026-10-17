@@ -1,6 +1,6 @@
 # DEBT-508: Concurrent E2E Runs Share One Clerk Rate Budget and One Stripe Customer
 
-**Status:** Verifying — still to show: two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22
+**Status:** In Progress — evaluate per-run Clerk users, and show two overlapping CI runs both pass; in doubt, since a CI run overlapping a local run lost a Clerk session; due 2026-10-22
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -87,6 +87,8 @@ On 2026-10-07 that overlap failed both runs. All four of `main`'s failures trace
   - One E2E run at a time stays the rule on this machine, and nobody pushes while `main`'s E2E runs after a promotion.
   - DEBT-503 item 1 is the structural fix for both production and CI, so it moves ahead of DEBT-505 in the register's Now stanza.
 
+**Adopted 2026-10-17 (DEBT-524 step 6):** during the pending overlap assessment, due 2026-10-22, evaluate per-run Clerk users as isolation for session state. Include instance-wide API usage and BUG-333/BUG-337's non-overlap controls: both session failures reproduced without overlapping runs, and separate users do not create separate API allowances. Record the evidence and decision before changing coordination. The existing one-run-at-a-time rule remains until that proof; no overlap experiment is authorized by this paragraph.
+
 ## The rest of the CI chain, 2026-10-07
 
 Every CI failure class seen today, and the Stripe hazard found with them, now has its own record and a decided fix:
@@ -106,6 +108,7 @@ Every CI failure class seen today, and the Stripe hazard found with them, now ha
   - the reset needs no Clerk secret, since it no longer imports a Clerk call;
   - the seed calls Clerk only when no ID is passed in.
 - [x] Sweep tests prove it deletes only stale per-run CI customers, never another owner's, at most 10 per setup attempt, and that cleanup stops at its deadline. A CI run's log shows teardown deleting its own customer.
+- [ ] By 2026-10-22, record the per-run Clerk-user evaluation, instance-budget impact and non-overlap session-loss controls before deciding whether to change coordination.
 - [ ] Two overlapping CI runs both pass. DEBT-503 item 1, which this depends on, was released on 2026-10-08. Not yet observed.
 
   *Added 2026-10-08:*
