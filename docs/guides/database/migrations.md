@@ -77,10 +77,21 @@ Small or empty tables can accept the standard lock cost, but the migration must
 say so in a nearby SQL comment. `0026_track_a_tail_sweep.sql` does this for its
 bounded cleanup over the small `practice_sessions` table.
 
-The application-session bounds in `lib/db-connection-options.ts` apply only to
-connections created by `lib/db.ts`. They are not evidence that Drizzle Kit's
-migration transaction has a statement or lock timeout. Do not claim migration
-timeout coverage unless it is proven on the actual `pnpm db:migrate` connection.
+Application startup options in `lib/db-connection-options.ts` alone do not
+configure Drizzle Kit's separate client. Migration 0052 installs the same bounds
+as defaults for the connecting role in the current database: 30-second
+statements, five-second lock waits and 60 seconds idle in a transaction.
+BUG-345's pooled integration test proves those values inside the actual managed
+Drizzle migration transaction and a lock failure with SQLSTATE `55P03`.
+
+Keep the five-second lock bound: a migration should fail instead of queueing
+requests behind its waiting lock. If a reviewed operation needs a longer
+statement limit, prove the need and put a bounded `SET LOCAL` inside its own
+migration transaction; do not raise the role default or set a different client.
+Existing backend sessions retain old defaults until renewal, including the
+session applying 0052. The [Postgres operations guide](../../architecture/integrations/postgres.md#bug-345-rollout-and-verification)
+owns rollout and production verification. Do not claim deployed coverage from
+the migration ledger alone.
 
 ## Deployed-Code Compatibility
 

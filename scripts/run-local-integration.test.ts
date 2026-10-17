@@ -31,6 +31,7 @@ describe('createLocalIntegrationCommandPlan', () => {
           DATABASE_URL:
             'postgresql://postgres:postgres@127.0.0.1:55439/addiction_boards_test',
           DB_TEST_PORT: '55439',
+          DB_TEST_POOLER_PORT: expect.any(String),
           LOCAL_TEST_INSTANCE: 'integration',
           NEXT_PUBLIC_APP_URL: expect.stringMatching(
             /^http:\/\/127\.0\.0\.1:\d+$/,

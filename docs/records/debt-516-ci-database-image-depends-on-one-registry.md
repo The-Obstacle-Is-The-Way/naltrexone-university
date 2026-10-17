@@ -1,6 +1,6 @@
 # DEBT-516: CI's Database Image Depends on One Registry
 
-**Status:** Verifying — CI pulls Postgres from the first of three registries serving its digest, and compose pins it too; after promotion, `main`'s CI logs which one served it; due 2026-10-24
+**Status:** In Progress — give BUG-345's pooler image the registry failover Postgres has, then confirm on `main`'s CI which registry served each image; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
@@ -80,6 +80,7 @@ While the image could not be pulled, every pull request's required `test` check 
 - [ ] Option 3's pull request is promoted, and `main`'s CI logs `Postgres image pulled from <registry>` in its `Start Postgres` step.
 - [ ] `main`'s scheduled hosted-checkout smoke logs the same. Its conclusion also depends on Stripe, so the evidence is the step, not the run.
 - [x] `docker-compose.yml` pins CI's digest, and `tests/ci-service-images.test.ts` keeps the two equal.
+- [ ] BUG-345's fix (#1549) added a second image to CI's required database path: PgBouncer, which Compose pulls from Docker Hub alone. On 2026-10-17, `mirror.gcr.io` also served its pinned digest; ECR Public did not. Give it the same failover, or record the owner's acceptance of the single-registry risk, before closing.
 
 ## Related
 

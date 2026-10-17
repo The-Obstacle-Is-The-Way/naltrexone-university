@@ -32,10 +32,12 @@ The plan also sets several limits the records work around:
 
 **Decided by the owner (2026-10-09):** keep the Hobby plan until the first live sale, then move production to Pro. The owner accepts the risk that Vercel's terms already apply to the live pricing page and checkout, which Vercel may enforce by limiting the deployment, as the 2026-08-11 ruling did. The other ways to comply, moving now or taking pricing and checkout offline, were offered and declined. Engineering then re-checks DEBT-505's log assumption and its watcher's timings (the cron monitor's 90-minute check-in margin and the watcher's 25-hour staleness window, both sized for Hobby's late starts), DEBT-511's cron timing and BUG-319's Skew Protection decision, and corrects each record.
 
+**Adopted 2026-10-17 (DEBT-524 step 8):** at that Pro recheck, remove a workaround only after equivalent failure-detection evidence or the owner's explicit acceptance of the remaining risk. Longer log retention alone does not detect a stopped schedule, a missing deployment, an expired read token or a Sentry failure. Preserve AUDIT-015's independent alert/schedule detection and each record's positive verification; a quiet log window is not proof of delivery.
+
 ## Verification
 
 - [ ] Owner: the team's plan reads Pro.
-- [ ] Engineering: DEBT-505, DEBT-511 and BUG-319 are re-checked against Pro's limits and corrected.
+- [ ] Engineering: DEBT-505, DEBT-511 and BUG-319 are re-checked against Pro's limits and corrected. Any retired control has equivalent detection evidence or explicit owner risk acceptance, and positive-verification obligations remain covered.
 
 ## Related
 
