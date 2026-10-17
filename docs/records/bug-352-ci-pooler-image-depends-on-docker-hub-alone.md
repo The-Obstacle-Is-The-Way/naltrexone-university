@@ -70,7 +70,7 @@ Production keeps serving, and no data is at risk. Recovery is a re-run once Dock
 
 ## Resolution (decided)
 
-**Decided:** option 1, on 2026-10-17, chosen from first principles at the owner's request. It is built in its own pull request.
+**Decided:** option 1, on 2026-10-17, chosen from first principles at the owner's request. It is built in its own pull request, which also closes DEBT-516.
 
 **Why option 1.**
 - **It fixes the cause, not the instance.** DEBT-516's guarantee lived in one image's script and one image's test, so the next image bypassed it. Option 1 moves the guarantee into one mechanism that every image uses. It adds a guard over every image a workflow pulls, so a new image cannot bypass it unnoticed.
@@ -136,10 +136,11 @@ Production keeps serving, and no data is at risk. Recovery is a re-run once Dock
 - [ ] Locally, with the image removed and pulled from the mirror alone, Compose with `PGBOUNCER_IMAGE_REPOSITORY=mirror.gcr.io/edoburu/pgbouncer` and `--pull never` starts the pooler from the mirror's copy.
 - [ ] The fixing pull request's CI logs `PgBouncer image pulled from <registry>`, and the pooler suite passes.
 - [ ] After promotion, `main`'s CI logs the notice for both images.
+- [ ] The fixing pull request closes DEBT-516, whose last item it completes.
 - [ ] The pin moves to PgBouncer 1.26.1 or later under the new duty, or a Waiting row holds that refresh with its trigger.
 
 ## Related
 
 - BUG-345: its fix added this image to CI.
-- DEBT-516: the failover this extends. It closed on 2026-10-17, and its open item for this image moved here.
+- DEBT-516: the failover this extends. Its last item is this record's fix, and it closes in the same pull request.
 - BUG-327: pinned every workflow image by digest.
