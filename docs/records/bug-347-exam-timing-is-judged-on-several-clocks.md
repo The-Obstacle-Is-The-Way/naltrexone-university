@@ -28,7 +28,7 @@ This was found by reading the code; it was not reproduced in a browser. Use-case
 **Two clocks:**
 - Server: `computeExamDeadline` (`src/domain/services/exam-timer.ts:11-17`) derives a deadline from persisted `startedAt`. The use cases compare it with their injected app clock (`save-exam-draft-answer.ts:64`; `finalize-exam-answers.ts:120`).
 - Browser: `use-exam-timer.ts:18-20,59` computes the time left from `Date.now()`, with no server offset.
-  - The page decides whether to send the flush on the browser's clock too (`use-practice-session-page-model.ts:242-276`): `isFinalDraftFlushProvablyStale` (`:73-83`, applied at `:247-254`) drops it more than 15 seconds past the deadline. The save's `{ ok: false }` result is ignored at `:256`; a thrown error is caught at `:257`; finalization follows at `:268`.
+  - The page decides whether to send the flush on the browser's clock too (`use-practice-session-page-model.ts:242-276`): `isFinalDraftFlushProvablyStale` (`:73-83`, applied at `:247-254`) drops it more than 15 seconds past the deadline. The save's `{ ok: false }` result is ignored at `:256`; a thrown error is caught at `:257`; finalization follows at `:269`.
 - The server refuses an early flush: `src/application/use-cases/finalize-exam-answers.ts:331-340`, `CONFLICT`, "only allowed at exam expiry", with no reason in its details.
 - The page recovers from a reasonless CONFLICT by reading the summary (`practice-session-page-logic.ts:325-372`). The summary refuses with "has not ended" (`get-practice-session-summary.ts:36`). The timer then clears its latch to retry (`use-exam-timer.ts:186-189`).
 - **Tests.** No test runs the browser clock ahead of the server's.

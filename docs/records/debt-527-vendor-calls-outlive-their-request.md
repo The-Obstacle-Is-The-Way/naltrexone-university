@@ -63,7 +63,7 @@ P3: a resilience liability, with no measured production timeout or data loss.
    - Preserve idempotency keys and existing recovery for unknown mutation outcomes. Keep DEBT-501's outage classifier separate from retry eligibility.
    - The success page uses the shared Stripe adapter/wrapper and breaker. Vendor SDKs stay outside application/domain; the budget contract belongs to the caller, with outward wiring.
    - Apply the same production constructors and deadline rules in tests; no production-only timeout switch. Amend ADR-018 to state the total deadline and retry composition.
-2. **A shared per-attempt limit first.** *Recommended first step.* Give the shared client the fetch client, with a `timeout` and `maxNetworkRetries` such that three wrapper attempts, backoff and the SDK's closed-connection retry fit well inside 30 seconds. It bounds each attempt, not retries or sequential calls, so option 1 still follows. DEBT-501 item 1 made the same change for the cron.
+2. **A shared per-attempt limit first.** *Recommended first step.* Give the shared client the fetch client, with a `timeout` and `maxNetworkRetries` such that three wrapper attempts, backoff and the SDK's closed-connection retry fit well inside 30 seconds. It bounds each attempt, not retries or sequential calls, so option 1 still follows. DEBT-501 item 1 already bounds the cron's subscription requests per request (`app/api/cron/reconcile-stripe-subscriptions/route.ts:19-22`).
 
 The SDK's 409/`stripe-should-retry` handling and its exceptional single closed-connection retry even at zero configured network retries must be included when selecting the combined retry policy. Do not add a second retry layer without accounting for those attempts.
 
