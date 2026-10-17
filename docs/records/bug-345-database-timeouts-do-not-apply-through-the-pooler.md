@@ -1,6 +1,6 @@
 # BUG-345: The Database Timeouts Do Not Apply Through Neon's Pooler
 
-**Status:** Verifying — production's pooled SHOW reports 30s, 5s and 60s after promotion; due 2026-10-20
+**Status:** Verifying — production's pooled SHOW reports 30s, 5s and 1min after promotion; due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-16
 
@@ -95,7 +95,7 @@ All eight checks passed on 2026-10-17, including a local rehearsal of CI's separ
 - [x] The actual managed Drizzle Kit transaction records all three bounds; its blocked migration fails with `55P03`. Accept the five-second lock limit and remove DEBT-447's now-proved Waiting item.
 - [x] A second agent challenged the updated mechanism, process inventory, managed-client proof and rollout on 2026-10-17; no substantiated correction to this record.
 - [ ] Set the final due date in the promotion change, then record backend renewal and repeated concurrent pooled samples.
-- [ ] After promotion, the authorized production check reports the intended 30s, 5s and 60s through the pooled path, with rollout evidence for preexisting backend sessions.
+- [ ] After promotion, the authorized production check reports the intended `30s`, `5s` and `1min` through the pooled path, with rollout evidence for preexisting backend sessions.
 
 ## Related
 

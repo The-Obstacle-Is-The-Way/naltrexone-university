@@ -67,7 +67,14 @@ describe('CI container images', () => {
     );
     expect(pooler).toBeGreaterThanOrEqual(0);
     expect(pooler).toBeLessThan(integration);
-    expect(steps[pooler]?.run).toContain('resolve-local-test-target.ts');
+    // One resolver call, and no `export X="$(…)"`: export's own status masks
+    // a failed command substitution, so the step would run on empty values.
+    expect(
+      steps[pooler]?.run?.match(/resolve-local-test-target\.ts/g),
+    ).toHaveLength(1);
+    expect(steps[pooler]?.run).not.toMatch(/export \w+="\$\(/);
+    expect(steps[pooler]?.run).toContain('${COMPOSE_PROJECT_NAME:?');
+    expect(steps[pooler]?.run).toContain('${DB_TEST_POOLER_PORT:?');
     expect(steps[pooler]?.run).toContain('GITHUB_ENV');
     expect(steps[pooler]?.run).toContain(
       'docker compose up --no-start --no-deps pgbouncer',

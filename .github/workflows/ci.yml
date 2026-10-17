@@ -98,8 +98,13 @@ jobs:
       - name: Start transaction pooler
         timeout-minutes: 3
         run: |
-          export COMPOSE_PROJECT_NAME="$(node --import tsx --input-type=module -e 'import { resolveLocalTestTarget } from "./scripts/resolve-local-test-target.ts"; process.stdout.write(resolveLocalTestTarget().composeProjectName)')"
-          export DB_TEST_POOLER_PORT="$(node --import tsx --input-type=module -e 'import { resolveLocalTestTarget } from "./scripts/resolve-local-test-target.ts"; process.stdout.write(resolveLocalTestTarget().poolerPort)')"
+          # A plain assignment fails the step when the resolver fails; an
+          # export of a command substitution would mask that failure.
+          target_env="$(pnpm exec tsx scripts/resolve-local-test-target.ts env)"
+          COMPOSE_PROJECT_NAME="$(sed -n 's/^COMPOSE_PROJECT_NAME=//p' <<< "$target_env")"
+          DB_TEST_POOLER_PORT="$(sed -n 's/^DB_TEST_POOLER_PORT=//p' <<< "$target_env")"
+          : "${COMPOSE_PROJECT_NAME:?The resolver gave no Compose project}" "${DB_TEST_POOLER_PORT:?The resolver gave no pooler port}"
+          export COMPOSE_PROJECT_NAME DB_TEST_POOLER_PORT
           printf 'DB_TEST_POOLER_PORT=%s\n' "$DB_TEST_POOLER_PORT" >> "$GITHUB_ENV"
           docker compose up --no-start --no-deps pgbouncer
           # Postgres was started separately with registry failover above.

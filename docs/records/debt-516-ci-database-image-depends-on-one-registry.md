@@ -1,6 +1,6 @@
 # DEBT-516: CI's Database Image Depends on One Registry
 
-**Status:** Verifying — CI pulls Postgres from the first of three registries serving its digest; confirm on `main`'s CI, and give BUG-345's pooler image the same failover; due 2026-10-24
+**Status:** In Progress — give BUG-345's pooler image the registry failover Postgres has, then confirm on `main`'s CI which registry served each image; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
 **Resolved:** —
