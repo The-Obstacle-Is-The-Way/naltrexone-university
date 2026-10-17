@@ -1,12 +1,10 @@
 # DEBT-528: Several Server Entry Points Repeat Policy, and the Copies Have Drifted
 
-**Status:** Open — share bearer parsing, rate-limit responses, webhook failure recording and manage-billing requests; preserve endpoint orchestration and inject cached auth at the boundary
+**Status:** Open — share bearer parsing, rate-limit responses, webhook failure recording and manage-billing requests; keep each endpoint's orchestration explicit
 **Priority:** P3
 **Date:** 2026-10-17
 
 ---
-
-Corrected 2026-10-17: replaced the universal pipeline with focused policies, corrected conditional reads and history, and named the outward cache dependency.
 
 ## Summary
 
@@ -32,7 +30,7 @@ The demonstrated copies and drift are:
 - Bearer parsing differs:
   - Renewal (`send-renewal-notices/route-handler.ts:36-51`) splits at the first space, so `Bearer <secret> extra` is refused.
   - Reconcile (`reconcile-stripe-subscriptions/route-handler.ts:71-81`) uses `split(' ', 2)`, which drops everything after the second space, so the same header is accepted.
-  - Both independently use the same hash comparison. An actual-handler probe with synthetic trailing bearer text reached renewal's 401 before the limiter, but reached reconcile's refusing limiter and returned 429. The correct secret is still required; this is not an authentication bypass.
+  - Both use the same hash comparison. With the correct secret plus trailing text, renewal refuses (401) and reconcile accepts. The secret is still required, so this is not an authentication bypass.
 - Logging differs: renewal and health log through `projectSafeErrorDiagnostics`, while reconcile logs `error.message` (`route-handler.ts:175,238,266`). BUG-348's scan owns that fix.
 - The Stripe webhook checks for its signature header before the limiter; Clerk and Resend rate-limit first.
 
@@ -56,7 +54,7 @@ The demonstrated copies and drift are:
 - Pricing and the app layout use request-cached `getRequestAuthState` (`lib/auth-request-cache.ts`); default entitled-action helpers use it too.
 - The billing page builds a fresh container, so `GET /app/billing` has independent user/subscription reads in layout and page when both render, with duplicate trial-card reads only when the subscription is `inTrial` (`app/(app)/app/layout.tsx:55-77`; `billing/page.tsx:51-76`).
 - A fresh successful checkout path reads identity at `billing-controller.ts:225,234,162`; a replay or early refusal need not execute all three. Its CONFLICT compares the two internal user IDs, not all three identity values. Preserve that safety check.
-- `requireEntitledUserId` ignores the dependencies it is given when the action runs on the default container (`src/adapters/controllers/require-entitled-user-id.ts:22-25`). Its unit test covers only the other branch; E2E exercises the default path but does not prove its cache count or injected-dependency fidelity. The helper imports outer `lib/auth-request-cache` at :5, contrary to the dependency rule; `create-action.ts:2` also imports an outer composition-helper type. Keep caching at the composition boundary and inject a client-owned auth reader/type rather than adding adapter imports from `lib`.
+- `requireEntitledUserId` ignores the dependencies it is given when the action runs on the default container (`src/adapters/controllers/require-entitled-user-id.ts:22-25`). Its unit test covers only the other branch; E2E exercises the default path but does not prove its cache count or injected-dependency fidelity. Its `lib/auth-request-cache` import is composition-time wiring that the architecture scan allows (`tests/architecture-boundary-source-scan.ts:49` bans only `app/` and `components/`), and ADR-001 lists controllers among the composition locations. Moving caching out of controllers would need an ADR amendment.
 
 **History:**
 - BUG-048: both webhooks failed open, fixed per route.
@@ -80,7 +78,7 @@ App billing and add-card lose their return destination after an unauthenticated 
    - Keep health, cron and webhook orchestration explicit. Preserve signature verification order and raw bodies, provider-specific event semantics, post-commit Stripe customer deletion and original-error causality (BUG-285/DEBT-458).
    - Reuse `createAction`; do not add a competing universal controller/form framework. Framework responses and redirects stay outward in `app`/`lib`, and event-ledger policy stays behind narrow adapter seams.
    - Reuse the pricing route schema and add only the missing shared billing schema. Keep the two route-owned server-action entry points: BUG-324 allows only form data from the client, not a client-selected redirect table.
-   - Keep cached auth wiring at the composition boundary and inject the required reader into adapters. DEBT-502 owns the identity-resolution contract; this record owns the demonstrated outward dependency and repeated resolution wiring.
+   - Make `requireEntitledUserId`'s default-container path honor the dependencies it is given. DEBT-502 owns the identity-resolution contract; this record owns the repeated resolution wiring.
 2. **One universal route/form pipeline.** This would combine provider verification, browser auth, bearer auth, limiting and presentation into a module with several reasons to change. The current evidence supports smaller shared policies, not this abstraction.
 
 ## Resolution (proposed)
@@ -93,7 +91,7 @@ Option 1, red first on the bearer parser, lost return destination and production
 - [ ] One manage-billing request module preserves form-only actions and restores each action's intended post-sign-in destination.
 - [ ] Shared limiter behavior preserves each endpoint's admission order, 429/503 status and response body.
 - [ ] Clerk and Stripe share the evidenced failure-ledger sequence without losing processed-event protection, post-commit behavior or original-error causality.
-- [ ] The production auth wiring is exercised with its injected cache reader; adapters no longer import the outer cache/composition types.
+- [ ] The default-container path honors injected dependencies, and a test covers it.
 
 ## Related
 

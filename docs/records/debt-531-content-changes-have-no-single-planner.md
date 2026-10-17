@@ -1,12 +1,10 @@
 # DEBT-531: Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently
 
-**Status:** Open — reconcile content normalization and hold scope through ADR-021/022; BUG-351 owns the planner and proposed freshness amendment, and DEBT-483 owns bootstrap timing
+**Status:** Open — reconcile content normalization and hold scope through ADR-021/022; BUG-351 owns the planner and source freshness, DEBT-483 the bootstrap timing
 **Priority:** P3
 **Date:** 2026-10-17
 
 ---
-
-Corrected 2026-10-17: preserved immutable history and semantic projections, corrected hold/tag claims, and retained DEBT-446 and DEBT-483 decision ownership.
 
 ## Summary
 
@@ -15,7 +13,7 @@ Two programs write question content, and they apply different rules to the same 
 - **The release builder** refuses a bundle that moves a question back to an earlier revision, unless `--revert` names it (DEBT-492).
 - **The direct seed** compares a file only with the current revision. Different content becomes a new current revision; it is live only when its question is published.
 
-The last recorded production state in DEBT-483 is unbootstrapped, with direct seeding still available; this review did not query the current release pointer. The managed production seed imports the local untracked drafts folder, which can lag the source. Bare seeding reads the existing MDX output instead.
+The last recorded production state in DEBT-483 is unbootstrapped, with direct seeding still available; the current release pointer was not queried. The managed production seed imports the local untracked drafts folder, which can lag the source. Bare seeding reads the existing MDX output instead.
 
 The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. Whole-revision equality uses different normalization at the seed and builder. Score eligibility deliberately compares a narrower key projection, with raw text. Hold scope also differs between activation and availability.
 
@@ -47,7 +45,7 @@ Production prevalence is unknown. A read-only census should separately count non
 - Activation treats a hold as excluding one revision (`release-activation.ts:99-104`; ADR-021 decision 5).
 - Availability and scoring treat a hold on any revision of a question as "under review" once the question is not published (`drizzle-question-repository.ts:403-413`; `score-eligibility-sql.ts:28-32`; `question-availability.ts:42-49`).
 - A lift reaches only the revision the active release publishes (`release-holds.ts:59-97`).
-- So a hold on R1, after a release publishes R2, cannot be lifted directly while another revision is active, or while the active release omits the question. Reactivating a release that names R1 makes it liftable, a disruptive workaround documented in `docs/architecture/content-pipeline.md:359`. If the question is later retired, that forgotten hold labels it "Under review" and drops past scores on it. DEBT-492 gap 3 noted the dormant hold and left it.
+- So a hold on R1, after a release publishes R2, cannot be lifted directly while another revision is active, or while the active release omits the question. Reactivating a release that names R1 makes it liftable, a disruptive workaround documented in `docs/architecture/content-pipeline.md:373`. If the question is later retired, that forgotten hold labels it "Under review" and drops past scores on it. DEBT-492 gap 3 noted the dormant hold and left it.
 - The two readings come from two decisions: ADR-021 decision 5 (per revision) and ADR-022 Decision 1 ("an unlifted hold on a revision of the question"). Choosing one amends the other. The gap is dormant until the bootstrap, since holds need an active release.
 
 **Smaller items:**
@@ -79,9 +77,9 @@ For holds, choose and document a coherent relationship between revision-level ac
 
 ## Resolution (proposed)
 
-BUG-351 owns the proposed shared planner and source-admission amendment. This record owns normalization and hold semantics, with their explicit ADR-021/022 amendments. DEBT-483 alone owns bootstrap timing, the managed seed's transition and release zero; its owner check comes first.
+BUG-351 owns the shared planner and source admission. This record owns normalization and hold semantics, with their explicit ADR-021/022 amendments. DEBT-483 alone owns bootstrap timing, the managed seed's transition and release zero; its owner check comes first.
 
-DEBT-446 Part 3b remains parked unless its trigger is established or the owner explicitly amends it. The local stale-seed reproduction does not prove a production incident, and mutually exclusive seed/builder programs do not establish a second independent source author. The new evidence supports **proposing** an amendment, not silently declaring that decision superseded. Preserve its Waiting row with BUG-351 as the proposed follow-up. DEBT-524's closed content discussion cited DEBT-483; it did not assign bootstrap ownership here.
+DEBT-446's Waiting row (Part 3b) leaves Waiting with BUG-351, which takes its scope. Its premise, that the seed refused key changes under graded history, went with `3ac01fc8`. DEBT-524's closed content discussion cited DEBT-483; it did not assign bootstrap ownership here.
 
 Feedback without attempt/session context cannot identify the reported revision, and vocabulary definitions remain repeated. These inspected facts are preserved as follow-up candidates, not additional acceptance requirements or evidence that all copies currently disagree. Any independently confirmed defect needs its own bounded owner.
 
@@ -95,6 +93,6 @@ Feedback without attempt/session context cannot identify the reported revision, 
 
 - BUG-351: the live defect, its reproduction and the planner's design.
 - DEBT-483 (Waiting): the production content bootstrap.
-- DEBT-446 (closed, Part 3b still Waiting): the parked freshness decision; BUG-351 proposes an owner amendment.
+- DEBT-446 (closed): the parked freshness check, whose Part 3b scope BUG-351 takes.
 - DEBT-524 (closed): Finding 1's view of the content transition, whose operational owner remains DEBT-483.
 - DEBT-492, BUG-281, BUG-314 (closed).

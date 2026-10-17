@@ -1,12 +1,10 @@
 # BUG-348: Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs
 
-**Status:** Open — shared diagnostic defaults and safe projection; prove silent portal failures and raw-message rejection. Replay policy stays with DEBT-529; exposure assessment stays private
+**Status:** Open — shared diagnostic defaults and one safe projector, red first on the silent portal failure and the raw `storeResult` message; replay policy stays with DEBT-529
 **Priority:** P3
 **Date:** 2026-10-17
 
 ---
-
-Corrected 2026-10-17: withdrew unsupported safety assurances and narrowed public evidence; separated diagnostics from replay policy and unproved Sentry/CSP proposals.
 
 ## Summary
 
@@ -15,10 +13,10 @@ Diagnostic logging and reporting vary across boundaries, and some paths bypass t
 1. **A failed manage-billing request can leave no server trace.**
    - `handleError` logs only errors that are not `ApplicationError`s, so it never logs an `INTERNAL_ERROR` or `STRIPE_ERROR`, though ADR-006 defines `INTERNAL_ERROR` as an unexpected error. Whether one is logged depends on the action.
    - Subscribe and add-card log a failed result's code. Manage billing logs nothing. Other actions leave it to the browser reporter, which can send the public `ActionResult` error, including its code/details, without the original server cause.
-   - So a portal session that fails with Stripe's circuit open, or with no portal URL, comes back as a result and redirects without a log line. BUG-166's catch does not see that returned failure. `createAction` catches exceptions inside its execution block; schema parsing occurs before that block, and transport or reporting failures can still throw.
+   - So a portal session that fails with Stripe's circuit open, or with no portal URL, comes back as a result and redirects without a log line. BUG-166's `catch` sees only a throw, and `createAction` returns every failure as a result (`:45` returns; `:64-69` catches), so it runs only if `handleError` itself throws.
    - The causes DEBT-452 preserved inside repository `INTERNAL_ERROR`s are likewise not written on action paths that do not log their result.
 2. **Raw error text reaches the logs.** A Drizzle query error's message carries the bound SQL parameters (`Failed query: … params: …`). DEBT-452 projected the `err` and `error` log seams it named. Message strings logged under other keys were outside its sweep and can carry parameters when handed a Drizzle error; this census proves raw-message logging, not sensitive data at every site: four `toErrorMessage` helpers and 21 listed inline sites, plus the retry logger.
-   - A synthetic error containing SQL parameters is sufficient to test that a raw message bypasses projection. Production log contents, access and retention have not been verified; credential-specific assessment belongs in private review.
+   - Concretely: if `storeResult` fails after an idempotent action succeeded, the wrapper logs the Drizzle message, up to 1,000 characters. Its parameters hold the cached result: for the billing portal, Checkout and trial setup, a Stripe session URL.
 
 Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-list is applied separately to events, breadcrumbs and spans, which is how BUG-318's fix left BUG-331's carriers.
 
@@ -45,13 +43,13 @@ Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-lis
   - three in `app/api/cron/reconcile-stripe-subscriptions/route-handler.ts`;
   - one each in `drizzle-rate-limiter.ts`, `stripe-webhook-processor.ts`, `manage-billing-core.ts` (with the stack), `checkout-success-sync.tsx` and `proxy.ts:218`.
 - `stripe-retry.ts:22-36`: the retry log carries the message, as ADR-018 §4 decided.
-- The idempotency wrapper's error projection needs a synthetic failure case through its actual logging seam. Keep credential-bearing diagnostics and any exploit assessment private until the records disclosure rule is satisfied.
+- `src/adapters/repositories/drizzle-idempotency-key-repository.ts:149-180`: `storeResult` does not translate its errors, so a raw Drizzle error reaches the wrapper. The portal, Checkout and trial setup set no `outcomeStoreFailurePolicy`, so they reach `with-idempotency.ts:278-287`.
 - `proxy.ts`, `lib/clerk-call-failures.ts` and `lib/clerk-backend-call-limit.ts` write with `console.*`, bypassing pino's level and its `SECRET_ENV_NAMES` redaction.
 
 **Sentry:**
 - `lib/sentry-data-collection.ts` keeps ADR-026's deny-list of term lists, applied per channel by `scrubEvent`, `scrubBreadcrumb`, `scrubServerEvent` and `scrubSpan`.
 - The credential-shape matcher the tooling uses (`tests/shared/clerk-credential-shapes.ts`) recognizes bare tokens; the app's redactor matches only `name=value` pairs.
-- CSP violation reports go from the browser to Sentry without any SDK hook (`proxy.ts` report URI). This review has not demonstrated sensitive content in an emitted CSP report. BUG-331 owns the server breadcrumb/span fixes and their remaining production verification.
+- CSP violation reports go from the browser to Sentry without any SDK hook (`proxy.ts` report URI). No emitted CSP report has been shown to carry sensitive content. BUG-331 owns the server breadcrumb/span fixes and their remaining production verification.
 
 **History:**
 - Swallowed or unreported errors: BUG-013, BUG-018, BUG-111, BUG-112, BUG-166, BUG-212, BUG-213, BUG-214.
@@ -61,10 +59,10 @@ Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-lis
 ## Impact
 
 - A failed manage-billing request whose error is an `ApplicationError` leaves no server trace. The user still sees an error, and an open circuit follows earlier outage failures that were logged.
-- Raw diagnostics can include data the logging boundary was intended to exclude. Production log access, downstream collection and retention are unverified. Short lifetime and a local logger configuration do not establish non-exploitability; the earlier categorical assurance is withdrawn.
+- If `storeResult` fails after Stripe succeeds, the wrapper logs the Drizzle message, whose parameters hold the session URL, beside the user ID. A portal URL is short-lived; a Checkout or trial-setup URL lasts 24 hours, since we set no `expires_at`. Only the owner reads these logs: one Vercel member, no drains, no pino transport, about an hour's retention (DEBT-505). The owner already has Stripe access, so this is a privacy gap, not an exploitable finding. Reassess if a member, a drain or Sentry log capture is added (DEBT-512).
 - Each new log or Sentry channel has to be found and filtered by hand.
 
-P3 for the demonstrated diagnostic defect. This is not a confidentiality-severity judgment; that assessment remains private and unverified.
+P3.
 
 ## Options
 
@@ -74,7 +72,7 @@ P3 for the demonstrated diagnostic defect. This is not a confidentiality-severit
    - **Enforcement.** DEBT-452 rejected a lint rule until the problem recurred, with evidence; the sites above are that recurrence. Add a source scan with red cases for the demonstrated raw-message forms, helper-produced strings and aliases at error-log boundaries, rather than only the literal `error.message` spelling. Prove safe projection through the real logger path too.
 2. **Patch the two live paths only:** log a failed portal result, and translate `storeResult`'s errors. That leaves the next call site to choose again.
 
-For Sentry, BUG-331 retains the existing server-channel work. A shared credential-shape redactor or CSP policy is a candidate, not a demonstrated fix: first reproduce a leak with synthetic data through the actual SDK or report path, check false positives and ADR-026's retained pseudonymous fields, and propose an explicit ADR amendment if evidence warrants it. Keep that assessment private when exploitable.
+For Sentry, BUG-331 retains the existing server-channel work. A shared credential-shape redactor or CSP policy is a candidate, not a demonstrated fix: first reproduce a leak with synthetic data through the actual SDK or report path, check false positives and ADR-026's retained pseudonymous fields, and propose an explicit ADR amendment if evidence warrants it.
 
 ## Resolution (proposed)
 

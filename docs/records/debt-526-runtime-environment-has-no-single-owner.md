@@ -6,8 +6,6 @@
 
 ---
 
-Corrected 2026-10-17: separated intentionally different environment policies, corrected CI receipts and build/runtime behavior, and withdrew the unsupported blanket DSN decision.
-
 ## Summary
 
 Deployment environment and Clerk bypass policy are read in several places. Eight production expressions read `NEXT_PUBLIC_SKIP_CLERK` directly. The startup and middleware bypass guards disagree off Vercel. Other checks deliberately answer different questions: build mode, live Clerk instance, trusted proxy headers and telemetry labeling. Consolidation must preserve those distinctions.
@@ -61,7 +59,7 @@ The same pattern shows in four related places:
 - `lib/logger.test.ts:109,140` uses name heuristics to discover omissions; these are tests, not independent lists of the same secrets.
 - `docs/architecture/environments.md` marks sensitive configuration. ADR-026 deliberately publishes the browser DSN but keeps the server DSN sensitive because it accepts operational events. `SENTRY_DSN` is absent from the logger list.
 
-A registry must distinguish public visibility from log-redaction policy. No cited receipt supports the earlier claim that the owner declared every DSN nonsecret on October 5; preserve ADR-026's two trust levels.
+`SENTRY_DSN` is sensitive under ADR-026 §2 but absent from `SECRET_ENV_NAMES`. The registry must say whether sensitive means redacted from logs.
 
 **History:** BUG-002, BUG-136, BUG-143, DEBT-041, DEBT-129 and DEBT-197 concern environment/skip checks. BUG-040 concerns Clerk configuration; BUG-064 was a false alarm closed Won't Fix, and BUG-079 concerned expected cross-environment session cookies. BUG-080 concerns the app URL. DEBT-240/446 concern database targets. BUG-345's pooled timeout configuration is an adjacent boundary problem, not evidence of duplicate environment predicates.
 

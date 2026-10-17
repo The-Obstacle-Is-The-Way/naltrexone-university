@@ -1,12 +1,10 @@
 # DEBT-530: Commercial Terms Are Restated by Hand in Each Place That Shows Them
 
-**Status:** Open — share versioned offer values and active-copy checks while preserving historical consent; consolidate blocking statuses only under DEBT-501's billing contract
+**Status:** Open — one source for the current offer, with tests tying live copy to it; historical consent stays frozen; blocking statuses follow DEBT-501's billing contract
 **Priority:** P3
 **Date:** 2026-10-17
 
 ---
-
-Corrected 2026-10-17: restored existing test evidence, preserved historical consent and owner approval, and specified inward offer contracts and period-sensitive status behavior.
 
 ## Summary
 
@@ -37,7 +35,7 @@ The billing page's cancellation date, a live presentation defect in the same are
   - `app/(marketing)/checkout/success/page.tsx:61`
   - `app/(marketing)/terms/terms-content.ts:45`
   - the frozen consent registry, `lib/checkout-disclosures.ts:26-60`
-- The runtime fence (`create-checkout-session.ts:144-155`) compares trial eligibility and the disclosure version, not the text/hash or granted days directly. `create-checkout-session.test.ts:340-383` pins the actual seven days. `lib/pricing-data.test.ts:77-107` checks cancellation text against Terms and pins amount/version/hash; `lib/checkout-disclosures.test.ts:47-81` checks historical hashes and active copy against its registry entry.
+- The runtime fence (`create-checkout-session.ts:144-155`) compares trial eligibility and the disclosure version, not the text/hash or granted days directly. `create-checkout-session.test.ts:348,383` pins the actual seven days. `lib/pricing-data.test.ts:77-107` checks cancellation text against Terms and pins amount/version/hash; `lib/checkout-disclosures.test.ts:47-81` checks historical hashes and active copy against its registry entry.
 
 **Amounts and saving:**
 - `lib/pricing-data.ts` holds each amount twice: `price: '$29'` beside `amountCents: 2900` (`:30-32`), and the same for the annual plan (`:41-43`).
@@ -84,9 +82,8 @@ A change made to one copy can leave another stating old terms. Existing tests ca
 ## Options
 
 1. **One offer module.** *Recommended:* it ends the hand copies without touching the evidence.
-   - Use versioned offer values for amounts/trial policy and an applicable legal version/date, with a separate support-contact value. Keep presentation formatting and billing lifecycle logic out of the offer contract.
-   - Keep pure business values inward or inject an application-owned offer configuration through the composition root, extending the existing `getRenewalTerms` seam. Use cases must not import outer `lib/pricing-data.ts`, `lib/support.ts` or `app` modules. Build current presentation outward from that contract.
-   - Pin historical disclosure versions and stored acknowledgment terms unchanged. Tie only the active registered disclosure and current legal copy to their applicable offer version. An authorized offer change appends a disclosure version. ADR-027 Decision 4 retains owner approval for adopted wording/version changes; this record does not authorize them.
+   - Hold the current amounts, trial days, support contact and terms version in one inner module, or inject them through the existing `getRenewalTerms` seam. Use cases must not import outer `lib/pricing-data.ts`, `lib/support.ts` or `app` modules. Build the current copy outward from it, and keep presentation formatting and billing lifecycle logic out of it.
+   - History needs no versioned values: the stored consent records and the append-only disclosure registry already keep it. Only the active disclosure and current legal copy are tied to the module. An authorized offer change appends a disclosure version; ADR-027 Decision 4 keeps the owner's approval for adopted wording, and this record does not authorize any change.
    - Share email footer formatting, while the acknowledgment continues to render the accepted, stored terms rather than today's price. Existing-subscriber changes remain with DEBT-501 and the price-change freeze.
    - The blocking statuses become one domain list that checkout, reconcile and the pricing page's reason read. It is a billing rule, so it follows DEBT-501's shared billing contract (adopted 2026-10-17): the contract is defined first, then the list is extracted.
 2. **Tests only:** keep every literal, and add tests that compare each copy with `FREE_TRIAL_DAYS`, `amountCents` and `SUPPORT_EMAIL`. This is cheaper, and it leaves the constants scattered.
@@ -97,8 +94,8 @@ Option 1, with the next offer or copy change, red first: a test that fails when 
 
 ## Verification
 
-- [ ] Trial days, amounts, saving and support address each have one source, and tests tie active copy to its applicable version while preserving historical evidence.
-- [ ] The applicable terms version and effective date agree; historical versions remain immutable.
+- [ ] Trial days, amounts, saving and support address each have one source, and tests tie the live copy to it.
+- [ ] The terms effective date is derived from `TERMS_VERSION`; registered disclosures stay unchanged.
 - [ ] One list decides which statuses block a new checkout; checkout, reconcile and the pricing page read it, and tests cover all eight statuses across current and expired periods, including pending-payment presentation.
 
 ## Related

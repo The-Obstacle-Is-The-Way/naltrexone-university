@@ -1,19 +1,17 @@
 # DEBT-527: Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request
 
-**Status:** Open — enforce one elapsed-time budget across vendor attempts, backoff and sequential calls; prove cancellation and ambiguous-write recovery through the production SDK path
+**Status:** Open — first a per-attempt Stripe timeout through the SDK's fetch client, proven on a loopback server; then one budget each caller passes, across attempts, backoff and sequential calls
 **Priority:** P3
 **Date:** 2026-10-17
 
 ---
-
-Corrected 2026-10-17: proved the SDK timeout is idle-based, replaced the stopgap with a total-deadline design, and removed the no-loss guarantee.
 
 ## Summary
 
 Each layer that calls Stripe or Clerk decides its own timeout and retries, and none of them knows the request's time limit.
 
 - **Stripe's SDK defaults apply.** The client sets neither `timeout` nor `maxNetworkRetries`, so the SDK retains an 80-second socket-idle timeout and two network retries. That timeout is not a total elapsed-time limit. Our wrapper adds up to three attempts around that, and the circuit breaker counts outages with its own classifier. Repeated retryable 5xx responses can produce nine HTTP requests, reproduced through the real SDK and production retry helper on loopback. The success page skips the wrapper, so its retries never reach the breaker.
-- **The request paths cannot wait that long.** The interactive and webhook paths inspected here configure 30-second `maxDuration` values. A stall past that limit can time out before the adapter reports failure or updates the breaker; faster failures can still open it. Hosted termination behavior was not exercised in this review.
+- **The request paths cannot wait that long.** The interactive and webhook paths inspected here configure 30-second `maxDuration` values. A stall past that limit can time out before the adapter reports failure or updates the breaker; faster failures can still open it. Hosted termination behavior was not exercised.
 - **Clerk has no caller-budget deadline.** `isTransientClerkError` covers transient statuses, network errors and SDK-wrapped transport failures. These lookups have no application deadline or breaker; underlying runtime network timeouts are separate.
 
 DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second timeout and one network retry). The same function's customer deletes keep the SDK's defaults; DEBT-501 item 1's Budget bullet owns their bound. This record owns interactive and webhook deadlines. DEBT-501 retains the reconcile cron's overall budget, customer-cleanup bounds and recovery coverage; the cron is also an HTTP request path.
@@ -41,7 +39,10 @@ DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second 
 
 **Timeout helpers:** three timer-race implementations (`lib/with-timeout.ts:11-16`, `src/adapters/gateways/cooldown-operational-alerts.ts:26-37`, `resend-transactional-email-gateway.ts:82-95`). They differ in error and provider-outcome semantics, and none cancels the losing work. Preserve Resend's ambiguous-result behavior if sharing mechanics. An adapter cannot import the outer `lib` helper. ADR-018 does not specify composition with SDK retries or a total deadline.
 
-**Timeout counterexample:** Stripe 23.0.0 uses `req.setTimeout` (`cjs/net/NodeHttpClient.js:47-49`). A loopback server sending data every 10 ms completed successfully after 164 ms with an SDK timeout of 40 ms. Lowering that setting alone cannot enforce the promised request budget.
+**The SDK's two clients time out differently:**
+- The default Node client uses `req.setTimeout` (`cjs/net/NodeHttpClient.js:47-49`), an idle limit. A loopback server sending data every 10 ms completed after 164 ms under a 40 ms timeout.
+- The fetch client, `Stripe.createFetchHttpClient()`, arms an `AbortController` timer that stays armed through the body (`cjs/net/FetchHttpClient.js:77-118`). The same trickle was aborted at 43 ms.
+- `timeout` and `maxNetworkRetries` can also be set per request (`esm/lib.d.ts:132`).
 
 **History:**
 - DEBT-079.
@@ -54,24 +55,25 @@ DEBT-501 item 1 narrowed the reconcile cron's subscription requests (a 5-second 
 
 A slow vendor request can outlive its configured caller budget, leaving checkout, billing or access reconciliation unresolved. A timed-out mutation may have succeeded remotely before its response was lost. Stripe retries webhook delivery for a finite period, not until success; [its documented live-mode window is up to three days](https://docs.stripe.com/webhooks#automatic-retries). DEBT-501 owns the remaining recovery coverage.
 
-P3 for an established resilience liability without a measured production timeout or data-loss incident. The earlier guarantee that no event or data is at risk was unsupported.
+P3: a resilience liability, with no measured production timeout or data loss.
 
 ## Options
 
-1. **One absolute deadline across the request's vendor work.** *Recommended.* Establish a monotonic deadline at the request boundary, reserve response/error-mapping time and pass the remaining budget through injected gateway dependencies. One adapter policy accounts for SDK attempts, wrapper attempts, backoff and sequential calls. It stops new work on expiry and cancels in-flight transport work where supported. If the installed SDK cannot cancel, implement and contract-test that transport seam; a timer race is not cancellation.
+1. **One absolute deadline across the request's vendor work.** *Recommended end state.* Establish a monotonic deadline at the request boundary, reserve response/error-mapping time and pass the remaining budget through injected gateway dependencies. One adapter policy accounts for SDK attempts, wrapper attempts, backoff and sequential calls. It stops new work on expiry and cancels in-flight transport work where supported. The fetch client already aborts on wall-clock time and takes a per-request `timeout`, so no custom transport is needed; a timer race in our code is not cancellation.
    - Preserve idempotency keys and existing recovery for unknown mutation outcomes. Keep DEBT-501's outage classifier separate from retry eligibility.
    - The success page uses the shared Stripe adapter/wrapper and breaker. Vendor SDKs stay outside application/domain; the budget contract belongs to the caller, with outward wiring.
    - Apply the same production constructors and deadline rules in tests; no production-only timeout switch. Amend ADR-018 to state the total deadline and retry composition.
-2. **A global SDK idle timeout alone.** It limits silence, but the trickling-response probe disproves an elapsed-time guarantee. Retries and sequential operations also accumulate. This may be one setting inside option 1, not a sufficient fix or separate “quick win.”
+2. **A shared per-attempt limit first.** *Recommended first step.* Give the shared client the fetch client, with a `timeout` and `maxNetworkRetries` such that three wrapper attempts, backoff and the SDK's closed-connection retry fit well inside 30 seconds. It bounds each attempt, not retries or sequential calls, so option 1 still follows. DEBT-501 item 1 made the same change for the cron.
 
 The SDK's 409/`stripe-should-retry` handling and its exceptional single closed-connection retry even at zero configured network retries must be included when selecting the combined retry policy. Do not add a second retry layer without accounting for those attempts.
 
 ## Resolution (proposed)
 
-Option 1 now, red first on the production path. DEBT-528's helper extraction is not a prerequisite. Keep cron budgets and durable recovery with DEBT-501, Clerk request allowance with DEBT-503, and consume those owners' policies here.
+First option 2, proven through the real SDK on a loopback server: stalled, trickling and 5xx. Then option 1: each caller passes its remaining budget as the per-request `timeout`, and the wrapper stops when it is spent. DEBT-528 is not a prerequisite. Keep cron budgets and durable recovery with DEBT-501, Clerk request allowance with DEBT-503, and consume those owners' policies here.
 
 ## Verification
 
+- [ ] The shared client's per-attempt limit holds through the real SDK on a loopback server, for stalled, trickling and 5xx responses.
 - [ ] Real SDK calls against a loopback server respect the total budget for silence, trickling bodies, retries, connection closure and sequential calls.
 - [ ] Exhaustion prevents new attempts/backoff; in-flight cancellation is proved rather than inferred from a returned timeout.
 - [ ] A provider write whose response is lost remains an unknown outcome, preserving its key and recovery behavior.

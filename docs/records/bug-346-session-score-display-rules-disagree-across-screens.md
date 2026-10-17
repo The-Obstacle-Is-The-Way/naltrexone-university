@@ -6,8 +6,6 @@
 
 ---
 
-Corrected 2026-10-17: distinguished the rejected domain return-type change from a nullable response projection.
-
 ## Summary
 
 Each screen decides for itself when a session's score is a percentage and when it is a dash, and the rules already disagree.
@@ -59,7 +57,7 @@ A learner sees two different scores for one session. No data is wrong, only its 
 ## Options
 
 1. **One shared score presenter that every screen calls, and drop the `answered > 0` clause.** *Recommended:* it applies the rules already decided, and gives the next change one place to land.
-2. **Return an explicit score-display value at the response boundary.** This changes the response contract and requires its consumers to migrate. DEBT-221 rejected making the domain's `computeAccuracy` nullable to preserve SPEC-003; a nullable response projection is a different proposal. A shared presenter fixes the demonstrated split without changing that API.
+2. **The server returns `accuracy: number | null`.** Every consumer changes. DEBT-221 kept the domain's `computeAccuracy` numeric to preserve SPEC-003 and its tests; it did not consider a nullable response field. Option 1 fixes the split without an API change.
 
 ## Resolution (proposed)
 

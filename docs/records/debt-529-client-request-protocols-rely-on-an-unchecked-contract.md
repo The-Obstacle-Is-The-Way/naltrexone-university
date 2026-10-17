@@ -6,8 +6,6 @@
 
 ---
 
-Corrected 2026-10-17: recounted link occurrences including moved tests, narrowed the cache-default claim, and restored every NO-GO reopening condition.
-
 ## Summary
 
 Each practice screen owns its own request lifecycle:
@@ -20,10 +18,10 @@ The family has needed repeated fixes: BUG-289–291, BUG-295 and BUG-298–303 i
 
 On 2026-07-23 the owner ruled DEBT-461's runtime consolidation NO-GO. The accepted design keeps the per-surface implementations, and requires `app/(app)/app/practice/shared/idempotency-protocol-contract.md` for every surface. This record does not reopen that ruling. It finds that the safeguards the accepted design relies on are not enforced:
 
-1. **The contract's references have drifted.** A census of local `#L` link occurrences found 48 code links and 71 test links, including repeats. Of 33 links labeled by a test title (excluding filenames and bare line labels), 24 titles still occur in the linked file; 19 of those point to the wrong line. The other nine titles are absent from the linked file.
+1. **The contract's line links have drifted.** It has 119 `#L` links: 48 to code and 71 to tests. Against the commit that wrote them (`e808225a`), 13 code links and 55 test links no longer point at their original line. Eighteen test lines are gone from the linked file: 16 tests moved to split files, and two titles no longer exist.
    - `question-flow-actions.test.ts` has 492 lines, yet links point to #L660/#L781; those tests moved to `question-flow-actions-submit.test.ts:163,284`.
    - A #L1013 test link into `practice-session-page-logic.test.ts` now belongs to `practice-session-page-logic-end-session.test.ts:380`.
-   - Code examples: `submitAnswerForQuestion` #L118 is now 139, `endSession` #L210 is now 275, and `commitChoice` #L412 is now 425. The earlier 15/46 code subset had no reproducible selection rule and is replaced by this explicit census and examples.
+   - Code examples: `submitAnswerForQuestion` #L118 is now 139, `endSession` #L210 is now 275, and `commitChoice` #L412 is now 425.
 
    The anchors originated with the contract (`e808225a`, 2026-07-21). No check validates its symbol/test references. The document already points to moved tests as well as stale lines.
 2. **The server caches errors thrown by `execute()` when a caller passes no policy.** Admission/claim failures have separate behavior. ADR-015's 2026-10-13 amendment records this default and the rule "every keyed action therefore passes a policy".
@@ -34,7 +32,7 @@ On 2026-07-23 the owner ruled DEBT-461's runtime consolidation NO-GO. The accept
 
 ## Evidence
 
-**The anchors:** the contract's matrix links `#Lnn` line anchors. `submitAnswerForQuestion` is now at `app/(app)/app/practice/practice-page-logic.ts:139` and `[sessionId]/practice-session-page-logic.ts:197`; `submitSelectedAnswer` at `app/(app)/app/questions/[slug]/question-page-logic.ts:229`; `endSession` at `practice-session-page-logic.ts:275`; `commitChoice` at `use-practice-session-question-flow.ts:425`. Within this contract, `94017438` (2026-10-13) changed only record citations.
+**The anchors:** the contract's matrix links `#Lnn` line anchors. `submitAnswerForQuestion` is now at `app/(app)/app/practice/practice-page-logic.ts:139` and `[sessionId]/practice-session-page-logic.ts:197`; `submitSelectedAnswer` at `app/(app)/app/questions/[slug]/question-page-logic.ts:229`; `endSession` at `practice-session-page-logic.ts:275`; `commitChoice` at `use-practice-session-question-flow.ts:425`. No later commit changed a code or test link.
 
 **The default cache policy:**
 - `src/adapters/controllers/shared/execute-idempotent.ts:40` makes the policy optional; `:64-65` caches when it is absent (`!== false`).
@@ -70,8 +68,8 @@ The contract references are already wrong. All twelve current keyed-controller c
 
 1. **Enforce the accepted design.** *Recommended:* it keeps the owner's ruling and closes the gaps it relies on.
    - Anchor the contract by symbol and test name instead of line number, and test that each named symbol or test exists in its file. A line-number check would fail on every unrelated edit.
-   - Require `shouldCacheError` and both sequencing hooks together, so each caller states its cache and stale-response policy. Preserve action-, reason- and rollback-aware cache decisions; code-level logging classification is insufficient. That enforces ADR-015's rule and the existing hook-pair invariant.
-2. **Reopen runtime consolidation only under DEBT-461's full criteria.** A new owner direction must explicitly reference the July 23 NO-GO. Show at least two live surfaces with identical complete transitions, no surface-mode flags or strategy callbacks, no weakened tests and net deletion of production branches, state and comments. BUG-304 is a later example, not proof of those conditions or an exhaustive census of later defects.
+   - Require `shouldCacheError` on every keyed action, and both sequencing hooks on the shared flow helpers. Each action keeps its own cache decisions. That enforces ADR-015's rule and the existing hook-pair invariant.
+2. **Reopen runtime consolidation only under DEBT-461's full criteria.** A new owner direction must explicitly reference the July 23 NO-GO. Show at least two live surfaces with identical complete transitions, no surface-mode flags or strategy callbacks, no weakened tests and net deletion of production branches, state and comments. BUG-304, the only later defect, does not meet them.
 
 ## Resolution (proposed)
 
