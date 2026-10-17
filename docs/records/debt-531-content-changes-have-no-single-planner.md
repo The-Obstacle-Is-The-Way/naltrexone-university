@@ -1,6 +1,6 @@
-# DEBT-531: Content Changes Have No Single Planner, and the Production Seed Can Undo a Correction the Release Builder Refuses
+# DEBT-531: Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently
 
-**Status:** Open — owner decides the content bootstrap (DEBT-483) or a revert check in the seed; check stored revisions are canonical first
+**Status:** Open — BUG-351's content-change planner is the first piece; then one definition of same content and one hold scope; the owner decides the bootstrap (DEBT-483)
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -13,14 +13,9 @@ Two programs write question content, and they apply different rules to the same 
 - **The release builder** refuses a bundle that moves a question back to an earlier revision, unless `--revert` names it (DEBT-492).
 - **The direct seed** compares a file only with the current revision. Different content becomes a new revision and goes live at once.
 
-Production content still goes through the direct seed: no release is active (DEBT-483). Its input is each clone's local, untracked drafts folder, which can be an older snapshot than the content repository. A stale file holding a question's pre-correction answer key is refused by the builder and published by the seed.
+Production content still goes through the direct seed: no release is active (DEBT-483). Its input is each clone's local, untracked drafts folder, which can be an older snapshot than the content repository.
 
-ADR-022 makes the window costlier than when DEBT-446 parked the freshness check:
-- While the stale revision is live, answers graded on the corrected revision count as "key corrected": they leave the score, and the question is served again with the wrong key.
-- Learners who answer in the window are taught and graded against the old key.
-- A corrective reseed restores the earlier learners' scores, but answers given in the window stay excluded afterwards. That is ADR-022 Decision 4 working as designed.
-
-The same split shows in smaller ways: "same content" has three definitions, and a hold's scope has two owners.
+The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. "Same content" has three definitions, and a hold's scope has two owners.
 
 ## Evidence
 
@@ -41,7 +36,7 @@ So, after bootstrap, any stored revision that is not canonical has two effects:
 - A bundle with no real change stages a new revision.
 - A whitespace-only difference in the correct choice marks past attempts "answer corrected".
 
-Separately, `revisionForContent` takes `.limit(1)` with no order, and nothing makes `(question, content_hash)` unique (`db/schema.ts`). After an A→B→A history it can match the older revision and report a revert that is not one.
+Separately, `revisionForContent` takes `.limit(1)` with no order, and nothing makes `(question, content_hash)` unique (`db/schema.ts`). BUG-351 reproduced the result: after an A→B→A→B history, the builder refuses the live content as a revert.
 
 Whether production holds such rows is unverified. One read-only query recomputing canonical hashes would settle it.
 
@@ -66,31 +61,35 @@ Whether production holds such rows is unverified. One read-only query recomputin
 
 ## Impact
 
-A seed run from a stale clone can silently publish an old answer key to production, teach it to the learners who answer in the window, and keep their answers out of their scores afterwards. This needs an operator mistake, but the setup invites it: drafts are per-clone copies (five dated backup folders sit in this clone). P3; P2 if production is seeded again before the bootstrap.
+The answer-key harm is BUG-351's, at P2. What remains here is latent:
+- After the bootstrap, a non-canonical stored revision makes a bundle with no real change stage a new revision, and makes a whitespace-only difference mark past attempts "answer corrected".
+- A forgotten hold can label a retired question "Under review" and drop past scores on it.
+
+P3.
 
 ## Options
 
-1. **Bootstrap releases in production (DEBT-483).** The seed then refuses production, and the builder's rules become the only path. Run the canonical-hash check first. *Recommended:* it ends the two-writer period that this whole family comes from. The decision and its timing are the owner's.
-2. **Until then, make the seed refuse a revert,** using the builder's match against every revision, with the same `--revert` escape. Do this if the bootstrap is not imminent.
-3. **One content planner** used by both writers: revert detection, canonical comparison and a deterministic match. This is the structural end state; option 1 makes most of it unnecessary.
+1. **One content planner** used by both writers. BUG-351's fix builds it for reverts and answer-key regressions, with canonical comparison and a deterministic match. Extend it to the remaining definitions of "same content". *Recommended:* the bootstrap alone does not remove the split, because the builder keeps its own gaps (BUG-351 steps 6 and 8).
+2. **Bootstrap releases in production (DEBT-483).** The seed then refuses production, and the builder's rules become the only path. Run the canonical-hash check first. The decision and its timing are the owner's. Bootstrap after BUG-351's planner, so the remaining writer has its rule.
 
 For holds, choose per-revision or per-question scope everywhere, amending the ADR that loses, and let a lift reach any revision.
 
 ## Resolution (proposed)
 
-The owner decides option 1's timing. If the bootstrap is more than a few weeks away, do option 2 now, red first with a seed test that refuses a stale file. Either way, run the canonical-hash query before the bootstrap.
+BUG-351's fix first: it is this record's planner, red first on its reproduction. Then the owner decides the bootstrap's timing, and the canonical-hash query runs before it.
 
-This record takes over DEBT-446's Waiting row (Part 3b), whose freshness gap it covers, so the row leaves Waiting in this change. Its trigger had not strictly fired: the release builder is a second writer, but the pointer lock orders it. The reasons to act now are new: ADR-022 made a window's answers stay out of scores, and the builder already has the rule the seed lacks. DEBT-524's Finding 1 judged the two-writer period covered by DEBT-483, and DEBT-524 closed on 2026-10-17 without placing the content transition in a live record. This record owns it: the rule that differs between the two writers, and the point where the seed stops writing production.
+DEBT-446's Waiting row (Part 3b) leaves Waiting in this change. Its freshness gap is BUG-351's live defect, which BUG-351's provenance check and planner close. Its trigger had not strictly fired: the release builder is a second writer, but the pointer lock orders it. The reasons to act now are new: ADR-022 made a window's answers stay out of scores, and BUG-351 showed that the builder's own rule is partial. DEBT-524's Finding 1 judged the two-writer period covered by DEBT-483, and DEBT-524 closed on 2026-10-17 without placing the content transition in a live record. This record owns it: the rules that differ between the two writers, and the point where the seed stops writing production.
 
 ## Verification
 
-- [ ] A seed of a stale file that would restore an earlier revision is refused, or the seed refuses production.
+- [ ] Both writers plan through one module (BUG-351), and it decides "same content" one way.
 - [ ] A read-only query shows every stored revision's hash equals its canonical hash, or the mismatches are rewritten before bootstrap.
 - [ ] A hold has one scope in activation, availability and scoring, and any hold can be lifted.
 
 ## Related
 
+- BUG-351: the live defect, its reproduction and the planner's design.
 - DEBT-483 (Waiting): the production content bootstrap.
-- DEBT-446 (closed; its Waiting row moves here): the seed's missing freshness check.
+- DEBT-446 (closed; its Waiting row left with this record): the seed's missing freshness check, now BUG-351's defect.
 - DEBT-524 (closed): Finding 1's view of the content transition, which this record now owns.
 - DEBT-492, BUG-281, BUG-314 (closed).
