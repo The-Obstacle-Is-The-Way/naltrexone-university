@@ -1,10 +1,10 @@
 # DEBT-516: CI's Database Image Depends on One Registry
 
-**Status:** In Progress — give BUG-345's pooler image the registry failover Postgres has, then confirm on `main`'s CI which registry served each image; due 2026-10-24
+**Status:** Verifying — every check is recorded, the pooler image's item moved to BUG-352, and the record closes with BUG-352's pull request; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-09
-**Resolved:** —
-**Verification receipts:** [#1444](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1444), promoted in #1445
+**Resolved:** 2026-10-17
+**Verification receipts:** [#1444](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1444), promoted in #1445; [#1454](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/1454), promoted in #1457
 
 ---
 
@@ -46,7 +46,7 @@ The decided fix, option 3, now starts Postgres in a workflow step that pulls the
 
 ## Impact
 
-While the image could not be pulled, every pull request's required `test` check failed before any code ran, and nothing merged. Production was unaffected and the failure was loud. Recovery by hand was bounded by the review queue, not the code change: on 2026-10-09 it took about an hour and a half. Locally, a clone could test against a different Postgres 16 build from CI's. With the fix, the check fails this way only if all three registries refuse the digest.
+While the image could not be pulled, every pull request's required `test` check failed before any code ran, and nothing merged. Production was unaffected and the failure was loud. Recovery by hand was bounded by the review queue, not the code change: on 2026-10-09 it took about an hour and a half. Locally, a clone could test against a different Postgres 16 build from CI's. With the fix, starting Postgres fails this way only if all three registries refuse the digest. Corrected 2026-10-17: BUG-345's pooler image, added to the same job later, pulls from Docker Hub alone; BUG-352 owns it.
 
 ## Options
 
@@ -77,10 +77,10 @@ While the image could not be pulled, every pull request's required `test` check 
 ## Verification
 
 - [x] #1444 is merged and promoted in #1445, and `main`'s CI pulled Postgres from the mirror (2026-10-10).
-- [ ] Option 3's pull request is promoted, and `main`'s CI logs `Postgres image pulled from <registry>` in its `Start Postgres` step.
-- [ ] `main`'s scheduled hosted-checkout smoke logs the same. Its conclusion also depends on Stripe, so the evidence is the step, not the run.
+- [x] Option 3's pull request, #1454, is promoted in #1457, and `main`'s CI logs `Postgres image pulled from <registry>` in its `Start Postgres` step: `docker.io` in the release run of 2026-10-17.
+- [x] `main`'s scheduled hosted-checkout smoke logs the same. Its conclusion also depends on Stripe, so the evidence is the step, not the run: `docker.io` in the scheduled run of 2026-10-17.
 - [x] `docker-compose.yml` pins CI's digest, and `tests/ci-service-images.test.ts` keeps the two equal.
-- [ ] BUG-345's fix (#1549) added a second image to CI's required database path: PgBouncer, which Compose pulls from Docker Hub alone. On 2026-10-17, `mirror.gcr.io` also served its pinned digest; ECR Public did not. Give it the same failover, or record the owner's acceptance of the single-registry risk, before closing.
+- [x] BUG-345's fix (#1549) added a second image to CI's required database path: PgBouncer, which Compose pulls from Docker Hub alone. On 2026-10-17 this item moved to BUG-352, which owns that image's failover and a guard for every image the workflows pull.
 
 ## Related
 
