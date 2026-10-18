@@ -67,6 +67,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 | [DEBT-529](./debt-529-client-request-protocols-rely-on-an-unchecked-contract.md) | The per-screen request protocols rely on a contract nothing checks, and their safe defaults are opt-in | P3 | Open — anchor the protocol contract by symbol and test that each exists; make the cache policy and stale-response guard required |
 | [DEBT-530](./debt-530-commercial-terms-are-restated-by-hand.md) | Commercial terms are restated by hand in each place that shows them | P3 | Open — one source for the current offer, with tests tying live copy to it; historical consent stays frozen; blocking statuses follow DEBT-501's billing contract |
 | [DEBT-531](./debt-531-content-changes-have-no-single-planner.md) | Content changes have no single planner, so the two writers judge the same file differently | P3 | Open — reconcile content normalization and hold scope through ADR-021/022; BUG-351 owns the planner and source freshness, DEBT-483 the bootstrap timing |
+| [DEBT-532](./debt-532-scripts-folder-grew-without-a-layout.md) | The scripts folder grew without a layout, so its tools repeat each other and some fail open | P3 | Open — owner reviews the proposals; then the defects in items 1–8 first, each red first in its own pull request |
 
 ## Waiting
 
