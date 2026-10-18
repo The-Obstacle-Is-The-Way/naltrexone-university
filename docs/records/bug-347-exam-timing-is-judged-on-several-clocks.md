@@ -1,6 +1,6 @@
 # BUG-347: An Exam's Timing Is Judged on Several Clocks, and Each Reader Decides Whether It Is Over
 
-**Status:** Open — count down from the server's remaining time and give an early flush a typed outcome, red first with a fast browser clock
+**Status:** In Progress — stale-flush check removed; server countdown, typed early-flush outcome and expired-reader rules remain; due 2026-10-19
 **Priority:** P2
 **Date:** 2026-10-17
 
@@ -15,7 +15,7 @@ The server owns an exam's deadline: `startedAt` plus 72 seconds per question. Th
 3. **The page treats a reasonless CONFLICT** as a cue to recover the summary. That fails, because the exam has not ended.
 4. **The page then shows an error,** rotates its key and retries on later timer ticks after each failed request finishes, until the server accepts it.
 
-A clock more than 15 seconds fast ends the exam up to (skew − 15) seconds early: past the grace window the page stops sending the flush, and the server accepts a finalization without one. With no question on screen at the browser's zero, no flush is sent and the exam can end up to the full skew early. The draft save before that finalization is not checked (`:256`; timeouts return `{ ok: false }`, `question-flow-actions.ts:302-307`): if it fails, an older saved answer, or none, is graded.
+Before step 1, a clock more than 15 seconds fast could end the exam up to (skew − 15) seconds early: past the grace window the page stopped sending the flush, and the server accepted a finalization without one. Step 1 removes that client check and forwards the captured draft. With no question on screen at the browser's zero, no flush is sent and the exam can still end up to the full skew early. The draft save before that finalization is not checked (`use-practice-session-page-model.ts:232`; timeouts return `{ ok: false }`, `question-flow-actions.ts:302-307`): if it fails, an older saved answer, or none, is graded.
 
 SPEC-039's risk table accepted client clock skew as affecting the display only; it did not foresee the early flush.
 
@@ -28,11 +28,11 @@ This was found by reading the code; it was not reproduced in a browser. Use-case
 **Two clocks:**
 - Server: `computeExamDeadline` (`src/domain/services/exam-timer.ts:11-17`) derives a deadline from persisted `startedAt`. The use cases compare it with their injected app clock (`save-exam-draft-answer.ts:64`; `finalize-exam-answers.ts:120`).
 - Browser: `use-exam-timer.ts:18-20,59` computes the time left from `Date.now()`, with no server offset.
-  - The page decides whether to send the flush on the browser's clock too (`use-practice-session-page-model.ts:242-276`): `isFinalDraftFlushProvablyStale` (`:73-83`, applied at `:247-254`) drops it more than 15 seconds past the deadline. The save's `{ ok: false }` result is ignored at `:256`; a thrown error is caught at `:257`; finalization follows at `:269`.
+  - Before step 1, the page also decided whether to send the flush on the browser's clock (`use-practice-session-page-model.ts:242-276` at `92e56929`): `isFinalDraftFlushProvablyStale` dropped it more than 15 seconds past the deadline. The page now captures and forwards the draft (`:230-245`). The save's `{ ok: false }` result is still ignored at `:232`; a thrown error is caught at `:233`; finalization follows at `:245`.
 - The server refuses an early flush: `src/application/use-cases/finalize-exam-answers.ts:331-340`, `CONFLICT`, "only allowed at exam expiry", with no reason in its details.
 - The page recovers from a reasonless CONFLICT by reading the summary (`practice-session-page-logic.ts:325-372`). The summary refuses with "has not ended" (`get-practice-session-summary.ts:36`). The timer then clears its latch to retry (`use-exam-timer.ts:186-189`).
-- **Tests.** No test runs the browser clock ahead of the server's.
-  - The lagging-clock cases (BUG-258) are covered at `use-practice-session-page-model-timer.browser.spec.tsx:280,318,357`.
+- **Tests.** Step 1 adds browser tests with clocks 5 and 20 seconds fast and a failed save. They assert that finalization receives the on-screen draft; the action boundary returns the server's early-flush refusal (`use-practice-session-page-model-timer.browser.spec.tsx:168`).
+  - The lagging-clock cases (BUG-258) are covered at `use-practice-session-page-model-timer.browser.spec.tsx:324,362,401`.
   - The server's refusal of an early flush is pinned (`finalize-exam-answers-final-draft.test.ts:188`), and so is its acceptance of a finalization without one (`finalize-exam-answers-deadline.test.ts:96`).
 
 **Readers disagree about an expired exam nobody has finalized.** `ended_at` is written only when something finalizes, while the deadline is derived:
@@ -54,19 +54,19 @@ This was found by reading the code; it was not reproduced in a browser. Use-case
 - BUG-254, BUG-255, BUG-258 and BUG-277: the end split between browser and server.
   - BUG-277 was this same reasonless CONFLICT abort, on the late side of the grace window.
   - BUG-258 was the browser clock running slow.
-  - BUG-255 capped `ended_at` on the server for the Review & Submit screen, where the timer stops (`isTimerActive`, `use-practice-session-page-model.ts:293-297`).
+  - BUG-255 capped `ended_at` on the server for the Review & Submit screen, where the timer stops (`isTimerActive`, `use-practice-session-page-model.ts:268-274`).
 - BUG-256: resuming an expired exam.
 - BUG-251: the Abandon decision.
 - SPEC-039 (archived; read it at `63a8f220324b`): the timer's design.
 
 ## Impact
 
-A clock a few seconds fast ends each exam on an error screen until the server's deadline. Over 15 seconds fast, the exam ends early, and a failed last save loses the on-screen answer. Frequency was not measured. P2: degraded; correcting the device clock avoids it.
+A fast clock still puts the exam on an error screen until the server's deadline. Before step 1, a clock over 15 seconds fast could also end the exam early, and a failed last save could lose the on-screen answer. Frequency was not measured. P2: degraded; correcting the device clock avoids it.
 
 ## Options
 
 1. **Take the browser's clock out of the decision, then count down from the server.**
-   - First, delete the client's stale-flush check (`:73-83`, `:247-254`). The server already drops a late flush and still finalizes (`finalize-exam-answers-final-draft.test.ts:215`; business rule R7).
+   - First, delete the client's stale-flush check (built in step 1). The server already drops a late flush and still finalizes (`finalize-exam-answers-final-draft.test.ts:215`; business rule R7).
    - Session timing payloads carry the server's remaining time; the page counts down using monotonic elapsed time and resynchronizes on resume or visibility change. Server checks remain authoritative, including network delay and sleeping tabs.
    - An early flush receives a typed outcome, and the page retries at the server's expiry with the on-screen answer. Before the server's deadline, a failed draft save never leads to a finalization that drops that answer. Keep the bounded post-deadline flush and the server cutoff (R7).
    - Share active/expired/ended classification where expiry matters, but specify each operation's response: active access finalizes, draft saves enforce the cutoff, and summary/feedback require committed finalization. Decide the expired mark-for-review policy explicitly. Abandon remains discard. Different responses do not by themselves prove a defect.
@@ -76,8 +76,10 @@ A clock a few seconds fast ends each exam on an error screen until the server's 
 
 ## Resolution (proposed)
 
-Option 1, red first:
-- a client test with the browser clock 5 seconds and 20 seconds fast;
+Option 1. Step 1 removes the client stale-flush check. Browser tests with clocks 5 and 20 seconds fast and a failed save prove that the draft reaches finalization; the server's existing cutoff tests still pass.
+
+Remaining, red first:
+- a client test with the browser clock 5 seconds and 20 seconds fast, completing at the server's deadline without an error screen;
 - a failed last draft save, with the on-screen answer still graded;
 - operation-specific tests for an expired, unfinalized exam, preserving summary/feedback integrity and Abandon.
 
@@ -85,6 +87,7 @@ BUG-251's Abandon decision and DEBT-437's accepted clock residual stand. Record 
 
 ## Verification
 
+- [x] The timer forwards the on-screen draft after a failed save with a fast clock or a late tab resume; the server applies its own cutoff.
 - [ ] With a fast browser clock, the exam ends at the server's deadline without an error screen.
 - [ ] Every reader except Abandon classifies an expired, unfinalized exam with one domain function.
 - [ ] Before the server's deadline, a failed draft save never leads to a finalization that drops the on-screen answer.

@@ -54,6 +54,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `applies the flush within the deadline grace window`
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `drops a flush arriving after the grace window and still finalizes`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `sends a final draft after a backgrounded exam resumes beyond grace so the server decides its cutoff`
 
 ### R8. Only an unfinished exam can be discarded. A tutor session, whose answers are graded attempts, can only be ended, so its attempts are never deleted. Discarding a session that is already gone is a silent success.
 

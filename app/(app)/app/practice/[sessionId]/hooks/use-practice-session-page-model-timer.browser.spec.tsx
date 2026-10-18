@@ -164,7 +164,48 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
   });
 
-  it('omits a provably stale final draft flush when a backgrounded exam tab resumes after grace', async () => {
+  it.each([5, 20])(
+    'forwards the final draft when the browser clock is %i seconds fast and the save fails',
+    async (skewSeconds) => {
+      vi.useFakeTimers();
+      const serverNowMs = Date.parse('2026-05-22T12:00:00.000Z');
+      vi.setSystemTime(serverNowMs);
+      mockActiveTimedExam('2026-05-22T12:00:01.000Z');
+      saveExamDraftAnswerMock.mockResolvedValue(
+        errorResult('INTERNAL_ERROR', 'Draft save failed'),
+      );
+      // The server has not reached its deadline. It refuses an early flush;
+      // dropping the flush instead would allow ordinary early finalization.
+      finalizeExamAnswersMock.mockResolvedValue(
+        errorResult(
+          'CONFLICT',
+          'Final exam answer flush is only allowed at exam expiry',
+        ),
+      );
+      const screen = await render(<PracticeSessionPageModelReviewProbe />);
+      await expect
+        .element(screen.getByTestId('active-view'))
+        .toMatchTextContent('question');
+      await screen.getByRole('button', { name: 'select-choice-1' }).click();
+
+      vi.setSystemTime(serverNowMs + skewSeconds * 1_000);
+      window.dispatchEvent(new Event('focus'));
+
+      await expect
+        .poll(() => finalizeExamAnswersMock.mock.calls.length)
+        .toBe(1);
+      expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          finalDraftAnswer: expect.objectContaining({
+            questionId: BROWSER_QUESTION_1_ID,
+            selectedChoiceId: BROWSER_CHOICE_1_ID,
+          }),
+        }),
+      );
+    },
+  );
+
+  it('sends a final draft after a backgrounded exam resumes beyond grace so the server decides its cutoff', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
     mockActiveTimedExam('2026-05-22T12:00:01.000Z');
@@ -193,8 +234,11 @@ describe('usePracticeSessionPageModel timer expiry', () => {
       .toMatchTextContent('0');
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
-      expect.not.objectContaining({
-        finalDraftAnswer: expect.anything(),
+      expect.objectContaining({
+        finalDraftAnswer: expect.objectContaining({
+          questionId: BROWSER_QUESTION_1_ID,
+          selectedChoiceId: BROWSER_CHOICE_1_ID,
+        }),
       }),
     );
   });

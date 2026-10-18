@@ -45,13 +45,8 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-actions';
-import { EXAM_FINAL_DRAFT_FLUSH_GRACE_MS } from '@/src/domain/services';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
-// Client-side optimization only: avoid sending a draft flush that is already
-// outside the shared server grace window. The server remains authoritative.
-const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
-  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
 type EndedSessionSummaryRecovery = {
   sessionId: string;
@@ -70,17 +65,6 @@ type PracticeSessionPageModelOutput = Omit<
   canSubmit: boolean;
   onSubmit: () => void;
 };
-
-function isFinalDraftFlushProvablyStale(input: {
-  deadlineAt: string | null | undefined;
-  nowMs: number;
-}): boolean {
-  if (typeof input.deadlineAt !== 'string') return false;
-  const deadlineMs = Date.parse(input.deadlineAt);
-  if (!Number.isFinite(deadlineMs)) return false;
-
-  return input.nowMs > deadlineMs + STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS;
-}
 
 export function usePracticeSessionPageModel(
   sessionId: string,
@@ -243,15 +227,7 @@ export function usePracticeSessionPageModel(
       // deadline the ordinary draft save is rejected as expired; rather than
       // leaving that doomed save's only effect as an error state, we forward the
       // captured selection to finalization so the server grades it.
-      const capturedFinalDraftAnswer = questionFlow.getCurrentExamDraft();
-      const finalDraftAnswer =
-        capturedFinalDraftAnswer &&
-        !isFinalDraftFlushProvablyStale({
-          deadlineAt: questionFlow.sessionInfo?.deadlineAt,
-          nowMs: Date.now(),
-        })
-          ? capturedFinalDraftAnswer
-          : undefined;
+      const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
       try {
         await questionFlow.saveCurrentExamDraft();
       } catch (error) {
@@ -286,7 +262,6 @@ export function usePracticeSessionPageModel(
     isMounted,
     questionFlow.getCurrentExamDraft,
     questionFlow.saveCurrentExamDraft,
-    questionFlow.sessionInfo?.deadlineAt,
     reviewStage.finalizeExamSession,
   ]);
 
