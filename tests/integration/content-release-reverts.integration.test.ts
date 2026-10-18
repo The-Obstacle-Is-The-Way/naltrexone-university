@@ -161,6 +161,7 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
       'Publish (0)',
       'Update to a newer revision (0)',
       `Revert to an earlier revision (1): ${corrected}`,
+      `Answer-key changes (1): ${corrected}`,
       'Replaces a held revision (0)',
       'Withdraw for good (0)',
       'Left out, held (0)',

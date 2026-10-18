@@ -1,6 +1,6 @@
 # BUG-351: The Production Seed Can Silently Restore a Corrected Answer Key, and the Release Builder's Guard Misses Part of the Same Case
 
-**Status:** In Progress — part 1 built; parts 2–3 remain; owner compares live keys with pinned content main, due 2026-10-24
+**Status:** In Progress — live matching and key previews built; return guard and source admission remain; owner live-key check due 2026-10-24
 **Priority:** P2
 **Date:** 2026-10-17
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. The release builder, which production will use after the bootstrap (DEBT-483), refuses only part of the same case. Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse; the stale-input defect remains until parts 2–3 ship. The bootstrap alone does not fix it.
+A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. The release builder, which production will use after the bootstrap (DEBT-483), refuses only part of the same case. Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse. Part 2a names changes in both previews; the return guard and source admission remain. The bootstrap alone does not fix it.
 
 Before part 1, reproduced on 2026-10-17 on a disposable local database, with the public placeholder question; independently repeated with entirely synthetic content through the same seed, builder and activation functions:
 - **1–2. Seed and correct.** Seed key A, then the corrected key B: R1 (key A), then R2 (key B), live.
@@ -52,9 +52,9 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 - The checked-in CI seed uses its test database, the Vercel build runs migrations, and `db:seed:all` excludes its resolved production target. This does not prove which commands or direct SQL have run on production. Supported release activation, rollback, holds and withdrawals also change content availability; they must participate in the publication boundary below.
 
 **The builder:**
-- `scripts/content-release/release-builder.ts:58-94`: `revisionForContent` now compares canonical fields, preferring the current revision, then the highest revision number. Before part 1, it used an unordered stored-hash match (`92e56929`, lines 57–78); nothing makes `(question, content_hash)` unique.
-- `revertedSlugs` (`:316-337`) calls a match a revert when its revision number is below the current one.
-- A file that matches no revision is appended as new content. `scripts/content-release/command-support.ts:80-92` prints it under "Update to a newer revision"; no plan line names an answer-key change.
+- `scripts/content-release/release-builder.ts:61-97`: `revisionForContent` now compares canonical fields, preferring the current revision, then the highest revision number. Before part 1, it used an unordered stored-hash match (`92e56929`, lines 57–78); nothing makes `(question, content_hash)` unique.
+- `revertedSlugs` (`:334-355`) calls a match a revert when its revision number is below the current one.
+- A file that matches no revision is appended as new content. Before part 2a, `scripts/content-release/command-support.ts:80-92` at `afba5aa4` printed it under "Update to a newer revision" with no answer-key line. Both previews now name key changes separately.
 
 **The scoring side:**
 - `src/domain/services/answer-key.ts:22-28` and `src/adapters/repositories/shared/score-eligibility-sql.ts:95-139` compare each attempt's key with the live revision's key, not with history.
@@ -84,7 +84,7 @@ P2: a reachable, operator-triggered content regression with a manual workaround:
 
 ## Options
 
-1. **Prefer the live revision, name every answer-key change, and admit only forward commits of the content repository's `main`.** *Recommended.* Three small parts, each red first. Part 1 is built; parts 2–3 remain proposed below.
+1. **Prefer the live revision, name every answer-key change, and admit only forward commits of the content repository's `main`.** *Recommended.* Three small parts, each red first. Part 1 and the previews in part 2a are built; the return guard and part 3 remain proposed below.
 2. **Bootstrap first, then the same steps in the builder only.** The seed then refuses production. Choose this if the owner schedules the bootstrap before part 3 ships.
 3. **Bootstrap alone (DEBT-483).** This does not fix the bug: the builder accepts step 8. Before part 1 it also refused step 6.
 4. **Process only:**
@@ -93,7 +93,7 @@ P2: a reachable, operator-triggered content regression with a manual workaround:
 
    Do these now as mitigations. They depend on memory, and the next copy or agent repeats the mistake.
 
-### The fix (option 1; part 1 built, parts 2–3 proposed)
+### The fix (option 1; live matching and previews built)
 
 **The invariant:** production content moves only forward along the content repository's `main`, and an answer key that a later live revision replaced does not come back without being named.
 
@@ -107,7 +107,7 @@ Each layer has a limit the next one covers:
 The v2 manifest names content hashes, not revision IDs (`release-manifest.ts:19,40-42` at `92e56929`). Before part 1, `existingRelease` reused that manifest on the same parent, so an existing stage could substitute R2 for the selected R4. Migration `0048_adr021_hold_lift_and_release_identity.sql` makes that manifest and parent unique. Part 1 writes v3 manifests that also name each selected revision ID; it still reads and verifies v2 releases for activation and rollback. Existing manifests, items and hashes stay immutable. `content-release-revision-matching.integration.test.ts` reproduces the collision with a previously staged older duplicate.
 
 **Part 2. The previews name answer-key changes.**
-- The stage and activation previews list each changed question by kind, and list answer-key changes separately: the correct choice's label and text, canonicalized as the seed canonicalizes content.
+- Built in part 2a: the stage and activation previews list each changed question by kind, with answer-key changes listed separately. The comparison uses the correct choice's label and text, canonicalized as the seed canonicalizes content (`scripts/content-release/release-changes.ts`). Activation binds the key-change list to its existing plan id, so a hold lift cannot change that advice after preview. Staging reads the same classification without changing availability.
 - A change whose key equals an earlier live key of the same question must be named with `--revert`, with a reason and authority recorded as an activation's are (DEBT-490). A repair after a regression, and a deliberate return to an earlier key, go the same way.
 - "Live" needs evidence. After the bootstrap, activation receipts, release items and hold timestamps say what was published. Before it, any stored revision is a candidate: the preview flags it and asks for the name, because a stored revision does not prove publication (a draft seed stores one and publishes nothing).
 
@@ -120,7 +120,7 @@ The v2 manifest names content hashes, not revision IDs (`release-manifest.ts:19,
 - The bootstrap records the commit verified against live content as the first watermark, and the existing guard then retires the direct seed for production.
 - This is the deployment pipeline's discipline: production receives only what was built from a known commit (Humble and Farley, *Continuous Delivery*).
 
-**Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:461-481`), and add the source commit to it. This is Fowler's Optimistic Offline Lock. No separate generation counter: revision ids are immutable, so a state that changes and changes back is exactly what the operator reviewed.
+**Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:396-423`), and add the source commit to it. This is Fowler's Optimistic Offline Lock. No separate generation counter: revision ids are immutable, so a state that changes and changes back is exactly what the operator reviewed.
 
 **If the seed must write production before the bootstrap:** admit the commit (advance the watermark under the pointer lock) before any write, check each per-question transaction against the admitted commit, and finish an interrupted run by rerunning the same commit. Questions already written match and are skipped. No receipts table.
 
@@ -140,14 +140,15 @@ The v2 manifest names content hashes, not revision IDs (`release-manifest.ts:19,
 
 **Until the fix ships:** seed production only from a copy refreshed from that pinned commit, and review the changes against live content. Move each clone's March 31 backup out of `content/drafts/`; that is the owner's call.
 
-**Engineering:** part 1 is built and tested; parts 2 and 3 remain, red first, with ADR-021's amendment and the content repository's SPEC-007 change for part 3. Use option 2's order if the owner schedules the bootstrap first (DEBT-483).
+**Engineering:** part 1 and the previews in part 2a are built and tested; the return guard and part 3 remain, red first, with ADR-021's amendment and the content repository's SPEC-007 change for part 3. Use option 2's order if the owner schedules the bootstrap first (DEBT-483).
 
 ## Verification
 
 - [ ] The owner's pinned-source comparison is recorded here as counts, noting that history before 2026-09-30 is incomplete.
 - [x] Part 1: `tests/integration/content-release-revision-matching.integration.test.ts` proves A→B→A→B keeps the live revision, newest-match fallback, canonical comparison, release reuse and v2 activation/rollback. The regression, fallback, canonical-match and release-identity cases failed before their fixes.
-- [ ] Part 1 reaches production; parts 2–3 still need their own proofs.
-- [ ] Part 2: the previews list every answer-key change, and a return to an earlier live key needs a name, a reason and an authority.
+- [ ] Parts 1 and 2a reach production; the return guard and part 3 still need their own proofs.
+- [x] Part 2a: `content-release-key-preview.integration.test.ts` proves both previews name canonical answer-key changes, staging lists each change by kind without publishing it, and a hold lift that changes key advice invalidates the reviewed plan. All six cases failed before the fix.
+- [ ] Part 2b: a return to an earlier live key needs a name, a reason and an authority.
 - [ ] Part 3: staging reads a commit of `main`; a commit that does not descend from the watermark is refused; a rollback does not lower it.
 - [ ] `docs/architecture/content-pipeline.md` describes the implemented input.
 - [ ] The owner runs this **candidate-recurrence diagnostic** once. It compares raw correct-label/text keys in revision-creation order, matching ADR-022's fields. It does not establish publication order, clinical error or an incident.

@@ -18,6 +18,7 @@ import {
   replaceQuestionTags,
   sortedTags,
 } from '../seed/question-syncer';
+import { findUnrecordedWithdrawals } from '../seed/question-withdrawal-writer';
 import {
   lockReleasePointer,
   ReleaseActivationError,
@@ -25,6 +26,7 @@ import {
   type ReleaseRemoval,
   stageRelease,
 } from './release-activation';
+import { type ReleaseChanges, readReleaseChanges } from './release-changes';
 import {
   buildReleaseManifest,
   type ReleaseManifestRemoval,
@@ -34,6 +36,7 @@ import {
 type Db = PostgresJsDatabase<typeof schema>;
 
 export type StageSummary = {
+  changes: ReleaseChanges;
   releaseId: string;
   parentReleaseId: string;
   /** An existing release with the same manifest on the same parent. */
@@ -299,7 +302,22 @@ export async function stageReleaseFromFiles(
         })),
         parentReleaseId: active,
       }));
+    const unrecorded = await findUnrecordedWithdrawals(
+      tx,
+      removals
+        .filter((row) => row.kind === 'archived')
+        .map((row) => row.questionId),
+    );
+    const pendingWithdrawnIds = new Set(
+      unrecorded.map((row) => row.questionId),
+    );
+    const { changes } = await readReleaseChanges(
+      tx,
+      releaseId,
+      removals.filter((row) => pendingWithdrawnIds.has(row.questionId)),
+    );
     return {
+      changes,
       releaseId,
       parentReleaseId: active,
       reusedRelease: reused !== null,

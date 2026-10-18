@@ -123,6 +123,13 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/domain/services/scoring.test.ts`: `in %s mode, answered: %s, question %s: counts %s`
 - `app/(app)/app/practice/[sessionId]/components/exam-review-view.browser.spec.tsx`: `omits the unanswered warning when no unanswered item will be scored`
 
+### R27. Stage and activation previews name answer-key changes separately from other content changes. Activation refuses a reviewed plan if its key-change list has changed.
+
+- `tests/integration/content-release-key-preview.integration.test.ts`: `compares %s in both previews`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `prints each staging change by kind without publishing the preview`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `canonicalizes stored correct text as the seed does before comparing keys`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `refuses an old preview when lifting a hold changes the compared key`
+
 ## Subscription and billing
 
 ### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed.
