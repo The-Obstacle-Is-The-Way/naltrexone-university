@@ -1,6 +1,6 @@
 # BUG-345: The Database Timeouts Do Not Apply Through Neon's Pooler
 
-**Status:** Verifying — production's pooled SHOW reports 30s, 5s and 1min after promotion; due 2026-10-20
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-16
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-DEBT-447 added three intended application-session bounds: 30 seconds per statement, 5 seconds per lock acquisition, and 60 seconds idle inside a transaction. The application sends them as connection startup parameters. On 2026-10-16, production and Neon dev both reported `0`, `0` and `5min` through their pooled URLs, using `SHOW` inside read-only transactions. The settings did not take effect. Migration 0052 now installs those bounds as database-scoped defaults for the connecting role. The status is effective on merge; production remains unverified until promotion and backend renewal.
+DEBT-447 added three intended application-session bounds: 30 seconds per statement, 5 seconds per lock acquisition, and 60 seconds idle inside a transaction. The application sends them as connection startup parameters. On 2026-10-16, production and Neon dev both reported `0`, `0` and `5min` through their pooled URLs, using `SHOW` inside read-only transactions. The settings did not take effect. Migration 0052 now installs those bounds as database-scoped defaults for the connecting role. Promotion #1551 released it on 2026-10-17. Two pooled production batches, that day and the next, found the intended values on every sampled backend.
 
 *Corrected 2026-10-16: independently repeated the dev-only check; narrowed the mechanism and impact claims; corrected migration scope, backend refresh and transaction-wrapper tradeoffs.*
 
@@ -94,8 +94,8 @@ All eight checks passed on 2026-10-17, including a local rehearsal of CI's separ
 - [x] Server defaults cover standalone queries and transactions independently of wrappers. Tests prove standalone cancellation, transaction locking/idle termination, savepoint rollback, old backend retention and three concurrent fresh backends. The ordinary role applies the migration and the drift assertion checks every timeout value.
 - [x] The actual managed Drizzle Kit transaction records all three bounds; its blocked migration fails with `55P03`. Accept the five-second lock limit and remove DEBT-447's now-proved Waiting item.
 - [x] A second agent challenged the updated mechanism, process inventory, managed-client proof and rollout on 2026-10-17; no substantiated correction to this record.
-- [ ] Set the final due date in the promotion change, then record backend renewal and repeated concurrent pooled samples.
-- [ ] After promotion, the authorized production check reports the intended `30s`, `5s` and `1min` through the pooled path, with rollout evidence for preexisting backend sessions.
+- [x] Promotion #1551 landed on 2026-10-17, so the October 20 due date stood. Backend renewal needed no owner action: no sample in either batch below retained an old value, so no Neon-side recycle was required.
+- [x] After promotion, the authorized production check reports the intended `30s`, `5s` and `1min` through the pooled path. Two batches ran, each of six concurrent `sql.begin('read only')` transactions held open until all six had read: one on 2026-10-17, shortly after promotion, and one on 2026-10-18, about 20 hours later. In both, the six transactions ran on six distinct backends, every one reported `on`, `30s`, `5s`, `1min`, and the role's defaults in the production database read `30s`, `5s`, `60s`. These samples establish the observed backends, not a census of the pool.
 
 ## Related
 

@@ -1,6 +1,6 @@
 # BUG-352: CI's Pooler Image Depends on Docker Hub Alone
 
-**Status:** Verifying — after promotion, main's CI logs the serving-registry notice for both images; due 2026-10-21
+**Status:** Verifying — every check is recorded, and the record closes; due 2026-10-21
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-The status is effective on merge. October 21 assumes promotion on October 18; the promotion change must set the actual promotion date plus three days in this record and the index. The main-branch notice check remains open.
+Promotion #1554 released the fix to `main` on 2026-10-18, so the October 21 due date stood.
 
 BUG-345's fix (#1549, promoted in #1551 on 2026-10-17) added a second container image to the required `test` job: PgBouncer, a transaction pooler standing in for Neon's. Before #1552, Compose pulled it by digest from Docker Hub alone, with no retry loop in the workflow and no other registry. #1552 gives both images one bounded failover helper.
 
@@ -142,11 +142,11 @@ Production keeps serving the previous deployment. The pull failure itself does n
 - [x] The pre-fix workflow failed the pull-policy and helper/Compose matching guards, plus digest parity. All pass after the fix; negative controls pass.
 - [x] Ten helper tests pass, including refusal, hang, CLI export, validation and sourced-shell behavior. All twelve original Postgres tests pass with their assertions unchanged; only the fake CLI constants moved to a shared import.
 - [x] Local Docker 29.8.1 / Compose 5.6.0: both Compose phases with `--pull never` started the mirror reference healthy on the resolver's project and port. Inspection confirmed the reference. Only this clone's pooler and the newly added mirror name were removed; the normal pooler was restored.
-- [ ] The fixing pull request's CI logs `PgBouncer image pulled from <registry>`, and the pooler suite passes.
-- [ ] After promotion, `main`'s CI logs the notice for both images.
+- [x] The fixing pull request's CI logs `PgBouncer image pulled from <registry>`, and the pooler suite passes. All six CI runs on #1552 after the fix was pushed logged `PgBouncer image pulled from docker.io`, and the pooler suite passed in each. One run's E2E failed on BUG-337, unrelated.
+- [x] After promotion, `main`'s CI logs the notice for both images. The push run for promotion #1554 on 2026-10-18 passed and logged `Postgres image pulled from docker.io` and `PgBouncer image pulled from docker.io`, with no registry warning.
 - [x] #1552 completes DEBT-516's pooler item; its final record is committed before deletion and retained by the closure ledger.
 - [x] The dependency guide owns the new refresh duty.
-- [ ] At closure, the 1.26.1-or-later refresh moves to a Waiting row with the trigger and acceptance above.
+- [x] At closure, the 1.26.1-or-later refresh moves to a Waiting row with the trigger and acceptance above. On 2026-10-18, no Docker Hub `edoburu/pgbouncer` tag carried 1.26.1; the newest tags were still `v1.26.0-p0` and `latest`. Option 4's GHCR copy moves to its own Waiting row, with the residual's triggers.
 
 ## Related
 
