@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { loadBillingData } from '@/app/(app)/app/billing/page';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import {
@@ -246,6 +246,10 @@ describe('app/(app)/app/billing/page', () => {
   });
 
   describe('BillingContent', () => {
+    let BillingContent: typeof import('./page').BillingContent;
+    beforeAll(async () => {
+      BillingContent = (await import('./page')).BillingContent;
+    });
     it('renders manage button when subscription exists', async () => {
       const { BillingContent } = await import('@/app/(app)/app/billing/page');
       const subscription = createSubscription();
@@ -261,30 +265,62 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('Pro Monthly · Active');
     });
 
-    it('renders cancelAtPeriodEnd banner when cancellation is scheduled', async () => {
-      const { BillingContent } = await import('@/app/(app)/app/billing/page');
-      const subscription = createSubscription({
-        cancelAtPeriodEnd: true,
-        currentPeriodEnd: new Date('2026-02-15T00:00:00Z'),
-      });
-
-      const cancelDate = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'UTC',
-      }).format(subscription.currentPeriodEnd);
-
-      const html = renderToStaticMarkup(
-        <BillingContent
-          subscription={subscription}
-          manageBillingAction={async () => undefined}
-        />,
-      );
-
-      expect(html).toContain('will cancel');
-      expect(html).toContain(cancelDate);
-    });
+    it.each([
+      {
+        name: 'previous US evening',
+        cutoff: '2026-11-01T03:00:00Z',
+        expected:
+          'November 1, 2026 at 3:00 AM UTC (October 31 at 11:00 PM EDT, October 31 at 8:00 PM PDT)',
+      },
+      {
+        name: 'first fall-back hour',
+        cutoff: '2026-11-01T05:30:00Z',
+        expected:
+          'November 1, 2026 at 5:30 AM UTC (1:30 AM EDT, October 31 at 10:30 PM PDT)',
+      },
+      {
+        name: 'second fall-back hour',
+        cutoff: '2026-11-01T06:30:00Z',
+        expected:
+          'November 1, 2026 at 6:30 AM UTC (1:30 AM EST, October 31 at 11:30 PM PDT)',
+      },
+      {
+        name: 'before spring-forward',
+        cutoff: '2026-03-08T06:30:00Z',
+        expected:
+          'March 8, 2026 at 6:30 AM UTC (1:30 AM EST, March 7 at 10:30 PM PST)',
+      },
+      {
+        name: 'after spring-forward',
+        cutoff: '2026-03-08T07:30:00Z',
+        expected:
+          'March 8, 2026 at 7:30 AM UTC (3:30 AM EDT, March 7 at 11:30 PM PST)',
+      },
+      {
+        name: 'previous US year',
+        cutoff: '2027-01-01T03:00:00Z',
+        expected:
+          'January 1, 2027 at 3:00 AM UTC (December 31, 2026 at 10:00 PM EST, December 31, 2026 at 7:00 PM PST)',
+      },
+    ])(
+      'states the $name cancellation cutoff with UTC, Eastern and Pacific times',
+      ({ cutoff, expected }) => {
+        const subscription = createSubscription({
+          cancelAtPeriodEnd: true,
+          currentPeriodEnd: new Date(cutoff),
+        });
+        const html = renderToStaticMarkup(
+          <BillingContent
+            subscription={subscription}
+            manageBillingAction={async () => undefined}
+          />,
+        );
+        const rendered = parseHtml(html).body.textContent;
+        expect(rendered).toContain(
+          `Your subscription will cancel on ${expected}. You'll keep access until then.`,
+        );
+      },
+    );
 
     it('does NOT render manage button when subscription is null', async () => {
       const { BillingContent } = await import('@/app/(app)/app/billing/page');
