@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Verifying — fixed with BUG-333's option 9; a week of CI after the merge without "Failed to fetch" or a sign-in loss; due 2026-10-21
+**Status:** Open — "Failed to fetch" recurred in required CI on 2026-10-18, after option 9; trace the failing request before choosing a fix
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -51,6 +51,12 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - Playwright's trace recorded both dev-browser cookies on the same request. But those were its provisional headers (no `host` or `sec-fetch-*`), and its `Cookie` header was 105 bytes longer than the server's: exactly the two cookies. So this trace's "both cookies sent" was the trace's view, not the wire. The earlier traces were not compared with what the server received, but they fit the same pattern.
   - The request left about 70 ms after Clerk JS's `/v1/environment` call answered. Clerk JS answers each environment fetch with `devBrowser.refreshCookies()`, which removes both cookies and sets them again. Every capture fits that window.
 - **In CI too (2026-10-12, about 09:58Z, #1472's second attempt).** In `review-mode-audit.spec.ts`, "history questions: correct and incorrect open review mode", a `page.goto` to a question page landed on Clerk's sign-in page. CI keeps no trace and no server log, so this one shows only that the loss happens there as well.
+- **After the fix, in CI (2026-10-18 00:26Z, #1552's CI).** `history.spec.ts`, "shows missed questions and removes them after correct reattempt", failed on its third load of a question page in one test. The page snapshot shows the signed-in app shell, the question's alert "Failed to fetch" with Try again, and Submit disabled. The helper waited 30 s for radio C. So the 2026-10-11 question page that waited for radio D fits this failure too.
+  - The session was not lost: the page stayed signed in, so this does not count against BUG-333's check.
+  - The server logged nothing during the test's 36 s.
+  - Not that PR's code: #1552 changes CI's image pulls, and E2E reaches Postgres directly, not through the pooler. The same head passed the full local E2E.
+  - Not an overlap: no other CI run was active in this repository, and the local E2E runs on that machine had ended 12 and 16 minutes earlier.
+  - CI keeps no trace (BUG-328 keeps reports carrying Clerk tokens off CI), so which request failed is not known.
 
 ## Impact
 
@@ -70,6 +76,8 @@ The first is now shown; the others are ruled out for the traced failure.
 
 ## Resolution (decided)
 
+*Corrected 2026-10-18: option 9 did not end the failure. It recurred in CI six days after the merge (Evidence), and that request is not yet identified.*
+
 Fixed with BUG-333's option 9 (2026-10-12). The cause is BUG-333's race with a second trigger: Clerk JS rewrites the dev-browser cookies after every environment fetch, which BUG-333's echo drop did not stop. A request that left inside the rewrite reached the server without the cookies. A server action was then answered with a redirect to Clerk, which the browser reports as "Failed to fetch", and a navigation landed on sign-in.
 
 In every signed-in E2E test's pages, a script now holds each removal of the two cookies until the current script ends, and drops it if Clerk JS writes that cookie first, so a rewrite replaces them in place. A removal that no write follows still lands, and the page sees the cookie gone at once, so Clerk JS can still discard a dev browser it no longer accepts. BUG-333 records the tests and the experiment. Pinning Clerk JS would not have helped: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
@@ -81,7 +89,8 @@ The diagnostic logging records names and lengths only, never values. It stays on
 - [x] The failing request is identified, with its trace (2026-10-11): a server action answered 307, signed out with `dev-browser-missing`.
 - [x] The cause is named (2026-10-12): requests caught on the server inside Clerk JS's dev-browser cookie rewrite, which follows every environment fetch.
 - [x] A fix with a red test: BUG-333's option 9 (2026-10-12).
-- [ ] A week of CI after the merge without "Failed to fetch" or a sign-in loss, due 2026-10-21.
+- [ ] A week of CI without "Failed to fetch" or a sign-in loss, after a fix that holds. Option 9's week failed on 2026-10-18.
+- [ ] The 2026-10-18 recurrence's failing request is identified, from a local trace or a CI trace kept within the job.
 
 ## Related
 
