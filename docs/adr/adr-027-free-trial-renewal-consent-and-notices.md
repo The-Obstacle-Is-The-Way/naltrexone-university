@@ -54,7 +54,7 @@
    - Resend sends the email (`src/adapters/gateways/resend-transactional-email-gateway.ts`). Without `RESEND_API_KEY`, rows stay queued.
    - Each row has an immutable payload, its hash, and a provider idempotency key derived from the row's ID. Dispatch claims the row before it sends.
    - A rate-limit or quota error retries with backoff, from 15 minutes up to 24 hours. A terminal error stops. An ambiguous result, or a claim stale for 15 minutes, becomes `outcome_unknown` and is never resent automatically, because Resend keeps an idempotency key for only 24 hours (DEBT-414 §7).
-   - `RequeueRenewalNoticeDeliveryUseCase` needs an operator and a reason. For an unknown outcome, it also needs confirmation that nothing was sent.
+   - `RequeueRenewalNoticeDeliveryUseCase` needs an operator and a reason. For an unknown outcome, it also needs confirmation that nothing was sent. An operator runs it with `pnpm notice:requeue` (`scripts/requeue-renewal-notice.ts`, 2026-10-18, DEBT-414 F23).
    - Before sending, dispatch supersedes a scheduled notice whose subscription is gone, inactive or cancelling, or is now on another plan or renewal date, or whose account email has changed. It refuses a reminder past its 30-day cutoff (F07).
    - Provider acceptance is stored as `accepted`, not `delivered`. Signed Resend webhooks record delivery or failure (`RecordRenewalNoticeProviderOutcomeUseCase`). A missed deadline, a refused late notice or an unknown outcome raises an [operational alert](../architecture/observability.md#operational-alerts).
 9. **A scheduled cancellation keeps access to period end and stops notices ([R11](../product/business-rules.md); 2026-09-28).**
@@ -77,7 +77,7 @@
 3. Notices state the configured plan amount and select subscriptions by the configured price ID. A price change would therefore misstate or skip notices (DEBT-501).
 4. Known gaps, decided but not yet built: an early bounce report can be lost (F21); a trial cancelled in the portal is still offered "Add a card", which records consent and acknowledges a renewal that will not happen (F22); a card added at or after trial end is never applied (DEBT-501 item 4).
 5. Delivery evidence needs the owner to configure the Resend webhook. Until then, notices stay `accepted` (DEBT-414).
-6. The requeue use case is wired in `lib/container/use-cases.ts`, but no route or script calls it, so a quarantined notice cannot be requeued without a hand-written database change (DEBT-414 F23, due before the first live renewal notice).
+6. Requeueing a quarantined notice is a manual operator step: `pnpm notice:requeue`, run against production behind the explicit database-target check, after checking Resend ([the requeue guide](../guides/operations/requeue-renewal-notice.md); DEBT-414 F23, 2026-10-18). There is no in-app surface for it.
 
 ### Mitigations
 
