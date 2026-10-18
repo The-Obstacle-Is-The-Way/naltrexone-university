@@ -111,7 +111,7 @@ describe('describeClerkCookies', () => {
     expect(navigation).not.toContain('arbitrary-secret');
     expect(navigation).not.toContain('another-secret');
   });
-  it('names cookies and lengths, never their values', () => {
+  it('names credential cookies and lengths while preserving allowed times', () => {
     const description = describeClerkCookies([
       {
         name: '__session',
