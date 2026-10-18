@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { globSync } from 'tinyglobby';
+import { parse } from 'yaml';
 
 const SCRIPTS_FOLDER = 'scripts';
 const SCRIPTS_DIRECTORY_PATH = 'scripts/README.md';
@@ -49,9 +50,14 @@ export function parseScriptsDirectory(
     .slice(start + DIRECTORY_START.length, end)
     .split('\n')) {
     const line = rawLine.trim();
-    if (!line.startsWith('|')) continue;
-    // GitHub renders a row without its closing pipe, so skipping one would
+    if (line.startsWith('#') || !/(?<!\\)\|/.test(line)) continue;
+    // GitHub renders a row without either outer pipe, so skipping one would
     // let a stale row pass unseen.
+    if (!line.startsWith('|')) {
+      throw new Error(
+        `A scripts directory row must start with a pipe: ${line}`,
+      );
+    }
     if (!line.endsWith('|') || line.endsWith('\\|')) {
       throw new Error(`A scripts directory row must end with a pipe: ${line}`);
     }
@@ -121,13 +127,45 @@ export type ScriptCallers = {
   vercelConfig: string;
 };
 
-const PACKAGE_SCRIPT_REFERENCE = /`pnpm ([\w:-]+)`/g;
+const PACKAGE_SCRIPT_REFERENCE = /`pnpm (?:run )?([\w:-]+)`/g;
+// The README's contract: a backticked `*.yml` name in Run by is a workflow.
 const WORKFLOW_REFERENCE = /`([\w-]+\.yml)`/g;
 const VERCEL_REFERENCE = '`vercel.json`';
 
+type WorkflowDocument = {
+  jobs?: Record<string, { steps?: { run?: unknown }[] }>;
+};
+
+// What a workflow's steps run, without comments or echoed text, so a path a
+// step only mentions does not count as running it.
+function workflowCommands(workflow: string): string {
+  const jobs = (parse(workflow) as WorkflowDocument | null)?.jobs ?? {};
+  return Object.values(jobs)
+    .flatMap((job) => job.steps ?? [])
+    .flatMap((step) => (typeof step.run === 'string' ? [step.run] : []))
+    .flatMap((run) => run.split('\n'))
+    .filter((line) => !/^\s*(?:#|echo\b)/.test(line))
+    .join('\n');
+}
+
+function runsScript(
+  commands: string,
+  scriptPath: string,
+  runners: readonly string[],
+): boolean {
+  return (
+    commands.includes(scriptPath) ||
+    runners.some((name) =>
+      new RegExp(`pnpm (?:run )?${escapeRegExp(name)}(?![\\w:-])`).test(
+        commands,
+      ),
+    )
+  );
+}
+
 // The Run by column is prose, but the package scripts, workflows and Vercel
 // build it names are checkable: each must run the row's script, directly or
-// through a package script. Importers and documents are left to review.
+// through a package script. Everything else a row names is left to review.
 export function collectRunByIssues(
   entries: readonly ScriptsDirectoryEntry[],
   { packageScripts, readWorkflow, vercelConfig }: ScriptCallers,
@@ -157,21 +195,14 @@ export function collectRunByIssues(
       const contents = readWorkflow(workflow);
       if (contents === null) {
         issues.push(`${file} names \`${workflow}\`, which is not a workflow.`);
-      } else if (
-        !contents.includes(scriptPath) &&
-        !runners.some((name) =>
-          new RegExp(`pnpm (?:run )?${escapeRegExp(name)}(?![\\w:-])`).test(
-            contents,
-          ),
-        )
-      ) {
+      } else if (!runsScript(workflowCommands(contents), scriptPath, runners)) {
         issues.push(`${file} names \`${workflow}\`, which does not run it.`);
       }
     }
 
     if (
       runBy.includes(VERCEL_REFERENCE) &&
-      !vercelConfig.includes(scriptPath)
+      !runsScript(vercelConfig, scriptPath, runners)
     ) {
       issues.push(
         `${file} names ${VERCEL_REFERENCE}, whose build command does not run it.`,

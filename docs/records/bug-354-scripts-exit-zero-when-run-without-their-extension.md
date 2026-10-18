@@ -20,10 +20,11 @@ The merge guard and the promotion verifier are run by hand, and by agents follow
   - The second agent's challenge reproduced the symlink case: `tsx` run on a symlink to `next-record-id.ts` exits 0 silently.
 - **Known in one place:** `verify-lockfile-union.ts:3-5` runs unconditionally because of this, but the other entry points were not changed.
 - **`import.meta.main` is no fix here.** On Node 24.21 it is `undefined` for a `.ts` file under `tsx`, because this package declares no module type. It is `true` only for `.mts`.
-- **Errors are reported three ways.**
-  - Some guards print only the error's message.
-  - `merge-reviewed-pr.ts:838-843` and `verify-promotion.ts:315-320` do not catch, so a usage error prints a stack trace.
+- **Errors are reported four ways.**
+  - Most guards print only the error's message.
+  - `merge-reviewed-pr.ts:838-843`, `verify-promotion.ts:315-320` and `documentation-archive.ts:778-784` do not catch, so an error prints a stack trace.
   - `export-question-feedback.ts` prints the whole error object.
+  - `verify-migration-ledger.ts` prints one fixed line for every error.
 
 ## Impact
 

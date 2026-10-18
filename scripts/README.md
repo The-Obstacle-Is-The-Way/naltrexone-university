@@ -2,14 +2,23 @@
 
 Command-line tools that run outside the app: database commands, deploy and build checks, the local test harness, CI steps, question content (seeding, drafts and releases), review and merge governance, records tooling, scheduled watchers and quality reports.
 
-The [directory](#directory) below gives every script one row: what it does and who runs it. `tests/scripts-directory.test.ts` checks two things. Every script has exactly one row, so adding, moving or deleting a script without its row fails. And every package script, workflow and `vercel.json` build that a row's "Run by" names really runs that script. Descriptions, importers and documents named in a row are kept by review, so a change to a script's callers updates its row. Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
+The [directory](#directory) below gives every script one row: what it does and who runs it. `tests/scripts-directory.test.ts` checks two things:
+
+- **Every script has exactly one row,** so adding, moving or deleting a script without its row fails.
+- **Every package script, workflow and `vercel.json` build that a row's "Run by" names runs that script.** That is, the package script's command, a workflow step's `run`, or the build command names the script's path, or a package script that does.
+  - A backticked `*.yml` name in "Run by" always means a workflow.
+  - Everything else a row says is kept by review, so a change to a script's callers updates its row.
+
+Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 
 ## Conventions
 
-- **Run a script through its package script** when it has one (`pnpm db:migrate`), and otherwise with `pnpm exec tsx scripts/<path>`. There are three exceptions:
+- **Run a script through its package script** when it has one (`pnpm db:migrate`), and otherwise with `pnpm exec tsx scripts/<path>`. Some scripts run another way:
   - `verify-lockfile-union.ts` runs with `node --import tsx`, as its guide explains;
   - the two `.mts` jobs run with plain `node`;
   - `ci/*.sh` runs with `bash`.
+
+  Some callers still use a path where a package script exists. `ci.yml` and `AGENTS.md` call `resolve-local-test-target.ts` by path, and the local E2E plan spawns `run-local-test-db.ts` by path (DEBT-532).
 - **An entry point exports its work as a function** with injectable dependencies, so tests can call it. At the bottom, a guard compares `import.meta.url` with `process.argv[1]`, and runs the function only when the file is executed directly.
   - On failure the entry point prints the error's message and sets `process.exitCode = 1`. Most wrap the guard in `/* v8 ignore */` comments.
   - Not every entry point follows this yet. `import-draft-questions.ts`, `seed-production.ts` and `seed-all-environments.ts` run unconditionally, and some guards neither catch nor carry the comments.
@@ -21,11 +30,13 @@ The [directory](#directory) below gives every script one row: what it does and w
 - **A database command goes through `database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` for a remote target.
   - The managed path in `internal/` takes no acknowledgement.
   - It is used by checked-in automation (CI, the Vercel build and the local test harness), and by the environment seeds after their own `DB_TARGET_ACK` check.
+  - A second rule still exists. With `E2E_USE_EXISTING_DATABASE=true` or `INTEGRATION_USE_EXISTING_DATABASE=true`, the E2E and integration lanes accept any host once `ALLOW_NON_LOCAL_DATABASE_URL=true` is set, without `DB_TARGET_ACK` (DEBT-532).
 - **Tests sit beside their source** as `<name>.test.ts` and run in `pnpm test`.
   - A large suite splits into `<name>-<aspect>.test.ts`; shared test support is `<name>-test-helpers.ts`; data files go in `fixtures/`.
   - The directory leaves these out, because their names already say what they serve.
   - Database behavior is proved in `tests/integration/`.
-- **A check of the whole repository is a policy test in `tests/`,** not a script here.
+  - Not yet true everywhere (DEBT-532). `content-release/release-command-args.test.ts`, `draft-question-body.test.ts` and `draft-question-split.test.ts` have no source file of those names, and the tests of `migration-ledger.ts` live in `tests/e2e/helpers/`.
+- **A check of the whole repository is a policy test in `tests/`,** not a script here. Not yet true of `rule-to-test-register.ts`, `documentation-asset-budget.ts` and the link audit in `documentation-archive.ts`, which serve only tests (DEBT-532).
 
 ## Directory
 

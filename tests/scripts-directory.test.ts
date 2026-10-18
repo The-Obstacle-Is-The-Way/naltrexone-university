@@ -107,6 +107,28 @@ describe('the scripts directory check', () => {
     ).toEqual([{ file: 'a.ts', purpose: 'Reads a | b.', runBy: 'CI' }]);
   });
 
+  it('fails closed on a row whose closing pipe is escaped', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+| \`a.ts\` | A. | B. \\|
+<!-- scripts-directory:end -->
+`),
+    ).toThrow(/must end with a pipe/);
+  });
+
+  // Both outer pipes are optional in GitHub's tables, so a row without its
+  // leading pipe still renders.
+  it('fails closed on a row without its leading pipe', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+\`gone.ts\` | Gone. | Nobody |
+<!-- scripts-directory:end -->
+`),
+    ).toThrow(/must start with a pipe/);
+  });
+
   it('leaves tests, their helpers and fixtures to the naming conventions', () => {
     expect(
       [
@@ -191,16 +213,27 @@ describe('the scripts directory check', () => {
 });
 
 describe('the callers a row names', () => {
+  function workflow(...runs: string[]): string {
+    return `jobs:\n  test:\n    steps:\n${runs
+      .map((run) => `      - run: ${JSON.stringify(run)}\n`)
+      .join('')}`;
+  }
+
   const callers: ScriptCallers = {
     packageScripts: {
       'db:migrate': 'tsx scripts/db-migrate.ts',
       'test:e2e': 'tsx scripts/run-local-e2e.ts --project=chromium',
-      build: 'next build',
+      'test:e2e:hosted': 'tsx scripts/hosted.ts',
+      build: 'next build && tsx scripts/manifest.ts',
     },
     readWorkflow: (name) =>
       ({
-        'ci.yml': 'run: pnpm test:e2e\nrun: bash scripts/ci/start.sh',
-        'other.yml': 'run: pnpm build',
+        'ci.yml': workflow('pnpm test:e2e', 'bash scripts/ci/start.sh'),
+        'hosted.yml': workflow('pnpm test:e2e:hosted'),
+        'other.yml': workflow('pnpm build'),
+        'warn.yml': workflow(
+          '# scripts/db-migrate.ts migrates\necho "Run scripts/db-migrate.ts by hand."',
+        ),
       })[name] ?? null,
     vercelConfig: '{"buildCommand": "tsx scripts/check.ts && pnpm build"}',
   };
@@ -211,6 +244,25 @@ describe('the callers a row names', () => {
 
   it('accepts a package script whose command runs the file', () => {
     expect(issuesFor('db-migrate.ts', '`pnpm db:migrate`')).toEqual([]);
+  });
+
+  it('reads a package script named with `pnpm run`', () => {
+    expect(issuesFor('db-migrate.ts', '`pnpm run db:migrate`')).toEqual([]);
+    expect(issuesFor('db-migrate.ts', '`pnpm run db:migrat`')).toEqual([
+      'db-migrate.ts names `pnpm db:migrat`, which package.json does not define.',
+    ]);
+  });
+
+  it('does not take a longer package script name for a shorter one', () => {
+    expect(issuesFor('run-local-e2e.ts', '`hosted.yml`')).toEqual([
+      'run-local-e2e.ts names `hosted.yml`, which does not run it.',
+    ]);
+  });
+
+  it('ignores a path a workflow only comments on or echoes', () => {
+    expect(issuesFor('db-migrate.ts', '`warn.yml`')).toEqual([
+      'db-migrate.ts names `warn.yml`, which does not run it.',
+    ]);
   });
 
   it('reports a package script that package.json does not define', () => {
@@ -249,5 +301,9 @@ describe('the callers a row names', () => {
     expect(issuesFor('db-migrate.ts', 'The `vercel.json` build')).toEqual([
       'db-migrate.ts names `vercel.json`, whose build command does not run it.',
     ]);
+  });
+
+  it('accepts a Vercel build that runs the file through a package script', () => {
+    expect(issuesFor('manifest.ts', 'The `vercel.json` build')).toEqual([]);
   });
 });

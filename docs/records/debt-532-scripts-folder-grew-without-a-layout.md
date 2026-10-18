@@ -25,11 +25,12 @@ The same review found four defects that stand on their own, filed separately: BU
 ### Missing Shared Building Blocks
 
 - **Entry points.**
-  - Thirty-five copies of the direct-run guard (BUG-354), with three error policies:
+  - Thirty-five copies of the direct-run guard (BUG-354), with four error policies:
     - most print the message;
-    - `merge-reviewed-pr.ts` and `verify-promotion.ts` let a stack trace through;
-    - `export-question-feedback.ts` prints the whole error object.
-  - `verify-migration-ledger.ts` hides even its own usage and target errors: with no `DATABASE_URL` it prints only `Migration ledger verification failed.` (catch at `:55-58`). Those messages carry no credentials; only driver errors need the generic line.
+    - `merge-reviewed-pr.ts`, `verify-promotion.ts` and `documentation-archive.ts` let a stack trace through;
+    - `export-question-feedback.ts` prints the whole error object;
+    - `verify-migration-ledger.ts` prints one fixed line for every error.
+  - That fixed line hides the ledger check's own usage and target errors: with no `DATABASE_URL` it prints only `Migration ledger verification failed.` (catch at `:55-58`). Those messages carry no credentials; only driver errors need the generic line.
 - **GitHub.**
   - Eight files each wrap `execFileSync('gh', …)`, and three modules adapt GitHub issues:
     - `github-alert-issues.ts` uses GitHub's search;
@@ -197,7 +198,7 @@ The audit looked for a platform feature to replace each of these and found none:
   - Eight GitHub wrappers and three issue adapters to keep in step.
   - Eight test files that mock `node:child_process` because no runner is injected.
   - A 48-file root that hides thirteen families.
-  - Documents that name scripts by path: 12 Markdown files mention `resolve-local-test-target.ts` 30 times, so every move edits them.
+  - Documents that name scripts by path: before this record, 12 Markdown files mentioned `resolve-local-test-target.ts` 30 times, so every move edits them.
 - **Risk.** The building blocks each script rebuilt have drifted. The defects listed above, and BUG-353 to BUG-356, are the drift that has shown so far.
 
 ## Options
@@ -263,7 +264,7 @@ Pending the owner's review. Recommended: option B, in this order.
 
 - [ ] BUG-353 to BUG-356 closed.
 - [ ] Every hand-run command has a package script, and no guide names a script's path where one exists.
-- [ ] One `gh` runner and one issue transport, and only the shared runner's own test touches `node:child_process`.
+- [ ] One `gh` runner and one issue transport, and no suite mocks `node:child_process`.
 - [ ] The deletions done, or declined by the owner with the reason recorded here.
 - [ ] The layout complete, with `tests/scripts-directory.test.ts` green after each move.
 - [ ] Each configuration replacement merged, or declined with its reason.
