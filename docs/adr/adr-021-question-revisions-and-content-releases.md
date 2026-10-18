@@ -161,7 +161,7 @@ BUG-351 part 1 proves that equal content can occupy several immutable revisions.
 
 Part 1 introduced `app-release-manifest-v3`. Each item names its selected revision ID alongside its slug and unchanged content hash. Reuse and activation verification therefore preserve the selected revision. Existing v2 releases retain their original bytes and hashes and remain readable for activation and rollback. V1 stays unsupported. No schema migration is needed. Content hashes still exclude row identities, as defined above.
 
-`tests/integration/content-release-revision-matching.integration.test.ts` proves the older-duplicate collision, stable restaging, v2 activation and rollback, and refusal of a v3 manifest whose item selects another revision with identical content.
+`tests/integration/content-release-revision-matching.integration.test.ts` proves the older-duplicate collision, stable restaging, v2 activation and rollback, and refusal of a revision-bound manifest whose item selects another revision with identical content.
 
 ## Amendment — 2026-10-18: freeze pre-bootstrap candidates
 
