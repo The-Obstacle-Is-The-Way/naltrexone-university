@@ -1,4 +1,4 @@
-import { inArray, sql } from 'drizzle-orm';
+import { and, inArray, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
 import { canonicalizeMarkdown } from '../../lib/content/parse-mdx-question';
@@ -15,6 +15,7 @@ export type ReleaseChanges = {
   update: string[];
   revert: string[];
   answerKeyChange: string[];
+  answerKeyReturn: string[];
   replacesHeld: string[];
   withdraw: string[];
   excludedHeld: string[];
@@ -83,6 +84,35 @@ export async function readReleaseChanges(
     JOIN questions q ON q.id = i.question_id
     WHERE i.release_id = ${releaseId} AND NOT ${ELIGIBLE_RELEASE_ITEM}
   `);
+  // Activated membership and the bootstrap's frozen candidates are the
+  // history boundary. A later stage alone supplies no publication evidence.
+  // Receipts are read under the pointer lock; timestamps do not order them.
+  const earlier = await tx
+    .select({
+      questionId: schema.questionRevisions.questionId,
+      revisionId: schema.questionRevisions.id,
+    })
+    .from(schema.questionRevisions)
+    .where(
+      and(
+        inArray(
+          schema.questionRevisions.questionId,
+          publishing.map((row) => row.question_id),
+        ),
+        sql`(
+          EXISTS (
+            SELECT 1 FROM content_release_items i
+            JOIN content_release_activations a ON a.release_id = i.release_id
+            WHERE i.question_revision_id = ${schema.questionRevisions.id}
+          ) OR EXISTS (
+            SELECT 1 FROM content_releases r
+            JOIN content_release_activations a ON a.release_id = r.id
+            WHERE (r.manifest -> 'preBootstrapCandidates')
+              @> jsonb_build_array(${schema.questionRevisions.id}::text)
+          )
+        )`,
+      ),
+    );
   const choices = await tx
     .select({
       questionRevisionId: schema.choices.questionRevisionId,
@@ -92,13 +122,13 @@ export async function readReleaseChanges(
     })
     .from(schema.choices)
     .where(
-      inArray(
-        schema.choices.questionRevisionId,
-        publishing.flatMap((row) => [
+      inArray(schema.choices.questionRevisionId, [
+        ...publishing.flatMap((row) => [
           row.current_revision_id,
           row.question_revision_id,
         ]),
-      ),
+        ...earlier.map((row) => row.revisionId),
+      ]),
     );
   const keys = new Map<string, KeyChoice[]>();
   for (const choice of choices) {
@@ -112,16 +142,32 @@ export async function readReleaseChanges(
   }
   const bySlug = (rows: readonly { slug: string }[]) =>
     rows.map((row) => row.slug).sort();
+  const changedKeys = publishing.filter((row) =>
+    answerKeyChanged(
+      keys.get(row.current_revision_id) ?? [],
+      keys.get(row.question_revision_id) ?? [],
+    ),
+  );
+  const earlierByQuestion = new Map<string, string[]>();
+  for (const row of earlier) {
+    const revisions = earlierByQuestion.get(row.questionId) ?? [];
+    revisions.push(row.revisionId);
+    earlierByQuestion.set(row.questionId, revisions);
+  }
   const changes: ReleaseChanges = {
     archive: bySlug(archiving),
     publish: bySlug(publishing.filter((row) => row.change === 'publish')),
     update: bySlug(publishing.filter((row) => row.change === 'update')),
     revert: bySlug(publishing.filter((row) => row.change === 'revert')),
-    answerKeyChange: bySlug(
-      publishing.filter((row) =>
-        answerKeyChanged(
-          keys.get(row.current_revision_id) ?? [],
-          keys.get(row.question_revision_id) ?? [],
+    answerKeyChange: bySlug(changedKeys),
+    answerKeyReturn: bySlug(
+      changedKeys.filter((row) =>
+        (earlierByQuestion.get(row.question_id) ?? []).some(
+          (revisionId) =>
+            !answerKeyChanged(
+              keys.get(revisionId) ?? [],
+              keys.get(row.question_revision_id) ?? [],
+            ),
         ),
       ),
     ),

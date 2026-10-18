@@ -312,7 +312,15 @@ describe('hold-questions', () => {
     );
 
     await runHoldQuestions(
-      ['--qid', question.slug, ...RECORD, '--lift', '--apply'],
+      [
+        '--qid',
+        question.slug,
+        ...RECORD,
+        '--lift',
+        '--revert',
+        question.slug,
+        '--apply',
+      ],
       commandIo().io,
     );
 

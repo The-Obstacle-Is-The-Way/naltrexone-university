@@ -127,6 +127,13 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 Bootstrap's reviewed plan also binds its frozen list of earlier revision candidates. That list is history metadata, never selectable content.
 
+A changed key that matches earlier history needs an explicit return name, reason and authority. Earlier history means activated release items plus the frozen bootstrap list; later unpublished revisions do not count. The rule also applies to key-changing rollbacks and hold lifts. Activation binds the return list to its reviewed plan.
+
+- `tests/integration/content-release-key-returns.integration.test.ts`: `names a stale-key return in both previews and records the named return and later repair decisions`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `does not treat a later %s-only stage as earlier publication`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `invalidates a preview when intervening activations turn its new key into a return`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `refuses an unnamed key-returning hold lift atomically and accepts its explicitly named decision`
+
 - `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `refuses a bootstrap preview after only its historical candidate set changes`
 - `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `never publishes historical candidates when activating or rolling back the bootstrap`
 

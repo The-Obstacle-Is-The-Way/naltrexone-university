@@ -89,6 +89,7 @@ export function formatChanges(plan: ReleaseChanges): string[] {
     formatNames('Update to a newer revision', plan.update),
     formatNames('Revert to an earlier revision', plan.revert),
     formatNames('Answer-key changes', plan.answerKeyChange),
+    formatNames('Return to an earlier answer key', plan.answerKeyReturn),
     formatNames('Replaces a held revision', plan.replacesHeld),
     formatNames('Withdraw for good', plan.withdraw),
     formatNames('Left out, held', plan.excludedHeld),
@@ -98,6 +99,11 @@ export function formatChanges(plan: ReleaseChanges): string[] {
 
 function formatNames(label: string, slugs: readonly string[]): string {
   return `${label} (${slugs.length})${slugs.length > 0 ? `: ${slugs.join(', ')}` : ''}`;
+}
+
+// The CLI validators accept content slugs, so these values need no quoting.
+export function formatRevertArgs(slugs: readonly string[]): string {
+  return slugs.map((slug) => ` --revert ${slug}`).join('');
 }
 
 // DEBT-490: the decision an activation records, as printed and as the

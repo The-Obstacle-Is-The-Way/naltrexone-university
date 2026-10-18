@@ -171,9 +171,17 @@ Bootstrap captures every stored revision ID in its own transaction after acquiri
 
 The list contributes to the manifest hash and therefore to the DEBT-489 plan id. Adding even a draft-only revision between preview and apply invalidates that preview. Reverification uses the stored list, never a fresh census. The preview reports its count. V2 and v3 manifests keep their original canonical bytes and hashes and remain readable for activation and rollback. No database migration or new table is needed.
 
-The return guard will use revisions in activated releases plus this frozen list. A later draft-only or never-activated staged revision does not enter the list. Capturing this history does not itself refuse a return; that guard remains in BUG-351 part 2b.
+The return guard uses revisions in activated releases plus this frozen list. A later draft-only or never-activated staged revision does not enter the list. V2/v3 releases contribute activated membership only; missing pre-bootstrap candidates are not reconstructed from later stored revisions.
 
 `tests/integration/content-release-bootstrap-candidates.integration.test.ts` proves capture under the pointer lock, preview invalidation, frozen membership, and item-only activation and rollback. The manifest tests pin v2/v3 canonical bytes and hashes.
+
+## Amendment — 2026-10-18: name answer-key returns
+
+BUG-351 part 2b compares each changed key with the same question's activated release items and frozen bootstrap candidates. Both previews name a return separately from other key changes. Staging requires `--revert` for either an older revision or a key return. Activation recomputes key returns under the release-pointer lock, requires exactly those names, and binds the return list to the reviewed plan. The existing activation receipt records the reason and authority; no new receipt table or migration is needed.
+
+This narrows DEBT-492's rollback exemption: a rollback that returns an earlier key now needs explicit names. Its revision-number staging rule is unchanged. A hold lift can also return a key after rollback; it takes explicit names through the same activation guard. An unnamed lift rolls back the hold change too. Same-key changes need no key-return approval.
+
+`tests/integration/content-release-key-returns.integration.test.ts` proves stale copies with unrelated edits, named returns and repairs, later unpublished exclusions, rollback and hold lift, and preview invalidation after intervening activations. Clinical review remains in the content repository.
 
 ## Related
 

@@ -65,6 +65,8 @@ export type ReleaseActivationErrorCode =
   | 'MANIFEST_ITEMS_MISMATCH'
   | 'INCOMPLETE_RELEASE'
   | 'PLAN_MISMATCH'
+  | 'KEY_RETURN_REQUIRED'
+  | 'UNEXPECTED_REVERT'
   | 'DECISION_REQUIRED';
 
 export class ReleaseActivationError extends Error {
@@ -270,6 +272,8 @@ export async function activateRelease(
     expectedActiveReleaseId: string | null;
     /** The plan id an operator reviewed; a different plan applies nothing. */
     expectedPlanId?: string | undefined;
+    /** Each answer-key return explicitly named by the operator. */
+    revert?: readonly string[];
     /** Why, and on whose authority: kept on the receipt (DEBT-490). */
     record: DecisionRecord;
   },
@@ -427,6 +431,7 @@ export async function activateRelease(
           archive: archiving.map((row) => row.id),
           withdraw: withdrawing.map((row) => row.id),
           answerKeyChange: changes.answerKeyChange,
+          answerKeyReturn: changes.answerKeyReturn,
         }),
       )
       .digest('hex');
@@ -437,6 +442,23 @@ export async function activateRelease(
       );
     }
     const plan: ActivationPlan = { id: planId, ...changes };
+    const named = new Set(input.revert ?? []);
+    const unexpected = [...named].filter(
+      (slug) => !changes.answerKeyReturn.includes(slug),
+    );
+    if (unexpected.length > 0) {
+      throw new ReleaseActivationError(
+        'UNEXPECTED_REVERT',
+        `These questions do not return to an earlier answer key: ${unexpected.join(', ')}. Remove their --revert flags.`,
+      );
+    }
+    const unnamed = changes.answerKeyReturn.filter((slug) => !named.has(slug));
+    if (unnamed.length > 0) {
+      throw new ReleaseActivationError(
+        'KEY_RETURN_REQUIRED',
+        `This activation returns ${unnamed.join(', ')} to an earlier answer key. Name each with --revert and record the reason and authority.`,
+      );
+    }
 
     // 4. Materialize. Drafts no release names are left as they are.
     const published = await tx.execute(sql`

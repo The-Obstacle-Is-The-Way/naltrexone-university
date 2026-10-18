@@ -176,6 +176,7 @@ describe('BUG-351: stage and activation previews name answer-key changes', () =>
       releaseId: base.releaseId,
       expectedActiveReleaseId: corrected.releaseId,
       record: RELEASE_DECISION,
+      revert: [slug],
     });
     await activateRelease(disposable.db, {
       releaseId: corrected.releaseId,
@@ -197,6 +198,7 @@ describe('BUG-351: stage and activation previews name answer-key changes', () =>
       qids: [slug],
       lift: true,
       record: RELEASE_DECISION,
+      revert: [slug],
     });
 
     await expect(
