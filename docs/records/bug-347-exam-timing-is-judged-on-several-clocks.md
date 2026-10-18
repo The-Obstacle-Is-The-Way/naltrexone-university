@@ -46,7 +46,7 @@ This was found by reading the code; it was not reproduced in a browser. Use-case
 **Other clocks in the same lifecycle (minor):**
 - `practice_sessions.started_at` is the database's `now()`, which is the transaction's start (`db/schema.ts:1053-1055`).
   - The insert is followed, in the same transaction, by `FOR SHARE` question locks (`drizzle-practice-session-repository.ts:612-639`). A wait on a content activation therefore shortens the exam.
-  - That lock wait is intended and tested, but its production duration was not measured. BUG-345's migration 0052 sets a 5-second timeout per lock acquisition through the pooler; it is not an end-to-end bound for the transaction. BUG-345 retains the production verification.
+  - That lock wait is intended and tested, but its production duration was not measured. BUG-345's migration 0052 sets a 5-second timeout per lock acquisition through the pooler; it is not an end-to-end bound for the transaction. BUG-345 closed after pooled production samples showed the intended settings on 2026-10-17 and 2026-10-18 (#1555).
 - `ended_at` comes from the app clock (`drizzle-practice-session-repository.ts:845`). The code concedes that `answered_at`, from the database clock, can be later (`:853-856`; DEBT-437 accepted this).
 - `attempts.answered_at` is the database default on submit, and the app clock or the deadline on exam finalize (`finalize-exam-answers.ts:208,238`). "Latest attempt" ranks across both.
 
