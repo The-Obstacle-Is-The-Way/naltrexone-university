@@ -48,7 +48,7 @@ This was found by reading the code; it was not reproduced in a browser. Use-case
 **Other clocks in the same lifecycle (minor):**
 - `practice_sessions.started_at` is the database's `now()`, which is the transaction's start (`db/schema.ts:1053-1055`).
   - The insert is followed, in the same transaction, by `FOR SHARE` question locks (`drizzle-practice-session-repository.ts:612-639`). A wait on a content activation therefore shortens the exam.
-  - That lock wait is intended and tested, but its production duration was not measured. BUG-345's migration 0052 sets a 5-second timeout per lock acquisition through the pooler; it is not an end-to-end bound for the transaction. BUG-345 retains the production verification.
+  - That lock wait is intended and tested, but its production duration was not measured. BUG-345's migration 0052 sets a 5-second timeout per lock acquisition through the pooler; it is not an end-to-end bound for the transaction. BUG-345 closed after pooled production samples showed the intended settings on 2026-10-17 and 2026-10-18 (#1555).
 - `ended_at` comes from the app clock (`drizzle-practice-session-repository.ts:845`). The code concedes that `answered_at`, from the database clock, can be later (`:853-856`; DEBT-437 accepted this).
 - `attempts.answered_at` is the database default on submit, and the app clock or the deadline on exam finalize (`finalize-exam-answers.ts:208,238`). "Latest attempt" ranks across both.
 
@@ -81,7 +81,7 @@ Before step 2, a fast clock put the exam on an error screen until the server's d
 Option 1, built in two steps. Step 1 removes the client stale-flush check. Step 2 adds:
 
 - Server remaining milliseconds on answerable and unavailable question payloads (`get-next-question.ts:71,118`). A read-only timing use case returns the same timing without finalizing or touching drafts (`get-practice-session-timing.ts:27-35`). Its controller uses the existing entitlement and owned-session checks.
-- A monotonic countdown (`use-exam-timer.ts:143`) refreshed on activation, focus and visibility return. A pending refresh does not block expiry from the last server sample. Display seconds round up; expiry uses milliseconds.
+- A monotonic countdown (`use-exam-timer.ts:144,153`) refreshed on activation, focus and visibility return. A pending refresh does not block expiry from the last server sample. Display seconds round up; expiry uses milliseconds.
 - Explicit expiry-only finalization, even without a draft (`use-practice-session-page-model.ts:245-248`). The server returns `exam_not_expired` before its deadline (`finalize-exam-answers.ts:150-162`). Idempotency does not cache that result. The page preserves its draft, stays ready, requests fresh timing and retries; it does not read a summary for this result (`practice-session-page-logic.ts:330-335`). Manual early submission still works.
 - Shared active/expired/ended classification (`exam-timer.ts:25-37,52-54`). Active question access finalizes an expired exam. Draft saves and marks for review refuse it; marks do not finalize it (`set-practice-session-question-mark.ts:44-60`). Incomplete-session and draft-review reads remain observational. Summary and completed feedback still require committed `endedAt`. Abandon discards the unfinished exam.
 
