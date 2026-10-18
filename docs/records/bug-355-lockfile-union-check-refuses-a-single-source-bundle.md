@@ -1,6 +1,6 @@
-# BUG-355: The Lockfile Union Check Refuses a Single-Source Bundle Whose Lockfile Matches Its Source
+# BUG-355: The Lockfile Union Check Refuses a Single-Source Bundle That Matches Its Source
 
-**Status:** Open — accept one source, and refuse a candidate equal to a source only when several are named; red first
+**Status:** Open — accept one source; refuse a candidate equal to a source only when several are named; red first
 **Priority:** P3
 **Date:** 2026-10-18
 

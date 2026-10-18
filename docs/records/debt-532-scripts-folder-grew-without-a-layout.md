@@ -1,6 +1,6 @@
 # DEBT-532: The Scripts Folder Grew Without Shared Building Blocks or a Layout
 
-**Status:** Open — owner reviews the proposals; the four defects found with this record are BUG-353 to BUG-356
+**Status:** Open — owner reviews the proposals; its four defects are BUG-353 to BUG-356
 **Priority:** P3
 **Date:** 2026-10-18
 

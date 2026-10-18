@@ -1,6 +1,6 @@
-# BUG-353: The Production Seed Can Publish the Placeholder Questions When the Shell Sets Their Flag
+# BUG-353: The Production Seed Can Publish the Placeholder Questions
 
-**Status:** Open — stop the environment seeds from passing the placeholder flag to their child seed, red first
+**Status:** Open — stop the environment seeds passing the placeholder flag to their child seed, red first
 **Priority:** P3
 **Date:** 2026-10-18
 

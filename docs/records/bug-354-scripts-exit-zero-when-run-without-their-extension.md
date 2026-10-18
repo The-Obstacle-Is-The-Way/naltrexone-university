@@ -1,6 +1,6 @@
 # BUG-354: Scripts Exit 0 Without Running When Called Without Their Extension or Through a Symlink
 
-**Status:** Open — one shared entry helper that resolves the executed path, red first; then package scripts for the hand-run commands
+**Status:** Open — a shared entry helper that resolves the executed path, red first; then package scripts
 **Priority:** P3
 **Date:** 2026-10-18
 

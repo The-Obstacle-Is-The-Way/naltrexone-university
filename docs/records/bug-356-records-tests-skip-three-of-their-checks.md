@@ -1,6 +1,6 @@
-# BUG-356: The Records Tests Skip Three of Their Checks: Ledger Lines, Statuses and the Queue-Review Date
+# BUG-356: The Records Tests Skip Their Ledger-Line, Status and Queue-Review Checks
 
-**Status:** Open — assert the three findings on the live tree through one blocking list shared with the command, red first
+**Status:** Open — assert the three findings on the live tree through one shared blocking list, red first
 **Priority:** P3
 **Date:** 2026-10-18
 
