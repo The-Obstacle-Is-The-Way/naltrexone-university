@@ -256,8 +256,11 @@ The helper writes the serving repository to `GITHUB_ENV`. Compose uses that repo
 
   ```sh
   for registry in docker.io mirror.gcr.io; do
-    docker buildx imagetools inspect --raw "$registry/edoburu/pgbouncer@<digest>" > "$registry.index.json" || exit 1
-    shasum -a 256 "$registry.index.json"
+    if docker buildx imagetools inspect --raw "$registry/edoburu/pgbouncer@<digest>" > "$registry.index.json"; then
+      shasum -a 256 "$registry.index.json"
+    else
+      echo "$registry does not serve it"
+    fi
   done
   ```
 

@@ -1,6 +1,6 @@
 # BUG-352: CI's Pooler Image Depends on Docker Hub Alone
 
-**Status:** Verifying — after promotion, main's CI logs the serving-registry notice for both images; due 2026-10-20
+**Status:** Verifying — after promotion, main's CI logs the serving-registry notice for both images; due 2026-10-21
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-The status is effective on merge. October 20 assumes promotion on October 17; the promotion change must set the actual promotion date plus three days in this record and the index. The main-branch notice check remains open.
+The status is effective on merge. October 21 assumes promotion on October 18; the promotion change must set the actual promotion date plus three days in this record and the index. The main-branch notice check remains open.
 
 BUG-345's fix (#1549, promoted in #1551 on 2026-10-17) added a second container image to the required `test` job: PgBouncer, a transaction pooler standing in for Neon's. Before #1552, Compose pulled it by digest from Docker Hub alone, with no retry loop in the workflow and no other registry. #1552 gives both images one bounded failover helper.
 

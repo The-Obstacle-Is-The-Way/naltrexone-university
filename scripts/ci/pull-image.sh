@@ -27,7 +27,7 @@ pull_image() {
         return 0
       fi
       if ((attempt < pull_attempts)); then
-        echo "[start-${name}] Pull ${attempt} of ${pull_attempts} from ${repository%%/*} failed; retrying in ${retry_delay_seconds}s."
+        echo "[pull-image] ${label} pull ${attempt} of ${pull_attempts} from ${repository%%/*} failed; retrying in ${retry_delay_seconds}s."
         sleep "$retry_delay_seconds"
       fi
     done
