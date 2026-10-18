@@ -105,9 +105,10 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/integration/scores-when-content-changes.integration.test.ts`: `agrees across the summary, History and the Dashboard as content changes during and after an exam`
 - `src/application/use-cases/get-user-stats.test.ts`: `leaves a withdrawn question out of accuracy, not out of activity`
 
-### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed.
+### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed. The seed's whitespace normalization alone does not correct an answer key.
 
 - `tests/shared/attempt-score-contract.ts`: `$name`
+- `tests/integration/answer-key-normalization.integration.test.ts`: `$name agrees between question reads and aggregate scores`
 - `tests/integration/question-repository-key-corrections.integration.test.ts`: `includes a latest answer whose key was corrected since, but not one whose stem was reworded`
 - `tests/integration/seed-revision-append.integration.test.ts`: `keeps a graded attempt on its revision and grade after a key correction`
 - `components/question/question-update-notice.test.tsx`: `says the attempt is not scored and links to the corrected question`

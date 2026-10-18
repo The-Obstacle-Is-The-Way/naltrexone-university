@@ -24,7 +24,7 @@ export type HistoryScoreItem = {
    * After the session, the question gained a current revision: with another
    * correct choice (its key corrected), or with only its stem reworded.
    */
-  revisedAfter?: 'key' | 'stem';
+  revisedAfter?: 'key' | 'key normalization' | 'stem';
 };
 
 export type SessionHistoryScoreHarness = {
@@ -49,6 +49,30 @@ type Scenario = {
 };
 
 const scenarios: readonly Scenario[] = [
+  ...(['tutor', 'exam'] as const).map(
+    (mode): Scenario => ({
+      name: `keeps ${mode} answers scored when only the correct choice normalization changes`,
+      mode,
+      items: [
+        {
+          answer: 'correct',
+          now: 'available',
+          revisedAfter: 'key normalization',
+        },
+        {
+          answer: 'incorrect',
+          now: 'retired',
+          revisedAfter: 'key normalization',
+        },
+        {
+          answer: 'unanswered',
+          now: 'available',
+          revisedAfter: 'key normalization',
+        },
+      ],
+      expected: { answered: 2, scored: 3, scoredCorrect: 1 },
+    }),
+  ),
   {
     name: 'scores every item when every question is available',
     mode: 'tutor',

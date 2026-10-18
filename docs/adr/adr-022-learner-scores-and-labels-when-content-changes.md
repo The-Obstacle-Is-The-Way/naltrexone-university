@@ -80,6 +80,8 @@ An item that does not count leaves both the numerator and the denominator. This 
 
 An answered attempt is **key-corrected** when the current revision's correct choice differs, by label or by text, from the correct choice of the revision the attempt was graded against. This comparison is complete for single-best-answer items: a different correct answer always changes the correct choice's label or text. It is conservative: reordering or rewording the correct option also counts, at the cost of one unscored attempt and one re-practice prompt, which is harmless.
 
+**Amended 2026-10-18 (DEBT-531).** Compare the label exactly and the correct choice's text after the seed's existing Markdown normalization: CRLF and CR become LF, trailing ASCII spaces and tabs are removed from each line, then JavaScript `trim()` removes whitespace at the edges. Normalization alone is not a key correction. Rewording or moving the correct option still is. Whole-revision equality also compares the other content fields; it remains a separate decision. The pure normalizer lives in the domain, and the SQL score reader has a tested equivalent. Stored revision fields, hashes and grades remain unchanged.
+
 A key-corrected attempt:
 - **does not count toward any score** (Decision 3);
 - **shows a distinct notice** instead of F-12's generic "updated": "The answer to this question was corrected after you answered. This attempt isn't scored. Practice the corrected question.";

@@ -1,6 +1,6 @@
 # DEBT-531: Content Changes Have No Single Planner, So the Two Writers Judge the Same File Differently
 
-**Status:** Open — reconcile content normalization and hold scope through ADR-021/022; BUG-351 owns the planner and source freshness, DEBT-483 the bootstrap timing
+**Status:** In Progress — key normalization built; the read-only census and hold scope remain, due 2026-10-21; BUG-351 owns the planner, DEBT-483 bootstrap timing
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -15,7 +15,7 @@ Two programs write question content, and they apply different rules to the same 
 
 The last recorded production state in DEBT-483 is unbootstrapped, with direct seeding still available; the current release pointer was not queried. The managed production seed imports the local untracked drafts folder, which can lag the source. Bare seeding reads the existing MDX output instead.
 
-The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. BUG-351 part 1 aligns whole-revision comparison at the seed and builder. Score eligibility deliberately compares a narrower key projection, with raw text. Hold scope also differs between activation and availability.
+The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. BUG-351 part 1 aligns whole-revision comparison at the seed and builder. Score eligibility compares a narrower key projection and now shares the seed's text normalization. Hold scope still differs between activation and availability.
 
 ## Evidence
 
@@ -30,14 +30,14 @@ The live defect this split causes is BUG-351: a stale seed restores a corrected 
 **Whole-revision equality and answer-key projection have different purposes and inconsistent normalization:**
 - The seed canonicalizes both sides before comparing (`scripts/seed/question-parser.ts:158-181`; guarded by `tests/integration/seed-revision-append.integration.test.ts:149-188`).
 - Before BUG-351 part 1, the builder compared the stored `content_hash` (`release-builder.ts:62-76` at `92e56929`). It now recomputes canonical fields with the seed's `revisionFieldsFromDb`. That hash covers the stored bytes, which may not be canonical; migration `0039` hashed the legacy columns as they were for every first revision. `a622027e` (2026-10-01) moved the builder off the seed's canonical comparison.
-- Answer-key correction compares the raw label and text (`src/domain/services/answer-key.ts:8-15` and its SQL twin, `src/adapters/repositories/shared/score-eligibility-sql.ts:104-108`).
+- Before this part, answer-key correction compared the raw label and text. It now compares exact labels and normalized text (`src/domain/services/answer-key.ts:10-15` and its SQL twin, `src/adapters/repositories/shared/score-eligibility-sql.ts:96-110`). The seed reuses `src/domain/value-objects/markdown-normalization.ts`; stored revision hashes still cover stored bytes.
 
 The consequences need distinct preconditions:
 - Before BUG-351 part 1, the builder could append a revision for canonical input equal in meaning to a noncanonical stored revision **if no stored raw hash matches it**. A canonical duplicate elsewhere in history could instead be reused. Part 1 compares canonical fields and prefers the current revision.
-- When an append changes raw correct-choice label/text only by normalization, ADR-022's raw comparison marks older answers corrected. Whitespace only in the stem does not do that. This can also occur before bootstrap if another substantive seed edit appends canonical choices from a legacy revision.
+- Before this part, an append that changed correct-choice text only by normalization marked older answers corrected. Whitespace only in the stem did not do that. This could occur before bootstrap if another substantive seed edit appended canonical choices from a legacy revision. The amended ADR-022 comparison keeps those answers scored.
 - Whole-content identity must not be collapsed into the key projection: a stem-only edit can change the revision without changing its key. Reusing normalization is a separate decision from merging those meanings.
 
-BUG-351 owns the duplicate-hash `.limit(1)` defect and deterministic current-match preference. This record owns whether key normalization should change scoring: amend ADR-022 Decision 4 explicitly and prove the SQL/domain twins agree. Put any shared pure normalizer inward; domain code must not import `lib/content`.
+BUG-351 owns the duplicate-hash `.limit(1)` defect and deterministic current-match preference. This record owns key normalization for scoring. ADR-022 Decision 4 now names the seed's existing normalization, with a pure domain normalizer and matching SQL. Domain code does not import `lib/content`.
 
 Production prevalence is unknown. A read-only census should separately count noncanonical revision fields and correct-choice normalization changes; neither count alone establishes a clinical error. Stored bytes/hashes remain immutable.
 
@@ -63,29 +63,31 @@ Production prevalence is unknown. A read-only census should separately count non
 ## Impact
 
 The answer-key harm is BUG-351's, at P2. What remains here is latent:
-- Under the preconditions above, normalization can append needless revisions or mark older keys corrected. The key-comparison effect is not restricted to post-bootstrap databases; current production prevalence is unverified.
+- The built normalization changes prevent needless revisions and false key corrections under the preconditions above. The former key-comparison effect was not restricted to post-bootstrap databases; production prevalence remains unverified.
 - A forgotten hold can label a retired question "Under review" and drop past scores on it.
 
 P3.
 
 ## Options
 
-1. **Shared normalization with distinct semantic comparisons.** BUG-351 owns the planner, including deterministic current-match preference. Whole-revision equality and ADR-022's key-only comparison remain distinct. Decide normalization for each field, amend ADR-022 if score eligibility changes, and test the domain/SQL counterparts. *Recommended:* the bootstrap alone does not remove the split, because the builder keeps its own gaps (BUG-351 steps 6 and 8).
+1. **Shared normalization with distinct semantic comparisons.** BUG-351 owns the planner, including deterministic current-match preference. Whole-revision equality and ADR-022's key-only comparison remain distinct. Decide normalization for each field, amend ADR-022 if score eligibility changes, and test the domain/SQL counterparts. *Recommended:* the bootstrap alone does not remove the split, because the builder still accepts BUG-351 step 8.
 2. **Bootstrap releases in production (DEBT-483).** The seed then refuses production, and the builder's rules become the only path. Run the canonical-hash check first. The decision and its timing are the owner's. Bootstrap after BUG-351's planner, so the remaining writer has its rule.
 
 For holds, choose and document a coherent relationship between revision-level activation exclusion and question-level availability. This is an ADR-021/022 decision, not a mechanical deduplication. Preserve the clinical caution and score effects in the selected policy, and allow a direct lift of a named held revision without rolling the release back.
 
-## Resolution (proposed)
+## Resolution (normalization built; remainder proposed)
 
 BUG-351 owns the shared planner and source admission. This record owns normalization and hold semantics, with their explicit ADR-021/022 amendments. DEBT-483 alone owns bootstrap timing, the managed seed's transition and release zero; its owner check comes first.
 
-DEBT-446's Waiting row (Part 3b) leaves Waiting with BUG-351, which takes its scope. Its premise, that the seed refused key changes under graded history, went with `3ac01fc8`. DEBT-524's closed content discussion cited DEBT-483; it did not assign bootstrap ownership here.
+The normalization part shares the seed's pure Markdown normalizer with the domain key comparison and gives the aggregate SQL reader an equivalent. Real Postgres cases exercise all 25 JavaScript edge-whitespace characters, line endings, trailing spaces and tabs, and significant interior changes. Shared fake-to-real contracts cover question reads, dashboard scores and tutor/exam history. Historical revision rows remain unchanged. The census and hold policy are next, due 2026-10-21.
+
+DEBT-446's former Part 3b scope belongs to BUG-351. Its premise, that the seed refused key changes under graded history, went with `3ac01fc8`. DEBT-524's closed content discussion cited DEBT-483; it did not assign bootstrap ownership here.
 
 Feedback without attempt/session context cannot identify the reported revision, and vocabulary definitions remain repeated. These inspected facts are preserved as follow-up candidates, not additional acceptance requirements or evidence that all copies currently disagree. Any independently confirmed defect needs its own bounded owner.
 
 ## Verification
 
-- [ ] BUG-351's planner consumes the agreed normalization while preserving separate whole-revision and key-projection meanings; SQL/domain score cases agree under the amended ADR-022.
+- [x] The seed, builder and key projection share the agreed normalization while keeping their comparisons distinct; SQL/domain score cases agree under the amended ADR-022. BUG-351 retains the remaining planner work.
 - [ ] A read-only census counts noncanonical fields without changing stored bytes or hashes. Approved content changes append revisions; historical rows are never rewritten to satisfy canonical comparison.
 - [ ] ADR-021/022 explicitly define hold scope across activation, availability and scoring; a named old hold can be lifted directly, with retirement/rollback cases tested.
 
