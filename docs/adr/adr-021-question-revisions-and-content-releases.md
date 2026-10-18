@@ -155,6 +155,14 @@ No driver for it has been identified. The one benefit cited, telling held, remov
 
 **Reopen if** a reader needs release membership that the projection cannot express.
 
+## Amendment — 2026-10-18: release identity includes selected revisions
+
+BUG-351 part 1 proves that equal content can occupy several immutable revisions. Matching the current revision is insufficient if release reuse substitutes an older revision with the same content hash. The v2 manifest omits revision IDs, while migration 0048 makes its hash and parent unique.
+
+New releases use `app-release-manifest-v3`. Each item names its selected revision ID alongside its slug and unchanged content hash. Reuse and activation verification therefore preserve the selected revision. Existing v2 releases retain their original bytes and hashes and remain readable for activation and rollback. V1 stays unsupported. No schema migration is needed. Content hashes still exclude row identities, as defined above.
+
+`tests/integration/content-release-revision-matching.integration.test.ts` proves the older-duplicate collision, stable restaging, v2 activation and rollback, and refusal of a v3 manifest whose item selects another revision with identical content.
+
 ## Related
 
 - DEBT-483, DEBT-484

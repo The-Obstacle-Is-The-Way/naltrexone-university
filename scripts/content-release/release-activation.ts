@@ -139,6 +139,7 @@ async function releaseEntries(tx: Db, releaseId: string) {
     .select({
       slug: schema.questions.slug,
       contentHash: schema.questionRevisions.contentHash,
+      revisionId: schema.questionRevisions.id,
     })
     .from(schema.contentReleaseItems)
     .innerJoin(
@@ -174,6 +175,7 @@ export async function stageRelease(
             .select({
               slug: schema.questions.slug,
               contentHash: schema.questionRevisions.contentHash,
+              revisionId: schema.questionRevisions.id,
             })
             .from(schema.questionRevisions)
             .innerJoin(
@@ -337,7 +339,7 @@ export async function activateRelease(
     }
     const entries = await releaseEntries(tx, release.id);
     const itemsHash = releaseManifestHash(
-      buildReleaseManifest(entries, manifest.removals),
+      buildReleaseManifest(entries, manifest.removals, manifest.format),
     );
     // In id order, so the plan's withdrawals are, like its other sets.
     const removed = await tx

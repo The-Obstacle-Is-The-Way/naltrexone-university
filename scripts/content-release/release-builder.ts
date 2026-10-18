@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray, lt } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
-import { sha256Hex } from '../../lib/content/parse-mdx-question';
-import { questionRevisionContentHash } from '../../lib/content/question-revision-hash';
+import { canonicalQuestionRevisionJson } from '../../lib/content/question-revision-hash';
 import type { SeedSourceFile } from '../seed/file-reader';
 import { onlyRow } from '../seed/only-row';
 import {
   isSyntheticPlaceholderSource,
+  revisionFieldsFromDb,
   revisionFieldsFromSeed,
   type SeedQuestionRep,
 } from '../seed/question-parser';
@@ -52,29 +52,45 @@ export type StageSummary = {
   withdrawals: number;
 };
 
-// A revision's content_hash is the stored-fields-json-v1 hash of exactly what
-// it holds (ADR-021), so a file matches a revision when the hashes agree.
+// Prefer the current revision when content has returned to an earlier value;
+// otherwise reuse the newest match. Compare canonical fields as the seed
+// does, without changing the stored bytes or their immutable hashes.
 async function revisionForContent(
   tx: Db,
   questionId: string,
   seed: SeedQuestionRep,
 ): Promise<string | null> {
-  const [match] = await tx
-    .select({ id: schema.questionRevisions.id })
+  const revisions = await tx
+    .select({ revision: schema.questionRevisions })
     .from(schema.questionRevisions)
-    .where(
-      and(
-        eq(schema.questionRevisions.questionId, questionId),
-        eq(
-          schema.questionRevisions.contentHash,
-          questionRevisionContentHash(revisionFieldsFromSeed(seed), {
-            hash: sha256Hex,
-          }),
-        ),
-      ),
+    .innerJoin(
+      schema.questions,
+      eq(schema.questions.id, schema.questionRevisions.questionId),
     )
-    .limit(1);
-  return match?.id ?? null;
+    .where(eq(schema.questionRevisions.questionId, questionId))
+    .orderBy(
+      desc(eq(schema.questionRevisions.id, schema.questions.currentRevisionId)),
+      desc(schema.questionRevisions.revisionNumber),
+    );
+  const choices = await tx
+    .select()
+    .from(schema.choices)
+    .where(eq(schema.choices.questionId, questionId));
+  const choicesByRevision = new Map<string, schema.Choice[]>();
+  for (const choice of choices) {
+    const group = choicesByRevision.get(choice.questionRevisionId) ?? [];
+    group.push(choice);
+    choicesByRevision.set(choice.questionRevisionId, group);
+  }
+  const incoming = canonicalQuestionRevisionJson(revisionFieldsFromSeed(seed));
+  for (const { revision } of revisions) {
+    const stored = revisionFieldsFromDb(
+      revision,
+      choicesByRevision.get(revision.id) ?? [],
+    );
+    if (canonicalQuestionRevisionJson(stored) === incoming) return revision.id;
+  }
+  return null;
 }
 
 // DEBT-483 / ADR-021 decision 6: in production, content arrives as a staged
@@ -353,6 +369,7 @@ async function existingRelease(
     .select({
       slug: schema.questions.slug,
       contentHash: schema.questionRevisions.contentHash,
+      revisionId: schema.questionRevisions.id,
     })
     .from(schema.questionRevisions)
     .innerJoin(
