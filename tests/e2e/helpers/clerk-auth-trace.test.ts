@@ -34,7 +34,7 @@ describe('describeNavigationAnswer', () => {
         },
       }),
     ).toBe(
-      'GET 127.0.0.1:3000/app/practice 307 auth=handshake/session-token-expired-refresh-non-eligible → example-12.clerk.accounts.dev/v1/client/handshake params=redirect_url,__clerk_hs_reason,__clerk_db_jwt; cookies: __clerk_redirect_count length=1, __session cleared, __client_uat length=10',
+      'GET 127.0.0.1:3000/app/practice 307 auth=handshake/session-token-expired-refresh-non-eligible → example-12.clerk.accounts.dev/v1/client/handshake hs_reason=session-token-expired params=redirect_url,__clerk_hs_reason,__clerk_db_jwt; cookies: __clerk_redirect_count=1, __session cleared, __client_uat=1791560000',
     );
   });
 
@@ -49,18 +49,18 @@ describe('describeNavigationAnswer', () => {
     ).toBe('GET 127.0.0.1:3000/app/dashboard 200 auth=signed-in');
   });
 
-  it('keeps redirect query names without printing any query value', () => {
+  it('keeps query secrets and malformed handshake reasons out of the trace', () => {
     const description = describeNavigationAnswer({
       method: 'GET',
       url: 'http://localhost/app',
       status: 307,
       headers: {
         location:
-          'https://example.accounts.dev/sign-in?__clerk_hs_reason=private-value&token=another-value',
+          'https://example.accounts.dev/sign-in?__clerk_hs_reason=private%20value&token=another-value',
       },
     });
     expect(description).toContain('params=__clerk_hs_reason,token');
-    expect(description).not.toContain('private-value');
+    expect(description).not.toContain('private value');
     expect(description).not.toContain('another-value');
   });
 });
@@ -127,7 +127,7 @@ describe('describeClerkCookies', () => {
     ]);
 
     expect(description).toBe(
-      `__session length=${jwt({ iat: 1791560000, exp: 1791560060, sid: 'sess_2abcDEF345' }).length}; __client_uat length=10; __clerk_db_jwt length=18`,
+      `__session length=${jwt({ iat: 1791560000, exp: 1791560060, sid: 'sess_2abcDEF345' }).length} iat=1791560000 exp=1791560060; __client_uat=1791559990; __clerk_db_jwt length=18`,
     );
     expect(description).not.toContain('dvb_');
     expect(description).not.toContain('eyJ');
@@ -135,7 +135,7 @@ describe('describeClerkCookies', () => {
 
   it('says when there is no session token at all', () => {
     expect(describeClerkCookies([{ name: '__client_uat', value: '0' }])).toBe(
-      'no __session; __client_uat length=1',
+      'no __session; __client_uat=0',
     );
   });
 });
@@ -188,6 +188,22 @@ describe('isSignInUrl', () => {
 });
 
 describe('ClerkAuthTrace', () => {
+  it('reports a later sign-in after an alert, without repeating either at teardown', () => {
+    const trace = new ClerkAuthTrace(() => 0);
+    trace.noteAnswer('requestfailed POST localhost/app/questions/q');
+    const outputs = [trace.report('none', 'failed-fetch alert')];
+    trace.noteAnswer('GET example.accounts.dev/sign-in 200');
+    outputs.push(trace.report('none', 'sign-in'));
+
+    expect(outputs.filter(Boolean)).toHaveLength(2);
+    expect(outputs[1]?.join('\n')).toContain(
+      'GET example.accounts.dev/sign-in 200',
+    );
+    expect(trace.report('none', 'failed-fetch alert')).toBeNull();
+    expect(trace.report('none', 'sign-in')).toBeNull();
+    expect(trace.report('none', 'test failure')).toBeNull();
+  });
+
   it('keeps event times when asynchronous header reads finish out of order', () => {
     let now = 100;
     const trace = new ClerkAuthTrace(() => now);

@@ -46,7 +46,7 @@ function cookieLengths(header: string | undefined): string {
   );
 }
 
-function decision(value: string | undefined): string | undefined {
+export function decision(value: string | undefined): string | undefined {
   // Clerk's decision is a name, never its arbitrary error message.
   return value && /^[a-z][a-z0-9-]{0,100}$/.test(value) ? value : undefined;
 }
@@ -58,7 +58,7 @@ export function describeFailedRequest(
     ? request.failure
     : `[redacted ${request.failure.length} chars]`;
   return redactSensitiveE2EText(
-    `requestfailed ${request.method} ${requestPlace(request.url)} ${flags(request)} failure=${failure}; observed cookies: ${cookieLengths(request.headers.cookie)}`,
+    `requestfailed ${request.method} ${requestPlace(request.url)} ${flags(request)} failure=${failure}; cookies unavailable (failed-request headers may be provisional; not evidence of missing cookies)`,
   );
 }
 
@@ -81,6 +81,6 @@ export function describeFetchAnswer(
   const reason = decision(answer.responseHeaders['x-clerk-auth-reason']);
   if (status) text += ` auth=${status}`;
   if (reason) text += ` reason=${reason}`;
-  text += `; observed cookies: ${cookieLengths(answer.headers.cookie)}`;
+  text += `; request cookies (response observed): ${cookieLengths(answer.headers.cookie)}`;
   return redactSensitiveE2EText(text);
 }

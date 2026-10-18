@@ -16,6 +16,26 @@ describe('failed-fetch diagnostics', () => {
     },
   };
 
+  it('never treats failed-request provisional cookies as evidence of what was sent', () => {
+    const output = describeFailedRequest({
+      ...request,
+      failure: 'net::ERR_FAILED',
+    });
+    expect(output).toContain(
+      'cookies unavailable (failed-request headers may be provisional; not evidence of missing cookies)',
+    );
+    expect(output).not.toContain('__clerk_db_jwt length=');
+    expect(
+      describeFetchAnswer({
+        ...request,
+        status: 307,
+        responseHeaders: { location: 'https://other.test/' },
+      }),
+    ).toContain(
+      'request cookies (response observed): __clerk_db_jwt length=13',
+    );
+  });
+
   it('records a token-bearing request and redirect without query, cookie or action values', () => {
     const trace = new ClerkAuthTrace(() => 0);
     trace.noteAnswer(

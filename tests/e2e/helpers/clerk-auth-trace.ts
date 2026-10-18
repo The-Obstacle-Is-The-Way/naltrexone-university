@@ -1,9 +1,12 @@
 import type { Frame, Page, Request, Response } from '@playwright/test';
+import { TimeoutError, withTimeout } from '../../../lib/with-timeout';
 import { observeFailedFetchAlerts } from './clerk-fetch-alert';
 import {
+  decision,
   describeFailedRequest,
   describeFetchAnswer,
 } from './clerk-fetch-trace';
+import { DIAGNOSIS_TIMEOUT_MS } from './clerk-session-deadlines';
 import { redactSensitiveE2EText } from './e2e-log-redaction';
 
 // BUG-333: a signed-in test can lose its session partway through and land on
@@ -59,20 +62,45 @@ function place(url: URL): string {
   return known ? `${url.host}${url.pathname}` : url.host;
 }
 
+function numericMetadata(name: string, value: unknown): string {
+  const text =
+    typeof value === 'string' || typeof value === 'number'
+      ? String(value)
+      : (JSON.stringify(value) ?? '');
+  return `${name}${/^\d+$/.test(text) ? `=${text}` : ` length=${text.length}`}`;
+}
+
+function sessionTimes(token: string): string {
+  try {
+    const claims: unknown = JSON.parse(
+      Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'),
+    );
+    if (!isRecord(claims)) return '';
+    return ['iat', 'exp']
+      .flatMap((name) =>
+        name in claims ? [numericMetadata(name, claims[name])] : [],
+      )
+      .join(' ');
+  } catch {
+    // An unreadable token still reports its length, never its value.
+    return '';
+  }
+}
+
 function describeSetCookies(header: string | undefined): string[] {
   if (!header) return [];
   return header.split('\n').flatMap((line) => {
     const [pair = '', ...attributes] = line.split(';');
-    const [name = '', value = ''] = pair.trim().split('=');
+    const [name = '', ...parts] = pair.trim().split('=');
+    const value = parts.join('=');
     const cleared =
       value === '' ||
       attributes.some((attribute) => /^\s*max-age=0\s*$/i.test(attribute));
     if (name === '__clerk_redirect_count')
-      return [`${name} length=${value.length}`];
+      return [numericMetadata(name, value)];
     if (name.startsWith('__session'))
       return [`${name} ${cleared ? 'cleared' : 'set'}`];
-    if (name.startsWith('__client_uat'))
-      return [`${name} length=${value.length}`];
+    if (name.startsWith('__client_uat')) return [numericMetadata(name, value)];
     if (name.startsWith('__clerk_db_jwt')) return [`${name} set`];
     return [];
   });
@@ -87,13 +115,18 @@ export function describeNavigationAnswer(answer: {
 }): string {
   const url = new URL(answer.url);
   let text = `${answer.method} ${place(url)} ${answer.status}`;
-  const status = answer.headers['x-clerk-auth-status'];
-  const reason = answer.headers['x-clerk-auth-reason'];
+  const status = decision(answer.headers['x-clerk-auth-status']);
+  const reason = decision(answer.headers['x-clerk-auth-reason']);
   if (status) text += ` auth=${status}${reason ? `/${reason}` : ''}`;
   const location = answer.headers.location;
   if (location) {
     const target = new URL(location, url);
     text += ` → ${place(target)}`;
+    const hsReason = target.searchParams.get('__clerk_hs_reason');
+    if (hsReason !== null)
+      text += decision(hsReason)
+        ? ` hs_reason=${hsReason}`
+        : ` hs_reason length=${hsReason.length}`;
     const names = [...target.searchParams.keys()];
     if (names.length > 0) text += ` params=${names.join(',')}`;
   }
@@ -113,7 +146,12 @@ export function describeClerkCookies(
     if (
       /^__(?:session|client_uat|clerk_db_jwt)(?:_[A-Za-z0-9_-]{8})?$/.test(name)
     ) {
-      parts.push(`${name} length=${value.length}`);
+      if (name.startsWith('__client_uat')) {
+        parts.push(numericMetadata(name, value));
+      } else {
+        const times = name.startsWith('__session') ? sessionTimes(value) : '';
+        parts.push(`${name} length=${value.length}${times ? ` ${times}` : ''}`);
+      }
     }
   }
   return parts.join('; ');
@@ -144,15 +182,20 @@ export function isSignInUrl(url: string): boolean {
   }
 }
 
-/** A bounded, timed record that reports once. */
+type TraceReason = 'sign-in' | 'failed-fetch alert' | 'test failure';
+// A navigation burst can add about 60 action/RSC answers. Keep the preceding
+// Clerk environment answer and failure as well, without an unbounded log.
+const TRACE_ENTRY_LIMIT = 100;
+
+/** A bounded, timed record that preserves each distinct failure signal. */
 export class ClerkAuthTrace {
   private readonly entries: Array<{ at: number; text: string }> = [];
   private readonly startedAt: number;
-  private reported = false;
+  private readonly reported = new Set<TraceReason>();
 
   constructor(
     private readonly now: () => number = Date.now,
-    private readonly limit = 40,
+    private readonly limit = TRACE_ENTRY_LIMIT,
   ) {
     this.startedAt = now();
   }
@@ -169,9 +212,16 @@ export class ClerkAuthTrace {
     );
   }
 
-  report(cookies: string): string[] | null {
-    if (this.reported) return null;
-    this.reported = true;
+  report(
+    cookies: string,
+    reason: TraceReason = 'test failure',
+  ): string[] | null {
+    if (
+      this.reported.has(reason) ||
+      (reason === 'test failure' && this.reported.size > 0)
+    )
+      return null;
+    this.reported.add(reason);
     return [
       ...this.entries.map(
         ({ at, text }) => `+${at - this.startedAt}ms ${text}`,
@@ -181,12 +231,45 @@ export class ClerkAuthTrace {
   }
 }
 
-type TraceReason = 'sign-in' | 'failed-fetch alert' | 'test failure';
 const reporters = new WeakMap<Page, (reason: TraceReason) => Promise<void>>();
 
 /** Called by the authenticated-test fixture before Playwright closes the page. */
 export async function reportFailedClerkAuthTrace(page: Page): Promise<void> {
   await reporters.get(page)?.('test failure');
+}
+
+/** The same reporting path serves page signals and fixture teardown. */
+export async function reportClerkAuthTrace(input: {
+  trace: ClerkAuthTrace;
+  pending: Iterable<Promise<void>>;
+  reason: TraceReason;
+  readCookies: () => Promise<Array<{ name: string; value: string }>>;
+  write: (text: string) => void;
+}): Promise<void> {
+  const cookies = await withTimeout(
+    (async () => {
+      await Promise.allSettled([...input.pending]);
+      return input.readCookies();
+    })(),
+    DIAGNOSIS_TIMEOUT_MS,
+  ).catch((error: unknown) => {
+    input.trace.noteAnswer(
+      error instanceof TimeoutError
+        ? `Some diagnostic reads timed out after ${DIAGNOSIS_TIMEOUT_MS}ms`
+        : 'Context cookies could not be read',
+    );
+    return undefined;
+  });
+  const lines = input.trace.report(
+    cookies ? describeClerkCookies(cookies) : 'unavailable',
+    input.reason,
+  );
+  if (lines)
+    input.write(
+      redactSensitiveE2EText(
+        [`[E2E_CLERK_AUTH_TRACE] ${input.reason}:`, ...lines].join('\n  '),
+      ),
+    );
 }
 
 function requestDetails(request: Request, headers: Headers) {
@@ -233,20 +316,14 @@ export async function startClerkAuthTrace(
     pending.add(settled);
     void settled.finally(() => pending.delete(settled));
   };
-  const report = async (reason: TraceReason) => {
-    await Promise.allSettled([...pending]);
-    const cookies = await page
-      .context()
-      .cookies()
-      .catch(() => []);
-    const lines = trace.report(describeClerkCookies(cookies));
-    if (lines)
-      write(
-        redactSensitiveE2EText(
-          [`[E2E_CLERK_AUTH_TRACE] ${reason}:`, ...lines].join('\n  '),
-        ),
-      );
-  };
+  const report = (reason: TraceReason) =>
+    reportClerkAuthTrace({
+      trace,
+      pending,
+      reason,
+      write,
+      readCookies: () => page.context().cookies(),
+    });
   reporters.set(page, report);
   await page.exposeFunction('__e2eFailedFetchAlert', () =>
     report('failed-fetch alert'),
@@ -281,19 +358,14 @@ export async function startClerkAuthTrace(
   });
   page.on('requestfailed', (request: Request) => {
     const at = Date.now();
-    track(
-      request
-        .allHeaders()
-        .catch(() => request.headers())
-        .then((headers) => {
-          trace.noteAnswer(
-            describeFailedRequest({
-              ...requestDetails(request, headers),
-              failure: request.failure()?.errorText ?? 'unknown',
-            }),
-            at,
-          );
-        }),
+    // Chromium's loadingFailed can resolve allHeaders() to provisional
+    // headers. Do not turn their missing Cookie field into wire evidence.
+    trace.noteAnswer(
+      describeFailedRequest({
+        ...requestDetails(request, request.headers()),
+        failure: request.failure()?.errorText ?? 'unknown',
+      }),
+      at,
     );
   });
   page.on('response', (response: Response) => {
