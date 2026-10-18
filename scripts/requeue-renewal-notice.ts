@@ -4,7 +4,6 @@ import postgres from 'postgres';
 import * as schema from '../db/schema';
 import { NobleSha256Hasher } from '../src/adapters/gateways/noble-sha256-hasher';
 import { DrizzleRenewalNoticeDeliveryRepository } from '../src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
-import type { DrizzleDb } from '../src/adapters/shared/database-types';
 import { zUuid } from '../src/adapters/shared/zod-schemas';
 import type { RenewalNoticeDeliveryRepository } from '../src/application/ports/repositories';
 import { RequeueRenewalNoticeDeliveryUseCase } from '../src/application/use-cases/requeue-renewal-notice-delivery';
@@ -27,29 +26,26 @@ export type RequeueRenewalNoticeOptions = {
   confirmedNoSend: boolean;
 };
 
-type RequeueRenewalNoticeSql = {
-  end(options: { timeout: number }): Promise<void>;
-};
-
-export type RequeueRenewalNoticeDeps<
-  TSql extends RequeueRenewalNoticeSql,
-  TDb,
-> = {
-  createSql(databaseUrl: string): TSql;
-  createDb(sql: TSql): TDb;
-  createRepository(db: TDb): RenewalNoticeDeliveryRepository;
+export type RequeueRenewalNoticeDeps = {
+  openRepository(databaseUrl: string): {
+    repository: RenewalNoticeDeliveryRepository;
+    close(): Promise<void>;
+  };
 };
 
 type TextOutput = { write(text: string): unknown };
 
-const DEFAULT_DEPS: RequeueRenewalNoticeDeps<
-  ReturnType<typeof postgres>,
-  DrizzleDb
-> = {
-  createSql: (databaseUrl) => postgres(databaseUrl, { max: 1 }),
-  createDb: (sql) => drizzle(sql, { schema }),
-  createRepository: (db) =>
-    new DrizzleRenewalNoticeDeliveryRepository(db, new NobleSha256Hasher()),
+const DEFAULT_DEPS: RequeueRenewalNoticeDeps = {
+  openRepository: (databaseUrl) => {
+    const sql = postgres(databaseUrl, { max: 1 });
+    return {
+      repository: new DrizzleRenewalNoticeDeliveryRepository(
+        drizzle(sql, { schema }),
+        new NobleSha256Hasher(),
+      ),
+      close: () => sql.end({ timeout: SQL_END_TIMEOUT_SECONDS }),
+    };
+  },
 };
 
 export function parseRequeueRenewalNoticeArgs(
@@ -109,7 +105,7 @@ export async function runRequeueRenewalNotice({
   env?: Readonly<Record<string, string | undefined>>;
   output?: TextOutput;
   errorOutput?: TextOutput;
-  deps?: RequeueRenewalNoticeDeps<RequeueRenewalNoticeSql, unknown>;
+  deps?: RequeueRenewalNoticeDeps;
   now?: () => Date;
 } = {}): Promise<void> {
   const options = parseRequeueRenewalNoticeArgs(argv);
@@ -123,12 +119,11 @@ export async function runRequeueRenewalNotice({
   await runHumanDatabaseCommand({
     env,
     execute: async (databaseUrl) => {
-      const sql = deps.createSql(databaseUrl);
-      const db = deps.createDb(sql);
+      const { repository, close } = deps.openRepository(databaseUrl);
 
       try {
         const delivery = await new RequeueRenewalNoticeDeliveryUseCase(
-          deps.createRepository(db),
+          repository,
           now,
         ).execute({ ...options, operator });
         output.write(
@@ -137,7 +132,7 @@ export async function runRequeueRenewalNotice({
             'The next daily renewal-notice run (09:00 UTC) rechecks it before sending it.\n',
         );
       } finally {
-        await sql.end({ timeout: SQL_END_TIMEOUT_SECONDS });
+        await close();
       }
     },
     log: (message) => {

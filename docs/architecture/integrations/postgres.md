@@ -58,7 +58,7 @@ earlier savepoint also rolls back `SET LOCAL`.
 
 ## Processes Using the Application Role
 
-Inventory, 2026-10-17: all repository production clients use the explicit
+Inventory, 2026-10-17, with the requeue script added 2026-10-18: all repository production clients use the explicit
 `DATABASE_URL` or the managed seed's named-environment resolution. The same role
 inherits the three defaults regardless of entry point.
 

@@ -12,17 +12,26 @@ A renewal notice that the system will not send again by itself sits in `renewal_
 The alert carries only a count, and Vercel keeps the log line that names the delivery ID for an hour on Hobby. Find the row with a read-only query, such as one in Neon's SQL editor:
 
 ```sql
-SELECT id, notice_kind, status, failure_class, failure_code,
-       attempt_count, last_attempt_at, applicable_at
+SELECT id, notice_kind, status, failure_class, failure_code, destination,
+       provider_event_id, attempt_count, last_attempt_at, applicable_at
 FROM renewal_notice_deliveries
 WHERE status IN ('outcome_unknown', 'terminal_failure')
 ORDER BY last_attempt_at DESC NULLS LAST;
 ```
 
+Note the row's `provider_event_id`; step 4 compares against it.
+
 ## 2. Decide whether to send it again
 
-- **`outcome_unknown`: check Resend first.** In Resend's dashboard, look for an email to the row's `destination` near its `last_attempt_at`. A send reuses the row's provider idempotency key. Resend honors that key for only 24 hours (ADR-027), so after that a requeued notice is always a new email. If Resend shows the email, do not requeue it; the notice was sent. Requeue only when you are sure nothing went out, and pass `--confirmed-no-send`.
-- **`terminal_failure`: fix the cause first.** `failure_class` and `failure_code` say why. A bounced or suppressed address fails again until the address changes. A notice refused as superseded (`notice_superseded`) or late (`notice_deadline_passed`) is refused again, because dispatch rechecks every scheduled notice before sending it.
+A requeued notice goes to the same `destination`, with the same content and the same Resend idempotency key. Resend honors that key for 24 hours (ADR-027).
+
+- **Wait until 24 hours after `last_attempt_at`.** Inside that window Resend answers a resend with the earlier email and sends nothing, yet the row is marked `accepted`. After it, a requeued notice is always a new email.
+- **`outcome_unknown`: check Resend first.** In Resend's dashboard, look for an email to the row's `destination` near its `last_attempt_at`. If Resend shows one, the notice was sent; do not requeue it. Requeue only when you are sure nothing went out, and pass `--confirmed-no-send`.
+- **`terminal_failure`: fix the cause first.** `failure_class` and `failure_code` say why.
+  - **A bounced or suppressed address fails again,** because the requeue sends to the same address.
+  - **A scheduled notice whose account email changed:** do not requeue the old row. Dispatch would refuse it as `destination_changed`. While the notice window is still open, the daily job queues a new notice for the new address.
+  - **An acknowledgment** (`notice_kind = 'acknowledgment'`) is never rechecked, so its requeue goes to the old address. Nothing can send it to a new address; raise that with the owner.
+  - **A notice refused as superseded or late** (`notice_superseded`, `notice_deadline_passed`) is refused again, because dispatch rechecks every scheduled notice before sending it.
 
 ## 3. Requeue it
 
@@ -39,4 +48,9 @@ The redacted `Database target:` line goes to stderr. On success, stdout names th
 
 ## 4. Confirm it went out
 
-The next daily renewal-notice run, at 09:00 UTC (`vercel.json`), picks up the queued row, rechecks it and sends it. Afterwards the row should be `accepted`, or `delivered` once Resend's delivery report arrives. If it is quarantined again, start over at step 1.
+The next daily renewal-notice run, at 09:00 UTC (`vercel.json`), picks up the queued row, rechecks it and sends it. Then check both:
+
+- **The row** is `accepted`, or `delivered` once Resend's delivery report arrives, and its `provider_event_id` differs from the one you noted. The same ID means Resend replayed the earlier email and nothing new was sent.
+- **Resend** shows that new email.
+
+If the row is quarantined again, start over at step 1.

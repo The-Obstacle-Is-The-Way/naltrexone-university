@@ -146,7 +146,7 @@ describe('runRequeueRenewalNotice', () => {
         '',
       ].join('\n'),
     );
-    expect(harness.sql.end).toHaveBeenCalledWith({ timeout: 5 });
+    expect(harness.close).toHaveBeenCalledOnce();
   });
 
   it('refuses an unknown outcome without the no-send confirmation and leaves it quarantined', async () => {
@@ -168,7 +168,44 @@ describe('runRequeueRenewalNotice', () => {
       requeueAudit: [],
     });
     expect(harness.output.text()).toBe('');
-    expect(harness.sql.end).toHaveBeenCalledWith({ timeout: 5 });
+    expect(harness.close).toHaveBeenCalledOnce();
+  });
+
+  it('prints the latest audit entry for a notice requeued before', async () => {
+    const { repository, deliveryId } = await quarantinedDelivery();
+    await repository.requeue({
+      id: deliveryId,
+      reason: 'First requeue',
+      requeuedBy: 'earlier@example.com',
+      requeuedAt: new Date('2026-10-17T12:00:00.000Z'),
+      confirmedNoSend: true,
+    });
+    await repository.claim({
+      id: deliveryId,
+      attemptId: 'attempt-2',
+      startedAt: now,
+    });
+    await repository.markTerminalFailure({
+      id: deliveryId,
+      attemptId: 'attempt-2',
+      failureClass: 'provider_bounced',
+      failureCode: 'bounced',
+      failedAt: now,
+    });
+    const harness = createHarness(repository);
+
+    await runRequeueRenewalNotice({
+      argv: ['--delivery-id', deliveryId, '--reason', 'Mailbox fixed'],
+      env: localEnv({ RENEWAL_NOTICE_OPERATOR: OPERATOR }),
+      output: harness.output,
+      errorOutput: harness.errorOutput,
+      deps: harness.deps,
+      now: () => now,
+    });
+
+    expect(harness.output.text()).toContain(
+      `Audit entry: {"reason":"Mailbox fixed","requeuedAt":"${now.toISOString()}","requeuedBy":"${OPERATOR}","confirmedNoSend":false,"priorStatus":"terminal_failure"}`,
+    );
   });
 
   it('refuses a delivery that is not quarantined', async () => {
@@ -241,7 +278,7 @@ describe('runRequeueRenewalNotice', () => {
         }),
       ).rejects.toThrow(/RENEWAL_NOTICE_OPERATOR must name the operator/);
     }
-    expect(harness.createSql).not.toHaveBeenCalled();
+    expect(harness.openRepository).not.toHaveBeenCalled();
   });
 
   it('refuses bad arguments before opening the database', async () => {
@@ -258,7 +295,7 @@ describe('runRequeueRenewalNotice', () => {
         deps: harness.deps,
       }),
     ).rejects.toThrow(/--delivery-id must be a delivery UUID/);
-    expect(harness.createSql).not.toHaveBeenCalled();
+    expect(harness.openRepository).not.toHaveBeenCalled();
   });
 
   it('requires an explicit DATABASE_URL before opening the database', async () => {
@@ -280,10 +317,10 @@ describe('runRequeueRenewalNotice', () => {
         deps: harness.deps,
       }),
     ).rejects.toThrow(/explicit DATABASE_URL/i);
-    expect(harness.createSql).not.toHaveBeenCalled();
+    expect(harness.openRepository).not.toHaveBeenCalled();
   });
 
-  it('refuses a remote target without its exact acknowledgement', async () => {
+  it('refuses a remote target without its exact acknowledgment', async () => {
     const { repository, deliveryId } = await quarantinedDelivery();
     const harness = createHarness(repository);
 
@@ -306,7 +343,7 @@ describe('runRequeueRenewalNotice', () => {
         deps: harness.deps,
       }),
     ).rejects.toThrow('DB_TARGET_ACK must exactly equal ["db.example/app"]');
-    expect(harness.createSql).not.toHaveBeenCalled();
+    expect(harness.openRepository).not.toHaveBeenCalled();
   });
 
   it('names the redacted database target on stderr', async () => {
@@ -331,7 +368,7 @@ describe('runRequeueRenewalNotice', () => {
       'Database target: LOCAL localhost:55432/addiction_boards_test',
     );
     expect(harness.errorOutput.text()).not.toContain('postgres:postgres');
-    expect(harness.createSql).toHaveBeenCalledWith(LOCAL_DATABASE_URL);
+    expect(harness.openRepository).toHaveBeenCalledWith(LOCAL_DATABASE_URL);
   });
 });
 
@@ -388,23 +425,16 @@ async function quarantinedDelivery() {
   return { repository, deliveryId };
 }
 
-type SqlStub = { end: (options: { timeout: number }) => Promise<void> };
-
 function createHarness(repository: FakeRenewalNoticeDeliveryRepository) {
-  const sql = { end: vi.fn<SqlStub['end']>().mockResolvedValue(undefined) };
-  const db = {};
-  const createSql = vi.fn((_databaseUrl: string) => sql);
-  const deps: RequeueRenewalNoticeDeps<SqlStub, object> = {
-    createSql,
-    createDb: () => db,
-    createRepository: (receivedDb) => {
-      expect(receivedDb).toBe(db);
-      return repository;
-    },
-  };
+  const close = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const openRepository = vi.fn((_databaseUrl: string) => ({
+    repository,
+    close,
+  }));
+  const deps: RequeueRenewalNoticeDeps = { openRepository };
   return {
-    sql,
-    createSql,
+    close,
+    openRepository,
     deps,
     output: createWritableSink(),
     errorOutput: createWritableSink(),
