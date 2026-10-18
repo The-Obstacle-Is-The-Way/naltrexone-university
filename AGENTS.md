@@ -134,5 +134,6 @@ pnpm quality:crap | test:mutation                      # observational quality r
 - [`docs/product/specification.md`](docs/product/specification.md): the product specification. Where it disagrees with the code on a schema or type, the code is right; correct the spec.
 - [`docs/design-system/`](docs/design-system/README.md): the design system. [`docs/guides/`](docs/guides/README.md): how to test, release, review and merge, and run UI QA. [`docs/architecture/`](docs/architecture/README.md): how the system is built. The map: [`docs/README.md`](docs/README.md).
 - [`docs/guides/testing/browser-automation.md`](./docs/guides/testing/browser-automation.md): browser checks behind Clerk sign-in. Never skip a visual check because a page redirects to sign-in: sign in first. Use `--profile`, never `--state`; keep `localhost` exact. With Chrome MCP, the user's browser is usually signed in already.
+- [`scripts/README.md`](scripts/README.md): what each script does and who runs it.
 - [`.agents/skills/`](.agents/skills/README.md): vendored agent skills and their refresh procedure.
 - CI secrets: step-scoped credentials, SHA-pinned actions, and no credentials for Dependabot ([the CI Secret Standard](./docs/architecture/environments.md#ci-secret-standard)).
