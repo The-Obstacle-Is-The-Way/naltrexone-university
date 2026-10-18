@@ -8,7 +8,7 @@
 
 ## Summary
 
-A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. The release builder, which production will use after the bootstrap (DEBT-483), refuses only part of the same case. Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse. Part 2 names changes and returns in both previews, freezes the earlier revision candidates at bootstrap, and requires named returns at activation. Source admission remains. The bootstrap alone does not fix it.
+A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. Before part 2, the release builder refused only part of the same case. Production will use it after the bootstrap (DEBT-483). Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse. Part 2 names changes and returns in both previews, freezes the earlier revision candidates at bootstrap, and requires named returns at activation. Source admission remains. The bootstrap alone does not fix it.
 
 Before part 1, reproduced on 2026-10-17 on a disposable local database, with the public placeholder question; independently repeated with entirely synthetic content through the same seed, builder and activation functions:
 - **1–2. Seed and correct.** Seed key A, then the corrected key B: R1 (key A), then R2 (key B), live.
@@ -23,7 +23,7 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 **The cause, from first principles.**
 - **No enforced source version comes with the input.** The intended authoring source is the content repository. The managed production seed imports a local copy without a commit-bound provenance check. A content hash proves equality, not which source came later.
 - **Neither writer establishes source freshness.** The seed compares the file with the live revision only, so a changed file becomes current at the next successful write. This is last-writer-wins behavior, not timestamp-based conflict resolution or proof that the content is newer.
-- **The builder sees only stored revisions.** It also asks whether the file equals a stored revision, so a stale key with a change to revision-hashed fields that matches no stored revision can pass. Status/tag-only changes do not alter that hash.
+- **The builder's old check compared whole revisions.** A stale key with a change to revision-hashed fields that matched no stored revision could pass. Status/tag-only changes do not alter that hash.
 - **Append-only revisions keep a record, not a guard.** They record R3; they do not prevent it.
 
 **What learners see while the stale key is live.** ADR-022 Decision 4 compares the graded revision's key with the current key when deriving score eligibility and notices. It does not regrade the stored answer. For otherwise eligible answers, a regression reverses which key counts:
@@ -86,7 +86,7 @@ P2: a reachable, operator-triggered content regression with a manual workaround:
 
 1. **Prefer the live revision, name every answer-key change, and admit only forward commits of the content repository's `main`.** *Recommended.* Three small parts, each red first. Parts 1 and 2 are built; part 3 remains proposed below.
 2. **Bootstrap first, then the same steps in the builder only.** The seed then refuses production. Choose this if the owner schedules the bootstrap before part 3 ships.
-3. **Bootstrap alone (DEBT-483).** This does not fix the bug: the builder accepts step 8. Before part 1 it also refused step 6.
+3. **Bootstrap alone (DEBT-483).** This does not establish source freshness. Before part 2, the builder accepted step 8. Before part 1 it also refused step 6.
 4. **Process only:**
    - refresh drafts from the content repository's `main` before every production seed;
    - move the 2026-03-31 backups out of `content/drafts/`.
@@ -121,7 +121,7 @@ The v2 manifest names content hashes, not revision IDs (`release-manifest.ts:19,
 - The bootstrap records the commit verified against live content as the first watermark, and the existing guard then retires the direct seed for production.
 - This is the deployment pipeline's discipline: production receives only what was built from a known commit (Humble and Farley, *Continuous Delivery*).
 
-**Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:421-443`), and add the source commit to it. This is Fowler's Optimistic Offline Lock. No separate generation counter: revision ids are immutable, so a state that changes and changes back is exactly what the operator reviewed.
+**Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:421-443`), and add the source commit to it. This is Fowler's Optimistic Offline Lock. No separate generation counter: the plan binds immutable revision pairs and the key-change and key-return lists. Returning the pointer to an earlier release can still change the return list, so the old preview must be repeated.
 
 **If the seed must write production before the bootstrap:** admit the commit (advance the watermark under the pointer lock) before any write, check each per-question transaction against the admitted commit, and finish an interrupted run by rerunning the same commit. Questions already written match and are skipped. No receipts table.
 
