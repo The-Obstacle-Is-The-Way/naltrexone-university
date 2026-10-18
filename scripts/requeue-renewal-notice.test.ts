@@ -142,7 +142,7 @@ describe('runRequeueRenewalNotice', () => {
       [
         `Requeued renewal notice ${deliveryId}; its status is now queued.`,
         `Audit entry: {"reason":"Resend shows no email for this notice","requeuedAt":"${now.toISOString()}","requeuedBy":"${OPERATOR}","confirmedNoSend":true,"priorStatus":"outcome_unknown"}`,
-        'The next daily renewal-notice run (09:00 UTC) rechecks it before sending it.',
+        'The next daily renewal-notice run, which starts between 09:00 and 10:00 UTC, rechecks it before sending it.',
         '',
       ].join('\n'),
     );

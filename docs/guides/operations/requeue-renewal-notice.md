@@ -54,7 +54,7 @@ The redacted `Database target:` line goes to stderr. On success, stdout names th
 
 ## 4. Confirm it went out
 
-The next daily renewal-notice run, at 09:00 UTC (`vercel.json`), picks up the queued row, rechecks it and sends it. Then check both:
+The next daily renewal-notice run, scheduled for 09:00 UTC (`vercel.json`) and started by Vercel at any time before 10:00 UTC, picks up the queued row, rechecks it and sends it. After that run, check both:
 
 - **The row** is `accepted`, or `delivered` once Resend's delivery report arrives.
 - **Resend** shows the email with the row's new `provider_event_id`, and that email was delivered.

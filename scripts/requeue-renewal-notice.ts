@@ -129,7 +129,7 @@ export async function runRequeueRenewalNotice({
         output.write(
           `Requeued renewal notice ${delivery.id}; its status is now ${delivery.status}.\n` +
             `Audit entry: ${JSON.stringify(delivery.requeueAudit.at(-1))}\n` +
-            'The next daily renewal-notice run (09:00 UTC) rechecks it before sending it.\n',
+            'The next daily renewal-notice run, which starts between 09:00 and 10:00 UTC, rechecks it before sending it.\n',
         );
       } finally {
         await close();
