@@ -1,18 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { runDbSeed } from './db-seed';
-import type { SeedOptions } from './seed/seed-options';
+import { recordSeeds } from './seed/seed-test-helpers';
 
 const LOCAL_DATABASE_URL = 'postgresql://local@127.0.0.1:55432/app';
-
-function recordSeeds() {
-  const seeds: Array<{ databaseUrl: string; options: SeedOptions }> = [];
-  return {
-    seeds,
-    seed: async (databaseUrl: string, options: SeedOptions) => {
-      seeds.push({ databaseUrl, options });
-    },
-  };
-}
 
 describe('db:seed placeholder choice', () => {
   it('seeds without the placeholder fixtures unless the command line asks', async () => {

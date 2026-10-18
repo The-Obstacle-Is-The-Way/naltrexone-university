@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSeedOptions } from './seed-options';
+import { parseSeedOptions, parseSeedPlanOnly } from './seed-options';
 
 describe('parseSeedOptions', () => {
   it('leaves the placeholder fixtures out by default', () => {
@@ -14,7 +14,7 @@ describe('parseSeedOptions', () => {
 
   // BUG-353: the seed once read this variable, so an exported value reached
   // the production seed through its inherited environment.
-  it.each(['true', 'false'])(
+  it.each(['true', 'false', ''])(
     'refuses a set SEED_INCLUDE_PLACEHOLDERS (%s), which it no longer reads',
     (value) => {
       expect(() =>
@@ -25,9 +25,36 @@ describe('parseSeedOptions', () => {
     },
   );
 
+  it('accepts the flag after the -- that pnpm passes through', () => {
+    expect(parseSeedOptions(['--', '--include-placeholders'], {})).toEqual({
+      includePlaceholders: true,
+    });
+  });
+
   it('refuses an argument it does not know', () => {
     expect(() => parseSeedOptions(['--include-placeholder'], {})).toThrow(
       'Unknown seed argument: --include-placeholder. The only option is --include-placeholders.',
     );
+  });
+});
+
+describe('parseSeedPlanOnly', () => {
+  const usage = 'Usage: pnpm db:seed:prod [-- --plan]';
+
+  it.each([
+    [[], false],
+    [['--'], false],
+    [['--plan'], true],
+    [['--', '--plan'], true],
+  ])('reads %j as plan-only: %s', (args, planOnly) => {
+    expect(parseSeedPlanOnly(args, usage)).toBe(planOnly);
+  });
+
+  it.each([
+    [['--', '--unsupported']],
+    [['--plan', '--plan']],
+    [['--plan', '--']],
+  ])('refuses %j with the command usage', (args) => {
+    expect(() => parseSeedPlanOnly(args, usage)).toThrow(usage);
   });
 });

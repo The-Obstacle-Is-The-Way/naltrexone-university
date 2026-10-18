@@ -229,7 +229,7 @@ node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$DEPLOY_T
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
 ```
 
-Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target.
+Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database: its reset republishes the placeholder questions placeholder-01 and placeholder-02 there, and writes the test user's state (BUG-353).
 
 The E2E credential preflight includes DEBT-391's migration-ledger check: it compares the active database against `db/migrations/meta/_journal.json` before seed/reset. The default local Docker flow also migrates first, so the check should pass by construction; it remains useful for explicit deploy-target runs.
 

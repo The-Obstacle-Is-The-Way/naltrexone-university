@@ -1,5 +1,8 @@
 import { pathToFileURL } from 'node:url';
-import { requireExplicitDatabaseUrl } from '../database-target';
+import {
+  classifyDatabaseTarget,
+  requireExplicitDatabaseUrl,
+} from '../database-target';
 import { parseSeedOptions, type SeedOptions } from '../seed/seed-options';
 import { runManagedDatabaseCommand } from './database-command-managed';
 
@@ -26,6 +29,15 @@ export async function runManagedDbSeed({
 }: ManagedDbSeedInput = {}): Promise<void> {
   const options = parseSeedOptions(args, env);
   const databaseUrl = requireExplicitDatabaseUrl(env);
+  // Every caller that passes the flag (CI, the hosted Checkout smoke, the
+  // local E2E plan) seeds a loopback database, and this path takes no
+  // DB_TARGET_ACK, so a remote target here is a mistake (BUG-353).
+  const target = classifyDatabaseTarget(databaseUrl);
+  if (options.includePlaceholders && target.kind !== 'LOCAL') {
+    throw new Error(
+      `The managed seed adds the placeholder fixtures only to a local database, and ${target.display} is remote.`,
+    );
+  }
   await runManagedDatabaseCommand({
     databaseUrl,
     log,
