@@ -115,7 +115,7 @@ To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. T
 
 GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 container on every run, in its `Start Postgres` step (`scripts/ci/start-postgres.sh`), from the first of Docker Hub, ECR Public and Google's mirror that serves the pinned digest. It does not depend on local Docker state. The pipeline runs:
 
-1. Start the digest-pinned Compose transaction pooler on the resolver's port, using the existing CI Postgres container.
+1. Pull PgBouncer through the same bounded helper as Postgres, trying Docker Hub then Google's mirror. The helper exports the serving repository. Start the digest-pinned Compose transaction pooler on the resolver's port with `--pull never` in both Compose calls, using the existing CI Postgres container. The dependency update guide owns its refresh duty (BUG-352).
 2. `pnpm db:migrate` — applies migrations to the CI database
 3. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks
 4. `pnpm test:integration:coverage` — runs all integration tests with coverage, including the pooled timeout and managed-migration proofs

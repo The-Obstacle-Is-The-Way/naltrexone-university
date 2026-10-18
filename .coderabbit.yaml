@@ -162,8 +162,10 @@ reviews:
         Review bug and debt records against docs/records/README.md, "How
         Records Work". It governs status and closure, over any stored learning:
         - Statuses are Open, In Progress, Blocked, or "Verifying — <the
-          remaining check>; due YYYY-MM-DD". There is no "Resolution State"
-          field.
+          remaining check>; due YYYY-MM-DD". Open, In Progress and Blocked
+          may add the next action after a dash ("Open — <next action>"),
+          where a due date goes; the status line stays within 200
+          characters. There is no "Resolution State" field.
         - When a fix merges but a check remains that only promotion or
           production can satisfy, the fixing PR itself sets Verifying,
           effective when it merges.

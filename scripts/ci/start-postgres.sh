@@ -6,55 +6,15 @@ set -euo pipefail
 # This starts CI's Postgres from the first of three registries that serves
 # the pinned digest. A pull by digest checks the manifest and every layer
 # against it, so each registry yields the same bytes.
-registries=(
-  docker.io/library/postgres
-  public.ecr.aws/docker/library/postgres
+source "$(dirname "${BASH_SOURCE[0]}")/pull-image.sh"
+IMAGE_PULL_TIMEOUT_SECONDS="${POSTGRES_PULL_TIMEOUT_SECONDS:-60}" pull_image Postgres "${POSTGRES_IMAGE_DIGEST:-}" \
+  docker.io/library/postgres \
+  public.ecr.aws/docker/library/postgres \
   mirror.gcr.io/library/postgres
-)
-digest="${POSTGRES_IMAGE_DIGEST:-}"
-pull_attempts=2
-# During the incident some pulls hung before failing; a stalled registry
-# must not use up the step's time before the others are tried.
-pull_timeout_seconds="${POSTGRES_PULL_TIMEOUT_SECONDS:-60}"
-retry_delay_seconds=10
+image="$PULLED_IMAGE"
 health_checks=60
 health_interval_seconds=2
 container=postgres
-
-if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-  echo "::error::POSTGRES_IMAGE_DIGEST must be sha256: and 64 hex digits, not '${digest}'." >&2
-  exit 2
-fi
-
-pull() {
-  local image="$1"
-  local attempt
-  for ((attempt = 1; attempt <= pull_attempts; attempt++)); do
-    if timeout --kill-after=10s "${pull_timeout_seconds}s" docker pull --quiet "$image"; then
-      return 0
-    fi
-    if ((attempt < pull_attempts)); then
-      echo "[start-postgres] Pull ${attempt} of ${pull_attempts} from ${image%%/*} failed; retrying in ${retry_delay_seconds}s."
-      sleep "$retry_delay_seconds"
-    fi
-  done
-  return 1
-}
-
-image=''
-for registry in "${registries[@]}"; do
-  if pull "${registry}@${digest}"; then
-    image="${registry}@${digest}"
-    break
-  fi
-  echo "::warning::Could not pull Postgres from ${registry%%/*}; trying the next registry."
-done
-
-if [[ -z "$image" ]]; then
-  echo "::error::No registry served postgres@${digest}." >&2
-  exit 1
-fi
-echo "::notice::Postgres image pulled from ${image%%/*}."
 
 # The same database, credentials and health check the job's service
 # container had; the job's DATABASE_URL points here.
