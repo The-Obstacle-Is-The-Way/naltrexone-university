@@ -125,7 +125,9 @@ Production keeps serving the previous deployment. The pull failure itself does n
 **The version stays `v1.25.2-p0` in this fix.** Moving it is the duty's first use, in its own pull request, once `edoburu/pgbouncer` publishes a tag with PgBouncer 1.26.1 or later.
 - 1.26.0 changed tracked parameters and 1.26.1 restored ignore-list precedence; upstream reports further `search_path` fixes pending. The pin remains unchanged to separate registry failover from a version change.
 - That pull request passes BUG-345's pooler suite unchanged, or records what differs.
-- The index's BUG-352 Waiting row now holds that refresh, with the tag trigger and suite acceptance criteria; it survives this record's closure.
+- This record holds that refresh while it is live, since the index's Waiting rows are for closed records. When it closes, the closing change moves the refresh to a Waiting row with this trigger and acceptance:
+  - **Trigger:** a Docker Hub `edoburu/pgbouncer` tag carries PgBouncer 1.26.1 or later. Check the tags and the executable's version in the weekly queue review.
+  - **Acceptance:** resolve the digest from Docker Hub, verify that both registries serve it, update both pins, and pass BUG-345's required pooler suite unchanged, or explain and prove any difference.
 
 **Out of scope.**
 - The npm registry, which every install needs, Vercel's build included.
@@ -143,7 +145,8 @@ Production keeps serving the previous deployment. The pull failure itself does n
 - [ ] The fixing pull request's CI logs `PgBouncer image pulled from <registry>`, and the pooler suite passes.
 - [ ] After promotion, `main`'s CI logs the notice for both images.
 - [x] #1552 completes DEBT-516's pooler item; its final record is committed before deletion and retained by the closure ledger.
-- [x] The dependency guide owns the new refresh duty; BUG-352's Waiting row holds the 1.26.1-or-later tag trigger and acceptance criteria.
+- [x] The dependency guide owns the new refresh duty.
+- [ ] At closure, the 1.26.1-or-later refresh moves to a Waiting row with the trigger and acceptance above.
 
 ## Related
 

@@ -244,7 +244,7 @@ BUG-352 puts both CI images through `scripts/ci/pull-image.sh`. PgBouncer tries 
 
 The helper writes the serving repository to `GITHUB_ENV`. Compose uses that repository with its literal digest and `--pull never` in both creation and startup. A mirror pull need not create the Docker Hub reference locally, and Docker cannot tag a digest target. Local `pnpm db:test:up` retains the Docker Hub default and its normal cache behavior.
 
-- **When.** Refresh on a PgBouncer security release, a behavior change affecting transaction pooling or ignored startup parameters, or an image advisory. BUG-352's Waiting row holds the first refresh: a Docker Hub tag carrying PgBouncer 1.26.1 or later. Check the [image's tags](https://hub.docker.com/r/edoburu/pgbouncer/tags) during the weekly queue review; verify the executable version, not only the tag name.
+- **When.** Refresh on a PgBouncer security release, a behavior change affecting transaction pooling or ignored startup parameters, or an image advisory. BUG-352 holds the first refresh, and a Waiting row holds it once BUG-352 closes: a Docker Hub tag carrying PgBouncer 1.26.1 or later. Check the [image's tags](https://hub.docker.com/r/edoburu/pgbouncer/tags) during the weekly queue review; verify the executable version, not only the tag name.
 - **How.** Resolve the index digest from Docker Hub's versioned tag only. Inspect the release notes and run the version command without network access:
 
   ```sh
