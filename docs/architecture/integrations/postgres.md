@@ -101,16 +101,16 @@ must put it inside Drizzle's migration transaction, not on a separate client.
    batch after normal traffic has exercised the deployment. Record date,
    connection count and values only, never a URL or credential. These samples
    establish the observed backends, not an exhaustive census of the pool.
-4. If any sample retains old values, leave BUG-345 open. The owner must arrange
-   any required Neon-side backend recycle using the provider's supported
-   procedure and assess its connection-disruption risk, then repeat the checks.
+4. If any sample retains old values, the rollout is unverified. The owner
+   must arrange any required Neon-side backend recycle using the provider's
+   supported procedure and assess its connection-disruption risk, then repeat
+   the checks.
    No agent may restart an endpoint or terminate production backends as part of
    this rollout. Do not assume a particular Neon backend lifetime or that local
    PgBouncer's admin commands are available there.
-5. BUG-345's deadline is three days after promotion. October 20, 2026 assumes
-   promotion on 2026-10-17; if promotion slips, a follow-up change sets the
-   actual date plus three days in the record and index. Close only after the
-   pooled production receipt.
+5. BUG-345 closed on 2026-10-18 on two such batches: one shortly after
+   promotion #1551, and one about 20 hours later. A later migration that
+   changes these role defaults repeats steps 2 to 4.
 
 **Rollback:** a code rollback alone leaves role defaults in place. Prefer a
 reviewed fix-forward transaction-local override for a proven exceptional
