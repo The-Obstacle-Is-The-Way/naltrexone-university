@@ -313,6 +313,8 @@ The frozen register histories up to 2026-10-05 are `docs/_archive/{bugs,debt}/re
 - BUG-330 · Signed-In E2E Fails En Masse When the Stored Clerk Session Cannot Be Restored After Its Token Expires · Resolved · 2026-10-10 · docs/_archive/bugs/bug-330-stored-clerk-session-lost-after-token-expiry.md
 - BUG-335 · The Merge Guard Mistakes a Merged-In `main` Commit for the Approved Head · Resolved · 2026-10-10 · docs/_archive/bugs/bug-335-merge-guard-mistakes-a-merged-in-main-commit-for-the-approved-head.md
 - BUG-344 · The Advisory Watcher Fails Every Run While a New Advisory's Issue Is Open · Resolved · 2026-10-16 · docs/records/bug-344-advisory-watcher-fails-while-a-new-advisory-is-open.md · #1540 · d4681072b174b50db088f7dd102d6e2e12920a81
+- BUG-345 · The Database Timeouts Do Not Apply Through Neon's Pooler · Resolved · 2026-10-18 · docs/records/bug-345-database-timeouts-do-not-apply-through-the-pooler.md · #1555 · 93bdef517d55662802ea4c2b2a46d5ac257df29a
+- BUG-352 · CI's Pooler Image Depends on Docker Hub Alone · Resolved · 2026-10-18 · docs/records/bug-352-ci-pooler-image-depends-on-docker-hub-alone.md · #1555 · 93bdef517d55662802ea4c2b2a46d5ac257df29a
 
 ## Debt
 
