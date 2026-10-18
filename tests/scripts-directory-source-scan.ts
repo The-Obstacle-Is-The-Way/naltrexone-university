@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { globSync } from 'tinyglobby';
 
@@ -49,11 +49,16 @@ export function parseScriptsDirectory(
     .slice(start + DIRECTORY_START.length, end)
     .split('\n')) {
     const line = rawLine.trim();
-    if (!line.startsWith('|') || !line.endsWith('|')) continue;
+    if (!line.startsWith('|')) continue;
+    // GitHub renders a row without its closing pipe, so skipping one would
+    // let a stale row pass unseen.
+    if (!line.endsWith('|') || line.endsWith('\\|')) {
+      throw new Error(`A scripts directory row must end with a pipe: ${line}`);
+    }
     const cells = line
       .slice(1, -1)
-      .split('|')
-      .map((cell) => cell.trim());
+      .split(/(?<!\\)\|/)
+      .map((cell) => cell.replaceAll('\\|', '|').trim());
     if (cells[0] === 'File' || cells.every((cell) => /^:?-+:?$/.test(cell))) {
       continue;
     }
@@ -110,7 +115,95 @@ export function collectScriptsDirectoryIssues(
   return issues.sort();
 }
 
+export type ScriptCallers = {
+  packageScripts: Readonly<Record<string, string>>;
+  readWorkflow: (name: string) => string | null;
+  vercelConfig: string;
+};
+
+const PACKAGE_SCRIPT_REFERENCE = /`pnpm ([\w:-]+)`/g;
+const WORKFLOW_REFERENCE = /`([\w-]+\.yml)`/g;
+const VERCEL_REFERENCE = '`vercel.json`';
+
+// The Run by column is prose, but the package scripts, workflows and Vercel
+// build it names are checkable: each must run the row's script, directly or
+// through a package script. Importers and documents are left to review.
+export function collectRunByIssues(
+  entries: readonly ScriptsDirectoryEntry[],
+  { packageScripts, readWorkflow, vercelConfig }: ScriptCallers,
+): string[] {
+  const issues: string[] = [];
+
+  for (const { file, runBy } of entries) {
+    const scriptPath = `${SCRIPTS_FOLDER}/${file}`;
+    const runners = Object.keys(packageScripts).filter((name) =>
+      packageScripts[name]?.includes(scriptPath),
+    );
+
+    for (const [, name = ''] of runBy.matchAll(PACKAGE_SCRIPT_REFERENCE)) {
+      const command = packageScripts[name];
+      if (command === undefined) {
+        issues.push(
+          `${file} names \`pnpm ${name}\`, which package.json does not define.`,
+        );
+      } else if (!command.includes(scriptPath)) {
+        issues.push(
+          `${file} names \`pnpm ${name}\`, whose command does not run it.`,
+        );
+      }
+    }
+
+    for (const [, workflow = ''] of runBy.matchAll(WORKFLOW_REFERENCE)) {
+      const contents = readWorkflow(workflow);
+      if (contents === null) {
+        issues.push(`${file} names \`${workflow}\`, which is not a workflow.`);
+      } else if (
+        !contents.includes(scriptPath) &&
+        !runners.some((name) =>
+          new RegExp(`pnpm (?:run )?${escapeRegExp(name)}(?![\\w:-])`).test(
+            contents,
+          ),
+        )
+      ) {
+        issues.push(`${file} names \`${workflow}\`, which does not run it.`);
+      }
+    }
+
+    if (
+      runBy.includes(VERCEL_REFERENCE) &&
+      !vercelConfig.includes(scriptPath)
+    ) {
+      issues.push(
+        `${file} names ${VERCEL_REFERENCE}, whose build command does not run it.`,
+      );
+    }
+  }
+
+  return issues.sort();
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function readScriptCallers(): ScriptCallers {
+  const root = process.cwd();
+  const packageJson = JSON.parse(
+    readFileSync(path.resolve(root, 'package.json'), 'utf8'),
+  ) as { scripts?: Record<string, string> };
+
+  return {
+    packageScripts: packageJson.scripts ?? {},
+    readWorkflow: (name) => {
+      const file = path.resolve(root, '.github/workflows', name);
+      return existsSync(file) ? readFileSync(file, 'utf8') : null;
+    },
+    vercelConfig: readFileSync(path.resolve(root, 'vercel.json'), 'utf8'),
+  };
+}
+
 // The folder on disk, not git's index, so a new untracked script fails too.
+// Dotfiles are not scripts, so the glob leaves them out.
 export function readScriptFiles(): string[] {
   return globSync('**/*', {
     cwd: path.resolve(process.cwd(), SCRIPTS_FOLDER),

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  collectRunByIssues,
   collectScriptsDirectoryIssues,
   isListedScript,
   parseScriptsDirectory,
+  readScriptCallers,
   readScriptFiles,
   readScriptsDirectory,
+  type ScriptCallers,
 } from './scripts-directory-source-scan';
 
 // ADR-023: a list kept in a document needs a test that checks it. The
@@ -71,6 +74,37 @@ describe('the scripts directory check', () => {
 <!-- scripts-directory:end -->
 `),
     ).toThrow(/exactly three cells/);
+  });
+
+  it('fails closed when the end marker comes first', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:end -->
+<!-- scripts-directory:start -->
+`),
+    ).toThrow(/ordered start\/end marker pair/);
+  });
+
+  // GitHub renders a row without its closing pipe, so skipping it would let a
+  // stale row pass and report a live one as missing.
+  it('fails closed on a row without its closing pipe', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+| \`a.ts\` | A. | B.
+<!-- scripts-directory:end -->
+`),
+    ).toThrow(/must end with a pipe/);
+  });
+
+  it('keeps an escaped pipe inside a cell', () => {
+    expect(
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+| \`a.ts\` | Reads a \\| b. | CI |
+<!-- scripts-directory:end -->
+`),
+    ).toEqual([{ file: 'a.ts', purpose: 'Reads a | b.', runBy: 'CI' }]);
   });
 
   it('leaves tests, their helpers and fixtures to the naming conventions', () => {
@@ -147,5 +181,73 @@ describe('the scripts directory check', () => {
     expect(
       collectScriptsDirectoryIssues(files, readScriptsDirectory()),
     ).toEqual([]);
+  });
+
+  it('confirms that every package script, workflow and Vercel build a row names runs its script', () => {
+    expect(
+      collectRunByIssues(readScriptsDirectory(), readScriptCallers()),
+    ).toEqual([]);
+  });
+});
+
+describe('the callers a row names', () => {
+  const callers: ScriptCallers = {
+    packageScripts: {
+      'db:migrate': 'tsx scripts/db-migrate.ts',
+      'test:e2e': 'tsx scripts/run-local-e2e.ts --project=chromium',
+      build: 'next build',
+    },
+    readWorkflow: (name) =>
+      ({
+        'ci.yml': 'run: pnpm test:e2e\nrun: bash scripts/ci/start.sh',
+        'other.yml': 'run: pnpm build',
+      })[name] ?? null,
+    vercelConfig: '{"buildCommand": "tsx scripts/check.ts && pnpm build"}',
+  };
+
+  function issuesFor(file: string, runBy: string): string[] {
+    return collectRunByIssues([{ file, purpose: 'Does it.', runBy }], callers);
+  }
+
+  it('accepts a package script whose command runs the file', () => {
+    expect(issuesFor('db-migrate.ts', '`pnpm db:migrate`')).toEqual([]);
+  });
+
+  it('reports a package script that package.json does not define', () => {
+    expect(issuesFor('db-migrate.ts', '`pnpm db:migrat`')).toEqual([
+      'db-migrate.ts names `pnpm db:migrat`, which package.json does not define.',
+    ]);
+  });
+
+  it('reports a package script whose command runs another file', () => {
+    expect(issuesFor('db-seed.ts', '`pnpm db:migrate`')).toEqual([
+      'db-seed.ts names `pnpm db:migrate`, whose command does not run it.',
+    ]);
+  });
+
+  it('accepts a workflow that runs the file directly or through a package script', () => {
+    expect(issuesFor('ci/start.sh', '`ci.yml`')).toEqual([]);
+    expect(issuesFor('run-local-e2e.ts', '`ci.yml`')).toEqual([]);
+  });
+
+  it('reports a workflow that does not exist', () => {
+    expect(issuesFor('ci/start.sh', '`gone.yml`')).toEqual([
+      'ci/start.sh names `gone.yml`, which is not a workflow.',
+    ]);
+  });
+
+  it('reports a workflow that does not run the file', () => {
+    expect(issuesFor('db-migrate.ts', '`other.yml`')).toEqual([
+      'db-migrate.ts names `other.yml`, which does not run it.',
+    ]);
+  });
+
+  it('reports a Vercel build that does not run the file', () => {
+    expect(issuesFor('check.ts', 'The `vercel.json` build command')).toEqual(
+      [],
+    );
+    expect(issuesFor('db-migrate.ts', 'The `vercel.json` build')).toEqual([
+      'db-migrate.ts names `vercel.json`, whose build command does not run it.',
+    ]);
   });
 });

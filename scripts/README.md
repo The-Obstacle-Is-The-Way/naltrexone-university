@@ -2,16 +2,29 @@
 
 Command-line tools that run outside the app: database commands, deploy and build checks, the local test harness, CI steps, question content (seeding, drafts and releases), review and merge governance, records tooling, scheduled watchers and quality reports.
 
-The [directory](#directory) below gives every script one row: what it does and who runs it. `tests/scripts-directory.test.ts` fails when a script is added, moved or deleted without its row. Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
+The [directory](#directory) below gives every script one row: what it does and who runs it. `tests/scripts-directory.test.ts` checks two things. Every script has exactly one row, so adding, moving or deleting a script without its row fails. And every package script, workflow and `vercel.json` build that a row's "Run by" names really runs that script. Descriptions, importers and documents named in a row are kept by review, so a change to a script's callers updates its row. Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 
 ## Conventions
 
-- **Run a script through its package script** when it has one (`pnpm db:migrate`), and otherwise with `pnpm exec tsx scripts/<path>`. The directory names the documented command for each.
-- **An entry point exports its work as a function** with injectable dependencies, so tests can call it. A guard at the bottom runs it only when the file is executed directly, comparing `import.meta.url` with `process.argv[1]` inside `/* v8 ignore */` comments. On failure it prints the error's message and sets `process.exitCode = 1`. `verify-lockfile-union.ts` runs unconditionally instead, because the guard does not recognize a path given without its extension or through a symlink.
-- **`.mts` marks a script that a workflow runs with plain `node`,** with no `pnpm install`. `tests/workflow-node-scripts.test.ts` requires it, because this package declares no module type. Such a script can import only Node built-ins, not the `.ts` modules here.
+- **Run a script through its package script** when it has one (`pnpm db:migrate`), and otherwise with `pnpm exec tsx scripts/<path>`. There are three exceptions:
+  - `verify-lockfile-union.ts` runs with `node --import tsx`, as its guide explains;
+  - the two `.mts` jobs run with plain `node`;
+  - `ci/*.sh` runs with `bash`.
+- **An entry point exports its work as a function** with injectable dependencies, so tests can call it. At the bottom, a guard compares `import.meta.url` with `process.argv[1]`, and runs the function only when the file is executed directly.
+  - On failure the entry point prints the error's message and sets `process.exitCode = 1`. Most wrap the guard in `/* v8 ignore */` comments.
+  - Not every entry point follows this yet. `import-draft-questions.ts`, `seed-production.ts` and `seed-all-environments.ts` run unconditionally, and some guards neither catch nor carry the comments.
+  - `verify-lockfile-union.ts` runs unconditionally on purpose, because the guard misses a path given without its extension or through a symlink (BUG-354).
+- **`.mts` marks a script that a workflow runs with plain `node`,** with no `pnpm install`. `tests/workflow-node-scripts.test.ts` requires it, because this package declares no module type.
+  - Such a script cannot use `node_modules`.
+  - It could import a `.ts` module here only by its full `.ts` name, which `tsconfig.json` does not allow today, so both jobs carry their own helpers.
 - **Shell scripts live in `ci/`** and drive Docker and the runner's packages for CI steps.
-- **A database command goes through `database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` for a remote target. Only checked-in automation (CI, the Vercel build, the local test harness) uses the managed path in `internal/`, which takes no acknowledgement.
-- **Tests sit beside their source** as `<name>.test.ts` and run in `pnpm test`. A large suite splits into `<name>-<aspect>.test.ts`; shared test support is `<name>-test-helpers.ts`; data files go in `fixtures/<topic>/`. The directory leaves these out, because their names already say what they serve. Database behavior is proved in `tests/integration/`.
+- **A database command goes through `database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` for a remote target.
+  - The managed path in `internal/` takes no acknowledgement.
+  - It is used by checked-in automation (CI, the Vercel build and the local test harness), and by the environment seeds after their own `DB_TARGET_ACK` check.
+- **Tests sit beside their source** as `<name>.test.ts` and run in `pnpm test`.
+  - A large suite splits into `<name>-<aspect>.test.ts`; shared test support is `<name>-test-helpers.ts`; data files go in `fixtures/`.
+  - The directory leaves these out, because their names already say what they serve.
+  - Database behavior is proved in `tests/integration/`.
 - **A check of the whole repository is a policy test in `tests/`,** not a script here.
 
 ## Directory
@@ -46,7 +59,7 @@ The [directory](#directory) below gives every script one row: what it does and w
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `resolve-local-test-target.ts` | Derives this clone's own Compose project, database URL and ports, so clones can test at the same time. | `pnpm local:test:target`; `ci.yml`; the local test commands; the integration database command in `AGENTS.md` |
+| `resolve-local-test-target.ts` | Derives this clone's own Compose project, database URL and ports, so clones can test at the same time. | `pnpm local:test:target`; `ci.yml`; the local test commands; `tests/shared/resolve-integration-database-url.ts`; the integration database command in `AGENTS.md` |
 | `run-local-test-db.ts` | Starts, stops or resets this clone's Docker test database and pooler. | `pnpm db:test:up`, `pnpm db:test:down` and `pnpm db:test:reset`; the local E2E plan |
 | `run-local-integration.ts` | Runs the integration lane against this clone's test database, or against a given database in CI. | `pnpm test:integration` and `pnpm test:integration:coverage`; `ci.yml` |
 | `run-local-e2e.ts` | Runs Playwright after preparing this clone's database, or against a given database in CI. | `pnpm test:e2e` and `pnpm test:e2e:stripe-hosted`; `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
@@ -116,7 +129,7 @@ The [directory](#directory) below gives every script one row: what it does and w
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `merge-reviewed-pr.ts` | The merge guard: an exact-head or carried CodeRabbit approval, resolved threads, green checks and `main`'s promotion in `dev`; merges with `--merge`. | By hand, per `AGENTS.md` |
+| `merge-reviewed-pr.ts` | The merge guard: an exact-head or carried CodeRabbit approval, resolved threads, green checks and `main`'s promotion in `dev`; merges with `--merge`. | By hand, per `AGENTS.md`; `verify-promotion.ts` imports its checks |
 | `verify-promotion.ts` | Proves that every source pull request of a `dev`-to-`main` promotion was reviewed; merges with `--merge`. | By hand, per `AGENTS.md` |
 | `diff-hunks.ts` | Decides whether a pull request's diff moved only because its base changed. | Imported by `merge-reviewed-pr.ts` |
 | `coderabbit-learnings.ts` | The marker and parser for a CodeRabbit reply that recorded a learning. | Imported by `merge-reviewed-pr.ts` and `coderabbit-learnings-review.ts` |
@@ -144,7 +157,7 @@ The [directory](#directory) below gives every script one row: what it does and w
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `github-alert-issues.ts` | Keeps one GitHub issue per alert condition: opens it, updates it with a comment, and closes it when the condition clears. | Imported by the watchers, the release watch, the learnings review and the records due check |
+| `github-alert-issues.ts` | Keeps one GitHub issue per alert condition: opens it, updates it with a comment, and closes it when the condition clears. | Imported by `operational-alert-watcher.ts`, `upstream-fix-watch.ts`, `production-release-watch.ts`, `coderabbit-learnings-review.ts` and `documentation-due-checks.ts` |
 | `operational-alert-watcher.ts` | Checks that Sentry's alert path still works, and keeps an issue open while it does not. | `operational-alert-watcher.yml` |
 | `upstream-advisory-watch.mts` | Raises an issue for each new security advisory published by a repository behind the lockfile. | `upstream-advisory-watch.yml`, with plain `node` |
 | `upstream-fix-watch.ts` | Raises an issue once an upstream fix that a local patch waits on has been released. | `upstream-fix-watch.yml` |
@@ -161,5 +174,5 @@ The [directory](#directory) below gives every script one row: what it does and w
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `validate-header-safe-secret.ts` | Prints metadata about named environment variables (presence, length, header safety), never their values. | Nobody since `ci.yml` stopped calling it; `docs/architecture/environments.md` lists it as an operator tool |
+| `validate-header-safe-secret.ts` | Prints metadata about named environment variables (presence, length, header safety), never their values. | Nobody since its CI step was removed in `0ba85539`; `docs/architecture/environments.md` lists it as an operator tool |
 <!-- scripts-directory:end -->
