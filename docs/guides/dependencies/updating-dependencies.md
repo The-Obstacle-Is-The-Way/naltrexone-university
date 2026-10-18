@@ -238,6 +238,35 @@ CI's `Start Postgres` steps pull one `postgres:16` digest from Docker Hub, then 
   Google keeps only what it has cached. If its mirror lacks a new digest, CI still has the other two; say so in the pull request and check again before the next refresh.
 - **Change four places in one pull request:** `POSTGRES_IMAGE_DIGEST` in `.github/workflows/ci.yml` and `.github/workflows/stripe-hosted-checkout-smoke.yml`, the `image` in `docker-compose.yml`, and `PINNED_POSTGRES_16_DIGEST` in `tests/ci-workflow.test.ts`. `tests/ci-service-images.test.ts` fails while the workflows and the compose file disagree. Update the PostgreSQL version in their comments too.
 
+## CI's PgBouncer Image
+
+BUG-352 puts both CI images through `scripts/ci/pull-image.sh`. PgBouncer tries Docker Hub, then Google's mirror: two attempts per registry, ten seconds apart, with TERM after 60 seconds and KILL ten seconds later. Four stalled attempts plus two delays take at most 300 seconds, within the seven-minute step (apart from process overhead).
+
+The helper writes the serving repository to `GITHUB_ENV`. Compose uses that repository with its literal digest and `--pull never` in both creation and startup. A mirror pull need not create the Docker Hub reference locally, and Docker cannot tag a digest target. Local `pnpm db:test:up` retains the Docker Hub default and its normal cache behavior.
+
+- **When.** Refresh on a PgBouncer security release, a behavior change affecting transaction pooling or ignored startup parameters, or an image advisory. BUG-352 holds the first refresh, and a Waiting row holds it once BUG-352 closes: a Docker Hub tag carrying PgBouncer 1.26.1 or later. Check the [image's tags](https://hub.docker.com/r/edoburu/pgbouncer/tags) during the weekly queue review; verify the executable version, not only the tag name.
+- **How.** Resolve the index digest from Docker Hub's versioned tag only. Inspect the release notes and run the version command without network access:
+
+  ```sh
+  docker buildx imagetools inspect docker.io/edoburu/pgbouncer:<version> --format '{{.Manifest.Digest}}'
+  docker run --rm --network none --entrypoint pgbouncer docker.io/edoburu/pgbouncer@<digest> --version
+  ```
+
+  Confirm both registries serve the exact index body. `--raw` avoids requesting every platform manifest. Compare each file's SHA-256 with the chosen digest:
+
+  ```sh
+  for registry in docker.io mirror.gcr.io; do
+    if docker buildx imagetools inspect --raw "$registry/edoburu/pgbouncer@<digest>" > "$registry.index.json"; then
+      shasum -a 256 "$registry.index.json"
+    else
+      echo "$registry does not serve it"
+    fi
+  done
+  ```
+
+  Google's mirror is a cache, with no retention guarantee; direct pulls work but are outside its documented daemon-mirror usage. A refresh lands only when both sources serve the digest. If Docker Hub fails while the mirror lacks the pin, or a refresh waits more than 14 days for the mirror, adopt an owner-controlled GHCR copy (BUG-352 option 4).
+- **Where.** Change `PGBOUNCER_IMAGE_DIGEST` in `.github/workflows/ci.yml` and the literal digest in `docker-compose.yml` together, including version comments. `tests/ci-service-images.test.ts` enforces equality, explicit registry lists and no implicit workflow pulls. New workflow images must use this helper with at least two registry repositories; declarative containers cannot run it before their initial pull. BUG-345's required pooler suite must pass unchanged, or the refresh PR must explain and prove the changed behavior. Do not make it advisory.
+
 ## Supply-Chain Boundary
 
 Dependabot tells us a version exists. It does not vouch for the package contents.
