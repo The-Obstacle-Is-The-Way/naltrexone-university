@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — "Failed to fetch" recurred in required CI on 2026-10-18, after option 9; trace the failing request before choosing a fix
+**Status:** Open — capture the next failed question fetch with the redacted request trace before choosing a fix
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-In required E2E on CI, a practice session's page loaded, then its first question and the bookmarks panel both failed at once. The page showed its own error state, "Failed to fetch", with Try again. The browser's `fetch` rejected, so the request failed at the network level rather than returning an error. The server logged nothing at that moment. A learner hitting this sees the same error and must press Try again.
+In required E2E on CI, a practice session's page loaded, then its first question and the bookmarks panel both failed at once. The page showed its own error state, "Failed to fetch", with Try again. The 2026-10-11 local trace identified a server-action redirect blocked by the browser. The same alert recurred on a standalone question page on 2026-10-18; that alert alone does not identify the failed request or its cause. The server logged nothing at that moment. The UI offers Try again. Whether the untraced recurrence can affect production is unknown.
 
 ## Evidence
 
@@ -21,7 +21,7 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - four `POST /app/practice` server actions within 250 ms, all with the same Clerk cookies (`__clerk_db_jwt`, `__session` and their suffixed copies);
   - the first three answered 200;
   - the fourth answered **307 to Clerk's sign-in page, with `x-clerk-auth-status: signed-out` and `x-clerk-auth-reason: dev-browser-missing`**;
-  - a `fetch` that follows a redirect to another origin fails as `Failed to fetch`;
+  - a redirect that the browser cannot complete under CORS fails the fetch; crossing origins alone does not guarantee failure;
   - 120 ms earlier, Clerk JS's `/v1/client` and `/v1/environment` responses carried a `clerk-db-jwt` header. BUG-333's echo filter drops that header only when it repeats the token the request sent; a different token passes by design.
 - **Not an overlap.** No CI run used the shared Clerk user then: #1465's CI E2E ran 23:16:08 to 23:19:39Z.
 - **The trace, examined further (2026-10-12).** Token values were compared by hash only.
@@ -51,16 +51,16 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - Playwright's trace recorded both dev-browser cookies on the same request. But those were its provisional headers (no `host` or `sec-fetch-*`), and its `Cookie` header was 105 bytes longer than the server's: exactly the two cookies. So this trace's "both cookies sent" was the trace's view, not the wire. The earlier traces were not compared with what the server received, but they fit the same pattern.
   - The request left about 70 ms after Clerk JS's `/v1/environment` call answered. Clerk JS answers each environment fetch with `devBrowser.refreshCookies()`, which removes both cookies and sets them again. Every capture fits that window.
 - **In CI too (2026-10-12, about 09:58Z, #1472's second attempt).** In `review-mode-audit.spec.ts`, "history questions: correct and incorrect open review mode", a `page.goto` to a question page landed on Clerk's sign-in page. CI keeps no trace and no server log, so this one shows only that the loss happens there as well.
-- **After the fix, in CI (2026-10-18 00:26Z, #1552's CI).** `history.spec.ts`, "shows missed questions and removes them after correct reattempt", failed on its third load of a question page in one test. The page snapshot shows the signed-in app shell, the question's alert "Failed to fetch" with Try again, and Submit disabled. The helper waited 30 s for radio C. So the 2026-10-11 question page that waited for radio D fits this failure too.
-  - The session was not lost: the page stayed signed in, so this does not count against BUG-333's check.
+- **After the fix, in CI (2026-10-18 00:26Z, #1552's CI).** `history.spec.ts`, "shows missed questions and removes them after correct reattempt", failed while choosing C in the correct-answer loop, after earlier question visits (`history.spec.ts:50`; `question.ts:109–114`). It was not the third question load in the whole test. The page snapshot shows the signed-in app shell, the question's alert "Failed to fetch" with Try again, and Submit disabled. The helper waited 30 s for radio C. So the 2026-10-11 question page that waited for radio D fits this failure too.
+  - The page did not navigate to sign-in. Its already-rendered shell does not prove that the failed request remained authenticated; the capture neither confirms nor excludes BUG-333's cause.
   - The server logged nothing during the test's 36 s.
-  - Not that PR's code: #1552 changes CI's image pulls, and E2E reaches Postgres directly, not through the pooler. The same head passed the full local E2E.
+  - No application code changed in #1552: it changes CI's image pulls, and E2E reaches Postgres directly, not through the pooler. This narrows the suspect changes; it does not prove the CI environment had no effect. The same head passed the full local E2E.
   - Not an overlap: no other CI run was active in this repository, and the local E2E runs on that machine had ended 12 and 16 minutes earlier.
   - CI keeps no trace (BUG-328 keeps reports carrying Clerk tokens off CI), so which request failed is not known.
 
 ## Impact
 
-**Users: none, for the traced cause.** `dev-browser-missing` exists only on Clerk development instances; production uses a production instance, which has no dev-browser token. The 2026-10-18 recurrence is not traced, so whether it shares that cause, and so whether users can meet it, is not yet known.
+**Users: the traced cause is specific to Clerk development instances.** The backend guards `dev-browser-missing` by instance type; it does not apply to a Clerk production instance. The 2026-10-18 recurrence is not traced, so whether it shares that cause, and so whether users can meet it, is not yet known.
 
 **Tests:** required E2E fails at random.
 - On 2026-10-11 it failed twice for certain and once possibly in about two and a half hours, each time in `review-mode-audit.spec.ts` right after sign-in. Once was in CI and once locally for certain; the earlier CI failure, a question page waiting for radio D, is not shown to be the same, though it matches 2026-10-18's.
@@ -70,25 +70,41 @@ How often it recurs after option 9 is not yet known.
 
 *Corrected 2026-10-18: the impact now covers the recurrence after option 9, whose cause and rate are not yet known.*
 
-**A separate helper weakness, fixed here.** The first failure on 2026-10-11 left a second lead. `submitQuestionForOutcome` (`tests/e2e/helpers/question.ts`) read its outcome with a page-wide `getByText(outcome, { exact: true }).isVisible()` that did not wait, and it treated a throw as "not this outcome". A second exact "Correct" on the page makes Playwright's strict mode throw, so a correct answer was skipped and the helper moved on to the next choice. It now reads the verdict pill it has already waited for (`readVerdict`, with a red test in `question.test.ts`). This does not explain the traced "Failed to fetch", which is the Clerk race below.
+**A separate helper weakness, fixed 2026-10-11.** The first failure on 2026-10-11 left a second lead. `submitQuestionForOutcome` (`tests/e2e/helpers/question.ts`) read its outcome with a page-wide `getByText(outcome, { exact: true }).isVisible()` that did not wait, and it treated a throw as "not this outcome". A second exact "Correct" on the page makes Playwright's strict mode throw, so a correct answer was skipped and the helper moved on to the next choice. It now reads the verdict pill it has already waited for (`readVerdict`, with a red test in `question.test.ts`). This does not explain the traced "Failed to fetch", which is the Clerk race below.
+
+## Audit, 2026-10-18
+
+Historical captures above are preserved evidence. This audit re-read the current code, #1552's failed CI log and its error-context artifact; it did not re-create the earlier local captures.
+
+| Claim | Finding and receipt |
+| --- | --- |
+| This captured alert came from the question-load path. | **Verified.** `question-page-client.tsx:331–340` renders `loadState.message`; `question-page-logic.ts:162–193` sets it from a rejected `getQuestionBySlug` call or an unsuccessful action result. `use-question-page-model.ts:145–169` supplies the server action and starts the load. The helper failed before submitting C (`question.ts:110–115`); submit failures can also set this shared alert, but not at that step. This load is not an explicit REST fetch or the navigation's RSC request. |
+| The alert alone proves a network failure. | **Unverified.** `error-message-helpers.ts:7–20` forwards returned or thrown messages. Next 16.4.1's `server-action-reducer.js:75–100` sends the action with fetch and rethrows rejection. A blocked CORS redirect, network interruption or aborted request can fail a fetch; ordinary HTTP error status is not itself a fetch rejection. The recurrence has no request capture. |
+| Navigation cancels this load by design. | **Unverified.** `loadQuestion` uses `withTimeout`, which races promises without aborting (`lib/with-timeout.ts:10–16`). The page model suppresses stale and unmounted results (`use-question-page-model.ts:158–161`; `question-page-logic.ts:171–185`). The action fetch supplies no AbortSignal; Next's separate RSC fetch accepts one. Capture the failed request before changing cancellation behavior. |
+| Option 9 covers only the environment event. | **Disproved.** `clerk-dev-browser-cookies.ts:42–75` intercepts every matching `document.cookie` removal and cancels it when a replacement arrives before its queued microtask. An unpaired removal still lands; HTTP Set-Cookie and another execution context are outside this setter. |
+| Clerk only removes these cookies during refresh. | **Disproved.** Clerk JS 6.39.0's `core/auth/cookies/devBrowser.ts:49–71` removes both copies in the setter and exposes removal alone. `AuthCookieService.ts:125–127` clears an unauthenticated dev browser before setup. The keeper's discard test preserves that behavior. This is not evidence that the recurrence used it, or that the floating CDN still serves 6.39.0. |
+| The traced dev-browser cause applies to production instances. | **Disproved.** The current lockfile resolves `@clerk/backend` 3.23.1; its `authenticateRequestWithTokenInCookie` checks `instanceType === "development"` before `DevBrowserMissing`. The earlier 3.22.0 receipt is historical. This does not establish the recurrence's production impact. |
+| Existing CI diagnostics identify the recurrence. | **Disproved.** `clerk-auth-trace.ts` records Clerk API and main-frame navigation answers, then prints only on sign-in. It omits failed requests and action/RSC answers. `playwright.config.ts:40` disables CI traces under BUG-328. |
+
+*Corrected 2026-10-18: the question load is a server action; a visible signed-in shell is not request authentication evidence; the C failure is the third choice in a later loop, not the test's third load. Cross-origin redirects are not inherently fetch failures, and option 9 covers synchronous rewrites regardless of trigger.*
 
 ## Options
 
-The first is now shown; the others are ruled out for the traced failure.
+For the 2026-10-18 recurrence, all three remain unverified:
 
-1. **A request redirected to another origin.** *Shown.* A server action or RSC request that Clerk's middleware answers with a handshake redirect to Clerk's domain fails as a CORS error, which the browser reports as "Failed to fetch". BUG-333 and BUG-330 show that Clerk session refreshes during E2E navigation are real.
-2. **A request aborted by navigation.** The session page's client navigation cancels the in-flight question and bookmark fetches.
-3. **The server dropped connections** under load, for example during a `next start` worker restart.
+1. **A browser-blocked cross-origin redirect.** Identify its originating action or RSC request, Clerk status/reason, redirect host and timing. A `dev-browser-missing` reason would reopen the cookie-gap investigation; it would not by itself identify a third trigger.
+2. **An aborted request.** Correlate the failure with navigation and page teardown. Fix the test helper if it abandons work it needs; fix the client only if it displays an error for work it intentionally abandoned.
+3. **A dropped connection or another cause.** Identify the failing request and transport error, then determine whether production shares the cause.
 
 ## Resolution (decided)
 
-*Corrected 2026-10-18: option 9 did not end the failure. It recurred in CI six days after the merge (Evidence), and that request is not yet identified.*
+Trace the recurrence before choosing another fix. Extend the existing bounded Clerk trace with failed requests, action/RSC redirects and event times. Print once on a failed test, a "Failed to fetch" alert or sign-in. Keep only method, safe path, resource type, action-header presence, status/reason, redirect host and cookie names/lengths. Never retain action IDs, cookie values, query values or bodies in the diagnostic output. CI's Playwright trace remains off.
 
-Fixed with BUG-333's option 9 (2026-10-12). The cause is BUG-333's race with a second trigger: Clerk JS rewrites the dev-browser cookies after every environment fetch, which BUG-333's echo drop did not stop. A request that left inside the rewrite reached the server without the cookies. A server action was then answered with a redirect to Clerk, which the browser reports as "Failed to fetch", and a navigation landed on sign-in.
+BUG-333's option 9 fixed the demonstrated 2026-10-12 synchronous cookie rewrite. Keep it and the echo filter unchanged until a new capture proves what needs changing. Pinning Clerk JS remains DEBT-521's owner decision.
 
-In every signed-in E2E test's pages, a script now holds each removal of the two cookies until the current script ends, and drops it if Clerk JS writes that cookie first, so a rewrite replaces them in place. A removal that no write follows still lands, and the page sees the cookie gone at once, so Clerk JS can still discard a dev browser it no longer accepts. BUG-333 records the tests and the experiment. Pinning Clerk JS would not have helped: 6.38.0 and 6.39.0 behave the same. Production is unaffected, because a production instance has no dev-browser token.
+*Corrected 2026-10-18: option 9 did not end the symptom. The earlier cause is proven only for its captures; it does not resolve the untraced recurrence.*
 
-The diagnostic logging records names and lengths only, never values. It stays on a local branch and never ships.
+A temporary server diagnostic, if needed to compare the browser's provisional headers with the wire, records names and lengths only. It stays local and never ships.
 
 ## Verification
 
@@ -96,9 +112,11 @@ The diagnostic logging records names and lengths only, never values. It stays on
 - [x] The cause is named (2026-10-12): requests caught on the server inside Clerk JS's dev-browser cookie rewrite, which follows every environment fetch.
 - [x] A fix with a red test: BUG-333's option 9 (2026-10-12).
 - [ ] A week of CI without "Failed to fetch" or a sign-in loss, after a fix that holds. Option 9's week failed on 2026-10-18.
-- [ ] The 2026-10-18 recurrence's failing request is identified, from a local trace or a CI trace kept within the job.
+- [x] Safe diagnostics, test-first (2026-10-18): request failure and redirect projections omit query, cookie and action values; event times survive asynchronous header reads. Existing cookie and query formatters failed negative controls before correction. The cookie keeper and echo filter are unchanged.
+- [ ] The diagnostic wiring is proven in Playwright: a controlled redirect/failure prints once on an alert, and a failed test reports before page teardown.
+- [ ] The 2026-10-18 recurrence's failing request is identified. Next: repeat history and review-mode-audit under unit-test load, with the owner's exclusive E2E-lane clearance. Keep local Playwright traces private; publish only the safe text diagnostic. If no capture names the cause, ship diagnostics with this record Open.
 
 ## Related
 
-- BUG-333 and BUG-330: Clerk session behaviour during E2E navigation.
+- BUG-333 and BUG-330: Clerk session behavior during E2E navigation.
 - BUG-334: Next.js's E592 during E2E, not seen in this run.
