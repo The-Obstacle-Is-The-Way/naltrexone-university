@@ -133,78 +133,87 @@ async function releaseEntries(tx: Db, releaseId: string) {
 // Writes a release of the given items, invisibly: nothing reads a release
 // until it is activated. Its manifest names each item's slug and the content
 // hash of the item's revision.
+type StageReleaseInput = {
+  items: readonly ReleaseItem[];
+  removals?: readonly ReleaseRemoval[];
+  parentReleaseId: string | null;
+};
+
 export async function stageRelease(
   db: Db,
-  input: {
-    items: readonly ReleaseItem[];
-    removals?: readonly ReleaseRemoval[];
-    parentReleaseId: string | null;
-  },
+  input: StageReleaseInput,
 ): Promise<string> {
-  return db.transaction(async (tx) => {
-    const entries =
-      input.items.length === 0
-        ? []
-        : await tx
-            .select({
-              slug: schema.questions.slug,
-              contentHash: schema.questionRevisions.contentHash,
-              revisionId: schema.questionRevisions.id,
-            })
-            .from(schema.questionRevisions)
-            .innerJoin(
-              schema.questions,
-              eq(schema.questions.id, schema.questionRevisions.questionId),
-            )
-            .where(
-              inArray(
-                schema.questionRevisions.id,
-                input.items.map((item) => item.questionRevisionId),
-              ),
-            );
-    const removals = input.removals ?? [];
-    const removedSlugs = await tx
-      .select({ id: schema.questions.id, slug: schema.questions.slug })
-      .from(schema.questions)
-      .where(
-        inArray(
-          schema.questions.id,
-          removals.map((removal) => removal.questionId),
-        ),
-      );
-    const slugById = new Map(removedSlugs.map((row) => [row.id, row.slug]));
-    const manifest = buildReleaseManifest(
-      entries,
-      removals.map((removal) => {
-        const slug = slugById.get(removal.questionId);
-        if (slug === undefined) {
-          throw new Error(
-            `A removal names ${removal.questionId}, which is not a question`,
+  return db.transaction((tx) => insertRelease(tx, input, []));
+}
+
+// Only bootstrap supplies candidates. They are manifest metadata, never items.
+async function insertRelease(
+  tx: Db,
+  input: StageReleaseInput,
+  preBootstrapCandidates: readonly string[],
+): Promise<string> {
+  const entries =
+    input.items.length === 0
+      ? []
+      : await tx
+          .select({
+            slug: schema.questions.slug,
+            contentHash: schema.questionRevisions.contentHash,
+            revisionId: schema.questionRevisions.id,
+          })
+          .from(schema.questionRevisions)
+          .innerJoin(
+            schema.questions,
+            eq(schema.questions.id, schema.questionRevisions.questionId),
+          )
+          .where(
+            inArray(
+              schema.questionRevisions.id,
+              input.items.map((item) => item.questionRevisionId),
+            ),
           );
-        }
-        return { slug, kind: removal.kind };
-      }),
+  const removals = input.removals ?? [];
+  const removedSlugs = await tx
+    .select({ id: schema.questions.id, slug: schema.questions.slug })
+    .from(schema.questions)
+    .where(
+      inArray(
+        schema.questions.id,
+        removals.map((removal) => removal.questionId),
+      ),
     );
-    const release = onlyRow(
-      await tx
-        .insert(schema.contentReleases)
-        .values({
-          manifest,
-          manifestHash: releaseManifestHash(manifest),
-          parentReleaseId: input.parentReleaseId,
-        })
-        .returning({ id: schema.contentReleases.id }),
-      'Failed to stage the release',
-    );
-    if (input.items.length > 0) {
-      await tx
-        .insert(schema.contentReleaseItems)
-        .values(
-          input.items.map((item) => ({ releaseId: release.id, ...item })),
+  const slugById = new Map(removedSlugs.map((row) => [row.id, row.slug]));
+  const manifest = buildReleaseManifest(
+    entries,
+    removals.map((removal) => {
+      const slug = slugById.get(removal.questionId);
+      if (slug === undefined) {
+        throw new Error(
+          `A removal names ${removal.questionId}, which is not a question`,
         );
-    }
-    return release.id;
-  });
+      }
+      return { slug, kind: removal.kind };
+    }),
+    undefined,
+    preBootstrapCandidates,
+  );
+  const release = onlyRow(
+    await tx
+      .insert(schema.contentReleases)
+      .values({
+        manifest,
+        manifestHash: releaseManifestHash(manifest),
+        parentReleaseId: input.parentReleaseId,
+      })
+      .returning({ id: schema.contentReleases.id }),
+    'Failed to stage the release',
+  );
+  if (input.items.length > 0) {
+    await tx
+      .insert(schema.contentReleaseItems)
+      .values(input.items.map((item) => ({ releaseId: release.id, ...item })));
+  }
+  return release.id;
 }
 
 // A hold defers its question locks to this full, ordered activation set.
@@ -313,7 +322,14 @@ export async function activateRelease(
     }
     const entries = await releaseEntries(tx, release.id);
     const itemsHash = releaseManifestHash(
-      buildReleaseManifest(entries, manifest.removals, manifest.format),
+      buildReleaseManifest(
+        entries,
+        manifest.removals,
+        manifest.format,
+        manifest.format === 'app-release-manifest-v4'
+          ? manifest.preBootstrapCandidates
+          : [],
+      ),
     );
     // In id order, so the plan's withdrawals are, like its other sets.
     const removed = await tx
@@ -481,7 +497,7 @@ export async function activateRelease(
 export async function bootstrapRelease(
   db: Db,
   input: { expectedPlanId?: string | undefined; record: DecisionRecord },
-): Promise<ActivationSummary> {
+): Promise<ActivationSummary & { preBootstrapCandidates: number }> {
   assertDecision(input.record);
   return db.transaction(async (tx) => {
     const active = await lockReleasePointer(tx);
@@ -498,15 +514,24 @@ export async function bootstrapRelease(
       })
       .from(schema.questions)
       .where(eq(schema.questions.status, 'published'));
-    const releaseId = await stageRelease(tx, {
-      items: live,
-      parentReleaseId: null,
-    });
-    return activateRelease(tx, {
+    const candidates = await tx
+      .select({ id: schema.questionRevisions.id })
+      .from(schema.questionRevisions)
+      .orderBy(asc(schema.questionRevisions.id));
+    const releaseId = await insertRelease(
+      tx,
+      {
+        items: live,
+        parentReleaseId: null,
+      },
+      candidates.map(({ id }) => id),
+    );
+    const activated = await activateRelease(tx, {
       releaseId,
       expectedActiveReleaseId: null,
       expectedPlanId: input.expectedPlanId,
       record: input.record,
     });
+    return { ...activated, preBootstrapCandidates: candidates.length };
   });
 }

@@ -125,6 +125,11 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 ### R27. Stage and activation previews name answer-key changes separately from other content changes. Activation refuses a reviewed plan if its key-change list has changed.
 
+Bootstrap's reviewed plan also binds its frozen list of earlier revision candidates. That list is history metadata, never selectable content.
+
+- `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `refuses a bootstrap preview after only its historical candidate set changes`
+- `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `never publishes historical candidates when activating or rolling back the bootstrap`
+
 - `tests/integration/content-release-key-preview.integration.test.ts`: `compares %s in both previews`
 - `tests/integration/content-release-key-preview.integration.test.ts`: `prints each staging change by kind without publishing the preview`
 - `tests/integration/content-release-key-preview.integration.test.ts`: `canonicalizes stored correct text as the seed does before comparing keys`
