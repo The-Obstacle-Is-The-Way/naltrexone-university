@@ -1,6 +1,6 @@
 # BUG-346: One Session Shows 0% in History and a Dash on Its Summary and the Dashboard
 
-**Status:** Open — drop the leftover `answered > 0` clause from the dashboard and summary, and share one score presenter, red first
+**Status:** Verifying — session screens share one score presenter; a scored, unanswered tutor session shows 0%; promotion to main remains, due 2026-10-19
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,14 +8,14 @@
 
 ## Summary
 
-Each screen decides for itself when a session's score is a percentage and when it is a dash, and the rules already disagree.
+Before this fix, each screen decided for itself when a session's score was a percentage and when it was a dash, and the rules disagreed.
 
-Take a tutor session ended with no answers. The end-of-session update makes every published item count toward the score (ADR-022), so the session has `scored = N`, `correct = 0` and `answered = 0`. The screens show:
+Take a tutor session ended with no answers. The end-of-session update makes every published item count toward the score (ADR-022), so the session has `scored = N`, `correct = 0` and `answered = 0`. Before this fix, the screens showed:
 - History: "0/N correct (0%)".
 - The dashboard: "0/N correct (—)".
 - The session summary: "—".
 
-Two tests pin the opposite outputs for that same input.
+Two tests pinned the opposite outputs for that same input.
 
 The decided rules already give the answer, and it is 0%:
 - **DEBT-221** shows a dash only when the denominator is 0.
@@ -26,6 +26,8 @@ The decided rules already give the answer, and it is 0%:
 This is the family BUG-163 and BUG-164 fixed: one session, different accuracy per screen.
 
 ## Evidence
+
+The following source and test receipts describe the defect at `134b0578`, before this fix.
 
 **The rule, by screen:**
 - Dashboard: `app/(app)/app/dashboard/page.tsx:188-191` shows a percentage when `scored > 0 && (mode === 'exam' || answered > 0)`.
@@ -52,21 +54,24 @@ History alone caps the displayed duration at ">120m". That is deliberate (SPEC-0
 
 ## Impact
 
-A learner sees two different scores for one session. No data is wrong, only its display, but the family has recurred after two fixes. P3.
+Until promotion, a learner sees two different scores for one session. No data is wrong, only its display, but the family has recurred after two fixes. P3.
 
 ## Options
 
 1. **One shared score presenter that every screen calls, and drop the `answered > 0` clause.** *Recommended:* it applies the rules already decided, and gives the next change one place to land.
 2. **The server returns `accuracy: number | null`.** Every consumer changes. DEBT-221 kept the domain's `computeAccuracy` numeric to preserve SPEC-003 and its tests; it did not consider a nullable response field. Option 1 fixes the split without an API change.
 
-## Resolution (proposed)
+## Resolution (built)
 
-Option 1, red first: a test renders one zero-answered tutor session row through History, the dashboard and the summary, and expects "0%" on each. Correct `session-summary-view.test.tsx:113`, which pins the dash.
+Option 1: `app/(app)/app/shared/score-percentage.ts` owns the percentage or dash. History, the dashboard, the summary and post-exam review call it. The dashboard's overall and seven-day accuracy use it too. The presenter reads `scored` and `accuracy`; it does not take the mode or answered count.
+
+The shared render test failed first on the dashboard and summary for one unanswered tutor row. Six cases now render the same row through History, the dashboard and the summary: tutor and exam, each with scored unanswered items, no scored items, or a reduced denominator requiring rounding. The summary's former dash assertion now expects 0%. R20 names these proofs. The domain accuracy and API types are unchanged.
 
 ## Verification
 
-- [ ] One test renders the same tutor session through History, the dashboard and the summary, and they agree.
-- [ ] No screen computes the score label or percent format itself.
+- [x] One test renders the same tutor session through History, the dashboard and the summary, and they agree.
+- [x] All four session screens call the shared score presenter; none keeps its own percentage formatter.
+- [ ] Promote to `main`; due 2026-10-19.
 
 ## Related
 
