@@ -60,9 +60,15 @@ In required E2E on CI, a practice session's page loaded, then its first question
 
 ## Impact
 
-**Users: none.** `dev-browser-missing` exists only on Clerk development instances; production uses a production instance, which has no dev-browser token.
+**Users: none, for the traced cause.** `dev-browser-missing` exists only on Clerk development instances; production uses a production instance, which has no dev-browser token. The 2026-10-18 recurrence is not traced, so whether it shares that cause, and so whether users can meet it, is not yet known.
 
-**Tests:** required E2E fails at random, twice for certain and once possibly in about two and a half hours on 2026-10-11 (once in CI and once locally for certain; the earlier CI failure is not shown to be the same), each time in `review-mode-audit.spec.ts` right after sign-in.
+**Tests:** required E2E fails at random.
+- On 2026-10-11 it failed twice for certain and once possibly in about two and a half hours, each time in `review-mode-audit.spec.ts` right after sign-in. Once was in CI and once locally for certain; the earlier CI failure, a question page waiting for radio D, is not shown to be the same, though it matches 2026-10-18's.
+- On 2026-10-18, six days after option 9, it failed once in CI, in `history.spec.ts` on a question page.
+
+How often it recurs after option 9 is not yet known.
+
+*Corrected 2026-10-18: the impact now covers the recurrence after option 9, whose cause and rate are not yet known.*
 
 **A separate helper weakness, fixed here.** The first failure on 2026-10-11 left a second lead. `submitQuestionForOutcome` (`tests/e2e/helpers/question.ts`) read its outcome with a page-wide `getByText(outcome, { exact: true }).isVisible()` that did not wait, and it treated a throw as "not this outcome". A second exact "Correct" on the page makes Playwright's strict mode throw, so a correct answer was skipped and the helper moved on to the next choice. It now reads the verdict pill it has already waited for (`readVerdict`, with a red test in `question.test.ts`). This does not explain the traced "Failed to fetch", which is the Clerk race below.
 
