@@ -1,6 +1,6 @@
 # BUG-348: Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs
 
-**Status:** Open — shared diagnostic defaults and one safe projector, red first on the silent portal failure and the raw `storeResult` message; replay policy stays with DEBT-529
+**Status:** In Progress — idempotency logs use the safe projector; shared failure defaults, remaining log boundaries and the source scan due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -15,12 +15,14 @@ Diagnostic logging and reporting vary across boundaries, and some paths bypass t
    - Subscribe and add-card log a failed result's code. Manage billing logs nothing. Other actions leave it to the browser reporter, which can send the public `ActionResult` error, including its code/details, without the original server cause.
    - So a portal session that fails with Stripe's circuit open, or with no portal URL, comes back as a result and redirects without a log line. BUG-166's `catch` sees only a throw, and `createAction` returns every failure as a result (`:46-50` returns; `:64-69` catches), so it runs only if `handleError` itself throws.
    - The causes DEBT-452 preserved inside repository `INTERNAL_ERROR`s are likewise not written on action paths that do not log their result.
-2. **Raw error text reaches the logs.** A Drizzle query error's message carries the bound SQL parameters (`Failed query: … params: …`). DEBT-452 projected the `err` and `error` log seams it named. Message strings logged under other keys were outside its sweep and can carry parameters when handed a Drizzle error; this census proves raw-message logging, not sensitive data at every site: four `toErrorMessage` helpers and 21 listed inline sites, plus the retry logger.
-   - Concretely: if `storeResult` fails after an idempotent action succeeded, the wrapper logs the Drizzle message, up to 1,000 characters. Its parameters hold the cached result: for the billing portal, Checkout and trial setup, a Stripe session URL.
+2. **Raw error text reached the idempotency logs and remains at other boundaries.** A Drizzle query error's message carries the bound SQL parameters (`Failed query: … params: …`). DEBT-452 projected the `err` and `error` log seams it named. Message strings logged under other keys were outside its sweep and can carry parameters when handed a Drizzle error; this census proves raw-message logging, not sensitive data at every site: three `toErrorMessage` helpers and 21 listed inline sites, plus the retry logger.
+   - Concretely: before the idempotency fix below, a failed `storeResult` after an action succeeded logged the Drizzle message, up to 1,000 characters. Its parameters hold the cached result: for the billing portal, Checkout and trial setup, a Stripe session URL.
 
 Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-list is applied separately to events, breadcrumbs and spans, which is how BUG-318's fix left BUG-331's carriers.
 
 ## Evidence
+
+The source locations and census below are from `134b0578`, before the idempotency logging fix.
 
 **Who decides to log or report:**
 - `src/adapters/controllers/action-result.ts:53-67`: `handleError` logs only non-`ApplicationError`s. A census found 68 production `new ApplicationError('INTERNAL_ERROR', ...)` expressions, for example `drizzle-user-repository.ts:49-54` and `drizzle-bookmark-repository.ts:30-32`.
@@ -34,9 +36,9 @@ Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-lis
 - The projector, `projectSafeErrorDiagnostics` (`src/adapters/shared/safe-error-diagnostics.ts`), keeps the name, code, SQLSTATE and constraint. For a Stripe error it keeps only the class name, dropping Stripe's code, type and request ID, while other call sites still log message strings instead. Their motivation was not established.
 - `toErrorMessage` helpers that log the raw message:
   - `src/adapters/shared/with-idempotency.ts:31` (used at `:258,269-270,284`)
-  - `src/adapters/jobs/reconcile-stripe-subscriptions.ts:31`
   - `reconcile-all-stripe-subscription-pages.ts:39`
   - `drain-pending-stripe-customer-cleanups.ts:35`
+- `reconcile-stripe-subscriptions.ts:362-379` uses its formatter in returned failure data; its log already projects the error at :370. It is not a raw-message logging helper.
 - Inline `error instanceof Error ? error.message : …` sites:
   - eight in `stripe-checkout-sessions.ts`;
   - five more in `with-idempotency.ts` (`:98,101,142,206,209`);
@@ -59,7 +61,7 @@ Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-lis
 ## Impact
 
 - A failed manage-billing request whose error is an `ApplicationError` leaves no server trace. The user still sees an error, and an open circuit follows earlier outage failures that were logged.
-- If `storeResult` fails after Stripe succeeds, the wrapper logs the Drizzle message, whose parameters hold the session URL, beside the user ID. A portal URL is short-lived; a Checkout or trial-setup URL lasts 24 hours, since we set no `expires_at`. Only the owner reads these logs: one Vercel member, no drains, no pino transport, about an hour's retention (DEBT-505). The owner already has Stripe access, so this is a privacy gap, not an exploitable finding. Reassess if a member, a drain or Sentry log capture is added (DEBT-512).
+- Before the idempotency fix, a failed `storeResult` after Stripe succeeded logged the Drizzle message, whose parameters hold the session URL, beside the user ID. A portal URL is short-lived; a Checkout or trial-setup URL lasts 24 hours, since we set no `expires_at`. Only the owner reads these logs: one Vercel member, no drains, no pino transport, about an hour's retention (DEBT-505). The owner already has Stripe access, so this is a privacy gap, not an exploitable finding. Reassess if a member, a drain or Sentry log capture is added (DEBT-512).
 - Each new log or Sentry channel has to be found and filtered by hand.
 
 P3.
@@ -74,15 +76,18 @@ P3.
 
 For Sentry, BUG-331 retains the existing server-channel work. A shared credential-shape redactor or CSP policy is a candidate, not a demonstrated fix: first reproduce a leak with synthetic data through the actual SDK or report path, check false positives and ADR-026's retained pseudonymous fields, and propose an explicit ADR amendment if evidence warrants it.
 
-## Resolution (proposed)
+## Resolution (in progress)
 
 Option 1, red first:
 - a failed portal result is logged;
 - the idempotency wrapper's log of a failed `storeResult` carries no SQL parameters;
 - the scan rejects a raw message in a log field.
 
+The idempotency wrapper now uses `projectSafeErrorDiagnostics` for prune, abort, error-write and result-write failures. `with-idempotency-diagnostics.test.ts` sends synthetic Drizzle failures through pino in all seven failure paths. Each log keeps the action, user ID, key, SQLSTATE and constraint without SQL parameters, cause text or stack. Existing tests retain the cache, replay and committed-outcome policies. The portal defaults, remaining log boundaries, source scan and ADR amendments remain.
+
 ## Verification
 
+- [x] The idempotency wrapper's failure logs carry projected diagnostics without SQL parameters: seven real-pino cases failed before the fix and pass after it.
 - [ ] A failed portal session (circuit open, missing URL) produces one log with projected diagnostics and any preserved cause.
 - [ ] No log field carries an error's raw message; a scan enforces it.
 - [ ] Diagnostic defaults and projection are shared, ADR-006 and ADR-018 are amended, and DEBT-529's action-aware replay policy is preserved.

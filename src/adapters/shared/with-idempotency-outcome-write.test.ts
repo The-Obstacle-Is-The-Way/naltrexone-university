@@ -57,7 +57,7 @@ describe('withIdempotency outcome writes', () => {
         userId: appUserId,
         action: 'billing:createCheckoutSession',
         key,
-        storeResultError: 'store result failed',
+        storeResultError: { name: 'Error' },
       },
     });
   });
@@ -214,7 +214,7 @@ describe('withIdempotency outcome writes', () => {
     ).resolves.toEqual({ ok: true });
     expect(logger.errorCalls[0]).toMatchObject({
       context: {
-        storeResultError: 'store result failed literal',
+        storeResultError: {},
       },
     });
   });
@@ -289,7 +289,7 @@ describe('withIdempotency outcome writes', () => {
         context: {
           action: 'question-feedback:submitQuestionReport',
           key: '21212121-2121-2121-2121-212121212121',
-          storeResultError: 'store result failed',
+          storeResultError: { name: 'Error' },
           userId: appUserId,
         },
       },
@@ -336,8 +336,8 @@ describe('withIdempotency outcome writes', () => {
       context: {
         action: 'question-feedback:submitQuestionReport',
         key: '18181818-1818-1818-1818-181818181818',
-        storeError: 'store error failed',
-        storeResultError: 'store result failed',
+        storeError: { name: 'Error' },
+        storeResultError: { name: 'Error' },
         userId: appUserId,
       },
     });
@@ -378,8 +378,8 @@ describe('withIdempotency outcome writes', () => {
 
     expect(logger.errorCalls[0]).toMatchObject({
       context: {
-        storeError: 'store error failed literal',
-        storeResultError: 'store result failed literal',
+        storeError: {},
+        storeResultError: {},
       },
     });
   });

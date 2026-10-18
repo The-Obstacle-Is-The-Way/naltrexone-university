@@ -89,8 +89,8 @@ describe('withIdempotency practice-session conflict caching', () => {
         userId: appUserId,
         action: 'practice:setPracticeSessionQuestionMark',
         key,
-        abortError: 'plain abort failure',
-        originalError: 'plain execute failure',
+        abortError: {},
+        originalError: {},
       },
     });
   });
