@@ -1,6 +1,6 @@
 # ADR-018: Resilience Patterns (Retry and Backoff)
 
-**Status:** Accepted
+**Status:** Accepted, amended 2026-10-18 (shared Stripe transport limits)
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-005 (Payment Boundary), ADR-006 (Error Handling Strategy)
@@ -77,6 +77,18 @@ callStripeWithRetry({
 - Uses `isTransientExternalError` as the retry predicate.
 - Logs each retry attempt at `warn` level with structured context (operation, attempt, delay, error details).
 - Default config: 3 attempts, 100ms initial delay, 2x factor, 1s max delay.
+
+### Shared Stripe Transport Limits — 2026-10-18 Amendment
+
+The shared client in `lib/stripe-client.ts`, used by `getStripe`, uses the SDK's fetch client. Its three-second timeout stays armed through the response body and aborts the transport. The default Node client's socket-idle timeout did not bound a continuously trickling body.
+
+The SDK gets one network retry. This retains one recovery for a connection failure, a 409, or `stripe-should-retry: true`. The SDK honors `stripe-should-retry: false`; the existing outer wrapper still applies its own transient-status classifier. A closed connection can also trigger the SDK's first retry, but does not add a third HTTP attempt.
+
+With the wrapper's three attempts, the configured allowance is at most six three-second HTTP attempts, three 500-ms SDK delays, and 100+200-ms outer backoff: 19.8 seconds. This is an attempt-and-backoff allowance, not a caller deadline. It does not cover sequential calls or per-request overrides. The reconciliation path keeps its five-second timeout and one SDK retry.
+
+A timeout before headers can use the SDK retry. A timeout or cut-off body after headers becomes `StripeConnectionError` after the SDK's retry decision. That error has no top-level code or status, so the unchanged outer retry predicate does not retry it; the outage classifier still counts it. A lost write response remains indeterminate. Callers retain their idempotency keys and recovery policies.
+
+`stripe-client-timeout.integration.test.ts` runs the production constructor and retry wrapper against loopback. It observes the server connection closing on silence and trickling, counts retries for 5xx, 409 and retry headers, checks caller overrides, and checks keys on retried writes. `lib/stripe.test.ts` proves the lazy production singleton uses that transport configuration.
 
 ### 4. Observability
 

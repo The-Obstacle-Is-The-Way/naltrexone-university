@@ -1,3 +1,4 @@
+import Stripe from 'stripe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   restoreProcessEnv,
@@ -21,21 +22,21 @@ function setSharedTestEnv() {
 
 type StripeInstance = {
   apiKey: string;
-  options: {
-    apiVersion: string;
-    typescript: boolean;
-  };
+  options: Stripe.StripeConfig;
 };
 
 function createStripeConstructorMock() {
-  return vi.fn(function StripeMock(
-    this: StripeInstance,
-    apiKey: string,
-    options: StripeInstance['options'],
-  ) {
-    this.apiKey = apiKey;
-    this.options = options;
-  });
+  return Object.assign(
+    vi.fn(function StripeMock(
+      this: StripeInstance,
+      apiKey: string,
+      options: StripeInstance['options'],
+    ) {
+      this.apiKey = apiKey;
+      this.options = options;
+    }),
+    { createFetchHttpClient: Stripe.createFetchHttpClient.bind(Stripe) },
+  );
 }
 
 describe('getStripe', () => {
@@ -69,11 +70,16 @@ describe('getStripe', () => {
 
     expect(stripeConstructor).toHaveBeenCalledTimes(1);
     expect(first).toBe(second);
+    expect(
+      stripeConstructor.mock.calls[0]?.[1].httpClient?.getClientName(),
+    ).toBe('fetch');
     expect(first).toMatchObject({
       apiKey: 'sk_test_dummy',
       options: {
         apiVersion: STRIPE_API_VERSION,
         typescript: true,
+        timeout: 3_000,
+        maxNetworkRetries: 1,
       },
     });
   });
