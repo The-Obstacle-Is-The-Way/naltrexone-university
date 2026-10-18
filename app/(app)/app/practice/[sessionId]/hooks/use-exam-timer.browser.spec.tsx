@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { useExamTimer } from './use-exam-timer';
 
 function TimerProbe(props: {
@@ -11,6 +12,20 @@ function TimerProbe(props: {
   const [deadlineAt, setDeadlineAt] = useState(props.initialDeadlineAt);
   const timer = useExamTimer({
     deadlineAt,
+    remainingMs:
+      deadlineAt === null
+        ? null
+        : Math.max(
+            0,
+            Date.parse(deadlineAt) - Date.parse('2026-05-22T12:00:00.000Z'),
+          ),
+    readTiming: async () => ({
+      deadlineAt,
+      remainingMs:
+        deadlineAt === null
+          ? null
+          : Math.max(0, Date.parse(deadlineAt) - Date.now()),
+    }),
     isExamActive: props.isExamActive ?? true,
     onExpire: props.onExpire,
   });
@@ -45,7 +60,108 @@ afterEach(() => {
 });
 
 describe('useExamTimer', () => {
-  it('counts down from the absolute deadline', async () => {
+  it.each([5_000, 20_000, -20_000])(
+    'uses server time with a browser clock offset of %i ms',
+    async (offsetMs) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(
+        new Date(Date.parse('2026-05-22T12:00:00.000Z') + offsetMs),
+      );
+      const onExpire = vi.fn();
+      function ServerTimer() {
+        const timer = useExamTimer({
+          deadlineAt: '2026-05-22T12:00:03.000Z',
+          remainingMs: 3_000,
+          isExamActive: true,
+          onExpire,
+          readTiming: async () => ({
+            deadlineAt: '2026-05-22T12:00:03.000Z',
+            remainingMs: 3_000,
+          }),
+        });
+        return (
+          <div data-testid="server-remaining">{timer?.remainingSeconds}</div>
+        );
+      }
+      const screen = await render(<ServerTimer />);
+      await expect
+        .element(screen.getByTestId('server-remaining'))
+        .toHaveTextContent('3');
+      vi.setSystemTime(new Date('2030-01-01T00:00:00.000Z'));
+      await vi.advanceTimersByTimeAsync(1_000);
+      await expect
+        .element(screen.getByTestId('server-remaining'))
+        .toHaveTextContent('2');
+      expect(onExpire).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(onExpire).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('keeps a pending expiry retryable across a new sample for the same deadline', async () => {
+    vi.useFakeTimers();
+    const finalization = createDeferred<boolean>();
+    const onExpire = vi
+      .fn()
+      .mockImplementationOnce(() => finalization.promise)
+      .mockResolvedValue(true);
+    function Timer() {
+      const [remainingMs, setRemainingMs] = useState(1_000);
+      useExamTimer({
+        deadlineAt: '2026-05-22T12:00:01.000Z',
+        remainingMs,
+        isExamActive: true,
+        onExpire,
+        readTiming: async () => null,
+      });
+      return (
+        <button type="button" onClick={() => setRemainingMs(0)}>
+          receive-new-sample
+        </button>
+      );
+    }
+    const screen = await render(<Timer />);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    await screen.getByRole('button', { name: 'receive-new-sample' }).click();
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    finalization.resolve(false);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not delay expiry while a server timing refresh is pending', async () => {
+    vi.useFakeTimers();
+    const timing = createDeferred<{
+      deadlineAt: string;
+      remainingMs: number;
+    }>();
+    const onExpire = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    function Timer() {
+      useExamTimer({
+        deadlineAt: '2026-05-22T12:00:01.000Z',
+        remainingMs: 1_000,
+        isExamActive: true,
+        onExpire,
+        readTiming: () => timing.promise,
+      });
+      return null;
+    }
+    const screen = await render(<Timer />);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+    await screen.unmount();
+    timing.resolve({ deadlineAt: '2026-05-22T12:00:01.000Z', remainingMs: 0 });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts down from the server remaining time', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
     const onExpire = vi.fn();

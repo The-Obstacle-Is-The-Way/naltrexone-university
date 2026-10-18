@@ -37,6 +37,7 @@ import {
   getCompletedSessionQuestionsWithFeedback,
   getPracticeSessionReview,
   getPracticeSessionSummary,
+  getPracticeSessionTiming,
   saveExamDraftAnswer,
   setPracticeSessionQuestionMark,
 } from '@/src/adapters/controllers/practice-actions';
@@ -241,8 +242,10 @@ export function usePracticeSessionPageModel(
 
       if (!isMounted()) return false;
       try {
-        const finalized =
-          await reviewStage.finalizeExamSession(finalDraftAnswer);
+        const finalized = await reviewStage.finalizeExamSession(
+          finalDraftAnswer,
+          { onlyIfExpired: true },
+        );
         if (!finalized && isMounted()) {
           expiryFinalizeInFlightRef.current = false;
         }
@@ -272,8 +275,17 @@ export function usePracticeSessionPageModel(
     !reviewStage.review &&
     !reviewStage.postExamSummary &&
     !reviewStage.postExamReview;
+  const readExamTiming = useCallback(async () => {
+    const result = await withTimeout(
+      getPracticeSessionTiming({ sessionId }),
+      STANDARD_READ_TIMEOUT_MS,
+    );
+    return result.ok ? result.data : null;
+  }, [sessionId]);
   const timerState = useExamTimer({
     deadlineAt: questionFlow.sessionInfo?.deadlineAt ?? null,
+    remainingMs: questionFlow.sessionInfo?.remainingMs ?? null,
+    readTiming: readExamTiming,
     isExamActive: isTimerActive,
     onExpire: finalizeExpiredExam,
   });

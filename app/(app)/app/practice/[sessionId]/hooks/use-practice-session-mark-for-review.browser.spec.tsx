@@ -74,6 +74,7 @@ function MarkForReviewPracticeViewContent(input: {
     sessionId: fixtureSession1Id,
     mode: 'exam' as const,
     deadlineAt: '2099-05-22T12:02:24.000Z',
+    remainingMs: 72_000,
     index: 0,
     total: 10,
     isMarkedForReview: false,
@@ -161,6 +162,8 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
 
+          remainingMs: 72_000,
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -209,6 +212,8 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -218,6 +223,8 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       mode: 'exam',
 
       deadlineAt: '2099-05-22T12:02:24.000Z',
+
+      remainingMs: 72_000,
 
       index: 0,
       total: 10,
@@ -273,6 +280,8 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          remainingMs: 72_000,
 
           index: 0,
           total: 10,
@@ -390,6 +399,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
             sessionId: fixtureSession1Id,
             mode: 'exam',
             deadlineAt: '2099-05-22T12:02:24.000Z',
+            remainingMs: 72_000,
             index: 0,
             total: 10,
             isMarkedForReview: props.markedForReview,
@@ -460,6 +470,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           sessionId: fixtureSession1Id,
           mode: 'exam',
           deadlineAt: '2099-05-22T12:02:24.000Z',
+          remainingMs: 72_000,
           index: 0,
           total: 10,
           isMarkedForReview: false,

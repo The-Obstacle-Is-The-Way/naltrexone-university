@@ -24,6 +24,7 @@ type QuestionSessionFixture = {
   sessionId?: string;
   mode: PracticeMode;
   deadlineAt?: string | null;
+  remainingMs?: number | null;
   index: number;
   total: number;
   isMarkedForReview: boolean;
@@ -101,6 +102,9 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
           : input.session.mode === 'exam'
             ? '2099-05-22T12:02:24.000Z'
             : null,
+      remainingMs:
+        input.session.remainingMs ??
+        (input.session.mode === 'exam' ? 72_000 : null),
       index: input.session.index,
       total: input.session.total,
       isMarkedForReview: input.session.isMarkedForReview,
