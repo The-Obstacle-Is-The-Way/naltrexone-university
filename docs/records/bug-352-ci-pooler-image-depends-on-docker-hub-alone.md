@@ -93,7 +93,7 @@ Production keeps serving the previous deployment. The pull failure itself does n
     - `::notice::<label> image pulled from <registry>` on success;
     - `::warning::Could not pull <label> from <registry>; trying the next registry.` before moving on;
     - `::error::No registry served <name>@<digest>.` when all refuse, with a non-zero exit.
-  - It rejects a digest that is not `sha256:` and 64 hex digits, and a call naming fewer than two repositories.
+  - It rejects a digest that is not `sha256:` and 64 hex digits, a pull timeout that is not a whole number of seconds above zero, and a call naming fewer than two repositories. A bad timeout would otherwise make `timeout` fail every attempt, which reads as every registry refusing.
   - It never returns the reference through captured output, which would swallow its notices.
 - **`start-postgres.sh` uses it.** It sources the helper and calls it with its three registries. Its behavior, its messages and `POSTGRES_PULL_TIMEOUT_SECONDS` stay as they are, so `scripts/ci/start-postgres.test.ts` passes unchanged.
 - **A `Pull PgBouncer` step**, right after `Start Postgres`, bounded at 7 minutes. Refusing both registries takes at most 2 × (70 + 10 + 70) = 300 seconds.
@@ -104,7 +104,7 @@ Production keeps serving the previous deployment. The pull failure itself does n
   - The name has to vary because Docker cannot tag a digest reference. A mirror pull does not guarantee the Docker Hub reference exists locally. The earlier empty-cache check on 2026-10-17 reported `No such image` for the Hub reference. The repeat on Docker 29.8.1 retained an already cached Hub reference and added the mirror reference; neither was removed to force a result. `docker tag` refused a digest target. Compose successfully started the mirror reference with `--pull never`, both with `--no-start` and with `--wait`.
   - Both `docker compose up` calls in `Start transaction pooler` add `--pull never`, so Compose can never fall back to an unannounced Docker Hub pull.
 - **The guard, red first, in `tests/ci-service-images.test.ts`.**
-  - No declarative workflow container may bypass the helper before steps run. No workflow `run` step calls `docker pull`, `docker run`, `docker create` or `docker compose pull` directly.
+  - No declarative workflow container may bypass the helper before steps run. No workflow `run` step calls `docker pull`, `docker run`, `docker create` (or their `docker image` and `docker container` forms) or `docker compose pull` directly, and legacy `docker-compose` is refused as a form.
   - Every `docker compose up`, `create` or `run` in a workflow passes `--pull never`.
   - Each Compose service a workflow starts has an image of the form `${<NAME>_IMAGE_REPOSITORY:-<repository>}@sha256:<64 hex>`. Its digest equals the one that workflow pulls through the helper, which also sets `<NAME>_IMAGE_REPOSITORY`.
   - Every helper caller, in a workflow or in `scripts/ci/`, names literal repositories on at least two registries. The helper's own CLI forwarding call is excluded from this source scan; its argument validation is exercised by the same CLI tests.

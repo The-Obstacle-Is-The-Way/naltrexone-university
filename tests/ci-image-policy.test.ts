@@ -47,12 +47,17 @@ describe('CI image policy negative controls', () => {
     'docker create example/pool',
     'docker compose pull pool',
     'true && docker pull example/pool',
+    'docker image pull example/pool',
+    'docker container run example/pool',
+    'docker container create example/pool',
   ])('rejects direct pull path: %s', (run) => {
     expect(workflowImageErrors(workflow(run), COMPOSE).direct).not.toEqual([]);
   });
   it.each([
     'docker --context runner pull example/pool',
     'docker compose -f other.yml up pool',
+    'docker-compose up --no-deps --pull never pool',
+    'docker-compose pull pool',
   ])('fails closed on unsupported Docker command form: %s', (run) => {
     expect(workflowImageErrors(workflow(run), COMPOSE).direct).not.toEqual([]);
   });

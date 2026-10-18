@@ -23,6 +23,7 @@ async function run({
   digest = DIGEST,
   repositories = REPOSITORIES,
   sourced = false,
+  timeout = '1',
 } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'pull-image-'));
   roots.push(root);
@@ -72,7 +73,7 @@ async function run({
       env: {
         ...process.env,
         PATH: `${root}:${process.env.PATH ?? ''}`,
-        IMAGE_PULL_TIMEOUT_SECONDS: '1',
+        IMAGE_PULL_TIMEOUT_SECONDS: timeout,
         GITHUB_ENV: githubEnv,
         FAKE_LOG: log,
         FAKE_DOCKER_REFUSE: refuse,
@@ -142,6 +143,20 @@ describe('pull-image.sh', () => {
     async (digest) => {
       const result = await run({ digest });
       expect(result.status).toBe(2);
+      expect(result.calls).toEqual([]);
+      expect(result.envFile).toBe('EXISTING=kept\n');
+    },
+  );
+  // A malformed timeout makes `timeout` exit 125 on every attempt, which the
+  // loop would report as registries refusing, after every retry and sleep.
+  it.each(['60s', '0', 'abc', '1.5'])(
+    'refuses pull timeout %s as configuration before Docker',
+    async (timeout) => {
+      const result = await run({ timeout });
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(
+        `::error::IMAGE_PULL_TIMEOUT_SECONDS must be a whole number of seconds above zero, not '${timeout}'.`,
+      );
       expect(result.calls).toEqual([]);
       expect(result.envFile).toBe('EXISTING=kept\n');
     },

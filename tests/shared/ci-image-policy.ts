@@ -73,7 +73,7 @@ export function workflowImageErrors(source: string, composeSource: string) {
       errors.repositories.push(...helperRepositoryErrors(step.run ?? ''));
       for (const command of shellCommands(step.run ?? '')) {
         if (
-          /\bdocker\s+(pull|run|create)\b|\bdocker\s+compose\b[^\n]*\bpull\b(?!\s+never)/.test(
+          /\bdocker\s+(?:(?:image|container)\s+)?(pull|run|create)\b|\bdocker\s+compose\b[^\n]*\bpull\b(?!\s+never)/.test(
             command.replace(/--pull(?:=|\s+)never/g, ''),
           )
         ) {
@@ -95,6 +95,13 @@ export function workflowImageErrors(source: string, composeSource: string) {
             pulled.set(name, resolved);
         }
         const docker = tokens.indexOf('docker');
+        // Legacy docker-compose escapes both the direct-pull and the
+        // `docker compose` checks, so it is refused as a form.
+        if (tokens.some((token) => /(?:^|\/)docker-compose$/.test(token))) {
+          errors.direct.push(
+            `Unsupported Docker form; use explicit audited commands: ${command}`,
+          );
+        }
         if (
           docker >= 0 &&
           (tokens[docker + 1]?.startsWith('-') ||

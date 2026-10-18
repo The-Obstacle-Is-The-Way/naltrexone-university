@@ -16,9 +16,15 @@ pull_image() {
     echo "::error::${digest_name} must be sha256: and 64 hex digits, not '${digest}'." >&2
     return 2
   fi
+  # A malformed limit makes `timeout` exit 125 on every attempt, which would
+  # read as every registry refusing.
+  local pull_timeout_seconds="${IMAGE_PULL_TIMEOUT_SECONDS:-60}"
+  if [[ ! "$pull_timeout_seconds" =~ ^[1-9][0-9]*$ ]]; then
+    echo "::error::IMAGE_PULL_TIMEOUT_SECONDS must be a whole number of seconds above zero, not '${pull_timeout_seconds}'." >&2
+    return 2
+  fi
   local name="${1##*/}" repository attempt
   local pull_attempts=2 retry_delay_seconds=10
-  local pull_timeout_seconds="${IMAGE_PULL_TIMEOUT_SECONDS:-60}"
   for repository in "$@"; do
     for ((attempt = 1; attempt <= pull_attempts; attempt++)); do
       if timeout --kill-after=10s "${pull_timeout_seconds}s" docker pull --quiet "${repository}@${digest}"; then
