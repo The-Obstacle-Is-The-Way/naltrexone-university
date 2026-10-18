@@ -450,6 +450,7 @@ export async function sendDueRenewalNotices(
     notices: [...annualNotices, ...anniversaryNotices],
     limit: dispatchLimit,
   });
+  await alertOnStalledSends(result.staleUnknown, deps);
   await alertOnMissedNoticeDeadlines(
     { renewalAfter: observedAt, renewalAtOrBefore: noticeDeadline },
     subscriptionLimit,
@@ -471,6 +472,24 @@ export async function sendDueRenewalNotices(
     alertDrill,
     scheduledChecks,
   };
+}
+
+// ADR-027: a send still unfinished after 15 minutes is quarantined as an
+// unknown outcome, like an ambiguous answer, and needs the same person before
+// a reminder's send-by cutoff passes.
+async function alertOnStalledSends(
+  staleUnknown: number,
+  deps: SendDueRenewalNoticesJobDeps,
+): Promise<void> {
+  if (staleUnknown === 0) return;
+  deps.logger.error(
+    { count: staleUnknown },
+    'Stalled renewal notice sends quarantined as unknown outcomes',
+  );
+  await deps.alerts.raise({
+    kind: 'renewal_notice_outcome_unknown',
+    count: staleUnknown,
+  });
 }
 
 // Runs after dispatch, so a notice sent in this run is not flagged.
