@@ -68,7 +68,7 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
    └─ pnpm typecheck
    └─ pnpm lint:ci
    └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
-   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm exec tsx scripts/internal/run-managed-db-seed.ts
+   └─ pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders
    └─ pnpm test:coverage
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required

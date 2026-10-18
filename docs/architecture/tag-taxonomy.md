@@ -151,7 +151,7 @@ Behavior:
 
 - `readSeedQuestionFiles()` reads `content/questions/**/*.mdx`.
 - Placeholder files under `content/questions/placeholder/**/*.mdx` are excluded
-  unless `SEED_INCLUDE_PLACEHOLDERS=true`.
+  unless the seed is given `--include-placeholders`.
 - When placeholders are excluded, `archivePlaceholderQuestions()` archives
   the ten committed fixtures' rows, by exact QID (BUG-315). Like the rest of
   the seed, it refuses a database with an active content release.

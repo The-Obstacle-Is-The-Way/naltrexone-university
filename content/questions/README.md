@@ -81,7 +81,7 @@ pnpm content:import:drafts -- --status published
 pnpm db:seed
 
 # Include placeholder content during seed
-SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
+pnpm db:seed --include-placeholders
 ```
 
 ## Workflow

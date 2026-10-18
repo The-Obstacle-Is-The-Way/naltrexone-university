@@ -95,12 +95,15 @@ describe('createE2ECommandPlan', () => {
     });
     expect(plan[2]).toMatchObject({
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/internal/run-managed-db-seed.ts'],
-      env: {
-        ...targetEnv,
-        SEED_INCLUDE_PLACEHOLDERS: 'true',
-      },
+      args: [
+        'exec',
+        'tsx',
+        'scripts/internal/run-managed-db-seed.ts',
+        '--include-placeholders',
+      ],
+      env: targetEnv,
     });
+    expect(plan[2]?.env).not.toHaveProperty('SEED_INCLUDE_PLACEHOLDERS');
     expect(plan[3]).toMatchObject({
       command: 'pnpm',
       args: [

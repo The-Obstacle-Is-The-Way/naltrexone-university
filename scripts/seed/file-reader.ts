@@ -19,7 +19,7 @@ function getSeedPatterns(includePlaceholders: boolean): readonly string[] {
 function getMissingFilesMessage(includePlaceholders: boolean): string {
   return includePlaceholders
     ? 'No question files found at content/questions/**/*.mdx. Seed requires at least one MDX file.'
-    : 'No question files found after excluding placeholders. Re-run with SEED_INCLUDE_PLACEHOLDERS=true or generate imported content under content/questions/imported/.';
+    : 'No question files found after excluding placeholders. Re-run with --include-placeholders or generate imported content under content/questions/imported/.';
 }
 
 export async function readSeedQuestionFiles(

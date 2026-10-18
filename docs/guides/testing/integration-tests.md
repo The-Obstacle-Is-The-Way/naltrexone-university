@@ -46,11 +46,11 @@ DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 
 Seeds question content and tags from `content/questions/`. Required for `tag-taxonomy-census.integration.test.ts` which validates that all tags have canonical kinds. Without seeding, that test file fails with `INTEGRATION_SEED_MISSING`.
 
-CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`. Local integration tests pass with plain `pnpm db:seed`, but you can add the flag for exact CI seed parity:
+CI seeds with `--include-placeholders`. Local integration tests pass with plain `pnpm db:seed`, but you can add the flag for exact CI seed parity:
 
 ```bash
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
-SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders
 ```
 
 ### 4. Run Tests
@@ -82,7 +82,7 @@ The 2026-10-14 run produced that exact receipt (04:59:25Z–05:00:44Z), after th
 ### One-Liner (Full Setup)
 
 ```bash
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders && pnpm test:integration
 ```
 
 ### Reset (Nuclear Option)
@@ -117,7 +117,7 @@ GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 contain
 
 1. Pull PgBouncer through the same bounded helper as Postgres, trying Docker Hub then Google's mirror. The helper exports the serving repository. Start the digest-pinned Compose transaction pooler on the resolver's port with `--pull never` in both Compose calls, using the existing CI Postgres container. The dependency update guide owns its refresh duty (BUG-352).
 2. `pnpm db:migrate` — applies migrations to the CI database
-3. `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed` — seeds test data, including placeholder content used by CI parity checks
+3. `pnpm db:seed --include-placeholders` — seeds test data, including placeholder content used by CI parity checks
 4. `pnpm test:integration:coverage` — runs all integration tests with coverage, including the pooled timeout and managed-migration proofs
 
 Integration tests are part of every PR and every push to `main`.

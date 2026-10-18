@@ -2410,7 +2410,7 @@ This list records the original build order. Today's release procedure is the [de
 8. Implement Stripe webhook endpoint and set `STRIPE_WEBHOOK_SECRET`.
 9. Implement pricing + checkout + success sync.
 10. Implement subscription gate for `/app/*`.
-11. Add seed script + placeholder questions (seeded only with `SEED_INCLUDE_PLACEHOLDERS=true`, as CI does); run `pnpm db:seed` against preview/prod by hand, with an explicit `DATABASE_URL` and `DB_TARGET_ACK`, after each content change (deploys do not seed).
+11. Add seed script + placeholder questions (seeded only with `--include-placeholders`, as CI does); run `pnpm db:seed` against preview/prod by hand, with an explicit `DATABASE_URL` and `DB_TARGET_ACK`, after each content change (deploys do not seed).
 12. Add GitHub Actions workflow and ensure green on PR.
 13. Connect repo to Vercel:
 

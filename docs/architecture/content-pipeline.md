@@ -80,7 +80,7 @@ PostgreSQL (questions, choices, tags, question_tags)
 
 10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and archives any existing placeholder rows. They're templates, not production content.
 
-To include them: `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`
+To include them in a test database: `pnpm db:seed --include-placeholders`. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
 
 ### Can I modify drafts freely?
 
@@ -292,10 +292,10 @@ The app selects and shows new questions only when they are **published**: `Drizz
 
 `content/questions/placeholder/` contains 10 committed templates for pipeline smoke-testing.
 
-To exclude placeholders from your runtime database:
+To exclude placeholders from your runtime database, seed without `--include-placeholders`:
 
 ```bash
-SEED_INCLUDE_PLACEHOLDERS=false pnpm db:seed
+pnpm db:seed
 ```
 
 This excludes `content/questions/placeholder/**/*.mdx` from the seed input and archives only the ten committed fixture slugs listed in `scripts/seed/placeholder-archiver.ts`. An authored question is not synthetic merely because its slug starts with `placeholder-` (BUG-315).
@@ -561,7 +561,7 @@ TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 # Prerequisite: approved MDX is already placed under content/questions/.
 # Generate/review replacements separately using the clean-staging procedure above.
-SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 pnpm dev
 ```
 
@@ -608,7 +608,7 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 
 The seed script is idempotent: running it again with the same MDX content skips every unchanged question and writes nothing.
 
-**Important:** By default, every `pnpm db:seed` run against a database with no active content release also archives the ten committed placeholder fixtures, by exact QID, unless `SEED_INCLUDE_PLACEHOLDERS=true`. An authored question whose QID merely starts with `placeholder-` is left alone (BUG-315). That placeholder archival is a deliberate side effect of every such run. Once a release is active, the seed refuses the database before it archives anything.
+**Important:** By default, every `pnpm db:seed` run against a database with no active content release also archives the ten committed placeholder fixtures, by exact QID, unless it is given `--include-placeholders`. An authored question whose QID merely starts with `placeholder-` is left alone (BUG-315). That placeholder archival is a deliberate side effect of every such run. Once a release is active, the seed refuses the database before it archives anything.
 
 ### How it works
 
@@ -638,7 +638,7 @@ So `updated` greater than `new revisions` means metadata changed. Check `status`
 
 ### What about placeholders?
 
-By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`.
+By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `pnpm db:seed --include-placeholders`.
 
 ---
 
