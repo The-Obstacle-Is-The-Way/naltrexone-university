@@ -109,8 +109,9 @@ must put it inside Drizzle's migration transaction, not on a separate client.
    this rollout. Do not assume a particular Neon backend lifetime or that local
    PgBouncer's admin commands are available there.
 5. BUG-345 closed on 2026-10-18 on two such batches: one shortly after
-   promotion #1551, and one about 20 hours later. A later migration that
-   changes these role defaults repeats steps 2 to 4.
+   promotion #1551, and one about 20 hours later. Production requests used the
+   pooled database between them: the rate limiter wrote rows in that window. A
+   later migration that changes these role defaults repeats steps 2 to 4.
 
 **Rollback:** a code rollback alone leaves role defaults in place. Prefer a
 reviewed fix-forward transaction-local override for a proven exceptional
