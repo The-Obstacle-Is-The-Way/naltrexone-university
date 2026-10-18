@@ -36,11 +36,18 @@ describe('release manifest', () => {
     expect(releaseManifestHash(first)).not.toBe(releaseManifestHash(next));
   });
 
-  it('preserves the canonical bytes and hash of a stored v2 manifest', () => {
+  it('preserves the canonical bytes and hash when reading or rebuilding a v2 manifest', () => {
     const stored = parseReleaseManifest(JSON.parse(V2_CANONICAL));
+    const rebuilt = buildReleaseManifest(
+      ITEMS,
+      REMOVALS,
+      'app-release-manifest-v2',
+    );
 
     expect(canonicalReleaseManifestJson(stored)).toBe(V2_CANONICAL);
     expect(releaseManifestHash(stored)).toBe(V2_DIGEST);
+    expect(canonicalReleaseManifestJson(rebuilt)).toBe(V2_CANONICAL);
+    expect(releaseManifestHash(rebuilt)).toBe(V2_DIGEST);
   });
 
   // Computed independently with Python's standard library:
@@ -113,6 +120,29 @@ describe('release manifest', () => {
       removals: [{ slug: 'gamma-q', kind: 'archived' }],
     });
   });
+
+  it.each(['app-release-manifest-v2', RELEASE_MANIFEST_FORMAT] as const)(
+    'refuses a stored %s manifest that both selects and removes a question',
+    (format) => {
+      const stored = {
+        format,
+        items: [
+          {
+            slug: 'alpha-q',
+            contentHash: HASH_A,
+            ...(format === RELEASE_MANIFEST_FORMAT
+              ? { revisionId: REVISION_A }
+              : {}),
+          },
+        ],
+        removals: [{ slug: 'alpha-q', kind: 'removed' }],
+      };
+
+      expect(() => parseReleaseManifest(stored)).toThrow(
+        'A question appears more than once in the manifest',
+      );
+    },
+  );
 
   it.each([
     [
