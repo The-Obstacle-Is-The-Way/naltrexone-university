@@ -19,7 +19,7 @@ WHERE status IN ('outcome_unknown', 'terminal_failure')
 ORDER BY last_attempt_at DESC NULLS LAST;
 ```
 
-Note the row's `provider_event_id`; step 4 compares against it.
+`provider_event_id` is set only on a row Resend accepted before reporting a bounce, failure or suppression. An `outcome_unknown` row has none.
 
 ## 2. Decide whether to send it again
 
@@ -50,7 +50,7 @@ The redacted `Database target:` line goes to stderr. On success, stdout names th
 
 The next daily renewal-notice run, at 09:00 UTC (`vercel.json`), picks up the queued row, rechecks it and sends it. Then check both:
 
-- **The row** is `accepted`, or `delivered` once Resend's delivery report arrives, and its `provider_event_id` differs from the one you noted. The same ID means Resend replayed the earlier email and nothing new was sent.
-- **Resend** shows that new email.
+- **The row** is `accepted`, or `delivered` once Resend's delivery report arrives.
+- **Resend** shows the email with the row's new `provider_event_id`, created after your requeue. An email created before it means Resend replayed the earlier send and nothing new went out.
 
 If the row is quarantined again, start over at step 1.
