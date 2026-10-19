@@ -1,6 +1,6 @@
 # ADR-021: Immutable Question Revisions and Atomic Content Releases
 
-**Status:** Accepted
+**Status:** Accepted, as amended 2026-10-03 (the contract step is not pursued; see [Amendment](#amendment--2026-10-03-the-contract-step-is-not-pursued)) and 2026-10-18 (release identity includes selected revisions; see [Amendment](#amendment--2026-10-18-release-identity-includes-selected-revisions))
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
 **Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 (DEBT-484, resolved). Phase 4 is in production as of 2026-10-02 (DEBT-483, resolved), built in steps from its design (DEBT-483). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. DEBT-489's fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` (DEBT-490) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred. DEBT-492 closed the release-safety gaps, and DEBT-490 records each decision; both are released, so the bootstrap, the owner's call, waits on nothing in engineering.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
@@ -154,6 +154,12 @@ Reading release items directly would:
 No driver for it has been identified. The one benefit cited, telling held, removed and withdrawn questions apart, is delivered without it by [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md), which derives availability from the status and the overlay tables.
 
 **Reopen if** a reader needs release membership that the projection cannot express.
+
+## Amendment — 2026-10-18: release identity includes selected revisions
+
+BUG-351 part 1 proves that equal content can occupy several immutable revisions. Matching the current revision is insufficient if release reuse substitutes an older revision with the same content hash. The v2 manifest omits revision IDs, while migration 0048 makes its hash and parent unique.
+
+New releases use `app-release-manifest-v3`. Each item names its selected revision ID alongside its slug and unchanged content hash. Reuse and activation verification therefore preserve the selected revision. Existing v2 releases retain their original bytes and hashes and remain readable for activation and rollback. V1 stays unsupported. No schema migration is needed. Content hashes still exclude row identities, as defined above.
 
 ## Related
 
