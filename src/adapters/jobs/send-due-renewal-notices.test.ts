@@ -202,25 +202,8 @@ function monthlySubscription(
 }
 
 describe('sendDueRenewalNotices job', () => {
-  // DEBT-414 F01: the strictest applicable annual-notice window is 30-40 days
-  // before the renewal (CO 25-40, VT/IL/DE/GA/HI 30-60, CA/NY 15-45). The job
-  // first selects a renewal at 35 days and retries daily down to 30.
-  it('selects active annual renewals 30 to 35 days out, targeting 35', async () => {
-    const { deps, listDue } = createDeps();
-
-    await sendDueRenewalNotices(
-      { subscriptionLimit: 50, dispatchLimit: 100 },
-      deps,
-    );
-
-    expect(listDue).toHaveBeenCalledWith({
-      renewalAtOrAfter: new Date('2026-09-06T12:00:00.000Z'),
-      renewalAtOrBefore: new Date('2026-09-11T12:00:00.000Z'),
-      disclosureVersion: '2026-08-05',
-      limit: 40,
-    });
-  });
-
+  // The 30–39-day boundaries and repeat-run deduplication for both plans
+  // run through real Postgres and the container in cron-routes.integration.test.ts.
   it('alerts on renewals inside 30 days that lack delivered notices, after dispatching', async () => {
     const { deps, execute, listPastNoticeDeadline, logger, alerts } =
       createDeps();
@@ -435,47 +418,8 @@ describe('sendDueRenewalNotices job', () => {
   });
 
   // DEBT-414 F02: monthly subscribers get a yearly reminder before the renewal
-  // that carries them past each twelve months, in the same 30-35-day window.
+  // that carries them past each twelve months, in the same 30-39-day window.
   describe('monthly anniversary reminders', () => {
-    it('schedules a reminder for each renewal 30 to 35 days out that starts another year', async () => {
-      const { deps, execute, listActiveMonthly } = createDeps();
-      listActiveMonthly.mockResolvedValueOnce([
-        // Renews into its second year on 2026-09-10: 34 days out.
-        monthlySubscription('sub_due', '2025-09-10T12:00:00.000Z'),
-        // 2026-09-12 is 36 days out: tomorrow's run.
-        monthlySubscription('sub_later', '2025-09-12T12:00:00.000Z'),
-        // 2026-09-05 is 29 days out: inside the minimum, never scheduled.
-        monthlySubscription('sub_late', '2025-09-05T12:00:00.000Z'),
-      ]);
-
-      await sendDueRenewalNotices(
-        { subscriptionLimit: 50, dispatchLimit: 100 },
-        deps,
-      );
-
-      const notices = execute.mock.calls[0]?.[0].notices ?? [];
-      expect(
-        notices.filter(
-          (notice) => notice.noticeKind === 'anniversary_reminder',
-        ),
-      ).toEqual([
-        {
-          noticeKind: 'anniversary_reminder',
-          externalSubscriptionId: 'sub_due',
-          applicableAt: new Date('2026-09-10T12:00:00.000Z'),
-          disclosureVersion: '2026-09-27',
-          destination: 'sub_due@example.com',
-          planName: 'Pro Monthly',
-          amountCents: 2900,
-          currency: 'usd',
-          frequency: 'month',
-          cancellationMethod:
-            'Cancel on the Billing page in the app or email support@addictionboards.com.',
-          changeDescription: null,
-        },
-      ]);
-    });
-
     it('pages through every active monthly subscription', async () => {
       const { deps, listActiveMonthly } = createDeps();
       const page = Array.from({ length: 500 }, (_, index) =>

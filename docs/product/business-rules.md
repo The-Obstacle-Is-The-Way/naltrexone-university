@@ -194,3 +194,11 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/application/use-cases/set-bookmark.test.ts`: `throws NOT_FOUND when adding an unpublished question`
 - `src/application/use-cases/set-bookmark.test.ts`: `returns bookmarked=false when removing an already absent bookmark`
 - `src/application/use-cases/get-bookmarks.test.ts`: `labels a bookmarked question that is %s`
+
+## Renewal scheduling
+
+### R28. Annual and monthly anniversary reminders are first eligible 39 days before renewal and are not scheduled inside the 30-day minimum or outside the 39-day maximum; a repeat run preserves an already accepted reminder instead of creating and sending another.
+
+The 39-day start is proposed and awaits owner approval; the approved start remains 35 days until that decision.
+
+- `tests/integration/cron-routes.integration.test.ts`: `selects %s reminders from 30 through 39 days and does not resend them`
