@@ -1,8 +1,8 @@
 # ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
-**Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The decisions below have shipped as engineering. They are not legal sign-off, and this record claims no legal compliance.
-**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-10
-**Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, and delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03. ADR-023 moved decisions out of records, so they are recorded here.
+**Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The decisions below are engineering, not legal sign-off, and this record claims no legal compliance.
+**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-17
+**Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03, and chose an operator script for requeueing a quarantined notice on 2026-10-17 (DEBT-414 F23). ADR-023 moved decisions out of records, so they are recorded here.
 **Depends On:** ADR-005 (Payment Boundary), ADR-014 (Stripe Eager Sync on Checkout Success), ADR-017 (Webhook Processing Lifecycle), ADR-026 (Error Monitoring with Sentry)
 
 ---
@@ -46,7 +46,7 @@
    - Reason (DEBT-414 §7): a failure after consent must not leave consent without an acknowledgment, and a retry must not send it twice.
 7. **Renewal notices go out 35 to 30 days before renewal, for both plans (2026-09-27; monthly from 2026-09-28).**
    - An annual plan gets an `annual_reminder` and a `renewal_notice`. A monthly plan gets an `anniversary_reminder` before the renewal that carries service past each twelve-month mark (`nextAnniversaryRenewalAt`).
-   - The cron runs at 09:00 UTC (`vercel.json`). It selects active, renewing subscriptions 35 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
+   - The cron is scheduled for 09:00 UTC (`vercel.json`); its current daily start window is 09:00–10:00 UTC. It selects active, renewing subscriptions 35 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
    - Each notice says the plan renews unless cancelled. It gives the cutoff in UTC, Eastern and Pacific time, and links cancellation (F06).
    - Reasons: F01 found the earlier 15–45-day window too early or too late for some states. The code records 30–40 days as the window every covered state shares. F02 cites Colorado and Connecticut for yearly reminders on monthly plans.
    - Each notice kind has its own disclosure version (`ANNUAL_RENEWAL_NOTICE_VERSION` and `MONTHLY_ANNIVERSARY_NOTICE_VERSION` in `lib/pricing-data.ts`), separate from checkout's `disclosureVersion`. A scheduled notice is deduplicated on its version, so a shared bump would schedule a second notice for a renewal that already has one (DEBT-478).
@@ -54,9 +54,9 @@
    - Resend sends the email (`src/adapters/gateways/resend-transactional-email-gateway.ts`). Without `RESEND_API_KEY`, rows stay queued.
    - Each row has an immutable payload, its hash, and a provider idempotency key derived from the row's ID. Dispatch claims the row before it sends.
    - A rate-limit or quota error retries with backoff, from 15 minutes up to 24 hours. A terminal error stops. An ambiguous result, or a claim stale for 15 minutes, becomes `outcome_unknown` and is never resent automatically, because Resend keeps an idempotency key for only 24 hours (DEBT-414 §7).
-   - `RequeueRenewalNoticeDeliveryUseCase` needs an operator and a reason. For an unknown outcome, it also needs confirmation that nothing was sent.
+   - `RequeueRenewalNoticeDeliveryUseCase` needs an operator, a reason and the attempt count inspected before checking the provider. It rejects evidence for an older attempt, and records the prior count in new audit entries. For an unknown outcome, it also needs confirmation that nothing was sent. An operator runs it with `pnpm notice:requeue` (`scripts/requeue-renewal-notice.ts`, 2026-10-18, DEBT-414 F23).
    - Before sending, dispatch supersedes a scheduled notice whose subscription is gone, inactive or cancelling, or is now on another plan or renewal date, or whose account email has changed. It refuses a reminder past its 30-day cutoff (F07).
-   - Provider acceptance is stored as `accepted`, not `delivered`. Signed Resend webhooks record delivery or failure (`RecordRenewalNoticeProviderOutcomeUseCase`). A missed deadline, a refused late notice or an unknown outcome raises an [operational alert](../architecture/observability.md#operational-alerts).
+   - Provider acceptance is stored as `accepted`, not `delivered`. Signed Resend webhooks record delivery or failure (`RecordRenewalNoticeProviderOutcomeUseCase`). A missed deadline, a refused late notice, an unknown outcome or an actionable terminal failure raises an [operational alert](../architecture/observability.md#operational-alerts).
 9. **A scheduled cancellation keeps access to period end and stops notices ([R11](../product/business-rules.md); 2026-09-28).**
    - Both portal profiles cancel `at_period_end` with no proration. Plan changes stay off while existing-subscriber price changes are frozen (owner, 2026-08-06).
    - `stripeSubscriptionEndsByPeriodEnd` treats a `cancel_at` at or before period end as a scheduled cancellation. All three subscription writers use it (F04). Selection and revalidation then skip that subscription.
@@ -68,7 +68,7 @@
 
 1. Every path to a paid subscription, a trial's first card included, takes an explicit opt-in to versioned text and keeps it as evidence.
 2. A notice states the facts as they stand when it is sent, or it is not sent.
-3. A notice that is missed, refused as late, or in doubt reaches the owner as an alert. An uncertain send is held, not repeated.
+3. A notice that is missed, refused as late, in doubt or in actionable terminal failure raises an operator alert. An uncertain send is held, not repeated.
 
 ### Negative
 
@@ -77,7 +77,7 @@
 3. Notices state the configured plan amount and select subscriptions by the configured price ID. A price change would therefore misstate or skip notices (DEBT-501).
 4. Known gaps, decided but not yet built: an early bounce report can be lost (F21); a trial cancelled in the portal is still offered "Add a card", which records consent and acknowledges a renewal that will not happen (F22); a card added at or after trial end is never applied (DEBT-501 item 4).
 5. Delivery evidence needs the owner to configure the Resend webhook. Until then, notices stay `accepted` (DEBT-414).
-6. The requeue use case is wired in `lib/container/use-cases.ts`, but no route or script calls it, so a quarantined notice cannot be requeued without a hand-written database change (DEBT-414 F23, due before the first live renewal notice).
+6. Requeueing a quarantined notice is a manual operator step: `pnpm notice:requeue`, run against production behind the explicit database-target check, after checking Resend ([the requeue guide](../guides/operations/requeue-renewal-notice.md); DEBT-414 F23, 2026-10-18). There is no in-app surface for it.
 
 ### Mitigations
 
@@ -112,7 +112,7 @@ DEBT-414 also leaves to counsel or the owner: the remedy for a missed statutory 
 
 - R10 and R11 in [the business rules](../product/business-rules.md) name the tests that prove them, and `tests/rule-to-test-register.test.ts` fails when a named test is missing.
 - The webhook records consent only when the Session's disclosure hash matches the text registered for its version.
-- A missed notice deadline, a refused late notice or an unknown outcome raises an operational alert, and the daily job re-checks deadlines after every dispatch.
+- A missed notice deadline, a refused late notice, an unknown outcome or an actionable terminal failure raises an operational alert, and the daily job re-checks deadlines after every dispatch.
 
 ## References
 

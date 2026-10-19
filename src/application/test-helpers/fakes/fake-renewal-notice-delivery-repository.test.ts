@@ -424,18 +424,24 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
 
   it('requires no-send confirmation to requeue unknown outcomes and preserves audit', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
-    const saved = await repository.saveQueued(createDelivery());
-    repository.records[0] = {
-      ...saved,
-      status: 'outcome_unknown',
+    await repository.saveQueued(createDelivery());
+    await repository.claim({
+      id: deliveryId,
       attemptId: 'attempt-1',
-      attemptStartedAt: now,
-      lastAttemptAt: now,
-    };
+      startedAt: now,
+    });
+    await repository.markOutcomeUnknown({
+      id: deliveryId,
+      attemptId: 'attempt-1',
+      failureClass: 'provider_outcome_unknown',
+      failureCode: 'timeout',
+      failedAt: now,
+    });
 
     await expect(
       repository.requeue({
         id: deliveryId,
+        expectedAttemptCount: 1,
         reason: 'Confirmed in Resend that no email exists',
         requeuedBy: 'operator@example.com',
         requeuedAt: now,
@@ -446,6 +452,7 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     await expect(
       repository.requeue({
         id: deliveryId,
+        expectedAttemptCount: 1,
         reason: 'Confirmed in Resend that no email exists',
         requeuedBy: 'operator@example.com',
         requeuedAt: now,

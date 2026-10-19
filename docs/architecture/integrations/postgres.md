@@ -58,7 +58,7 @@ earlier savepoint also rolls back `SET LOCAL`.
 
 ## Processes Using the Application Role
 
-Inventory, 2026-10-17: all repository production clients use the explicit
+Inventory, 2026-10-17, with the requeue script added 2026-10-18: all repository production clients use the explicit
 `DATABASE_URL` or the managed seed's named-environment resolution. The same role
 inherits the three defaults regardless of entry point.
 
@@ -70,6 +70,7 @@ inherits the three defaults regardless of entry point.
 | `db:seed`, managed `db:seed:all`/`db:seed:prod`, `scripts/seed.ts` and `scripts/seed/question-syncer.ts` | Read and prepare files before per-question transactions. Each statement and lock wait is bounded; the whole seed may take longer than 30 seconds. |
 | `scripts/content-release/{stage-release,activate-release,bootstrap-release,hold-questions}.ts`, shared `command-support.ts`, and `scripts/seed/withdraw-questions.ts` | Prepare input before database work. Release transactions serialize on the release pointer and issue successive SQL statements, without operator prompts or provider calls inside them. The lock limit prevents a release waiting indefinitely behind another writer. |
 | `scripts/export-question-feedback.ts` | One joined read; file formatting/output follows the query. A slow export fails rather than keeping an unbounded query alive. |
+| `scripts/requeue-renewal-notice.ts` | One row read and one conditional update through the requeue use case, with no transaction and no provider call. |
 | `db:studio`, `scripts/db-studio.ts`, and manual clients using this role | Individual operations inherit the bounds, including an interactive transaction left idle. Studio does not justify an unbounded default. `db:generate` uses local schema files and does not need a database session. |
 
 No current process requires a higher bound. This is a source/workload decision,
