@@ -22,6 +22,7 @@ import {
   PracticeSessionPageModelNavigationProbe,
   PracticeSessionPageModelReviewProbe,
   saveExamDraftAnswerMock,
+  setPracticeSessionQuestionMarkMock,
   setupPracticeSessionPageModelBrowserSpec,
 } from './use-practice-session-page-model-test-helpers';
 
@@ -449,6 +450,37 @@ describe('usePracticeSessionPageModel timer expiry', () => {
         }),
       }),
     );
+  });
+
+  it('flushes the on-screen answer when the server refuses a mark after its deadline', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    mockActiveTimedExam('2026-05-22T12:00:30.000Z');
+    mockFinalizeSummaryFromFinalFlush();
+    setPracticeSessionQuestionMarkMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toMatchTextContent('question');
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+
+    await screen
+      .getByRole('button', { name: 'toggle-mark-for-review' })
+      .click();
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toMatchTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-answered-count'))
+      .toMatchTextContent('1');
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
   });
 
   it('next-question trusts a server-expired draft save when the browser clock is behind', async () => {

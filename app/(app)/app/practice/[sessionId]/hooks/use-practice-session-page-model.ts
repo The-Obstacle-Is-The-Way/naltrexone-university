@@ -497,6 +497,7 @@ export function usePracticeSessionPageModel(
       setReview: reviewStage.setReview,
       isMounted,
       setPracticeSessionQuestionMarkFn: setPracticeSessionQuestionMark,
+      recoverServerExpiredExam: questionFlow.recoverServerExpiredExam,
     });
 
   return {

@@ -89,6 +89,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onSubmit: (options?: SubmitOptions) => Promise<SubmitAnswerOutput | null>;
   saveCurrentExamDraft: () => Promise<ExamDraftSaveResult>;
   getCurrentExamDraft: () => ExamDraftAnswer | null;
+  recoverServerExpiredExam: () => Promise<void>;
 };
 
 export function usePracticeSessionQuestionFlow(
@@ -543,5 +544,6 @@ export function usePracticeSessionQuestionFlow(
     onSubmit,
     saveCurrentExamDraft,
     getCurrentExamDraft,
+    recoverServerExpiredExam,
   };
 }

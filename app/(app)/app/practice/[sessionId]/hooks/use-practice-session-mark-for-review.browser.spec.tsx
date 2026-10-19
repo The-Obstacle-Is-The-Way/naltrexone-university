@@ -92,6 +92,7 @@ function MarkForReviewPracticeViewContent(input: {
     setReview,
     isMounted: () => true,
     setPracticeSessionQuestionMarkFn: input.setPracticeSessionQuestionMarkFn,
+    recoverServerExpiredExam: () => Promise.resolve(),
   });
 
   return (
@@ -174,6 +175,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         setReview,
         isMounted: () => true,
         setPracticeSessionQuestionMarkFn,
+        recoverServerExpiredExam: () => Promise.resolve(),
       }),
     );
 
@@ -293,6 +295,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         setReview: vi.fn(),
         isMounted: () => true,
         setPracticeSessionQuestionMarkFn,
+        recoverServerExpiredExam: () => Promise.resolve(),
       }),
     );
 
@@ -410,6 +413,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
           setReview: vi.fn(),
           isMounted: () => true,
           setPracticeSessionQuestionMarkFn,
+          recoverServerExpiredExam: () => Promise.resolve(),
         }),
       { initialProps: { markedForReview: false } },
     );
@@ -481,6 +485,7 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
         setReview: vi.fn(),
         isMounted: () => true,
         setPracticeSessionQuestionMarkFn,
+        recoverServerExpiredExam: () => Promise.resolve(),
       }),
     );
 

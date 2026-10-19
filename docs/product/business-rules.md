@@ -72,13 +72,14 @@ The server owns expiry. The browser counts down from server remaining time, usin
 - `src/application/use-cases/end-practice-session.test.ts`: `rejects generic end for an active exam session`
 - `src/application/use-cases/expired-exam-read-policy.test.ts`: `discards an expired unfinalized exam without grading its saved draft`
 
-### R9. Marking a question for review exists only inside an unfinished exam before its server deadline. Expiry refuses the mark without finalizing the exam.
+### R9. Marking a question for review exists only inside an unfinished exam before its server deadline. Expiry refuses the mark, and the mark never finalizes the exam; the page answers the refusal with the expiry flush, carrying the on-screen answer.
 
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `persists marked-for-review state for exam sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT for tutor sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT when session is already ended`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `allows a mark one millisecond before expiry`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `refuses a mark %i ms after expiry without finalizing the exam`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `flushes the on-screen answer when the server refuses a mark after its deadline`
 
 ### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
 
