@@ -41,6 +41,7 @@ function createStripeConstructorMock() {
 
 describe('getStripe', () => {
   let getStripe: typeof import('./stripe').getStripe;
+  let createRequestContainer: typeof import('./container').createRequestContainer;
   let stripeConstructor: ReturnType<typeof createStripeConstructorMock>;
 
   beforeEach(async () => {
@@ -56,10 +57,29 @@ describe('getStripe', () => {
     }));
 
     ({ getStripe } = await import('./stripe'));
+    ({ createRequestContainer } = await import('./container'));
   });
 
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
+  });
+
+  it('uses a fresh budgeted client without changing the unbudgeted singleton', () => {
+    const singleton = getStripe();
+    const container = createRequestContainer();
+    const scoped = container.stripe;
+    expect(container.stripe).toBe(scoped);
+    expect(container.stripeBudget).toBeDefined();
+    expect(scoped).not.toBe(singleton);
+    expect(getStripe()).toBe(singleton);
+    expect(stripeConstructor.mock.calls[1]?.[1]).toMatchObject({
+      timeout: 10_000,
+      maxNetworkRetries: 0,
+    });
+    expect(stripeConstructor.mock.calls[0]?.[1]).toMatchObject({
+      timeout: 10_000,
+      maxNetworkRetries: 1,
+    });
   });
 
   it('constructs Stripe lazily and returns the same instance on repeated calls', () => {

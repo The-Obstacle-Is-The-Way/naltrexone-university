@@ -2,6 +2,7 @@ import { CircuitBreaker } from '@/src/adapters/shared/circuit-breaker';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import type { Logger } from '@/src/application/ports/logger';
+import type { StripeCallBudget } from './stripe-call-budget';
 import { isStripeOutage } from './stripe-errors';
 
 const STRIPE_CIRCUIT_FAILURE_THRESHOLD = 5;
@@ -39,11 +40,22 @@ export function callStripeWithRetry<T>({
   operation,
   fn,
   logger,
+  budget,
 }: {
   operation: string;
   fn: () => Promise<T>;
-  logger: Logger;
+  logger: Pick<Logger, 'warn'>;
+  budget?: StripeCallBudget | undefined;
 }): Promise<T> {
+  if (budget) {
+    // Refusing an already-exhausted caller is not a new provider failure.
+    try {
+      budget.requireRemainingMs();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return stripeCircuitBreaker.execute(fn);
+  }
   return stripeCircuitBreaker.execute(() =>
     retry(fn, {
       ...DEFAULT_RETRY_OPTIONS,

@@ -1,13 +1,15 @@
 import 'server-only';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
+import type { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
+import { StripeBudgetHttpClient } from './stripe-budget-http-client';
 
 // DEBT-527: a backstop against a hung request, not a latency target. A try
 // that Stripe is still processing when it is cut off fails even if Stripe
 // completes it, and a retry with the same key meets a 409 while the first is
 // in flight. So the limit sits well above Stripe's normal latency: a slow but
 // working call still succeeds, and a hang still fails inside the 30-second
-// request limit. Each caller's own budget is DEBT-527's next step.
+// request limit. Request-scoped clients also share a caller deadline.
 export const STRIPE_REQUEST_LIMITS = {
   timeoutMs: 10_000,
   maxNetworkRetries: 1,
@@ -20,6 +22,7 @@ export function createStripeClient(
     timeoutMs: number;
     maxNetworkRetries: number;
   } = STRIPE_REQUEST_LIMITS,
+  budget?: StripeCallBudget,
 ): Stripe {
   return new Stripe(secretKey, {
     ...connection,
@@ -40,11 +43,17 @@ export function createStripeClient(
     typescript: true,
     // A wall-clock timeout through the response body. Node's default client
     // only limits socket idle time, so a trickling response can outlive it.
-    httpClient: Stripe.createFetchHttpClient(),
+    httpClient: budget
+      ? new StripeBudgetHttpClient(
+          Stripe.createFetchHttpClient(),
+          budget,
+          limits.timeoutMs,
+        )
+      : Stripe.createFetchHttpClient(),
     timeout: limits.timeoutMs,
-    // Keep one SDK retry for connection failures, 409s and retry headers. A
-    // timed-out call ends after two tries and the SDK's delay, 20.5 seconds;
-    // our outer wrapper does not retry a timeout (ADR-018).
-    maxNetworkRetries: limits.maxNetworkRetries,
+    // Budgeted clients let the transport own one retry; the SDK and outer
+    // wrapper must not add their own backoff. Unbudgeted callers keep the
+    // SDK retry policy (ADR-018).
+    maxNetworkRetries: budget ? 0 : limits.maxNetworkRetries,
   });
 }

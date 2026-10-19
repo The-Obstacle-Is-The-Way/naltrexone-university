@@ -78,7 +78,7 @@ describe('createStripeProviderContractInvocation', () => {
     expect(invocation.env.STRIPE_CHECKOUT_CONTRACT_PRICE_ID).toBe(
       'price_contract_only',
     );
-    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(12);
+    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(13);
   });
 
   it('targets only the provider contracts through a database-free config', () => {
@@ -123,14 +123,12 @@ describe('captured Vitest reporter payload fixtures', () => {
       ),
     );
 
-  it('accepts the reporter envelope when all provider cases passed', async () => {
+  it('rejects an older reporter envelope missing a required provider case', async () => {
     const report = await loadFixture('trial-clock-smoke-report-passed.json');
 
-    expect(assertProviderContractsExecuted(report)).toEqual({
-      executed: 14,
-      passed: 14,
-      skipped: 0,
-    });
+    expect(() => assertProviderContractsExecuted(report)).toThrow(
+      'PROOF_MISSING_CASE: recovers a lost create response by replaying its unchanged idempotency key',
+    );
   });
 
   it('rejects the real skip-shaped payload that exits zero', async () => {
@@ -195,7 +193,7 @@ describe('runStripeProviderContracts execution proof', () => {
 
     await expect(
       runStripeProviderContracts({ env: validEnvironment(), runVitest }),
-    ).resolves.toEqual({ executed: 14, passed: 14, skipped: 0 });
+    ).resolves.toEqual({ executed: 15, passed: 15, skipped: 0 });
     expect(runVitest).toHaveBeenCalledOnce();
   });
 

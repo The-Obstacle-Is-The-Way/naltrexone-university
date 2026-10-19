@@ -8,6 +8,8 @@ import type { ReviewControllerDeps } from '@/src/adapters/controllers/review-con
 import type { StatsControllerDeps } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhook-controller';
 import type { TagControllerDeps } from '@/src/adapters/controllers/tag-controller';
+import type { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
+import type { StripeRequestClient } from '@/src/adapters/gateways/stripe/stripe-request-client';
 import type { ScheduledWorkflows } from '@/src/adapters/jobs/scheduled-checks';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type {
@@ -77,13 +79,13 @@ import type {
 } from '@/src/application/use-cases';
 import type { env } from '../env';
 import type { logger } from '../logger';
-import type { getStripe } from '../stripe';
 
 export type ContainerPrimitives = {
   db: DrizzleDb;
   env: typeof env;
   logger: typeof logger;
-  getStripe: typeof getStripe;
+  getStripe: () => StripeRequestClient;
+  stripeBudget?: StripeCallBudget | undefined;
   now: () => Date;
   sha256Hasher: Sha256Hasher;
 };
