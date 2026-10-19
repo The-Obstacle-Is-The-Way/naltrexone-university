@@ -167,7 +167,7 @@ The SDK has zero configured retries on this path, and the adapter wrapper adds n
 
 Transport retries retain warning logs with the HTTP method and resource family, attempt count, delay, status and projected diagnostics. They exclude path identifiers, query values and raw error messages. Logging failure must not prevent provider recovery.
 
-The checkout-success path uses the shared adapter wrapper and circuit breaker. A budget already exhausted before a call is refused before the breaker, without counting a new provider outage. An attempted provider call that ends in an outage still counts.
+The checkout-success path uses the shared adapter wrapper and circuit breaker. A budget already exhausted before a call is refused before the breaker, without counting a new provider outage. An attempted provider call that ends in an outage still counts, with one exception. A connection failure the caller's own deadline caused counts neither as an outage nor as a success: the deadline gave the call's first attempt less than the attempt limit, or refused an attempt or the retry's backoff, and less than one backoff of the caller's time remains. Such a failure says nothing about Stripe's health; if it is a half-open probe, the next call probes. A call whose first attempt had the full limit counts as before.
 
 A deadline or lost response does not prove that Stripe refused a write. It remains an unknown outcome, with the same idempotency key and existing recovery path. A later request receives a new caller budget; a write whose idempotency key the caller derives keeps that key.
 

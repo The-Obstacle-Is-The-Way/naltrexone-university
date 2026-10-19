@@ -1,9 +1,11 @@
 import Stripe from 'stripe';
-import type { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
+import {
+  STRIPE_RETRY_BACKOFF_MS,
+  type StripeCallBudget,
+} from '@/src/adapters/gateways/stripe/stripe-call-budget';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { Logger } from '@/src/application/ports/logger';
 
-const RETRY_DELAY_MS = 500;
 type FetchClient = ReturnType<typeof Stripe.createFetchHttpClient>;
 type FetchResponse = Awaited<ReturnType<FetchClient['makeRequest']>>;
 
@@ -59,7 +61,7 @@ export class StripeBudgetHttpClient {
           operation: `${args[3]} ${resource && /^[a-z_]+$/.test(resource) ? resource : 'stripe'}`,
           attempt: 1,
           maxAttempts: 2,
-          delayMs: RETRY_DELAY_MS,
+          delayMs: STRIPE_RETRY_BACKOFF_MS,
           ...(statusCode === undefined ? {} : { statusCode }),
           error: projectSafeErrorDiagnostics(error),
         },
@@ -75,19 +77,24 @@ export class StripeBudgetHttpClient {
   ): Promise<FetchResponse> {
     for (let attempt = 0; ; attempt += 1) {
       const remaining = this.budget.remainingMs();
-      if (remaining <= 0) throw Stripe.HttpClient.makeTimeoutError();
+      if (remaining <= 0) {
+        this.budget.recordDeadlineLimit();
+        throw Stripe.HttpClient.makeTimeoutError();
+      }
+      const attemptLimitMs = Math.min(args[7], this.attemptTimeoutMs);
+      // The caller's deadline, not Stripe, then decides how long it waits.
+      if (attempt === 0 && remaining < attemptLimitMs)
+        this.budget.recordDeadlineLimit();
       // The fetch client's timer also aborts stalled/trickling response bodies.
       const requestArgs: Parameters<FetchClient['makeRequest']> = [...args];
-      requestArgs[7] = Math.ceil(
-        Math.min(args[7], this.attemptTimeoutMs, remaining),
-      );
+      requestArgs[7] = Math.ceil(Math.min(attemptLimitMs, remaining));
       let response: FetchResponse;
       try {
         response = await this.delegate.makeRequest(...requestArgs);
       } catch (error) {
         if (
           attempt === 0 &&
-          (await this.budget.waitBeforeRetry(RETRY_DELAY_MS, () =>
+          (await this.budget.waitBeforeRetry(STRIPE_RETRY_BACKOFF_MS, () =>
             this.logRetry(args, error),
           ))
         )
@@ -97,17 +104,18 @@ export class StripeBudgetHttpClient {
       if (
         attempt > 0 ||
         !shouldRetry(response) ||
-        this.budget.remainingMs() <= RETRY_DELAY_MS
+        this.budget.remainingMs() <= STRIPE_RETRY_BACKOFF_MS
       ) {
         return response;
       }
       // toStream releases the SDK timer; cancel its body before backing off.
       await response.toStream(() => {})?.cancel();
       if (
-        !(await this.budget.waitBeforeRetry(RETRY_DELAY_MS, () =>
+        !(await this.budget.waitBeforeRetry(STRIPE_RETRY_BACKOFF_MS, () =>
           this.logRetry(args, undefined, response.getStatusCode()),
         ))
       ) {
+        this.budget.recordDeadlineLimit();
         throw Stripe.HttpClient.makeTimeoutError();
       }
     }

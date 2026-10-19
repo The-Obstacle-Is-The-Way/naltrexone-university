@@ -3,7 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from 'node:http';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRequestContainer } from '@/lib/container';
 import { createStripeClient } from '@/lib/stripe-client';
 import { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
@@ -491,6 +491,87 @@ describe('Stripe caller budget on loopback', () => {
         expect(keys).toHaveLength(2);
         expect(keys[0]).toBeTruthy();
         expect(keys[0]).toBe(keys[1]);
+      },
+    );
+  });
+});
+
+// DEBT-527 review: the shared breaker opens on Stripe outages. A call the
+// caller's own deadline cut short is not evidence of one; a call whose first
+// attempt had the full limit is.
+describe('Stripe circuit and the caller deadline on loopback', () => {
+  async function freshRetry() {
+    vi.resetModules();
+    return (await import('@/src/adapters/gateways/stripe/stripe-retry'))
+      .callStripeWithRetry;
+  }
+
+  it("keeps the circuit closed through timeouts the caller's deadline caused", async () => {
+    const callStripe = await freshRetry();
+    let healthy = false;
+    await withServer(
+      (_request, response) => {
+        if (healthy) customer(response);
+      },
+      async (client) => {
+        for (let call = 0; call < 6; call += 1) {
+          const budget = new StripeCallBudget(100);
+          const stripe = client(budget);
+          await expect(
+            callStripe({
+              operation: 'customers.retrieve',
+              budget,
+              fn: () => stripe.customers.retrieve('cus_loopback'),
+              logger: new FakeLogger(),
+            }),
+          ).rejects.toMatchObject({ type: 'StripeConnectionError' });
+        }
+        healthy = true;
+        const budget = new StripeCallBudget();
+        const stripe = client(budget);
+        await expect(
+          callStripe({
+            operation: 'customers.retrieve',
+            budget,
+            fn: () => stripe.customers.retrieve('cus_loopback'),
+            logger: new FakeLogger(),
+          }),
+        ).resolves.toMatchObject({ id: 'cus_loopback' });
+      },
+    );
+  });
+
+  it('opens the circuit on timeouts whose first attempt had the full limit', async () => {
+    const callStripe = await freshRetry();
+    let requests = 0;
+    await withServer(
+      () => {
+        requests += 1;
+      },
+      async (client) => {
+        // A full 400-ms first attempt, then a retry the deadline cuts to
+        // about 100 ms: the first attempt was a fair test, so it counts.
+        const call = () => {
+          const budget = new StripeCallBudget(1_000);
+          const stripe = client(budget, 400);
+          return callStripe({
+            operation: 'customers.retrieve',
+            budget,
+            fn: () => stripe.customers.retrieve('cus_loopback'),
+            logger: new FakeLogger(),
+          });
+        };
+        for (let failed = 0; failed < 5; failed += 1) {
+          await expect(call()).rejects.toMatchObject({
+            type: 'StripeConnectionError',
+          });
+        }
+        const sent = requests;
+        await expect(call()).rejects.toMatchObject({
+          code: 'STRIPE_ERROR',
+          message: 'Stripe temporarily unavailable',
+        });
+        expect(requests).toBe(sent);
       },
     );
   });

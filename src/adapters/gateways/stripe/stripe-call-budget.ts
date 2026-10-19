@@ -2,9 +2,12 @@ import { ApplicationError } from '@/src/application/errors';
 
 // Request routes have 30 seconds; leave five seconds for persistence and response.
 export const STRIPE_CALLER_BUDGET_MS = 25_000;
+// The budgeted transport's one retry waits this long first.
+export const STRIPE_RETRY_BACKOFF_MS = 500;
 
 export class StripeCallBudget {
   private readonly deadline: number;
+  private deadlineLimits = 0;
 
   constructor(
     durationMs = STRIPE_CALLER_BUDGET_MS,
@@ -26,6 +29,27 @@ export class StripeCallBudget {
       );
     }
     return remaining;
+  }
+
+  /**
+   * The transport records a call the deadline cut short: its first attempt
+   * got less than the attempt limit, or the deadline refused an attempt or
+   * the retry's backoff.
+   */
+  recordDeadlineLimit(): void {
+    this.deadlineLimits += 1;
+  }
+
+  /**
+   * Starts a call. The returned check says whether a failure of this call is
+   * the caller's deadline, not the provider: the deadline cut it short and
+   * left less than one retry backoff (DEBT-527 review).
+   */
+  startCall(): () => boolean {
+    const limitsBefore = this.deadlineLimits;
+    return () =>
+      this.deadlineLimits > limitsBefore &&
+      this.remainingMs() <= STRIPE_RETRY_BACKOFF_MS;
   }
 
   async waitBeforeRetry(

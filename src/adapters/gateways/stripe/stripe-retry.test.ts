@@ -88,6 +88,66 @@ describe('callStripeWithRetry', () => {
     ).resolves.toBe('ok');
   });
 
+  // A timeout the caller's own deadline caused says nothing about Stripe's
+  // health, so it neither counts toward the circuit nor closes it.
+  it("ignores a connection failure on a call the caller's deadline cut short", async () => {
+    const logger = new FakeLogger();
+    let nowMs = 0;
+    for (let call = 0; call < 6; call += 1) {
+      const budget = new StripeCallBudget(1_000, () => nowMs);
+      await expect(
+        callStripeWithRetry({
+          operation: 'customers.retrieve',
+          logger,
+          budget,
+          fn: async () => {
+            budget.recordDeadlineLimit();
+            nowMs += 1_000;
+            throw createStripeError('Request aborted due to timeout', {
+              type: 'StripeConnectionError',
+            });
+          },
+        }),
+      ).rejects.toMatchObject({ type: 'StripeConnectionError' });
+    }
+    await expect(
+      callStripeWithRetry({
+        operation: 'customers.retrieve',
+        logger,
+        budget: new StripeCallBudget(1_000, () => nowMs),
+        fn: async () => 'ok',
+      }),
+    ).resolves.toBe('ok');
+  });
+
+  it('counts a connection failure that leaves the caller time, even after a shortened attempt', async () => {
+    const logger = new FakeLogger();
+    for (let call = 0; call < 5; call += 1) {
+      const budget = new StripeCallBudget(10_000, () => 0);
+      await expect(
+        callStripeWithRetry({
+          operation: 'customers.retrieve',
+          logger,
+          budget,
+          fn: async () => {
+            budget.recordDeadlineLimit();
+            throw createStripeError('Connection refused', {
+              type: 'StripeConnectionError',
+            });
+          },
+        }),
+      ).rejects.toMatchObject({ type: 'StripeConnectionError' });
+    }
+    await expect(
+      callStripeWithRetry({
+        operation: 'customers.retrieve',
+        logger,
+        budget: new StripeCallBudget(),
+        fn: async () => 'unexpected',
+      }),
+    ).rejects.toMatchObject({ message: 'Stripe temporarily unavailable' });
+  });
+
   it('retries transient Stripe errors and logs each retry attempt', async () => {
     const logger = new FakeLogger();
 
