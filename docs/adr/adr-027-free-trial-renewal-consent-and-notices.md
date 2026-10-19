@@ -1,8 +1,8 @@
 # ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
 **Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The decisions below are engineering, not legal sign-off, and this record claims no legal compliance.
-**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-17
-**Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03, and chose an operator script for requeueing a quarantined notice on 2026-10-17 (DEBT-414 F23). ADR-023 moved decisions out of records, so they are recorded here.
+**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-19
+**Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03, chose an operator script for requeueing a quarantined notice on 2026-10-17 (DEBT-414 F23), and approved the 39-day reminder start on 2026-10-19. ADR-023 moved decisions out of records, so they are recorded here.
 **Depends On:** ADR-005 (Payment Boundary), ADR-014 (Stripe Eager Sync on Checkout Success), ADR-017 (Webhook Processing Lifecycle), ADR-026 (Error Monitoring with Sentry)
 
 ---
@@ -44,7 +44,7 @@
    - The webhook queues the acknowledgment in the transaction that records consent, then dispatches it. The daily job retries a row that is still queued.
    - It states the accepted terms, the price, the trial end, the cancellation deadline and method, and the policy. It links Billing, support, Terms and Privacy (`send-renewal-acknowledgment.ts`).
    - Reason (DEBT-414 §7): a failure after consent must not leave consent without an acknowledgment, and a retry must not send it twice.
-7. **Renewal notices start at 39 days before renewal and stop at 30, for both plans (39-day refinement proposed 2026-10-19, pending owner approval; approved 35-day schedule 2026-09-27, monthly from 2026-09-28).**
+7. **Renewal notices start at 39 days before renewal and stop at 30, for both plans (39-day start approved 2026-10-19, replacing the 35-day start approved 2026-09-27; monthly from 2026-09-28).**
    - An annual plan gets an `annual_reminder` and a `renewal_notice`. A monthly plan gets an `anniversary_reminder` before the renewal that carries service past each twelve-month mark (`nextAnniversaryRenewalAt`).
    - The cron is scheduled for 09:00 UTC (`vercel.json`); its current daily start window is 09:00–10:00 UTC. It selects active, renewing subscriptions 39 days out, and retries daily down to `RENEWAL_NOTICE_MINIMUM_DAYS = 30` (`src/adapters/jobs/send-due-renewal-notices.ts`; the constant is in `src/application/shared/renewal-notice-schedule.ts`).
    - Each notice says the plan renews unless cancelled. It gives the cutoff in UTC, Eastern and Pacific time, and links cancellation (F06).
@@ -62,9 +62,9 @@
    - `stripeSubscriptionEndsByPeriodEnd` treats a `cancel_at` at or before period end as a scheduled cancellation. All three subscription writers use it (F04). Selection and revalidation then skip that subscription.
    - Email to support is a second cancellation channel (Terms §4).
 
-## Proposed timing refinement: 39 days (owner approval pending, 2026-10-19)
+## Timing refinement: 39 days (approved 2026-10-19)
 
-Move the first selection for annual and monthly anniversary reminders from 35 to 39 elapsed days before renewal; retain the 30-day dispatch cutoff. The owner approved 35. This refinement remains a draft proposal until the owner approves it. It adds four days to the maximum recovery interval (nine instead of five), while keeping a one-day margin inside the strictest reviewed 40-day upper limit. Actual recovery time is shorter when selection, provider acceptance or failure detection is delayed.
+Move the first selection for annual and monthly anniversary reminders from 35 to 39 elapsed days before renewal; retain the 30-day dispatch cutoff. The owner approved 35 on 2026-09-27 and this 39-day start on 2026-10-19. It adds four days to the maximum recovery interval (nine instead of five), while keeping a one-day margin inside the strictest reviewed 40-day upper limit. Colorado's text does not say how days are counted; 39 elapsed days stays within 40 local calendar days in every US time zone, even across a daylight-saving change, while 40 elapsed days could exceed it. Actual recovery time is shorter when selection, provider acceptance or failure detection is delayed.
 
 The 30–40-day overlap is for the reviewed first annual reminder, not nationwide compliance. The source provisions have different term thresholds and cancellation-deadline anchors:
 
