@@ -251,7 +251,6 @@ describe('app/(app)/app/billing/page', () => {
       BillingContent = (await import('./page')).BillingContent;
     });
     it('renders manage button when subscription exists', async () => {
-      const { BillingContent } = await import('@/app/(app)/app/billing/page');
       const subscription = createSubscription();
 
       const html = renderToStaticMarkup(
@@ -323,8 +322,6 @@ describe('app/(app)/app/billing/page', () => {
     );
 
     it('does NOT render manage button when subscription is null', async () => {
-      const { BillingContent } = await import('@/app/(app)/app/billing/page');
-
       const html = renderToStaticMarkup(<BillingContent subscription={null} />);
 
       expect(html).not.toContain('Manage in Stripe');
