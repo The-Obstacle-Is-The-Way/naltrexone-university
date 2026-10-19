@@ -18,6 +18,10 @@ export type ReleaseDispositions = {
   archive?: readonly string[];
 };
 const GIT_OUTPUT_LIMIT = 16 * 1024 * 1024;
+// The content repository's authoring root: its README names
+// questions/SCHEMA.md as the authoring contract. A recall.md or vignettes.md
+// anywhere else, such as a backup or an artifact, is not a question source.
+const QUESTION_ROOT = 'questions/';
 
 let localGitVariables: Promise<readonly string[]> | undefined;
 
@@ -131,14 +135,18 @@ export async function readContentCommit(
     const separator = entry.indexOf('\t');
     const metadata = entry.slice(0, separator);
     const path = entry.slice(separator + 1);
-    if (!['recall.md', 'vignettes.md'].includes(basename(path))) continue;
+    if (
+      !path.startsWith(QUESTION_ROOT) ||
+      !['recall.md', 'vignettes.md'].includes(basename(path))
+    )
+      continue;
     if (!/^100(?:644|755) blob /.test(metadata))
       throw new Error('Content source files must be regular files');
     paths.push(path);
   }
   if (paths.length === 0)
     throw new Error(
-      'Source commit contains no recall.md or vignettes.md files',
+      `Source commit contains no recall.md or vignettes.md files under ${QUESTION_ROOT}`,
     );
   const scratch = await mkdtemp(join(tmpdir(), 'content-release-archive-'));
   try {
@@ -160,6 +168,11 @@ export async function readContentCommit(
       for (const [index, block] of blocks.entries()) {
         const parsed = parseDraftQuestionBlock(block);
         const qid = parsed.frontmatter.qid;
+        // A copied file would otherwise supply the question twice.
+        if (found.has(qid))
+          throw new Error(
+            `A question ID appears more than once in the source commit: ${qid}`,
+          );
         found.add(qid);
         files.push({
           absolutePath: join(scratch, path, `${index}.mdx`),

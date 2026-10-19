@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { source } from '@/tests/integration/seed-test-helpers';
-import { createContentRepository } from '@/tests/shared/content-repository-test-helpers';
+import {
+  createContentRepository,
+  FIXTURE_QUESTION_FILE,
+} from '@/tests/shared/content-repository-test-helpers';
 import { parseSeedQuestionFile } from '../seed/question-parser';
 import {
   assertAdmissibleCommit,
@@ -25,7 +28,10 @@ afterEach(async () => {
 describe('immutable content source', () => {
   it('archives the selected main commit and ignores dirty working files', async () => {
     const commit = await repo.commit([source('synthetic-source')]);
-    await writeFile(join(repo.directory, 'recall.md'), 'invalid dirty content');
+    await writeFile(
+      join(repo.directory, FIXTURE_QUESTION_FILE),
+      'invalid dirty content',
+    );
     const files = await readContentCommit({
       repository: repo.directory,
       commit,
@@ -186,11 +192,42 @@ describe('immutable content source', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+  // The content repository's authoring contract lives under questions/
+  // (its README links questions/SCHEMA.md). A copy elsewhere, such as a
+  // backup or an artifact, is not a question source (BUG-351 review).
+  it('reads question files only under questions/', async () => {
+    await repo.commit([source('kept-source')]);
+    const commit = await repo.commit([source('stray-source')], {
+      path: 'artifacts/backup/recall.md',
+    });
+
+    const files = await readContentCommit({
+      repository: repo.directory,
+      commit,
+    });
+
+    expect(files.map(({ raw }) => parseSeedQuestionFile(raw).slug)).toEqual([
+      'kept-source',
+    ]);
+  });
+  it('refuses a question ID that appears in two source files', async () => {
+    await repo.commit([source('twice-source')]);
+    const commit = await repo.commit([source('twice-source')], {
+      path: 'questions/other-group/recall.md',
+    });
+
+    await expect(
+      readContentCommit({ repository: repo.directory, commit }),
+    ).rejects.toThrow(/more than once/);
+  });
   it('refuses symlinked authoring files in the committed tree', async () => {
     await repo.commit([source('synthetic-source')]);
-    await unlink(join(repo.directory, 'recall.md'));
-    await writeFile(join(repo.directory, 'other.md'), 'Synthetic target');
-    await symlink('other.md', join(repo.directory, 'recall.md'));
+    await unlink(join(repo.directory, FIXTURE_QUESTION_FILE));
+    await writeFile(
+      join(repo.directory, 'questions/fixture/other.md'),
+      'Synthetic target',
+    );
+    await symlink('other.md', join(repo.directory, FIXTURE_QUESTION_FILE));
     await repo.git('add', '.');
     await repo.git('commit', '-m', 'Record synthetic symlink');
     const commit = await repo.git('rev-parse', 'HEAD');

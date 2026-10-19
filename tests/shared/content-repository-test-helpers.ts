@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import matter from '@11ty/gray-matter';
 import postgres from 'postgres';
@@ -10,6 +10,8 @@ import { runStageRelease } from '@/scripts/content-release/stage-release';
 import type { SeedSourceFile } from '@/scripts/seed/file-reader';
 
 const exec = promisify(execFile);
+
+export const FIXTURE_QUESTION_FILE = 'questions/fixture/recall.md';
 
 // A real repository of synthetic authoring files. Never opens the corpus repository.
 export async function createContentRepository() {
@@ -46,7 +48,11 @@ export async function createContentRepository() {
   return {
     directory,
     git,
-    async commit(files: readonly SeedSourceFile[]) {
+    // Question files live under the content repository's questions/ root.
+    async commit(
+      files: readonly SeedSourceFile[],
+      { path = FIXTURE_QUESTION_FILE }: { path?: string } = {},
+    ) {
       const blocks = files.map(({ raw }) => {
         const { data, content } = matter(raw);
         return [
@@ -65,8 +71,9 @@ export async function createContentRepository() {
           '---',
         ].join('\n');
       });
-      await writeFile(join(directory, 'recall.md'), blocks.join('\n\n'));
-      await git('add', 'recall.md');
+      await mkdir(dirname(join(directory, path)), { recursive: true });
+      await writeFile(join(directory, path), blocks.join('\n\n'));
+      await git('add', path);
       await git(
         'commit',
         '--allow-empty',
