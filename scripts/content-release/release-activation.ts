@@ -157,8 +157,8 @@ async function releaseEntries(tx: Db, releaseId: string) {
 }
 
 // Writes a release of the given items, invisibly: nothing reads a release
-// until it is activated. Its manifest names each item's slug and the content
-// hash of the item's revision.
+// until it is activated. Its manifest names each item's slug, the content
+// hash of the item's revision and, from format v3, the revision's ID.
 export async function stageRelease(
   db: Db,
   input: {
