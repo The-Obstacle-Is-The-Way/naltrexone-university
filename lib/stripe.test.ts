@@ -78,7 +78,7 @@ describe('getStripe', () => {
       options: {
         apiVersion: STRIPE_API_VERSION,
         typescript: true,
-        timeout: 3_000,
+        timeout: 10_000,
         maxNetworkRetries: 1,
       },
     });

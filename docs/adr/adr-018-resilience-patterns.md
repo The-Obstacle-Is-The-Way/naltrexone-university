@@ -80,11 +80,11 @@ callStripeWithRetry({
 
 ### Shared Stripe Transport Limits — 2026-10-18 Amendment
 
-The shared client in `lib/stripe-client.ts`, used by `getStripe`, uses the SDK's fetch client. Its three-second timeout stays armed through the response body and aborts the transport. The default Node client's socket-idle timeout did not bound a continuously trickling body.
+The shared client in `lib/stripe-client.ts`, used by `getStripe`, uses the SDK's fetch client. Its ten-second timeout stays armed through the response body and aborts the transport. The default Node client's socket-idle timeout did not bound a continuously trickling body.
 
 The SDK gets one network retry. This retains one recovery for a connection failure, a 409, or `stripe-should-retry: true`. The SDK honors `stripe-should-retry: false`; the existing outer wrapper still applies its own transient-status classifier. A closed connection can also trigger the SDK's first retry, but does not add a third HTTP attempt.
 
-With the wrapper's three attempts, the configured allowance is at most six three-second HTTP attempts, three 500-ms SDK delays, and 100+200-ms outer backoff: 19.8 seconds. This is an attempt-and-backoff allowance, not a caller deadline. It does not cover sequential calls or per-request overrides. The reconciliation path keeps its five-second timeout and one SDK retry.
+The timeout is a backstop against a hang, not a latency target. A try cut off while Stripe is still processing it fails even if Stripe completes it, and its retry with the same key meets a 409 while the first is in flight; so a short limit turns a slow success on the payment path into an error. Ten seconds sits well above Stripe's normal latency. A call that times out ends after two tries and one 500-ms SDK delay, 20.5 seconds, inside the 30-second request limit; the outer wrapper does not retry a timeout (below). Fast refusals that both layers retry (a 5xx or a 409) can reach six HTTP attempts. This is not a caller deadline: it does not cover sequential calls or per-request overrides, which DEBT-527's caller budget will. Tighten the limit only from measured Stripe latency. The reconciliation path keeps its five-second timeout and one SDK retry.
 
 A timeout before headers can use the SDK retry. A timeout or cut-off body after headers becomes `StripeConnectionError` after the SDK's retry decision. That error has no top-level code or status, so the unchanged outer retry predicate does not retry it; the outage classifier still counts it. A lost write response remains indeterminate. Callers retain their idempotency keys and recovery policies.
 

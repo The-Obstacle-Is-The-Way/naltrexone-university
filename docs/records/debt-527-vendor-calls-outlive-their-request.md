@@ -73,13 +73,16 @@ The SDK's 409/`stripe-should-retry` handling and its exceptional single closed-c
 
 First option 2, proven through the real SDK on a loopback server: stalled, trickling and 5xx. Then option 1: each caller passes its remaining budget as the per-request `timeout`, and the wrapper stops when it is spent. DEBT-528 is not a prerequisite. Keep cron budgets and durable recovery with DEBT-501, Clerk request allowance with DEBT-503, and consume those owners' policies here.
 
-The first step is built in `lib/stripe-client.ts`, with `getStripe` using the same factory tested on loopback: a three-second fetch timeout and one SDK retry. One retry retains the SDK's 409 and retry-header recovery. With three outer attempts, the configured attempts and backoff total at most 19.8 seconds per wrapped call; this is not a caller-wide deadline. Per-request overrides remain authoritative. ADR-018 records the transport and retry composition.
+The first step is built in `lib/stripe-client.ts`, with `getStripe` using the same factory tested on loopback: a ten-second fetch timeout and one SDK retry. One retry retains the SDK's 409 and retry-header recovery. A call that times out ends after two tries, 20.5 seconds, inside the 30-second request limit; this is not a caller-wide deadline.
+
+Corrected 2026-10-19: the first step used three seconds. A try cut off while Stripe is still processing a write fails even if Stripe completes it, and its same-key retry meets a 409 while the first is in flight, so three seconds turned a slow but working checkout into an error. The limit is a backstop against hangs, so it sits well above Stripe's normal latency. Before the caller budget tightens any limit, measure Stripe's latency per operation from the server's traces. Per-request overrides remain authoritative. ADR-018 records the transport and retry composition.
 
 The loopback suite proves transport cancellation, six rather than nine requests for repeated retryable 500s, caller overrides, and preserved write keys. Six cases fail against the original constructor configuration. The singleton wiring test also fails against that configuration. The same tests pass with the shared transport limits.
 
 ## Verification
 
 - [x] The shared client's per-attempt limit holds through the real SDK on a loopback server, for stalled, trickling and 5xx responses.
+- [x] A call Stripe answers in four seconds completes under the production limit; under a three-second limit it fails after two tries (`stripe-client-timeout.integration.test.ts`).
 - [ ] Real SDK calls against a loopback server respect the total budget for silence, trickling bodies, retries, connection closure and sequential calls.
 - [ ] Exhaustion prevents new attempts/backoff; in-flight cancellation is proved rather than inferred from a returned timeout.
 - [ ] A provider write whose response is lost remains an unknown outcome, preserving its key and recovery behavior.

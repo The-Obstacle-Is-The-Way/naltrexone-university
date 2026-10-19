@@ -1,18 +1,24 @@
 import { createServer, type RequestListener } from 'node:http';
 import type Stripe from 'stripe';
 import { describe, expect, it } from 'vitest';
-import { createStripeClient } from '@/lib/stripe-client';
+import { createStripeClient, STRIPE_REQUEST_LIMITS } from '@/lib/stripe-client';
 import { callStripeWithRetry } from '@/src/adapters/gateways/stripe/stripe-retry';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 const CUSTOMER = { id: 'cus_loopback', object: 'customer' };
+// The hang cases inject a short limit through the production constructor, so
+// they prove the transport without waiting out the production limit.
+const HANG_TEST_LIMITS = { timeoutMs: 1_000, maxNetworkRetries: 1 };
 // End the old unbounded request too, so a red test leaves no work running.
-const FALLBACK_RESPONSE_MS = 4_500;
+const FALLBACK_RESPONSE_MS = 2_000;
 const TRICKLE_INTERVAL_MS = 25;
+// Slower than a tight limit would allow, well inside the production one.
+const SLOW_SUCCESS_MS = 4_000;
 
 async function withStripeServer(
   handler: RequestListener,
   run: (stripe: Stripe) => Promise<void>,
+  limits: Parameters<typeof createStripeClient>[2] = STRIPE_REQUEST_LIMITS,
 ): Promise<void> {
   const server = createServer(handler);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -22,11 +28,11 @@ async function withStripeServer(
   }
   try {
     await run(
-      createStripeClient('sk_test_loopback_only', {
-        host: '127.0.0.1',
-        port: address.port,
-        protocol: 'http',
-      }),
+      createStripeClient(
+        'sk_test_loopback_only',
+        { host: '127.0.0.1', port: address.port, protocol: 'http' },
+        limits,
+      ),
     );
   } finally {
     server.closeAllConnections();
@@ -97,13 +103,34 @@ describe('the shared Stripe client on loopback', () => {
           expect(closedResponses).toHaveLength(expectedRequests);
           for (const closed of await Promise.all(closedResponses)) {
             expect(closed.fallbackSent).toBe(false);
-            expect(closed.elapsedMs).toBeGreaterThanOrEqual(2_500);
+            expect(closed.elapsedMs).toBeGreaterThanOrEqual(
+              HANG_TEST_LIMITS.timeoutMs * 0.8,
+            );
             expect(closed.elapsedMs).toBeLessThan(FALLBACK_RESPONSE_MS);
           }
         },
+        HANG_TEST_LIMITS,
       );
     },
   );
+
+  it('completes a call that Stripe answers slowly but within the production limit', async () => {
+    let requests = 0;
+    await withStripeServer(
+      (_request, response) => {
+        requests += 1;
+        const answer = setTimeout(() => {
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end(JSON.stringify(CUSTOMER));
+        }, SLOW_SUCCESS_MS);
+        response.once('close', () => clearTimeout(answer));
+      },
+      async (stripe) => {
+        await expect(retrieve(stripe)).resolves.toMatchObject(CUSTOMER);
+        expect(requests).toBe(1);
+      },
+    );
+  });
 
   it.each([
     { status: 500, retryHeader: undefined, expectedRequests: 6 },
