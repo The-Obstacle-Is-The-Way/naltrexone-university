@@ -37,7 +37,7 @@ These receipts describe baseline `134b0578`, before the shared transport limit.
 
 **Clerk:**
 - `src/adapters/gateways/clerk-auth-gateway.ts:129-132` and `clerk-user-provisioner.ts:132-137` retry on `isTransientClerkError`, without a caller-budget deadline or breaker.
-- DEBT-503 item 2 owns the proposed retry/allowance budget; that pending proposal does not impose a deadline.
+- DEBT-503 item 2 owns the proposed retry/allowance budget, and with it a caller deadline for these retries; it waits for its trigger.
 
 **Timeout helpers:** three timer-race implementations (`lib/with-timeout.ts:11-16`, `src/adapters/gateways/cooldown-operational-alerts.ts:26-37`, `resend-transactional-email-gateway.ts:82-95`). They differ in error and provider-outcome semantics, and none cancels the losing work. Preserve Resend's ambiguous-result behavior if sharing mechanics. An adapter cannot import the outer `lib` helper. ADR-018 does not specify composition with SDK retries or a total deadline.
 
@@ -65,30 +65,30 @@ P3: a resilience liability, with no measured production timeout or data loss.
    - Preserve idempotency keys and existing recovery for unknown mutation outcomes. Keep DEBT-501's outage classifier separate from retry eligibility.
    - The success page uses the shared Stripe adapter/wrapper and breaker. Vendor SDKs stay outside application/domain; the budget contract belongs to the caller, with outward wiring.
    - Apply the same production constructors and deadline rules in tests; no production-only timeout switch. Amend ADR-018 to state the total deadline and retry composition.
-2. **A shared per-attempt limit first.** *Recommended first step.* Give the shared client the fetch client, with an explicit ten-second attempt limit and one SDK retry. The caller deadline must still bound the combined retries. It bounds each attempt, not retries or sequential calls, so option 1 still follows. DEBT-501 item 1 already bounds the cron's subscription requests per request (`app/api/cron/reconcile-stripe-subscriptions/route.ts:19-22`).
+2. **A shared per-attempt limit first.** *Recommended first step.* Give the shared client the fetch client, with an explicit ten-second attempt limit and one SDK retry. The caller deadline must still bound the combined retries. It bounds each attempt, not retries or sequential calls, so option 1 still follows. DEBT-501 item 1 already bounds the cron's subscription requests per request (`app/api/cron/reconcile-stripe-subscriptions/route.ts:20-23`).
 
 The SDK's 409/`stripe-should-retry` handling and its exceptional single closed-connection retry even at zero configured network retries must be included when selecting the combined retry policy. Do not add a second retry layer without accounting for those attempts.
 
-## Resolution (built)
+## Resolution
 
 Options 2 and 1 are built: one caller deadline controls attempts, backoff and sequential calls. Budgeted calls have one retry owner, and the SDK fetch transport cancels in-flight work when the deadline expires. A 25-second monotonic budget is created once per request and passed through gateway dependencies. Each attempt gets the smaller of ten seconds and the remaining budget. One transport retry may follow a 500-ms backoff only when that delay fits. The SDK and outer wrapper add no retries on this path. The request client refuses per-call SDK retry overrides before provider work, and no per-call timeout can raise the attempt limit. The fetch transport aborts silence and trickling bodies; retryable bodies are canceled before backoff. The success page uses the same client, budget, wrapper and breaker. A refused call after exhaustion starts no provider work and does not count a new outage. The unbudgeted shared client retains its ten-second attempt limit and one SDK retry. DEBT-528 is not a prerequisite. Keep cron budgets and durable recovery with DEBT-501, Clerk request allowance with DEBT-503, and consume those owners' policies here.
 
-Corrected 2026-10-19: passing the remaining time once as the SDK request timeout does not enforce a total budget. `RequestSender.js:416-423` reuses that value on every attempt, and `:413-415` schedules its own backoff. A loopback call with a 100-ms request timeout and one SDK retry took 711 ms. The total budget must own retries as well as transport cancellation.
+Passing the remaining time once as the SDK request timeout would not enforce a total budget. `RequestSender.js:416-423` reuses that value on every attempt, and `:413-415` schedules its own backoff. A loopback call with a 100-ms request timeout and one SDK retry took 711 ms. The total budget must own retries as well as transport cancellation.
 
 The first step is built in `lib/stripe-client.ts`, with `getStripe` using the same factory tested on loopback: a ten-second fetch timeout and one SDK retry. One retry retains the SDK's 409 and retry-header recovery. A pre-header timeout can use two tries and 500 ms of backoff, 20.5 seconds, inside the 30-second request limit; this is not a caller-wide deadline.
 
-Corrected 2026-10-19: the first step used three seconds. A try cut off while Stripe is still processing a write fails even if Stripe completes it, and its same-key retry meets a 409 while the first is in flight, so three seconds turned a slow but working checkout into an error. The limit is a backstop against hangs, so it sits well above Stripe's normal latency. Before the caller budget tightens any limit, measure Stripe's latency per operation from the server's traces. Per-request overrides remain authoritative on unbudgeted callers, including the reconcile cron. ADR-018 records the transport and retry composition.
+Why ten seconds: a try cut off while Stripe is still processing a write fails even if Stripe completes it, and its same-key retry meets a 409 while the first is in flight, so a short limit turns a slow but working checkout into an error. The limit is a backstop against hangs, so it sits well above Stripe's normal latency. Before the caller budget tightens any limit, measure Stripe's latency per operation from the server's traces. Per-request overrides remain authoritative on unbudgeted callers, including the reconcile cron. ADR-018 records the transport and retry composition.
 
 The per-attempt loopback suite proves transport cancellation, six rather than nine requests for repeated retryable 500s, caller overrides, and preserved write keys. Six cases fail against the original constructor configuration. The singleton wiring test also fails against that configuration. The same tests pass with the shared transport limits.
 
-Corrected 2026-10-19: the per-attempt limit alone does not bound combined retries; only a pre-header timeout can use both SDK attempts; a response-body timeout ends after one. Repeated 5xx responses can reach six requests through the unbudgeted wrapper, while 409 reaches two. `stripe-client-timeout.integration.test.ts` proves both distinctions.
+The per-attempt limit alone does not bound combined retries; only a pre-header timeout can use both SDK attempts; a response-body timeout ends after one. Repeated 5xx responses can reach six requests through the unbudgeted wrapper, while 409 reaches two. `stripe-client-timeout.integration.test.ts` proves both distinctions.
 
-The caller-budget suite proves silence, trickling bodies, retries, connection closure, sequential calls, and cancellation observed by the loopback server. A lost write response remains an unknown outcome; a later request keeps the same key and recovers the accepted write. The shared fake/provider contract adds that recovery scenario. No commercial rule changes.
+The caller-budget suite proves silence, trickling bodies, retries, connection closure, sequential calls, and cancellation observed by the loopback server. A lost write response remains an unknown outcome; a later request keeps the same key and recovers the accepted write. The shared fake/provider contract's first case already proves that a repeat with the unchanged key returns the accepted Session. No commercial rule changes.
 
 ## Verification
 
 - [x] The shared client's per-attempt limit holds through the real SDK on a loopback server, for stalled, trickling and 5xx responses.
-- [x] A call Stripe answers in four seconds completes under the production limit; under a three-second limit it fails after two tries (`stripe-client-timeout.integration.test.ts`).
+- [x] A call Stripe answers in four seconds completes under the production limit (`stripe-client-timeout.integration.test.ts`).
 - [x] Real SDK calls against a loopback server respect the total budget for silence, trickling bodies, retries, connection closure and sequential calls.
 - [x] Exhaustion prevents new attempts/backoff; in-flight cancellation is proved rather than inferred from a returned timeout.
 - [x] A provider write whose response is lost remains an unknown outcome, preserving its key and recovery behavior.

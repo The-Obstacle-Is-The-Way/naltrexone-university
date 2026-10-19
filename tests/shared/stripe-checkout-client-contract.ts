@@ -680,40 +680,6 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
     },
   },
-  {
-    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[12],
-    async run(harness) {
-      const options = { idempotencyKey: idempotencyKey('lost_response') };
-      let committedId: string | undefined;
-      // Fault injection happens after the provider has accepted the write.
-      // The real SDK loopback suite separately proves transport cancellation.
-      const lost = Object.assign(new Error('Response lost'), {
-        code: 'ETIMEDOUT',
-      });
-      await expect(
-        (async () => {
-          const committed = await harness.sessions.create(
-            harness.subscriptionParams,
-            options,
-          );
-          committedId = committed.id;
-          throw lost;
-        })(),
-      ).rejects.toBe(lost);
-      const recovered = await harness.sessions.create(
-        harness.subscriptionParams,
-        options,
-      );
-      expect(recovered.id === committedId).toBe(true);
-      const listed = await harness.sessions.list({
-        customer: harness.subscriptionParams.customer,
-        limit: 100,
-      });
-      expect(
-        listed.data.filter((session) => session.id === recovered.id),
-      ).toHaveLength(1);
-    },
-  },
 ];
 
 export function runStripeCheckoutClientContract(

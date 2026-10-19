@@ -1,6 +1,6 @@
 # ADR-018: Resilience Patterns (Retry and Backoff)
 
-**Status:** Accepted, as amended 2026-10-19 (shared Stripe transport limits and caller deadlines)
+**Status:** Accepted, as amended 2026-10-18 and 2026-10-19 (shared Stripe transport limits and caller deadlines)
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-005 (Payment Boundary), ADR-006 (Error Handling Strategy)
@@ -152,7 +152,7 @@ The shared client in `lib/stripe-client.ts`, used by `getStripe`, uses the SDK's
 
 The SDK gets one network retry. This retains one recovery for a connection failure, a 409, or `stripe-should-retry: true`. The SDK honors `stripe-should-retry: false`; the existing outer wrapper still applies its own transient-status classifier. A closed connection can also trigger the SDK's first retry, but does not add a third HTTP attempt.
 
-The timeout is a backstop against a hang, not a latency target. A try cut off while Stripe is still processing it fails even if Stripe completes it, and its retry with the same key meets a 409 while the first is in flight; so a short limit turns a slow success on the payment path into an error. Ten seconds sits well above Stripe's normal latency. A call that times out ends after two tries and one 500-ms SDK delay, 20.5 seconds, inside the 30-second request limit; the outer wrapper does not retry a timeout (next paragraph). Fast refusals that both layers retry (a 5xx or a 409) can reach six HTTP attempts. This is not a caller deadline: it does not cover sequential calls or per-request overrides, which DEBT-527's caller budget will. Tighten the limit only from measured Stripe latency. The reconciliation path keeps its five-second timeout and one SDK retry.
+The timeout is a backstop against a hang, not a latency target. A try cut off while Stripe is still processing it fails even if Stripe completes it, and its retry with the same key meets a 409 while the first is in flight; so a short limit turns a slow success on the payment path into an error. Ten seconds sits well above Stripe's normal latency. A call that times out before headers ends after two tries and one 500-ms SDK delay, 20.5 seconds, inside the 30-second request limit; the outer wrapper does not retry a timeout (next paragraph). Repeated retryable 5xx responses, which both layers retry, can reach six HTTP attempts; the outer classifier does not retry a 409, so it reaches two. This is not a caller deadline: it does not cover sequential calls or per-request overrides. Tighten the limit only from measured Stripe latency. The reconciliation path keeps its five-second timeout and one SDK retry.
 
 A timeout before headers can use the SDK retry. A timeout or cut-off body after headers becomes `StripeConnectionError` after the SDK's retry decision. That error has no top-level code or status, so the unchanged outer retry predicate does not retry it; the outage classifier still counts it. A lost write response remains indeterminate. Callers retain their idempotency keys and recovery policies.
 
@@ -169,6 +169,6 @@ Transport retries retain warning logs with the HTTP method and resource family, 
 
 The checkout-success path uses the shared adapter wrapper and circuit breaker. A budget already exhausted before a call is refused before the breaker, without counting a new provider outage. An attempted provider call that ends in an outage still counts.
 
-A deadline or lost response does not prove that Stripe refused a write. It remains an unknown outcome, with the same idempotency key and existing recovery path. A later request receives a new caller budget, not a new write identity.
+A deadline or lost response does not prove that Stripe refused a write. It remains an unknown outcome, with the same idempotency key and existing recovery path. A later request receives a new caller budget; a write whose idempotency key the caller derives keeps that key.
 
-The reconciliation cron retains its separate policy. Unbudgeted clients retain the shared ten-second attempt limit, one SDK retry, and the existing outer retry classifier. The previous amendment's six-attempt statement applies to repeated retryable 5xx responses, not 409: the outer classifier does not retry 409. Only a pre-header timeout can use both SDK attempts and the backoff; a body timeout ends after one attempt.
+The reconciliation cron retains its separate policy. Unbudgeted clients retain the shared ten-second attempt limit, one SDK retry, and the existing outer retry classifier. Only a pre-header timeout can use both SDK attempts and the backoff; a body timeout ends after one attempt.

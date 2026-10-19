@@ -166,25 +166,25 @@ describe('Stripe caller budget on loopback', () => {
   });
 
   it('caps the next attempt at the remaining deadline after backoff', async () => {
-    let requests = 0;
-    let closed = 0;
+    // A 400-ms attempt, then the 500-ms backoff, leaves about 200 ms of the
+    // 1,100-ms budget: the second attempt is cut there, not at 400 ms.
+    const lifetimes: number[] = [];
     await withServer(
       (_request, response) => {
-        requests += 1;
+        const arrived = performance.now();
         response.once('close', () => {
-          closed += 1;
+          lifetimes.push(performance.now() - arrived);
         });
       },
       async (client) => {
-        const started = performance.now();
         await expect(
-          client(new StripeCallBudget(650), 100).customers.retrieve(
+          client(new StripeCallBudget(1_100), 400).customers.retrieve(
             'cus_loopback',
           ),
         ).rejects.toMatchObject({ type: 'StripeConnectionError' });
-        expect(performance.now() - started).toBeLessThan(900);
-        await expect.poll(() => closed).toBe(2);
-        expect(requests).toBe(2);
+        await expect.poll(() => lifetimes.length).toBe(2);
+        expect(lifetimes[0]).toBeGreaterThanOrEqual(350);
+        expect(lifetimes[1]).toBeLessThan(350);
       },
     );
   });
@@ -214,7 +214,7 @@ describe('Stripe caller budget on loopback', () => {
       (_request, response) => {
         requests += 1;
         if (requests === 1) {
-          const timer = setTimeout(() => customer(response), 100);
+          const timer = setTimeout(() => customer(response), 200);
           response.once('close', () => clearTimeout(timer));
         } else
           response.once('close', () => {
@@ -222,7 +222,7 @@ describe('Stripe caller budget on loopback', () => {
           });
       },
       async (client) => {
-        const budget = new StripeCallBudget(200);
+        const budget = new StripeCallBudget(1_000);
         const stripe = client(budget);
         const call = () =>
           callStripeWithRetry({
@@ -237,7 +237,9 @@ describe('Stripe caller budget on loopback', () => {
           type: 'StripeConnectionError',
         });
         await expect(call()).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-        expect(performance.now() - started).toBeLessThan(450);
+        // A fresh budget per call would run past 1,500 ms and reach a third
+        // request.
+        expect(performance.now() - started).toBeLessThan(1_500);
         await expect.poll(() => closed).toBe(true);
         expect(requests).toBe(2);
       },
@@ -385,7 +387,8 @@ describe('Stripe caller budget on loopback', () => {
         response.once('close', () => clearTimeout(timer));
       },
       async (client) => {
-        const started = performance.now();
+        // With the 1,000-ms override, the first attempt would receive the
+        // 800-ms response and succeed.
         await expect(
           client(new StripeCallBudget(2_000), 50).customers.retrieve(
             'cus_loopback',
@@ -393,7 +396,6 @@ describe('Stripe caller budget on loopback', () => {
             { timeout: 1_000 },
           ),
         ).rejects.toMatchObject({ type: 'StripeConnectionError' });
-        expect(performance.now() - started).toBeLessThan(750);
         expect(requests).toBe(2);
       },
     );
