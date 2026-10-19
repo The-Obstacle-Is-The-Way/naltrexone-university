@@ -26,7 +26,7 @@ Every accepted start invocation owns an opaque claim, and retirement is refused 
 
 ### 5. Owner-fenced continuations
 
-An asynchronous success or failure continuation may mutate a request-key slot or UI lifecycle only while it still owns the relevant request, question, session, or presentation generation; mount checks alone are only a limited variant. BUG-301 owns feedback token-slot fencing, BUG-302 owns report-dialog presentation fencing, and BUG-303 owns the start claim/current-key variant. Reuse [`claimRequestKeySlot`](<../../shared/idempotency-request-key.ts>) for a shared token slot; request sequences, current-identity checks, in-flight serialization, and dialog generations remain surface-local owners.
+An asynchronous success or failure continuation may mutate a request-key slot or UI lifecycle only while it still owns the relevant request, question, session, or presentation generation; mount checks alone are only a limited variant. BUG-301 owns feedback token-slot fencing, BUG-302 owns report-dialog presentation fencing, and BUG-303 owns the start claim/current-key variant. Reuse [`claimRequestKeySlot`](<../../shared/idempotency-request-key.ts>) for a shared token slot; request sequences, current-identity checks, in-flight serialization, and dialog generations remain surface-local owners. Both sequencing hooks are required by the shared load and submit flows and their page helpers. The flows reject an absent or partial pair before starting a request.
 
 ### 6. Reason-discriminated recovery
 

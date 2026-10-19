@@ -63,6 +63,7 @@ describe('executeIdempotent', () => {
     const userId = crypto.randomUUID();
 
     const result = await executeIdempotent({
+      shouldCacheError: () => true,
       d: deps,
       userId,
       idempotencyKey: null,
@@ -85,6 +86,7 @@ describe('executeIdempotent', () => {
     const schema = z.object({ value: z.number() });
     const userId = crypto.randomUUID();
     const args = {
+      shouldCacheError: () => true,
       d: deps,
       userId,
       idempotencyKey: '22222222-2222-2222-2222-222222222223',
@@ -110,6 +112,7 @@ describe('executeIdempotent', () => {
     const userId = crypto.randomUUID();
 
     const result = await executeIdempotent({
+      shouldCacheError: () => true,
       d: deps,
       userId,
       idempotencyKey: undefined,
@@ -131,6 +134,7 @@ describe('executeIdempotent', () => {
 
     await expect(
       executeIdempotent({
+        shouldCacheError: () => true,
         d: deps,
         userId,
         idempotencyKey: null,
@@ -151,6 +155,7 @@ describe('executeIdempotent', () => {
     const userId = crypto.randomUUID();
 
     const result = await executeIdempotent({
+      shouldCacheError: () => true,
       d: deps,
       userId,
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
@@ -174,6 +179,7 @@ describe('executeIdempotent', () => {
     const schema = z.object({ value: z.number() });
     const userId = crypto.randomUUID();
     const args = {
+      shouldCacheError: () => true,
       d: deps,
       userId,
       idempotencyKey: '22222222-2222-2222-2222-222222222222',
@@ -199,6 +205,7 @@ describe('executeIdempotent', () => {
     const schema = z.object({ value: z.number() });
     const userId = crypto.randomUUID();
     const args = {
+      shouldCacheError: () => true,
       d: deps,
       userId,
       idempotencyKey: '33333333-3333-3333-3333-333333333333',

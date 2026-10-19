@@ -55,11 +55,9 @@ function safeLogError(
 }
 
 function shouldCacheExecutionError(
-  shouldCacheError: ((error: unknown) => boolean) | undefined,
+  shouldCacheError: (error: unknown) => boolean,
   error: unknown,
 ): boolean {
-  if (!shouldCacheError) return true;
-
   try {
     return shouldCacheError(error);
   } catch {
@@ -119,7 +117,7 @@ export async function withIdempotency<T>(input: {
   zombieThresholdMs?: number;
   parseResult?: (value: unknown) => T;
   beforeExecute?: () => Promise<void>;
-  shouldCacheError?: (error: unknown) => boolean;
+  shouldCacheError: (error: unknown) => boolean;
   outcomeStoreFailurePolicy?: IdempotencyOutcomeStoreFailurePolicy;
   execute: () => Promise<T>;
 }): Promise<T> {

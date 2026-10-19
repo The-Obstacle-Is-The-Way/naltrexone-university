@@ -9,6 +9,7 @@ import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const { fixtureAttempt1Id, fixtureChoice1Id, fixtureQuestion1Id } = vi.hoisted(
   () => ({
@@ -110,6 +111,7 @@ describe('practice-page-logic answer flow', () => {
       const setSubmitResult = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
@@ -148,6 +150,7 @@ describe('practice-page-logic answer flow', () => {
       );
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: null,
@@ -178,6 +181,7 @@ describe('practice-page-logic answer flow', () => {
       );
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
@@ -199,6 +203,7 @@ describe('practice-page-logic answer flow', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
@@ -221,6 +226,7 @@ describe('practice-page-logic answer flow', () => {
       const setLoadState = vi.fn();
 
       await submitAnswerForQuestion({
+        ...createRequestSequencing(),
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
@@ -249,6 +255,7 @@ describe('practice-page-logic answer flow', () => {
       const setSubmitResult = vi.fn();
 
       const promise = submitAnswerForQuestion({
+        ...createRequestSequencing(),
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,

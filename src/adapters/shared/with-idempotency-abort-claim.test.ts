@@ -17,6 +17,7 @@ describe('withIdempotency abortClaim race safety', () => {
       throw 'plain failure';
     });
     const input = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
@@ -53,6 +54,7 @@ describe('withIdempotency abortClaim race safety', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -108,6 +110,7 @@ describe('withIdempotency abortClaim race safety', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -152,6 +155,7 @@ describe('withIdempotency abortClaim race safety', () => {
 
     await expect(
       withIdempotency({
+        shouldCacheError: () => true,
         repo,
         userId: appUserId,
         action: 'billing:createCheckoutSession',
@@ -201,6 +205,7 @@ describe('withIdempotency abortClaim race safety', () => {
       return { source: 'newer' };
     });
     const base = {
+      shouldCacheError: () => true,
       repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',

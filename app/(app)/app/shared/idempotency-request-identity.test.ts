@@ -20,6 +20,7 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { ok } from '@/tests/test-helpers/ok';
+import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const questionId = crypto.randomUUID();
 const choiceAId = crypto.randomUUID();
@@ -134,6 +135,7 @@ type SubmitSurface = (input: {
 const submitQuickPracticeSurface: SubmitSurface = async (input) => {
   let submitted: SubmitAnswerOutput | null = null;
   await submitQuickPracticeAnswer({
+    ...createRequestSequencing(),
     question: nextQuestion,
     selectedChoiceId: input.choiceId,
     questionLoadedAtMs: 0,
@@ -156,6 +158,7 @@ function createPracticeSessionSurface(sessionId: string): SubmitSurface {
   return async (input) => {
     let submitted: SubmitAnswerOutput | null = null;
     await submitPracticeSessionAnswer({
+      ...createRequestSequencing(),
       sessionId,
       question: nextQuestion,
       selectedChoiceId: input.choiceId,

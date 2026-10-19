@@ -81,8 +81,8 @@ export async function loadNextQuestion(input: {
   setUnavailableItem: (item: UnavailableSessionItem | null) => void;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   return runLoadQuestionFlow({
@@ -146,8 +146,8 @@ export function createLoadNextQuestionAction(input: {
   setSessionInfo: (info: NextQuestion['session']) => void;
   setUnavailableItem: (item: UnavailableSessionItem | null) => void;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): (options?: LoadNextQuestionOptions) => void {
   return (options) => {
@@ -210,8 +210,8 @@ export async function submitAnswerForQuestion(input: {
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   /** Reloads the item after a not-found answer (ADR-021 §3). */
   reload?: SessionQuestionReload | undefined;
-  createRequestSequenceId?: (() => number) | undefined;
-  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  createRequestSequenceId: () => number;
+  isLatestRequest: (requestId: number) => boolean;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   if (!input.question || !input.selectedChoiceId) return;

@@ -8,6 +8,7 @@ import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const { fixtureQuestion1Id, fixtureQuestion2Id, fixtureChoice1Id } = vi.hoisted(
   () => ({
@@ -121,6 +122,7 @@ describe('practice-page-logic loading', () => {
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         getNextQuestionFn,
         filters: {
           tagSlugs: ['opioids'],
@@ -162,6 +164,7 @@ describe('practice-page-logic loading', () => {
       const setSubmitRequestToken = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         getNextQuestionFn: async () => ok(null),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         nowMs: () => 1234,
@@ -183,6 +186,7 @@ describe('practice-page-logic loading', () => {
       const setSubmitRequestToken = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         getNextQuestionFn: async () =>
           err('UNSUBSCRIBED', 'Subscription required'),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
@@ -210,6 +214,7 @@ describe('practice-page-logic loading', () => {
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
+        ...createRequestSequencing(),
         getNextQuestionFn: async () => {
           throw new Error('Network down');
         },
@@ -242,6 +247,7 @@ describe('practice-page-logic loading', () => {
       const setQuestion = vi.fn();
 
       const promise = loadNextQuestion({
+        ...createRequestSequencing(),
         getNextQuestionFn: async () => deferred.promise,
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
         nowMs: () => 1234,
@@ -271,6 +277,7 @@ describe('practice-page-logic loading', () => {
       const setLoadState = vi.fn();
 
       const action = createLoadNextQuestionAction({
+        ...createRequestSequencing(),
         startTransition,
         getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },

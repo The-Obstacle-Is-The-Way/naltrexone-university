@@ -8,6 +8,7 @@ import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
+import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const fixtureAttempt1Id = crypto.randomUUID();
 const fixtureAttempt2Id = crypto.randomUUID();
@@ -89,6 +90,7 @@ describe('question-flow-actions', () => {
     };
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => {
         // Simulate an async update happening after the initial reset but before the
@@ -146,6 +148,7 @@ describe('question-flow-actions', () => {
     const onLoaded = vi.fn();
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: true,
@@ -189,6 +192,7 @@ describe('question-flow-actions', () => {
     const recoverNullQuestion = vi.fn(async () => true);
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: true,
@@ -219,6 +223,7 @@ describe('question-flow-actions', () => {
     const recoverNullQuestion = vi.fn(async () => false);
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: true,
@@ -249,6 +254,7 @@ describe('question-flow-actions', () => {
     const recoverNullQuestion = vi.fn(async () => true);
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: true,
@@ -288,6 +294,7 @@ describe('question-flow-actions', () => {
       let question: unknown = { questionId: fixtureQuestionOldId };
 
       const promise = runLoadQuestionFlow({
+        ...createRequestSequencing(),
         requestInput: {},
         getQuestionFn: async () => new Promise<never>(() => {}),
         nowMs: () => 9999,
@@ -346,6 +353,7 @@ describe('question-flow-actions', () => {
     const onLoaded = vi.fn();
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => {
         throw new Error('Network down');
@@ -381,8 +389,31 @@ describe('question-flow-actions', () => {
     expect(onLoaded).toHaveBeenCalledWith(null);
   });
 
+  it('rejects a load with neither sequencing hook before starting the request', async () => {
+    const getQuestionFn = vi.fn(async () => ({
+      ok: true as const,
+      data: null,
+    }));
+    await expect(
+      // @ts-expect-error Intentionally omit the required sequencing pair.
+      runLoadQuestionFlow({
+        requestInput: {},
+        getQuestionFn,
+        nowMs: () => 9999,
+        setLoadState: () => undefined,
+        setSelectedChoiceId: () => undefined,
+        setSubmitResult: () => undefined,
+        setSubmitRequestToken: () => undefined,
+        setQuestionLoadedAt: () => undefined,
+        setQuestion: () => undefined,
+      }),
+    ).rejects.toThrow('Request sequencing hooks must be provided together');
+    expect(getQuestionFn).not.toHaveBeenCalled();
+  });
+
   it('throws when request sequencing hooks are partially provided for load flow', async () => {
     await expect(
+      // @ts-expect-error Intentionally provide only half the required pair.
       runLoadQuestionFlow({
         requestInput: {},
         getQuestionFn: async () => ({

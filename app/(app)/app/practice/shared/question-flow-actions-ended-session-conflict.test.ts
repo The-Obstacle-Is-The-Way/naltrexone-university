@@ -8,6 +8,7 @@ import {
   PracticeSessionConflictMessages,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
+import { createRequestSequencing } from '@/tests/test-helpers/request-sequencing';
 
 const fixtureChoice1Id = crypto.randomUUID();
 const fixtureQuestion1Id = crypto.randomUUID();
@@ -23,6 +24,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     });
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: false,
@@ -56,6 +58,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     const recoverEndedSessionConflict = vi.fn(async () => true);
 
     await runLoadQuestionFlow({
+      ...createRequestSequencing(),
       requestInput: {},
       getQuestionFn: async () => ({
         ok: false,
@@ -91,6 +94,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     });
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
@@ -121,6 +125,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     const recoverEndedSessionConflict = vi.fn(async () => true);
 
     await runSubmitAnswerFlow({
+      ...createRequestSequencing(),
       question: { questionId: fixtureQuestion1Id },
       selectedChoiceId: fixtureChoice1Id,
       questionLoadedAtMs: 1000,
