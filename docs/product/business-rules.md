@@ -123,6 +123,25 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `src/domain/services/scoring.test.ts`: `in %s mode, answered: %s, question %s: counts %s`
 - `app/(app)/app/practice/[sessionId]/components/exam-review-view.browser.spec.tsx`: `omits the unanswered warning when no unanswered item will be scored`
 
+### R27. Stage and activation previews name answer-key changes separately from other content changes. Activation refuses a reviewed plan if its key-change list has changed.
+
+Bootstrap's reviewed plan also binds its frozen list of earlier revision candidates. That list is history metadata, never selectable content.
+
+A changed key that matches earlier history needs an explicit return name, reason and authority. Earlier history means activated release items plus the frozen bootstrap list; later unpublished revisions do not count. The rule also applies to key-changing rollbacks and hold lifts. Activation binds the return list to its reviewed plan.
+
+- `tests/integration/content-release-key-returns.integration.test.ts`: `names a stale-key return in both previews and records the named return and later repair decisions`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `does not treat a later %s-only stage as earlier publication`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `invalidates a preview when intervening activations turn its new key into a return`
+- `tests/integration/content-release-key-returns.integration.test.ts`: `refuses an unnamed key-returning hold lift atomically and accepts its explicitly named decision`
+
+- `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `refuses a bootstrap preview after only its historical candidate set changes`
+- `tests/integration/content-release-bootstrap-candidates.integration.test.ts`: `never publishes historical candidates when activating or rolling back the bootstrap`
+
+- `tests/integration/content-release-key-preview.integration.test.ts`: `compares %s in both previews`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `prints each staging change by kind without publishing the preview`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `canonicalizes stored correct text as the seed does before comparing keys`
+- `tests/integration/content-release-key-preview.integration.test.ts`: `refuses an old preview when lifting a hold changes the compared key`
+
 ## Subscription and billing
 
 ### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed.
@@ -197,7 +216,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 ## Renewal recovery
 
-### R27. Retrying a quarantined renewal notice requires an operator, a reason and evidence for the current attempt; an unknown outcome also requires confirmation that nothing was sent.
+### R28. Retrying a quarantined renewal notice requires an operator, a reason and evidence for the current attempt; an unknown outcome also requires confirmation that nothing was sent.
 
 - `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `requeues an unknown outcome only with no-send confirmation and preserves an audit entry`
 - `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects missing operator evidence and accepted rows`
