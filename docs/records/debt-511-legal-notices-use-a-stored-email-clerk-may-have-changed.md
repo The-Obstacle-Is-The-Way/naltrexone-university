@@ -1,6 +1,6 @@
 # DEBT-511: Legal Notices Go to a Stored Email That Clerk May Have Changed
 
-**Status:** Open — resolution decided below; built on DEBT-502's identity resolver, and due before 35 days ahead of the earliest live renewal
+**Status:** Open — resolution decided below; built on DEBT-502's identity resolver, and due before 39 days ahead of the earliest live renewal
 **Priority:** P2
 **Date:** 2026-10-07
 **Resolved:** —
@@ -40,7 +40,7 @@ DEBT-503 item 1 widens the gap slightly. It stops refreshing the email on every 
   - Stripe's upcoming-renewal email goes to this copy. DEBT-414 F19a listed it as a candidate for Massachusetts' 5–30-day notice; that path closed on 2026-10-07 (item 5 below).
 - **Queue mechanics.**
   - **No second queuing.** The job's already-queued check ignores status, and the scheduled unique index includes the destination (`db/schema.ts`). So a notice superseded while the stored address is unchanged is never queued again.
-  - **Few runs.** The window from renewal minus 35 days to renewal minus 30 days gets 4–6 runs of the daily cron (Vercel Hobby fires it within about ±59 minutes). A notice superseded on the last run is never sent.
+  - **Few runs.** The window from renewal minus 39 days to renewal minus 30 days gets 8–10 runs of the daily cron (Vercel Hobby fires it within about ±59 minutes). A notice superseded on the last run is never sent.
   - **The email write can be refused.** The user upsert's `updated_at` guard can keep the old address.
 - **Cost.** Clerk's Backend API allows 1,000 requests per 10 seconds in production. One lookup per user per run, shared by that user's notices, is well under that, off the request path.
 
