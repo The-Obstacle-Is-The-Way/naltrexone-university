@@ -1,6 +1,6 @@
 # ADR-021: Immutable Question Revisions and Atomic Content Releases
 
-**Status:** Accepted, as amended 2026-10-03 (the contract step is not pursued; see [Amendment](#amendment--2026-10-03-the-contract-step-is-not-pursued)) and 2026-10-18 (release identity includes selected revisions; see [Amendment](#amendment--2026-10-18-release-identity-includes-selected-revisions))
+**Status:** Accepted, as amended 2026-10-03 (the contract step is not pursued; see [Amendment](#amendment--2026-10-03-the-contract-step-is-not-pursued)) and 2026-10-18 (release identity includes selected revisions, pre-bootstrap candidates are frozen, and answer-key returns are named; see the amendments on [release identity](#amendment--2026-10-18-release-identity-includes-selected-revisions), [candidates](#amendment--2026-10-18-freeze-pre-bootstrap-candidates) and [key returns](#amendment--2026-10-18-name-answer-key-returns))
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
 **Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 (DEBT-484, resolved). Phase 4 is in production as of 2026-10-02 (DEBT-483, resolved), built in steps from its design (DEBT-483). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. DEBT-489's fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` (DEBT-490) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred. DEBT-492's release-safety changes and DEBT-490's decision receipts are released. Bootstrap remains an owner decision and requires BUG-351 part 2's key-return check and pre-bootstrap history freeze to ship first.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
@@ -160,6 +160,24 @@ No driver for it has been identified. The one benefit cited, telling held, remov
 BUG-351 part 1 proves that equal content can occupy several immutable revisions. Matching the current revision is insufficient if release reuse substitutes an older revision with the same content hash. The v2 manifest omits revision IDs, while migration 0048 makes its hash and parent unique.
 
 New releases use `app-release-manifest-v3`. Each item names its selected revision ID alongside its slug and unchanged content hash. Reuse and activation verification therefore preserve the selected revision. Existing v2 releases retain their original bytes and hashes and remain readable for activation and rollback. V1 stays unsupported. No schema migration is needed. Content hashes still exclude row identities, as defined above.
+
+## Amendment — 2026-10-18: freeze pre-bootstrap candidates
+
+The owner chose to preserve pre-bootstrap revision IDs for BUG-351's return guard. Before releases, a stored revision is a candidate for earlier publication, not proof of it.
+
+New releases use `app-release-manifest-v4` in place of v3, with the same items. Bootstrap captures every stored revision ID in its own transaction after acquiring the release-pointer lock, and its manifest carries the sorted, unique list in `preBootstrapCandidates`, separately from `items`. Other new releases carry an empty list. The existing immutable-manifest trigger freezes it. Activation and rollback still use only release items; candidates cannot become selectable content.
+
+The list contributes to the manifest hash and therefore to the DEBT-489 plan id. Adding even a draft-only revision between preview and apply invalidates that preview. Reverification uses the stored list, never a fresh census. The preview reports its count. V2 and v3 manifests keep their original canonical bytes and hashes and remain readable for activation and rollback. No database migration or new table is needed.
+
+The return guard uses revisions in activated releases plus this frozen list. A later draft-only or never-activated staged revision does not enter the list. V2/v3 releases contribute activated membership only; missing pre-bootstrap candidates are not reconstructed from later stored revisions.
+
+## Amendment — 2026-10-18: name answer-key returns
+
+BUG-351 part 2b compares each changed key with the same question's activated release items and frozen bootstrap candidates. Both previews name a return separately from other key changes. Staging requires `--revert` for either an older revision or a key return. Activation recomputes key returns under the release-pointer lock, requires exactly those names, and binds the return list to the reviewed plan. The existing activation receipt records the reason and authority; no new receipt table or migration is needed.
+
+This narrows DEBT-492's rollback exemption: a rollback that returns an earlier key now needs explicit names. Its revision-number staging rule is unchanged. A hold lift can also return a key after rollback; it takes explicit names through the same activation guard. An unnamed lift rolls back the hold change too. Same-key changes need no key-return approval.
+
+Clinical review remains in the content repository.
 
 ## Related
 
