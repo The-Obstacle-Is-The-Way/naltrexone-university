@@ -2,14 +2,16 @@
 
 A renewal notice that the system will not send again by itself sits in `renewal_notice_deliveries` with one of two statuses:
 
-- **`outcome_unknown`.** Resend's answer was ambiguous, or a send attempt was still unfinished 15 minutes after it started, which the next daily run finds a day later. Either raises the [`renewal_notice_outcome_unknown` alert](../../architecture/observability.md#operational-alerts). The notice may or may not have reached the subscriber.
-- **`terminal_failure`.** Resend refused the send, reported a bounce, failure or suppression, or dispatch refused the notice.
+- **`outcome_unknown`.** Resend's answer was ambiguous, or a claim was still unfinished after 15 minutes when a later run checked it. Both raise `renewal_notice_outcome_unknown`.
+- **`terminal_failure`.** A provider refusal, bounce, send failure, suppression, corrupt payload or missing anniversary facts raises `renewal_notice_terminal_failure`. A late reminder raises `renewal_notice_send_by_cutoff_passed`. Intentional supersession does not alert: the old notice should no longer be sent.
 
-`scripts/requeue-renewal-notice.ts` (`pnpm notice:requeue`) puts one of these rows back in the queue. It runs `RequeueRenewalNoticeDeliveryUseCase`, so the operator, the reason and the prior status are kept in the row's audit fields, and an unknown outcome is refused without confirmation that nothing was sent ([ADR-027](../../adr/adr-027-free-trial-renewal-consent-and-notices.md), decision 8). Never change the row with SQL instead: that skips the audit and the confirmation.
+Stale claims are checked only when the job runs. A late stall may therefore be discovered after the send-by cutoff; raising an alert does not guarantee time remains to recover.
 
-## 1. Find the row
+The [alert runbook](../../architecture/observability.md#operational-alerts) leads here. `pnpm notice:requeue` runs `RequeueRenewalNoticeDeliveryUseCase`, preserving the operator, reason and prior status in the audit. An unknown outcome requires truthful confirmation that nothing was sent ([ADR-027](../../adr/adr-027-free-trial-renewal-consent-and-notices.md), decision 8). Never bypass this with SQL or a false confirmation. Requeue is an audited retry of the same notice, not a way to repair its immutable evidence or reconcile a previously accepted send.
 
-The alert carries only a count, and Vercel keeps the log line that names the delivery ID for an hour on Hobby. Find the row with a read-only query, such as one in Neon's SQL editor:
+## 1. Find and identify the notice
+
+Alerts carry a count. Query the quarantined rows, for example in Neon's SQL editor:
 
 ```sql
 SELECT * FROM (
@@ -24,41 +26,53 @@ ORDER BY CASE WHEN send_by > now() THEN 0 WHEN send_by IS NULL THEN 1 ELSE 2 END
          send_by, last_attempt_at DESC NULLS LAST;
 ```
 
-`provider_event_id` is set only on a row Resend accepted before reporting a bounce, failure or suppression. An `outcome_unknown` row has none. `send_by` is a reminder's send-by cutoff. Reminders still before it come first, soonest first; then acknowledgments, which have none; then reminders past it, which a requeue can no longer help.
+Open reminders come first, soonest cutoff first; then notices without a reminder cutoff; then expired reminders. Acknowledgments have no cutoff. `material_change` and `fee_change` also have no reminder cutoff, but nothing currently schedules them.
 
-## 2. Decide whether to send it again
+For the selected ID, inspect its `payload_snapshot` and `provider_idempotency_key` as well. In [Resend's email details](https://resend.com/docs/dashboard/emails/manage-emails) and [API logs](https://resend.com/docs/dashboard/logs/introduction), match the recipient, subject and full stored content, using the exact key if the provider evidence exposes it. **Recipient and time alone are insufficient:** the annual job creates both an `annual_reminder` and a `renewal_notice` in the same run. One can succeed while the other is unknown. Inspect all matching requests and their linked emails, including earlier attempts and requeues. Do not use the dashboard's resend action; it bypasses the application's audit and revalidation.
 
-A requeued notice goes to the same `destination`, with the same content and the same Resend idempotency key. Resend keeps that key for 24 hours after it receives a send, and answers a repeat inside that time with its earlier answer instead of sending again ([Resend's idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys); ADR-027).
+A quarantined row with a `provider_event_id` was accepted before a failure report. An `outcome_unknown` row normally has none; a missing ID is not evidence that Resend sent nothing.
 
-- **Act before `send_by`.** A reminder must go out before its send-by cutoff, 30 days before renewal. A requeued row waits for the next daily run, which Vercel starts at any time between 09:00 and 10:00 UTC, so requeue it before 09:00 UTC on the last day whose run ends before `send_by`. Reminders are first sent 35 days before renewal, so a quarantined reminder leaves you five days at most, and less when earlier attempts failed or the attempt stalled. After `send_by` a requeue cannot help: dispatch refuses the notice as `notice_deadline_passed`, and the missed-deadline alert recurs each day. The remedy for a missed deadline is a counsel question (DEBT-414 F07). An acknowledgment has no cutoff.
-- **`outcome_unknown`: check Resend, then requeue at once.** In Resend's dashboard, look for an email to the row's `destination` near its `last_attempt_at`. If Resend shows one, the notice was sent; do not requeue it, and if that email bounced, failed or was suppressed, treat it as the bounced address below. If it shows none, requeue it with `--confirmed-no-send` straight away; waiting 24 hours would spend days the cutoff does not leave. Your check is what prevents a second email: a requeued send more than 24 hours after the first is a new email, and the next run reaches Resend inside 24 hours only some days. When it does, Resend answers with any email you missed, and step 4 shows it.
-- **A row with a `provider_event_id`: wait until 25 hours after `last_attempt_at`.** Resend accepted that email, then reported it bounced, failed or suppressed. Inside its 24 hours, which start seconds after `last_attempt_at`, Resend answers a requeue with that same email and sends nothing, yet the row is marked `accepted`. If the wait runs past `send_by`, the notice cannot go out again in time.
-- **`terminal_failure`: fix the cause first.** `failure_class` and `failure_code` say why.
-  - **A bounced or suppressed address fails again,** because the requeue sends to the same address.
-  - **A scheduled notice whose account email changed:** do not requeue the old row. Dispatch would refuse it as `destination_changed`. While the notice window is still open, the daily job queues a new notice for the new address.
-  - **An acknowledgment** (`notice_kind = 'acknowledgment'`) is never rechecked, so its requeue goes to the old address. Nothing can send it to a new address; raise that with the owner.
-  - **A notice refused as superseded or late** (`notice_superseded`, `notice_deadline_passed`) is refused again, because dispatch rechecks every scheduled notice before sending it.
+## 2. Decide whether and when to retry
+
+A retry uses the same destination, immutable content and idempotency key. [Resend retains keys for 24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys); a repeat inside that window returns the earlier response without sending another email.
+
+- **Check the deadline first.** Dispatch refuses a reminder after `send_by`, 30 days before renewal. First selection is at 35 days, leaving at most five days to recover. The daily cron starts between 09:00 and 10:00 UTC and has a five-minute runtime limit. For that route, requeue before 09:00 on a day whose run can finish before the cutoff, allowing until 10:05 and time for failures or a backlog. If the next scheduled run is too late, use the manual run in step 4 while time remains. After the cutoff, escalate the missed notice to the owner (DEBT-414 F07); requeue cannot extend it.
+- **`outcome_unknown`: establish that this notice was not sent.** Check the exact notice identified in step 1. A missing dashboard result alone, especially just after a timeout, is not proof: the gateway's ten-second timeout does not cancel the provider request. Resolve incomplete evidence with Resend before asserting `--confirmed-no-send`. Once no send is confirmed, requeue promptly; there is no reason to consume another day waiting for a send that did not occur. If a send is confirmed, do not set the flag, even if that email later failed. Leave the row quarantined and escalate reconciliation to the owner under DEBT-414 F21. That case has no supported reconciliation command today.
+- **A previously accepted, failed email: let its idempotency window expire before requeue.** Use Resend's timestamp for the original accepted request, not `last_attempt_at`: the latter is the application's claim time and can also describe a later local refusal. Wait beyond 24 hours, allowing for timestamp precision; 25 hours from the provider timestamp is a conservative margin. Only then requeue, because any daily or manual run can select a queued row. If that margin would consume the last opportunity, verify the exact expiry with Resend and use the manual run after expiry and before the cutoff. Inside the window, a replay can falsely return the row to `accepted` without a new email.
+- **Fix an actionable terminal cause first.** An invalid API key or sender configuration can be corrected before retry. A bounced or suppressed mailbox must be made deliverable; retrying the same address does not fix it. `payload_integrity_failure` cannot be fixed by requeue, because the evidence is immutable: escalate to the owner without editing it in SQL.
+- **A changed address or superseded notice:** do not requeue an obsolete scheduled row. Dispatch refuses it again as `notice_superseded` (for example, `destination_changed`). While the window remains open, the daily or manual job can queue a replacement for the new account address. An acknowledgment is never revalidated and would still go to its stored old address; a new-address acknowledgment needs the owner. Missing anniversary facts raise an alert and need correction under DEBT-501 before an anniversary reminder can pass revalidation.
 
 ## 3. Requeue it
 
-Set `RENEWAL_NOTICE_OPERATOR` to your name or email; the audit records it. The command needs an explicit `DATABASE_URL`, and a remote target is refused until `DB_TARGET_ACK` matches the JSON its first refusal names. That is the same workflow the manual seed uses in [Promote to Production](../release/promote-to-production.md).
+Set `RENEWAL_NOTICE_OPERATOR` to your name or email. Use an explicit `DATABASE_URL`; a remote target also requires the exact `DB_TARGET_ACK` JSON named by its first refusal, as in [Promote to Production](../release/promote-to-production.md).
 
 ```bash
 RENEWAL_NOTICE_OPERATOR="you@example.com" DATABASE_URL="<production url>" DB_TARGET_ACK='<from the first refusal>' \
   pnpm --silent notice:requeue --delivery-id <id> --reason "<what you checked and why>" --confirmed-no-send
 ```
 
-Leave out `--confirmed-no-send` for a `terminal_failure` you have not checked in Resend; the audit then records that no check was confirmed. Put the arguments straight after the script name: pnpm 11 passes a `--` separator through to the script, which refuses it.
+Omit `--confirmed-no-send` for a terminal failure unless you have confirmed no send; its audit then records `false`. Put arguments directly after the script name: pnpm 11 passes a `--` separator through, which this parser refuses. Keep personal information out of the reason where possible; the command prints the audit text you supply.
 
-The redacted `Database target:` line goes to stderr. On success, stdout names the row, its new `queued` status and the audit entry. A delivery ID that does not exist, or a row in any other status, is refused as not eligible, and nothing changes.
+The redacted database target goes to stderr. Stdout names the row, its `queued` status and the latest audit entry. A nonexistent ID or a row outside the two quarantine statuses is refused without a change. If another retry changed the attempt after the command read it, the command returns a conflict instead of applying stale confirmation or overwriting the audit. Recheck the new attempt before retrying the command. The command queues a retry; it does not itself send email.
 
-## 4. Confirm it went out
+## 4. Run dispatch and confirm delivery
 
-The next daily renewal-notice run, scheduled for 09:00 UTC (`vercel.json`) and started by Vercel at any time before 10:00 UTC, picks up the queued row, rechecks it and sends it. After that run, check both:
+If the next daily run fits the deadline, inspect the row after that run completes. For an urgent recovery, the existing authenticated POST invokes the same production job immediately:
 
-- **The row** is `accepted`, or `delivered` once Resend's delivery report arrives.
-- **Resend** shows the email with the row's new `provider_event_id`, and that email was delivered.
-  - An email created after your requeue is the new send. If it bounces, fails or is suppressed, Resend's report marks the row `terminal_failure` again.
-  - An email created before your requeue is Resend's earlier answer. For a requeued `terminal_failure`, nothing new went out. For a requeued `outcome_unknown`, the first attempt went out after all. Its report arrived before the row had its ID, so the row stays `accepted` whatever became of that email. If it was not delivered, the notice was not given and nothing will alert, because the missed-deadline check counts `accepted` as sent: raise it with the owner (DEBT-414 F07).
+```bash
+curl --fail-with-body --silent --show-error --request POST \
+  --header "Authorization: Bearer ${CRON_SECRET:?}" \
+  https://addictionboards.com/api/cron/send-renewal-notices
+```
 
-If the row is quarantined again, start over at step 1.
+Use the production cron secret. **This runs the whole job**, including other due notices and its normal maintenance, not just your row. The route permits five requests per minute; honor `Retry-After` on a 429. A non-2xx response needs investigation. A successful response reports `selected`, `dispatchFailures`, `queueFailures` and `staleUnknown`; none proves this particular row was sent. The job selects at most 80 due deliveries per run, so a backlog may require another admitted run while time remains. Do not blindly retry a request that timed out: inspect the row and provider evidence first.
+
+For example, a failed accepted send on Monday at 09:30 UTC, with a Wednesday 08:00 cutoff, reaches the conservative 25-hour margin on Tuesday at 10:30. Requeue and a manual run on Tuesday can recover it; waiting for Wednesday's cron cannot.
+
+Check both the row and Resend:
+
+- The row should become `accepted`, then `delivered` when its report arrives. Inspect the email for its new `provider_event_id` and verify actual delivery.
+- An email created after requeue is the new send. A recorded failure returns the row to `terminal_failure` and alerts; restart at step 1 after fixing the cause.
+- An email created before requeue is a replay. If its earlier report was dropped before the row had that provider ID, the row can remain `accepted` indefinitely. A later report can still update it. Do not treat acceptance as delivery: the deadline checks count acceptance as sent, so they cannot detect this case. Escalate missing provider evidence under F21 and any missed deadline under F07.
+
+Before relying on production delivery reports, the owner must have configured the signed Resend webhook (DEBT-414). This procedure does not establish that configuration or close F21's early-report gap.

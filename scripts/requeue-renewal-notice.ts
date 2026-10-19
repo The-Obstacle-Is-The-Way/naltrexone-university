@@ -83,7 +83,7 @@ export function parseRequeueRenewalNoticeArgs(
   if (deliveryId === undefined) {
     throw usageError('--delivery-id is required');
   }
-  if (reason === undefined) {
+  if (reason === undefined || reason.trim().length === 0) {
     throw usageError('--reason is required');
   }
   if (!zUuid.safeParse(deliveryId).success) {

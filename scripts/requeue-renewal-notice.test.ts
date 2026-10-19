@@ -298,6 +298,25 @@ describe('runRequeueRenewalNotice', () => {
     expect(harness.openRepository).not.toHaveBeenCalled();
   });
 
+  it.each(['', '   '])(
+    'refuses an empty audit reason %j before opening the database',
+    async (reason) => {
+      const harness = createHarness(
+        new FakeRenewalNoticeDeliveryRepository(() => now),
+      );
+      await expect(
+        runRequeueRenewalNotice({
+          argv: ['--delivery-id', randomUUID(), '--reason', reason],
+          env: localEnv({ RENEWAL_NOTICE_OPERATOR: OPERATOR }),
+          output: harness.output,
+          errorOutput: harness.errorOutput,
+          deps: harness.deps,
+        }),
+      ).rejects.toThrow(/--reason is required/);
+      expect(harness.openRepository).not.toHaveBeenCalled();
+    },
+  );
+
   it('requires an explicit DATABASE_URL before opening the database', async () => {
     const { repository, deliveryId } = await quarantinedDelivery();
     const harness = createHarness(repository);

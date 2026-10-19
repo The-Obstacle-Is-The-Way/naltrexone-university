@@ -294,6 +294,9 @@ export class DrizzleRenewalNoticeDeliveryRepository
         and(
           eq(renewalNoticeDeliveries.id, input.id),
           eq(renewalNoticeDeliveries.status, existing.status),
+          // Another retry can return to the same quarantine status. Its new
+          // attempt needs fresh confirmation and must keep its newer audit.
+          eq(renewalNoticeDeliveries.attemptCount, existing.attemptCount),
         ),
       )
       .returning();

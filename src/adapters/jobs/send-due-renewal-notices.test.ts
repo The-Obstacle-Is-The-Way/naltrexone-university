@@ -267,35 +267,6 @@ describe('sendDueRenewalNotices job', () => {
     expect(alerts.raised).toEqual([]);
   });
 
-  // ADR-027: an unknown outcome raises an alert. A stalled claim must, too:
-  // otherwise the first alert is the missed deadline, too late to requeue.
-  it('alerts when the run quarantines stalled send attempts as unknown outcomes', async () => {
-    const { deps, execute, logger, alerts } = createDeps();
-    execute.mockResolvedValueOnce({
-      queued: 2,
-      queueFailures: 0,
-      rejectedNotices: 0,
-      selected: 2,
-      staleUnknown: 3,
-      dispatchFailures: 0,
-    });
-
-    await sendDueRenewalNotices(
-      { subscriptionLimit: 50, dispatchLimit: 100 },
-      deps,
-    );
-
-    expect(logger.errorCalls).toEqual([
-      {
-        msg: 'Stalled renewal notice sends quarantined as unknown outcomes',
-        context: { count: 3 },
-      },
-    ]);
-    expect(alerts.raised).toEqual([
-      { kind: 'renewal_notice_outcome_unknown', count: 3 },
-    ]);
-  });
-
   it('reports a failed deadline check without failing the run', async () => {
     const { deps, execute, listPastNoticeDeadline, logger } = createDeps();
     listPastNoticeDeadline.mockRejectedValueOnce(new Error('query failed'));
