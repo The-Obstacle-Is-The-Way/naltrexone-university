@@ -4,6 +4,30 @@ import { parseQidCommandArgs } from './qid-command-args';
 const RECORD = ['--reason', ' Under review ', '--authority', 'Clinical lead'];
 
 describe('parseQidCommandArgs', () => {
+  it('reads named answer-key returns only for commands that allow them', () => {
+    const argv = [
+      '--qid',
+      'alpha-q',
+      ...RECORD,
+      '--lift',
+      '--revert',
+      'alpha-q',
+    ];
+    expect(
+      parseQidCommandArgs(argv, {
+        decision: 'hold',
+        allowLift: true,
+        allowRevert: true,
+      }).revert,
+    ).toEqual(['alpha-q']);
+    expect(() =>
+      parseQidCommandArgs(argv, {
+        decision: 'hold',
+        allowLift: true,
+      }),
+    ).toThrow('Unknown argument: --revert');
+  });
+
   it('reads QIDs, the trimmed record and --apply', () => {
     expect(
       parseQidCommandArgs(
@@ -16,6 +40,7 @@ describe('parseQidCommandArgs', () => {
       qids: ['alpha-q', 'beta-q'],
       apply: true,
       lift: false,
+      revert: [],
       record: { reason: 'Under review', authority: 'Clinical lead' },
     });
   });

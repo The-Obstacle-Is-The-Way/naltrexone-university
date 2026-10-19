@@ -45,6 +45,45 @@ describe('parseBootstrapArgs', () => {
 });
 
 describe('parseActivateArgs', () => {
+  it('reads the named answer-key returns for activation', () => {
+    expect(
+      parseActivateArgs([
+        '--release',
+        RELEASE,
+        '--expect-active',
+        ACTIVE,
+        ...DECISION,
+        '--revert',
+        'alpha-q',
+        '--revert',
+        'beta-q',
+      ]).revert,
+    ).toEqual(['alpha-q', 'beta-q']);
+  });
+
+  it.each([
+    [['--revert'], 'Missing value for --revert'],
+    [['--revert', '*'], 'Invalid question QID: *'],
+    [
+      ['--revert', 'alpha-q', '--revert', 'alpha-q'],
+      'Duplicate question QID: alpha-q',
+    ],
+  ] as const)(
+    'rejects invalid activation return flags %j',
+    (flags, message) => {
+      expect(() =>
+        parseActivateArgs([
+          '--release',
+          RELEASE,
+          '--expect-active',
+          ACTIVE,
+          ...DECISION,
+          ...flags,
+        ]),
+      ).toThrow(message);
+    },
+  );
+
   it('reads the release, the expected active release, the plan and --apply', () => {
     expect(
       parseActivateArgs([
@@ -61,6 +100,7 @@ describe('parseActivateArgs', () => {
       releaseId: RELEASE,
       expectedActiveReleaseId: ACTIVE,
       expectedPlanId: PLAN,
+      revert: [],
       record: RECORD,
       apply: true,
     });
@@ -79,6 +119,7 @@ describe('parseActivateArgs', () => {
       releaseId: RELEASE,
       expectedActiveReleaseId: null,
       expectedPlanId: undefined,
+      revert: [],
       record: RECORD,
       apply: false,
     });
