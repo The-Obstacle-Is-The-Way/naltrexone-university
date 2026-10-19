@@ -23,7 +23,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343, and R31 with BUG-351.
 
 ## Practice sessions
 
@@ -142,12 +142,14 @@ A changed key that matches earlier history needs an explicit return name, reason
 - `tests/integration/content-release-key-preview.integration.test.ts`: `canonicalizes stored correct text as the seed does before comparing keys`
 - `tests/integration/content-release-key-preview.integration.test.ts`: `refuses an old preview when lifting a hold changes the compared key`
 
-### R28. After bootstrap, ordinary release commands admit only source commits at or after the highest admitted commit on the content repository's main first-parent history. Rollback preserves that watermark.
+### R31. After bootstrap, ordinary release commands admit only source commits at or after the highest admitted commit on the content repository's main first-parent history. Rollback preserves that watermark. The first release after the bootstrap starts from the commit the owner verified against live content, or a later one.
 
-The first sourced stage initializes the watermark. Bootstrap still adopts the live bank and does not prove its source. Draft and permanent-archive dispositions remain explicit decisions bound to the activation plan. A source-free release can be activated by the ordinary command only if it was activated before.
+The first sourced stage names that verified baseline and initializes the watermark. Bootstrap still adopts the live bank and does not prove its source. Draft and permanent-archive dispositions remain explicit decisions bound to the activation plan. A source-free release can be activated by the ordinary command only if it was activated before.
 
 - `scripts/content-release/content-source.test.ts`: `archives the selected main commit and ignores dirty working files`
 - `scripts/content-release/content-source.test.ts`: `refuses a merged side-branch commit and a rewritten main watermark`
+- `tests/integration/content-release-source.integration.test.ts`: `starts the first release after the bootstrap only from the verified baseline or later`
+- `scripts/content-release/content-source.test.ts`: `refuses a snapshot older than the verified baseline`
 - `tests/integration/content-release-source.integration.test.ts`: `previews without a watermark write, then binds source identity and the activation plan`
 - `tests/integration/content-release-source.integration.test.ts`: `re-reads the watermark after waiting for the release-pointer lock`
 - `tests/integration/content-release-source.integration.test.ts`: `refuses a legacy unactivated release but rolls back a previously activated legacy release without lowering the watermark`

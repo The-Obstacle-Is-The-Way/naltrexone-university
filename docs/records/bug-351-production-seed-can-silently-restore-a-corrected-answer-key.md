@@ -1,6 +1,6 @@
 # BUG-351: The Production Seed Can Silently Restore a Corrected Answer Key, and the Release Builder's Guard Misses Part of the Same Case
 
-**Status:** Blocked — owner chooses bootstrap order; post-bootstrap source admission built; live-key checks remain; due 2026-10-24
+**Status:** In Progress — parts 1 and 2 in production; part 3 built, its first release bound to the verified baseline; owner live-key check due 2026-10-24
 **Priority:** P2
 **Date:** 2026-10-17
 
@@ -125,21 +125,22 @@ This needs an active release, so production cannot reach it before the bootstrap
 
 **Part 3. Read a commit, not a copy.**
 
-**Corrected 2026-10-19:** bootstrap stays unchanged, as the owner instructed. It captures candidates and adopts the live bank; it does not establish a source watermark (`bootstrapRelease`). The first successful commit-bound stage establishes that watermark. This does not prove the existing live bank's source. The owner's pinned-source check and bootstrap-order decision remain required.
+Bootstrap stays unchanged. It captures candidates and adopts the live bank; it does not establish a source watermark (`bootstrapRelease`). The first commit-bound stage after it names the commit the owner verified against live content (`--baseline`), and its source must be that commit or a later one; that stage establishes the watermark.
 
 The strict authoring schema has no publication status (`scripts/draft-question-import.ts:31-59`). Commit-bound staging therefore keeps the existing draft and permanent-archive operations through explicit `--draft` and `--archive` names. Unlisted source questions are published. These dispositions use the builder's existing manifest removals and reviewed activation; they do not change question content or the content repository's schema.
 
 - Staging reads `git archive <commit>` of the content repository's `main`, never the drafts folder, and records the commit in the release manifest. The content repository's SPEC-007 already proposes `corpus_commit`. ADR-021 is amended.
 - One row holds the highest admitted commit: the watermark. Staging and activation refuse a commit that is off `main`'s first-parent history, or that does not descend from the watermark.
-- The check runs under the release-pointer lock, in the transaction that advances the watermark. The database cannot evaluate Git ancestry itself. The pointer row lock serializes the check and write; this is not a conditional SQL compare-and-set.
+- Git's first-parent history is read before the transaction. Under the release-pointer lock, in the transaction that advances the watermark, only the watermark is read and compared. The pointer row lock serializes the check and write; this is not a conditional SQL compare-and-set.
 - A rollback to an earlier release leaves the watermark alone, so a stale copy does not become admissible again. A rewritten `main` needs an owner reset.
 - The ordinary activation command refuses a release without a commit unless it was activated before. Bootstrap retains its separate, unchanged path.
-- Bootstrap remains unchanged. The first successful source-bound stage initializes the watermark; the active release already makes the direct seed refuse the database.
+- Bootstrap remains unchanged. The first source-bound stage after it must name the owner-verified baseline, `--baseline <commit>`, and its source must be that commit or a later one on `main`'s first-parent history. Without the baseline, with an older source or with an off-`main` baseline, staging refuses; once a watermark exists, `--baseline` is refused. That stage initializes the watermark; the active release already makes the direct seed refuse the database.
+- Git runs without the repository-local variables a hook exports, such as `GIT_DIR`, so a command run from a linked worktree reads the named content repository and no other.
 - This is the deployment pipeline's discipline: production receives only what was built from a known commit (Humble and Farley, *Continuous Delivery*).
 
 **Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:428-449`), and bind the source commit through the v5 manifest hash. This is Fowler's Optimistic Offline Lock. No separate generation counter: the plan binds immutable revision pairs and the key-change and key-return lists. Returning the pointer to an earlier release can still change the return list, so the old preview must be repeated.
 
-**Pending the owner's order decision; not built. If the seed must write production before the bootstrap:** admit the commit (advance the watermark under the pointer lock) before any write, check each per-question transaction against the admitted commit, and finish an interrupted run by rerunning the same commit. Questions already written match and are skipped. No receipts table.
+**Decided 2026-10-19 (owner): bootstrap first.** Parts 1 and 2 were promoted (#1573); then come the owner's live-key check, the QA gated runs and the bootstrap, and the first release after it names the verified baseline. So this guard is not built. It would have applied only if the seed had to write production before the bootstrap: admit the commit (advance the watermark under the pointer lock) before any write, check each per-question transaction against the admitted commit, and finish an interrupted run by rerunning the same commit. Questions already written match and are skipped. No receipts table.
 
 **Order.** Ship parts 1, 2 and 3 in that order, each red first, and do not call freshness solved before part 3. Correct `docs/architecture/content-pipeline.md` with part 3: until then, the managed seed imports the drafts; the source is the content repository's `main`.
 
@@ -157,17 +158,18 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 
 **Until the fix ships:** seed production only from a copy refreshed from that pinned commit, and review the changes against live content. Move each clone's March 31 backup out of `content/drafts/`; that is the owner's call.
 
-**Engineering:** parts 1 and 2 and post-bootstrap part 3 are built and tested. ADR-021 has a dated source-admission amendment. The app uses its own v5 manifest; no content-repository file or schema changed. The owner must choose the bootstrap order before this part merges. Option 2 needs no direct-seed guard; option 1 still needs that separate implementation before rollout.
+**Engineering:** parts 1 and 2 and post-bootstrap part 3 are built and tested. ADR-021 has a dated source-admission amendment. The app uses its own v5 manifest; no content-repository file or schema changed. The owner chose option 2's order on 2026-10-19, so no direct-seed guard is needed, and approved binding the first release after the bootstrap to the verified baseline.
 
 ## Verification
 
 - [ ] The owner's pinned-source comparison is recorded here as counts, noting that history before 2026-09-30 is incomplete.
 - [x] Part 1: `tests/integration/content-release-revision-matching.integration.test.ts` proves A→B→A→B keeps the live revision, newest-match fallback, canonical comparison, release reuse and v2 activation/rollback. The regression, fallback, canonical-match and release-identity cases failed before their fixes.
-- [ ] Promote the fixes to main after the owner chooses the bootstrap order.
+- [x] Parts 1 and 2 reach production: promotion #1573, live 2026-10-19 21:26Z.
+- [ ] Part 3 reaches production.
 - [x] Part 2a: `content-release-key-preview.integration.test.ts` proves both previews name canonical answer-key changes, staging lists each change by kind without publishing it, and a hold lift that changes key advice invalidates the reviewed plan. All six cases failed before the fix.
 - [x] Part 2b prerequisite: `content-release-bootstrap-candidates.integration.test.ts` proves the frozen candidate list is captured under the pointer lock, bound to the reviewed plan, and separate from activation and rollback items. All seven cases failed before the fix. V2/v3 canonical hashes, activation and rollback remain tested.
 - [x] Part 2b: `content-release-key-returns.integration.test.ts` proves named returns and repairs, activation refusal, later draft/stage exclusion, legacy-history limits, stale-plan refusal, and explicit rollback and hold-lift decisions. The first twelve cases failed before the guard. Canonical history and same-key command forwarding have additional negative controls.
-- [x] Part 3: `content-source.test.ts` and `content-release-source.integration.test.ts` prove archived main input, first-parent ordering, watermark serialization, stale staging and activation refusal, rollback without a repository, hold reapplication, source-bound identity and plans, and unchanged bootstrap. The initial unit run failed one manifest assertion and the missing source module; all five initial command cases failed. Disposition tests failed before the publication flags were added.
+- [x] Part 3: `content-source.test.ts` and `content-release-source.integration.test.ts` prove archived main input, first-parent ordering, watermark serialization, stale staging and activation refusal, rollback without a repository, hold reapplication, source-bound identity and plans, and unchanged bootstrap. The initial unit run failed one manifest assertion and the missing source module; all five initial command cases failed. Disposition tests failed before the publication flags were added. The verified-baseline cases (`starts the first release after the bootstrap only from the verified baseline or later`, and the unit cases under "the first release after the bootstrap") and the hook-variable case (`leaves the repository a hook's GIT_DIR names untouched`) failed before their fixes.
 - [x] `docs/architecture/content-pipeline.md` describes the implemented input, dispositions, source order and bootstrap boundary.
 - [ ] The owner runs this **candidate-recurrence diagnostic** once. It compares raw correct-label/text keys in revision-creation order, matching ADR-022's fields. It does not establish publication order, clinical error or an incident.
   - Staged revisions and repairs count. Re-activating an old revision creates no revision and can be missed. History predating append-only storage is incomplete. Published-current and answered-attempt counts narrow the candidates; an attempt proves use, not that its key was clinically wrong.
