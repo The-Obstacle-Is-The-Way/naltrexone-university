@@ -57,8 +57,6 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - No application code changed in #1552: it changes CI's image pulls, and E2E reaches Postgres directly, not through the pooler. This narrows the suspect changes; it does not prove the CI environment had no effect. The same head passed the full local E2E.
   - Not an overlap: no other CI run was active in this repository, and the local E2E runs on that machine had ended 12 and 16 minutes earlier.
   - CI keeps no trace (BUG-328 keeps reports carrying Clerk tokens off CI), so which request failed is not known.
-
-
 - **First session load, 2026-10-19 01:36:44Z, #1556's CI.** `practice.spec.ts:381` called `startSession(page, 'exam', 2)` and waited 15 seconds for "Exam Session". The snapshot shows "Tutor Session", "Failed to fetch" and Try again. `practice-session-page-view.tsx:242–243` falls back to tutor until `sessionInfo` arrives; this heading is evidence of the failed first load, not an exam becoming a tutor session. The other 62 tests passed. This head changed scripts and docs only. No overlap was reported; the server logged no error for the failure.
 - **Timing refresh, 2026-10-19 06:43:05Z, #1561's CI — confounded.** The 72-second exam test at `exam-timing.spec.ts:13` installed a clock 20 seconds ahead mid-page, then dispatched focus. Its timing-action POST response waiter never resolved before the 180-second test limit. The snapshot shows "Failed to fetch", 0:00 and "Time is up. Submitting your exam." Finalization did not recover the session. The other 63 tests passed. No overlap was reported; the server logged no error for the failure. Installing Playwright's clock mid-page changes Date and restarts performance.now while timers continue in real time; Clerk also sees the focus event. This is a confounded recurrence, not evidence of the same cause. #1561 subsequently moved clock installation before page load and made the waiter end on request failure. This branch does not yet contain that spec.
 
@@ -73,6 +71,8 @@ A controlled probe used a same-origin POST with a Next-Action header and a real 
 | 1.64.0 / 156 | Any route registered | Original action requestfailed with `net::ERR_ABORTED`; no 307 event; target never contacted |
 
 The page sees "Failed to fetch" in all four cases. `clerk-dev-browser-echo.ts:35–52` registers a context route in signed-in tests, so their redirected actions have the same visibility gap. The recorder cannot recover a response event Playwright never emits. This does not explain why Clerk redirected any application request.
+
+On 2026-10-19, the standalone two-server contract on 1.64.0 failed with the echo-shaped context route (`requestfailed POST /trace-action net::ERR_ABORTED`, no redirect line), but passed 2/2 with only that route removed, isolating microsoft/playwright#43242; the contract is expected to pass on 1.64.1.
 
 [Upstream #43249](https://github.com/microsoft/playwright/pull/43249) disables the Chromium feature responsible. The npm registry, read 2026-10-19, dates 1.64.1 packages on 2026-10-14: `playwright` at 11:54:49.998Z, `playwright-core` at 11:54:58.323Z and `@playwright/test` at 11:58:13.696Z. The seven-day release-age gate therefore admits the full package set on 2026-10-21 at 11:58:14Z; keep the gate. The contract now uses two local HTTP servers and an unrelated context route matching the echo filter's shape. It must remain failing on 1.64.0 and pass on 1.64.1 before claiming redirect wiring works. BUG-337 first failed on 2026-10-11, so this upgrade cannot be its original fix.
 
