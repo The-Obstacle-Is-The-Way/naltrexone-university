@@ -132,7 +132,7 @@ Current approved `test.setTimeout` bands in `tests/e2e/**/*.spec.ts`:
 
 - `120_000`: standard authenticated flows with Clerk + seeded subscription setup.
 - `180_000`: multi-page audits or long navigation chains.
-- `150_000`: the hosted portal-cancellation journey, with its in-file rationale.
+- `150_000`: the hosted portal-cancellation journey (`stripe-hosted-portal-cancellation.spec.ts`), whose cases add first-timer resets, a paid-subscription restore, the Stripe-hosted portal and a signed webhook replay. Its spec has no rationale comment yet.
 
 Current repo posture:
 
@@ -169,7 +169,7 @@ Current repo posture:
 | `tests/e2e/history.spec.ts` | History page flows |
 | `tests/e2e/content-change-notices.spec.ts` | Bound-revision update and withdrawal notices |
 | `tests/e2e/entitlement-loss.spec.ts` | Expired/revoked entitlement behavior |
-| `tests/e2e/legal-pages.spec.ts` | Public legal-page content and links |
+| `tests/e2e/legal-pages.spec.ts` | Public legal pages served signed out: status, path, heading and a required clause |
 | `tests/e2e/mobile-layout.spec.ts` | Narrow-viewport horizontal overflow |
 | `tests/e2e/public-crawl-resources.spec.ts` | Public crawl directives and resources |
 | `tests/e2e/public-social-image.spec.ts` | Public social-image response |
@@ -238,7 +238,7 @@ node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$DEPLOY_T
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
 ```
 
-Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database: after preflight succeeds and both required fixture rows exist, its reset can republish placeholder-01 and placeholder-02 and clear the test user's state (BUG-360). Setup also seeds subscription state before that reset.
+Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database. Once preflight succeeds, setup writes the shared test user's subscription rows; the reset then deletes and rebuilds that user's practice data and, if both exist, republishes placeholder-01 and placeholder-02 (BUG-360).
 
 The E2E credential preflight includes DEBT-391's migration-ledger check: it compares the active database against `db/migrations/meta/_journal.json` before seed/reset. The default local Docker flow also migrates first, so the check should pass by construction; it remains useful for explicit deploy-target runs.
 

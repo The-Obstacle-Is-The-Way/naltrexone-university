@@ -28,13 +28,13 @@ Corrected 2026-10-18: separate the E2E reset, qualify active-release and target 
   - An archived synthetic placeholder source is exempt from the archived-status refusal (`scripts/seed/question-syncer.ts:217-221`; classification in `scripts/seed/question-parser.ts:95`). A recorded withdrawal still refuses republishing (`question-syncer.ts:226-231`).
 - **The flag was in common use.** `AGENTS.md`, the integration and content guides and the content READMEs set it for local and CI seeding, though inline rather than exported.
 - **The managed seed has no acknowledgment.** It authorizes any URL without `DB_TARGET_ACK` (`scripts/internal/database-target-managed.ts`). So the command line the promotion guide prints for CI's seed step, run in a shell whose `DATABASE_URL` pointed at production, could also have published eligible placeholders before this fix, provided no active release or withdrawal refused the run.
-- **Found by** the scripts audit (DEBT-532). BUG-351, about the seed's stale input, does not cover it.
+- **Found by** the scripts directory audit (#1560). BUG-351, about the seed's stale input, does not cover it.
 
 ## Impact
 
 - **Trigger:** the variable exported in the operator's shell, or set by a parent process, when `db:seed:prod` ran. A bare human seed with an explicit production target and its acknowledgment read the same variable. Both paths refuse mutation once a content release is active.
 - **Occurrence is unmeasured.** No production query was performed in this audit.
-- **Not checked:** which of the ten slugs in `scripts/seed/placeholder-archiver.ts` exist in production, and in what status. The two required fixture rows are a prerequisite for BUG-360. A published row proves stored publication, not that a learner saw it or which path published it.
+- **Not checked:** which of the ten slugs in `scripts/seed/placeholder-archiver.ts` exist in production, and in what status. BUG-360's reset republishes two of them only if both exist; its setup writes need neither. A published row proves stored publication, not that a learner saw it or which path published it.
 - **Effect:** synthetic questions published in the live bank, and learners' answers to them scored. A successful later seed without placeholders archives them while no release is active; without an authored input bundle that seed fails before archival. Once a release is active, remediation uses release/withdrawal commands rather than direct seeding.
 - `db:seed:all` had the same input hazard for the non-production targets too, where the harm is smaller.
 
@@ -71,7 +71,7 @@ was not independently reconstructed. This audit reran the current tests.
 
 ## Related
 
-- DEBT-532: the scripts audit that found this, and its proposal to run the production seed in an owner-approved CI job.
+- #1560: the scripts directory audit that found this. Its debt record proposes running the production seed in an owner-approved CI job.
 - BUG-351: the production seed's input freshness. Its evidence cites `pnpm db:seed:prod -- --plan`, which stopped with a usage error under pnpm 11 until the fixing pull request.
 - BUG-315: placeholder archival by exact slug.
 - BUG-360: the separate deploy-target E2E reset and owner decision.

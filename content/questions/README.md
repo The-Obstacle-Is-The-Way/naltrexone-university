@@ -81,10 +81,10 @@ require the exact `DB_TARGET_ACK` under the repository's database-target rules.
 # Validate draft inputs without writing MDX
 pnpm content:import:drafts -- --dry-run
 
-# Generate imported MDX as draft status
+# Generate imported MDX as draft status, into an absent or empty destination
 pnpm content:import:drafts
 
-# Generate imported MDX as published status
+# Generate imported MDX as published status, into an absent or empty destination
 pnpm content:import:drafts -- --status published
 
 # Seed MDX into the database

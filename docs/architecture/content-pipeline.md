@@ -78,7 +78,7 @@ PostgreSQL (questions, choices, tags, question_tags)
 
 ### What about `content/questions/placeholder/`?
 
-10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and archives any existing placeholder rows. They're templates, not production content.
+10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and, while no content release is active, archives the ten fixtures' rows by exact QID. They're templates, not production content.
 
 To include them in a test database: `pnpm db:seed --include-placeholders`. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
 
@@ -96,7 +96,7 @@ You author slugs in draft YAML (`topics: [pharmacology-neuroscience]`). The impo
 
 ### Sources of Truth
 
-- **Draft question format:** `content/drafts/questions/SCHEMA.md`, mirrored from the content repository, where it is edited; the importer's schema (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts` decide what is accepted
+- **Draft question format:** `content/drafts/questions/SCHEMA.md`, mirrored from the content repository, where it is edited (this copy carries corrections from 2026-10-18 still to be applied there); the importer's schema (`scripts/draft-question-import.ts`) and `lib/content/schemas.ts` decide what is accepted
 - **Canonical tag taxonomy:** `lib/content/draft-taxonomy.ts` (code), `docs/product/content-taxonomy.md` (reference)
 - **Schema enforcement (code):** `lib/content/schemas.ts`, `lib/content/parse-mdx-question.ts`
 - **Database tables:** `db/schema.ts` (`questions`, `choices`, `tags`, `question_tags`)
@@ -585,7 +585,7 @@ Before seeding, ensure the target database schema is up to date:
 DATABASE_URL="<target-db-url>" pnpm db:migrate
 ```
 
-The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). Current remote release state was not checked in this audit. The migration 0049 notice is historical evidence, not a current census; bootstrapping production remains the owner's decision (DEBT-483).
+The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). This document does not record whether a release is active in any remote database. The migration 0049 notice is historical evidence, not a current census; bootstrapping production remains the owner's decision (DEBT-483).
 
 ---
 
@@ -641,7 +641,7 @@ Concurrent inserts of a new slug can also make one run fail on the unique constr
 
 ### What about placeholders?
 
-By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them (e.g., for CI): `pnpm db:seed --include-placeholders`.
+By default, `pnpm db:seed` **excludes** placeholder questions and, while no content release is active, archives the ten committed fixtures' rows in the DB, by exact QID (BUG-315). This is intentional — placeholders are templates, not production content. To include them in a local test database: `pnpm db:seed --include-placeholders`. CI runs the managed seed, `run-managed-db-seed.ts --include-placeholders`.
 
 ---
 
