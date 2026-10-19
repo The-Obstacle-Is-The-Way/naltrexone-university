@@ -1,6 +1,6 @@
 # BUG-347: An Exam's Timing Is Judged on Several Clocks, and Each Reader Decides Whether It Is Over
 
-**Status:** Verifying — promotion of the server countdown and expiry guards to main; due 2026-10-19
+**Status:** Verifying — promotion of the server countdown and expiry guards to main; due 2026-10-21
 **Priority:** P2
 **Date:** 2026-10-17
 
@@ -56,7 +56,7 @@ This was found by reading the code; it was not reproduced in a browser. Use-case
 - BUG-254, BUG-255, BUG-258 and BUG-277: the end split between browser and server.
   - BUG-277 was this same reasonless CONFLICT abort, on the late side of the grace window.
   - BUG-258 was the browser clock running slow.
-  - BUG-255 capped `ended_at` on the server for the Review & Submit screen, where the timer stops (`isTimerActive`, `use-practice-session-page-model.ts:268-274`).
+  - BUG-255 capped `ended_at` on the server for the Review & Submit screen, where the timer stops (`isTimerActive`, `use-practice-session-page-model.ts:258-264`).
 - BUG-256: resuming an expired exam.
 - BUG-251: the Abandon decision.
 - SPEC-039 (archived; read it at `63a8f220324b`): the timer's design.
@@ -91,12 +91,13 @@ BUG-251's Abandon decision and DEBT-437's accepted clock residual stand. Record 
 
 ## Verification
 
-- [x] The timer forwards the on-screen draft after a failed save with a fast clock or a late tab resume; the server applies its own cutoff.
+- [x] The timer forwards the on-screen draft with a fast clock or a late tab resume, without waiting on a draft save the server would refuse; the server applies its own cutoff.
 - [x] With a fast browser clock, browser tests finish at the server's deadline without an error screen.
 - [x] Expiry-sensitive operations use one domain classification; summary and completed feedback require committed finalization, and Abandon remains discard.
+  - Corrected 2026-10-19: the original item said every reader except Abandon classifies with one domain function. The post-exam review read still uses `sessionShouldShowExplanation`; only expiry-sensitive operations share the classification.
 - [x] Before the server's deadline, a failed draft save never leads to timer finalization that drops the on-screen answer.
 - [ ] Full gate, review and merge to dev.
-- [ ] Owner promotes the fix to main; due 2026-10-19.
+- [ ] Owner promotes the fix to main; due 2026-10-21.
 
 ## Related
 

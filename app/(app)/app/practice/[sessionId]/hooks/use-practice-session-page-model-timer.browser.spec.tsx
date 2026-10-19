@@ -125,16 +125,13 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     vi.useRealTimers();
   });
 
-  it('grades a locally selected exam answer when timer expiry final draft save is rejected', async () => {
+  it('grades a locally selected exam answer at timer expiry without waiting on a draft save', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
     mockActiveTimedExam('2026-05-22T12:00:01.000Z');
     mockFinalizeSummaryFromFinalFlush();
-    saveExamDraftAnswerMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Exam time has expired', {
-        reason: 'exam_time_expired',
-      }),
-    );
+    // A save that never answers: the expiry flush must not wait on it.
+    saveExamDraftAnswerMock.mockImplementation(() => new Promise(() => {}));
 
     const screen = await render(<PracticeSessionPageModelReviewProbe />);
 
@@ -151,13 +148,7 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     await expect
       .element(screen.getByTestId('summary-answered-count'))
       .toMatchTextContent('1');
-    expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
-    expect(saveExamDraftAnswerMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        questionId: BROWSER_QUESTION_1_ID,
-        selectedChoiceId: BROWSER_CHOICE_1_ID,
-      }),
-    );
+    expect(saveExamDraftAnswerMock).not.toHaveBeenCalled();
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
     expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
       expect.objectContaining({

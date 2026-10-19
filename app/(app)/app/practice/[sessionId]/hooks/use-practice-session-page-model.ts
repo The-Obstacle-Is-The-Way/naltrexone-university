@@ -224,23 +224,11 @@ export function usePracticeSessionPageModel(
     expiryFinalizeInFlightRef.current = true;
 
     return (async () => {
-      // BUG-254: capture the on-screen draft BEFORE the save attempt. At the
-      // deadline the ordinary draft save is rejected as expired; rather than
-      // leaving that doomed save's only effect as an error state, we forward the
-      // captured selection to finalization so the server grades it.
+      // BUG-254: forward the on-screen draft to finalization so the server
+      // grades it. BUG-347: the countdown reaches zero only after the server's
+      // deadline, so an ordinary draft save here is always refused; awaiting
+      // one could delay this flush past the server's grace window.
       const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
-      try {
-        await questionFlow.saveCurrentExamDraft();
-      } catch (error) {
-        if (isMounted()) {
-          reportClientError(error, {
-            component: 'UsePracticeSessionPageModel',
-            action: 'saveCurrentExamDraftOnTimerExpire',
-          });
-        }
-      }
-
-      if (!isMounted()) return false;
       try {
         const finalized = await reviewStage.finalizeExamSession(
           finalDraftAnswer,
@@ -264,7 +252,6 @@ export function usePracticeSessionPageModel(
   }, [
     isMounted,
     questionFlow.getCurrentExamDraft,
-    questionFlow.saveCurrentExamDraft,
     reviewStage.finalizeExamSession,
   ]);
 

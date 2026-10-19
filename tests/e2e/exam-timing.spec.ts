@@ -15,7 +15,9 @@ test('a fast browser clock preserves the answer until server exam expiry', async
 }) => {
   // One real question lasts 72 seconds; this exercises the production timer,
   // read-only timing action and finalizer without replacing their clocks.
-  test.setTimeout(150_000);
+  // A long multi-step flow (the guide's 180_000 tier): sign-in, the full
+  // 72-second exam, its expiry and finalization.
+  test.setTimeout(180_000);
   await runE2EUserStateReset();
   await signInWithClerkPassword(page);
   await ensureSubscribed(page);
@@ -45,6 +47,8 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   expect(seconds(before) - seconds(after)).toBeLessThan(10);
   await expect(page.getByRole('radio').first()).toBeChecked();
 
+  // The summary appears only after the 72-second exam reaches the server's
+  // deadline and the timer's flush finalizes it.
   await expect(
     page.getByRole('heading', { name: 'Session Summary' }),
   ).toBeVisible({ timeout: 90_000 });
