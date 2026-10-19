@@ -100,7 +100,7 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | `seed/placeholder-archiver.ts` | Archives the ten committed fixture slugs, including updating timestamps and counting rows already archived; refuses an active release. | Imported by `seed.ts` |
 | `seed/seed-summary.ts` | Formats the seed's report lines. | Imported by `seed.ts` |
 | `seed/only-row.ts` | Returns the first row, or throws if none exists; it does not reject extra rows. | Imported by the seed and release writers and `tests/shared/question-fixtures.ts` |
-| `seed/qid-command-args.ts` | Parses the operator commands' `--qid`, `--apply`, `--lift`, `--reason` and `--authority` arguments. | Imported by `seed/withdraw-questions.ts` and the content-release commands |
+| `seed/qid-command-args.ts` | Parses the operator commands' `--qid`, `--apply`, `--lift`, `--revert`, `--reason` and `--authority` arguments. | Imported by `seed/withdraw-questions.ts` and the content-release commands |
 | `seed/withdraw-questions.ts` | Archives questions by QID and permanently withdraws every stored revision not already withdrawn; a dry run unless `--apply`. | By hand, per `docs/architecture/content-pipeline.md` and `docs/architecture/integrations/postgres.md` |
 | `seed-helpers.ts` | Splits the reference section off an explanation, and detects the legacy wrong-answers heading. | Imported by `seed/question-parser.ts` |
 | `seed-all-environments.ts` | Seeds deduplicated `.env.local`, Vercel Development and Preview targets from drafts; checks the Production host/port/database exclusion first. Requires the pinned preinstalled Vercel CLI and remote-target acknowledgment, including for `--plan`. | `pnpm db:seed:all` |
@@ -122,11 +122,12 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | --- | --- | --- |
 | `content-release/bootstrap-release.ts` | Previews adoption of what is live as the first release; `--apply` requires the preview's plan ID and disables subsequent direct seeding. | By hand, per `docs/architecture/content-pipeline.md` |
 | `content-release/stage-release.ts` | Previews question files as a release on top of the active one; `--apply` persists staging. Omitted live QIDs require `--remove`, and older revisions require `--revert`. | By hand, per `docs/architecture/content-pipeline.md` |
-| `content-release/activate-release.ts` | Previews an activation or rollback by default. `--release`, `--expect-active`, `--reason` and `--authority` are always required; `--apply` also requires the preview's `--plan`. | By hand, per `docs/architecture/content-pipeline.md` |
-| `content-release/hold-questions.ts` | Previews holds or lifts on live revisions; `--apply` persists them and re-applies the active release. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/activate-release.ts` | Previews an activation or rollback by default. `--release`, `--expect-active`, `--reason` and `--authority` are always required; `--apply` also requires the preview's `--plan`, and a return to an earlier answer key needs `--revert` for that question. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/hold-questions.ts` | Previews holds or lifts on live revisions; `--apply` persists them and re-applies the active release. A lift that returns a question to an earlier answer key needs `--revert`. | By hand, per `docs/architecture/content-pipeline.md` |
 | `content-release/command-support.ts` | The release commands' database client, preview-or-apply transaction and output. | Imported by the four release commands |
 | `content-release/release-activation.ts` | The release engine: the pointer lock, the seed guard, staging, activation and bootstrap. | Imported by `activate-release.ts`, `bootstrap-release.ts` and `command-support.ts`, the release builder and holds, and the seed writers |
 | `content-release/release-builder.ts` | Stages a release from question files: new questions, changed revisions, removals and reverts. | Imported by `content-release/stage-release.ts` |
+| `content-release/release-changes.ts` | Reads what activating a release would change, without locking question rows: publications, updates, reverts, answer-key changes and returns, withdrawals, and items left out as held or withdrawn. It also defines which release items are eligible. | Imported by release activation and the release builder; `command-support.ts` imports its type |
 | `content-release/release-holds.ts` | Places or lifts holds on the live revision, then re-activates. | Imported by `content-release/hold-questions.ts` |
 | `content-release/release-manifest.ts` | Builds, canonicalizes, hashes and parses a release manifest. | Imported by release activation and the release builder |
 

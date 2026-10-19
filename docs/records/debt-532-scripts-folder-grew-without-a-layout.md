@@ -8,7 +8,7 @@
 
 ## Summary
 
-`scripts/` holds 151 tracked files: 76 scripts and modules, 65 tests and test helpers, 9 fixtures, and its README. Forty-eight of the 76 sit in the root, beside five subfolders (`ci/`, `content-release/`, `fixtures/`, `internal/`, `seed/`). Its README has thirteen functional families plus a manual operator-tool section. Existing shared modules include `database-target.ts`, `database-process.ts`, `github-alert-issues.ts`, `seed/qid-command-args.ts` and `content-release/command-support.ts`; reuse is inconsistent, not absent. `scripts/README.md` holds the inventory, and `tests/scripts-directory.test.ts` checks file coverage and static caller references.
+`scripts/` holds 153 tracked files: 77 scripts and modules, 66 tests and test helpers, 9 fixtures, and its README. Forty-eight of the 77 sit in the root, beside five subfolders (`ci/`, `content-release/`, `fixtures/`, `internal/`, `seed/`). Its README has thirteen functional families plus a manual operator-tool section. Existing shared modules include `database-target.ts`, `database-process.ts`, `github-alert-issues.ts`, `seed/qid-command-args.ts` and `content-release/command-support.ts`; reuse is inconsistent, not absent. `scripts/README.md` holds the inventory, and `tests/scripts-directory.test.ts` checks file coverage and static caller references.
 
 The scripts encode repository-specific behavior. Replacing one requires proof that its behavior survives; this audit does not establish that no platform could replace it. The debt is in how they are built:
 
@@ -98,7 +98,7 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
 - **`upstream-advisory-watch.mts` (1,004 lines).**
   - It holds the dependency map, manifest and lockfile readers, npm resolution, three GitHub adapters, a range evaluator, and policy with orchestration.
   - Its four test files already split along those lines.
-- **`content-release/release-activation.ts` (594 lines).** `activateRelease` computes and applies a plan in about 275 lines.
+- **`content-release/release-activation.ts` (560 lines).** `activateRelease` computes and applies a plan in about 245 lines.
 - **`e2e-local-orchestrator.ts` (326 lines).**
   - It holds the E2E plan and also the command runner that `db:test:*` and `test:integration` use, so those commands log `[local-e2e]`.
   - It spawns `run-local-test-db.ts` as a child that resolves the target again, the mechanism behind BUG-329.
