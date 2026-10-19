@@ -63,17 +63,17 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `check-clerk-jwt-key.ts` | Fails on an invalid configured key or a confirmed mismatch with Clerk's published keys. An absent key passes; an unreadable key set warns and passes unchecked. | The `vercel.json` build command, first |
-| `check-server-action-manifest.ts` | Fails a build in which a server action or `'use cache'` function declares an argument beyond its first. | `pnpm build`, after `next build` |
+| `check-clerk-jwt-key.ts` | Fails on an invalid configured key, a configured key without `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, or a confirmed mismatch with Clerk's published keys. An absent key passes; an unreadable key set warns and passes unchecked. | The `vercel.json` build command, first |
+| `check-server-action-manifest.ts` | Fails a build in which a server action or `'use cache'` function declares an argument beyond its first. | `pnpm build`, after `next build`, so also `ci.yml`, `stripe-hosted-checkout-smoke.yml` and the `vercel.json` build command |
 
 ### Local Test Harness
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `resolve-local-test-target.ts` | Derives a Compose project, database URL and ports from the clone path or explicit overrides. Check for port collisions and BUG-329's long-name limitation; shared provider users still require coordination. | `pnpm local:test:target`; `ci.yml`; the local test commands; `tests/shared/resolve-integration-database-url.ts`; the integration database command in `AGENTS.md` |
+| `resolve-local-test-target.ts` | Derives a Compose project, database URL and ports from the clone path or explicit overrides. Ports come from a hash of the clone's identity over 10,000 slots and are not checked for collisions; BUG-329's long-name limitation applies, and shared provider users still require coordination. | `pnpm local:test:target`; `ci.yml`; the local test commands; `tests/shared/resolve-integration-database-url.ts`; the integration database command in `AGENTS.md` |
 | `run-local-test-db.ts` | Starts, stops or resets this clone's Docker test database and pooler. | `pnpm db:test:up`, `pnpm db:test:down` and `pnpm db:test:reset`; the local E2E plan |
 | `run-local-integration.ts` | Runs the integration lane against this clone's test database, or an explicitly opted-in existing database. Does not start, migrate or seed it. | `pnpm test:integration` and `pnpm test:integration:coverage`; `ci.yml` |
-| `run-local-e2e.ts` | Runs Playwright after preparing this clone's database, or against a given database in CI. | `pnpm test:e2e` and `pnpm test:e2e:stripe-hosted`; `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
+| `run-local-e2e.ts` | Runs Playwright after preparing this clone's database, or against an explicitly opted-in existing database (`E2E_USE_EXISTING_DATABASE`), as CI does. | `pnpm test:e2e` and `pnpm test:e2e:stripe-hosted`; `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
 | `e2e-local-orchestrator.ts` | Builds the local E2E plan, and runs a command plan with signal forwarding for all three local test commands. | Imported by `run-local-e2e.ts`, `run-local-integration.ts` and `run-local-test-db.ts` |
 | `run-stripe-provider-contracts.ts` | Runs the Stripe provider-contract suite in test mode, and fails unless every named case ran and passed. | `pnpm test:stripe-provider`; `stripe-trial-clock-smoke.yml` |
 
@@ -122,10 +122,10 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | --- | --- | --- |
 | `content-release/bootstrap-release.ts` | Previews adoption of what is live as the first release; `--apply` requires the preview's plan ID and disables subsequent direct seeding. | By hand, per `docs/architecture/content-pipeline.md` |
 | `content-release/stage-release.ts` | Previews question files as a release on top of the active one; `--apply` persists staging. Omitted live QIDs require `--remove`, and older revisions require `--revert`. | By hand, per `docs/architecture/content-pipeline.md` |
-| `content-release/activate-release.ts` | Previews an activation or rollback by default. `--apply` requires the preview plan, expected active release, reason and authority. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/activate-release.ts` | Previews an activation or rollback by default. `--release`, `--expect-active`, `--reason` and `--authority` are always required; `--apply` also requires the preview's `--plan`. | By hand, per `docs/architecture/content-pipeline.md` |
 | `content-release/hold-questions.ts` | Previews holds or lifts on live revisions; `--apply` persists them and re-applies the active release. | By hand, per `docs/architecture/content-pipeline.md` |
 | `content-release/command-support.ts` | The release commands' database client, preview-or-apply transaction and output. | Imported by the four release commands |
-| `content-release/release-activation.ts` | The release engine: the pointer lock, the seed guard, staging, activation and bootstrap. | Imported by the release commands, the release builder and holds, and the seed writers |
+| `content-release/release-activation.ts` | The release engine: the pointer lock, the seed guard, staging, activation and bootstrap. | Imported by `activate-release.ts`, `bootstrap-release.ts` and `command-support.ts`, the release builder and holds, and the seed writers |
 | `content-release/release-builder.ts` | Stages a release from question files: new questions, changed revisions, removals and reverts. | Imported by `content-release/stage-release.ts` |
 | `content-release/release-holds.ts` | Places or lifts holds on the live revision, then re-activates. | Imported by `content-release/hold-questions.ts` |
 | `content-release/release-manifest.ts` | Builds, canonicalizes, hashes and parses a release manifest. | Imported by release activation and the release builder |

@@ -47,7 +47,7 @@ Options 1 and 3. The helper is one of the shared building blocks DEBT-532 propos
 
 - [ ] A test runs a script by an extensionless path and by a symlink, and fails while either exits 0 without running.
 - [ ] Imports do not execute commands; direct, extensionless and symlink execution work for the supported runtimes. A source scan shows every guarded entry point uses the helper; intentional unconditional thin CLIs remain explicit exceptions.
-- [ ] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them.
+- [ ] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them. Each accepts pnpm 11's leading `--` (`pnpm x -- 1560`), which both hand-run commands refuse today.
 
 ## Related
 

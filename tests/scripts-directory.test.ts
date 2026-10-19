@@ -242,7 +242,7 @@ describe('the callers a row names', () => {
     return collectRunByIssues([{ file, purpose: 'Does it.', runBy }], callers);
   }
 
-  it('accepts a package script whose command runs the file', () => {
+  it('accepts a package script whose command references the file', () => {
     expect(issuesFor('db-migrate.ts', '`pnpm db:migrate`')).toEqual([]);
   });
 
@@ -271,13 +271,13 @@ describe('the callers a row names', () => {
     ]);
   });
 
-  it('reports a package script whose command runs another file', () => {
+  it('reports a package script whose command references another file', () => {
     expect(issuesFor('db-seed.ts', '`pnpm db:migrate`')).toEqual([
       'db-seed.ts names `pnpm db:migrate`, whose command does not reference it.',
     ]);
   });
 
-  it('accepts a workflow that runs the file directly or through a package script', () => {
+  it('accepts a workflow that references the file directly or through a package script', () => {
     expect(issuesFor('ci/start.sh', '`ci.yml`')).toEqual([]);
     expect(issuesFor('run-local-e2e.ts', '`ci.yml`')).toEqual([]);
   });
@@ -320,13 +320,13 @@ describe('the callers a row names', () => {
     ]);
   });
 
-  it('reports a workflow that does not run the file', () => {
+  it('reports a workflow that does not reference the file', () => {
     expect(issuesFor('db-migrate.ts', '`other.yml`')).toEqual([
       'db-migrate.ts names `other.yml`, which does not reference it.',
     ]);
   });
 
-  it('reports a Vercel build that does not run the file', () => {
+  it('reports a Vercel build that does not reference the file', () => {
     expect(issuesFor('check.ts', 'The `vercel.json` build command')).toEqual(
       [],
     );
@@ -335,7 +335,7 @@ describe('the callers a row names', () => {
     ]);
   });
 
-  it('accepts a Vercel build that runs the file through a package script', () => {
+  it('accepts a Vercel build that references the file through a package script', () => {
     expect(issuesFor('manifest.ts', 'The `vercel.json` build')).toEqual([]);
   });
 

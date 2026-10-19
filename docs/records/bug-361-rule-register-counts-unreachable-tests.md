@@ -1,7 +1,7 @@
 # BUG-361: The Rule Register Counts Unreachable Test Declarations
 
-**Status:** Open — reject unreachable proof declarations, red first
-**Priority:** P2
+**Status:** Open — specify the executed-result mapping, then fix red first
+**Priority:** P3
 **Date:** 2026-10-18
 
 ---
@@ -12,7 +12,7 @@ The business-rule register accepts a named test inside an uncalled function or a
 
 ## Evidence
 
-- `scripts/rule-to-test-register.ts:110-113` assumes loop bodies run; `:135` describes the returned titles as tests that would run unconditionally. The recursive visitor (`:152-173`) does not exclude uncalled function bodies or loops.
+- `scripts/rule-to-test-register.ts:110-113` assumes loop bodies run; `:135` describes the returned titles as tests that would run unconditionally. The recursive visitor (`:149-171`) does not exclude uncalled function bodies or loops.
 - Run from the repository root (no infrastructure):
 
   ```bash
@@ -39,3 +39,7 @@ Specify option 2's mapping and report contract before implementation, red first.
 - [ ] An uncalled function and a zero-iteration loop cannot satisfy a proving-test entry.
 - [ ] Supported module and suite declarations still pass; existing skip and conditional controls remain effective.
 - [ ] Check the live register and run its proving suites after the fix.
+
+## Related
+
+- DEBT-532: the scripts audit that found this.

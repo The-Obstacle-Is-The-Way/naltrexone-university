@@ -16,7 +16,7 @@
   - No package script, workflow or hook runs the command; only its own test spawns it.
 - **The live-tree tests skip them.** `tests/documentation-archive.test.ts` and `tests/documentation-records.test.ts` assert every other blocking field of the live audit. They test these three only on synthetic input (`tests/documentation-records.test.ts:48`, `:66`, `:95`).
 - **The weekly job catches the date.** `documentation-due-checks.ts:77-82` throws on an unreadable queue-review date. Its schedule reads the default branch, so new records reach that automatic check after promotion; workflow dispatch and a local dry-run can check earlier.
-- **The records rules rely on the check.** The records index says "the guard checks receipt shape" for every ledger line ("Closing", step 3).
+- **The records rules rely on the check.** The records index says "The guard checks receipt shape" for every ledger line ("Closing", step 3).
 - **The tree is clean today.** On 2026-10-18 the command exited 0 on the live tree.
 
 ## Impact

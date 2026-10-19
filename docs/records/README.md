@@ -47,7 +47,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[BUG-357](./bug-357-importer-ignores-unknown-flags.md)|Importer ignores unknown flags|P3|Open — reject unknown importer flags before I/O, red first|
 |[BUG-358](./bug-358-integration-setup-rejects-ipv6-loopback.md)|Integration setup rejects IPv6 loopback|P3|Open — normalize integration loopback hostnames, red first|
 |[BUG-359](./bug-359-ledger-cli-hides-usage-and-target-errors.md)|Ledger CLI hides usage/target errors|P3|Open — preserve safe ledger usage/target diagnostics, red first|
-|[BUG-361](./bug-361-rule-register-counts-unreachable-tests.md)|Rule register counts unreachable tests|P2|Open — reject unreachable proof declarations, red first|
+|[BUG-361](./bug-361-rule-register-counts-unreachable-tests.md)|Rule register counts unreachable tests|P3|Open — specify the executed-result mapping, then fix red first|
 |[DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)|Public legal pages, renewal consent, and security-program closure|P1|Open — engineering has F21, F22 and F23 left; the rest waits on the owner, counsel and a tax adviser (AUDIT-015)|
 |[DEBT-501](./debt-501-billing-operations-resilience.md)|Billing operations can leave payers without access as the service grows or changes|P2|Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items|
 |[DEBT-502](./debt-502-account-identity-and-action-hardening.md)|Rare account states can lock a person out, and payment actions expose test seams|P3|Open — decided per item|

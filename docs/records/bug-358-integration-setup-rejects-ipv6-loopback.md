@@ -4,16 +4,18 @@
 **Priority:** P3
 **Date:** 2026-10-18
 
+---
+
 ## Summary
 
 Integration setup rejects a valid IPv6 loopback URL as remote. Its local-host predicate expects `::1`, but Node's `URL.hostname` returns `[::1]`.
 
 ## Evidence
 
-- `tests/integration/setup.ts:16-19` accepts `localhost`, `127.0.0.1` or `::1`; `:55-68` passes `new URL(databaseUrl).hostname` directly to that predicate and throws before opening the database.
+- `tests/integration/setup.ts:16-19` accepts `localhost`, `127.0.0.1` or `::1`; `:55-70` passes `new URL(databaseUrl).hostname` directly to that predicate and throws before opening the database.
 - On Node 24.21.0, `node -e 'console.log(new URL("postgresql://postgres:postgres@[::1]/test").hostname)'` prints `[::1]`.
 - Extracting the actual `isLocalDatabaseHost` function with the TypeScript parser and transpiling it, without importing setup or opening a database, returned true for `localhost` and `127.0.0.1`, false for `[::1]`.
-- `scripts/e2e-local-orchestrator.ts:137` already includes `[::1]`; `scripts/database-target.ts` normalizes brackets before classifying loopback.
+- `scripts/e2e-local-orchestrator.ts:135` already includes `[::1]`; `scripts/database-target.ts` normalizes brackets before classifying loopback.
 
 ## Impact
 

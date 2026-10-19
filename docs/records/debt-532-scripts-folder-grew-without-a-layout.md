@@ -18,7 +18,7 @@ The scripts encode repository-specific behavior. Replacing one requires proof th
 - **Some scripts stand in for configuration.**
 - **Some code is dead.**
 
-The initial review filed BUG-353 through BUG-356. The challenge separated the importer, IPv6 setup and ledger diagnostics into BUG-357, BUG-358 and BUG-359. BUG-360 on #1559 owns the independent deploy-target E2E reset; BUG-361 owns unreachable rule-register proofs. The review's method, recount commands and coverage are in its pull request.
+The initial review filed BUG-353 through BUG-356. The challenge separated the importer, IPv6 setup and ledger diagnostics into BUG-357, BUG-358 and BUG-359. BUG-360, filed with #1559, owns the independent deploy-target E2E reset; BUG-361 owns unreachable rule-register proofs. The review's method, recount commands and coverage are in its pull request.
 
 Corrected 2026-10-19: recount files and references after dev integration, separate defects, bound platform claims, preserve existing helpers and caller-specific behavior, and correct deletion and migration proposals.
 
@@ -36,7 +36,7 @@ Corrected 2026-10-19: recount files and references after dev integration, separa
 - **GitHub.**
   - Eight files each wrap `execFileSync('gh', …)`, and three modules adapt GitHub issues:
     - `github-alert-issues.ts` uses GitHub's search;
-    - `security-txt-renewal.mts:83-88` reads the repository's whole issue and pull-request list only inside its renewal window (`:44-52`). The advisory watch's memoized adapter (`upstream-advisory-watch.mts:639-644`) reads that list once per run when issue processing is reached; its workflow schedules every three hours. `github-alert-issues.ts:117-118` instead searches by title.
+    - `security-txt-renewal.mts:83-88` reads the repository's whole issue and pull-request list only inside its renewal window (`:44-53`). The advisory watch's adapter (`upstream-advisory-watch.mts:636-672`) reads that list afresh on each call: once per run to close reviewed issues (`:793`), and again when new advisories need checking (`:280`); its workflow runs every three hours. `github-alert-issues.ts:117-118` instead searches by title.
   - Three test fakes are each named `MemoryIssues`.
   - The two `.mts` jobs run under plain `node` with no install. They could import a `.ts` helper only by its full `.ts` name, which `tsconfig.json` does not allow today, and only one that uses nothing from `node_modules`. So each carries its own copy.
 - **Alert assignees.**
@@ -111,7 +111,7 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
   - The unit tests of `migration-ledger.ts` live in `tests/e2e/helpers/`.
   - `seed.test.ts` tests `seed/question-parser.ts` and `seed/tag-manager.ts`, not `seed.ts`.
   - `content-release/release-command-args.test.ts`, `draft-question-body.test.ts` and `draft-question-split.test.ts` have no source file of those names.
-- **Production code that serves tests.** `choiceIdByLabel` in `seed/question-revision-writer.ts` is used only by `tests/shared/question-fixtures.ts`.
+- **Production code that serves tests.** `choiceIdByLabel` in `seed/question-revision-writer.ts` is used only by tests: `tests/shared/question-fixtures.ts` and its own unit test.
 - **Repository policy in script suites.**
   - At least thirteen script suites pin the contents of `package.json`, workflows or `vercel.json`. Examples: `check-clerk-jwt-key.test.ts` (which repeats `vercel.test.ts`), `e2e-local-orchestrator.test.ts`, `database-command.test.ts`, `mutation-report-integrity.test.ts` and `production-release-watch.test.ts`.
   - `docs/architecture/environments.md:47` names several of them as the workflow contracts, so moving them to `tests/` changes that text too.
@@ -135,7 +135,7 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
 | `validateSeedQuestionTags` in `seed/tag-manager.ts`, and its five tests in `seed.test.ts` | It re-checks rules that `QuestionFrontmatterSchema` has already applied. The function runs; its rejection branches appear redundant. | Show that no input passes the schema and fails the validator. |
 | `fixtures/trial-clock-smoke-report-passed.json` and `-mixed-failure.json` | The test already builds reports from the case titles. The mixed-failure file reaches only the first check. | Keep `-skipped.json` as the one real-shape sample. |
 | The `documentation-archive.ts` command line and its spawn tests | No package script, workflow or hook invokes it; it remains usable manually and runs in this audit. | BUG-356 first, then an explicit decision about the standalone audit. Preserve all findings and exit behavior needed by operators. |
-| Unused exports and compatibility aliases | `resolveLocalE2EDatabaseUrl` and `documentationLinks` have no tracked caller outside their tests. `formatMigrationContentDriftMessage` is called within `migration-ledger.ts`, so only its export is a candidate. `E2E_INSTANCE` and `E2E_APP_PORT` have no tracked external caller; operator environments are not observable from source. | Keep the internally used formatter. Check operator use and document migration before removing environment aliases. |
+| Unused exports and compatibility aliases | `resolveLocalE2EDatabaseUrl` has no tracked caller outside its tests, and `documentationLinks` has none at all. `formatMigrationContentDriftMessage` is called within `migration-ledger.ts`, so only its export is a candidate. `E2E_INSTANCE` and `E2E_APP_PORT` have no tracked external caller; operator environments are not observable from source. | Keep the internally used formatter. Check operator use and document migration before removing environment aliases. |
 | `prepare-seed-corpus.ts` and the environment seeds | They currently support both production and non-production draft import/seeding. | Replace every still-needed target workflow, satisfy BUG-351's source freshness requirements, and handle DEBT-483's bootstrap separately before deletion. |
 | `upstream-fix-watch.ts` and its workflow | Its only watch is DEBT-500's. | DEBT-500 closes and no other watch is added. |
 

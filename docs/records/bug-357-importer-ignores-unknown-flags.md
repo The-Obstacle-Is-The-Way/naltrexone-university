@@ -4,15 +4,17 @@
 **Priority:** P3
 **Date:** 2026-10-18
 
+---
+
 ## Summary
 
 The draft importer recognizes flags by searching the argument array, but never rejects the remaining arguments. A typo in `--dry-run` turns a requested preview into a write when the output directory is empty or absent.
 
 ## Evidence
 
-- `scripts/import-draft-questions.ts:14-54` checks only recognized flags; `:46` enables dry-run only for the exact spelling.
-- `:163-171` writes when `dryRun` is false. The empty-output check at `:90-103` protects an existing nonempty corpus, but does not prevent new unintended files.
-- Reproduced with one synthetic `recall.md` using the valid fixture shape in `scripts/import-draft-questions.test.ts:15-47`, input and output under a temporary directory: `node --import tsx scripts/import-draft-questions.ts --in <input> --out <empty-output> --dry-run` exited 0 with `files=1 questions=1 written=0 (dry-run) uniqueQids=1` and no output files. Changing only the last argument to `--dry-rnu` exited 0 with `written=1` and created `misc/fixture-source/audit-001.mdx`.
+- `scripts/import-draft-questions.ts:13-53` checks only recognized flags; `:46` enables dry-run only for the exact spelling.
+- `:163-172` writes when `dryRun` is false. The empty-output check at `:90-104` protects an existing nonempty corpus, but does not prevent new unintended files.
+- Reproduced with one synthetic `recall.md` using the valid fixture shape in `scripts/import-draft-questions.test.ts:15-46`, input and output under a temporary directory: `node --import tsx scripts/import-draft-questions.ts --in <input> --out <empty-output> --dry-run` exited 0 with `files=1 questions=1 written=0 (dry-run) uniqueQids=1` and no output files. Changing only the last argument to `--dry-rnu` exited 0 with `written=1` and created `misc/fixture-source/audit-001.mdx`.
 
 ## Impact
 

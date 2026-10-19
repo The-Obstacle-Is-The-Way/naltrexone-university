@@ -19,6 +19,7 @@ The same refusal is wrong for multiple sources when one contains the others' cha
   - It requires two sources (`scripts/lockfile-union.ts:441`).
   - It refuses a candidate path equal to a source path (`:444`).
   - It refuses a candidate whose text equals any source's text (`:562-569`), with the message "a bundle must combine its sources".
+- **Why the refusal exists.** Its comment (`:562-563`) says a candidate identical to one source "usually means a source was left off the command line". If the candidate carries the left-off source's changes, the structured comparison already reports them as `extra`; if it does not, neither check can see the omission.
 - **Reproduced 2026-10-18** with the repository's fixtures:
 
   ```sh
