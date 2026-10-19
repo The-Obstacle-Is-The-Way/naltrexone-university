@@ -8,7 +8,7 @@
 
 ## Summary
 
-The server owns an exam's deadline: `startedAt` plus 72 seconds per question. Before step 2, the browser counted down on its own clock. A fast browser clock could trigger finalization before the server's deadline. Step 2 counts down from server remaining milliseconds, refreshes timing without finalizing, and gives premature expiry a typed, uncached result. Review and promotion remain.
+The server owns an exam's deadline: `startedAt` plus 72 seconds per question. Before step 2, the browser counted down on its own clock. A fast browser clock could trigger finalization before the server's deadline. Step 2 counts down from server remaining milliseconds, refreshes timing without finalizing, and gives premature expiry a typed, uncached result. Promotion to `main` remains.
 
 At `72a1ef5b`, after step 1:
 
@@ -96,7 +96,6 @@ BUG-251's Abandon decision and DEBT-437's accepted clock residual stand. Record 
 - [x] Expiry-sensitive operations use one domain classification; summary and completed feedback require committed finalization, and Abandon remains discard.
   - Corrected 2026-10-19: the original item said every reader except Abandon classifies with one domain function. The post-exam review read still uses `sessionShouldShowExplanation`; only expiry-sensitive operations share the classification.
 - [x] Before the server's deadline, a failed draft save never leads to timer finalization that drops the on-screen answer.
-- [ ] Full gate, review and merge to dev.
 - [ ] Owner promotes the fix to main; due 2026-10-21.
 
 ## Related
