@@ -25,7 +25,7 @@ The live defect this split causes is BUG-351: a stale seed restores a corrected 
 - The production path:
   - `db:seed:prod` (`scripts/seed-production.ts`) prepares the corpus from `content/drafts/questions` (`scripts/import-draft-questions.ts:20`) with `--status published` (`scripts/prepare-seed-corpus.ts:24`), then seeds production (`scripts/seed-environment-targets.ts:105-106`).
   - The drafts' question folders are untracked (`.gitignore:63-66`).
-- `release-activation.ts:102-109`: the seed may write whenever no release is active.
+- `release-activation.ts:103-111`: the seed may write whenever no release is active.
 
 **Whole-revision equality and answer-key projection have different purposes and inconsistent normalization:**
 - The seed canonicalizes both sides before comparing (`scripts/seed/question-parser.ts:158-181`; guarded by `tests/integration/seed-revision-append.integration.test.ts:149-188`).
@@ -42,7 +42,7 @@ BUG-351 owns the duplicate-hash `.limit(1)` defect and deterministic current-mat
 Production prevalence is unknown. A read-only census should separately count noncanonical revision fields and correct-choice normalization changes; neither count alone establishes a clinical error. Stored bytes/hashes remain immutable.
 
 **A hold's scope has two owners:**
-- Activation treats a hold as excluding one revision (`release-changes.ts:29-33`; ADR-021 decision 5).
+- Activation treats a hold as excluding one revision (`release-changes.ts:30-34`; ADR-021 decision 5).
 - Availability and scoring treat a hold on any revision of a question as "under review" once the question is not published (`drizzle-question-repository.ts:403-413`; `score-eligibility-sql.ts:28-32`; `question-availability.ts:42-49`).
 - A lift reaches only the revision the active release publishes (`release-holds.ts:60-98`).
 - So a hold on R1, after a release publishes R2, cannot be lifted directly while another revision is active, or while the active release omits the question. Reactivating a release that names R1 makes it liftable, a disruptive workaround documented in `docs/architecture/content-pipeline.md:373`. If the question is later retired, that forgotten hold labels it "Under review" and drops past scores on it. DEBT-492 gap 3 noted the dormant hold and left it.

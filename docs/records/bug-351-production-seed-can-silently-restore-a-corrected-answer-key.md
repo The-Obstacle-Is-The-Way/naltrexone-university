@@ -53,7 +53,7 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 
 **The builder:**
 - `scripts/content-release/release-builder.ts:61-97`: `revisionForContent` now compares canonical fields, preferring the current revision, then the highest revision number. Before part 1, it used an unordered stored-hash match (`92e56929`, lines 57–78); nothing makes `(question, content_hash)` unique.
-- `revertedSlugs` (`:346-367`) calls a match a revert when its revision number is below the current one. Part 2b also compares changed keys with activated release items and the frozen bootstrap candidates (`scripts/content-release/release-changes.ts:87-115`).
+- `revertedSlugs` (`:347-368`) calls a match a revert when its revision number is below the current one. Part 2b also compares changed keys with activated release items and the frozen bootstrap candidates (`scripts/content-release/release-changes.ts:87-115`).
 - A file that matches no revision is appended as new content. Before part 2a, `scripts/content-release/command-support.ts:80-92` at `afba5aa4` printed it under "Update to a newer revision" with no answer-key line. Both previews now name key changes separately.
 
 **The scoring side:**
@@ -132,7 +132,7 @@ This needs an active release, so production cannot reach it before the bootstrap
 - The bootstrap records the commit verified against live content as the first watermark, and the existing guard then retires the direct seed for production.
 - This is the deployment pipeline's discipline: production receives only what was built from a known commit (Humble and Farley, *Continuous Delivery*).
 
-**Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:421-443`), and add the source commit to it. This is Fowler's Optimistic Offline Lock. No separate generation counter: the plan binds immutable revision pairs and the key-change and key-return lists. Returning the pointer to an earlier release can still change the return list, so the old preview must be repeated.
+**Concurrency.** Keep DEBT-489's plan id, which activation already recomputes under its locks (`release-activation.ts:422-444`), and add the source commit to it. This is Fowler's Optimistic Offline Lock. No separate generation counter: the plan binds immutable revision pairs and the key-change and key-return lists. Returning the pointer to an earlier release can still change the return list, so the old preview must be repeated.
 
 **If the seed must write production before the bootstrap:** admit the commit (advance the watermark under the pointer lock) before any write, check each per-question transaction against the admitted commit, and finish an interrupted run by rerunning the same commit. Questions already written match and are skipped. No receipts table.
 
