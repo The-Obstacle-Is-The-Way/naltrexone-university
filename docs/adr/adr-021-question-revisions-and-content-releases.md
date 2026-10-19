@@ -161,8 +161,6 @@ BUG-351 part 1 proves that equal content can occupy several immutable revisions.
 
 Part 1 introduced `app-release-manifest-v3`. Each item names its selected revision ID alongside its slug and unchanged content hash. Reuse and activation verification therefore preserve the selected revision. Existing v2 releases retain their original bytes and hashes and remain readable for activation and rollback. V1 stays unsupported. No schema migration is needed. Content hashes still exclude row identities, as defined above.
 
-`tests/integration/content-release-revision-matching.integration.test.ts` proves the older-duplicate collision, stable restaging, v2 activation and rollback, and refusal of a revision-bound manifest whose item selects another revision with identical content.
-
 ## Amendment — 2026-10-18: freeze pre-bootstrap candidates
 
 The owner chose to preserve pre-bootstrap revision IDs for BUG-351's return guard. Before releases, a stored revision is a candidate for earlier publication, not proof of it.
@@ -173,15 +171,13 @@ The list contributes to the manifest hash and therefore to the DEBT-489 plan id.
 
 The return guard uses revisions in activated releases plus this frozen list. A later draft-only or never-activated staged revision does not enter the list. V2/v3 releases contribute activated membership only; missing pre-bootstrap candidates are not reconstructed from later stored revisions.
 
-`tests/integration/content-release-bootstrap-candidates.integration.test.ts` proves capture under the pointer lock, preview invalidation, frozen membership, and item-only activation and rollback. The manifest tests pin v2/v3 canonical bytes and hashes.
-
 ## Amendment — 2026-10-18: name answer-key returns
 
 BUG-351 part 2b compares each changed key with the same question's activated release items and frozen bootstrap candidates. Both previews name a return separately from other key changes. Staging requires `--revert` for either an older revision or a key return. Activation recomputes key returns under the release-pointer lock, requires exactly those names, and binds the return list to the reviewed plan. The existing activation receipt records the reason and authority; no new receipt table or migration is needed.
 
 This narrows DEBT-492's rollback exemption: a rollback that returns an earlier key now needs explicit names. Its revision-number staging rule is unchanged. A hold lift can also return a key after rollback; it takes explicit names through the same activation guard. An unnamed lift rolls back the hold change too. Same-key changes need no key-return approval.
 
-`tests/integration/content-release-key-returns.integration.test.ts` proves stale copies with unrelated edits, named returns and repairs, later unpublished exclusions, rollback and hold lift, and preview invalidation after intervening activations. Clinical review remains in the content repository.
+Clinical review remains in the content repository.
 
 ## Related
 
