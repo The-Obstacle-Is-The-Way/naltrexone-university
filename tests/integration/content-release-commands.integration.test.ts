@@ -166,6 +166,11 @@ describe('activate-release', () => {
       removals: [{ questionId: dropped.id, kind: 'draft' }],
       parentReleaseId: first,
     });
+    // The stage command records its admitted source; this test stages below
+    // it, so it records the same watermark (BUG-351).
+    await disposable.db
+      .update(schema.contentReleasePointer)
+      .set({ sourceCommit: commit });
     const args = [
       '--repo',
       repo.directory,

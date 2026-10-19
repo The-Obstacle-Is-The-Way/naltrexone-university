@@ -49,7 +49,15 @@ const io = (lines: string[] = []) => ({
   env: { DATABASE_URL: disposable.url },
   log: (line: string) => lines.push(line),
 });
-async function stage(commit: string, apply = true) {
+// The first stage after the bootstrap names its own commit as the verified
+// baseline unless a test passes one, or null for none (BUG-351).
+async function stage(commit: string, apply = true, baseline?: string | null) {
+  const verified =
+    baseline === undefined
+      ? (await watermark()) === null
+        ? commit
+        : null
+      : baseline;
   const lines: string[] = [];
   await runStageRelease(
     [
@@ -57,6 +65,7 @@ async function stage(commit: string, apply = true) {
       repo.directory,
       '--commit',
       commit,
+      ...(verified ? ['--baseline', verified] : []),
       ...(apply ? ['--apply'] : []),
     ],
     io(lines),
@@ -92,6 +101,27 @@ async function watermark() {
 }
 
 describe('BUG-351: commit-bound release commands', () => {
+  it('starts the first release after the bootstrap only from the verified baseline or later', async () => {
+    const older = await repo.commit([source('synthetic-source')]);
+    const verified = await repo.commit([
+      source('synthetic-source', { stem: 'Verified synthetic task.' }),
+    ]);
+    const later = await repo.commit([
+      source('synthetic-source', { stem: 'Later synthetic task.' }),
+    ]);
+
+    await expect(stage(later, true, null)).rejects.toThrow(/--baseline/);
+    await expect(stage(older, true, verified)).rejects.toThrow(
+      /precedes the verified baseline/,
+    );
+    expect(await watermark()).toBeNull();
+
+    await stage(later, true, verified);
+    expect(await watermark()).toBe(later);
+    await expect(stage(later, true, verified)).rejects.toThrow(
+      /applies only to the first release/,
+    );
+  });
   it('previews without a watermark write, then binds source identity and the activation plan', async () => {
     const first = await repo.commit([source('synthetic-source')]);
     await stage(first, false);

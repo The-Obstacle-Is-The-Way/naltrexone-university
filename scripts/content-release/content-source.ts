@@ -19,38 +19,87 @@ export type ReleaseDispositions = {
 };
 const GIT_OUTPUT_LIMIT = 16 * 1024 * 1024;
 
+let localGitVariables: Promise<readonly string[]> | undefined;
+
+/**
+ * The environment for git commands on a named repository. Git prefers
+ * GIT_DIR and its siblings over `-C`, and a hook run from a linked worktree
+ * exports them; inherited, they point a command at the wrong repository
+ * (BUG-351 review). Git lists its own repository-local variables.
+ */
+export async function gitEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<NodeJS.ProcessEnv> {
+  localGitVariables ??= exec('git', ['rev-parse', '--local-env-vars']).then(
+    ({ stdout }) => stdout.split('\n').filter(Boolean),
+  );
+  const names = await localGitVariables;
+  const scrubbed: NodeJS.ProcessEnv = { ...env };
+  for (const name of names) delete scrubbed[name];
+  return scrubbed;
+}
+
 async function git(repository: string, args: string[]): Promise<string> {
   return (
     await exec('git', ['-C', repository, ...args], {
+      env: await gitEnvironment(),
       maxBuffer: GIT_OUTPUT_LIMIT,
     })
   ).stdout;
 }
 
-export async function assertForwardMainCommit(
+/** main's first-parent history, newest first. Read it before database work. */
+export async function readMainFirstParents(
   repository: string,
-  commit: string,
-  watermark: string | null,
-): Promise<void> {
-  if (!CORPUS_COMMIT_PATTERN.test(commit))
-    throw new Error('Source needs a full lowercase commit ID');
-  // A side-branch ancestor is not an admitted publication on main. Read this
-  // chain again under the database pointer lock, not just when archiving.
-  const chain = (
+): Promise<readonly string[]> {
+  return (
     await git(repository, ['rev-list', '--first-parent', 'refs/heads/main'])
   )
     .trim()
     .split('\n');
+}
+
+/**
+ * Admits a source commit for a release: a full ID on main's first-parent
+ * history, at or after the watermark. The first release after the bootstrap
+ * has no watermark yet. It names the commit the owner verified against live
+ * content, and the source must be that commit or a later one, so an older
+ * snapshot cannot become the starting point (BUG-351).
+ */
+export function assertAdmissibleCommit(
+  chain: readonly string[],
+  commit: string,
+  watermark: string | null,
+  baseline?: string,
+): void {
+  if (!CORPUS_COMMIT_PATTERN.test(commit))
+    throw new Error('Source needs a full lowercase commit ID');
   const candidate = chain.indexOf(commit);
   if (candidate < 0)
     throw new Error('Source commit is not on main first-parent history');
-  if (watermark !== null) {
-    const admitted = chain.indexOf(watermark);
-    if (admitted < 0 || candidate > admitted)
+  if (watermark === null) {
+    if (baseline === undefined)
       throw new Error(
-        'Source commit does not advance the watermark on main first-parent history',
+        'The first release after the bootstrap needs --baseline: the commit verified against live content',
       );
+    const verified = chain.indexOf(baseline);
+    if (verified < 0)
+      throw new Error('The baseline is not on main first-parent history');
+    if (candidate > verified)
+      throw new Error(
+        'Source commit precedes the verified baseline on main first-parent history',
+      );
+    return;
   }
+  if (baseline !== undefined)
+    throw new Error(
+      'A source watermark is recorded; --baseline applies only to the first release after the bootstrap',
+    );
+  const admitted = chain.indexOf(watermark);
+  if (admitted < 0 || candidate > admitted)
+    throw new Error(
+      'Source commit does not advance the watermark on main first-parent history',
+    );
 }
 
 // Only the archive is converted. Neither the checkout nor the app's mutable
@@ -68,7 +117,10 @@ export async function readContentCommit(
   if (new Set(named).size !== named.length)
     throw new Error('Each source question may have only one disposition');
   const found = new Set<string>();
-  await assertForwardMainCommit(source.repository, source.commit, null);
+  if (!CORPUS_COMMIT_PATTERN.test(source.commit))
+    throw new Error('Source needs a full lowercase commit ID');
+  if (!(await readMainFirstParents(source.repository)).includes(source.commit))
+    throw new Error('Source commit is not on main first-parent history');
   const entries = (
     await git(source.repository, ['ls-tree', '-r', '-z', source.commit])
   )

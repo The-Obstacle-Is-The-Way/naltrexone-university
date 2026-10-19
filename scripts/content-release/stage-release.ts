@@ -18,11 +18,14 @@ type StageIo = {
 // --apply, --remove <qid> for each live question whose file is absent on
 // purpose (DEBT-489), and --revert <qid> for each question the bundle moves
 // back to an earlier revision on purpose (DEBT-492). Each flag value is
-// checked like a QID.
+// checked like a QID. --baseline <commit>, only on the first release after
+// the bootstrap, names the commit the owner verified against live content
+// (BUG-351).
 export function parseStageArgs(argv: readonly string[]): {
   apply: boolean;
   repository: string;
   commit: string;
+  baseline?: string;
   draft: string[];
   archive: string[];
   remove: string[];
@@ -31,6 +34,7 @@ export function parseStageArgs(argv: readonly string[]): {
   let apply = false;
   let repository: string | undefined;
   let commit: string | undefined;
+  let baseline: string | undefined;
   const draft: string[] = [];
   const archive: string[] = [];
   const remove: string[] = [];
@@ -45,6 +49,10 @@ export function parseStageArgs(argv: readonly string[]): {
       commit = argv[++index];
       if (!commit || !CORPUS_COMMIT_PATTERN.test(commit))
         throw new Error('--commit needs a full lowercase commit ID');
+    } else if (arg === '--baseline' && baseline === undefined) {
+      baseline = argv[++index];
+      if (!baseline || !CORPUS_COMMIT_PATTERN.test(baseline))
+        throw new Error('--baseline needs a full lowercase commit ID');
     } else if (arg === '--apply' && !apply) {
       apply = true;
     } else if (arg === '--draft' || arg === '--archive') {
@@ -65,7 +73,16 @@ export function parseStageArgs(argv: readonly string[]): {
     throw new Error('--repo and --commit are required');
   if (draft.some((qid) => archive.includes(qid)))
     throw new Error('Each source question may have only one disposition');
-  return { apply, repository, commit, draft, archive, remove, revert };
+  return {
+    apply,
+    repository,
+    commit,
+    ...(baseline ? { baseline } : {}),
+    draft,
+    archive,
+    remove,
+    revert,
+  };
 }
 
 // Stages a release of the archived content commit on the active release, writing
@@ -75,8 +92,16 @@ export async function runStageRelease(
   argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: StageIo = {},
 ): Promise<void> {
-  const { apply, repository, commit, draft, archive, remove, revert } =
-    parseStageArgs(argv);
+  const {
+    apply,
+    repository,
+    commit,
+    baseline,
+    draft,
+    archive,
+    remove,
+    revert,
+  } = parseStageArgs(argv);
   await runHumanDatabaseCommand({
     env,
     log,
@@ -86,7 +111,7 @@ export async function runStageRelease(
           stageReleaseFromCommit(
             target,
             { repository, commit },
-            { remove, revert, draft, archive },
+            { remove, revert, draft, archive, baseline },
           ),
         );
         log(
@@ -95,6 +120,7 @@ export async function runStageRelease(
             `parent=${staged.parentReleaseId}`,
             `reusedRelease=${staged.reusedRelease}`,
             `source=${commit}`,
+            ...(baseline ? [`baseline=${baseline}`] : []),
             `items=${staged.items}`,
             `inserted=${staged.inserted}`,
             `appended=${staged.appended}`,
