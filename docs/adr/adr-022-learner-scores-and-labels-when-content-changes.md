@@ -1,6 +1,6 @@
 # ADR-022: Learner Scores and Labels When Content Changes
 
-**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03)), 2026-10-05 (what a page shows for an item no score counts; see [Amendment](#amendment--2026-10-05)) and 2026-10-18 (key corrections judged on normalized text; see [Amendment](#amendment--2026-10-18))
+**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03)), 2026-10-05 (what a page shows for an item no score counts; see [Amendment](#amendment--2026-10-05)) and 2026-10-18 (key corrections judged on normalized text; see [Amendment](#amendment--2026-10-18)) and 2026-10-19 (revision holds and question-wide clinical caution)
 **Date:** 2026-10-03
 **Implementation:** Implemented and in production since 2026-10-03, by DEBT-493, released through promotion #1355.
 **Decision Makers:** The owner, who on 2026-10-03 asked for every remaining decision that can be settled in code to be decided from first principles, "like the best software engineers in the world and the best physicians in the world who are designing this question bank", and executed. This record decides the three questions [ADR-021](./adr-021-question-revisions-and-content-releases.md) left to the owner: withdrawn-item scoring, answer-key regrade, and how an unavailable question is labeled (DEBT-484, BUG-317).
@@ -79,8 +79,6 @@ An item that does not count leaves both the numerator and the denominator. This 
 ### 4. Answer-key corrections are detected, disclosed and re-practiced
 
 An answered attempt is **key-corrected** when the current revision's correct choice differs, by label or by text, from the correct choice of the revision the attempt was graded against. This comparison is complete for single-best-answer items: a different correct answer always changes the correct choice's label or text. It is conservative: reordering or rewording the correct option also counts, at the cost of one unscored attempt and one re-practice prompt, which is harmless.
-
-> **Amended 2026-10-18.** The correct choice's text is compared after the seed's Markdown normalization, so whitespace alone is not a key correction ([Amendment](#amendment--2026-10-18)).
 
 A key-corrected attempt:
 - **does not count toward any score** (Decision 3);
@@ -173,17 +171,6 @@ A review of a key-corrected attempt therefore says "This attempt isn't scored." 
 - **Hide the attempt's content.** This erases the learner's own record, which Decision 2 keeps for answered items.
 - **Show the corrected answer on the old review.** The revisions' choices differ, so the learner's choice may not exist in the current revision. It would also mix revisions on one page, and hand over the answer that Decision 4 has the learner re-practice.
 
-## Amendment — 2026-10-18
-
-Decided under the owner's 2026-09-28 delegation, for DEBT-531: the seed and the release builder judged "same content" with the seed's Markdown normalization, while Decision 4 compared the correct choice's raw text.
-
-> **A key correction is judged on normalized text.** Compare the label exactly and the correct choice's text after the seed's existing Markdown normalization: CRLF and CR become LF, trailing ASCII spaces and tabs are removed from each line, then JavaScript `trim()` removes whitespace at the edges. Normalization alone is not a key correction. Rewording or moving the correct option still is.
-
-**Consequences.**
-- **One rule for the writers and the scores.** The pure normalizer lives in the domain; the SQL score reader has a tested equivalent. Whole-revision equality also compares the other content fields; it remains a separate decision.
-- **Nothing stored changes.** Stored revision fields, hashes and grades remain unchanged.
-- **A past score can change once, on deploy.** An answered attempt that counted as key-corrected only because its correct choice's whitespace changed is scored again and loses the "answer was corrected" notice. This is the one exception to the Amendment of 2026-10-03's "a past score changes only when the content's validity changes": the earlier comparison misread an unchanged key as a correction, and this restores the score the content always deserved.
-
 ## Alternatives rejected
 
 - **Keep today's behavior.** It penalizes learners for unsafe or flawed content they could not change, and leaves a corrected key's grades misleading.
@@ -197,3 +184,22 @@ Decided under the owner's 2026-09-28 delegation, for DEBT-531: the seed and the 
 - [ADR-021](./adr-021-question-revisions-and-content-releases.md): immutable revisions and releases.
 - DEBT-493: the implementation.
 - [Pattern Registry](../design-system/pattern-registry.md): F-11 (withdrawal notice) and F-12 (updated notice), revised by DEBT-493.
+
+## Amendment — 2026-10-18
+
+Decided under the owner's 2026-09-28 delegation, for DEBT-531: the seed and the release builder judged "same content" with the seed's Markdown normalization, while Decision 4 compared the correct choice's raw text.
+
+> **A key correction is judged on normalized text.** Compare the label exactly and the correct choice's text after the seed's existing Markdown normalization: CRLF and CR become LF, trailing ASCII spaces and tabs are removed from each line, then JavaScript `trim()` removes whitespace at the edges. Normalization alone is not a key correction. Rewording or moving the correct option still is.
+
+**Consequences.**
+- **One rule for the writers and the scores.** Whole-revision equality also compares the other content fields; it remains a separate decision.
+- **Nothing stored changes.** Stored revision fields, hashes and grades remain unchanged.
+- **A past score can change once, on deploy.** An answered attempt that counted as key-corrected only because its correct choice's whitespace changed is scored again and loses the "answer was corrected" notice. This is the one exception to the Amendment of 2026-10-03's "a past score changes only when the content's validity changes": the earlier comparison misread an unchanged key as a correction, and this restores the score the content always deserved.
+
+## Amendment — 2026-10-19: revision holds and question-wide clinical caution
+
+A hold excludes its exact revision from activation, including rollback. A different revision may be published without lifting that hold. While the question is published, it is available and the existing key-correction rule decides whether an older answer counts.
+
+If no revision is published, any unlifted hold on the question keeps it Under review and out of scores. Retirement does not resolve a clinical review. Lifting the last hold makes an omitted question Retired, not Available; a withdrawal still takes precedence. Its past answers count again only when the fair-chance and key-correction rules also allow them. Stored grades remain unchanged.
+
+A named old hold may be lifted directly after replacement or retirement. This ends only that hold's review; it does not lift another hold or publish content outside the active release. This clarifies Decision 1's question-level caution alongside ADR-021's revision-level activation exclusion.

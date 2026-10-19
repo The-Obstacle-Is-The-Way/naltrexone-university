@@ -93,6 +93,13 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/shared/question-availability-contract.ts`: `$name, read through either revision`
 - `tests/shared/question-availability-contract.ts`: `$name, read by id`
 
+A hold blocks its exact revision from activation. A published replacement remains available without lifting the old hold. Once unpublished, any unresolved hold keeps the question Under review and unscored. A direct lift of the last hold leaves an omitted question Retired; it does not republish it.
+
+- `tests/integration/content-hold-scope.integration.test.ts`: `lifts a named old hold after retirement without republishing or rewriting history`
+- `tests/integration/content-hold-scope.integration.test.ts`: `keeps an old revision held on rollback until its named hold is lifted`
+- `tests/integration/content-hold-scope.integration.test.ts`: `lifts an old hold while its replacement stays live and never retargets a later hold`
+- `tests/integration/content-hold-scope.integration.test.ts`: `requires a named key return for a hold-ID lift and rolls back an unnamed lift`
+
 ### R19. A question no longer available shows its content only to a learner who answered it, never on an omitted or unanswered item, whether it was withdrawn, is under review or was retired.
 
 - `tests/integration/withdrawn-question-review.integration.test.ts`: `finalizes an exam with an unanswered item, then hides it from every review once withdrawn`

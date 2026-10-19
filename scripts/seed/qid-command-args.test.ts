@@ -4,6 +4,43 @@ import { parseQidCommandArgs } from './qid-command-args';
 const RECORD = ['--reason', ' Under review ', '--authority', 'Clinical lead'];
 
 describe('parseQidCommandArgs', () => {
+  const holdId = '4afd2bbf-d161-49b3-ad3a-56a6bf37f580';
+
+  it('accepts a named hold lift without a live question selector', () => {
+    expect(
+      parseQidCommandArgs(['--hold', holdId, '--lift', ...RECORD], {
+        decision: 'hold',
+        allowLift: true,
+      }),
+    ).toMatchObject({ qids: [], holdIds: [holdId], lift: true, apply: false });
+  });
+
+  it.each([
+    [['--hold', holdId, ...RECORD], '--hold requires --lift'],
+    [
+      ['--hold', holdId, '--lift', '--qid', 'alpha-q', ...RECORD],
+      'Use either --qid or --hold, not both',
+    ],
+    [['--hold', 'not-a-uuid', '--lift', ...RECORD], 'Invalid hold ID'],
+    [
+      ['--hold', holdId, '--hold', holdId, '--lift', ...RECORD],
+      'Duplicate hold ID',
+    ],
+    [['--hold', '--lift', ...RECORD], 'Missing value for --hold'],
+  ])('rejects an invalid named hold selector %j', (argv, message) => {
+    expect(() =>
+      parseQidCommandArgs(argv, { decision: 'hold', allowLift: true }),
+    ).toThrow(message);
+  });
+
+  it('does not accept a hold selector for a withdrawal', () => {
+    expect(() =>
+      parseQidCommandArgs(['--hold', holdId, '--lift', ...RECORD], {
+        decision: 'withdrawal',
+      }),
+    ).toThrow('Unknown argument: --hold');
+  });
+
   it('reads named answer-key returns only for commands that allow them', () => {
     const argv = [
       '--qid',
