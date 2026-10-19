@@ -15,25 +15,25 @@ Two programs write question content, and they apply different rules to the same 
 
 The last recorded production state in DEBT-483 is unbootstrapped, with direct seeding still available; the current release pointer was not queried. The managed production seed imports the local untracked drafts folder, which can lag the source. Bare seeding reads the existing MDX output instead.
 
-The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. Whole-revision equality uses different normalization at the seed and builder. Score eligibility deliberately compares a narrower key projection, with raw text. Hold scope also differs between activation and availability.
+The live defect this split causes is BUG-351: a stale seed restores a corrected answer key with no warning, and the builder's own guard misses part of that case. BUG-351 reproduces it, measures today's exposure and designs the fix: one content-change planner that both writers call. This record keeps the rest of the split. BUG-351 part 1 aligns whole-revision comparison at the seed and builder. Score eligibility deliberately compares a narrower key projection, with raw text. Hold scope also differs between activation and availability.
 
 ## Evidence
 
 **The two revert rules:**
-- Builder: `scripts/content-release/release-builder.ts:57-78` matches a file against every revision of its question. `:254-268` refuses a move to an earlier revision without `--revert`.
+- Builder: `scripts/content-release/release-builder.ts:58-94` matches a file against every revision of its question. `:271-285` refuses a move to an earlier revision without `--revert`.
 - Seed: `scripts/seed/question-syncer.ts:256-267` compares the canonical file with the current revision only, and appends a revision when they differ. BUG-281's graded-history refusal went when revisions became append-only (`3ac01fc8`, 2026-09-30).
 - The production path:
   - `db:seed:prod` (`scripts/seed-production.ts`) prepares the corpus from `content/drafts/questions` (`scripts/import-draft-questions.ts:20`) with `--status published` (`scripts/prepare-seed-corpus.ts:24`), then seeds production (`scripts/seed-environment-targets.ts:105-106`).
   - The drafts' question folders are untracked (`.gitignore:63-66`).
-- `release-activation.ts:127-134`: the seed may write whenever no release is active.
+- `release-activation.ts:127-135`: the seed may write whenever no release is active.
 
 **Whole-revision equality and answer-key projection have different purposes and inconsistent normalization:**
 - The seed canonicalizes both sides before comparing (`scripts/seed/question-parser.ts:158-181`; guarded by `tests/integration/seed-revision-append.integration.test.ts:149-188`).
-- The builder compares the stored `content_hash` (`release-builder.ts:62-76`). That hash covers the stored bytes, which may not be canonical; migration `0039` hashed the legacy columns as they were for every first revision. `a622027e` (2026-10-01) moved the builder off the seed's canonical comparison.
+- Before BUG-351 part 1, the builder compared the stored `content_hash` (`release-builder.ts:62-76` at `92e56929`). It now recomputes canonical fields with the seed's `revisionFieldsFromDb`. That hash covers the stored bytes, which may not be canonical; migration `0039` hashed the legacy columns as they were for every first revision. `a622027e` (2026-10-01) moved the builder off the seed's canonical comparison.
 - Answer-key correction compares the raw label and text (`src/domain/services/answer-key.ts:8-15` and its SQL twin, `src/adapters/repositories/shared/score-eligibility-sql.ts:104-108`).
 
 The consequences need distinct preconditions:
-- The builder can append a revision for canonical input equal in meaning to a noncanonical stored revision **if no stored raw hash matches it**. A canonical duplicate elsewhere in history can instead be reused.
+- Before BUG-351 part 1, the builder could append a revision for canonical input equal in meaning to a noncanonical stored revision **if no stored raw hash matches it**. A canonical duplicate elsewhere in history could instead be reused. Part 1 compares canonical fields and prefers the current revision.
 - When an append changes raw correct-choice label/text only by normalization, ADR-022's raw comparison marks older answers corrected. Whitespace only in the stem does not do that. This can also occur before bootstrap if another substantive seed edit appends canonical choices from a legacy revision.
 - Whole-content identity must not be collapsed into the key projection: a stem-only edit can change the revision without changing its key. Reusing normalization is a separate decision from merging those meanings.
 
@@ -49,7 +49,7 @@ Production prevalence is unknown. A read-only census should separately count non
 - The two readings come from two decisions: ADR-021 decision 5 (per revision) and ADR-022 Decision 1 ("an unlifted hold on a revision of the question"). Choosing one amends the other. The gap is dormant until the bootstrap, since holds need an active release.
 
 **Smaller items:**
-- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:323-343`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
+- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:340-360`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
 - Feedback records `question_id`, an optional `attempt_id` and an optional `practice_session_id`, but no revision (`db/schema.ts:1340-1361`). A report with neither an attempt nor a session cannot say which revision it concerned.
 - Question status, tag kind and the slug pattern are each retyped in several places (`db/schema.ts`, the domain value objects, `lib/content/schemas.ts`, `scripts/draft-question-import.ts`). They agree today; DEBT-453 consolidated only difficulty.
 

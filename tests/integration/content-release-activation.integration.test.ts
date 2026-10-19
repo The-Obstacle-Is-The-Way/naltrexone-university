@@ -367,7 +367,11 @@ describe('DEBT-483: release activation', () => {
 
     await withRollback(async (tx) => {
       const manifest = buildReleaseManifest([
-        { slug: question.slug, contentHash: 'f'.repeat(64) },
+        {
+          slug: question.slug,
+          contentHash: 'f'.repeat(64),
+          revisionId: question.revisionId,
+        },
       ]);
       const [release] = await tx
         .insert(schema.contentReleases)
@@ -394,7 +398,11 @@ describe('DEBT-483: release activation', () => {
 
     await withRollback(async (tx) => {
       const manifest = buildReleaseManifest([
-        { slug: question.slug, contentHash: 'f'.repeat(64) },
+        {
+          slug: question.slug,
+          contentHash: 'f'.repeat(64),
+          revisionId: question.revisionId,
+        },
       ]);
       const [release] = await tx
         .insert(schema.contentReleases)
