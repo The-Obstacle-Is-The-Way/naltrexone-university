@@ -106,11 +106,22 @@ Each layer has a limit the next one covers:
 
 The v2 manifest names content hashes, not revision IDs (`release-manifest.ts:19,40-42` at `92e56929`). Before part 1, `existingRelease` reused that manifest on the same parent, so an existing stage could substitute R2 for the selected R4. Migration `0048_adr021_hold_lift_and_release_identity.sql` makes that manifest and parent unique. Part 1 introduced v3 manifests that also name each selected revision ID; it still reads and verifies v2 releases for activation and rollback. Existing manifests, items and hashes stay immutable. `content-release-revision-matching.integration.test.ts` reproduces the collision with a previously staged older duplicate.
 
+**Part 1's interim limit.** The revert check still compares only the matched revision's number with the current one. Picking the newest match lets one stale copy through that the unordered match used to refuse:
+1. Before the bootstrap: R1 (key A), R2 (key B), then R3 (key A), live.
+2. After the bootstrap, a repair staged with `--revert` makes R2 current.
+3. A stale file with key A now matches R3, which is newer than R2, so it stages as "Update to a newer revision".
+
+This needs an active release, so production cannot reach it before the bootstrap. Part 2's key-return check closes it, because key A was live in the bootstrap release; `content-release-key-returns.integration.test.ts` refuses this case, and it fails with part 1's revert check alone. Do not bootstrap before part 2 ships; part 2 also captures the pre-bootstrap history the check needs.
+
 **Part 2. The previews name answer-key changes.**
 - Built in part 2a: the stage and activation previews list each changed question by kind, with answer-key changes listed separately. The comparison uses the correct choice's label and text, canonicalized as the seed canonicalizes content (`scripts/content-release/release-changes.ts`). Activation binds the key-change list to its existing plan id, so a hold lift cannot change that advice after preview. Staging reads the same classification without changing availability.
 - A change whose key equals an earlier live key of the same question must be named with `--revert`, with a reason and authority on the existing activation receipt (DEBT-490). A repair after a regression, and a deliberate return to an earlier key, go the same way. Activation recomputes returns under the pointer lock and binds them to its plan. Rollbacks and hold lifts that return a key need explicit names too. This supersedes DEBT-492's rollback exemption for key returns; its revision-number staging rule remains.
 - The bootstrap freezes every stored revision ID in a separate `preBootstrapCandidates` manifest list. It captures that list in its own transaction under the release-pointer lock. The list is part of the manifest hash and therefore the DEBT-489 plan id: a changed candidate set requires a new preview. It is never a release item, so activation and rollback cannot publish it.
 - After the bootstrap, the return guard uses revisions in activated releases plus that frozen list. Before the bootstrap, any stored revision is only a candidate, because a draft seed stores one and publishes nothing. Later draft-only and never-activated staged revisions do not enter the list. The existing regression test below remains required.
+- **Part 2's limit.** Returns are checked only where an item's key differs from the question's current revision.
+  - **The path it misses:** before the bootstrap, a bare seed of a stale file marked `draft` makes the stale key current and unpublishes the question; the managed seed forces `published`, so only the bare seed reaches this.
+  - **What happens:** the bootstrap leaves that question out, and a later release that publishes it lists a "Publish" with no key change.
+  - **What closes it:** part 3, since staging then reads only forward commits of `main`, never a stale copy. Until then, the rule below applies: seed production only from a refreshed copy of that pinned commit.
 
 **Part 3. Read a commit, not a copy.**
 - Staging reads `git archive <commit>` of the content repository's `main`, never the drafts folder, and records the commit in the release manifest. The content repository's SPEC-007 already proposes `corpus_commit`. ADR-021 is amended.

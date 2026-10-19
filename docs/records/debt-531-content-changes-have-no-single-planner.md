@@ -20,12 +20,12 @@ The live defect this split causes is BUG-351: a stale seed restores a corrected 
 ## Evidence
 
 **The two revert rules:**
-- Builder: `scripts/content-release/release-builder.ts:61-97` matches a file against every revision of its question. `:273-287` refuses a move to an earlier revision without `--revert`.
+- Builder: `scripts/content-release/release-builder.ts:61-97` matches a file against every revision of its question. `:307-321` refuses a move to an earlier revision without `--revert`.
 - Seed: `scripts/seed/question-syncer.ts:256-267` compares the canonical file with the current revision only, and appends a revision when they differ. BUG-281's graded-history refusal went when revisions became append-only (`3ac01fc8`, 2026-09-30).
 - The production path:
   - `db:seed:prod` (`scripts/seed-production.ts`) prepares the corpus from `content/drafts/questions` (`scripts/import-draft-questions.ts:20`) with `--status published` (`scripts/prepare-seed-corpus.ts:24`), then seeds production (`scripts/seed-environment-targets.ts:105-106`).
   - The drafts' question folders are untracked (`.gitignore:63-66`).
-- `release-activation.ts:101-108`: the seed may write whenever no release is active.
+- `release-activation.ts:102-109`: the seed may write whenever no release is active.
 
 **Whole-revision equality and answer-key projection have different purposes and inconsistent normalization:**
 - The seed canonicalizes both sides before comparing (`scripts/seed/question-parser.ts:158-181`; guarded by `tests/integration/seed-revision-append.integration.test.ts:149-188`).
@@ -44,12 +44,12 @@ Production prevalence is unknown. A read-only census should separately count non
 **A hold's scope has two owners:**
 - Activation treats a hold as excluding one revision (`release-changes.ts:29-33`; ADR-021 decision 5).
 - Availability and scoring treat a hold on any revision of a question as "under review" once the question is not published (`drizzle-question-repository.ts:403-413`; `score-eligibility-sql.ts:28-32`; `question-availability.ts:42-49`).
-- A lift reaches only the revision the active release publishes (`release-holds.ts:59-97`).
+- A lift reaches only the revision the active release publishes (`release-holds.ts:60-98`).
 - So a hold on R1, after a release publishes R2, cannot be lifted directly while another revision is active, or while the active release omits the question. Reactivating a release that names R1 makes it liftable, a disruptive workaround documented in `docs/architecture/content-pipeline.md:373`. If the question is later retired, that forgotten hold labels it "Under review" and drops past scores on it. DEBT-492 gap 3 noted the dormant hold and left it.
 - The two readings come from two decisions: ADR-021 decision 5 (per revision) and ADR-022 Decision 1 ("an unlifted hold on a revision of the question"). Choosing one amends the other. The gap is dormant until the bootstrap, since holds need an active release.
 
 **Smaller items:**
-- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:357-377`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
+- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:370-390`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
 - Feedback records `question_id`, an optional `attempt_id` and an optional `practice_session_id`, but no revision (`db/schema.ts:1340-1361`). A report with neither an attempt nor a session cannot say which revision it concerned.
 - Question status, tag kind and the slug pattern are each retyped in several places (`db/schema.ts`, the domain value objects, `lib/content/schemas.ts`, `scripts/draft-question-import.ts`). They agree today; DEBT-453 consolidated only difficulty.
 

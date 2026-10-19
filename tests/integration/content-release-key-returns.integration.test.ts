@@ -107,6 +107,33 @@ describe('BUG-351: an earlier answer key returns only by a named decision', () =
     },
   );
 
+  // Part 1's interim gap: the newest match (R3) outranks the repaired current
+  // revision (R2), so the revision-number revert check alone accepts it.
+  it('refuses an exact stale copy after a named repair, though it matches a newer revision', async () => {
+    const slug = `it-key-return-${randomUUID()}`;
+    await syncQuestionsFromFiles(disposable.db, [source(slug)]);
+    await syncQuestionsFromFiles(disposable.db, [source(slug, CORRECTION)]);
+    await syncQuestionsFromFiles(disposable.db, [source(slug)]);
+    const base = await bootstrapRelease(disposable.db, {
+      record: RELEASE_DECISION,
+    });
+    const repair = await stageReleaseFromFiles(
+      disposable.db,
+      [source(slug, CORRECTION)],
+      { revert: [slug] },
+    );
+    await activateRelease(disposable.db, {
+      releaseId: repair.releaseId,
+      expectedActiveReleaseId: base.releaseId,
+      record: RELEASE_DECISION,
+      revert: [slug],
+    });
+
+    await expect(
+      stageReleaseFromFiles(disposable.db, [source(slug)]),
+    ).rejects.toThrow('earlier answer key');
+  });
+
   it('names a stale-key return in both previews and records the named return and later repair decisions', async () => {
     const { slug, active } = await arrangeCorrection(true);
     const staged = await stageReturn(slug);

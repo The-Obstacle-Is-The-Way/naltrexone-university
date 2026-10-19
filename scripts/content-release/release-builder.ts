@@ -110,8 +110,9 @@ async function revisionForContent(
 // A member already withdrawn may be absent. Staging records no withdrawal; an
 // archived file is a removal that activation turns into one.
 //
-// DEBT-492: a file whose content matches an earlier revision moves its
-// question back to that revision, which can undo an answer-key correction.
+// DEBT-492: a file whose content matches only an earlier revision, not the
+// current one, moves its question back to that revision, which can undo an
+// answer-key correction.
 // Staging allows that only for a question named in `revert`.
 // BUG-351 also requires a name when a changed key matches earlier publication
 // history, even if unrelated edits make the selected revision new.

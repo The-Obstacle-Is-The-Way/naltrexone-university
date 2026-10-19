@@ -335,12 +335,15 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-
 # and the items a hold or withdrawal leaves out.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
+# A plan that returns a question to an earlier answer key needs --revert <qid>
+# for each such question, at staging and at activation (BUG-351).
 # Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
   --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
   --plan "<plan-id>" --apply
 # Roll back: preview and apply the earlier release the same way.
-# Hold a question's live revision, or lift that hold with --lift.
+# Hold a question's live revision, or lift that hold with --lift. A lift that
+# returns a question to an earlier answer key needs --revert too.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
   --qid "example-qid" --reason "Why" --authority "Who"
 ```
@@ -352,7 +355,8 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 - **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `archived`, or the withdrawal command, for content that must never return.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
-- **A revert is named (DEBT-492).** A file whose content matches an earlier revision moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so it is not refused, but its plan names each revert; it also archives questions added since.
+- **A revert is named (DEBT-492).** A file whose content matches only an earlier revision, not the current one, moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so a content revert alone does not refuse it; its plan names each revert, and it also archives questions added since.
+- **A return to an earlier answer key is named (BUG-351).** The stage and activation previews list answer-key changes apart from other changes. A change whose key equals one this database once had live needs `--revert <qid>` at staging and at activation, with the activation's reason and authority. "Once live" means a revision in an activated release, or one of the pre-bootstrap revisions the bootstrap froze in its manifest. A rollback and a hold lift publish through activation, so they need the name too.
 
 **Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
 
@@ -360,7 +364,8 @@ Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) 
 - the release and the release it replaces;
 - every (question, revision) it publishes, unchanged ones included;
 - every question it archives;
-- every question it withdraws.
+- every question it withdraws;
+- its answer-key changes, and its returns to an earlier key (BUG-351).
 
 Activation recomputes the plan under its own locks and refuses a different one. So a hold, a withdrawal, a lift, or anything else between preview and apply that changes one of those sets means a fresh preview. Tags are outside the plan: they are not versioned, so a tag change does not change it. A rollback is previewed and applied the same way, and still honors current holds and withdrawals: a withdrawal is permanent.
 
