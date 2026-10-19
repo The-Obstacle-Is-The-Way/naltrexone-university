@@ -21,6 +21,8 @@ export type RenewalNoticeRequeueAuditEntry = {
   requeuedBy: string;
   confirmedNoSend: boolean;
   priorStatus: 'terminal_failure' | 'outcome_unknown';
+  /** Older audit entries predate binding provider evidence to an attempt. */
+  priorAttemptCount?: number;
 };
 
 export type NewRenewalNoticeDelivery = {
