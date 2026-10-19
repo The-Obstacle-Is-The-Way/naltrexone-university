@@ -112,6 +112,11 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/integration/seed-revision-append.integration.test.ts`: `keeps a graded attempt on its revision and grade after a key correction`
 - `components/question/question-update-notice.test.tsx`: `says the attempt is not scored and links to the corrected question`
 
+### R26. A release built from unchanged content keeps the question's current revision, even when the same content was stored in an earlier revision.
+
+- `tests/integration/content-release-revision-matching.integration.test.ts`: `keeps the live revision after a key regression and repair`
+- `tests/integration/content-release-revision-matching.integration.test.ts`: `does not reuse a staged %s release that names an older identical revision`
+
 ### R22. An exam's submit warning counts only the unanswered questions that would be scored.
 
 - `src/application/use-cases/get-practice-session-review-content-changes.test.ts`: `counts the scored items left unanswered in an active exam`

@@ -11,17 +11,27 @@ import { z } from 'zod';
 //   archived: retired in authored MDX; activation withdraws it for good.
 //   draft:    set back to draft in MDX; out of the bank until a release names it.
 //   removed:  absent from the bundle, and named by the operator.
-export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v2';
+// Format v3 also binds the selected revision: equal content can occur in
+// multiple immutable revisions, and reusing a release must not substitute one.
+export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v3';
 
 export const RELEASE_REMOVAL_KINDS = ['archived', 'draft', 'removed'] as const;
 export type ReleaseRemovalKind = (typeof RELEASE_REMOVAL_KINDS)[number];
 
-export type ReleaseManifestEntry = { slug: string; contentHash: string };
+type ContentEntry = { slug: string; contentHash: string };
+export type ReleaseManifestEntry = ContentEntry & { revisionId: string };
 export type ReleaseManifestRemoval = { slug: string; kind: ReleaseRemovalKind };
 
-export type ReleaseManifest = {
-  format: typeof RELEASE_MANIFEST_FORMAT;
-  items: ReleaseManifestEntry[];
+export type ReleaseManifest = (
+  | {
+      format: typeof RELEASE_MANIFEST_FORMAT;
+      items: ReleaseManifestEntry[];
+    }
+  | {
+      format: 'app-release-manifest-v2';
+      items: ContentEntry[];
+    }
+) & {
   removals: ReleaseManifestRemoval[];
 };
 
@@ -36,10 +46,9 @@ function compareSlugs(a: { slug: string }, b: { slug: string }): number {
 export function buildReleaseManifest(
   entries: readonly ReleaseManifestEntry[],
   removals: readonly ReleaseManifestRemoval[] = [],
+  format: ReleaseManifest['format'] = RELEASE_MANIFEST_FORMAT,
 ): ReleaseManifest {
-  const items = entries
-    .map(({ slug, contentHash }) => ({ slug, contentHash }))
-    .sort(compareSlugs);
+  const items = [...entries].sort(compareSlugs);
   for (const item of items) {
     if (!CONTENT_HASH.test(item.contentHash)) {
       throw new Error(
@@ -56,7 +65,22 @@ export function buildReleaseManifest(
       throw new Error(`${slug} appears more than once in the manifest`);
     }
   });
-  return { format: RELEASE_MANIFEST_FORMAT, items, removals: sortedRemovals };
+  // v2 is used only to verify an existing release in its original form.
+  return format === 'app-release-manifest-v2'
+    ? {
+        format,
+        items: items.map(({ slug, contentHash }) => ({ slug, contentHash })),
+        removals: sortedRemovals,
+      }
+    : {
+        format,
+        items: items.map(({ slug, contentHash, revisionId }) => ({
+          slug,
+          contentHash,
+          revisionId: z.guid().parse(revisionId),
+        })),
+        removals: sortedRemovals,
+      };
 }
 
 // Sorted keys at every level and no insignificant whitespace, byte-identical
@@ -67,10 +91,14 @@ export function canonicalReleaseManifestJson(
 ): string {
   return JSON.stringify({
     format: manifest.format,
-    items: manifest.items.map(({ slug, contentHash }) => ({
-      contentHash,
-      slug,
-    })),
+    items:
+      manifest.format === 'app-release-manifest-v2'
+        ? manifest.items.map(({ slug, contentHash }) => ({ contentHash, slug }))
+        : manifest.items.map(({ slug, contentHash, revisionId }) => ({
+            contentHash,
+            revisionId,
+            slug,
+          })),
     removals: manifest.removals.map(({ slug, kind }) => ({ kind, slug })),
   });
 }
@@ -81,37 +109,54 @@ export function releaseManifestHash(manifest: ReleaseManifest): string {
     .digest('hex');
 }
 
-const storedManifestSchema = z
+const contentEntrySchema = z
   .object({
-    format: z.literal(RELEASE_MANIFEST_FORMAT),
-    items: z.array(
-      z.object({ slug: z.string().min(1), contentHash: z.string() }).strict(),
-    ),
-    removals: z.array(
-      z
-        .object({
-          slug: z.string().min(1),
-          kind: z.enum(RELEASE_REMOVAL_KINDS),
-        })
-        .strict(),
-    ),
+    slug: z.string().min(1),
+    contentHash: z.string().regex(CONTENT_HASH),
   })
   .strict();
+const removalsSchema = z.array(
+  z
+    .object({
+      slug: z.string().min(1),
+      kind: z.enum(RELEASE_REMOVAL_KINDS),
+    })
+    .strict(),
+);
+const storedManifestSchema = z.discriminatedUnion('format', [
+  z
+    .object({
+      format: z.literal('app-release-manifest-v2'),
+      items: z.array(contentEntrySchema),
+      removals: removalsSchema,
+    })
+    .strict(),
+  z
+    .object({
+      format: z.literal(RELEASE_MANIFEST_FORMAT),
+      items: z.array(contentEntrySchema.extend({ revisionId: z.guid() })),
+      removals: removalsSchema,
+    })
+    .strict(),
+]);
 
 // A stored manifest comes back from jsonb with its keys reordered; its entries
 // must still be exactly what buildReleaseManifest writes.
 export function parseReleaseManifest(value: unknown): ReleaseManifest {
   const parsed = storedManifestSchema.parse(value);
-  const rebuilt = buildReleaseManifest(parsed.items, parsed.removals);
-  const inOrder =
-    rebuilt.items.every(
-      (item, index) => parsed.items[index]?.slug === item.slug,
-    ) &&
-    rebuilt.removals.every(
-      (removal, index) => parsed.removals[index]?.slug === removal.slug,
-    );
-  if (!inOrder) {
+  const slugs = [...parsed.items, ...parsed.removals].map(({ slug }) => slug);
+  if (new Set(slugs).size !== slugs.length) {
+    throw new Error('A question appears more than once in the manifest');
+  }
+  if (
+    [parsed.items, parsed.removals].some((entries) =>
+      entries.some((entry, index) => {
+        const previous = entries[index - 1];
+        return previous !== undefined && compareSlugs(previous, entry) >= 0;
+      }),
+    )
+  ) {
     throw new Error('Stored manifest entries are not in slug order');
   }
-  return rebuilt;
+  return parsed;
 }
