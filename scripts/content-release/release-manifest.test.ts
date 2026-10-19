@@ -31,7 +31,7 @@ describe('release manifest', () => {
       { ...item, revisionId: nextRevisionId },
     ]);
 
-    expect(first.format).toBe('app-release-manifest-v3');
+    expect(first.format).toBe('app-release-manifest-v4');
     expect(first.items).toEqual([item]);
     expect(releaseManifestHash(first)).not.toBe(releaseManifestHash(next));
   });
@@ -56,9 +56,26 @@ describe('release manifest', () => {
   const V2_DIGEST =
     'cdf14ee1a6deb5388f09402de2545b92f32b20e91f06e67e43bf1e9e83a76ba0';
 
-  const CANONICAL = `{"format":"app-release-manifest-v3","items":[{"contentHash":"${HASH_A}","revisionId":"${REVISION_A}","slug":"alpha-q"},{"contentHash":"${HASH_B}","revisionId":"${REVISION_B}","slug":"beta-q"}],"removals":[{"kind":"draft","slug":"delta-q"},{"kind":"archived","slug":"gamma-q"}]}`;
-  const DIGEST =
+  const V3_CANONICAL = `{"format":"app-release-manifest-v3","items":[{"contentHash":"${HASH_A}","revisionId":"${REVISION_A}","slug":"alpha-q"},{"contentHash":"${HASH_B}","revisionId":"${REVISION_B}","slug":"beta-q"}],"removals":[{"kind":"draft","slug":"delta-q"},{"kind":"archived","slug":"gamma-q"}]}`;
+  const V3_DIGEST =
     'a063925e13f88f4b5d30a0d31e1c5ef1e79ec9cf97795f6eaac01767f1d1f188';
+
+  const CANONICAL = `{"format":"app-release-manifest-v4","items":[{"contentHash":"${HASH_A}","revisionId":"${REVISION_A}","slug":"alpha-q"},{"contentHash":"${HASH_B}","revisionId":"${REVISION_B}","slug":"beta-q"}],"preBootstrapCandidates":[],"removals":[{"kind":"draft","slug":"delta-q"},{"kind":"archived","slug":"gamma-q"}]}`;
+  const DIGEST =
+    '70c201744faec3f82ed7785d5dd1a70163797f783d83af0e6bc6d04001f79eb7';
+
+  it('preserves the canonical bytes and hash of a v3 manifest', () => {
+    const stored = parseReleaseManifest(JSON.parse(V3_CANONICAL));
+    const rebuilt = buildReleaseManifest(
+      ITEMS,
+      REMOVALS,
+      'app-release-manifest-v3',
+    );
+    expect(canonicalReleaseManifestJson(stored)).toBe(V3_CANONICAL);
+    expect(releaseManifestHash(stored)).toBe(V3_DIGEST);
+    expect(canonicalReleaseManifestJson(rebuilt)).toBe(V3_CANONICAL);
+    expect(releaseManifestHash(rebuilt)).toBe(V3_DIGEST);
+  });
 
   it('orders items and removals by slug and writes the canonical form', () => {
     expect(
@@ -111,26 +128,34 @@ describe('release manifest', () => {
 
   it('reads back a stored manifest whatever its key order', () => {
     const stored = JSON.parse(
-      `{"removals":[{"slug":"gamma-q","kind":"archived"}],"items":[{"slug":"alpha-q","contentHash":"${HASH_A}","revisionId":"${REVISION_A}"}],"format":"${RELEASE_MANIFEST_FORMAT}"}`,
+      `{"removals":[{"slug":"gamma-q","kind":"archived"}],"items":[{"slug":"alpha-q","contentHash":"${HASH_A}","revisionId":"${REVISION_A}"}],"preBootstrapCandidates":[],"format":"${RELEASE_MANIFEST_FORMAT}"}`,
     );
 
     expect(parseReleaseManifest(stored)).toEqual({
       format: RELEASE_MANIFEST_FORMAT,
+      preBootstrapCandidates: [],
       items: [{ slug: 'alpha-q', contentHash: HASH_A, revisionId: REVISION_A }],
       removals: [{ slug: 'gamma-q', kind: 'archived' }],
     });
   });
 
-  it.each(['app-release-manifest-v2', RELEASE_MANIFEST_FORMAT] as const)(
+  it.each([
+    'app-release-manifest-v2',
+    'app-release-manifest-v3',
+    RELEASE_MANIFEST_FORMAT,
+  ] as const)(
     'refuses a stored %s manifest that both selects and removes a question',
     (format) => {
       const stored = {
         format,
+        ...(format === RELEASE_MANIFEST_FORMAT
+          ? { preBootstrapCandidates: [] }
+          : {}),
         items: [
           {
             slug: 'alpha-q',
             contentHash: HASH_A,
-            ...(format === RELEASE_MANIFEST_FORMAT
+            ...(format !== 'app-release-manifest-v2'
               ? { revisionId: REVISION_A }
               : {}),
           },
@@ -151,12 +176,19 @@ describe('release manifest', () => {
     ],
     [
       'an extra key',
-      { format: RELEASE_MANIFEST_FORMAT, items: [], removals: [], note: 1 },
+      {
+        format: RELEASE_MANIFEST_FORMAT,
+        preBootstrapCandidates: [],
+        items: [],
+        removals: [],
+        note: 1,
+      },
     ],
     [
       'an unknown removal kind',
       {
         format: RELEASE_MANIFEST_FORMAT,
+        preBootstrapCandidates: [],
         items: [],
         removals: [{ slug: 'alpha-q', kind: 'deleted' }],
       },
@@ -165,6 +197,7 @@ describe('release manifest', () => {
       'entries out of order',
       {
         format: RELEASE_MANIFEST_FORMAT,
+        preBootstrapCandidates: [],
         items: [
           { slug: 'beta-q', contentHash: HASH_B, revisionId: REVISION_B },
           { slug: 'alpha-q', contentHash: HASH_A, revisionId: REVISION_A },
@@ -176,6 +209,7 @@ describe('release manifest', () => {
       'removals out of order',
       {
         format: RELEASE_MANIFEST_FORMAT,
+        preBootstrapCandidates: [],
         items: [],
         removals: [
           { slug: 'gamma-q', kind: 'archived' },
