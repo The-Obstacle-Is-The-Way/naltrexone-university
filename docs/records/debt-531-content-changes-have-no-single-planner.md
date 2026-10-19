@@ -77,7 +77,7 @@ P3.
 
 For holds, preserve revision-level activation exclusion and question-level clinical caution. The ADR-021/022 amendments state when each applies. A direct lift names the hold ID, so it cannot clear another review of the same revision.
 
-## Resolution (built)
+## Resolution
 
 BUG-351 owns the shared planner and source admission. This record owns normalization and hold semantics, with their explicit ADR-021/022 amendments. DEBT-483 alone owns bootstrap timing, the managed seed's transition and release zero; its owner check comes first.
 

@@ -381,6 +381,8 @@ An unpublished question with any unlifted hold remains **Under review** and out 
 
 **Read-only normalization census.** With an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/census-normalization.ts`. It accepts no flags and opens a read-only transaction. Its JSON contains only counts: revisions, choices, revisions with noncanonical fields, each of the five Markdown field types, and the correct-choice text subset. Optional empty strings are compared with the seed's `null`; whitespace-only strings follow its normalizer. No question identifiers, text or hashes are emitted. No stored field, hash or historical row is changed. Counts measure normalization differences, not clinical errors.
 
+**Read-only key-return census (BUG-351).** With an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/census-key-returns.ts`. It accepts no flags and opens one read-only, repeatable-read transaction. It counts revisions whose answer key changed from the one before and matches an earlier revision's, comparing ADR-022's key: each correct choice's exact label and normalized text, through the same SQL normalization the score reads use. Its JSON contains only counts: candidate revisions, their questions, those that are published and current, attempts bound to them and answered, and revisions without exactly one correct choice. No question identifiers, text or hashes are emitted, and nothing is changed.
+
 ---
 
 ## 5. Database Storage
