@@ -21,16 +21,20 @@ The merge guard and the promotion verifier are run by hand, and by agents follow
 - **Known in one place:** `verify-lockfile-union.ts:3-5` runs unconditionally because of this, but the other entry points were not changed.
 - **`import.meta.main` is no fix here.** On Node 24.21 it is `undefined` for a `.ts` file under `tsx`, because this package declares no module type. It is `true` only for `.mts`.
 - **Error-reporting patterns include the following.**
-  - Most guards print only the error's message.
-  - `merge-reviewed-pr.ts:838-843`, `verify-promotion.ts:315-320` and `documentation-archive.ts:778-784` do not catch, so an error prints a stack trace.
+  - Many guards print only the error's message.
+  - `merge-reviewed-pr.ts:838-843`, `verify-promotion.ts:315-320` and `documentation-archive.ts:779-784` do not catch, so an error prints a stack trace.
   - `export-question-feedback.ts` prints the whole error object.
   - `verify-migration-ledger.ts` prints code, message and remedy for typed ledger errors; other failures receive a fixed line. BUG-359 owns its hidden safe usage and target messages.
 
+  - Reproduced 2026-10-19: `pnpm exec tsx scripts/content-release/activate-release --release x --expect-active y --reason r --authority a --apply` exits 0 with no output. With `.ts` it exits 1 and names the bad argument.
+
 Corrected 2026-10-18: distinguish file-URL comparison and typed diagnostics; keep error reporting separate from entry detection.
+Corrected 2026-10-19: add the production content commands to the impact; all three hand-run commands refuse a leading `--`.
 
 ## Impact
 
-- **A silent no-op that exits 0.** With `--merge` nothing merges, so that path is safe. But the merge guard's read-only check, which `AGENTS.md` lists before any merge, can be mistaken for a pass. The same holds for the promotion verifier and the record ID.
+- **A silent no-op that exits 0.** With `--merge` nothing merges, so that path is safe. But the merge guard's read-only check, which `AGENTS.md` lists before any merge, can be mistaken for a pass. The promotion verifier's check can be mistaken for a pass the same way. The record ID prints nothing, which is noticed but not explained.
+- **Production content commands too.** `seed/withdraw-questions.ts` and the four `content-release/` commands are run by hand against production (`docs/architecture/content-pipeline.md`). A mistyped `--apply` run prints nothing and exits 0, which an operator can take for an applied withdrawal, hold or activation.
 - **Impact history is unverified.** This audit reproduced the no-ops but did not establish a mistaken approval or downstream incident.
 
 ## Options
@@ -47,7 +51,7 @@ Options 1 and 3. The helper is one of the shared building blocks DEBT-532 propos
 
 - [ ] A test runs a script by an extensionless path and by a symlink, and fails while either exits 0 without running.
 - [ ] Imports do not execute commands; direct, extensionless and symlink execution work for the supported runtimes. A source scan shows every guarded entry point uses the helper; intentional unconditional thin CLIs remain explicit exceptions.
-- [ ] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them. Each accepts pnpm 11's leading `--` (`pnpm x -- 1560`), which both hand-run commands refuse today.
+- [ ] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them. Each accepts pnpm 11's leading `--` (`pnpm x -- 1560`), which all three refuse today.
 
 ## Related
 

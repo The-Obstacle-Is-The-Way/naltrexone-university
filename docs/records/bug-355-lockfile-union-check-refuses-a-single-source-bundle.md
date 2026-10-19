@@ -19,7 +19,7 @@ The same refusal is wrong for multiple sources when one contains the others' cha
   - It requires two sources (`scripts/lockfile-union.ts:441`).
   - It refuses a candidate path equal to a source path (`:444`).
   - It refuses a candidate whose text equals any source's text (`:562-569`), with the message "a bundle must combine its sources".
-- **Why the refusal exists.** Its comment (`:562-563`) says a candidate identical to one source "usually means a source was left off the command line". If the candidate carries the left-off source's changes, the structured comparison already reports them as `extra`; if it does not, neither check can see the omission.
+- **Why the refusal exists.** Its comment (`:562-563`) says a candidate identical to one source "usually means a source was left off the command line". A left-off source whose changes the candidate carries is already reported as `extra`. The refusal catches one more case: a bundle that took one source's lockfile unchanged while the command left off another source the operator meant to bundle. That input is identical to a correct single-source bundle, so no check can tell them apart; listing every bundled pull request as a source remains the operator's step.
 - **Reproduced 2026-10-18** with the repository's fixtures:
 
   ```sh
@@ -32,17 +32,18 @@ The same refusal is wrong for multiple sources when one contains the others' cha
 
   It exits 2 with that message.
 - **Multiple-source counterexample.** Using `source-826.yaml` and `candidate-union.yaml` as two distinct sources with the same `base.yaml`, and a copy of `candidate-union.yaml` as candidate, also exits 2. Calling `compareLockfileUnion` on those contents returns empty `extra`, `missing`, `unmatched` and `conflicts` arrays; `lockfileUnionExitCode` returns 0. The second source contains the first's changes.
-- **How often it bites is not known.** The guide re-authors Dependabot updates as repository-owned bundles, so single-source bundles occur. The refusal fires only when the regenerated lockfile matches the source byte for byte, and how often that happens has not been measured.
+- **How often it bites is not known.** The guide re-authors Dependabot updates as repository-owned bundles, so single-source bundles occur: the guide bundles every Dependabot pull request CodeRabbit will not review, which on the current plan is all of them. A plain single-source re-author is the case most likely to regenerate the source's lockfile exactly. The refusal fires only when the regenerated lockfile matches the source byte for byte, and how often that happens has not been measured.
 
 ## Impact
 
 A correct single-source or overlapping multi-source bundle can fail its required verification. The operator must stop; skipping a required verification is not an acceptable workaround.
 
 Corrected 2026-10-18: prove the multi-source counterexample and remove the proposed byte-identity heuristic from both options and verification.
+Corrected 2026-10-19: the refusal does catch one omission, which removing it gives up; the guide's reference paragraph and the CLI test also encode it.
 
 ## Options
 
-1. **Accept one `--source` and remove the identical-content refusal.** Use the existing structured union checks to reject actual extra, missing, unmatched or conflicting changes, regardless of byte identity. Drop the guide's base-as-second-source instruction.
+1. **Accept one `--source` and remove the identical-content refusal.** Use the existing structured union checks to reject actual extra, missing, unmatched or conflicting changes, regardless of byte identity. Drop the guide's base-as-second-source instruction. This accepts that a source left off the command line goes unseen when the candidate equals another source.
 2. **Keep the two-source workaround but remove the identical-content refusal.** This fixes the content rejection but preserves an unnecessary command-line restriction.
 
 ## Resolution (proposed)
@@ -54,7 +55,8 @@ Option 1.
 - [ ] A test with one source and an identical candidate fails first, then passes.
 - [ ] A valid subset/superset union identical to one of two distinct sources passes, red first.
 - [ ] A candidate that actually omits another source's changes still fails the structured comparison.
-- [ ] Guide step 6 names a single source directly.
+- [ ] Guide step 6 names a single source directly, and the guide's reference paragraph no longer says identical content is refused.
+- [ ] `scripts/lockfile-union-cli.test.ts`'s identical-content refusal test is replaced by the passing cases above.
 
 ## Related
 

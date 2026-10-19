@@ -129,6 +129,47 @@ describe('the scripts directory check', () => {
     ).toThrow(/must start with a pipe/);
   });
 
+  // A commented-out row, or one inside a code fence, does not render as a
+  // table row, so counting it would let a stale script pass.
+  it('fails closed on an HTML comment inside the directory', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+| File | What it does | Run by |
+| --- | --- | --- |
+<!-- | \`a.ts\` | A. | \`pnpm a\` | -->
+<!-- scripts-directory:end -->
+`),
+    ).toThrow(/HTML comments or code fences/);
+  });
+
+  it('fails closed on a code fence inside the directory', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+\`\`\`text
+| \`a.ts\` | A. | \`pnpm a\` |
+\`\`\`
+<!-- scripts-directory:end -->
+`),
+    ).toThrow(/HTML comments or code fences/);
+  });
+
+  it('reads a header row only when all three headings match', () => {
+    expect(() =>
+      parseScriptsDirectory(`
+<!-- scripts-directory:start -->
+| File | Purpose |
+| --- | --- |
+<!-- scripts-directory:end -->
+`),
+    ).toThrow(/exactly three cells/);
+  });
+
+  it('requires a row for code placed in the fixtures folder', () => {
+    expect(isListedScript('fixtures/run-me.ts')).toBe(true);
+  });
+
   it('leaves tests, their helpers and fixtures to the naming conventions', () => {
     expect(
       [
@@ -196,7 +237,7 @@ describe('the scripts directory check', () => {
     ]);
   });
 
-  it('gives every script in the folder exactly one described row', () => {
+  it('gives every inventoried file exactly one row with a description and a caller', () => {
     const files = readScriptFiles();
 
     expect(files.length).toBeGreaterThan(0);
@@ -205,7 +246,7 @@ describe('the scripts directory check', () => {
     ).toEqual([]);
   });
 
-  it('checks static path references in each named package script, workflow and Vercel build', () => {
+  it('checks static path references in each package script, workflow and Vercel build a row names as a code span', () => {
     expect(
       collectRunByIssues(readScriptsDirectory(), readScriptCallers()),
     ).toEqual([]);
@@ -384,6 +425,118 @@ describe('the callers a row names', () => {
     ).toEqual([
       'check.ts names `pnpm check`, whose command does not reference it.',
     ]);
+  });
+
+  it('reads a package script named with arguments', () => {
+    expect(
+      issuesFor('db-migrate.ts', '`pnpm db:migrate -- --verbose`'),
+    ).toEqual([]);
+    expect(issuesFor('db-seed.ts', '`pnpm db:migrate -- --verbose`')).toEqual([
+      'db-seed.ts names `pnpm db:migrate`, whose command does not reference it.',
+    ]);
+  });
+
+  it('reads a `pnpm exec` command as a direct reference to the script', () => {
+    expect(
+      issuesFor('check.ts', 'By hand, as `pnpm exec tsx scripts/check.ts`'),
+    ).toEqual([]);
+    expect(
+      issuesFor('check.ts', 'By hand, as `pnpm exec tsx scripts/other.ts`'),
+    ).toEqual([
+      'check.ts names `pnpm exec tsx scripts/other.ts`, which does not reference it.',
+    ]);
+  });
+
+  it('reads a workflow named with the .yaml extension', () => {
+    expect(issuesFor('ci/start.sh', '`gone.yaml`')).toEqual([
+      'ci/start.sh names `gone.yaml`, which is not a workflow.',
+    ]);
+  });
+
+  it('reports a caller named with another package manager', () => {
+    expect(issuesFor('db-migrate.ts', '`npm run db:migrate`')).toEqual([
+      'db-migrate.ts names `npm run db:migrate`; name its package script as `pnpm <name>`.',
+    ]);
+  });
+
+  it('reports a package script, workflow or Vercel build named outside a code span', () => {
+    for (const runBy of [
+      'pnpm db:migrate',
+      'ci.yml',
+      'The Vercel build command',
+    ]) {
+      expect(issuesFor('db-migrate.ts', runBy)).toEqual([
+        'db-migrate.ts names a caller outside a code span, which this check cannot read.',
+      ]);
+    }
+  });
+
+  it('reads every job of a workflow', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`jobs.yml`' }],
+        {
+          ...callers,
+          readWorkflow: () =>
+            'jobs:\n  a:\n    steps:\n      - run: "true"\n  b:\n    steps:\n      - run: tsx scripts/check.ts\n  c:\n    steps:\n      - run: "true"\n',
+        },
+      ),
+    ).toEqual([]);
+  });
+
+  it('counts only run text, not a step name, environment value or action input', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`fields.yml`' }],
+        {
+          ...callers,
+          readWorkflow: () =>
+            'jobs:\n  test:\n    steps:\n      - name: tsx scripts/check.ts\n        run: "true"\n        env:\n          FILE: scripts/check.ts\n      - uses: actions/github-script@v7\n        with:\n          script: scripts/check.ts\n',
+        },
+      ),
+    ).toEqual(['check.ts names `fields.yml`, which does not reference it.']);
+  });
+
+  it('does not take the end of a longer path for the script', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`pnpm check`' }],
+        { ...callers, packageScripts: { check: 'tsx tests/scripts/check.ts' } },
+      ),
+    ).toEqual([
+      'check.ts names `pnpm check`, whose command does not reference it.',
+    ]);
+  });
+
+  it('ignores a path in a trailing comment or a chained echo or printf', () => {
+    for (const command of [
+      'true # scripts/check.ts',
+      'true && echo scripts/check.ts',
+      'true; printf "%s" scripts/check.ts',
+    ]) {
+      expect(
+        collectRunByIssues(
+          [{ file: 'check.ts', purpose: 'Checks.', runBy: '`pnpm check`' }],
+          { ...callers, packageScripts: { check: command } },
+        ),
+      ).toEqual([
+        'check.ts names `pnpm check`, whose command does not reference it.',
+      ]);
+    }
+  });
+
+  it('reads the commands after a leading echo', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`vercel.json`' }],
+        {
+          ...callers,
+          vercelConfig: JSON.stringify({
+            buildCommand: 'echo building && tsx scripts/check.ts',
+          }),
+        },
+      ),
+    ).toEqual([]);
   });
 
   it('follows nested package commands without looping on cycles', () => {

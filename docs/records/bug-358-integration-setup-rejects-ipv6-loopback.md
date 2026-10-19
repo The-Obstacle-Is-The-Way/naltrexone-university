@@ -19,7 +19,9 @@ Integration setup rejects a valid IPv6 loopback URL as remote. Its local-host pr
 
 ## Impact
 
-An intentional IPv6 local integration target is refused unless the operator enables the remote-database override. The default resolver uses IPv4 and is unaffected. Enabling a remote override is an unnecessarily broad workaround.
+No IPv6 integration target works today, with or without the remote-database override. postgres.js 3.4.9 reads the host of `postgresql://…@[::1]:5432/…` as `[` (`postgres(url).options.host` is `["["]`, with no connection opened), and setup, `lib/db.ts` and the suites pass the URL string to it. So the refusal names the wrong cause for a target the driver cannot reach. The default resolver uses IPv4 and is unaffected. `e2e-local-orchestrator.ts:135` accepts `[::1]` but meets the same driver limit.
+
+Corrected 2026-10-19: the override is no workaround, because the driver cannot parse a bracketed IPv6 host.
 
 ## Options
 
@@ -28,11 +30,12 @@ An intentional IPv6 local integration target is refused unless the operator enab
 
 ## Resolution (proposed)
 
-Option 2 if the extraction remains small; otherwise option 1 first. Do not merge the human acknowledgement and test-lane opt-in policies incidentally.
+Option 2 if the extraction remains small; otherwise option 1 first. Do not merge the human acknowledgment and test-lane opt-in policies incidentally.
 
 ## Verification
 
-- [ ] Red-first proof that setup accepts IPv6 loopback without the remote override and still rejects remote hosts.
+- [ ] Red-first proof that setup classifies `[::1]` as local and still rejects remote hosts.
+- [ ] Either an IPv6 connection through the supported driver is proven, or the integration guide says targets use an IPv4 or named host.
 - [ ] Existing IPv4 resolver integration lane passes.
 
 ## Related
