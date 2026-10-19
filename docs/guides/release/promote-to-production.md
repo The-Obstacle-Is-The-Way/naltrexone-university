@@ -133,9 +133,9 @@ Either way, production keeps serving the previous release. That is harmless when
 The release watch must therefore find a deployment for the exact merge SHA, not merely a ready one.
 
 The hourly **production release watch** (`.github/workflows/production-release-watch.yml`, DEBT-523) checks the same thing without anyone watching.
-- Once `main`'s head is 45 minutes old, it keeps one issue open, titled "Production is not serving main's head" and assigned to the owner.
+- After `main`'s head is more than 45 minutes old, and no matching CI run remains pending, it evaluates one owner-assigned issue titled "Production is not serving main's head". During the grace period or while any matching CI run is unfinished, it leaves the issue state unchanged.
 - The issue stays open while the head has no passing CI run on `main`, a push run or a manual one, or no successful GitHub deployment to Vercel's `Production` environment.
-- It closes once the head, or a newer one, is released.
+- It closes once the evaluated head has passing CI and a successful GitHub Production deployment record. That record is not an independent observation of the bytes currently served.
 - **Hourly is the schedule, not the guarantee.** GitHub starts scheduled runs late under load, and drops some.
   - On 2026-10-16 the watch reached `main` at 11:20Z, and its first scheduled run came at 15:24Z. No run came for the three slots before that.
   - From 2026-10-12 to 2026-10-16, this repository's daily jobs started 4 to 10 hours late, and the three-hourly advisory watch ran about half its slots.
@@ -218,7 +218,7 @@ export DB_TARGET_ACK='["host/database"]'
 pnpm db:seed
 ```
 
-A reseed appends changed content as a new question revision (ADR-021 phase 2b):
+Before an active content release exists, a reseed appends changed content as a new question revision (ADR-021 phase 2b):
 a corrected stem, explanation, reference, difficulty or answer key becomes the
 question's current revision, and the question's status and tags change in place.
 Nothing earlier is rewritten. Attempts and practice sessions keep the revision
@@ -226,6 +226,8 @@ they were shown and graded against; reviews and sessions in progress say the
 question has been updated since (Pattern Registry F-12). The seed therefore has
 no graded-history refusal, no key-change override and no wait for sessions in
 progress. It reports `updated=N (new revisions=M)`.
+
+Once a content release is active, direct seeding refuses the database. Use the reviewed stage/activation procedure in the content pipeline guide instead.
 
 Seed from the commit that is deployed to the target. The seed refuses to run
 until the target has applied migration `0042`
@@ -278,11 +280,11 @@ If you are using Neon, fetch the connection string for the intended branch first
 
 **Caution:** Always double-check which database/branch you're targeting. Running migrations or seeds against the wrong environment can corrupt data. Production operations should be done deliberately and verified immediately.
 
-**Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; deploy-time schema changes are handled by the Vercel Build Command migration. Use `pnpm db:migrate` manually only for an out-of-band or fallback migration against an explicit `DATABASE_URL`.
+**Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the non-production seed targets without writing data. Production is an exclusion fence, never a seed target for this command. `pnpm db:seed:all` then imports drafts as published and seeds local, Development and Preview once per unique host/port/database identity. Remote acknowledgments are required even for `--plan`. It does **not** run migrations; deploy-time schema changes are handled by the Vercel Build Command migration. Use `pnpm db:migrate` manually only for an out-of-band or fallback migration against an explicit `DATABASE_URL`.
 
-**The Vercel CLI version.** `pnpm db:seed:all` and `pnpm db:seed:prod`, `--plan` included, run the `vercel` on your `PATH`. They refuse, before pulling anything, unless `vercel --version` prints exactly `REQUIRED_VERCEL_CLI_VERSION` from `scripts/seed-environment-runtime.ts`. The pin is deliberate, by the owner's 2026-09-20 ruling: the CLI is not a repository dependency, and is never fetched with `npx` or `pnpm dlx`. Install that exact version before seeding, or change the pin in a reviewed pull request. A newer CLI is refused too.
+**The Vercel CLI version.** `pnpm db:seed:all` and `pnpm db:seed:prod`, `--plan` included, run the `vercel` on your `PATH`. They refuse, before pulling anything, unless the trimmed `vercel --version` output equals `REQUIRED_VERCEL_CLI_VERSION`, defined in `scripts/seed-environment-runtime.ts`. The pin is deliberate, by the owner's 2026-09-20 ruling: the CLI is not a repository dependency, and is never fetched with `npx` or `pnpm dlx`. Install that exact version before seeding, or change the pin in a reviewed pull request. A newer CLI is refused too.
 
-Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`. For an intentional deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with both explicit opt-ins:
+Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`. For an intentional non-production deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with both explicit opt-ins:
 
 ```bash
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
@@ -290,6 +292,8 @@ node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
+
+Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: after preflight succeeds and both expected fixture rows are present, setup can republish them and resets the shared test user's data (BUG-360).
 
 Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 
@@ -341,13 +345,13 @@ Feature PRs require CodeRabbit **APPROVED** through the [checked-in merge comman
 
 ## 7. Seeding from Multiple Clones
 
-The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotency and Multi-Clone Safety](../../architecture/content-pipeline.md#16-seed-idempotency-and-multi-clone-safety) for the full explanation.
+Direct seeding is allowed only before a content release is active. Repeated matching content does not add revisions, but archival and withdrawal receipts can still write. See [Content Pipeline §16: Seed Idempotency and Multi-Clone Safety](../../architecture/content-pipeline.md#16-seed-idempotency-and-multi-clone-safety) for the full explanation.
 
 **Key points:**
 - The `slug` field is the stable identity key — same slug = same question across any clone or DB
-- A question whose canonical content, status and tags equal its current revision is skipped (zero writes)
-- Seeding the same content from different clones is a no-op
-- The only risk is seeding from a clone with *older* imported MDX, whose files win (ADR-021 phase 2b):
+- A question whose canonical content, status and tags match is skipped; an archived file can still fill missing withdrawal receipts
+- Default placeholder archival updates existing fixture rows even when already archived; matching content therefore does not imply zero database writes
+- Concurrent inserts can fail on the unique slug key, and a multi-file seed is not atomic. Another risk is seeding from a clone with *older* imported MDX, whose files win (ADR-021 phase 2b):
   - older **content** is appended as a new current revision, which learners who saw the newer one see as an update notice; the seed counts it under `updated` and `new revisions`;
   - an older **status or tag set** changes in place with no revision, and a stale `draft` status hides a published question from new practice (the seed refuses to reactivate an archived one); the seed counts it under `updated` only
 

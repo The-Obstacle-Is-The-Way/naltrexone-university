@@ -9,18 +9,21 @@
 
 ---
 
-## 1. Draft Question Format (Complete Example)
+## 1. Draft Question Format (Historical Syntax)
+
+The clinical explanation and reference were corrected on 2026-10-18; the
+legacy syntax below remains intentionally invalid for the current importer.
 
 ```markdown
 ---
-qid: white-2020-001
+qid: bradley-2007-001
 type: recall
 difficulty: medium
 substances: [alcohol]
 topics: [screening-diagnosis]
-treatments: [naltrexone]
+treatments: []
 diagnoses: [alcohol-use-disorder]
-source: white-2020
+source: bradley-2007
 answer: B
 ---
 
@@ -41,24 +44,23 @@ alcohol use in women?
 
 ## Explanation
 
-The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
-Women achieve higher blood alcohol concentrations than men at equivalent
-doses due to lower body water content and reduced gastric ADH activity.
+In the cited primary-care validation, thresholds of >=3 for women and >=4
+for men gave the best combined sensitivity and specificity for alcohol misuse.
 
-**Clinical pearl:** The AUDIT-C is a fast, well-validated screening tool for
-unhealthy alcohol use in primary care.
+**Clinical pearl:** A positive screening result warrants further assessment;
+it does not establish a diagnosis by itself.
 
 **Why other answers are wrong:**
-- A) This is too sensitive for the standard female cutoff and would overcall
-  unhealthy use.
-- C) This is the standard male cutoff, not the standard female cutoff.
-- D) This threshold is too high and would miss many at-risk patients.
+- A) A threshold of 2 is below the supported threshold for women.
+- C) A threshold of 4 was supported for men, not women, in this validation.
+- D) A threshold of 5 exceeds the supported threshold for women.
 
 ### Reference
 
-White AM, Castle IP, Hingson RW, Powell PA. Using death certificates to
-explore changes in alcohol-related mortality in the United States, 1999 to
-2017. Alcohol Clin Exp Res. 2020;44(1):178-187.
+Bradley KA, DeBenedetti AF, Volk RJ, et al. AUDIT-C as a brief screen for
+alcohol misuse in primary care. Alcohol Clin Exp Res. 2007;31(7):1208-1217.
+doi:10.1111/j.1530-0277.2007.00403.x. https://pubmed.ncbi.nlm.nih.gov/17451397/
+
 ```
 
 ---
@@ -369,24 +371,15 @@ content/questions/imported/<source-group>/<source>/<qid>.mdx
 
 ---
 
-## 10. Commands
+## 10. Current Commands
 
-```bash
-# Validate drafts without writing files
-pnpm content:import:drafts -- --dry-run
-
-# Import drafts as draft status
-pnpm content:import:drafts
-
-# Import drafts as published status
-pnpm content:import:drafts -- --status published
-
-# Seed generated MDX into the database
-pnpm db:seed
-
-# Include placeholders during seed
-pnpm db:seed --include-placeholders
-```
+The historical examples above are not current importer input. Convert them to
+the [active schema](../../../content/drafts/questions/SCHEMA.md) first, then use
+its fresh-output staging commands and the content pipeline's reviewed placement
+procedure. A dry run validates input without writing; a real import requires an
+empty output directory. Seeding needs an explicit `DATABASE_URL`, remote-target
+acknowledgment where applicable, and no active release. The test-only
+placeholder option is `pnpm db:seed --include-placeholders`.
 
 ---
 
@@ -405,26 +398,20 @@ filters intentionally hide them.
 
 ### Global Uniqueness
 
-The code validates non-empty and kebab-case `qid` values, but it does not
-centrally enforce global uniqueness across the entire corpus. That remains an
-authoring responsibility.
+The importer rejects duplicate QIDs within its input batch, and the database
+has a unique slug constraint. Neither proves uniqueness across separate private
+source repositories; avoiding reuse across them remains an authoring duty.
 
 ---
 
-## 12. Quick Checklist for Draft Authors
+## 12. Current Authoring Checklist
 
-- [ ] Every `qid` is globally unique
-- [ ] Each block starts with `---` followed immediately by `qid:`
-- [ ] `answer` is in YAML, not marked in the choices
-- [ ] `topics`, `substances`, and `treatments` use canonical slugs
-- [ ] Diagnoses are kebab-case slugs
-- [ ] File names are `recall.md` or `vignettes.md`
-- [ ] `## Question` / `## Choices` / `## Explanation` are present
-- [ ] Choices are plausible, homogeneous, and avoid cueing
-- [ ] Wrong-answer bullets explain reasoning, not just correctness
-- [ ] `### Reference` appears after the wrong-answer subsection if you want it
-      stored separately
-- [ ] `pnpm content:import:drafts -- --dry-run` passes
+- [ ] Use the active schema's YAML `choices` with one correct answer and an explanation for each wrong answer; omit legacy `answer` and `## Choices`.
+- [ ] Each question begins with `---` followed immediately by `qid:`.
+- [ ] Use canonical topic/substance/treatment slugs and kebab-case source/diagnosis identifiers.
+- [ ] Include `## Question`, `## Explanation` and its required terminal `### Reference`.
+- [ ] Keep QIDs unique, write `recall.md` or `vignettes.md`, and pass the importer dry run.
+- [ ] Review clinical accuracy and question quality separately from structural acceptance.
 
 ---
 

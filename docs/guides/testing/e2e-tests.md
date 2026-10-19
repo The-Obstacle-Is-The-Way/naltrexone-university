@@ -69,7 +69,7 @@ webServer: {
 ```
 
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
-- Runs Chromium only, in two required projects: `chromium` (Desktop Chrome) and `mobile-smoke` (Pixel 5 touch and mobile rendering at 375×667, the width the billing QA procedure checks by hand)
+- Runs Chromium only, in two required projects: `chromium` (Desktop Chrome) and `mobile-smoke` (Pixel 5 touch and mobile rendering at 375×667; billing QA separately checks 390×844 by hand)
 - `pnpm test:e2e` selects both required projects and excludes every `stripe-hosted-*.spec.ts` file. `mobile-smoke` re-runs only the journeys tagged `@mobile-smoke` (public pages, the pricing CTA, a tutor session, quick practice and subscriber navigation) plus `mobile-layout.spec.ts`, which fails if a public (signed out and signed in) or subscriber page scrolls sideways at 375px or 360px; `chromium` ignores that probe
 - The isolated E2E server receives a test-only `CONSENT_STATE_SECRET` unless the environment sets one, so the trial banner's add-card action can sign its Checkout consent state; production and preview carry their own secret
 - The `stripe-hosted` project is an observational compatibility probe for Stripe-owned Checkout markup; it is scheduled/manual and never a pull-request or push check
@@ -132,7 +132,7 @@ Current approved `test.setTimeout` bands in `tests/e2e/**/*.spec.ts`:
 
 - `120_000`: standard authenticated flows with Clerk + seeded subscription setup.
 - `180_000`: multi-page audits or long navigation chains.
-- `300_000`: temporary outlier only where explicitly justified in-file.
+- `150_000`: the hosted portal-cancellation journey, with its in-file rationale.
 
 Current repo posture:
 
@@ -145,6 +145,7 @@ Current repo posture:
 | File | Purpose |
 | ---- | ------- |
 | `tests/e2e/global.setup.ts` | Shared setup (Playwright project dependency) |
+| `tests/e2e/global-teardown.ts` | Stored-session and per-run customer cleanup |
 | `tests/e2e/smoke.spec.ts` | Marketing smoke (home, pricing) |
 | `tests/e2e/pricing-unauthenticated.spec.ts` | Pricing behavior for signed-out users |
 | `tests/e2e/theme-preference.spec.ts` | Theme preference persistence |
@@ -166,6 +167,14 @@ Current repo posture:
 | `tests/e2e/session-review-navigation.spec.ts` | Session review with prev/next navigation (SPEC-027/028) |
 | `tests/e2e/review-mode-audit.spec.ts` | Review mode read-only audit |
 | `tests/e2e/history.spec.ts` | History page flows |
+| `tests/e2e/content-change-notices.spec.ts` | Bound-revision update and withdrawal notices |
+| `tests/e2e/entitlement-loss.spec.ts` | Expired/revoked entitlement behavior |
+| `tests/e2e/legal-pages.spec.ts` | Public legal-page content and links |
+| `tests/e2e/mobile-layout.spec.ts` | Narrow-viewport horizontal overflow |
+| `tests/e2e/public-crawl-resources.spec.ts` | Public crawl directives and resources |
+| `tests/e2e/public-social-image.spec.ts` | Public social-image response |
+| `tests/e2e/security-contact.spec.ts` | Public security contact and security.txt |
+| `tests/e2e/trial-add-card.spec.ts` | Required application-owned trial add-card contract |
 
 ### Running E2E Tests
 
@@ -185,17 +194,17 @@ pnpm test:e2e:stripe-hosted
 pnpm test:e2e -- tests/e2e/smoke.spec.ts
 
 # Run with UI (interactive)
-pnpm test:e2e -- --ui
+pnpm test:e2e --ui
 
 # Debug mode
-pnpm test:e2e -- --debug
+pnpm test:e2e --debug
 ```
 
 These commands still execute the setup project by default. If your goal is to run an unauthenticated spec without the authenticated preflight, you must opt out of project dependencies explicitly.
 
 ### Environment Variables for E2E
 
-Both Playwright projects assume authenticated E2E infrastructure because `tests/e2e/global.setup.ts` always runs first. For a normal `pnpm test:e2e` run or an explicit `pnpm test:e2e:stripe-hosted` run, these must be present:
+The two required journey projects and the optional hosted project assume authenticated E2E infrastructure because `tests/e2e/global.setup.ts` always runs first. For a normal `pnpm test:e2e` run or an explicit `pnpm test:e2e:stripe-hosted` run, these must be present:
 
 ```bash
 CLERK_SECRET_KEY=sk_test_...
@@ -213,15 +222,15 @@ To check which of them `.env.local` sets without printing any value, list the na
 rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local | cut -d= -f1
 ```
 
-Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `--include-placeholders` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start Postgres` step runs.
+Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `--include-placeholders` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, but hash collisions or explicit overrides can still select the same port; check ownership before running. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start Postgres` step runs.
 
 Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. Checkout Sessions created by the required redirect-boundary tests and by explicit hosted-smoke runs can remain deterministic recovery-chain rungs while Stripe retains their idempotency keys. DEBT-466 and DEBT-470 retain provider-faithful blocking contract coverage for that traversal; do not rotate the user or drop the database volume to mask a traversal failure.
 
 The temporary local `assertLocalTrialCheckoutReplayCapacity()` guard and `[E2E_CHECKOUT_CHAIN_SATURATED]` push exception were removed when DEBT-470 landed the subscription tail jump. The 2026-08-17 characterization had found 11 current-tuple completed Sessions inside 24 hours against the old fallback cap 10. The structural fix now selects a unique exact-metadata tail through a bounded provider list and keeps the old rung walk only as a safe fallback; retained-chain length no longer defines the healthy exact-match path's recovery-create depth. Any failure before the Stripe-origin boundary remains blocking. Failures inside `stripe-hosted-*.spec.ts` are observational provider-compatibility failures, not evidence that a candidate commit is wrong. Stripe's 24-hour statement remains only the earliest pruning eligibility, not an exact deletion deadline.
 
-Both executable journey projects depend on the `setup` project, which runs the shared credential preflight and seed/reset pass before either project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it. The former fourteen per-spec `test.skip(!hasClerkCredentials, ...)` guards were deleted under DEBT-473; the parser-backed skip-policy scan keeps their floor at zero, so suite setup remains the single fail-closed credential gate.
+All three journey projects depend on the `setup` project, which runs the shared credential preflight and seed/reset pass before their tests start. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it. The former fourteen per-spec `test.skip(!hasClerkCredentials, ...)` guards were deleted under DEBT-473; the parser-backed skip-policy scan keeps their floor at zero, so suite setup remains the single fail-closed credential gate.
 
-To intentionally validate a real deploy-target database instead of the local Docker database, opt out explicitly and prefix the target URL. This is not the default local flow:
+To intentionally validate a non-production deploy-target database instead of the local Docker database, opt out explicitly and prefix the target URL. This is not the default local flow:
 
 ```bash
 DEPLOY_TARGET_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
@@ -229,7 +238,7 @@ node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$DEPLOY_T
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
 ```
 
-Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database: its reset republishes the placeholder questions placeholder-01 and placeholder-02 there, and writes the test user's state (BUG-353).
+Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target. Never point a deploy-target check at the production database: after preflight succeeds and both required fixture rows exist, its reset can republish placeholder-01 and placeholder-02 and clear the test user's state (BUG-360). Setup also seeds subscription state before that reset.
 
 The E2E credential preflight includes DEBT-391's migration-ledger check: it compares the active database against `db/migrations/meta/_journal.json` before seed/reset. The default local Docker flow also migrates first, so the check should pass by construction; it remains useful for explicit deploy-target runs.
 
@@ -260,22 +269,22 @@ The setup project currently runs these steps, in this order:
 
 `global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
 
-`checkout-redirect.spec.ts` uses the same reset/reseed lifecycle to prove both required application-owned transitions: an eligible first-timer's monthly trial CTA and a returning user's paid annual CTA each resolve a real Checkout Session and cross onto the `checkout.stripe.com` origin. Required CI performs no selector action or assertion after that boundary. The two `stripe-hosted-*.spec.ts` files reuse the lifecycle only in the scheduled/manual compatibility project. Individual test-mode subscription objects are disposable fixture state. The shared Clerk user is not, and neither are the long-lived `local-dev`, `local-clone-*`, `github-ci` and `github-stripe-hosted-smoke` customers; only per-run `github-ci-<run id>-<attempt>` customers are deleted.
+`checkout-redirect.spec.ts` uses the same reset/reseed lifecycle to prove both required application-owned transitions: an eligible first-timer's monthly trial CTA and a returning user's paid annual CTA each resolve a real Checkout Session and cross onto the `checkout.stripe.com` origin. Required CI performs no selector action or assertion after that boundary. The `stripe-hosted-*.spec.ts` files reuse the lifecycle only in the scheduled/manual compatibility project. Individual test-mode subscription objects are disposable fixture state. The shared Clerk user is not, and neither are the long-lived `local-dev`, `local-clone-*`, `github-ci` and `github-stripe-hosted-smoke` customers; only per-run `github-ci-<run id>-<attempt>` customers are deleted.
 
 `checkout-success-provider.spec.ts` restores a blocking post-boundary contract without scraping Checkout. Stripe's public [Checkout Sessions API](https://docs.stripe.com/api/checkout/sessions) has no operation that completes an arbitrary existing Session. Stripe's supported [`stripe trigger checkout.session.completed`](https://docs.stripe.com/cli/trigger) command does create the necessary real test-mode API objects and side-effect events. The required contract therefore proves two adjacent seams: it retrieves the Session created by the production use case and asserts its parameters plus rejection while `open`, then creates a separate completed Session through the supported trigger and passes that Session through the production `/checkout/success` synchronization, real Drizzle repositories, and entitlement use case. It covers a paid annual subscription and a cardless monthly trial. Do not replace the supported trigger with the CLI fixture's private payment-page endpoint or claim that the CLI can complete the application-created Session.
 
 ### Stripe network ownership and failure bounds
 
-The local Docker database makes database state isolated, not the E2E suite hermetic. Every row below deliberately depends on Stripe test mode and can fail independently of the candidate diff. Direct helper clients use a 15-second request timeout and one SDK network retry; Playwright's setup/default or explicit test timeout is the outer bound.
+The local Docker database makes database state isolated, not the E2E suite hermetic. The selected surfaces below deliberately depend on Stripe test mode and can fail independently of the candidate diff. Direct helper clients use a 15-second request timeout and one SDK network retry; Playwright's setup/default or explicit test timeout is the outer bound.
 
 | Networked surface | Required lane | Scheduled/manual lane | Failure bound |
 | ---- | ---- | ---- | ---- |
-| `credential-health-check.ts` — Account and configured Price retrieval | setup dependency | setup dependency | 15 seconds/request + one retry; 30-second setup-test outer bound |
-| `seed-test-user.ts` — Customer, PaymentMethod, and Subscription list/retrieve/create/update/cancel/attach | setup dependency | setup dependency | 15 seconds/request + one retry; 30-second setup-test outer bound |
-| `subscription.ts` — Customer, PaymentMethod, and Subscription reset/restore/evidence calls | redirect and provider-contract lifecycle | both hosted journeys | 15 seconds/request + one retry; 120-second spec outer bound |
+| `credential-health-check.ts` — Account and configured Price retrieval | setup dependency | setup dependency | 15 seconds/request + one retry; shared 60-second preparation budget before reserved sign-in/sign-out time |
+| `seed-test-user.ts` — Customer, PaymentMethod, and Subscription list/retrieve/create/update/cancel/attach | setup dependency | setup dependency | 15 seconds/request + one retry; shared 60-second preparation budget before reserved sign-in/sign-out time |
+| `subscription.ts` — Customer, PaymentMethod, and Subscription reset/restore/evidence calls | redirect and provider-contract lifecycle | hosted Checkout journeys | 15 seconds/request + one retry; caller's explicit spec budget (120, 150 or 180 seconds) |
 | `paid-checkout.ts` — lifecycle plus Subscription/Invoice/Invoice Payment/PaymentIntent evidence | lifecycle calls; equivalent paid evidence is independently asserted by the provider contract | full evidence in the paid hosted journey | 15 seconds/request + one retry; 120-second spec outer bound |
-| `stripe-hosted-checkout.ts` — browser navigation and form submission to `checkout.stripe.com` | none | both hosted journeys | 30-second hosted locator/navigation assertions inside a 120-second spec |
-| Production Checkout Session list/retrieve/create/expire and Subscription list | redirect and provider-contract specs | both hosted journeys | production retry policy inside a 120-second spec |
+| `stripe-hosted-checkout.ts` — browser navigation and form submission to `checkout.stripe.com` | none | hosted Checkout journeys | 30-second hosted locator/navigation assertions inside the caller's explicit spec budget |
+| Production Checkout Session list/retrieve/create/expire and Subscription list | redirect and provider-contract specs | hosted Checkout journeys | production retry policy inside the caller's explicit spec budget |
 | Stripe CLI completed-Session trigger and success-sync Session/Subscription retrieval | annual + cardless-trial provider-contract specs | none | 30-second CLI subprocess; 15 seconds/request + one retry; 120-second spec outer bound |
 | `FakeStripeCheckoutClient` fake↔provider contract — Customer and Checkout Session create/retrieve/expire/list, and Subscription list/retrieve | none; normal integration runs skip without the explicit opt-in | weekly/manual `stripe-trial-clock-smoke.yml` provider-contract job via `pnpm test:stripe-provider` | 20-second scheduled test bound plus a five-minute fail-closed process-tree bound inside a ten-minute job |
 
@@ -312,7 +321,7 @@ test.describe('feature name', () => {
 
 ### What Is It?
 
-Vercel's agent-browser is an AI-powered CLI that lets AI agents control Chrome for autonomous testing and exploration. Unlike Playwright (scripted), agent-browser explores intelligently.
+Vercel's agent-browser is a browser-control CLI that an agent can drive for exploration. The agent chooses actions; the CLI executes them.
 
 **Install:**
 ```bash
@@ -331,9 +340,9 @@ agent-browser --version  # Confirm the CLI is installed and responding
 
 ### Core Concepts
 
-1. **Accessibility Tree Snapshots** — Agent-browser works with the A11y tree, not raw DOM
-2. **Refs** — Elements are referenced as `@e1`, `@e2`, etc. (not CSS selectors)
-3. **Non-Visual** — The AI "sees" the page structure, not pixels
+1. **Snapshots** expose the accessibility tree for inspection; commands can also read HTML.
+2. **Refs** such as `@e1` select snapshot elements. [CSS, text, XPath and semantic locators](https://agent-browser.dev/selectors) are also supported.
+3. **Screenshots** provide visual evidence; [commands](https://agent-browser.dev/commands) support both screenshots and structured inspection.
 
 ### Basic Usage
 
@@ -394,7 +403,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the required E2E layer only on pushes to `main`, manual runs on `main` (DEBT-523) and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and all 398 browser tests run on every trigger because they need no provider credential. Before unit coverage, required CI runs `pnpm lint:doubles`; local `pnpm lint` invokes the same fail-closed test-double fidelity ratchet, while ordinary Vitest runs no longer pay for it through `globalSetup`. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone (DEBT-473 F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Neither workflow uploads the HTML report, because every report carries Clerk development tokens from the setup steps (BUG-328). When their E2E step fails, both run `scripts/ci/scan-playwright-output.ts test-results`, and upload `test-results/` only if the scan passes it. The scan accepts only regular UTF-8 text files (`.md`, `.txt`, `.json`, `.log`) and refuses anything else, such as a zip, a report, an image or a symbolic link, instead of decoding it. It looks for the Clerk credential shapes in `tests/shared/clerk-credential-shapes.ts` after undoing percent-encoding and JSON `\u` escapes; E2E console redaction removes the same shapes from the text as logged. The shapes are a heuristic; the file-type allow-list is what bounds what can be published. The upload leaves out hidden files, which include the stored auth state in `.auth/`, and `**/trace.zip`; Playwright tracing is disabled in CI but uses `retain-on-failure` locally. `tests/ci-workflow.test.ts` requires, in every workflow, that no step names `playwright-report`, that only the scan and scan-gated uploads name `test-results`, and that every upload action passes the scan or is a listed exemption keyed by its artifact name and path. A step that publishes without naming either directory is left to review of workflow changes. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
+CI runs the required E2E layer only on pushes to `main`, manual runs on `main` (DEBT-523) and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and the browser-test suite run on every trigger because they need no provider credential. Before unit coverage, required CI runs `pnpm lint:doubles`; local `pnpm lint` invokes the same fail-closed test-double fidelity ratchet, while ordinary Vitest runs no longer pay for it through `globalSetup`. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone (DEBT-473 F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Neither workflow uploads the HTML report, because every report carries Clerk development tokens from the setup steps (BUG-328). When their E2E step fails, both run `scripts/ci/scan-playwright-output.ts test-results`, and upload `test-results/` only if the scan passes it. The scan accepts only regular UTF-8 text files (`.md`, `.txt`, `.json`, `.log`) and refuses anything else, such as a zip, a report, an image or a symbolic link, instead of decoding it. It looks for the Clerk credential shapes in `tests/shared/clerk-credential-shapes.ts` after undoing percent-encoding and JSON `\u` escapes; E2E console redaction removes the same shapes from the text as logged. The shapes are a heuristic; the file-type allow-list is what bounds what can be published. The upload leaves out hidden files, which include the stored auth state in `.auth/`, and `**/trace.zip`; Playwright tracing is disabled in CI but uses `retain-on-failure` locally. `tests/ci-workflow.test.ts` requires, in every workflow, that no step names `playwright-report`, that only the scan and scan-gated uploads name `test-results`, and that every upload action passes the scan or is a listed exemption keyed by its artifact name and path. A step that publishes without naming either directory is left to review of workflow changes. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
@@ -415,7 +424,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | ------ | ------- |
 | `E2E_CLERK_USER_USERNAME` | Test Clerk account username (email) |
 | `E2E_CLERK_USER_PASSWORD` | Test Clerk account password |
-| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace. CI sets one per run attempt (`github-ci-<run id>-<attempt>`, DEBT-508), so concurrent runs never share a customer; it is a workflow value, not a secret. Locally, `pnpm test:e2e` sets `local-clone-<instance>`, from the instance that picks the clone's database port, so clones never share one either. Only a value exported in the shell overrides it; one in `.env.local` is ignored |
+| `E2E_STRIPE_OWNER` | Stripe test customer/subscription owner namespace. CI sets one per run attempt (`github-ci-<run id>-<attempt>`, DEBT-508), so concurrent runs never share a customer; it is a workflow value, not a secret. Locally, `pnpm test:e2e` sets `local-clone-<instance>`, from the instance that picks the clone's database port, so clones normally get distinct owners; identical instance names or hashes can still collide, and Clerk remains shared. Only a value exported in the shell overrides it; one in `.env.local` is ignored |
 | `CLERK_SECRET_KEY` | Clerk API key (preflight uses it to find and verify the E2E user once per run) |
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
 | `DATABASE_URL` | CI Postgres connection string for direct DB writes during seeding; local `pnpm test:e2e` supplies the Docker URL automatically |
@@ -433,7 +442,7 @@ Playwright coverage intentionally focuses on user-facing regression paths:
 - Practice sessions + continuation
 - Review + bookmarks
 
-For feature-level acceptance criteria and planned routes (e.g., Quick Practice at `/app/practice/quick`), track expected E2E additions in the relevant specs (e.g., SPEC-019 Phase 2 acceptance criteria).
+Quick Practice at `/app/practice/quick` is covered by `practice.spec.ts`. Compare each current feature's acceptance criteria with its executable tests before proposing additional E2E coverage.
 
 ---
 
@@ -453,11 +462,7 @@ Do not blanket-kill `:3000`. Local E2E uses a per-clone resolved `PORT`; if that
 
 ### Agent-browser can't connect
 
-Ensure Chrome is installed and not running with restrictive flags:
-```bash
-# macOS - kill Chrome completely
-killall "Google Chrome"
-```
+Check the browser installation and the selected session/profile. Close only the agent-browser session you own with `agent-browser close`; do not terminate other Chrome sessions.
 
 ### Agent-browser says “Browser not launched”
 
@@ -492,7 +497,7 @@ See DEBT-293 for the full analysis and the resolved reset strategy.
 
 **Most likely causes (in order):**
 
-1. **Database availability:** normal local `pnpm test:e2e` targets Docker Postgres and should not hit Neon cold starts. If you intentionally opted into a deploy-target database with `E2E_USE_EXISTING_DATABASE=true`, Neon free-tier cold starts can take ~400-750ms. The postgres driver has a 30-second `connect_timeout` and automatic reconnection with exponential backoff, so this usually resolves itself. If tests still fail, verify the selected database is reachable:
+1. **Database availability:** normal local `pnpm test:e2e` targets Docker Postgres and should not hit Neon cold starts. If you intentionally opted into a deploy-target database with `E2E_USE_EXISTING_DATABASE=true`, a suspended Neon endpoint can add startup latency; no project-specific timing bound is established here. The postgres driver has a 30-second `connect_timeout` and automatic reconnection with exponential backoff, so this usually resolves itself. If tests still fail, verify the selected database is reachable:
 
    ```bash
    psql "$DATABASE_URL" -c "SELECT 1"
@@ -508,17 +513,17 @@ See DEBT-293 for the full analysis and the resolved reset strategy.
 
 3. **Connection pool exhaustion:** The postgres driver defaults to `max: 10` connections. In dev, the singleton pattern (`globalForDb`) prevents accumulation across HMR reloads. If you suspect exhaustion, restart the dev server.
 
-4. **Network partition / Neon outage:** This applies only to intentional deploy-target runs (`E2E_USE_EXISTING_DATABASE=true`) or app development against Neon. Check [Neon status page](https://neonstatus.com/). The `connect_timeout: 30` will fire and return an error within 30 seconds, but client-side server action calls are wrapped with `withTimeout` (SPEC-029), so the UI should fail fast (~10–15s) instead of hanging indefinitely.
+4. **Network partition / Neon outage:** This applies only to intentional deploy-target runs (`E2E_USE_EXISTING_DATABASE=true`) or app development against Neon. Check [Neon status page](https://neonstatus.com/). The driver's connection-establishment timeout does not bound every query on an established connection. Callers using `withTimeout` (SPEC-029) bound their own UI wait; verify the specific call site rather than assuming every action has that wrapper.
 
 **What the codebase already handles:**
 - `connect_timeout: 30s` (postgres driver default) — connections time out
 - `max_lifetime: 30-60 min` (random jitter) — connections are recycled
 - `keep_alive: 60s` — detects broken TCP connections
 - Exponential backoff with jitter on reconnection
-- `createAction` try/catch wraps every server action
+- Controller actions using `createAction` receive its error mapping; form wrappers can delegate without it
 - Error boundaries on every route
 
-**Client-side timeouts:** `lib/with-timeout.ts` wraps client-side server action calls (SPEC-029), preventing indefinite "Loading..." states. See SPEC-029.
+**Client-side timeouts:** practice/review callers using `lib/with-timeout.ts` bound their waits (SPEC-029). This is not a guarantee for every server-action call in the application.
 
 ---
 

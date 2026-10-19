@@ -26,6 +26,12 @@ slug: "unique-kebab-case-slug"
 difficulty: "easy"          # easy | medium | hard
 status: "published"         # draft | published | archived
 tags:
+  - slug: "general"
+    name: "General"
+    kind: "topic"
+  - slug: "alcohol"
+    name: "Alcohol"
+    kind: "substance"
   - slug: "naltrexone"
     name: "Naltrexone"
     kind: "treatment"       # topic | substance | treatment | diagnosis
@@ -33,6 +39,7 @@ choices:
   - label: "A"
     text: "First choice..."
     correct: false
+    explanation: "Why the first choice is incorrect."
   - label: "B"
     text: "Correct answer..."
     correct: true
@@ -47,10 +54,6 @@ Your question text here. Supports Markdown.
 
 General explanation of the correct answer.
 
-**Why other answers are wrong:**
-- A) Explanation for choice A
-- C) Explanation for choice C
-
 ### Reference
 
 Citation or source note.
@@ -59,13 +62,20 @@ Citation or source note.
 Notes:
 
 - `lib/content/schemas.ts` validates frontmatter strictly.
-- `scripts/seed/question-parser.ts` splits `## Explanation` into the general
-  explanation, per-choice wrong-answer explanations, and optional
-  `### Reference` content.
+- `scripts/seed/question-parser.ts` splits a terminal `### Reference` from
+  `## Explanation`; it requires a nonempty reference except for synthetic seed
+  fixtures. Wrong-choice explanations come from YAML `choices[].explanation`;
+  the legacy wrong-answer Markdown section is refused.
 - Diagnosis tags are valid in stored content but are hidden from current
   Practice and History filter UIs.
 
 ## Commands
+
+Import writes require an absent or empty destination. For a replacement bundle,
+use the [staging procedure](../../docs/architecture/content-pipeline.md#import-drafts--mdx-generated),
+review it, then place the approved artifact under `content/questions/`.
+The seed commands below require an explicit `DATABASE_URL`; remote targets also
+require the exact `DB_TARGET_ACK` under the repository's database-target rules.
 
 ```bash
 # Validate draft inputs without writing MDX
@@ -80,7 +90,7 @@ pnpm content:import:drafts -- --status published
 # Seed MDX into the database
 pnpm db:seed
 
-# Include placeholder content during seed
+# Include placeholder content in a test database
 pnpm db:seed --include-placeholders
 ```
 
@@ -90,9 +100,12 @@ pnpm db:seed --include-placeholders
 2. Import drafts into `content/questions/imported/`.
 3. Seed from `content/questions/**/*.mdx`.
 
-`pnpm db:seed` reads every `.mdx` file under `content/questions/`. By default it
+`pnpm db:seed` reads non-hidden `.mdx` files under `content/questions/`. By default it
 excludes `content/questions/placeholder/**/*.mdx`; when placeholders are
-excluded, existing `placeholder-*` database rows are archived during seed.
+excluded, the ten exact fixture slugs in `scripts/seed/placeholder-archiver.ts`
+are archived after a successful sync. Other `placeholder-*` slugs are left alone.
+An active content release makes the seed refuse the database; subsequent changes
+use the release commands.
 
 Changed content, including a corrected answer key, becomes a new revision of the
 question (ADR-021 phase 2b); nothing earlier is rewritten. Attempts and practice

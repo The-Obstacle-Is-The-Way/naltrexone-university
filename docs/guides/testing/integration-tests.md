@@ -14,7 +14,7 @@ From a fresh local test database, all four steps are required. Skipping any step
 pnpm db:test:up
 ```
 
-This resolves the current clone's local test target, then starts Postgres and PgBouncer with that target's project name, `DB_TEST_PORT` and `DB_TEST_POOLER_PORT`. Different clones get different Compose projects and host ports by default.
+This resolves the current clone's local test target, then starts Postgres and PgBouncer with that target's project name, `DB_TEST_PORT` and `DB_TEST_POOLER_PORT`. The clone-path mapping normally separates projects and ports; hash/name collisions or explicit overrides can still collide, so check ownership.
 
 PgBouncer runs in transaction mode. It ignores the three timeout startup parameters to reproduce BUG-345's observed Neon behavior; this is not a claim to reproduce Neon's undisclosed configuration in full. `db-pooler-timeouts.integration.test.ts` creates its own disposable database and ordinary role, runs the managed migration entry point through the pooler, and proves server defaults and SQLSTATEs. Only its local fixture pool is recycled. The rest of the integration suite continues to use direct Postgres.
 
@@ -35,7 +35,7 @@ TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 ```
 
-This applies migration files from `db/migrations/` in order, including extensions like `pgcrypto`. **Do not use `drizzle-kit push`** — it creates tables from the schema but skips migration files, so extensions and constraints defined in migrations will be missing (e.g., `pgcrypto` for `gen_random_uuid`).
+This applies migration files from `db/migrations/` in order, including extensions like `pgcrypto`. **Do not use `drizzle-kit push`** — it creates tables from the schema but skips migration files, so extensions and constraints defined in migrations will be missing (including the migration's `pgcrypto` extension). On Postgres 16, `gen_random_uuid()` is a core function; it does not depend on that extension ([Postgres documentation](https://www.postgresql.org/docs/16/pgcrypto.html#PGCRYPTO-RANDOM-DATA-FUNCS)).
 
 ### 3. Seed Test Data
 
@@ -109,7 +109,7 @@ To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. T
 GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 container on every run, in its `Start Postgres` step (`scripts/ci/start-postgres.sh`), from the first of Docker Hub, ECR Public and Google's mirror that serves the pinned digest. It does not depend on local Docker state. The pipeline runs:
 
 1. Pull PgBouncer through the same bounded helper as Postgres, trying Docker Hub then Google's mirror. The helper exports the serving repository. Start the digest-pinned Compose transaction pooler on the resolver's port with `--pull never` in both Compose calls, using the existing CI Postgres container. The dependency update guide owns its refresh duty (BUG-352).
-2. `pnpm db:migrate` — applies migrations to the CI database
+2. `pnpm exec tsx scripts/internal/run-managed-db-migrate.ts` — applies migrations to the CI database
 3. `pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders` — seeds test data, including the placeholder fixtures
 4. `pnpm test:integration:coverage` — runs all integration tests with coverage, including the pooled timeout and managed-migration proofs
 
@@ -155,17 +155,17 @@ INTEGRATION_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABAS
 
 `tests/integration/setup.ts` refuses to run against a non-local host by default. If `DATABASE_URL` points at Neon or any other remote host, the suite aborts before running tests. This is intentional protection against hitting shared environments by mistake.
 
-Only combine `INTEGRATION_USE_EXISTING_DATABASE=true` and `ALLOW_NON_LOCAL_DATABASE_URL=true` when you explicitly intend to run against a non-local database and understand the risk.
+Those opt-ins permit the outer runner and general setup to use a remote target; they do not make the full lane remote-compatible. The session-proof suites use `tests/shared/resolve-integration-database-url.ts`, which always rejects remote hosts. Use the per-clone local database for the full integration gate.
 
 **`drizzle-kit push` was used instead of `pnpm db:migrate`**
 
-Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` fails), `gen_random_uuid()` errors, or missing constraints. `drizzle-kit push` infers schema from TypeScript but does not run migration SQL files. Fix: reset and re-run migrations.
+Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` checks the migration's extension), or missing migration-defined constraints. `drizzle-kit push` infers schema from TypeScript but does not run migration SQL files. Fix: reset and re-run migrations.
 
 ```bash
 pnpm db:test:reset
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders
 ```
 
 **`tag-taxonomy-census` fails / `INTEGRATION_SEED_MISSING`**
