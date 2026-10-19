@@ -74,7 +74,7 @@ Option 1. The domain and fake keep the first termination observation. The fake r
 
 `computeRenewalConsentRetainUntil` computes the UTC calendar floors. The adapter requests the termination floor alone and passes it into `GREATEST(retain_until, $floor)` under the existing null predicate. No SQL interval calculation or redundant termination maximum remains. February 29 plus one year is March 1.
 
-Seven shared scenarios run against the fake and Postgres: three replay orders, the consent floor, a leap day, a longer existing floor and concurrent first observations. The real concurrent case uses separate database connections. The fake-contract register names this proof and preserves the three other examples in their own rows. Business rule R28 names the retention contract.
+Eight shared scenarios run against the fake and Postgres: three replay orders, the consent floor, a leap day, a longer existing floor, a stored floor that only the termination floor raises, and concurrent first observations. The real concurrent case uses separate database connections. The fake-contract register names this proof and preserves the three other examples in their own rows. Business rule R28 names the retention contract.
 
 ## Verification
 
