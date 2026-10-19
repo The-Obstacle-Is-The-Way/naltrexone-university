@@ -60,7 +60,7 @@ describe("the proxy's Clerk JWT key", () => {
     expect(await jwtKeyHandedToClerk()).toBeUndefined();
     expect(logged).toHaveBeenCalledWith({
       event: 'clerk_jwt_key_unreadable',
-      reason: 'CLERK_JWT_KEY is not a public key in PEM form',
+      reason: { name: 'Error' },
     });
   });
 });

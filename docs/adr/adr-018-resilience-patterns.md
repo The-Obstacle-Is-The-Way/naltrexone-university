@@ -1,6 +1,6 @@
 # ADR-018: Resilience Patterns (Retry and Backoff)
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-10-19)
 **Date:** 2026-02-07
 **Decision Makers:** Engineering
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-005 (Payment Boundary), ADR-006 (Error Handling Strategy)
@@ -143,3 +143,11 @@ Internal errors (database constraint violations, validation errors, domain error
 - ADR-005 (Payment Boundary) — Stripe isolation at adapter layer
 - ADR-006 (Error Handling Strategy) — Error classification and propagation
 - ADR-008 (Logging & Observability) — Structured logging for retry events
+
+## Amendment — 2026-10-19: Safe retry diagnostics
+
+Section 4's error context no longer includes the raw message. Retry events still retain their operation, attempt, maximum attempts and delay. Error diagnostics use the shared projection, including preserved causes, and omit messages, stacks and response bodies.
+
+The vendor allow-list retains Stripe error types `StripeError`, `StripeAPIError`, `StripeConnectionError`, `StripeAuthenticationError`, `StripePermissionError`, `StripeRateLimitError`, `StripeInvalidRequestError`, `StripeCardError`, `StripeIdempotencyError` and `StripeSignatureVerificationError`. It retains codes `resource_missing`, `rate_limit`, `idempotency_key_in_use`, `parameter_missing`, `parameter_invalid_integer`, `parameter_unknown`, `api_key_expired` and `card_declined`. Other vendor strings are omitted.
+
+Network codes are limited to `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`, `ENOTFOUND`, `ECONNREFUSED`, `EHOSTUNREACH` and `EPIPE`. Request IDs must start with `req_` followed by 1–128 alphanumeric characters. HTTP failure status is an integer from 400 through 599. These fields are diagnostic metadata; they do not alter retry eligibility, circuit-breaker decisions or idempotent replay.

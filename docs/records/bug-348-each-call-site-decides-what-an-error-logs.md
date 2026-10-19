@@ -1,6 +1,6 @@
 # BUG-348: Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs
 
-**Status:** In Progress — idempotency logs use the safe projector; shared failure defaults, remaining log boundaries and the source scan due 2026-10-20
+**Status:** Verifying — promotion to main; due 2026-10-20
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -8,14 +8,14 @@
 
 ## Summary
 
-Diagnostic logging and reporting vary across boundaries, and some paths bypass the safe error projector. Durable replay is a separate, action-aware concern already owned by the idempotency policy and DEBT-529. Two diagnostic gaps are established below.
+Diagnostic logging and reporting vary across boundaries, and some paths bypass the safe error projector. Durable replay is a separate, action-aware concern already owned by the idempotency policy and DEBT-529. The evidence below records the two gaps before this fix.
 
-1. **A failed manage-billing request can leave no server trace.**
+1. **A failed manage-billing request could leave no server trace.**
    - `handleError` logs only errors that are not `ApplicationError`s, so it never logs an `INTERNAL_ERROR` or `STRIPE_ERROR`, though ADR-006 defines `INTERNAL_ERROR` as an unexpected error. Whether one is logged depends on the action.
    - Subscribe and add-card log a failed result's code. Manage billing logs nothing. Other actions leave it to the browser reporter, which can send the public `ActionResult` error, including its code/details, without the original server cause.
    - So a portal session that fails with Stripe's circuit open, or with no portal URL, comes back as a result and redirects without a log line. BUG-166's `catch` sees only a throw, and `createAction` returns every failure as a result (`:46-50` returns; `:64-69` catches), so it runs only if `handleError` itself throws.
    - The causes DEBT-452 preserved inside repository `INTERNAL_ERROR`s are likewise not written on action paths that do not log their result.
-2. **Raw error text reached the idempotency logs and remains at other boundaries.** A Drizzle query error's message carries the bound SQL parameters (`Failed query: … params: …`). DEBT-452 projected the `err` and `error` log seams it named. Message strings logged under other keys were outside its sweep and can carry parameters when handed a Drizzle error; this census proves raw-message logging, not sensitive data at every site: three `toErrorMessage` helpers and 21 listed inline sites, plus the retry logger.
+2. **Raw error text reached the idempotency logs and other boundaries.** A Drizzle query error's message carries the bound SQL parameters (`Failed query: … params: …`). DEBT-452 projected the `err` and `error` log seams it named. Message strings logged under other keys were outside its sweep and can carry parameters when handed a Drizzle error; this census proves raw-message logging, not sensitive data at every site: three `toErrorMessage` helpers and 21 listed inline sites, plus the retry logger.
    - Concretely: before the idempotency fix below, a failed `storeResult` after an action succeeded logged the Drizzle message, up to 1,000 characters. Its parameters hold the cached result: for the billing portal, Checkout and trial setup, a Stripe session URL.
 
 Sentry's filtering repeats the pattern one channel at a time: ADR-026's deny-list is applied separately to events, breadcrumbs and spans, which is how BUG-318's fix left BUG-331's carriers.
@@ -76,21 +76,23 @@ P3.
 
 For Sentry, BUG-331 retains the existing server-channel work. A shared credential-shape redactor or CSP policy is a candidate, not a demonstrated fix: first reproduce a leak with synthetic data through the actual SDK or report path, check false positives and ADR-026's retained pseudonymous fields, and propose an explicit ADR amendment if evidence warrants it.
 
-## Resolution (in progress)
+## Resolution (built)
 
-Option 1, red first:
-- a failed portal result is logged;
-- the idempotency wrapper's log of a failed `storeResult` carries no SQL parameters;
-- the scan rejects a raw message in a log field.
+Option 1. The controller boundary logs operational failures before it converts them to public results. Manage billing logs only an exception that escapes that boundary. Both paths project diagnostics. Billing actions include their action names. Checkout and add-card result consumers do not duplicate the operational diagnostic. The checkout use case logs its application code without raw error fields. Public messages and field errors are unchanged.
 
-The idempotency wrapper now uses `projectSafeErrorDiagnostics` for prune, abort, error-write and result-write failures. `with-idempotency-diagnostics.test.ts` sends synthetic Drizzle failures through pino in all seven failure paths. Each log keeps the action, user ID, key, SQLSTATE and constraint without SQL parameters, cause text or stack. Existing tests retain the cache, replay and committed-outcome policies. The portal defaults, remaining log boundaries, source scan and ADR amendments remain.
+The shared diagnostic policy distinguishes operational failures from expected outcomes and preserves the four browser-reporting exclusions. The pure projector is shared by adapter and framework logs. It follows causes and retains only validated diagnostic fields, including the vendor allow-list in ADR-018. ADR-006 and ADR-018 are amended. The action-aware idempotency cache policies are unchanged.
+
+The idempotency wrapper uses the projector for prune, abort, error-write and result-write failures. Its seven real-pino cases retain the action, user ID, key, SQLSTATE and constraint without SQL parameters, cause text or stack. The remaining raw-message log fields and browser console error objects use the same projector. The source scan rejects message and stack fields, stringification, local formatter helpers and aliases at log calls.
+
+The portal tests exercise the real gateway's missing-URL and open-circuit paths through the action boundary and redirect. Each produces one serialized diagnostic. Restoring the old suppression makes both fail. A separate preserved-cause case proves SQLSTATE and constraint survive without raw text.
 
 ## Verification
 
 - [x] The idempotency wrapper's failure logs carry projected diagnostics without SQL parameters: seven real-pino cases failed before the fix and pass after it.
-- [ ] A failed portal session (circuit open, missing URL) produces one log with projected diagnostics and any preserved cause.
-- [ ] No log field carries an error's raw message; a scan enforces it.
-- [ ] Diagnostic defaults and projection are shared, ADR-006 and ADR-018 are amended, and DEBT-529's action-aware replay policy is preserved.
+- [x] A failed portal session (circuit open, missing URL) produces one log with projected diagnostics and any preserved cause.
+- [x] No log field carries an error's raw message; a scan enforces it.
+- [x] Diagnostic defaults and projection are shared, ADR-006 and ADR-018 are amended, and DEBT-529's action-aware replay policy is preserved.
+- [ ] Promote the fix to main.
 
 ## Related
 

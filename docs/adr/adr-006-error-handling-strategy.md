@@ -1,6 +1,6 @@
 # ADR-006: Error Handling Strategy
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-10-19)
 **Date:** 2026-01-31
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers), ADR-002 (Domain Model)
@@ -342,3 +342,11 @@ function errorCodeToStatus(code: ApplicationErrorCode): number {
 - [neverthrow library](https://github.com/supermacro/neverthrow)
 - [Effect TypeScript](https://effect.website/)
 - Martin Fowler, "Notification Pattern"
+
+## Amendment — 2026-10-19: Shared diagnostic policy
+
+An application error can represent an operational failure. `INTERNAL_ERROR`, `STRIPE_ERROR` and unclassified exceptions produce an error-level diagnostic at the controller boundary, before conversion to a public result. Routine validation and Next.js dynamic-render control flow produce no diagnostic there. Action names may accompany diagnostics; public messages and field errors remain separate from logs. A result consumer does not log the same operational failure again. A thrown failure outside that boundary is logged by its caller.
+
+Diagnostic classification, log level and browser reportability share one policy. Browser reporting continues to exclude `VALIDATION_ERROR`, `UNAUTHENTICATED`, `UNSUBSCRIBED` and `RATE_LIMITED`; other outcomes remain reportable. This policy does not decide durable replay. Replay remains action-, reason- and rollback-aware.
+
+Every application log boundary, including browser console calls, projects error diagnostics. Raw messages, stacks, SQL parameters and provider response bodies are excluded, regardless of the log field's name. Projection follows preserved causes within a bounded depth. It retains validated class names, application codes, SQLSTATEs and constraint names, plus the reviewed vendor metadata in ADR-018. Public responses and Sentry reporting keep their separate policies.

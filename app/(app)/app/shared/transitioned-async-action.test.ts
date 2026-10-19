@@ -37,7 +37,7 @@ describe('shared/transitioned-async-action', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith(
       'runTransitionedAsyncAction: unhandled error in run()',
-      expect.any(Error),
+      { name: 'Error' },
     );
   });
 
@@ -61,7 +61,7 @@ describe('shared/transitioned-async-action', () => {
     expect(onUnhandledError).toHaveBeenCalledWith(error);
     expect(consoleSpy).toHaveBeenCalledWith(
       'runTransitionedAsyncAction: unhandled error in run()',
-      error,
+      { name: 'Error' },
     );
   });
 
@@ -87,7 +87,7 @@ describe('shared/transitioned-async-action', () => {
     expect(onUnhandledError).toHaveBeenCalledWith(error);
     expect(consoleSpy).toHaveBeenCalledWith(
       'runTransitionedAsyncAction: unhandled error in run()',
-      error,
+      { name: 'Error' },
     );
   });
 
@@ -136,7 +136,7 @@ describe('shared/transitioned-async-action', () => {
     await expect(promise).resolves.toBeUndefined();
     expect(consoleSpy).toHaveBeenCalledWith(
       'runTransitionedAsyncAction: unhandled error in run()',
-      error,
+      { name: 'Error' },
     );
   });
 
@@ -162,7 +162,7 @@ describe('shared/transitioned-async-action', () => {
     expect(onUnhandledError).toHaveBeenCalledWith(error);
     expect(consoleSpy).toHaveBeenCalledWith(
       'runTransitionedAsyncAction: unhandled error in run()',
-      error,
+      { name: 'Error' },
     );
   });
 });

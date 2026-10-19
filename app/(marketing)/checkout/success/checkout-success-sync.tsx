@@ -62,7 +62,7 @@ function createStripeOnRetry(
       attempt,
       maxAttempts,
       delayMs,
-      error: error instanceof Error ? error.message : String(error),
+      error: projectSafeErrorDiagnostics(error),
     };
 
     if (logger.warn) {

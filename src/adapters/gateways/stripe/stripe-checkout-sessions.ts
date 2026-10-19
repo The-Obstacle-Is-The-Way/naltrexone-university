@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
   type CheckoutSessionCreateParams,
   isValidStripeSubscriptionStatus,
@@ -636,7 +637,7 @@ async function expireSupersededCheckoutSession({
     logger.error(
       {
         sessionId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Failed to expire superseded checkout session',
     );
@@ -771,7 +772,7 @@ async function retrieveLiveCheckoutSessionAfterCreate({
     logger.warn(
       {
         sessionId: session.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Falling back to created checkout session snapshot after live retrieval failed',
     );
@@ -873,7 +874,7 @@ async function refuseIfSubscriptionAppeared({
         userId: input.userId,
         externalCustomerId: input.externalCustomerId,
         sessionId: session.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Failed to re-check subscriptions before handing back a checkout session',
     );
@@ -927,7 +928,7 @@ async function refuseIfSubscriptionAppeared({
     logger.error(
       {
         ...context,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: projectSafeErrorDiagnostics(error),
       },
       'Failed to expire checkout session after a subscription appeared',
     );
@@ -1004,7 +1005,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
       logger.error(
         {
           ...listContext,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: projectSafeErrorDiagnostics(error),
         },
         'Failed to list open checkout sessions after a completion',
       );
@@ -1048,7 +1049,7 @@ export async function expireOtherOpenSubscriptionCheckoutSessions({
         logger.error(
           {
             ...context,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: projectSafeErrorDiagnostics(error),
           },
           'Failed to expire another open subscription checkout session',
         );
@@ -1156,8 +1157,7 @@ export async function createStripeCheckoutSession({
       existingPriceId = session.line_items?.data?.[0]?.price?.id;
       existingCheckoutVariant = getRetrievedCheckoutSessionVariant(session);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = projectSafeErrorDiagnostics(error);
       if (trialRequested) {
         replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
           input,
@@ -1168,7 +1168,7 @@ export async function createStripeCheckoutSession({
         {
           sessionId: existingSession.id,
           error: errorMessage,
-          cause: error,
+          cause: projectSafeErrorDiagnostics(error),
         },
         'Failed to inspect existing checkout session',
       );
@@ -1279,8 +1279,7 @@ export async function createStripeCheckoutSession({
         });
         ignoredOpenSessionIdsAfterCreate.add(existingSession.id);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = projectSafeErrorDiagnostics(error);
         if (expireFailureIsFatal) {
           logger.error(
             {

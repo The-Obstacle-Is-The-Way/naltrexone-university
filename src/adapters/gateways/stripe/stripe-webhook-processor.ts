@@ -12,6 +12,7 @@ import {
   subscriptionEventTypes,
 } from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
 import { isMissingStripeCustomerError } from '@/src/adapters/gateways/stripe-customer-deleter';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -489,10 +490,9 @@ export async function processStripeWebhookEvent({
       error instanceof Error ? error.message : 'Unknown error';
 
     // BUG-325: anyone can send a bad signature, so it is a warning. Stripe's
-    // reason (for example a timestamp outside tolerance) helps tell a
-    // misconfigured secret from a forgery.
+    // diagnostic class is retained without its raw response text.
     logger.warn(
-      { error: errorMessage },
+      { error: projectSafeErrorDiagnostics(error) },
       'Webhook signature verification failed',
     );
 

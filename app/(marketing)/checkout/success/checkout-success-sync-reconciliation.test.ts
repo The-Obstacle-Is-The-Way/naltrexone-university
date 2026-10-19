@@ -217,7 +217,7 @@ describe('syncCheckoutSuccess retry logging', () => {
           attempt: 1,
           maxAttempts: expect.any(Number),
           delayMs: expect.any(Number),
-          error: expect.any(String),
+          error: { networkCode: 'ECONNRESET' },
         }),
         'Retrying Stripe API call',
       );
