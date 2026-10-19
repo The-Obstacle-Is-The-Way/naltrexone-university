@@ -170,21 +170,82 @@ describe('parseActivateArgs', () => {
 });
 
 describe('parseStageArgs', () => {
+  const sourceArgs = ['--repo', '/fixture', '--commit', 'a'.repeat(40)];
+  const source = {
+    repository: '/fixture',
+    commit: 'a'.repeat(40),
+    draft: [],
+    archive: [],
+  };
+  it('requires an explicit repository and full source commit', () => {
+    expect(() => parseStageArgs([])).toThrow(
+      /--repo and --commit are required/,
+    );
+    expect(() =>
+      parseStageArgs(['--repo', '/fixture', '--commit', 'main']),
+    ).toThrow(/full/);
+  });
+  it('names draft and permanent archive dispositions for commit-derived questions', () => {
+    expect(
+      parseStageArgs([
+        ...sourceArgs,
+        '--draft',
+        'alpha-q',
+        '--archive',
+        'beta-q',
+      ]),
+    ).toMatchObject({ draft: ['alpha-q'], archive: ['beta-q'] });
+  });
+  it('refuses two dispositions for one question', () => {
+    expect(() =>
+      parseStageArgs([
+        ...sourceArgs,
+        '--draft',
+        'alpha-q',
+        '--archive',
+        'alpha-q',
+      ]),
+    ).toThrow(/one disposition/);
+  });
   it('reads --apply and each live question to remove', () => {
     expect(
-      parseStageArgs(['--remove', 'alpha-q', '--apply', '--remove', 'beta-q']),
-    ).toEqual({ apply: true, remove: ['alpha-q', 'beta-q'], revert: [] });
+      parseStageArgs([
+        ...sourceArgs,
+        '--remove',
+        'alpha-q',
+        '--apply',
+        '--remove',
+        'beta-q',
+      ]),
+    ).toEqual({
+      ...source,
+      apply: true,
+      remove: ['alpha-q', 'beta-q'],
+      revert: [],
+    });
   });
 
   // DEBT-492: each question the bundle moves back to an earlier revision.
   it('reads each question to revert', () => {
     expect(
-      parseStageArgs(['--revert', 'alpha-q', '--revert', 'beta-q']),
-    ).toEqual({ apply: false, remove: [], revert: ['alpha-q', 'beta-q'] });
+      parseStageArgs([
+        ...sourceArgs,
+        '--revert',
+        'alpha-q',
+        '--revert',
+        'beta-q',
+      ]),
+    ).toEqual({
+      ...source,
+      apply: false,
+      remove: [],
+      revert: ['alpha-q', 'beta-q'],
+    });
   });
 
   it('defaults to a dry run that removes and reverts nothing', () => {
-    expect(parseStageArgs([])).toEqual({
+    expect(parseStageArgs([...sourceArgs])).toEqual({
+      ...source,
       apply: false,
       remove: [],
       revert: [],

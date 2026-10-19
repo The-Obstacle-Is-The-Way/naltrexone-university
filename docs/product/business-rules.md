@@ -142,6 +142,17 @@ A changed key that matches earlier history needs an explicit return name, reason
 - `tests/integration/content-release-key-preview.integration.test.ts`: `canonicalizes stored correct text as the seed does before comparing keys`
 - `tests/integration/content-release-key-preview.integration.test.ts`: `refuses an old preview when lifting a hold changes the compared key`
 
+### R28. After bootstrap, ordinary release commands admit only source commits at or after the highest admitted commit on the content repository's main first-parent history. Rollback preserves that watermark.
+
+The first sourced stage initializes the watermark. Bootstrap still adopts the live bank and does not prove its source. Draft and permanent-archive dispositions remain explicit decisions bound to the activation plan. A source-free release can be activated by the ordinary command only if it was activated before.
+
+- `scripts/content-release/content-source.test.ts`: `archives the selected main commit and ignores dirty working files`
+- `scripts/content-release/content-source.test.ts`: `refuses a merged side-branch commit and a rewritten main watermark`
+- `tests/integration/content-release-source.integration.test.ts`: `previews without a watermark write, then binds source identity and the activation plan`
+- `tests/integration/content-release-source.integration.test.ts`: `re-reads the watermark after waiting for the release-pointer lock`
+- `tests/integration/content-release-source.integration.test.ts`: `refuses a legacy unactivated release but rolls back a previously activated legacy release without lowering the watermark`
+- `tests/integration/content-release-source.integration.test.ts`: `binds different dispositions of one commit to distinct manifests and activation plans`
+
 ## Subscription and billing
 
 ### R2. Without an entitled subscription, practice, bookmarks and statistics are refused as unsubscribed.

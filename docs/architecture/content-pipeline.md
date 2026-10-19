@@ -53,14 +53,14 @@ This document serves two purposes:
 
 ### Which directory feeds production?
 
-**Only `content/questions/**/*.mdx`** — the seed script (`pnpm db:seed`) reads exclusively from this directory. It never touches `content/drafts/`.
+**The bare seed (`pnpm db:seed`) reads `content/questions/**/*.mdx`.** It does not import drafts. The managed production seed first imports `content/drafts/questions` as published content, then invokes the bare seed. Once a release is active, both seeds refuse that database; staging reads an archived commit of the content repository's `main` instead.
 
 ### How the three directories relate
 
 ```text
 content/drafts/questions/**/*.md       YOUR WORKSPACE (raw authoring, gitignored)
-        │                              Safe to modify, delete, restructure anytime.
-        │                              Nothing reads from here automatically.
+        │                              Managed seeding imports this directory.
+        │                              The bare seed does not read it directly.
         │
         │  pnpm content:import:drafts  (manual — you choose when to run)
         │  Validates tags against canonical taxonomy, expands slugs to
@@ -84,7 +84,7 @@ To include them: `SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed`
 
 ### Can I modify drafts freely?
 
-**Yes.** `content/drafts/` is completely decoupled from the seed. Changes there have zero effect on the database until you explicitly run `pnpm content:import:drafts` to regenerate the MDX output, then `pnpm db:seed` to push it to the database.
+Editing drafts does not write the database. A manual import followed by the bare seed can publish those edits; the managed production seed performs the import automatically. After bootstrap, neither path can seed that database. Commit-bound release staging ignores the app's draft and imported folders.
 
 ### Where do tag display names come from?
 
@@ -325,23 +325,24 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootst
   --reason "Why" --authority "Who"
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootstrap-release.ts \
   --reason "Why" --authority "Who" --plan "<plan-id>" --apply
-# Stage the MDX bundle as a release on the active release. Every question the
+# Stage the selected commit of the content repository main as a release. Every question the
 # active release names must appear in the bundle unless it is withdrawn; name
 # one whose file is absent on purpose with --remove, and one whose file moves
 # it back to an earlier revision on purpose with --revert.
-DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts --apply
+DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts \
+  --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>" --apply
 # Preview its activation: it prints the plan id, every question it archives,
 # publishes, updates, reverts or withdraws, any that replace a held revision,
 # and the items a hold or withdrawal leaves out.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
-  --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
+  --repo "$CONTENT_REPOSITORY" --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who"
 # A plan that returns a question to an earlier answer key needs --revert <qid>
 # for each such question, at staging and at activation (BUG-351).
 # Apply exactly the plan you reviewed. If the plan has changed since, nothing is applied.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/activate-release.ts \
-  --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
+  --repo "$CONTENT_REPOSITORY" --release "<release-id>" --expect-active "<active-release-id>" --reason "Why" --authority "Who" \
   --plan "<plan-id>" --apply
-# Roll back: preview and apply the earlier release the same way.
+# Roll back: preview and apply a previously activated release the same way; --repo is optional.
 # Hold a question's live revision, or lift that hold with --lift. A lift that
 # returns a question to an earlier answer key needs --revert too.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-questions.ts \
@@ -350,18 +351,22 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/hold-q
 
 Once a release is active, the direct seed (`pnpm db:seed` and the managed seed) refuses that database, and authored content changes only through releases: stage, preview the activation, then apply its plan. Withdrawals and holds still act directly, with their own commands. **Bootstrapping production is the owner's decision**, because it changes how content is published (DEBT-483).
 
+**Source admission (BUG-351).** Supply the intended content repository with its current local `main` reference and a full commit ID. Staging archives that commit and converts its tracked `recall.md` and `vignettes.md` files with the app's parser. It does not read mutable checkout files, app drafts or imported MDX, and it does not execute content-repository code. Unlisted source questions default to published; use `--draft <qid>` or `--archive <qid>` for explicit dispositions. Each name must occur in the commit and may have only one disposition.
+
+The v5 manifest binds the commit to the release and its activation plan. Under the release-pointer lock, staging and first activation require the commit to equal or follow the watermark on `main`'s first-parent chain. An older commit or a merged side-branch commit is refused. The first successful sourced stage initializes the watermark; bootstrap does not establish it or prove the adopted bank's source. Previews and failed operations leave it unchanged. A later stage can make an earlier staged release inadmissible. Rollback and hold reapplication never lower it. A release with no source commit may be used by the ordinary activation command only if it was activated before; bootstrap retains its separate, unchanged path. A rewritten main that drops the watermark requires an owner decision.
+
 **What a release removes (DEBT-489).** A new release, one never active before, accounts for every live question, meaning every member of the active release, held ones included:
-- **A member stays in the release** if its file is `published`.
-- **A member leaves** only by a named removal: its file set to `draft` (until a release names it again), its file set to `archived` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `archived`, or the withdrawal command, for content that must never return.
+- **A member stays in the release** if its source question has no draft or archive disposition.
+- **A member leaves** only by a named removal: `--draft <qid>` (until a release names it again), `--archive <qid>` (a permanent withdrawal), or its QID given to `--remove` (like `draft`, reversible: a later release that includes its file publishes it again). Use `--archive`, or the withdrawal command, for content that must never return.
 - **A withdrawn member** may be absent.
 - **Staging refuses a bundle that leaves out any other member**, and names them, so a stale or partial content folder cannot remove questions silently. Activation repeats the check for any release never active before.
 - **A revert is named (DEBT-492).** A file whose content matches only an earlier revision, not the current one, moves its question *back* to that revision, which can undo an answer-key correction. Staging refuses that unless the question is named with `--revert <qid>`. The plan lists it under "Revert to an earlier revision", apart from "Publish" (not live now) and "Update to a newer revision". A rollback restores earlier revisions by definition, so a content revert alone does not refuse it; its plan names each revert, and it also archives questions added since.
 - **A return to an earlier answer key is named (BUG-351).** The stage and activation previews list answer-key changes apart from other changes. A change whose key equals one this database once had live needs `--revert <qid>` at staging and at activation, with the activation's reason and authority. "Once live" means a revision in an activated release, or one of the pre-bootstrap revisions the bootstrap froze in its manifest. A rollback and a hold lift publish through activation, so they need the name too.
 
-**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An `archived` file becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its file may only stay `archived`) and refuses a bundle with no published file, and is one transaction.
+**Staging writes nothing a learner sees.** It writes drafts, revisions that do not become current, and the release. It locks only the release pointer, not question rows, so learners can start sessions while a stage runs (DEBT-492). An archive disposition becomes a withdrawal only when its release is activated, so an abandoned release leaves no withdrawal behind. Tags are the exception: they are not versioned (ADR-021 decision 1), so a tag change takes effect when staged. Staging also refuses to revive a withdrawn question (its source question may only keep an archive disposition) and refuses a bundle with no published file, and is one transaction.
 
 **Applying is bound to the reviewed plan.** The plan id covers:
-- the release and the release it replaces;
+- the release, including its source commit, and the release it replaces;
 - every (question, revision) it publishes, unchanged ones included;
 - every question it archives;
 - every question it withdraws;
@@ -600,7 +605,7 @@ Re-run `pnpm db:seed` whenever the database's question/tag data may be out of sy
 | Trigger | Why Reseed Is Needed |
 |---------|---------------------|
 | **After `pnpm db:migrate`** (schema changes) | Migrations may alter enums or constraints that require fresh data insertion. |
-| **After MDX content changes** (new questions, updated tags, edited frontmatter) | While no release is active, the seed is the path from MDX files to database rows; once one is, `stage-release.ts` is. |
+| **After MDX content changes** (new questions, updated tags, edited frontmatter) | While no release is active, the seed is the path from MDX files to database rows; once one is, `stage-release.ts` reads the chosen content-repository commit. |
 | **After tag taxonomy changes** (SPEC-033, renamed slugs, new kinds) | Taxonomy migrations include tag data cleanup (see SPEC-033 §14). Run `pnpm db:migrate` first, then `pnpm db:seed`. |
 | **After switching Neon branches** | Different branches may have different data states. |
 | **After `pnpm db:test:reset`** | Test DB is wiped; seed restores content. |
