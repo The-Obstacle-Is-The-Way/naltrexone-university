@@ -103,8 +103,11 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
             ? '2099-05-22T12:02:24.000Z'
             : null,
       remainingMs:
-        input.session.remainingMs ??
-        (input.session.mode === 'exam' ? 72_000 : null),
+        input.session.remainingMs !== undefined
+          ? input.session.remainingMs
+          : input.session.mode === 'exam'
+            ? 72_000
+            : null,
       index: input.session.index,
       total: input.session.total,
       isMarkedForReview: input.session.isMarkedForReview,
