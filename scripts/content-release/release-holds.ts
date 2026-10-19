@@ -15,6 +15,7 @@ export type HoldChange = {
   qids: readonly string[];
   record: DecisionRecord;
   lift: boolean;
+  revert?: readonly string[];
 };
 
 export type HoldSummary = {
@@ -105,6 +106,7 @@ export async function changeHolds(
     const activation = await activateRelease(tx, {
       releaseId: active,
       expectedActiveReleaseId: active,
+      revert: change.revert ?? [],
       record: {
         reason: `hold ${change.lift ? 'lifted' : 'placed'}: ${change.record.reason}`,
         authority: change.record.authority,
