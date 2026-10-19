@@ -157,7 +157,7 @@ This needs an active release, so production cannot reach it before the bootstrap
 - [ ] Part 2: the previews list every answer-key change, and a return to an earlier live key needs a name, a reason and an authority.
 - [ ] Part 3: staging reads a commit of `main`; a commit that does not descend from the watermark is refused; a rollback does not lower it.
 - [ ] `docs/architecture/content-pipeline.md` describes the implemented input.
-- [ ] The owner runs this **candidate-recurrence diagnostic** once. It compares raw correct-label/text keys in revision-creation order, matching ADR-022's fields. It does not establish publication order, clinical error or an incident.
+- [ ] The owner runs this **candidate-recurrence diagnostic** once. It compares raw correct-label/text keys in revision-creation order: a superset of ADR-022's normalized key, so a whitespace-only change also shows as a candidate. It does not establish publication order, clinical error or an incident.
   - Staged revisions and repairs count. Re-activating an old revision creates no revision and can be missed. History predating append-only storage is incomplete. Published-current and answered-attempt counts narrow the candidates; an attempt proves use, not that its key was clinically wrong.
   - The synthetic regression/repair/staged-copy case returns 3 candidates, 1 question, 1 published current candidate, 0 bound attempts, 0 answered attempts and 0 malformed keys. The third candidate was never activated.
 
