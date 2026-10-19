@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import {
   buildTimeSpentSeconds,
   createTransitionedLoadAction,
+  type RequestSequencingHooks,
   runLoadQuestionFlow,
+  type runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -519,5 +521,25 @@ describe('question-flow-actions', () => {
 
     expect(loadState).toEqual({ status: 'loading' });
     expect(question).toEqual({ questionId: fixtureQuestionOldId });
+  });
+});
+
+describe('question flow inputs', () => {
+  it('requires both sequencing hooks for question loads', () => {
+    expectTypeOf<
+      Pick<
+        Parameters<typeof runLoadQuestionFlow>[0],
+        keyof RequestSequencingHooks
+      >
+    >().toEqualTypeOf<RequestSequencingHooks>();
+  });
+
+  it('requires both sequencing hooks for answer submissions', () => {
+    expectTypeOf<
+      Pick<
+        Parameters<typeof runSubmitAnswerFlow>[0],
+        keyof RequestSequencingHooks
+      >
+    >().toEqualTypeOf<RequestSequencingHooks>();
   });
 });

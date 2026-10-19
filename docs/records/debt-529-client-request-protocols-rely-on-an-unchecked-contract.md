@@ -24,10 +24,10 @@ On 2026-07-23 the owner ruled DEBT-461's runtime consolidation NO-GO. The accept
    - Code examples: `submitAnswerForQuestion` #L118 is now 139, `endSession` #L210 is now 275, and `commitChoice` #L412 is now 425.
 
    The anchors originated with the contract (`e808225a`, 2026-07-21). No check then validated its symbol/test references. The contract now names declarations and running test titles, including the moved tests. `tests/idempotency-protocol-contract.test.ts` rejects missing files, declarations and proofs, plus line anchors and unnamed source links.
-2. **The server caches errors thrown by `execute()` when a caller passes no policy.** Admission/claim failures have separate behavior. ADR-015's 2026-10-13 amendment records this default and the rule "every keyed action therefore passes a policy".
-   - All twelve current callers do, but nothing fails if the thirteenth does not.
+2. **The server cached errors thrown by `execute()` when a caller passed no policy.** Admission/claim failures have separate behavior. ADR-015's 2026-10-13 amendment records this default and the rule "every keyed action therefore passes a policy".
+   - All twelve callers did, but nothing failed if a thirteenth did not.
    - BUG-278 and BUG-289 were this default: a transient execution error cached for 24 hours under a key that never changed.
-3. **The stale-response guard is optional.** The shared question-flow helpers take an optional `isLatestRequest`, and default to "latest" when a caller passes neither sequencing hook. They throw only when a caller passes one hook without the other (`assertRequestSequencingHooks`).
+3. **The stale-response guard was optional.** The shared question-flow helpers took an optional `isLatestRequest`, and defaulted to "latest" when a caller passed neither sequencing hook. They threw only when a caller passed one hook without the other (`assertRequestSequencingHooks`).
    - BUG-194 was a submit path with only the unmount guard, while its sibling load path checked for the latest request.
 
 ## Evidence
@@ -73,7 +73,7 @@ The contract references had drifted. The reference guard now checks their target
    - Require `shouldCacheError` on every keyed action, and both sequencing hooks on the shared flow helpers. Each action keeps its own cache decisions. That enforces ADR-015's rule and the existing hook-pair invariant.
 2. **Reopen runtime consolidation only under DEBT-461's full criteria.** A new owner direction must explicitly reference the July 23 NO-GO. Show at least two live surfaces with identical complete transitions, no surface-mode flags or strategy callbacks, no weakened tests and net deletion of production branches, state and comments. BUG-304, the only later defect, does not meet them.
 
-## Resolution (built)
+## Resolution
 
 Option 1. The reference check failed on the original contract and now passes with declaration and test-name links.
 

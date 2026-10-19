@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { z } from 'zod';
 import {
   FakeIdempotencyKeyRepository,
@@ -234,5 +234,36 @@ describe('executeIdempotent', () => {
       message: 'Cached idempotency result is invalid',
     });
     expect(execute).not.toHaveBeenCalled();
+  });
+});
+
+describe('executeIdempotent inputs', () => {
+  it('requires an explicit cache policy on controller actions', () => {
+    expectTypeOf<
+      Pick<Parameters<typeof executeIdempotent>[0], 'shouldCacheError'>
+    >().toEqualTypeOf<{ shouldCacheError: (error: unknown) => boolean }>();
+  });
+
+  // DEBT-529 kept this: a schema refusal is deterministic, so it is cached
+  // even under a policy that caches nothing else.
+  it('caches a thrown validation error even when the action policy declines to cache', async () => {
+    const deps = createDeps();
+    const schema = z.object({ value: z.number() });
+    const execute = vi.fn(async () => schema.parse({ value: 'not a number' }));
+    const args = {
+      shouldCacheError: () => false,
+      d: deps,
+      userId: crypto.randomUUID(),
+      idempotencyKey: '22222222-2222-2222-2222-222222222229',
+      action: 'practice:test',
+      outputSchema: schema,
+      execute,
+    };
+
+    await expect(executeIdempotent(args)).rejects.toBeDefined();
+    await expect(executeIdempotent(args)).rejects.toBeDefined();
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(deps.idempotencyKeyRepository.calls).toContain('storeError');
   });
 });
