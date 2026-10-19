@@ -13,7 +13,9 @@ import { z } from 'zod';
 //   removed:  absent from the bundle, and named by the operator.
 // Format v3 also binds the selected revision: equal content can occur in
 // multiple immutable revisions, and reusing a release must not substitute one.
-export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v3';
+// Format v4 freezes the bootstrap's historical candidates separately from
+// selectable items. Later releases carry an empty candidate list.
+export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v4';
 
 export const RELEASE_REMOVAL_KINDS = ['archived', 'draft', 'removed'] as const;
 export type ReleaseRemovalKind = (typeof RELEASE_REMOVAL_KINDS)[number];
@@ -25,6 +27,11 @@ export type ReleaseManifestRemoval = { slug: string; kind: ReleaseRemovalKind };
 export type ReleaseManifest = (
   | {
       format: typeof RELEASE_MANIFEST_FORMAT;
+      items: ReleaseManifestEntry[];
+      preBootstrapCandidates: string[];
+    }
+  | {
+      format: 'app-release-manifest-v3';
       items: ReleaseManifestEntry[];
     }
   | {
@@ -47,7 +54,17 @@ export function buildReleaseManifest(
   entries: readonly ReleaseManifestEntry[],
   removals: readonly ReleaseManifestRemoval[] = [],
   format: ReleaseManifest['format'] = RELEASE_MANIFEST_FORMAT,
+  preBootstrapCandidates: readonly string[] = [],
 ): ReleaseManifest {
+  if (format !== RELEASE_MANIFEST_FORMAT && preBootstrapCandidates.length > 0) {
+    throw new Error('Legacy manifests cannot carry bootstrap candidates');
+  }
+  const candidates = preBootstrapCandidates
+    .map((id) => z.guid().parse(id))
+    .sort();
+  if (new Set(candidates).size !== candidates.length) {
+    throw new Error('A bootstrap candidate appears more than once');
+  }
   const items = [...entries].sort(compareSlugs);
   for (const item of items) {
     if (!CONTENT_HASH.test(item.contentHash)) {
@@ -65,22 +82,26 @@ export function buildReleaseManifest(
       throw new Error(`${slug} appears more than once in the manifest`);
     }
   });
-  // v2 is used only to verify an existing release in its original form.
-  return format === 'app-release-manifest-v2'
-    ? {
-        format,
-        items: items.map(({ slug, contentHash }) => ({ slug, contentHash })),
-        removals: sortedRemovals,
-      }
-    : {
-        format,
-        items: items.map(({ slug, contentHash, revisionId }) => ({
-          slug,
-          contentHash,
-          revisionId: z.guid().parse(revisionId),
-        })),
-        removals: sortedRemovals,
-      };
+  // Legacy formats are used only to verify existing releases in their
+  // original form. Their bytes and hashes must not gain the new list.
+  if (format === 'app-release-manifest-v2') {
+    return {
+      format,
+      items: items.map(({ slug, contentHash }) => ({ slug, contentHash })),
+      removals: sortedRemovals,
+    };
+  }
+  const content = {
+    items: items.map(({ slug, contentHash, revisionId }) => ({
+      slug,
+      contentHash,
+      revisionId: z.guid().parse(revisionId),
+    })),
+    removals: sortedRemovals,
+  };
+  return format === RELEASE_MANIFEST_FORMAT
+    ? { format, ...content, preBootstrapCandidates: candidates }
+    : { format, ...content };
 }
 
 // Sorted keys at every level and no insignificant whitespace, byte-identical
@@ -99,6 +120,9 @@ export function canonicalReleaseManifestJson(
             revisionId,
             slug,
           })),
+    ...(manifest.format === RELEASE_MANIFEST_FORMAT
+      ? { preBootstrapCandidates: manifest.preBootstrapCandidates }
+      : {}),
     removals: manifest.removals.map(({ slug, kind }) => ({ kind, slug })),
   });
 }
@@ -133,8 +157,16 @@ const storedManifestSchema = z.discriminatedUnion('format', [
     .strict(),
   z
     .object({
+      format: z.literal('app-release-manifest-v3'),
+      items: z.array(contentEntrySchema.extend({ revisionId: z.guid() })),
+      removals: removalsSchema,
+    })
+    .strict(),
+  z
+    .object({
       format: z.literal(RELEASE_MANIFEST_FORMAT),
       items: z.array(contentEntrySchema.extend({ revisionId: z.guid() })),
+      preBootstrapCandidates: z.array(z.guid()),
       removals: removalsSchema,
     })
     .strict(),
@@ -144,6 +176,17 @@ const storedManifestSchema = z.discriminatedUnion('format', [
 // must still be exactly what buildReleaseManifest writes.
 export function parseReleaseManifest(value: unknown): ReleaseManifest {
   const parsed = storedManifestSchema.parse(value);
+  if (
+    parsed.format === RELEASE_MANIFEST_FORMAT &&
+    parsed.preBootstrapCandidates.some((id, index) => {
+      const previous = parsed.preBootstrapCandidates[index - 1];
+      return previous !== undefined && previous >= id;
+    })
+  ) {
+    throw new Error(
+      'Stored bootstrap candidates must be unique and in ID order',
+    );
+  }
   const slugs = [...parsed.items, ...parsed.removals].map(({ slug }) => slug);
   if (new Set(slugs).size !== slugs.length) {
     throw new Error('A question appears more than once in the manifest');

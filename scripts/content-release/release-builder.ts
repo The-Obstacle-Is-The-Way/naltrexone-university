@@ -18,6 +18,7 @@ import {
   replaceQuestionTags,
   sortedTags,
 } from '../seed/question-syncer';
+import { findUnrecordedWithdrawals } from '../seed/question-withdrawal-writer';
 import {
   lockReleasePointer,
   ReleaseActivationError,
@@ -25,6 +26,7 @@ import {
   type ReleaseRemoval,
   stageRelease,
 } from './release-activation';
+import { type ReleaseChanges, readReleaseChanges } from './release-changes';
 import {
   buildReleaseManifest,
   type ReleaseManifestRemoval,
@@ -34,6 +36,7 @@ import {
 type Db = PostgresJsDatabase<typeof schema>;
 
 export type StageSummary = {
+  changes: ReleaseChanges;
   releaseId: string;
   parentReleaseId: string;
   /** An existing release with the same manifest on the same parent. */
@@ -111,6 +114,8 @@ async function revisionForContent(
 // current one, moves its question back to that revision, which can undo an
 // answer-key correction.
 // Staging allows that only for a question named in `revert`.
+// BUG-351 also requires a name when a changed key matches earlier publication
+// history, even if unrelated edits make the selected revision new.
 export async function stageReleaseFromFiles(
   db: Db,
   files: readonly SeedSourceFile[],
@@ -268,21 +273,6 @@ export async function stageReleaseFromFiles(
         'Refusing to stage a release with no published question: activating it would take every question out of the bank.',
       );
     }
-    const reverting = await revertedSlugs(tx, items);
-    const namedReverts = new Set(options.revert ?? []);
-    for (const qid of namedReverts) {
-      if (!reverting.includes(qid)) {
-        throw new Error(
-          `Cannot revert ${qid}: the bundle does not move it to an earlier revision.`,
-        );
-      }
-    }
-    const unnamed = reverting.filter((slug) => !namedReverts.has(slug));
-    if (unnamed.length > 0) {
-      throw new Error(
-        `The bundle moves ${unnamed.join(', ')} back to an earlier revision, which can undo a correction. Restore the newer content, or name each with --revert.`,
-      );
-    }
 
     const reused = await existingRelease(
       tx,
@@ -300,7 +290,47 @@ export async function stageReleaseFromFiles(
         })),
         parentReleaseId: active,
       }));
+    const unrecorded = await findUnrecordedWithdrawals(
+      tx,
+      removals
+        .filter((row) => row.kind === 'archived')
+        .map((row) => row.questionId),
+    );
+    const pendingWithdrawnIds = new Set(
+      unrecorded.map((row) => row.questionId),
+    );
+    const { changes } = await readReleaseChanges(
+      tx,
+      releaseId,
+      removals.filter((row) => pendingWithdrawnIds.has(row.questionId)),
+    );
+    const reverting = await revertedSlugs(tx, items);
+    const namedReverts = new Set(options.revert ?? []);
+    for (const qid of namedReverts) {
+      if (!reverting.includes(qid) && !changes.answerKeyReturn.includes(qid)) {
+        throw new Error(
+          `Cannot revert ${qid}: the bundle does not move it to an earlier revision or return to an earlier answer key.`,
+        );
+      }
+    }
+    const unnamed = reverting.filter((slug) => !namedReverts.has(slug));
+    if (unnamed.length > 0) {
+      throw new Error(
+        `The bundle moves ${unnamed.join(', ')} back to an earlier revision, which can undo a correction. Restore the newer content, or name each with --revert.`,
+      );
+    }
+
+    const unnamedKeys = changes.answerKeyReturn.filter(
+      (slug) => !namedReverts.has(slug),
+    );
+    if (unnamedKeys.length > 0) {
+      throw new Error(
+        `The bundle returns ${unnamedKeys.join(', ')} to an earlier answer key. Name each with --revert.`,
+      );
+    }
+
     return {
+      changes,
       releaseId,
       parentReleaseId: active,
       reusedRelease: reused !== null,

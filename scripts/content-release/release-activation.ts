@@ -9,6 +9,11 @@ import {
   recordWithdrawals,
 } from '../seed/question-withdrawal-writer';
 import {
+  ELIGIBLE_RELEASE_ITEM as ELIGIBLE,
+  type ReleaseChanges,
+  readReleaseChanges,
+} from './release-changes';
+import {
   buildReleaseManifest,
   parseReleaseManifest,
   type ReleaseRemovalKind,
@@ -48,25 +53,7 @@ export type ActivationSummary = {
 // the release by identity rather than by row id lets a bootstrap, whose
 // release is created in the same transaction, be previewed and then applied
 // to the same plan. The slug lists are that diff, named.
-export type ActivationPlan = {
-  id: string;
-  /** Questions that leave the bank. */
-  archive: string[];
-  /** Questions published that are not live now (DEBT-492: split by kind). */
-  publish: string[];
-  /** Live questions moved to a newer revision. */
-  update: string[];
-  /** Questions moved back to an earlier revision than their current one. */
-  revert: string[];
-  /** Items whose question has an unlifted hold on another revision. */
-  replacesHeld: string[];
-  /** Questions withdrawn for good. */
-  withdraw: string[];
-  /** Items left out because their revision has an unlifted hold. */
-  excludedHeld: string[];
-  /** Items left out because their question is withdrawn. */
-  excludedWithdrawn: string[];
-};
+export type ActivationPlan = ReleaseChanges & { id: string };
 
 export type ReleaseActivationErrorCode =
   | 'POINTER_MISSING'
@@ -78,6 +65,8 @@ export type ReleaseActivationErrorCode =
   | 'MANIFEST_ITEMS_MISMATCH'
   | 'INCOMPLETE_RELEASE'
   | 'PLAN_MISMATCH'
+  | 'KEY_RETURN_REQUIRED'
+  | 'UNEXPECTED_REVERT'
   | 'DECISION_REQUIRED';
 
 export class ReleaseActivationError extends Error {
@@ -89,19 +78,6 @@ export class ReleaseActivationError extends Error {
     this.name = 'ReleaseActivationError';
   }
 }
-
-// An item is selectable unless its question has a withdrawal, which is
-// permanent and per question (#953), or its revision has an unlifted hold.
-// Used inside statements that alias content_release_items as i.
-const WITHDRAWN = sql`EXISTS (
-  SELECT 1 FROM question_withdrawals w WHERE w.question_id = i.question_id
-)`;
-const HELD = sql`EXISTS (
-  SELECT 1 FROM question_holds h
-  WHERE h.question_revision_id = i.question_revision_id AND h.lifted_at IS NULL
-)`;
-// Parenthesized, so it negates and combines as one condition.
-const ELIGIBLE = sql`(NOT ${WITHDRAWN} AND NOT ${HELD})`;
 
 // All supported content writers acquire this lock before any question row.
 // Serializing these operator transactions also covers nested hold activation
@@ -158,79 +134,89 @@ async function releaseEntries(tx: Db, releaseId: string) {
 
 // Writes a release of the given items, invisibly: nothing reads a release
 // until it is activated. Its manifest names each item's slug, the content
-// hash of the item's revision and, from format v3, the revision's ID.
+// hash of the item's revision and, from format v3, the revision's ID; from
+// format v4 it also carries the bootstrap's pre-bootstrap candidates.
+type StageReleaseInput = {
+  items: readonly ReleaseItem[];
+  removals?: readonly ReleaseRemoval[];
+  parentReleaseId: string | null;
+};
+
 export async function stageRelease(
   db: Db,
-  input: {
-    items: readonly ReleaseItem[];
-    removals?: readonly ReleaseRemoval[];
-    parentReleaseId: string | null;
-  },
+  input: StageReleaseInput,
 ): Promise<string> {
-  return db.transaction(async (tx) => {
-    const entries =
-      input.items.length === 0
-        ? []
-        : await tx
-            .select({
-              slug: schema.questions.slug,
-              contentHash: schema.questionRevisions.contentHash,
-              revisionId: schema.questionRevisions.id,
-            })
-            .from(schema.questionRevisions)
-            .innerJoin(
-              schema.questions,
-              eq(schema.questions.id, schema.questionRevisions.questionId),
-            )
-            .where(
-              inArray(
-                schema.questionRevisions.id,
-                input.items.map((item) => item.questionRevisionId),
-              ),
-            );
-    const removals = input.removals ?? [];
-    const removedSlugs = await tx
-      .select({ id: schema.questions.id, slug: schema.questions.slug })
-      .from(schema.questions)
-      .where(
-        inArray(
-          schema.questions.id,
-          removals.map((removal) => removal.questionId),
-        ),
-      );
-    const slugById = new Map(removedSlugs.map((row) => [row.id, row.slug]));
-    const manifest = buildReleaseManifest(
-      entries,
-      removals.map((removal) => {
-        const slug = slugById.get(removal.questionId);
-        if (slug === undefined) {
-          throw new Error(
-            `A removal names ${removal.questionId}, which is not a question`,
+  return db.transaction((tx) => insertRelease(tx, input, []));
+}
+
+// Only bootstrap supplies candidates. They are manifest metadata, never items.
+async function insertRelease(
+  tx: Db,
+  input: StageReleaseInput,
+  preBootstrapCandidates: readonly string[],
+): Promise<string> {
+  const entries =
+    input.items.length === 0
+      ? []
+      : await tx
+          .select({
+            slug: schema.questions.slug,
+            contentHash: schema.questionRevisions.contentHash,
+            revisionId: schema.questionRevisions.id,
+          })
+          .from(schema.questionRevisions)
+          .innerJoin(
+            schema.questions,
+            eq(schema.questions.id, schema.questionRevisions.questionId),
+          )
+          .where(
+            inArray(
+              schema.questionRevisions.id,
+              input.items.map((item) => item.questionRevisionId),
+            ),
           );
-        }
-        return { slug, kind: removal.kind };
-      }),
+  const removals = input.removals ?? [];
+  const removedSlugs = await tx
+    .select({ id: schema.questions.id, slug: schema.questions.slug })
+    .from(schema.questions)
+    .where(
+      inArray(
+        schema.questions.id,
+        removals.map((removal) => removal.questionId),
+      ),
     );
-    const release = onlyRow(
-      await tx
-        .insert(schema.contentReleases)
-        .values({
-          manifest,
-          manifestHash: releaseManifestHash(manifest),
-          parentReleaseId: input.parentReleaseId,
-        })
-        .returning({ id: schema.contentReleases.id }),
-      'Failed to stage the release',
-    );
-    if (input.items.length > 0) {
-      await tx
-        .insert(schema.contentReleaseItems)
-        .values(
-          input.items.map((item) => ({ releaseId: release.id, ...item })),
+  const slugById = new Map(removedSlugs.map((row) => [row.id, row.slug]));
+  const manifest = buildReleaseManifest(
+    entries,
+    removals.map((removal) => {
+      const slug = slugById.get(removal.questionId);
+      if (slug === undefined) {
+        throw new Error(
+          `A removal names ${removal.questionId}, which is not a question`,
         );
-    }
-    return release.id;
-  });
+      }
+      return { slug, kind: removal.kind };
+    }),
+    undefined,
+    preBootstrapCandidates,
+  );
+  const release = onlyRow(
+    await tx
+      .insert(schema.contentReleases)
+      .values({
+        manifest,
+        manifestHash: releaseManifestHash(manifest),
+        parentReleaseId: input.parentReleaseId,
+      })
+      .returning({ id: schema.contentReleases.id }),
+    'Failed to stage the release',
+  );
+  if (input.items.length > 0) {
+    await tx
+      .insert(schema.contentReleaseItems)
+      .values(input.items.map((item) => ({ releaseId: release.id, ...item })));
+  }
+  return release.id;
 }
 
 // A hold defers its question locks to this full, ordered activation set.
@@ -287,6 +273,8 @@ export async function activateRelease(
     expectedActiveReleaseId: string | null;
     /** The plan id an operator reviewed; a different plan applies nothing. */
     expectedPlanId?: string | undefined;
+    /** Each answer-key return explicitly named by the operator. */
+    revert?: readonly string[];
     /** Why, and on whose authority: kept on the receipt (DEBT-490). */
     record: DecisionRecord;
   },
@@ -339,7 +327,14 @@ export async function activateRelease(
     }
     const entries = await releaseEntries(tx, release.id);
     const itemsHash = releaseManifestHash(
-      buildReleaseManifest(entries, manifest.removals, manifest.format),
+      buildReleaseManifest(
+        entries,
+        manifest.removals,
+        manifest.format,
+        manifest.format === 'app-release-manifest-v4'
+          ? manifest.preBootstrapCandidates
+          : [],
+      ),
     );
     // In id order, so the plan's withdrawals are, like its other sets.
     const removed = await tx
@@ -418,48 +413,12 @@ export async function activateRelease(
     const withdrawnIds = new Set(unrecorded.map((row) => row.questionId));
     const withdrawn = withdrawnIds.size;
 
-    // The plan: what the statements below will do, under the same locks.
-    // DEBT-492: each change is named by kind. A revert is a move to a lower
-    // revision number than the question's current one, whatever its status;
-    // a hold binds one revision, so an item can replace a held revision.
-    const publishing = await tx.execute<{
-      question_id: string;
-      question_revision_id: string;
-      slug: string;
-      change: 'publish' | 'update' | 'revert' | null;
-      replaces_held: boolean;
-    }>(sql`
-      SELECT i.question_id, i.question_revision_id, q.slug,
-        CASE
-          WHEN ir.revision_number < cr.revision_number THEN 'revert'
-          WHEN q.status <> 'published' THEN 'publish'
-          WHEN q.current_revision_id <> i.question_revision_id THEN 'update'
-        END AS change,
-        EXISTS (
-          SELECT 1 FROM question_holds h
-          WHERE h.question_id = i.question_id
-            AND h.lifted_at IS NULL
-            AND h.question_revision_id <> i.question_revision_id
-        ) AS replaces_held
-      FROM content_release_items i
-      JOIN questions q ON q.id = i.question_id
-      JOIN question_revisions ir ON ir.id = i.question_revision_id
-      LEFT JOIN question_revisions cr ON cr.id = q.current_revision_id
-      WHERE i.release_id = ${release.id} AND ${ELIGIBLE}
-      ORDER BY i.question_id
-    `);
-    const archiving = await tx.execute<{ id: string; slug: string }>(sql`
-      SELECT q.id, q.slug FROM questions q
-      WHERE q.status = 'published'
-        AND NOT EXISTS (
-          SELECT 1 FROM content_release_items i
-          WHERE i.release_id = ${release.id}
-            AND i.question_id = q.id
-            AND ${ELIGIBLE}
-        )
-      ORDER BY q.id
-    `);
     const withdrawing = removed.filter((row) => withdrawnIds.has(row.id));
+    const { publishing, archiving, changes } = await readReleaseChanges(
+      tx,
+      release.id,
+      withdrawing,
+    );
     const planId = createHash('sha256')
       .update(
         JSON.stringify({
@@ -472,6 +431,8 @@ export async function activateRelease(
           ]),
           archive: archiving.map((row) => row.id),
           withdraw: withdrawing.map((row) => row.id),
+          answerKeyChange: changes.answerKeyChange,
+          answerKeyReturn: changes.answerKeyReturn,
         }),
       )
       .digest('hex');
@@ -481,28 +442,24 @@ export async function activateRelease(
         `Release ${release.id}'s plan is now ${planId}, not ${input.expectedPlanId} as reviewed. Nothing was applied; preview it again.`,
       );
     }
-    // The items the overlay leaves out, which the publish set already binds.
-    const excluded = await tx.execute<{ slug: string; withdrawn: boolean }>(sql`
-      SELECT q.slug, ${WITHDRAWN} AS withdrawn
-      FROM content_release_items i
-      JOIN questions q ON q.id = i.question_id
-      WHERE i.release_id = ${release.id} AND NOT ${ELIGIBLE}
-    `);
-    const bySlug = (rows: readonly { slug: string }[]) =>
-      rows.map((row) => row.slug).sort();
-    const plan: ActivationPlan = {
-      id: planId,
-      archive: bySlug(archiving),
-      publish: bySlug(publishing.filter((row) => row.change === 'publish')),
-      update: bySlug(publishing.filter((row) => row.change === 'update')),
-      revert: bySlug(publishing.filter((row) => row.change === 'revert')),
-      replacesHeld: bySlug(
-        publishing.filter((row) => row.change !== null && row.replaces_held),
-      ),
-      withdraw: bySlug(withdrawing),
-      excludedHeld: bySlug(excluded.filter((row) => !row.withdrawn)),
-      excludedWithdrawn: bySlug(excluded.filter((row) => row.withdrawn)),
-    };
+    const plan: ActivationPlan = { id: planId, ...changes };
+    const named = new Set(input.revert ?? []);
+    const unexpected = [...named].filter(
+      (slug) => !changes.answerKeyReturn.includes(slug),
+    );
+    if (unexpected.length > 0) {
+      throw new ReleaseActivationError(
+        'UNEXPECTED_REVERT',
+        `These questions do not return to an earlier answer key: ${unexpected.join(', ')}. Remove their --revert flags.`,
+      );
+    }
+    const unnamed = changes.answerKeyReturn.filter((slug) => !named.has(slug));
+    if (unnamed.length > 0) {
+      throw new ReleaseActivationError(
+        'KEY_RETURN_REQUIRED',
+        `This activation returns ${unnamed.join(', ')} to an earlier answer key. Name each with --revert and record the reason and authority.`,
+      );
+    }
 
     // 4. Materialize. Drafts no release names are left as they are.
     const published = await tx.execute(sql`
@@ -563,7 +520,7 @@ export async function activateRelease(
 export async function bootstrapRelease(
   db: Db,
   input: { expectedPlanId?: string | undefined; record: DecisionRecord },
-): Promise<ActivationSummary> {
+): Promise<ActivationSummary & { preBootstrapCandidates: number }> {
   assertDecision(input.record);
   return db.transaction(async (tx) => {
     const active = await lockReleasePointer(tx);
@@ -580,15 +537,24 @@ export async function bootstrapRelease(
       })
       .from(schema.questions)
       .where(eq(schema.questions.status, 'published'));
-    const releaseId = await stageRelease(tx, {
-      items: live,
-      parentReleaseId: null,
-    });
-    return activateRelease(tx, {
+    const candidates = await tx
+      .select({ id: schema.questionRevisions.id })
+      .from(schema.questionRevisions)
+      .orderBy(asc(schema.questionRevisions.id));
+    const releaseId = await insertRelease(
+      tx,
+      {
+        items: live,
+        parentReleaseId: null,
+      },
+      candidates.map(({ id }) => id),
+    );
+    const activated = await activateRelease(tx, {
       releaseId,
       expectedActiveReleaseId: null,
       expectedPlanId: input.expectedPlanId,
       record: input.record,
     });
+    return { ...activated, preBootstrapCandidates: candidates.length };
   });
 }
