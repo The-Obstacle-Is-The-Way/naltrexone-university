@@ -16,7 +16,7 @@ type NormalizationCensus = {
   choiceTexts: number;
   choiceExplanations: number;
   correctChoiceTexts: number;
-  revisionsWithCorrectChoiceTextChanges: number;
+  revisionsWithNoncanonicalCorrectChoiceTexts: number;
 };
 
 // The seed maps a raw empty optional field to null before normalization.
@@ -56,7 +56,7 @@ export async function readNormalizationCensus(
         (select count(*)::int from choice_fields where text) as "choiceTexts",
         (select count(*)::int from choice_fields where explanation) as "choiceExplanations",
         (select count(*)::int from choice_fields where is_correct and text) as "correctChoiceTexts",
-        (select count(distinct question_revision_id)::int from choice_fields where is_correct and text) as "revisionsWithCorrectChoiceTextChanges"
+        (select count(distinct question_revision_id)::int from choice_fields where is_correct and text) as "revisionsWithNoncanonicalCorrectChoiceTexts"
     `);
       const result = rows[0];
       if (!result) throw new Error('Normalization census returned no counts');
@@ -90,8 +90,8 @@ export async function runNormalizationCensus(
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 /* v8 ignore start */
 if (import.meta.url === executedPath) {
-  runNormalizationCensus().catch(() => {
-    console.error('Normalization census failed; no content was changed.');
+  runNormalizationCensus().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });
 }

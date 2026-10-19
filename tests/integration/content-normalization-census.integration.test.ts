@@ -101,7 +101,7 @@ describe('read-only content normalization census', () => {
       choiceTexts: 1,
       choiceExplanations: 2,
       correctChoiceTexts: 1,
-      revisionsWithCorrectChoiceTextChanges: 1,
+      revisionsWithNoncanonicalCorrectChoiceTexts: 1,
     });
     expect(await stored()).toEqual(before);
     const lines: string[] = [];
