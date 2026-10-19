@@ -20,12 +20,12 @@ The live defect this split causes is BUG-351: a stale seed restores a corrected 
 ## Evidence
 
 **The two revert rules:**
-- Builder: `scripts/content-release/release-builder.ts:58-94` matches a file against every revision of its question. `:270-284` refuses a move to an earlier revision without `--revert`.
+- Builder: `scripts/content-release/release-builder.ts:58-94` matches a file against every revision of its question. `:271-285` refuses a move to an earlier revision without `--revert`.
 - Seed: `scripts/seed/question-syncer.ts:256-267` compares the canonical file with the current revision only, and appends a revision when they differ. BUG-281's graded-history refusal went when revisions became append-only (`3ac01fc8`, 2026-09-30).
 - The production path:
   - `db:seed:prod` (`scripts/seed-production.ts`) prepares the corpus from `content/drafts/questions` (`scripts/import-draft-questions.ts:20`) with `--status published` (`scripts/prepare-seed-corpus.ts:24`), then seeds production (`scripts/seed-environment-targets.ts:105-106`).
   - The drafts' question folders are untracked (`.gitignore:63-66`).
-- `release-activation.ts:127-134`: the seed may write whenever no release is active.
+- `release-activation.ts:127-135`: the seed may write whenever no release is active.
 
 **Whole-revision equality and answer-key projection have different purposes and inconsistent normalization:**
 - The seed canonicalizes both sides before comparing (`scripts/seed/question-parser.ts:158-181`; guarded by `tests/integration/seed-revision-append.integration.test.ts:149-188`).
@@ -49,7 +49,7 @@ Production prevalence is unknown. A read-only census should separately count non
 - The two readings come from two decisions: ADR-021 decision 5 (per revision) and ADR-022 Decision 1 ("an unlifted hold on a revision of the question"). Choosing one amends the other. The gap is dormant until the bootstrap, since holds need an active release.
 
 **Smaller items:**
-- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:339-359`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
+- Tags change in place outside the release manifest, its review plan and rollback (`release-builder.ts:340-360`; `release-manifest.ts`). This accepted implementation limit is already documented in ADR-021's implementation boundary and `docs/architecture/content-pipeline.md:357,365`: staging changes tags immediately, and rollback does not restore them. Changing it requires an explicit ADR-021 amendment; it is not an undocumented defect.
 - Feedback records `question_id`, an optional `attempt_id` and an optional `practice_session_id`, but no revision (`db/schema.ts:1340-1361`). A report with neither an attempt nor a session cannot say which revision it concerned.
 - Question status, tag kind and the slug pattern are each retyped in several places (`db/schema.ts`, the domain value objects, `lib/content/schemas.ts`, `scripts/draft-question-import.ts`). They agree today; DEBT-453 consolidated only difficulty.
 
