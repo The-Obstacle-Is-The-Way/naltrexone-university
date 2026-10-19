@@ -18,9 +18,10 @@ The scripts encode repository-specific behavior. Replacing one requires proof th
 - **Some scripts stand in for configuration.**
 - **Some code is dead.**
 
-The initial review filed BUG-353 through BUG-356. The challenge separated the importer, IPv6 setup and ledger diagnostics into BUG-357, BUG-358 and BUG-359. BUG-360, filed with #1559, owns the independent deploy-target E2E reset; BUG-361 owns unreachable rule-register proofs. The review's method, recount commands and coverage are in its pull request.
+The initial review filed BUG-353 through BUG-356. The challenge separated the importer, IPv6 setup and ledger diagnostics into BUG-357, BUG-358 and BUG-359. BUG-360, filed with #1559, owns the independent deploy-target E2E reset; BUG-361 owns unreachable rule-register proofs. The review's method and coverage are in its pull request.
 
 Corrected 2026-10-19: recount files and references after dev integration, separate defects, bound platform claims, preserve existing helpers and caller-specific behavior, and correct deletion and migration proposals.
+Corrected 2026-10-19: a second challenge widened the error-reporting, loopback and test-name evidence, corrected citations and BUG-352's and DEBT-500's references, and ordered the steps by their dependencies.
 
 ## Evidence
 
@@ -29,14 +30,14 @@ Corrected 2026-10-19: recount files and references after dev integration, separa
 - **Entry points.**
   - Thirty-six copies of the direct-run guard (BUG-354). Error-reporting patterns include:
     - most print the message;
-    - `merge-reviewed-pr.ts`, `verify-promotion.ts` and `documentation-archive.ts` let a stack trace through;
+    - `merge-reviewed-pr.ts`, `verify-promotion.ts` and `documentation-archive.ts` let a stack trace through, as do `check-server-action-manifest.ts` on a malformed manifest and `ci/scan-playwright-output.ts` on an unreadable directory;
     - `export-question-feedback.ts` prints the whole error object;
-    - `verify-migration-ledger.ts` preserves typed ledger code/message/remedy and uses a generic line for other errors.
+    - `verify-migration-ledger.ts` and `documentation-due-checks.ts` print their own typed errors and a generic line for the rest; the operational, learnings, security.txt and advisory watchers print only a generic line.
   - BUG-359 owns the hidden safe usage and target diagnostics. Unknown errors must remain sanitized; a shared entry detector must not erase those distinctions.
 - **GitHub.**
-  - Eight files each wrap `execFileSync('gh', …)`, and three modules adapt GitHub issues:
+  - Eight files run `gh` through their own `execFileSync` wrapper (`verify-promotion.ts` through a generic `run`), and three modules adapt GitHub issues:
     - `github-alert-issues.ts` uses GitHub's search;
-    - `security-txt-renewal.mts:83-88` reads the repository's whole issue and pull-request list only inside its renewal window (`:44-53`). The advisory watch's adapter (`upstream-advisory-watch.mts:636-672`) reads that list afresh on each call: once per run to close reviewed issues (`:793`), and again when new advisories need checking (`:280`); its workflow runs every three hours. `github-alert-issues.ts:117-118` instead searches by title.
+    - `security-txt-renewal.mts:83-88` reads the repository's whole issue and pull-request list only inside its renewal window (`:45`, list at `:53`). The advisory watch's adapter (`upstream-advisory-watch.mts:636-672`) reads that list afresh on each call: once per run to close reviewed issues (`:793`), and again when new advisories need checking (`:280`); its workflow runs every three hours. `github-alert-issues.ts:118-131` instead searches by title.
   - Three test fakes are each named `MemoryIssues`.
   - The two `.mts` jobs run under plain `node` with no install. They could import a `.ts` helper only by its full `.ts` name, which `tsconfig.json` does not allow today, and only one that uses nothing from `node_modules`. So each carries its own copy.
 - **Alert assignees.**
@@ -55,8 +56,8 @@ Corrected 2026-10-19: recount files and references after dev integration, separa
 
   The last two manage process groups and have diverged.
 - **Database targets.**
-  - Five loopback checks disagree: `database-target.ts`, `e2e-local-orchestrator.ts`, `tests/shared/resolve-integration-database-url.ts`, `tests/integration/setup.ts` and `tests/integration/helpers.ts`.
-    - BUG-358 owns the setup's IPv6 loopback rejection.
+  - At least seven database loopback checks disagree: `database-target.ts`, `e2e-local-orchestrator.ts`, `tests/shared/resolve-integration-database-url.ts`, `tests/integration/setup.ts`, `tests/integration/helpers.ts`, and the E2E evidence helpers `tests/e2e/helpers/checkout-consent.ts` and `portal-cancellation.ts`, which accept only `localhost` and `127.0.0.1`.
+    - BUG-358 owns the setup's IPv6 loopback rejection; the database driver cannot reach a bracketed IPv6 host in any case.
   - Two rules decide whether a command may touch a remote database:
     - `DB_TARGET_ACK` names the exact remote host, port and database identities;
     - the boolean `ALLOW_NON_LOCAL_DATABASE_URL` admits any host, for the E2E passthrough and the integration helpers.
@@ -110,7 +111,7 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
   - `validate-header-safe-secret.test.ts` holds the only unit tests of `src/adapters/shared/header-secret.ts`.
   - The unit tests of `migration-ledger.ts` live in `tests/e2e/helpers/`.
   - `seed.test.ts` tests `seed/question-parser.ts` and `seed/tag-manager.ts`, not `seed.ts`.
-  - `content-release/release-command-args.test.ts`, `draft-question-body.test.ts` and `draft-question-split.test.ts` have no source file of those names.
+  - `content-release/release-command-args.test.ts`, `content-release/bootstrap-manifest.test.ts` (which tests `release-manifest.ts`), `draft-question-body.test.ts` and `draft-question-split.test.ts` have no source file of those names.
 - **Production code that serves tests.** `choiceIdByLabel` in `seed/question-revision-writer.ts` is used only by tests: `tests/shared/question-fixtures.ts` and its own unit test.
 - **Repository policy in script suites.**
   - At least thirteen script suites pin the contents of `package.json`, workflows or `vercel.json`. Examples: `check-clerk-jwt-key.test.ts` (which repeats `vercel.test.ts`), `e2e-local-orchestrator.test.ts`, `database-command.test.ts`, `mutation-report-integrity.test.ts` and `production-release-watch.test.ts`.
@@ -137,22 +138,23 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
 | The `documentation-archive.ts` command line and its spawn tests | No package script, workflow or hook invokes it; it remains usable manually and runs in this audit. | BUG-356 first, then an explicit decision about the standalone audit. Preserve all findings and exit behavior needed by operators. |
 | Unused exports and compatibility aliases | `resolveLocalE2EDatabaseUrl` has no tracked caller outside its tests, and `documentationLinks` has none at all. `formatMigrationContentDriftMessage` is called within `migration-ledger.ts`, so only its export is a candidate. `E2E_INSTANCE` and `E2E_APP_PORT` have no tracked external caller; operator environments are not observable from source. | Keep the internally used formatter. Check operator use and document migration before removing environment aliases. |
 | `prepare-seed-corpus.ts` and the environment seeds | They currently support both production and non-production draft import/seeding. | Replace every still-needed target workflow, satisfy BUG-351's source freshness requirements, and handle DEBT-483's bootstrap separately before deletion. |
-| `upstream-fix-watch.ts` and its workflow | Its only watch is DEBT-500's. | DEBT-500 closes and no other watch is added. |
+| `upstream-fix-watch.ts` and its workflow | Its only watch is the Stryker fix that DEBT-500's Waiting row waits for (#1500); the record itself is closed. | That watch fires, #1500 closes with the patch removed, and no other watch is added. |
 
 ### Scripts Standing In for Configuration
 
 - **CI's database.**
-  - `ci/start-postgres.sh` rebuilds `docker-compose.yml`'s `db` service by hand: the same environment and health check, plus a poll that `docker compose up --wait` already does. It also forces `ci.yml` to `docker network connect` the container for PgBouncer.
-  - Preserve the registry failover shipped by BUG-352 in #1555:
+  - `ci/start-postgres.sh`, which `ci.yml` and `stripe-hosted-checkout-smoke.yml` run, rebuilds `docker-compose.yml`'s `db` service by hand: the same environment and health check, plus a poll that `docker compose up --wait` already does. It also forces `ci.yml` to `docker network connect` the container for PgBouncer.
+  - Preserve the registry failover that DEBT-516 (#1454) and BUG-352 (#1552) shipped:
     - give `db` the `${…_IMAGE_REPOSITORY}@sha256:` form that `pgbouncer` already uses;
     - pull it with `ci/pull-image.sh`;
-    - start both with `docker compose up -d --wait --pull never`.
+    - start both with `docker compose up -d --wait --pull never`;
+    - align `DB_TEST_PORT` with the workflows' `DATABASE_URL`, which uses 5432 while Compose defaults to 5434.
 
     CI and local then share one database definition.
 - **One migrate path.**
-  - Vercel runs the ledger check before and after the managed migrate (`vercel.json`). CI and local E2E run the managed migrate bare.
+  - Vercel runs the ledger check before and after the managed migrate (`vercel.json`). CI, the hosted Checkout smoke workflow and local E2E run the managed migrate bare.
   - The pre-specific verifier lacks a real-Postgres test path; the shared query adapter and post-verifier do run in E2E credential preflight. A deploy should not be the first proof of the pre-specific behavior.
-  - Proposal: one managed migrate command that checks, migrates and checks again, used by all three, with real-Postgres tests for fresh, partially migrated, current and drifted ledgers before adoption.
+  - Proposal: one managed migrate command that checks, migrates and checks again, used by all four, with real-Postgres tests for fresh, partially migrated, current and drifted ledgers before adoption.
 - **The Stripe provider lane.**
   - `run-stripe-provider-contracts.ts` overrides its config's 10-second timeout with `--testTimeout=20000` and repeats the config's file list. It also builds a process tree by hand to run Vitest and parse its JSON.
   - A custom Vitest reporter could own case validation, but deleting the wrapper also removes its five-minute local process-tree bound, environment gate, `DATABASE_URL` removal and failure diagnostics. A job timeout covers only CI.
@@ -161,10 +163,10 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
   - `run-local-integration.ts` neither starts, migrates nor seeds its database, though the E2E command does. So `AGENTS.md` carries a five-command recipe.
   - Prepare the database as E2E does, with an opt-out for quick reruns.
 - **The production seed (owner ruling needed).**
-  - `db:seed:prod` is an operator command that pulls only Production's `DATABASE_URL` through the pinned preinstalled Vercel CLI; `db:seed:all` pulls all three Vercel environments to exclude Production. Both import the operator's drafts (BUG-351).
+  - `db:seed:prod` is an operator command that pulls only Production's `DATABASE_URL` through the pinned preinstalled Vercel CLI; `db:seed:all` seeds `.env.local`'s database and Vercel Development and Preview, and pulls Production only to refuse a matching target. Both import the operator's drafts (BUG-351).
   - Proposed target: a manually dispatched GitHub Actions job in a protected Environment, with the owner as required reviewer. Pin content and app commits, stage and preview the release, then bind the approved activation to its release ID, expected active release, preview plan ID, reason and authority. Each database first needs DEBT-483's separate, owner-approved bootstrap, which adopts existing live content.
   - Costs:
-    - It would make a production database URL a new CI secret consumer under the CI Secret Standard (`docs/architecture/environments.md`), which `tests/ci-workflow.test.ts` enumerates.
+    - It would make a production database URL a new CI secret consumer under the CI Secret Standard (`docs/architecture/environments.md`). `tests/ci-workflow.test.ts` checks only the workflows it names, so the new workflow needs its own consumer list there.
     - It needs read access to the content repository.
   - This could deliver BUG-351 Part 3's staging after the bootstrap prerequisite. An Actions job still inherits environment inputs; relocating it alone does not create an environment allowlist. Keep required operator paths until the replacement has evidence.
 - **The merge guard (owner decision).**
@@ -196,12 +198,12 @@ Retain these responsibilities until a replacement proves equivalent behavior. Th
   - Eight test files still mock `node:child_process`; some modules already inject runners, so each remaining default-transport test needs a deliberate replacement.
   - Forty-eight script/module files at the root (102 tracked root files including tests and README).
   - At the merge base, 12 Markdown files mentioned `resolve-local-test-target.ts` 31 times. Moving that script changes those references unless stable commands replace them first.
-- **Risk.** The building blocks each script rebuilt have drifted. The defects listed above, and BUG-353 to BUG-356, are the drift that has shown so far.
+- **Risk.** The building blocks each script rebuilt have drifted. The defects listed above, and BUG-353 through BUG-361, are the drift that has shown so far.
 
 ## Options
 
 - **A. Fix the separately recorded defects only.** Smaller scope, but duplicated policies remain and can diverge again.
-- **B. In order: the defects, shared building blocks, the configuration replacements that remove scripts, deletions, then the layout one family at a time.** Each step is a small pull request, and the directory test keeps the file list true across every move. Recommended.
+- **B. In order: the defects, package scripts, shared building blocks, the configuration replacements that remove scripts, deletions, the layout one family at a time, then the splits.** Each step is a small pull request, and the directory test keeps the file list true across every move. Recommended.
 - **C. One reorganization.** Rejected:
   - it would invalidate the file and line evidence that BUG-351 and DEBT-531 cite in `seed/` and `content-release/`;
   - it would touch the affected guides, configuration and path contracts in one review.
@@ -210,7 +212,7 @@ Retain these responsibilities until a replacement proves equivalent behavior. Th
 
 Pending the owner's review. Recommended: option B, in this order.
 
-1. **The separately recorded defects,** each fixed red first; owner-dependent production and E2E decisions remain with the owner.
+1. **The separately recorded defects,** each fixed red first, except BUG-354's shared entry detector, which waits for step 3's runtime choice; its package scripts need not wait. Owner-dependent production and E2E decisions remain with the owner.
 2. **Package scripts for every hand-run command,** with documents switched to them. A move still updates `package.json`, `vercel.json`, the workflows, the local E2E plan and the suites that pin paths.
 3. **Shared building blocks in `scripts/lib/`:**
    - reusable `gh` and issue transport, preserving distinct issue lifecycles, assignment and redaction policies;
@@ -226,14 +228,14 @@ Pending the owner's review. Recommended: option B, in this order.
    - prove credential-free generation while preserving connected-command guards, then consider deleting `db-generate.ts`;
    - Compose for CI's database, preserving BUG-352's registry failover;
    - the Stripe reporter only if it preserves the wrapper's local and CI safeguards.
-5. **The deletions above,** once each precondition holds.
+5. **The deletions above,** once each precondition holds. The environment seeds' deletion follows step 8.
 6. **The layout, one family per pull request, with its README rows:**
 
    ```text
    scripts/
      lib/           shared building blocks (step 3)
-     database/      target, command, migrate, seed, studio, migration ledger; managed/ for automation
-     deploy/        the Clerk key and server-action manifest checks
+     database/      target, command, generate, migrate, seed, studio, migration ledger; managed/ for automation
+     deploy/        the Clerk key and server-action manifest checks, and the header-secret check if kept
      test-lanes/    target, test database, integration, E2E, command plan, Stripe provider lane
      ci/            image pull, Chromium install, output scan
      content/       source/, drafts/, store/, seed/ (with environments/), release/
@@ -254,26 +256,29 @@ Pending the owner's review. Recommended: option B, in this order.
    - the merge guard, in its own pull request with its tests unchanged;
    - `documentation-archive.ts`: the records lifecycle to `scripts/records/`; move links to a `tests/` source scan only if the operator CLI no longer needs them;
    - the advisory watch.
-8. **The dispatched seed job,** with BUG-351 Part 3, after the owner rules on its secrets.
+8. **The dispatched seed job,** with BUG-351 Part 3, after each target database's bootstrap (DEBT-483) and the owner's ruling on its secrets.
 9. **Later, after BUG-351 and the bootstrap.** The content write side moves behind ports into `src/application` and `src/adapters`, with the planner in `src/domain`, leaving thin commands here.
 
 ## Verification
 
 - [ ] Separately recorded defects fixed and their remaining owner checks resolved.
 - [ ] Every hand-run command has a package script, and no guide names a script's path where one exists.
-- [ ] One `gh` runner and one issue transport, and no suite mocks `node:child_process`.
+- [ ] One `gh` runner and one issue transport; no suite mocks `node:child_process`, and a scan keeps it so.
+- [ ] The scheduled jobs' runtime chosen; the entry detector, process primitives and loopback predicate shared.
 - [ ] The deletions done, or declined by the owner with the reason recorded here.
 - [ ] The layout complete, with `tests/scripts-directory.test.ts` green after each move.
 - [ ] Each configuration replacement merged, or declined with its reason.
+- [ ] The three splits merged, or declined with the reason recorded here.
+- [ ] The dispatched seed job merged with BUG-351 Part 3, or declined by the owner with the reason recorded here.
 
 ## Related
 
 - **Defects found by the review and challenge:** BUG-353 through BUG-361.
-- **Closed prerequisite:** BUG-352 shipped registry failover in #1555; its remaining owner/watch follow-ups do not block evaluating the Compose consolidation.
+- **Closed prerequisite:** BUG-352 shipped the pooler's registry failover and the shared `ci/pull-image.sh` in #1552 (closed in #1555); its remaining owner/watch follow-ups do not block evaluating the Compose consolidation.
 - **Content writers:** BUG-351 owns the planner and input freshness, DEBT-531 normalization and hold scope, and DEBT-483 the bootstrap.
 - **Scripts touched by open records:**
   - BUG-329: the local target that changes in child processes;
-  - DEBT-500: the upstream fix watch;
+  - DEBT-500's Waiting row (the record is closed): the upstream fix watch;
   - DEBT-505: the operational watcher;
   - DEBT-509: the advisory watch;
   - DEBT-523: the release watch.

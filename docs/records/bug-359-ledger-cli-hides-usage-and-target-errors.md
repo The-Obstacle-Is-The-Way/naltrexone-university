@@ -8,13 +8,16 @@
 
 ## Summary
 
-The migration-ledger command replaces its own actionable usage and missing-target messages with a generic failure. It still exits nonzero; the defect is loss of the information needed to correct the command.
+The migration-ledger command replaces its own actionable usage, missing-target and invalid-target messages with a generic failure. It still exits nonzero; the defect is loss of the information needed to correct the command.
 
 ## Evidence
 
 - `scripts/verify-migration-ledger.ts:14-19` throws a usage message for a missing or invalid phase; `:24` calls `requireExplicitDatabaseUrl`, whose explicit-URL error is defined in `scripts/database-target.ts:21-26`.
 - The catch at `scripts/verify-migration-ledger.ts:54-60` prints code, message and remedy for `MigrationLedgerVerificationError`, but replaces all other errors with `Migration ledger verification failed.`
 - Reproduced without a database connection: with `DATABASE_URL` absent, both `pnpm exec tsx scripts/verify-migration-ledger.ts` and `pnpm exec tsx scripts/verify-migration-ledger.ts pre` exit 1 and print only that fixed line. The first fails argument parsing and the second fails before constructing the Postgres client.
+- Invalid targets are hidden too. `:25` calls `authorizeManagedDatabaseTargets`, which raises "The explicitly supplied DATABASE_URL is invalid." (`database-target.ts:86-97`); `DATABASE_URL='not a url' pnpm exec tsx scripts/verify-migration-ledger.ts pre` prints only the fixed line.
+
+Corrected 2026-10-19: invalid-target errors are hidden as well.
 
 ## Impact
 

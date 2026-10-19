@@ -18,11 +18,13 @@ The draft importer recognizes flags by searching the argument array, but never r
 
 ## Impact
 
-An operator can unintentionally materialize drafts. This command does not connect to a database, and a nonempty output directory still fails closed.
+An operator can unintentionally materialize drafts. Without `--out`, the output is `content/questions/imported/` (`:21`), which is gitignored and absent in a fresh clone, so a mistyped preview writes into the tree `pnpm db:seed` reads. The command itself opens no database, and a nonempty output directory still fails closed.
+
+Corrected 2026-10-19: the default output is the seed's input tree, and the environment seeds send the leading `--`.
 
 ## Options
 
-1. Consume every argument with explicit supported flags and reject unknown, duplicate or missing-value arguments before filesystem work. Preserve the documented leading pnpm `--` separator.
+1. Consume every argument with explicit supported flags and reject unknown, duplicate or missing-value arguments before filesystem work. Preserve the leading pnpm `--` separator, which the guide documents and the environment seeds send (`seed-environment-runtime.ts:55`).
 2. Keep permissive parsing and warn in the guide. This leaves a misspelled preview destructive to an empty output tree.
 
 ## Resolution (proposed)
@@ -32,7 +34,7 @@ Option 1, with subprocess tests that inspect the temporary output tree. DEBT-532
 ## Verification
 
 - [ ] A typo and each unsupported argument exit nonzero and create no output, red first.
-- [ ] The supported flags, default write behavior, explicit dry-run and leading pnpm separator remain covered.
+- [ ] The supported flags, default write behavior, explicit dry-run and leading pnpm separator remain covered, including the environment seeds' `pnpm content:import:drafts -- --status published --out <staging>` call.
 
 ## Related
 

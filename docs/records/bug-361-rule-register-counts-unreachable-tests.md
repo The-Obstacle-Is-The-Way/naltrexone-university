@@ -8,7 +8,7 @@
 
 ## Summary
 
-The business-rule register accepts a named test inside an uncalled function or a `while (false)` body as a proving test. Neither declaration executes. No current registered proof using either shape was identified; this is a reproduced guard gap, not evidence that an existing product rule lacks coverage.
+The business-rule register accepts a named test inside an uncalled function, a `while (false)` body, code after a `return`, or an empty `.each` table as a proving test. None of these declarations executes. Many current proofs are `.each` titles over literal tables (for example R23's `%i` titles), so an emptied table is the likeliest way one would become unreachable. No current registered proof using either shape was identified; this is a reproduced guard gap, not evidence that an existing product rule lacks coverage.
 
 ## Evidence
 
@@ -20,6 +20,9 @@ The business-rule register accepts a named test inside an uncalled function or a
   ```
 
   Both inputs return `[ 'unrun proof' ]`; the command exits 0. They register no tests when evaluated as JavaScript.
+- The same call returns the title for `describe("s", () => { return; test("after return", () => {}); })` and for `test.each([])("empty each %s", () => {})`; Vitest registers neither.
+
+Corrected 2026-10-19: add code after `return` and an empty `.each` table.
 
 ## Impact
 
@@ -36,7 +39,7 @@ Specify option 2's mapping and report contract before implementation, red first.
 
 ## Verification
 
-- [ ] An uncalled function and a zero-iteration loop cannot satisfy a proving-test entry.
+- [ ] An uncalled function, a zero-iteration loop, code after a `return` and an empty `.each` table cannot satisfy a proving-test entry.
 - [ ] Supported module and suite declarations still pass; existing skip and conditional controls remain effective.
 - [ ] Check the live register and run its proving suites after the fix.
 

@@ -7,6 +7,8 @@ const SCRIPTS_FOLDER = 'scripts';
 const SCRIPTS_DIRECTORY_PATH = 'scripts/README.md';
 const DIRECTORY_START = '<!-- scripts-directory:start -->';
 const DIRECTORY_END = '<!-- scripts-directory:end -->';
+const DIRECTORY_HEADER = ['File', 'What it does', 'Run by'] as const;
+const CODE_EXTENSION = /\.(?:[cm]?[jt]s|sh)$/;
 
 export type ScriptsDirectoryEntry = {
   file: string;
@@ -16,13 +18,13 @@ export type ScriptsDirectoryEntry = {
 
 // Tests, their helpers and fixtures sit beside the script they serve and are
 // named after it, so the README describes them once, by convention, rather
-// than in a row each.
+// than in a row each. Code placed in `fixtures/` still needs a row.
 export function isListedScript(file: string): boolean {
   return !(
     file === 'README.md' ||
     file.endsWith('.test.ts') ||
     file.endsWith('-test-helpers.ts') ||
-    file.startsWith('fixtures/')
+    (file.startsWith('fixtures/') && !CODE_EXTENSION.test(file))
   );
 }
 
@@ -45,10 +47,16 @@ export function parseScriptsDirectory(
     );
   }
 
+  const body = markdown.slice(start + DIRECTORY_START.length, end);
+  // A row inside either one does not render as a table row.
+  if (/<!--|^\s*(?:```|~~~)/m.test(body)) {
+    throw new Error(
+      'The scripts directory must not contain HTML comments or code fences, which hide rows or stop them rendering as a table.',
+    );
+  }
+
   const entries: ScriptsDirectoryEntry[] = [];
-  for (const rawLine of markdown
-    .slice(start + DIRECTORY_START.length, end)
-    .split('\n')) {
+  for (const rawLine of body.split('\n')) {
     const line = rawLine.trim();
     if (line.startsWith('#') || !/(?<!\\)\|/.test(line)) continue;
     // GitHub renders a row without either outer pipe, so skipping one would
@@ -65,10 +73,13 @@ export function parseScriptsDirectory(
       .slice(1, -1)
       .split(/(?<!\\)\|/)
       .map((cell) => cell.replaceAll('\\|', '|').trim());
-    if (cells[0] === 'File' || cells.every((cell) => /^:?-+:?$/.test(cell))) {
+    const isHeader =
+      cells.length === DIRECTORY_HEADER.length &&
+      DIRECTORY_HEADER.every((heading, index) => cells[index] === heading);
+    if (isHeader || cells.every((cell) => /^:?-+:?$/.test(cell))) {
       continue;
     }
-    if (cells.length !== 3) {
+    if (cells.length !== DIRECTORY_HEADER.length) {
       throw new Error(
         `A scripts directory row must have exactly three cells: ${line}`,
       );
@@ -127,24 +138,36 @@ export type ScriptCallers = {
   vercelConfig: string;
 };
 
-const PACKAGE_SCRIPT_REFERENCE = /`pnpm (?:run )?([^\s`]+)`/g;
-// The README's contract: a backticked `*.yml` name in Run by is a workflow.
-const WORKFLOW_REFERENCE = /`([^`\r\n]+\.yml)`/g;
+// The README's contract: Run by names automation only as a code span, either
+// `pnpm <script>` (arguments allowed), a workflow file or `vercel.json`. Any
+// other way of naming one fails, so a caller is never silently unchecked. A
+// `pnpm exec` command, run by hand, must name the row's own path.
+const PACKAGE_SCRIPT_REFERENCE =
+  /`pnpm\s+(?:run\s+)?(?!exec\s)([^\s`]+)[^`]*`/g;
+const PNPM_EXEC_REFERENCE = /`(pnpm\s+exec\s[^`]*)`/g;
+const WORKFLOW_REFERENCE = /`([^`\r\n]+\.ya?ml)`/g;
 const VERCEL_REFERENCE = '`vercel.json`';
+const OTHER_PACKAGE_MANAGER = /`(?:npm|npx|yarn)\s[^`]*`/g;
+const CALLER_OUTSIDE_CODE_SPAN = /\bpnpm\b|\.ya?ml\b|\bvercel\b/i;
 
 type WorkflowDocument = {
   jobs?: Record<string, { steps?: { run?: unknown }[] }>;
 };
 
+// Drops comments, then splits on command separators and drops `echo` and
+// `printf` commands, so a path they only print does not count.
 function commandLines(commands: string): string {
   return commands
     .split('\n')
-    .filter((line) => !/^\s*(?:#|echo\b)/.test(line))
+    .map((line) => line.replace(/(?:^|\s)#.*$/, ''))
+    .flatMap((line) => line.split(/&&|\|\||[;|]/))
+    .filter((command) => !/^\s*(?:echo|printf)\b/.test(command))
     .join('\n');
 }
 
 // This is a static reference check, not a shell interpreter. It excludes
-// whole comment/echo lines but cannot prove which branch executes.
+// comments and echo/printf commands but cannot prove which branch executes,
+// and it does not read heredocs or continued lines.
 function workflowCommands(workflow: string): string {
   const jobs = (parse(workflow) as WorkflowDocument | null)?.jobs ?? {};
   return Object.values(jobs)
@@ -193,6 +216,25 @@ export function collectRunByIssues(
 
   for (const { file, runBy } of entries) {
     const scriptPath = `${SCRIPTS_FOLDER}/${file}`;
+
+    for (const [span] of runBy.matchAll(OTHER_PACKAGE_MANAGER)) {
+      issues.push(
+        `${file} names ${span}; name its package script as \`pnpm <name>\`.`,
+      );
+    }
+    if (CALLER_OUTSIDE_CODE_SPAN.test(runBy.replace(/`[^`]*`/g, ' '))) {
+      issues.push(
+        `${file} names a caller outside a code span, which this check cannot read.`,
+      );
+    }
+
+    for (const [, command = ''] of runBy.matchAll(PNPM_EXEC_REFERENCE)) {
+      if (!referencesScript(command, scriptPath, {})) {
+        issues.push(
+          `${file} names \`${command}\`, which does not reference it.`,
+        );
+      }
+    }
 
     for (const [, name = ''] of runBy.matchAll(PACKAGE_SCRIPT_REFERENCE)) {
       const command = packageScripts[name];
