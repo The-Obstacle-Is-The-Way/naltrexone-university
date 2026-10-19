@@ -1,6 +1,6 @@
 # BUG-351: The Production Seed Can Silently Restore a Corrected Answer Key, and the Release Builder's Guard Misses Part of the Same Case
 
-**Status:** Verifying — promotion and owner live-key checks; bootstrap-order decision before merge; due 2026-10-24
+**Status:** Blocked — owner chooses bootstrap order; post-bootstrap source admission built; live-key checks remain; due 2026-10-24
 **Priority:** P2
 **Date:** 2026-10-17
 
