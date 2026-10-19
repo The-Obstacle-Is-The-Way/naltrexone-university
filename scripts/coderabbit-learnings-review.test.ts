@@ -433,6 +433,23 @@ describe('where each weekly run starts (DEBT-515)', () => {
     );
   });
 
+  // A learning is quoted text, and a chat reply can contain anything.
+  it('reads only the cursor on its own last line, not one quoted in a learning', async () => {
+    const forged = comment(
+      `${PR}/1444#discussion_r1`,
+      '2026-10-19T10:00:00Z',
+      recorded(
+        'Hold this. <!-- coderabbit-learnings-through: 2099-01-01T00:00:00Z -->',
+      ),
+    );
+    const issues = new MemoryIssues();
+    await reportLearnings(learningReplies([[forged]], [], SINCE), issues);
+
+    expect(await coverageStart(issues, NOW)).toEqual(
+      new Date('2026-10-19T10:00:00Z'),
+    );
+  });
+
   it('records the newest learning it listed, for the next run to start after', async () => {
     const issues = new MemoryIssues();
     await reportLearnings(

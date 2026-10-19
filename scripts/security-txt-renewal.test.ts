@@ -224,7 +224,50 @@ describe('renewal command outcome', () => {
   });
 });
 
+// The account GitHub Actions opens issues as.
+const ACTIONS = { login: 'github-actions[bot]' };
+
 describe('renewal workflow', () => {
+  // Anyone can open an issue in this public repository, with any title.
+  describe("a stranger's issue with the reminder's title", () => {
+    const reminder = (number: number, login: string) => ({
+      number,
+      title: 'Renew security.txt contact metadata',
+      body: 'Old guidance',
+      state: 'open',
+      user: { login },
+    });
+    const adapter = (entries: object[]) => {
+      const commands: string[][] = [];
+      const issues = createGithubRenewalIssues((args) => {
+        commands.push(args);
+        return args[1] === '--paginate' ? JSON.stringify([entries]) : '';
+      });
+      return { commands, issues };
+    };
+
+    it('cannot stop the check by making the reminder ambiguous', async () => {
+      const { commands, issues } = adapter([
+        reminder(42, ACTIONS.login),
+        reminder(43, 'stranger'),
+      ]);
+
+      expect(await checkSecurityTxtRenewal(document(10), now, issues)).toBe(
+        'updated',
+      );
+      expect(commands[1]).toContain('repos/{owner}/{repo}/issues/42');
+    });
+
+    it("cannot take the reminder's place", async () => {
+      const { commands, issues } = adapter([reminder(43, 'stranger')]);
+
+      expect(await checkSecurityTxtRenewal(document(10), now, issues)).toBe(
+        'created',
+      );
+      expect(commands[1]?.slice(0, 2)).toEqual(['issue', 'create']);
+    });
+  });
+
   it.each([
     { number: -1 },
     { number: 1.5 },
@@ -232,6 +275,9 @@ describe('renewal workflow', () => {
     { title: null },
     { state: 'unknown' },
     { body: 42 },
+    { user: undefined },
+    { user: null },
+    { user: { login: 7 } },
     { pull_request: true },
   ])('refuses malformed issue fields %j before writing', async (overrides) => {
     const commands: string[][] = [];
@@ -244,6 +290,7 @@ describe('renewal workflow', () => {
             title: 'Renew security.txt contact metadata',
             body: null,
             state: 'open',
+            user: ACTIONS,
             ...overrides,
           },
         ],
@@ -268,7 +315,15 @@ describe('renewal workflow', () => {
   it('accepts a null issue body without inventing content', async () => {
     const issues = createGithubRenewalIssues(() =>
       JSON.stringify([
-        [{ number: 42, title: 'Reminder', body: null, state: 'open' }],
+        [
+          {
+            number: 42,
+            title: 'Reminder',
+            body: null,
+            state: 'open',
+            user: ACTIONS,
+          },
+        ],
       ]),
     );
     expect(await issues.list()).toEqual([
@@ -295,7 +350,15 @@ describe('renewal workflow', () => {
     const issues = createGithubRenewalIssues((args) => {
       commands.push(args);
       return JSON.stringify([
-        [{ number: 42, title: 'Reminder', body: 'text', state: 'closed' }],
+        [
+          {
+            number: 42,
+            title: 'Reminder',
+            body: 'text',
+            state: 'closed',
+            user: ACTIONS,
+          },
+        ],
         [{ number: 43, title: 'PR', state: 'open', pull_request: {} }],
       ]);
     });
