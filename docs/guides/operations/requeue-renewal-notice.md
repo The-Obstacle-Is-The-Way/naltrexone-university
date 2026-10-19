@@ -44,11 +44,11 @@ A retry uses the same destination, immutable content and idempotency key. [Resen
 
 ## 3. Requeue it
 
-Set `RENEWAL_NOTICE_OPERATOR` to your name or email. Use an explicit `DATABASE_URL`; a remote target also requires the exact `DB_TARGET_ACK` JSON named by its first refusal, as in [Promote to Production](../release/promote-to-production.md).
+Set `RENEWAL_NOTICE_OPERATOR` to your name or email. Use an explicit `DATABASE_URL`; a remote target also requires the exact `DB_TARGET_ACK` JSON named by its first refusal, as in [Promote to Production](../release/promote-to-production.md). Replace the quoted placeholders with the values from your inspection and target check.
 
 ```bash
 RENEWAL_NOTICE_OPERATOR="you@example.com" DATABASE_URL="<production url>" DB_TARGET_ACK='<from the first refusal>' \
-  pnpm --silent notice:requeue --delivery-id <id> --expected-attempt-count <inspected-attempt-count> --reason "<what you checked and why>" --confirmed-no-send
+  pnpm --silent notice:requeue --delivery-id "<id>" --expected-attempt-count "<inspected-attempt-count>" --reason "<what you checked and why>" --confirmed-no-send
 ```
 
 Omit `--confirmed-no-send` for a terminal failure unless you have confirmed no send; its audit then records `false`. Put arguments directly after the script name: pnpm 11 passes a `--` separator through, which this parser refuses. Keep personal information out of the reason where possible; the command prints the audit text you supply.
