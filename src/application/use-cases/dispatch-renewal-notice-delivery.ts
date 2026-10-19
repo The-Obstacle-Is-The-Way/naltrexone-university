@@ -237,16 +237,43 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     });
     if (!claimed) return { outcome: 'claim_lost', delivery: null };
 
-    return {
-      outcome: 'attempted',
-      delivery: await this.deliveryRepository.markTerminalFailure({
-        id: claimed.id,
-        attemptId,
-        failureClass,
-        failureCode,
-        failedAt: this.now(),
-      }),
-    };
+    const terminated = await this.deliveryRepository.markTerminalFailure({
+      id: claimed.id,
+      attemptId,
+      failureClass,
+      failureCode,
+      failedAt: this.now(),
+    });
+    // An obsolete notice needs no action, but missing anniversary facts do.
+    // A missed cutoff already has its own alert.
+    if (
+      failureClass === 'payload_integrity_failure' ||
+      failureCode === 'anniversary_unknown'
+    ) {
+      await this.alertTerminalFailure(terminated);
+    }
+    return { outcome: 'attempted', delivery: terminated };
+  }
+
+  private async alertTerminalFailure(
+    delivery: RenewalNoticeDelivery,
+  ): Promise<void> {
+    try {
+      this.logger.error(
+        {
+          deliveryId: delivery.id,
+          failureClass: delivery.failureClass,
+          failureCode: delivery.failureCode,
+        },
+        'Renewal notice delivery requires operator recovery',
+      );
+    } catch {
+      // A diagnostic failure must not suppress the durable quarantine's alert.
+    }
+    await this.alerts.raise({
+      kind: 'renewal_notice_terminal_failure',
+      count: 1,
+    });
   }
 
   private async persistOutcome(
@@ -288,10 +315,12 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       });
     }
     if (result.status === 'terminal_failure') {
-      return this.deliveryRepository.markTerminalFailure({
+      const delivery = await this.deliveryRepository.markTerminalFailure({
         ...failure,
         failureClass: 'provider_terminal_failure',
       });
+      await this.alertTerminalFailure(delivery);
+      return delivery;
     }
     const delivery = await this.deliveryRepository.markOutcomeUnknown({
       ...failure,

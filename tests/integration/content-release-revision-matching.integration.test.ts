@@ -68,10 +68,17 @@ async function stageLegacyRelease(
   revision: schema.QuestionRevision,
   slug: string,
   parentReleaseId: string | null,
+  format: 'v2' | 'v3' = 'v2',
 ) {
   const manifest = parseReleaseManifest({
-    format: 'app-release-manifest-v2',
-    items: [{ slug, contentHash: revision.contentHash }],
+    format: `app-release-manifest-${format}`,
+    items: [
+      {
+        slug,
+        contentHash: revision.contentHash,
+        ...(format === 'v3' ? { revisionId: revision.id } : {}),
+      },
+    ],
     removals: [],
   });
   const [release] = await disposable.db
@@ -131,7 +138,7 @@ describe('release revision matching', () => {
     expect(await revisionRows()).toEqual(before);
   });
 
-  it.each(['v2', 'v3'] as const)(
+  it.each(['v2', 'v3', 'v4'] as const)(
     'does not reuse a staged %s release that names an older identical revision',
     async (format) => {
       const slug = `it-match-${randomUUID()}`;
@@ -148,8 +155,8 @@ describe('release revision matching', () => {
         record: RELEASE_DECISION,
       });
       const priorStage =
-        format === 'v2'
-          ? (await stageLegacyRelease(older, slug, active.releaseId)).id
+        format !== 'v4'
+          ? (await stageLegacyRelease(older, slug, active.releaseId, format)).id
           : await stageRelease(disposable.db, {
               items: [{ questionId: current.id, questionRevisionId: older.id }],
               parentReleaseId: active.releaseId,
@@ -171,40 +178,43 @@ describe('release revision matching', () => {
     },
   );
 
-  it('activates and rolls back to a v2 release without rewriting it', async () => {
-    const slug = `it-match-${randomUUID()}`;
-    await syncQuestionsFromFiles(disposable.db, [source(slug)]);
-    const [revision] = await revisionRows();
-    if (!revision) throw new Error('Expected the original revision');
-    const legacy = await stageLegacyRelease(revision, slug, null);
-    await activateRelease(disposable.db, {
-      releaseId: legacy.id,
-      expectedActiveReleaseId: null,
-      record: RELEASE_DECISION,
-    });
-    const next = await stageReleaseFromFiles(disposable.db, [
-      source(slug, { stem: 'An edited synthetic task.' }),
-    ]);
-    await activateRelease(disposable.db, {
-      releaseId: next.releaseId,
-      expectedActiveReleaseId: legacy.id,
-      record: RELEASE_DECISION,
-    });
+  it.each(['v2', 'v3'] as const)(
+    'activates and rolls back to a %s release without rewriting it',
+    async (format) => {
+      const slug = `it-match-${randomUUID()}`;
+      await syncQuestionsFromFiles(disposable.db, [source(slug)]);
+      const [revision] = await revisionRows();
+      if (!revision) throw new Error('Expected the original revision');
+      const legacy = await stageLegacyRelease(revision, slug, null, format);
+      await activateRelease(disposable.db, {
+        releaseId: legacy.id,
+        expectedActiveReleaseId: null,
+        record: RELEASE_DECISION,
+      });
+      const next = await stageReleaseFromFiles(disposable.db, [
+        source(slug, { stem: 'An edited synthetic task.' }),
+      ]);
+      await activateRelease(disposable.db, {
+        releaseId: next.releaseId,
+        expectedActiveReleaseId: legacy.id,
+        record: RELEASE_DECISION,
+      });
 
-    await activateRelease(disposable.db, {
-      releaseId: legacy.id,
-      expectedActiveReleaseId: next.releaseId,
-      record: RELEASE_DECISION,
-    });
+      await activateRelease(disposable.db, {
+        releaseId: legacy.id,
+        expectedActiveReleaseId: next.releaseId,
+        record: RELEASE_DECISION,
+      });
 
-    expect((await currentQuestion()).currentRevisionId).toBe(revision.id);
-    expect(
-      await disposable.db
-        .select()
-        .from(schema.contentReleases)
-        .where(eq(schema.contentReleases.id, legacy.id)),
-    ).toEqual([legacy]);
-  });
+      expect((await currentQuestion()).currentRevisionId).toBe(revision.id);
+      expect(
+        await disposable.db
+          .select()
+          .from(schema.contentReleases)
+          .where(eq(schema.contentReleases.id, legacy.id)),
+      ).toEqual([legacy]);
+    },
+  );
 
   it('rejects a manifest naming a different revision with identical content', async () => {
     const file = source(`it-match-${randomUUID()}`);
