@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — capture the next failed question fetch with the redacted request trace before choosing a fix
+**Status:** Open — on Playwright 1.64.1, trace the next CI failure and fix its cause; without one, require the clean-run count; due 2026-11-04
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -8,7 +8,7 @@
 
 ## Summary
 
-In required E2E on CI, a practice session's page loaded, then its first question and the bookmarks panel both failed at once. The page showed its own error state, "Failed to fetch", with Try again. The 2026-10-11 local trace identified a server-action redirect blocked by the browser. The same alert recurred on a standalone question page on 2026-10-18; that alert alone does not identify the failed request or its cause. The server logged nothing at that moment. The UI offers Try again. Whether the untraced recurrence can affect production is unknown.
+In required E2E on CI, a practice session's page loaded, then its first question and the bookmarks panel both failed at once. The page showed its own error state, "Failed to fetch", with Try again. The 2026-10-11 local trace identified a server-action redirect blocked by the browser. The same alert recurred on a standalone question page on 2026-10-18 and in two practice-session tests on 2026-10-19. Those alerts alone do not identify the failed requests or their causes. Playwright 1.64.0 hides a redirected action when interception is enabled; upgrading restores diagnostic visibility, not authentication. The server logged nothing at that moment. The UI offers Try again. Whether the untraced recurrence can affect production is unknown.
 
 ## Evidence
 
@@ -51,24 +51,61 @@ In required E2E on CI, a practice session's page loaded, then its first question
   - Playwright's trace recorded both dev-browser cookies on the same request. But those were its provisional headers (no `host` or `sec-fetch-*`), and its `Cookie` header was 105 bytes longer than the server's: exactly the two cookies. So this trace's "both cookies sent" was the trace's view, not the wire. The earlier traces were not compared with what the server received, but they fit the same pattern.
   - The request left about 70 ms after Clerk JS's `/v1/environment` call answered. Clerk JS answers each environment fetch with `devBrowser.refreshCookies()`, which removes both cookies and sets them again. Every capture fits that window.
 - **In CI too (2026-10-12, about 09:58Z, #1472's second attempt).** In `review-mode-audit.spec.ts`, "history questions: correct and incorrect open review mode", a `page.goto` to a question page landed on Clerk's sign-in page. CI keeps no trace and no server log, so this one shows only that the loss happens there as well.
-- **After the fix, in CI (2026-10-18 00:26Z, #1552's CI).** `history.spec.ts`, "shows missed questions and removes them after correct reattempt", failed while choosing C in the correct-answer loop, after earlier question visits (`history.spec.ts:50`; `question.ts:114`, `selectChoiceByLabel`). It was not the third question load in the whole test. The page snapshot shows the signed-in app shell, the question's alert "Failed to fetch" with Try again, and Submit disabled. The helper waited 30 s for radio C. So the 2026-10-11 question page that waited for radio D fits this failure too.
+- **After option 9, in CI (2026-10-18 00:26Z, #1552's CI).** `history.spec.ts`, "shows missed questions and removes them after correct reattempt", failed while choosing C in the correct-answer loop, after earlier question visits (`history.spec.ts:51`; `question.ts:114`, `selectChoiceByLabel`). It was not the third question load in the whole test. The page snapshot shows the signed-in app shell, the question's alert "Failed to fetch" with Try again, and Submit disabled. The helper waited 30 s for radio C. So the 2026-10-11 question page that waited for radio D fits this failure too.
   - The page did not navigate to sign-in. Its already-rendered shell does not prove that the failed request remained authenticated; the capture neither confirms nor excludes BUG-333's cause.
   - The server logged nothing during the test's 36 s.
   - No application code changed in #1552: it changes CI's image pulls, and E2E reaches Postgres directly, not through the pooler. This narrows the suspect changes; it does not prove the CI environment had no effect. The same head passed the full local E2E.
   - Not an overlap: no other CI run was active in this repository, and the local E2E runs on that machine had ended 12 and 16 minutes earlier.
   - CI keeps no trace (BUG-328 keeps reports carrying Clerk tokens off CI), so which request failed is not known.
 
+
+- **First session load, 2026-10-19 01:36:44Z, #1556's CI.** `practice.spec.ts:381` called `startSession(page, 'exam', 2)` and waited 15 seconds for "Exam Session". The snapshot shows "Tutor Session", "Failed to fetch" and Try again. `practice-session-page-view.tsx:242–243` falls back to tutor until `sessionInfo` arrives; this heading is evidence of the failed first load, not an exam becoming a tutor session. The other 62 tests passed. This head changed scripts and docs only. No overlap was reported; the server logged no error for the failure.
+- **Timing refresh, 2026-10-19 06:43:05Z, #1561's CI — confounded.** The 72-second exam test at `exam-timing.spec.ts:13` installed a clock 20 seconds ahead mid-page, then dispatched focus. Its timing-action POST response waiter never resolved before the 180-second test limit. The snapshot shows "Failed to fetch", 0:00 and "Time is up. Submitting your exam." Finalization did not recover the session. The other 63 tests passed. No overlap was reported; the server logged no error for the failure. Installing Playwright's clock mid-page changes Date and restarts performance.now while timers continue in real time; Clerk also sees the focus event. This is a confounded recurrence, not evidence of the same cause. #1561 subsequently moved clock installation before page load and made the waiter end on request failure. This branch does not yet contain that spec.
+
+### Redirect visibility, checked 2026-10-19
+
+A controlled probe used a same-origin POST with a Next-Action header and a real 307 to another local origin refusing CORS. The owner supplied its four version/interception results; the prior local full runs independently caught the 1.64.0 intercepted failure. The upstream mechanism is [microsoft/playwright#43242](https://github.com/microsoft/playwright/issues/43242).
+
+| Playwright / bundled Chromium | Interception | Observed events |
+| --- | --- | --- |
+| 1.63.0 / 153 | Absent or present | Response 307, then redirect-target requestfailed with `net::ERR_FAILED` |
+| 1.64.0 / 156 | Absent | Response 307, then redirect-target requestfailed with `net::ERR_FAILED` |
+| 1.64.0 / 156 | Any route registered | Original action requestfailed with `net::ERR_ABORTED`; no 307 event; target never contacted |
+
+The page sees "Failed to fetch" in all four cases. `clerk-dev-browser-echo.ts:35–52` registers a context route in signed-in tests, so their redirected actions have the same visibility gap. The recorder cannot recover a response event Playwright never emits. This does not explain why Clerk redirected any application request.
+
+[Upstream #43249](https://github.com/microsoft/playwright/pull/43249) disables the Chromium feature responsible. The npm registry, read 2026-10-19, dates 1.64.1 packages on 2026-10-14: `playwright` at 11:54:49.998Z, `playwright-core` at 11:54:58.323Z and `@playwright/test` at 11:58:13.696Z. The seven-day release-age gate therefore admits the full package set on 2026-10-21 at 11:58:14Z; keep the gate. The contract now uses two local HTTP servers and an unrelated context route matching the echo filter's shape. It must remain failing on 1.64.0 and pass on 1.64.1 before claiming redirect wiring works. BUG-337 first failed on 2026-10-11, so this upgrade cannot be its original fix.
+
+*Corrected 2026-10-19: the npm package timestamps require waiting until 11:58:14Z, later than the proposed 11:51Z. GitHub's release timestamp is 11:51:33Z; pnpm uses npm package timestamps. The earlier fixture comment blamed `route.fulfill`. A real HTTP redirect fails too. The confirmed condition is Chromium's redirect handling with any route registered, not the response's source.*
+
+### Accepting cross-origin redirects: not established
+
+On 2026-10-19, a read-only scan of the previous interrupted full run's 42 retained network chunks found 197 Clerk `/v1/` entries. Thirteen redirects were GET document handshakes back to the app, not preflighted fetches. Of 92 browser fetch entries, 46 were GETs without Content-Type and 46 were form POSTs with `application/x-www-form-urlencoded`; 69 answered 200 and 23 lacked a completed response. No fetch response showed a redirect to an accepting target. The remaining entries came from the helper's API requests. These are retained entries from an interrupted run, not a complete traffic census or 23 product failures.
+
+The echo filter uses `route.fetch()` and then fulfills the browser request (`clerk-dev-browser-echo.ts:43–48`). Installed Playwright delegates this to its API request context and follows up to 20 redirects by default (`coreBundle.js:61235–61238`, `27742`). That can hide intermediate upstream redirects from browser events. The observed fetch methods and content types do not establish a preflighted redirect; the trace cannot prove absence either. [microsoft/playwright#43332](https://github.com/microsoft/playwright/issues/43332) describes a redirected CORS media request losing Origin, but no corresponding media path or accepting redirect was found here. Do not add option 4 without a concrete request/redirect receipt.
+
 ## Impact
 
-**Users: the traced cause is specific to Clerk development instances.** The backend guards `dev-browser-missing` by instance type; it does not apply to a Clerk production instance. The 2026-10-18 recurrence is not traced, so whether it shares that cause, and so whether users can meet it, is not yet known.
+**Users: the traced cause is specific to Clerk development instances.** The backend guards `dev-browser-missing` by instance type; it does not apply to a Clerk production instance. The three recurrences are not traced, so whether they share that cause, and so whether users can meet them, is not yet known.
 
-**Tests:** required E2E fails at random.
-- On 2026-10-11 it failed twice for certain and once possibly in about two and a half hours, each time in `review-mode-audit.spec.ts` right after sign-in. Once was in CI and once locally for certain; the earlier CI failure, a question page waiting for radio D, is not shown to be the same, though it matches 2026-10-18's.
-- On 2026-10-18, six days after option 9, it failed once in CI, in `history.spec.ts` on a question page.
+**Tests:** required E2E can fail without identifying the failed request. The 2026-10-11 captures preceded option 9; the three recurrences above followed it.
 
-How often it recurs after option 9 is not yet known.
+### Required CI E2E frequency, counted 2026-10-19
 
-*Corrected 2026-10-18: the impact now covers the recurrence after option 9, whose cause and rate are not yet known.*
+The cutoff is 2026-10-19 15:10:20Z. Count completed `CI` workflow `E2E smoke` executions by run ID and attempt, assigning each by its step start time. Include earlier failed attempts even when a rerun passed. Exclude skipped steps, workflows that never reached E2E, the separate hosted-Stripe lane and one canceled E2E execution. Every completed non-successful E2E attempt in these windows was inspected: all three had a failed-test `error-context.md` containing "Failed to fetch". Passing step conclusions establish no failed tests, not absence of every background fetch rejection. Run/attempt and head receipts belong in the PR description.
+
+| UTC window | Completed required E2E attempts | Failed tests showing "Failed to fetch" |
+| --- | --- | --- |
+| Option 9 merge, 10-13 07:45:35, to the requested 10-15 10:38 boundary | 68 | 0 |
+| Requested 10-15 10:38 boundary to cutoff | 99 | 3 (3.03%); excluding the confounded attempt, 2/98 (2.04%) |
+| Option 9 merge to the verified main promotion, 10-15 15:44:17 | 71 | 0 |
+| Verified main promotion to cutoff | 96 | 3 (3.125%); excluding the confounded attempt, 2/95 (2.11%) |
+
+*Corrected 2026-10-19: 10:38 was the bundle commit's Eastern time, not its main promotion in UTC. The bundle was committed at 14:38:36Z, merged in #1522 at 15:30:45Z, and promoted in #1523 at 15:44:17Z. Both requested and corrected windows are shown.*
+
+These are calendar-window rates across different PR heads, not randomized browser-version comparisons. They do not prove that 1.64.0 caused the recurrences. Use the more conservative unconfounded requested-window rate, `p = 2/98`, for a clean-run threshold: `ceil(3/p) = 147` consecutive required CI E2E runs over at least seven days. The corrected promotion window would require 143; including the confounded failure would require only 99 or 96. Keep 147. This is the approximate 95% rule-of-three criterion, assuming comparable independent runs, not proof that an unknown cause is gone.
+
+*Corrected 2026-10-19: replace the unknown recurrence rate and the one-week-only check with an attempt-inclusive CI census, a separate clock-confounded result and an explicit clean-run threshold.*
 
 **A separate helper weakness, fixed 2026-10-11.** The first failure on 2026-10-11 left a second lead. `submitQuestionForOutcome` (`tests/e2e/helpers/question.ts`) read its outcome with a page-wide `getByText(outcome, { exact: true }).isVisible()` that did not wait, and it treated a throw as "not this outcome". A second exact "Correct" on the page makes Playwright's strict mode throw, so a correct answer was skipped and the helper moved on to the next choice. It now reads the verdict pill it has already waited for (`readVerdict`, with a red test in `question.test.ts`). This does not explain the traced "Failed to fetch", which is the Clerk race below.
 
@@ -90,7 +127,7 @@ Historical captures above are preserved evidence. This audit re-read the current
 
 ## Options
 
-For the 2026-10-18 recurrence, all three remain unverified:
+For the recurrences after option 9, all three remain unverified:
 
 1. **A browser-blocked cross-origin redirect.** Identify its originating action or RSC request, Clerk status/reason, redirect host and timing. A `dev-browser-missing` reason would reopen the cookie-gap investigation; it would not by itself identify a third trigger.
 2. **An aborted request.** Correlate the failure with navigation and page teardown. Fix the test helper if it abandons work it needs; fix the client only if it displays an error for work it intentionally abandoned.
@@ -98,9 +135,9 @@ For the 2026-10-18 recurrence, all three remain unverified:
 
 ## Resolution (decided)
 
-Trace the recurrence before choosing another fix. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
+Trace the recurrence before choosing another fix. After this diagnostics PR merges, keep BUG-337 Open, not Verifying: no new fix has landed. Upgrade to Playwright 1.64.1 only after its release-age gate opens, in a separate dependency commit. That restores visibility and is not a BUG-337 fix. The status deadline is provisionally 2026-11-04 for a 2026-10-21 merge; update it to the actual merge date plus 14 days before merging. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
 
-Keep method, safe path, resource type, action-header presence, status/reason, redirect host and cookie names/lengths. Strict allowlists retain Clerk reason names, numeric `__client_uat` and redirect counts, and the session JWT's numeric `iat`/`exp`. Arbitrary values are reduced to lengths. Credential values, action IDs, other query values and bodies never enter the output. CI's Playwright trace remains off.
+Keep method, safe path, resource type, action-header presence, status/reason, redirect host and cookie names/lengths. Strict allowlists retain Clerk reason names, numeric `__client_uat` and redirect counts, and the session JWT's numeric `iat`/`exp`. Arbitrary values are reduced to lengths. Credential values, action IDs, other query values and bodies never enter the output. CI's Playwright trace remains off. `tests/clerk-auth-fixture-policy.test.ts` rejects signed-in specs that use Playwright's base test instead of `./helpers/clerk-auth-test`. It recognizes either the password helper or shared auth-state marker. On the next sync, convert #1561's exam-timing spec if it still uses the base test; keep its clock correction.
 
 **Cookie evidence has a limit.** In the installed Playwright 1.64.0, Chromium's `CRNetworkManager._onLoadingFailed` calls `setRawRequestHeaders(null)` when no response exists; `Request.setRawRequestHeaders` falls back to provisional headers when raw headers have not already arrived. Those headers omit Cookie. Failed-request lines explicitly report cookies unavailable, not cookies absent. For a failed redirected fetch, only its redirect response line's request-cookie fields can show what was sent; an unavailable field proves nothing. The context snapshot is the jar at report time. A server-side comparison is still needed if the evidence conflicts.
 
@@ -117,10 +154,12 @@ A temporary server diagnostic, if needed to compare the browser's provisional he
 - [x] The failing request is identified, with its trace (2026-10-11): a server action answered 307, signed out with `dev-browser-missing`.
 - [x] The cause is named (2026-10-12): requests caught on the server inside Clerk JS's dev-browser cookie rewrite, which follows every environment fetch.
 - [x] A fix with a red test: BUG-333's option 9 (2026-10-12).
-- [ ] A week of CI without "Failed to fetch" or a sign-in loss, after a fix that holds. Option 9's week failed on 2026-10-18.
 - [x] Safe diagnostics, test-first (2026-10-18): request failure and redirect projections omit credential and action values; allowlisted reason names and numeric times remain; event times survive asynchronous header reads. Existing cookie and query formatters failed negative controls before correction. The cookie keeper and echo filter are unchanged.
-- [ ] The diagnostic wiring is proven in Playwright: a controlled redirect/failure prints once on an alert, and a failed test reports before page teardown.
-- [ ] The 2026-10-18 recurrence's failing request is identified. Next: repeat history and review-mode-audit under unit-test load, with the owner's exclusive E2E-lane clearance. Keep local Playwright traces private; publish only the safe text diagnostic. If no capture names the cause, ship diagnostics with this record Open.
+- [x] Signed-in fixture coverage is executable, test-first (2026-10-19): unsafe synthetic imports and nested-spec discovery failed before the guard; this branch's specs pass.
+- [ ] On Playwright 1.64.1, the two-server redirect contract passes with interception enabled, and the full required E2E run proves both diagnostic tests. Keep this unchecked on 1.64.0.
+- [ ] The next CI recurrence supplies the failing request and Clerk's reason. Its trace becomes the next action. Keep local Playwright traces private; publish only sanitized text. Focused local repeats can capture evidence but add nothing to the CI clean-run count.
+- [ ] Close as Resolved only after a traced failure names Clerk's reason and a fix for that cause lands with a failing test first, is promoted where applicable, and passes its stated verification. This diagnostics PR leaves the record Open.
+- [ ] Without a recurrence, consider closure only after **147 consecutive required CI E2E runs over at least seven days after this PR merges** (`N ≥ 3/p`, with `p = 2/98`). A recurrence resets the count and makes its trace the next action; canceled, skipped and local runs do not count as clean CI runs. Any closure on this basis must explicitly say **the cause was never found**.
 
 ## Related
 
