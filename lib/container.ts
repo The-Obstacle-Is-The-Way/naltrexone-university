@@ -159,6 +159,7 @@ export function createRequestContainer(overrides: ContainerOverrides = {}) {
         {},
         undefined,
         stripeBudget,
+        overrides.primitives?.logger ?? logger,
       ));
   let stripe: StripeRequestClient | undefined;
   return createContainer({

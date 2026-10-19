@@ -2,6 +2,7 @@ import 'server-only';
 import Stripe from 'stripe';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 import type { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
+import type { Logger } from '@/src/application/ports/logger';
 import { StripeBudgetHttpClient } from './stripe-budget-http-client';
 
 // DEBT-527: a backstop against a hung request, not a latency target. A try
@@ -23,6 +24,7 @@ export function createStripeClient(
     maxNetworkRetries: number;
   } = STRIPE_REQUEST_LIMITS,
   budget?: StripeCallBudget,
+  logger?: Pick<Logger, 'warn'>,
 ): Stripe {
   return new Stripe(secretKey, {
     ...connection,
@@ -48,6 +50,7 @@ export function createStripeClient(
           Stripe.createFetchHttpClient(),
           budget,
           limits.timeoutMs,
+          logger,
         )
       : Stripe.createFetchHttpClient(),
     timeout: limits.timeoutMs,

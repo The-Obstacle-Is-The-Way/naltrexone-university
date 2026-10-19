@@ -16,6 +16,7 @@ async function withServer(
     client: (
       budget: StripeCallBudget,
       timeoutMs?: number,
+      logger?: FakeLogger,
     ) => ReturnType<typeof createStripeClient>,
   ) => Promise<void>,
 ) {
@@ -30,7 +31,7 @@ async function withServer(
   if (!address || typeof address === 'string')
     throw new Error('No loopback port');
   try {
-    await run((budget, timeoutMs = 10_000) =>
+    await run((budget, timeoutMs = 10_000, logger) =>
       createStripeClient(
         'sk_test_loopback_only',
         {
@@ -40,6 +41,7 @@ async function withServer(
         },
         { timeoutMs, maxNetworkRetries: 1 },
         budget,
+        logger,
       ),
     );
   } finally {
@@ -392,6 +394,83 @@ describe('Stripe caller budget on loopback', () => {
           ),
         ).rejects.toMatchObject({ type: 'StripeConnectionError' });
         expect(performance.now() - started).toBeLessThan(750);
+        expect(requests).toBe(2);
+      },
+    );
+  });
+
+  it('logs a budgeted transport retry without provider response text', async () => {
+    let requests = 0;
+    await withServer(
+      (_request, response) => {
+        requests += 1;
+        if (requests > 1) {
+          customer(response);
+          return;
+        }
+        response.statusCode = 500;
+        response.end(
+          JSON.stringify({
+            error: {
+              type: 'api_error',
+              message: 'Private provider response marker',
+            },
+          }),
+        );
+      },
+      async (client) => {
+        const logger = new FakeLogger();
+        await client(
+          new StripeCallBudget(1_000),
+          10_000,
+          logger,
+        ).customers.retrieve('cus_loopback');
+        expect(logger.warnCalls).toHaveLength(1);
+        expect(logger.warnCalls[0]).toMatchObject({
+          msg: 'Retrying Stripe API call',
+          context: {
+            operation: 'GET customers',
+            attempt: 1,
+            maxAttempts: 2,
+            delayMs: 500,
+            statusCode: 500,
+          },
+        });
+        expect(JSON.stringify(logger.warnCalls)).not.toContain(
+          'Private provider response marker',
+        );
+      },
+    );
+  });
+
+  it('continues provider recovery when retry logging throws', async () => {
+    class ThrowingLogger extends FakeLogger {
+      override warn(...args: Parameters<FakeLogger['warn']>): void {
+        super.warn(...args);
+        throw new Error('Logger unavailable');
+      }
+    }
+    let requests = 0;
+    await withServer(
+      (_request, response) => {
+        requests += 1;
+        if (requests > 1) {
+          customer(response);
+          return;
+        }
+        response.statusCode = 500;
+        response.end('{}');
+      },
+      async (client) => {
+        const logger = new ThrowingLogger();
+        await expect(
+          client(
+            new StripeCallBudget(1_000),
+            10_000,
+            logger,
+          ).customers.retrieve('cus_loopback'),
+        ).resolves.toMatchObject({ id: 'cus_loopback' });
+        expect(logger.warnCalls).toHaveLength(1);
         expect(requests).toBe(2);
       },
     );

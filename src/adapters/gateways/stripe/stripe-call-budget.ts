@@ -28,7 +28,12 @@ export class StripeCallBudget {
     return remaining;
   }
 
-  async waitBeforeRetry(delayMs: number): Promise<boolean> {
+  async waitBeforeRetry(
+    delayMs: number,
+    beforeWait?: () => void,
+  ): Promise<boolean> {
+    if (this.remainingMs() <= delayMs) return false;
+    beforeWait?.();
     if (this.remainingMs() <= delayMs) return false;
     await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
     return this.remainingMs() > 0;
