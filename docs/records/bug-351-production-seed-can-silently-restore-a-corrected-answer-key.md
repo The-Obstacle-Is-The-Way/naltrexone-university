@@ -106,6 +106,13 @@ Each layer has a limit the next one covers:
 
 The v2 manifest names content hashes, not revision IDs (`release-manifest.ts:19,40-42` at `92e56929`). Before part 1, `existingRelease` reused that manifest on the same parent, so an existing stage could substitute R2 for the selected R4. Migration `0048_adr021_hold_lift_and_release_identity.sql` makes that manifest and parent unique. Part 1 writes v3 manifests that also name each selected revision ID; it still reads and verifies v2 releases for activation and rollback. Existing manifests, items and hashes stay immutable. `content-release-revision-matching.integration.test.ts` reproduces the collision with a previously staged older duplicate.
 
+**Part 1's interim limit.** The revert check still compares only the matched revision's number with the current one. Picking the newest match lets one stale copy through that the unordered match used to refuse:
+1. Before the bootstrap: R1 (key A), R2 (key B), then R3 (key A), live.
+2. After the bootstrap, a repair staged with `--revert` makes R2 current.
+3. A stale file with key A now matches R3, which is newer than R2, so it stages as "Update to a newer revision".
+
+This needs an active release, so production cannot reach it before the bootstrap. Part 2's key-return check closes it, because key A was live in the bootstrap release; part 2 adds this case as a test. Do not bootstrap before part 2 ships; part 2 also captures the pre-bootstrap history the check needs.
+
 **Part 2. The previews name answer-key changes.**
 - The stage and activation previews list each changed question by kind, and list answer-key changes separately: the correct choice's label and text, canonicalized as the seed canonicalizes content.
 - A change whose key equals an earlier live key of the same question must be named with `--revert`, with a reason and authority recorded as an activation's are (DEBT-490). A repair after a regression, and a deliberate return to an earlier key, go the same way.
