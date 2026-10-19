@@ -1,4 +1,5 @@
 import postgres from 'postgres';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 import {
   appendNonSecretCause,
   createSharedE2EResetSupport,
@@ -34,7 +35,7 @@ const REQUIRED_ENV_VARS: readonly SharedRequiredEnvVar[] = [
     key: 'DATABASE_URL',
     code: 'E2E_RESET:DATABASE_URL_MISSING',
     message: 'DATABASE_URL is missing.',
-    fix: 'Set DATABASE_URL in .env.local (dev) or repository secrets (CI).',
+    fix: "Run E2E through pnpm test:e2e, which supplies this clone's local database; CI sets DATABASE_URL in its workflow.",
   },
   {
     key: 'E2E_CLERK_USER_USERNAME',
@@ -640,7 +641,7 @@ export async function runE2EUserStateReset(
 
   const { databaseUrl, clerkEmail } =
     sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl, sql });

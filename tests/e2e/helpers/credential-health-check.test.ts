@@ -335,6 +335,38 @@ describe('runE2ECredentialHealthCheck', () => {
     expect(services.verifyStripePriceId).not.toHaveBeenCalled();
   });
 
+  // BUG-360: Playwright can start without pnpm test:e2e's host check, and
+  // setup writes to the shared test user's rows.
+  it('rejects a remote database before any database call, without printing its credentials', async () => {
+    const services = createServices();
+    const env = createEnv({
+      DATABASE_URL: 'postgresql://app:hunter2@ep-example.neon.tech/app',
+    });
+
+    const message = await runE2ECredentialHealthCheck({ env, services }).then(
+      () => '',
+      (error: Error) => error.message,
+    );
+
+    expect(message).toContain('[E2E_PREFLIGHT:DATABASE_URL_NOT_LOCAL]');
+    expect(message).not.toContain('hunter2');
+    expect(services.checkDatabaseConnectivity).not.toHaveBeenCalled();
+  });
+
+  it('accepts a remote database for an opted-in deploy-target check', async () => {
+    const services = createServices();
+    const env = {
+      ...createEnv({
+        DATABASE_URL: 'postgresql://app:hunter2@ep-example.neon.tech/app',
+      }),
+      ALLOW_NON_LOCAL_DATABASE_URL: 'true',
+    };
+
+    await expect(
+      runE2ECredentialHealthCheck({ env, services }),
+    ).resolves.toEqual({ clerkUserId: 'user_123' });
+  });
+
   it('aggregates multiple validation failures into one setup error', async () => {
     const env = createEnv();
     const services = createServices({

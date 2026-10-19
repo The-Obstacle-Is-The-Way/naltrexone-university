@@ -8,6 +8,7 @@ import {
   reviseQuestion,
   setQuestionState,
 } from '@/tests/shared/question-fixtures';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 
 // DEBT-496: content changes arranged for the E2E user on dedicated questions,
 // never the shared seeded bank, and removed afterwards. Deleting a question
@@ -39,7 +40,9 @@ function requireEnv(name: string): string {
 }
 
 export async function openContentChanges(): Promise<ContentChanges> {
-  const sql = postgres(requireEnv('DATABASE_URL'), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(requireEnv('DATABASE_URL')), {
+    max: 1,
+  });
   const db = drizzle(sql, { schema });
   const questionIds: string[] = [];
   try {

@@ -6,6 +6,7 @@ import {
   type ClerkUserListResponse,
   fetchClerkWithRetry,
 } from './credential-health-check';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 import { createStripeTestClient } from './stripe-test-client';
 
 const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
@@ -56,7 +57,7 @@ export async function seedTestSubscription(
     );
   }
 
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
   const stripe = createStripeTestClient(stripeSecretKey);
 
   try {
@@ -107,7 +108,7 @@ export async function reseedTestSubscription(): Promise<void> {
     );
   }
 
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
   let clerkUserId: string | undefined;
   try {
     const [row] = await sql<{ clerk_user_id: string }[]>`

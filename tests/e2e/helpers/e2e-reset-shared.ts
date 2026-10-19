@@ -1,4 +1,5 @@
 import postgres from 'postgres';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 
 type SharedRequiredEnvKey = 'DATABASE_URL' | 'E2E_CLERK_USER_USERNAME';
 
@@ -178,7 +179,9 @@ export function createSharedE2EResetSupport<E extends SharedErrorLike>({
       );
     }
 
-    const sql = input.sql ?? postgres(input.databaseUrl ?? '', { max: 1 });
+    const sql =
+      input.sql ??
+      postgres(guardE2EDatabaseUrl(input.databaseUrl ?? ''), { max: 1 });
     try {
       const rows = await sql<{ id: string }[]>`
         SELECT id

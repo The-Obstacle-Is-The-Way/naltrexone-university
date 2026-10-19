@@ -34,6 +34,7 @@ import {
   requireProviderEnv,
   sessionHasExpectedRenewalTerms,
 } from './checkout-success-provider-resources';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 import { triggerStripeCompletedCheckout } from './stripe-cli-checkout';
 import { createStripeTestClient } from './stripe-test-client';
 
@@ -103,7 +104,7 @@ export async function runCheckoutSuccessProviderContract(
   const priceId = shape === 'annual' ? priceIds.annual : priceIds.monthly;
   const appUrl = requireProviderEnv('NEXT_PUBLIC_APP_URL');
   const stripe = createStripeTestClient(stripeSecretKey);
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
   const db = drizzle(sql, { schema });
   const resources: ContractResources = {
     userId: null,

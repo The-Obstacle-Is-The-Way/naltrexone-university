@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
 import type Stripe from 'stripe';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 import { reseedTestSubscription } from './seed-test-user';
 import { createStripeTestClient } from './stripe-test-client';
 
@@ -115,7 +116,9 @@ async function clearCustomerPaymentMethods(
 }
 
 export async function resetE2EUserToFirstTimer(): Promise<void> {
-  const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(requireE2EEnv('DATABASE_URL')), {
+    max: 1,
+  });
   const stripe = createStripeClient();
 
   try {
@@ -144,7 +147,9 @@ async function closeE2ESql(sql: ReturnType<typeof postgres>): Promise<void> {
 }
 
 export async function removeE2EUserEntitlement(): Promise<E2EEntitlementSnapshot> {
-  const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(requireE2EEnv('DATABASE_URL')), {
+    max: 1,
+  });
   const email = requireE2EEnv('E2E_CLERK_USER_USERNAME');
 
   try {
@@ -180,7 +185,9 @@ export async function removeE2EUserEntitlement(): Promise<E2EEntitlementSnapshot
 export async function restoreE2EUserEntitlement(
   snapshot: E2EEntitlementSnapshot,
 ): Promise<void> {
-  const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(requireE2EEnv('DATABASE_URL')), {
+    max: 1,
+  });
 
   try {
     await sql`
@@ -224,7 +231,9 @@ export async function restoreE2EUserEntitlement(
 }
 
 export async function expectE2EUserHasTrialWithoutPaymentMethod(): Promise<void> {
-  const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(requireE2EEnv('DATABASE_URL')), {
+    max: 1,
+  });
   const stripe = createStripeClient();
 
   try {

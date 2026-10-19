@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import type Stripe from 'stripe';
+import { guardE2EDatabaseUrl } from './e2e-database-target';
 import { createStripeTestClient } from './stripe-test-client';
 
 // DEBT-414 F04: helpers for the observational Billing-portal cancellation
@@ -26,7 +27,9 @@ function requireLocalDatabaseUrl(): string {
 export async function readE2ELocalSubscription(): Promise<E2ELocalSubscription> {
   const email = process.env.E2E_CLERK_USER_USERNAME;
   if (!email) throw new Error('E2E_CLERK_USER_USERNAME is required.');
-  const sql = postgres(requireLocalDatabaseUrl(), { max: 1 });
+  const sql = postgres(guardE2EDatabaseUrl(requireLocalDatabaseUrl()), {
+    max: 1,
+  });
   try {
     const [row] = await sql<E2ELocalSubscription[]>`
       SELECT subscription.stripe_subscription_id AS id,
