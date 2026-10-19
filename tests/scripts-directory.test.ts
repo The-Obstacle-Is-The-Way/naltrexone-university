@@ -205,7 +205,7 @@ describe('the scripts directory check', () => {
     ).toEqual([]);
   });
 
-  it('confirms that every package script, workflow and Vercel build a row names runs its script', () => {
+  it('checks static path references in each named package script, workflow and Vercel build', () => {
     expect(
       collectRunByIssues(readScriptsDirectory(), readScriptCallers()),
     ).toEqual([]);
@@ -255,13 +255,13 @@ describe('the callers a row names', () => {
 
   it('does not take a longer package script name for a shorter one', () => {
     expect(issuesFor('run-local-e2e.ts', '`hosted.yml`')).toEqual([
-      'run-local-e2e.ts names `hosted.yml`, which does not run it.',
+      'run-local-e2e.ts names `hosted.yml`, which does not reference it.',
     ]);
   });
 
   it('ignores a path a workflow only comments on or echoes', () => {
     expect(issuesFor('db-migrate.ts', '`warn.yml`')).toEqual([
-      'db-migrate.ts names `warn.yml`, which does not run it.',
+      'db-migrate.ts names `warn.yml`, which does not reference it.',
     ]);
   });
 
@@ -273,13 +273,45 @@ describe('the callers a row names', () => {
 
   it('reports a package script whose command runs another file', () => {
     expect(issuesFor('db-seed.ts', '`pnpm db:migrate`')).toEqual([
-      'db-seed.ts names `pnpm db:migrate`, whose command does not run it.',
+      'db-seed.ts names `pnpm db:migrate`, whose command does not reference it.',
     ]);
   });
 
   it('accepts a workflow that runs the file directly or through a package script', () => {
     expect(issuesFor('ci/start.sh', '`ci.yml`')).toEqual([]);
     expect(issuesFor('run-local-e2e.ts', '`ci.yml`')).toEqual([]);
+  });
+
+  it('checks workflow names containing dots', () => {
+    const entries = [
+      { file: 'check.ts', purpose: 'Checks.', runBy: '`ci.old.yml`' },
+    ];
+    expect(
+      collectRunByIssues(entries, { ...callers, readWorkflow: () => null }),
+    ).toEqual(['check.ts names `ci.old.yml`, which is not a workflow.']);
+    expect(
+      collectRunByIssues(entries, {
+        ...callers,
+        readWorkflow: () => workflow('tsx scripts/check.ts'),
+      }),
+    ).toEqual([]);
+  });
+
+  it('checks package command names containing dots', () => {
+    const entries = [
+      { file: 'check.ts', purpose: 'Checks.', runBy: '`pnpm check.file`' },
+    ];
+    expect(
+      collectRunByIssues(entries, { ...callers, packageScripts: {} }),
+    ).toEqual([
+      'check.ts names `pnpm check.file`, which package.json does not define.',
+    ]);
+    expect(
+      collectRunByIssues(entries, {
+        ...callers,
+        packageScripts: { 'check.file': 'tsx scripts/check.ts' },
+      }),
+    ).toEqual([]);
   });
 
   it('reports a workflow that does not exist', () => {
@@ -290,7 +322,7 @@ describe('the callers a row names', () => {
 
   it('reports a workflow that does not run the file', () => {
     expect(issuesFor('db-migrate.ts', '`other.yml`')).toEqual([
-      'db-migrate.ts names `other.yml`, which does not run it.',
+      'db-migrate.ts names `other.yml`, which does not reference it.',
     ]);
   });
 
@@ -299,11 +331,83 @@ describe('the callers a row names', () => {
       [],
     );
     expect(issuesFor('db-migrate.ts', 'The `vercel.json` build')).toEqual([
-      'db-migrate.ts names `vercel.json`, whose build command does not run it.',
+      'db-migrate.ts names `vercel.json`, whose build command does not reference it.',
     ]);
   });
 
   it('accepts a Vercel build that runs the file through a package script', () => {
     expect(issuesFor('manifest.ts', 'The `vercel.json` build')).toEqual([]);
+  });
+
+  it('does not count a script path in another Vercel field as a build reference', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`vercel.json`' }],
+        {
+          ...callers,
+          vercelConfig: JSON.stringify({
+            buildCommand: 'next build',
+            ignoreCommand: 'tsx scripts/check.ts',
+          }),
+        },
+      ),
+    ).toEqual([
+      'check.ts names `vercel.json`, whose build command does not reference it.',
+    ]);
+  });
+
+  it('requires the whole script path, not the prefix of a different file', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`pnpm check`' }],
+        {
+          ...callers,
+          packageScripts: { check: 'tsx scripts/check.ts.old' },
+        },
+      ),
+    ).toEqual([
+      'check.ts names `pnpm check`, whose command does not reference it.',
+    ]);
+  });
+
+  it('ignores package commands that only echo or comment on a path', () => {
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`pnpm check`' }],
+        {
+          ...callers,
+          packageScripts: {
+            check: 'echo "scripts/check.ts"\n# scripts/check.ts',
+          },
+        },
+      ),
+    ).toEqual([
+      'check.ts names `pnpm check`, whose command does not reference it.',
+    ]);
+  });
+
+  it('follows nested package commands without looping on cycles', () => {
+    const nestedCallers = {
+      ...callers,
+      packageScripts: {
+        check: 'pnpm run inner',
+        inner: 'pnpm cycle && tsx "scripts/check.ts"',
+        cycle: 'pnpm check',
+      },
+    };
+    expect(
+      collectRunByIssues(
+        [{ file: 'check.ts', purpose: 'Checks.', runBy: '`pnpm check`' }],
+        nestedCallers,
+      ),
+    ).toEqual([]);
+    expect(
+      collectRunByIssues(
+        [{ file: 'missing.ts', purpose: 'Checks.', runBy: '`pnpm check`' }],
+        nestedCallers,
+      ),
+    ).toEqual([
+      'missing.ts names `pnpm check`, whose command does not reference it.',
+    ]);
   });
 });

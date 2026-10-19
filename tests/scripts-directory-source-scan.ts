@@ -127,45 +127,64 @@ export type ScriptCallers = {
   vercelConfig: string;
 };
 
-const PACKAGE_SCRIPT_REFERENCE = /`pnpm (?:run )?([\w:-]+)`/g;
+const PACKAGE_SCRIPT_REFERENCE = /`pnpm (?:run )?([^\s`]+)`/g;
 // The README's contract: a backticked `*.yml` name in Run by is a workflow.
-const WORKFLOW_REFERENCE = /`([\w-]+\.yml)`/g;
+const WORKFLOW_REFERENCE = /`([^`\r\n]+\.yml)`/g;
 const VERCEL_REFERENCE = '`vercel.json`';
 
 type WorkflowDocument = {
   jobs?: Record<string, { steps?: { run?: unknown }[] }>;
 };
 
-// What a workflow's steps run, without comments or echoed text, so a path a
-// step only mentions does not count as running it.
+function commandLines(commands: string): string {
+  return commands
+    .split('\n')
+    .filter((line) => !/^\s*(?:#|echo\b)/.test(line))
+    .join('\n');
+}
+
+// This is a static reference check, not a shell interpreter. It excludes
+// whole comment/echo lines but cannot prove which branch executes.
 function workflowCommands(workflow: string): string {
   const jobs = (parse(workflow) as WorkflowDocument | null)?.jobs ?? {};
   return Object.values(jobs)
     .flatMap((job) => job.steps ?? [])
     .flatMap((step) => (typeof step.run === 'string' ? [step.run] : []))
-    .flatMap((run) => run.split('\n'))
-    .filter((line) => !/^\s*(?:#|echo\b)/.test(line))
     .join('\n');
 }
 
-function runsScript(
+function referencesScript(
   commands: string,
   scriptPath: string,
-  runners: readonly string[],
+  packageScripts: ScriptCallers['packageScripts'],
+  visited = new Set<string>(),
 ): boolean {
+  const lines = commandLines(commands);
   return (
-    commands.includes(scriptPath) ||
-    runners.some((name) =>
-      new RegExp(`pnpm (?:run )?${escapeRegExp(name)}(?![\\w:-])`).test(
-        commands,
-      ),
-    )
+    new RegExp(`(?:^|[\\s"'])${escapeRegExp(scriptPath)}(?=$|[\\s"';&|])`).test(
+      lines,
+    ) ||
+    Object.entries(packageScripts).some(([name, command]) => {
+      if (
+        visited.has(name) ||
+        !new RegExp(
+          `(?:^|[\\s;&|])pnpm (?:run )?${escapeRegExp(name)}(?=$|[\\s;&|])`,
+        ).test(lines)
+      )
+        return false;
+      return referencesScript(
+        command,
+        scriptPath,
+        packageScripts,
+        new Set([...visited, name]),
+      );
+    })
   );
 }
 
-// The Run by column is prose, but the package scripts, workflows and Vercel
-// build it names are checkable: each must run the row's script, directly or
-// through a package script. Everything else a row names is left to review.
+// Named package scripts, workflows and the Vercel build must reference the
+// row's path, directly or through package commands. Actual execution and
+// completeness of the caller list still need source review.
 export function collectRunByIssues(
   entries: readonly ScriptsDirectoryEntry[],
   { packageScripts, readWorkflow, vercelConfig }: ScriptCallers,
@@ -174,9 +193,6 @@ export function collectRunByIssues(
 
   for (const { file, runBy } of entries) {
     const scriptPath = `${SCRIPTS_FOLDER}/${file}`;
-    const runners = Object.keys(packageScripts).filter((name) =>
-      packageScripts[name]?.includes(scriptPath),
-    );
 
     for (const [, name = ''] of runBy.matchAll(PACKAGE_SCRIPT_REFERENCE)) {
       const command = packageScripts[name];
@@ -184,9 +200,9 @@ export function collectRunByIssues(
         issues.push(
           `${file} names \`pnpm ${name}\`, which package.json does not define.`,
         );
-      } else if (!command.includes(scriptPath)) {
+      } else if (!referencesScript(command, scriptPath, packageScripts)) {
         issues.push(
-          `${file} names \`pnpm ${name}\`, whose command does not run it.`,
+          `${file} names \`pnpm ${name}\`, whose command does not reference it.`,
         );
       }
     }
@@ -195,17 +211,30 @@ export function collectRunByIssues(
       const contents = readWorkflow(workflow);
       if (contents === null) {
         issues.push(`${file} names \`${workflow}\`, which is not a workflow.`);
-      } else if (!runsScript(workflowCommands(contents), scriptPath, runners)) {
-        issues.push(`${file} names \`${workflow}\`, which does not run it.`);
+      } else if (
+        !referencesScript(
+          workflowCommands(contents),
+          scriptPath,
+          packageScripts,
+        )
+      ) {
+        issues.push(
+          `${file} names \`${workflow}\`, which does not reference it.`,
+        );
       }
     }
 
     if (
       runBy.includes(VERCEL_REFERENCE) &&
-      !runsScript(vercelConfig, scriptPath, runners)
+      !referencesScript(
+        (JSON.parse(vercelConfig) as { buildCommand?: string }).buildCommand ??
+          '',
+        scriptPath,
+        packageScripts,
+      )
     ) {
       issues.push(
-        `${file} names ${VERCEL_REFERENCE}, whose build command does not run it.`,
+        `${file} names ${VERCEL_REFERENCE}, whose build command does not reference it.`,
       );
     }
   }

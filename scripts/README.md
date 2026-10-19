@@ -4,10 +4,10 @@ Command-line tools that run outside the app: database commands, deploy and build
 
 The [directory](#directory) below gives every script one row: what it does and who runs it. `tests/scripts-directory.test.ts` checks two things:
 
-- **Every script has exactly one row,** so adding, moving or deleting a script without its row fails.
-- **Every package script, workflow and `vercel.json` build that a row's "Run by" names runs that script.** That is, the package script's command, a workflow step's `run`, or the build command names the script's path, or a package script that does.
+- **Every inventoried file has exactly one row,** so adding, moving or deleting one without its row fails. The inventory includes non-hidden files except this README, `*.test.ts`, `*-test-helpers.ts` and `fixtures/**`.
+- **Named automation contains a static reference to the script.** The check follows package commands, workflow steps' `run` text, and only `vercel.json`'s `buildCommand`, looking for the complete path or a `pnpm` package command that references it. Whole comment and `echo` lines are excluded.
   - A backticked `*.yml` name in "Run by" always means a workflow.
-  - Everything else a row says is kept by review, so a change to a script's callers updates its row.
+  - It does not interpret shell control flow, variables or imports, prove that a command executes, or find omitted callers. Those claims and the purpose column need source review; changes to callers update the row.
 
 Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 
@@ -19,24 +19,24 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
   - `ci/*.sh` runs with `bash`.
 
   Some callers still use a path where a package script exists. `ci.yml` and `AGENTS.md` call `resolve-local-test-target.ts` by path, and the local E2E plan spawns `run-local-test-db.ts` by path (DEBT-532).
-- **An entry point exports its work as a function** with injectable dependencies, so tests can call it. At the bottom, a guard compares `import.meta.url` with `process.argv[1]`, and runs the function only when the file is executed directly.
-  - On failure the entry point prints the error's message and sets `process.exitCode = 1`. Most wrap the guard in `/* v8 ignore */` comments.
+- **Most TypeScript entry points export their work as a function.** Some inject their dependencies; others call real infrastructure. A typical guard compares `import.meta.url` with the file URL made from `process.argv[1]`, and runs the function only when they match. Use the full extension and the real path: extensionless and symlink invocations can silently do nothing (BUG-354).
+  - Error reporting varies: message, stack, or a sanitized diagnostic; most guards set `process.exitCode = 1` on failure. Many carry `/* v8 ignore */` comments.
   - Not every entry point follows this yet. `import-draft-questions.ts`, `seed-production.ts` and `seed-all-environments.ts` run unconditionally, and some guards neither catch nor carry the comments.
   - `verify-lockfile-union.ts` runs unconditionally on purpose, because the guard misses a path given without its extension or through a symlink (BUG-354).
 - **`.mts` marks a script that a workflow runs with plain `node`,** with no `pnpm install`. `tests/workflow-node-scripts.test.ts` requires it, because this package declares no module type.
   - Such a script cannot use `node_modules`.
   - It could import a `.ts` module here only by its full `.ts` name, which `tsconfig.json` does not allow today, so both jobs carry their own helpers.
 - **Shell scripts live in `ci/`** and drive Docker and the runner's packages for CI steps.
-- **A database command goes through `database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` for a remote target.
+- **Human database entry points use `database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` naming the exact remote host, port and database set. Imported writer modules rely on their entry point's authorization.
   - The managed path in `internal/` takes no acknowledgement.
-  - It is used by checked-in automation (CI, the Vercel build and the local test harness), and by the environment seeds after their own `DB_TARGET_ACK` check.
-  - A second rule still exists. With `E2E_USE_EXISTING_DATABASE=true` or `INTEGRATION_USE_EXISTING_DATABASE=true`, the E2E and integration lanes accept any host once `ALLOW_NON_LOCAL_DATABASE_URL=true` is set, without `DB_TARGET_ACK` (DEBT-532).
+  - It is used by checked-in automation (CI, the Vercel build and the local test harness), and by the environment seeds after their own `DB_TARGET_ACK` check. The migration-ledger CLI uses the managed target authorizer directly.
+  - A second rule still exists. The E2E passthrough and integration setup accept a remote host with `ALLOW_NON_LOCAL_DATABASE_URL=true`, without `DB_TARGET_ACK`; their outer runners also require the corresponding `*_USE_EXISTING_DATABASE=true` switch. The integration session-proof suites still reject remote targets (DEBT-532).
 - **Tests sit beside their source** as `<name>.test.ts` and run in `pnpm test`.
   - A large suite splits into `<name>-<aspect>.test.ts`; shared test support is `<name>-test-helpers.ts`; data files go in `fixtures/`.
   - The directory leaves these out, because their names already say what they serve.
   - Database behavior is proved in `tests/integration/`.
   - Not yet true everywhere (DEBT-532). `content-release/release-command-args.test.ts`, `draft-question-body.test.ts` and `draft-question-split.test.ts` have no source file of those names, and the tests of `migration-ledger.ts` live in `tests/e2e/helpers/`.
-- **A check of the whole repository is a policy test in `tests/`,** not a script here. Not yet true of `rule-to-test-register.ts`, `documentation-asset-budget.ts` and the link audit in `documentation-archive.ts`, which serve only tests (DEBT-532).
+- **A check of the whole repository is a policy test in `tests/`,** not a script here. `rule-to-test-register.ts` and `documentation-asset-budget.ts` are test-only policy helpers still here. The link audit in `documentation-archive.ts` also serves its operator CLI (DEBT-532).
 
 ## Directory
 
@@ -63,16 +63,16 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `check-clerk-jwt-key.ts` | Fails a deploy whose `CLERK_JWT_KEY` does not match the keys Clerk publishes. | The `vercel.json` build command, first |
+| `check-clerk-jwt-key.ts` | Fails on an invalid configured key or a confirmed mismatch with Clerk's published keys. An absent key passes; an unreadable key set warns and passes unchecked. | The `vercel.json` build command, first |
 | `check-server-action-manifest.ts` | Fails a build in which a server action or `'use cache'` function declares an argument beyond its first. | `pnpm build`, after `next build` |
 
 ### Local Test Harness
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `resolve-local-test-target.ts` | Derives this clone's own Compose project, database URL and ports, so clones can test at the same time. | `pnpm local:test:target`; `ci.yml`; the local test commands; `tests/shared/resolve-integration-database-url.ts`; the integration database command in `AGENTS.md` |
+| `resolve-local-test-target.ts` | Derives a Compose project, database URL and ports from the clone path or explicit overrides. Check for port collisions and BUG-329's long-name limitation; shared provider users still require coordination. | `pnpm local:test:target`; `ci.yml`; the local test commands; `tests/shared/resolve-integration-database-url.ts`; the integration database command in `AGENTS.md` |
 | `run-local-test-db.ts` | Starts, stops or resets this clone's Docker test database and pooler. | `pnpm db:test:up`, `pnpm db:test:down` and `pnpm db:test:reset`; the local E2E plan |
-| `run-local-integration.ts` | Runs the integration lane against this clone's test database, or against a given database in CI. | `pnpm test:integration` and `pnpm test:integration:coverage`; `ci.yml` |
+| `run-local-integration.ts` | Runs the integration lane against this clone's test database, or an explicitly opted-in existing database. Does not start, migrate or seed it. | `pnpm test:integration` and `pnpm test:integration:coverage`; `ci.yml` |
 | `run-local-e2e.ts` | Runs Playwright after preparing this clone's database, or against a given database in CI. | `pnpm test:e2e` and `pnpm test:e2e:stripe-hosted`; `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
 | `e2e-local-orchestrator.ts` | Builds the local E2E plan, and runs a command plan with signal forwarding for all three local test commands. | Imported by `run-local-e2e.ts`, `run-local-integration.ts` and `run-local-test-db.ts` |
 | `run-stripe-provider-contracts.ts` | Runs the Stripe provider-contract suite in test mode, and fails unless every named case ran and passed. | `pnpm test:stripe-provider`; `stripe-trial-clock-smoke.yml` |
@@ -84,28 +84,28 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | `ci/start-postgres.sh` | Starts CI's Postgres from the first registry that serves the pinned digest, and waits until it is healthy. | `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
 | `ci/pull-image.sh` | Pulls an image by digest from the first registry that serves it; sourced as a function or run directly. | `ci.yml`, for PgBouncer; sourced by `ci/start-postgres.sh` |
 | `ci/install-playwright-chromium.sh` | Installs Chromium and its system packages, working around the runner's apt mirrors. | `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
-| `ci/scan-playwright-output.ts` | Refuses to upload a failed run's output if it holds a binary file or a Clerk credential. | `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
+| `ci/scan-playwright-output.ts` | Checks upload-eligible output for supported UTF-8 text types and known Clerk credential patterns; exits nonzero on refusal. Hidden paths and `trace.zip` are excluded, matching the workflow uploads. | `ci.yml` and `stripe-hosted-checkout-smoke.yml` |
 
 ### Question Content: Seeding
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `seed.ts` | Syncs every question file under `content/questions/` into a database, then archives the placeholder fixtures unless they are included. | Imported by `db-seed.ts` and `internal/run-managed-db-seed.ts` |
-| `seed/file-reader.ts` | Finds and reads the question MDX files. | Imported by `seed.ts` and `content-release/stage-release.ts` |
+| `seed.ts` | Syncs question MDX under `content/questions/`, excluding placeholder files unless `SEED_INCLUDE_PLACEHOLDERS=true`; otherwise archives the ten fixture slugs. Refuses an active content release. #1559 replaces the environment switch with an explicit flag (BUG-353). | Imported by `db-seed.ts` and `internal/run-managed-db-seed.ts` |
+| `seed/file-reader.ts` | Finds and reads the question MDX files; fails if none remain after filtering. | Imported by `seed.ts` and `content-release/stage-release.ts`; its source-file type is used by the seed writer and release builder |
 | `seed/question-parser.ts` | Parses and validates one question file into the seed's representation. | Imported by the seed writer, the release builder and `draft-question-import.ts` |
-| `seed/question-syncer.ts` | The seed's writer: inserts or updates each question in its own transaction. | Imported by `seed.ts`; the release builder imports its tag helpers |
+| `seed/question-syncer.ts` | The seed's writer: inserts or updates each question in its own transaction. | Imported by `seed.ts`; the release builder imports its preparation and tag helpers |
 | `seed/question-revision-writer.ts` | Appends a question revision and its choices. | Imported by the seed writer, the release builder and `tests/shared/question-fixtures.ts` |
 | `seed/question-withdrawal-writer.ts` | Records and reads per-revision withdrawals. | Imported by the seed writer, release activation and `seed/withdraw-questions.ts` |
 | `seed/tag-manager.ts` | Validates a question's tags and upserts tag rows. | Imported by `seed/question-syncer.ts` |
-| `seed/placeholder-archiver.ts` | Archives the committed placeholder fixtures by exact slug. | Imported by `seed.ts` |
+| `seed/placeholder-archiver.ts` | Archives the ten committed fixture slugs, including updating timestamps and counting rows already archived; refuses an active release. | Imported by `seed.ts` |
 | `seed/seed-summary.ts` | Formats the seed's report lines. | Imported by `seed.ts` |
-| `seed/only-row.ts` | Returns the single row a write must produce, or throws. | Imported by the seed and release writers and `tests/shared/question-fixtures.ts` |
+| `seed/only-row.ts` | Returns the first row, or throws if none exists; it does not reject extra rows. | Imported by the seed and release writers and `tests/shared/question-fixtures.ts` |
 | `seed/qid-command-args.ts` | Parses the operator commands' `--qid`, `--apply`, `--lift`, `--reason` and `--authority` arguments. | Imported by `seed/withdraw-questions.ts` and the content-release commands |
-| `seed/withdraw-questions.ts` | Permanently withdraws questions by QID; a dry run unless `--apply`. | By hand, per `docs/architecture/content-pipeline.md` |
+| `seed/withdraw-questions.ts` | Archives questions by QID and permanently withdraws every stored revision not already withdrawn; a dry run unless `--apply`. | By hand, per `docs/architecture/content-pipeline.md` and `docs/architecture/integrations/postgres.md` |
 | `seed-helpers.ts` | Splits the reference section off an explanation, and detects the legacy wrong-answers heading. | Imported by `seed/question-parser.ts` |
-| `seed-all-environments.ts` | Seeds every non-production environment's database from the drafts. | `pnpm db:seed:all` |
-| `seed-production.ts` | Seeds production from the drafts, as published questions. | `pnpm db:seed:prod` |
-| `seed-environment-targets.ts` | Plans and authorizes the environment seeds' targets, then prepares the corpus and seeds each one. | Imported by `seed-all-environments.ts` and `seed-production.ts` |
+| `seed-all-environments.ts` | Seeds deduplicated `.env.local`, Vercel Development and Preview targets from drafts; checks the Production host/port/database exclusion first. Requires the pinned preinstalled Vercel CLI and remote-target acknowledgment, including for `--plan`. | `pnpm db:seed:all` |
+| `seed-production.ts` | Resolves Vercel Production and seeds drafts as published questions; refuses an ambient `DATABASE_URL`. Requires the pinned preinstalled Vercel CLI and remote-target acknowledgment, including for `--plan`. | `pnpm db:seed:prod` |
+| `seed-environment-targets.ts` | Plans and authorizes the environment seeds' targets, then prepares the corpus and seeds each one unless plan-only. | Imported by `seed-all-environments.ts` and `seed-production.ts`; its types are used by `seed-environment-runtime.ts` |
 | `seed-environment-runtime.ts` | The environment seeds' real dependencies: Vercel CLI environment pulls, the corpus import and a child seed per target. | Imported by `seed-all-environments.ts` and `seed-production.ts` |
 | `prepare-seed-corpus.ts` | Rebuilds `content/questions/imported/` from the drafts and swaps it into place. | Imported by `seed-environment-runtime.ts` |
 
@@ -114,16 +114,16 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | File | What it does | Run by |
 | --- | --- | --- |
 | `draft-question-import.ts` | Splits draft files into question blocks and converts each into canonical question MDX. | Imported by `import-draft-questions.ts` |
-| `import-draft-questions.ts` | Converts `content/drafts/questions/` into `content/questions/imported/`. | `pnpm content:import:drafts`; the environment seeds |
+| `import-draft-questions.ts` | Converts `recall.md` and `vignettes.md` from the drafts tree to canonical MDX. Defaults to draft status; preflights the batch and requires an empty output directory for writes. `--in`, `--out`, `--status` and `--dry-run` configure it; unknown arguments are currently ignored. | `pnpm content:import:drafts`; the environment seeds |
 
 ### Question Content: Releases
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `content-release/bootstrap-release.ts` | Adopts what is live as a database's first content release. | By hand, per `docs/architecture/content-pipeline.md` |
-| `content-release/stage-release.ts` | Stages the question files as a release on top of the active one. | By hand, per `docs/architecture/content-pipeline.md` |
-| `content-release/activate-release.ts` | Previews, then applies, an activation or a rollback. | By hand, per `docs/architecture/content-pipeline.md` |
-| `content-release/hold-questions.ts` | Places or lifts holds on questions and re-applies the active release. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/bootstrap-release.ts` | Previews adoption of what is live as the first release; `--apply` requires the preview's plan ID and disables subsequent direct seeding. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/stage-release.ts` | Previews question files as a release on top of the active one; `--apply` persists staging. Omitted live QIDs require `--remove`, and older revisions require `--revert`. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/activate-release.ts` | Previews an activation or rollback by default. `--apply` requires the preview plan, expected active release, reason and authority. | By hand, per `docs/architecture/content-pipeline.md` |
+| `content-release/hold-questions.ts` | Previews holds or lifts on live revisions; `--apply` persists them and re-applies the active release. | By hand, per `docs/architecture/content-pipeline.md` |
 | `content-release/command-support.ts` | The release commands' database client, preview-or-apply transaction and output. | Imported by the four release commands |
 | `content-release/release-activation.ts` | The release engine: the pointer lock, the seed guard, staging, activation and bootstrap. | Imported by the release commands, the release builder and holds, and the seed writers |
 | `content-release/release-builder.ts` | Stages a release from question files: new questions, changed revisions, removals and reverts. | Imported by `content-release/stage-release.ts` |
@@ -145,7 +145,7 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | `diff-hunks.ts` | Decides whether a pull request's diff moved only because its base changed. | Imported by `merge-reviewed-pr.ts` |
 | `coderabbit-learnings.ts` | The marker and parser for a CodeRabbit reply that recorded a learning. | Imported by `merge-reviewed-pr.ts` and `coderabbit-learnings-review.ts` |
 | `coderabbit-learnings-review.ts` | Keeps one owner-assigned issue listing the learnings CodeRabbit recorded since the last report. | `coderabbit-learnings-review.yml` |
-| `production-release-watch.ts` | Keeps an issue open while `main`'s head lacks a passing CI run or a production deployment. | `production-release-watch.yml` |
+| `production-release-watch.ts` | After a 45-minute grace period, reports absent/failed main CI or no successful GitHub Production deployment record; leaves the issue unchanged while CI is pending. | `production-release-watch.yml` |
 
 ### Dependencies
 
@@ -159,19 +159,19 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | File | What it does | Run by |
 | --- | --- | --- |
 | `next-record-id.ts` | Prints the next free BUG or DEBT ID. | By hand, per `AGENTS.md` |
-| `documentation-archive.ts` | Audits the records and documentation links: the ledger, statuses, due dates, index rows and link targets. | Imported by the documentation tests and `documentation-due-checks.ts` |
-| `documentation-due-checks.ts` | Keeps one issue for overdue dated record actions and the queue review. | `documentation-due-checks.yml` |
+| `documentation-archive.ts` | Audits records and documentation links. Its CLI exits 1 for blocking findings, but overdue/far-future actions are reported separately; BUG-356 describes missing live-tree assertions. | Imported by the documentation tests and `documentation-due-checks.ts`; run manually for the complete blocking audit |
+| `documentation-due-checks.ts` | Keeps one issue for due or excessively far-future record actions and queue-review dates. An unreadable queue date instead fails the command before updating the issue. | `documentation-due-checks.yml` |
 | `documentation-asset-budget.ts` | The per-file size budget for documentation assets. | Imported by `tests/documentation-asset-budget.test.ts` |
-| `rule-to-test-register.ts` | Checks that each business rule's proving tests still exist and still run. | Imported by `tests/rule-to-test-register.test.ts` |
+| `rule-to-test-register.ts` | Checks named test files and titles against static declaration, skip and conditional rules; does not prove execution and misses some unreachable declarations (BUG-361). | Imported by `tests/rule-to-test-register.test.ts` |
 
 ### Scheduled Watchers
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `github-alert-issues.ts` | Keeps one GitHub issue per alert condition: opens it, updates it with a comment, and closes it when the condition clears. | Imported by `operational-alert-watcher.ts`, `upstream-fix-watch.ts`, `production-release-watch.ts`, `coderabbit-learnings-review.ts` and `documentation-due-checks.ts` |
+| `github-alert-issues.ts` | Keeps one GitHub issue per alert condition: creates or reopens it, edits its body and comments when changed, and closes it when the condition clears. | Imported by `operational-alert-watcher.ts`, `upstream-fix-watch.ts`, `production-release-watch.ts`, `coderabbit-learnings-review.ts` and `documentation-due-checks.ts` |
 | `operational-alert-watcher.ts` | Checks that Sentry's alert path still works, and keeps an issue open while it does not. | `operational-alert-watcher.yml` |
-| `upstream-advisory-watch.mts` | Raises an issue for each new security advisory published by a repository behind the lockfile. | `upstream-advisory-watch.yml`, with plain `node` |
-| `upstream-fix-watch.ts` | Raises an issue once an upstream fix that a local patch waits on has been released. | `upstream-fix-watch.yml` |
+| `upstream-advisory-watch.mts` | Scans upstream repository advisories from its configured start date; ignores medium/low advisories from indirect-only repositories, raises other eligible issues unless reviewed ranges prove locked versions unaffected, and closes existing issues on that evidence. | `upstream-advisory-watch.yml`, with plain `node` |
+| `upstream-fix-watch.ts` | Raises an issue when a non-prerelease npm release follows a tracked fix's landing; the owner still verifies that the release contains the fix. | `upstream-fix-watch.yml` |
 | `security-txt-renewal.mts` | Opens an issue when `security.txt`'s `Expires` date is less than 90 days away. | `security-txt-renewal.yml`, with plain `node` |
 
 ### Quality Reports
@@ -179,11 +179,11 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | File | What it does | Run by |
 | --- | --- | --- |
 | `crap-report.ts` | Ranks functions by CRAP score: coverage from the three test lanes against cyclomatic complexity. | `pnpm quality:crap` |
-| `mutation-report-integrity.ts` | Fails the mutation run when a surviving mutant ran no test, or the report is malformed. | `mutation.yml` |
+| `mutation-report-integrity.ts` | Fails on unreadable JSON, invalid files/mutants/status shapes, or a survivor without a valid positive `testsCompleted` count. | `mutation.yml` |
 
-### Unused
+### Manual Operator Tool
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `validate-header-safe-secret.ts` | Prints metadata about named environment variables (presence, length, header safety), never their values. | Nobody since its CI step was removed in `0ba85539`; `docs/architecture/environments.md` lists it as an operator tool |
+| `validate-header-safe-secret.ts` | Prints metadata about named environment variables (presence, length, header safety), never their values; exits 1 on invalid input. | By hand, as listed in `docs/architecture/environments.md`; no checked-in automation caller since `0ba85539` removed its CI step |
 <!-- scripts-directory:end -->
