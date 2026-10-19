@@ -6,6 +6,7 @@ import type {
   RenewalNoticeDeliveryRepository,
   RenewalNoticeProviderOutcome,
 } from '@/src/application/ports/renewal-notice-delivery-repository';
+import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { assertValidRenewalNoticeDeliveryPayload } from '@/src/application/shared/transactional-email-payload';
 import type {
   NewRenewalNoticeDelivery,
@@ -58,7 +59,7 @@ export class FakeRenewalNoticeDeliveryRepository
 
   constructor(
     private readonly now: () => Date = () => new Date(),
-    private readonly hasher = new FakeSha256Hasher(),
+    private readonly hasher: Sha256Hasher = new FakeSha256Hasher(),
   ) {}
 
   snapshot(): RenewalNoticeDelivery[] {
@@ -278,6 +279,7 @@ export class FakeRenewalNoticeDeliveryRepository
 
   async requeue(input: {
     id: string;
+    expectedAttemptCount: number;
     reason: string;
     requeuedBy: string;
     requeuedAt: Date;
@@ -294,6 +296,12 @@ export class FakeRenewalNoticeDeliveryRepository
         'Renewal notice delivery is not eligible for requeue',
       );
     }
+    if (record.attemptCount !== input.expectedAttemptCount) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Renewal notice attempt changed since inspection; check the current attempt before requeue',
+      );
+    }
     if (record.status === 'outcome_unknown' && !input.confirmedNoSend) {
       throw new ApplicationError(
         'VALIDATION_ERROR',
@@ -308,6 +316,7 @@ export class FakeRenewalNoticeDeliveryRepository
       requeuedBy: input.requeuedBy,
       confirmedNoSend: input.confirmedNoSend,
       priorStatus,
+      priorAttemptCount: record.attemptCount,
     });
     Object.assign(record, {
       status: 'queued' as const,

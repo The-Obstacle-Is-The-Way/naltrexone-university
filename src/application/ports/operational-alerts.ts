@@ -8,6 +8,7 @@ export const OPERATIONAL_ALERT_KINDS = [
   'anniversary_reminder_deadline_missed',
   'renewal_notice_send_by_cutoff_passed',
   'renewal_notice_outcome_unknown',
+  'renewal_notice_terminal_failure',
   'checkout_stripe_holds_unrecorded',
   'clerk_backend_call_limiter_failed',
   // DEBT-503 item 3, one kind per impact, so a lesser one never spends the
