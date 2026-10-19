@@ -494,6 +494,7 @@ describe('renewal notice delivery persistence', () => {
     await expect(
       repository.requeue({
         id: saved.id,
+        expectedAttemptCount: 1,
         reason: 'Confirmed in Resend that no email exists',
         requeuedBy: 'operator@example.com',
         requeuedAt: now,
@@ -503,6 +504,7 @@ describe('renewal notice delivery persistence', () => {
     await expect(
       repository.requeue({
         id: saved.id,
+        expectedAttemptCount: 1,
         reason: 'Confirmed in Resend that no email exists',
         requeuedBy: 'operator@example.com',
         requeuedAt: now,
@@ -541,10 +543,16 @@ describe('renewal notice delivery persistence', () => {
       providerEventId: 'email_delivered',
       completedAt: now,
     });
+    await repository.recordProviderOutcome({
+      providerEventId: 'email_delivered',
+      outcome: { kind: 'delivered' },
+      observedAt: now,
+    });
 
     await expect(
       repository.requeue({
         id: saved.id,
+        expectedAttemptCount: 1,
         reason: 'Operator requested retry',
         requeuedBy: 'operator@example.com',
         requeuedAt: now,

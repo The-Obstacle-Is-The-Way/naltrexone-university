@@ -213,3 +213,15 @@ A changed key that matches earlier history needs an explicit return name, reason
 - `src/application/use-cases/set-bookmark.test.ts`: `throws NOT_FOUND when adding an unpublished question`
 - `src/application/use-cases/set-bookmark.test.ts`: `returns bookmarked=false when removing an already absent bookmark`
 - `src/application/use-cases/get-bookmarks.test.ts`: `labels a bookmarked question that is %s`
+
+## Renewal recovery
+
+### R28. Retrying a quarantined renewal notice requires an operator, a reason and evidence for the current attempt; an unknown outcome also requires confirmation that nothing was sent.
+
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `requeues an unknown outcome only with no-send confirmation and preserves an audit entry`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects missing operator evidence and accepted rows`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects an unknown outcome without no-send confirmation`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `refuses confirmation for an older attempt before the command starts`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `refuses evidence inspected before a newer %s attempt existed (%s)`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `preserves an audit entry written before inspected attempt counts existed`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `rejects a stale requeue after another operator leaves the notice %s`

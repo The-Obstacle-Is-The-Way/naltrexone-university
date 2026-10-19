@@ -244,6 +244,7 @@ export class DrizzleRenewalNoticeDeliveryRepository
 
   async requeue(input: {
     id: string;
+    expectedAttemptCount: number;
     reason: string;
     requeuedBy: string;
     requeuedAt: Date;
@@ -258,6 +259,12 @@ export class DrizzleRenewalNoticeDeliveryRepository
       throw new ApplicationError(
         'CONFLICT',
         'Renewal notice delivery is not eligible for requeue',
+      );
+    }
+    if (existing.attemptCount !== input.expectedAttemptCount) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Renewal notice attempt changed since inspection; check the current attempt before requeue',
       );
     }
     if (existing.status === 'outcome_unknown' && !input.confirmedNoSend) {
@@ -286,6 +293,7 @@ export class DrizzleRenewalNoticeDeliveryRepository
             requeuedBy: input.requeuedBy,
             confirmedNoSend: input.confirmedNoSend,
             priorStatus: existing.status,
+            priorAttemptCount: existing.attemptCount,
           },
         ],
         updatedAt: input.requeuedAt,
@@ -294,6 +302,9 @@ export class DrizzleRenewalNoticeDeliveryRepository
         and(
           eq(renewalNoticeDeliveries.id, input.id),
           eq(renewalNoticeDeliveries.status, existing.status),
+          // Another retry can return to the same quarantine status. Its new
+          // attempt needs fresh confirmation and must keep its newer audit.
+          eq(renewalNoticeDeliveries.attemptCount, input.expectedAttemptCount),
         ),
       )
       .returning();
