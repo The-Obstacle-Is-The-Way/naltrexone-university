@@ -84,7 +84,13 @@ export function createChoice(input: {
   };
 }
 
+// One exam question's 72 seconds; tutor sessions have no countdown.
+const DEFAULT_REMAINING_MS = { exam: 72_000, tutor: null } as const;
+
 export function createQuestionResponse(input: QuestionFixtureInput) {
+  // A destructuring default applies only to undefined, so an explicit null stays.
+  const { remainingMs = DEFAULT_REMAINING_MS[input.session.mode] } =
+    input.session;
   return {
     questionId: input.questionId,
     slug: input.slug ?? input.questionId,
@@ -102,12 +108,7 @@ export function createQuestionResponse(input: QuestionFixtureInput) {
           : input.session.mode === 'exam'
             ? '2099-05-22T12:02:24.000Z'
             : null,
-      remainingMs:
-        input.session.remainingMs !== undefined
-          ? input.session.remainingMs
-          : input.session.mode === 'exam'
-            ? 72_000
-            : null,
+      remainingMs,
       index: input.session.index,
       total: input.session.total,
       isMarkedForReview: input.session.isMarkedForReview,
