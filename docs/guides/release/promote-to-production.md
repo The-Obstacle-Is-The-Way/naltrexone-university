@@ -280,6 +280,8 @@ If you are using Neon, fetch the connection string for the intended branch first
 
 **Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; deploy-time schema changes are handled by the Vercel Build Command migration. Use `pnpm db:migrate` manually only for an out-of-band or fallback migration against an explicit `DATABASE_URL`.
 
+**The Vercel CLI version.** `pnpm db:seed:all` and `pnpm db:seed:prod`, `--plan` included, run the `vercel` on your `PATH`. They refuse, before pulling anything, unless `vercel --version` prints exactly `REQUIRED_VERCEL_CLI_VERSION` from `scripts/seed-environment-runtime.ts`. The pin is deliberate, by the owner's 2026-09-20 ruling: the CLI is not a repository dependency, and is never fetched with `npx` or `pnpm dlx`. Install that exact version before seeding, or change the pin in a reviewed pull request. A newer CLI is refused too.
+
 Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`. For an intentional deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with both explicit opt-ins:
 
 ```bash
