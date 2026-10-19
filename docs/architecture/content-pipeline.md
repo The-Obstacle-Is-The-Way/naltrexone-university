@@ -329,8 +329,9 @@ DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/bootst
 # active release names must appear in the bundle unless it is withdrawn; name
 # one whose file is absent on purpose with --remove, and one whose file moves
 # it back to an earlier revision on purpose with --revert. The first release
-# after the bootstrap also names, with --baseline, the commit the owner
-# verified against live content (BUG-351).
+# after the bootstrap also names, with --baseline, the full commit ID the
+# owner's live-key check compared, as recorded in BUG-351. The command trusts
+# that ID, so copy it from the record, never from memory.
 DATABASE_URL="$TARGET_DATABASE_URL" pnpm exec tsx scripts/content-release/stage-release.ts \
   --repo "$CONTENT_REPOSITORY" --commit "<full-commit-id>" --apply
 # Preview its activation: it prints the plan id, every question it archives,

@@ -162,7 +162,7 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 
 ## Verification
 
-- [ ] The owner's pinned-source comparison is recorded here as counts, noting that history before 2026-09-30 is incomplete.
+- [ ] The owner's pinned-source comparison is recorded here as counts, with the full commit ID it compared, noting that history before 2026-09-30 is incomplete. That ID is the first release's `--baseline` after the bootstrap; the command cannot tell whether a named commit was checked, so use exactly this one.
 - [x] Part 1: `tests/integration/content-release-revision-matching.integration.test.ts` proves A→B→A→B keeps the live revision, newest-match fallback, canonical comparison, release reuse and v2 activation/rollback. The regression, fallback, canonical-match and release-identity cases failed before their fixes.
 - [x] Parts 1 and 2 reach production: promotion #1573, live 2026-10-19 21:26Z.
 - [ ] Part 3 reaches production.
