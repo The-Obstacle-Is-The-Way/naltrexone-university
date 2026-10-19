@@ -46,7 +46,7 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | File | What it does | Run by |
 | --- | --- | --- |
 | `database-target.ts` | Classifies a database URL as local or remote, and enforces the explicit-URL and `DB_TARGET_ACK` rules. | Imported by the database commands, the managed path, `verify-migration-ledger.ts` and the environment seeds |
-| `database-command.ts` | Runs a person's database command: explicit URL, acknowledgement for a remote target, then logs the target without credentials. | Imported by `db-*.ts`, the content-release commands, `export-question-feedback.ts` and `seed/withdraw-questions.ts` |
+| `database-command.ts` | Runs a person's database command: explicit URL, acknowledgement for a remote target, then logs the target without credentials. | Imported by `db-*.ts`, the content-release commands, `export-question-feedback.ts`, `requeue-renewal-notice.ts` and `seed/withdraw-questions.ts` |
 | `database-process.ts` | Runs `pnpm` with a given `DATABASE_URL` and the parent's output, and rejects on a non-zero exit. | Imported by `db-generate.ts`, `db-migrate.ts`, `db-studio.ts` and `internal/run-managed-db-migrate.ts` |
 | `db-generate.ts` | `drizzle-kit generate` behind the human database guard. | `pnpm db:generate` |
 | `db-migrate.ts` | `drizzle-kit migrate` behind the human database guard. | `pnpm db:migrate` |
@@ -182,9 +182,10 @@ Known problems in this folder, and the proposed layout, are tracked in DEBT-532.
 | `crap-report.ts` | Ranks functions by CRAP score: coverage from the three test lanes against cyclomatic complexity. | `pnpm quality:crap` |
 | `mutation-report-integrity.ts` | Fails on unreadable JSON, invalid files/mutants/status shapes, or a survivor without a valid positive `testsCompleted` count. | `mutation.yml` |
 
-### Manual Operator Tool
+### Manual Operator Tools
 
 | File | What it does | Run by |
 | --- | --- | --- |
+| `requeue-renewal-notice.ts` | Sends a quarantined renewal notice again through `RequeueRenewalNoticeDeliveryUseCase`, behind the human database guard. An unknown outcome needs `--confirmed-no-send`; the operator, reason and prior status go into the row's audit fields, and the next renewal-notice run rechecks the row before sending. | `pnpm notice:requeue`, per `docs/guides/operations/requeue-renewal-notice.md` |
 | `validate-header-safe-secret.ts` | Prints metadata about named environment variables (presence, length, header safety), never their values; exits 1 on invalid input. | By hand, as listed in `docs/architecture/environments.md`; no checked-in automation caller since `0ba85539` removed its CI step |
 <!-- scripts-directory:end -->

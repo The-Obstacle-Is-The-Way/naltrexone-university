@@ -8,7 +8,7 @@
 
 ## Summary
 
-Thirty-five entry points under `scripts/` (33 `.ts` and 2 `.mts`) decide whether to run by comparing `import.meta.url` with a file URL derived from `process.argv[1]`. A path that `tsx` resolves without `.ts`, or a symlink path, can differ from the module's resolved URL. The guard then skips the work and the script exits 0.
+Thirty-six entry points under `scripts/` (34 `.ts` and 2 `.mts`) decide whether to run by comparing `import.meta.url` with a file URL derived from `process.argv[1]`. A path that `tsx` resolves without `.ts`, or a symlink path, can differ from the module's resolved URL. The guard then skips the work and the script exits 0.
 
 The merge guard and the promotion verifier are run by hand, and by agents following `AGENTS.md`. So a mistyped `pnpm exec tsx scripts/merge-reviewed-pr <PR>` prints nothing and exits 0, which a person or an agent can take for a pass.
 
@@ -35,7 +35,7 @@ Corrected 2026-10-18: distinguish file-URL comparison and typed diagnostics; kee
 
 ## Options
 
-1. **One shared helper** that decides whether its module is the executed file. It compares real paths, trying the module's extension and resolving symlinks. All 35 entry points use it. Preserve each caller's error handling: watcher diagnostics deliberately suppress provider output, and typed ledger diagnostics preserve safe remedies. Prove both native `.mts` and `tsx` `.ts` execution/import behavior before migration.
+1. **One shared helper** that decides whether its module is the executed file. It compares real paths, trying the module's extension and resolving symlinks. All 36 entry points use it. Preserve each caller's error handling: watcher diagnostics deliberately suppress provider output, and typed ledger diagnostics preserve safe remedies. Prove both native `.mts` and `tsx` `.ts` execution/import behavior before migration.
 2. **Split each command into a module and a thin file that always runs**, as `verify-lockfile-union.ts` does. This adds a separate library file per command.
 3. **Package scripts for the hand-run commands:** the merge guard, the promotion verifier and the record ID. This prevents most typos but leaves the guard as it is.
 

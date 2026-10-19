@@ -8,7 +8,7 @@
 
 ## Summary
 
-`scripts/` holds 153 tracked files: 77 scripts and modules, 66 tests and test helpers, 9 fixtures, and its README. Forty-eight of the 77 sit in the root, beside five subfolders (`ci/`, `content-release/`, `fixtures/`, `internal/`, `seed/`). Its README has thirteen functional families plus a manual operator-tool section. Existing shared modules include `database-target.ts`, `database-process.ts`, `github-alert-issues.ts`, `seed/qid-command-args.ts` and `content-release/command-support.ts`; reuse is inconsistent, not absent. `scripts/README.md` holds the inventory, and `tests/scripts-directory.test.ts` checks file coverage and static caller references.
+`scripts/` holds 155 tracked files: 78 scripts and modules, 67 tests and test helpers, 9 fixtures, and its README. Forty-nine of the 78 sit in the root, beside five subfolders (`ci/`, `content-release/`, `fixtures/`, `internal/`, `seed/`). Its README has thirteen functional families plus a manual operator-tool section. Existing shared modules include `database-target.ts`, `database-process.ts`, `github-alert-issues.ts`, `seed/qid-command-args.ts` and `content-release/command-support.ts`; reuse is inconsistent, not absent. `scripts/README.md` holds the inventory, and `tests/scripts-directory.test.ts` checks file coverage and static caller references.
 
 The scripts encode repository-specific behavior. Replacing one requires proof that its behavior survives; this audit does not establish that no platform could replace it. The debt is in how they are built:
 
@@ -27,7 +27,7 @@ Corrected 2026-10-19: recount files and references after dev integration, separa
 ### Missing Shared Building Blocks
 
 - **Entry points.**
-  - Thirty-five copies of the direct-run guard (BUG-354). Error-reporting patterns include:
+  - Thirty-six copies of the direct-run guard (BUG-354). Error-reporting patterns include:
     - most print the message;
     - `merge-reviewed-pr.ts`, `verify-promotion.ts` and `documentation-archive.ts` let a stack trace through;
     - `export-question-feedback.ts` prints the whole error object;
