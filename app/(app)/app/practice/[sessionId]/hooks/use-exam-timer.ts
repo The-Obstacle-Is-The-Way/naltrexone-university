@@ -24,6 +24,10 @@ const EXAM_TIMER_MILESTONES = [
   { seconds: 30, announcement: '30 seconds remaining' },
 ] as const;
 
+// After the server refuses an early finalization and no fresh timing sample
+// arrives, the next attempt waits this long rather than one tick.
+const REFUSED_EXPIRY_RETRY_MS = 5_000;
+
 function getCrossedMilestoneAnnouncement(
   previousRemainingSeconds: number | null,
   remainingSeconds: number,
@@ -142,7 +146,13 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
     if (deadlineAt === null || remainingMs === null) return;
     let active = true;
     let expiresAt = performance.now() + remainingMs;
-    let reading: Promise<void> | null = null;
+    let reading: Promise<boolean> | null = null;
+    let retryTimeoutId: number | undefined;
+
+    function releaseExpiry() {
+      if (firedDeadlineRef.current === deadlineAt)
+        firedDeadlineRef.current = null;
+    }
 
     function update(allowExpiry = true) {
       if (!active) return;
@@ -181,33 +191,45 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
       void (async () => {
         try {
           const handled = await onExpireRef.current();
-          if (handled === false && firedDeadlineRef.current === deadlineAt) {
-            firedDeadlineRef.current = null;
-            if (active) void resync();
+          if (handled !== false || firedDeadlineRef.current !== deadlineAt)
+            return;
+          // The server's deadline has not passed. A newer sample already
+          // restarted this countdown if the effect is no longer active.
+          if (!active || (await resync())) {
+            releaseExpiry();
+            return;
           }
+          // No fresh sample: a pause, not a mutation each tick.
+          if (active)
+            retryTimeoutId = window.setTimeout(
+              releaseExpiry,
+              REFUSED_EXPIRY_RETRY_MS,
+            );
         } catch {
           // onExpire reports its own failures; retry on the next tick.
-          if (firedDeadlineRef.current === deadlineAt)
-            firedDeadlineRef.current = null;
+          releaseExpiry();
         }
       })();
     }
 
-    function resync(): Promise<void> {
+    /** True when a server sample for this deadline moved the countdown. */
+    function resync(): Promise<boolean> {
       if (reading) return reading;
       reading = (async () => {
         try {
           const timing = await readTimingRef.current();
-          if (!active) return;
           if (
-            timing?.deadlineAt === deadlineAt &&
-            timing.remainingMs !== null
-          ) {
-            expiresAt = performance.now() + timing.remainingMs;
-          }
+            !active ||
+            timing?.deadlineAt !== deadlineAt ||
+            timing.remainingMs === null
+          )
+            return false;
+          expiresAt = performance.now() + timing.remainingMs;
+          return true;
         } catch {
           // A failed refresh keeps the last server sample; finalization still
           // checks the server cutoff and the next focus can refresh again.
+          return false;
         } finally {
           reading = null;
           if (active) update(false);
@@ -231,6 +253,7 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
     return () => {
       active = false;
       window.clearInterval(intervalId);
+      window.clearTimeout(retryTimeoutId);
       document.removeEventListener('visibilitychange', onReturn);
       window.removeEventListener('focus', onReturn);
     };

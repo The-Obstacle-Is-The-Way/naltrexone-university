@@ -136,10 +136,7 @@ describe('useExamTimer', () => {
       deadlineAt: string;
       remainingMs: number;
     }>();
-    const onExpire = vi
-      .fn()
-      .mockResolvedValueOnce(false)
-      .mockResolvedValue(true);
+    const onExpire = vi.fn().mockResolvedValue(true);
     function Timer() {
       useExamTimer({
         deadlineAt: '2026-05-22T12:00:01.000Z',
@@ -153,11 +150,77 @@ describe('useExamTimer', () => {
     const screen = await render(<Timer />);
     await vi.advanceTimersByTimeAsync(1_000);
     expect(onExpire).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(1_000);
-    expect(onExpire).toHaveBeenCalledTimes(2);
     await screen.unmount();
     timing.resolve({ deadlineAt: '2026-05-22T12:00:01.000Z', remainingMs: 0 });
     await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+  });
+
+  // The server refused an early finalization (exam_not_expired). A retry
+  // waits for a fresh server sample, so ticks do not become a mutation each
+  // second against the same countdown.
+  it('retries a refused expiry once a fresh server sample arrives', async () => {
+    vi.useFakeTimers();
+    const timing = createDeferred<{
+      deadlineAt: string;
+      remainingMs: number;
+    }>();
+    const reads = [Promise.resolve(null), timing.promise];
+    const onExpire = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    function Timer() {
+      useExamTimer({
+        deadlineAt: '2026-05-22T12:00:01.000Z',
+        remainingMs: 1_000,
+        isExamActive: true,
+        onExpire,
+        readTiming: () => reads.shift() ?? Promise.resolve(null),
+      });
+      return null;
+    }
+    await render(<Timer />);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    timing.resolve({
+      deadlineAt: '2026-05-22T12:00:01.000Z',
+      remainingMs: 1_000,
+    });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a refused expiry after a pause when no fresh sample comes', async () => {
+    vi.useFakeTimers();
+    const onExpire = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    const readTiming = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockRejectedValue(new Error('Timing read failed'));
+    function Timer() {
+      useExamTimer({
+        deadlineAt: '2026-05-22T12:00:01.000Z',
+        remainingMs: 1_000,
+        isExamActive: true,
+        onExpire,
+        readTiming,
+      });
+      return null;
+    }
+    await render(<Timer />);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(2_000);
     expect(onExpire).toHaveBeenCalledTimes(2);
   });
 
