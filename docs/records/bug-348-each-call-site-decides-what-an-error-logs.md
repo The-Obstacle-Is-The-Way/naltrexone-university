@@ -76,7 +76,7 @@ P3.
 
 For Sentry, BUG-331 retains the existing server-channel work. A shared credential-shape redactor or CSP policy is a candidate, not a demonstrated fix: first reproduce a leak with synthetic data through the actual SDK or report path, check false positives and ADR-026's retained pseudonymous fields, and propose an explicit ADR amendment if evidence warrants it.
 
-## Resolution (built)
+## Resolution
 
 Option 1. The controller boundary logs operational failures before it converts them to public results. Manage billing logs only an exception that escapes that boundary. Both paths project diagnostics. Billing actions include their action names. Checkout and add-card result consumers do not duplicate the operational diagnostic. The checkout use case logs its application code without raw error fields. Public messages and field errors are unchanged.
 
