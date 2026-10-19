@@ -70,12 +70,17 @@ async function arrangeCorrected() {
   return { corrected, other, base, correction };
 }
 
-async function planOf(releaseId: string, expectedActiveReleaseId: string) {
+async function planOf(
+  releaseId: string,
+  expectedActiveReleaseId: string,
+  revert: readonly string[] = [],
+) {
   return (
     await previewOrApply(disposable.db, false, (db) =>
       activateRelease(db, {
         releaseId,
         expectedActiveReleaseId,
+        revert,
         record: RELEASE_DECISION,
       }),
     )
@@ -102,7 +107,9 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
       { revert: [corrected] },
     );
 
-    expect(await planOf(staged.releaseId, correction)).toMatchObject({
+    expect(
+      await planOf(staged.releaseId, correction, [corrected]),
+    ).toMatchObject({
       publish: [],
       update: [],
       revert: [corrected],
@@ -124,7 +131,7 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
         { revert: [qid] },
       ),
     ).rejects.toThrow(
-      `Cannot revert ${qid}: the bundle does not move it to an earlier revision.`,
+      `Cannot revert ${qid}: the bundle does not move it to an earlier revision or return to an earlier answer key.`,
     );
   });
 
@@ -148,7 +155,7 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
   it("names a rollback's reverts, and prints each kind on its own line", async () => {
     const { corrected, base, correction } = await arrangeCorrected();
 
-    const plan = await planOf(base, correction);
+    const plan = await planOf(base, correction, [corrected]);
 
     expect(plan).toMatchObject({
       publish: [],
@@ -161,6 +168,8 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
       'Publish (0)',
       'Update to a newer revision (0)',
       `Revert to an earlier revision (1): ${corrected}`,
+      `Answer-key changes (1): ${corrected}`,
+      `Return to an earlier answer key (1): ${corrected}`,
       'Replaces a held revision (0)',
       'Withdraw for good (0)',
       'Left out, held (0)',
@@ -218,7 +227,9 @@ describe('DEBT-492: reverts and replaced held revisions are named', () => {
       { revert: [corrected] },
     );
 
-    expect(await planOf(staged.releaseId, correction)).toMatchObject({
+    expect(
+      await planOf(staged.releaseId, correction, [corrected]),
+    ).toMatchObject({
       publish: [],
       revert: [corrected],
       replacesHeld: [corrected],
