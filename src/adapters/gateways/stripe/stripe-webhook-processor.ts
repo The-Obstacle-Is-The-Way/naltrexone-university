@@ -20,7 +20,10 @@ import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
-import { constructStripeWebhookEvent } from './stripe-webhook-signature';
+import {
+  constructStripeWebhookEvent,
+  webhookSignatureFailureReason,
+} from './stripe-webhook-signature';
 
 function isSetupSessionPayload(payload: unknown): boolean {
   return (
@@ -489,10 +492,14 @@ export async function processStripeWebhookEvent({
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
 
-    // BUG-325: anyone can send a bad signature, so it is a warning. Stripe's
-    // diagnostic class is retained without its raw response text.
+    // BUG-325: anyone can send a bad signature, so it is a warning. A fixed
+    // reason tells a misconfigured secret or a stale delivery from a
+    // forgery, without Stripe's raw text.
     logger.warn(
-      { error: projectSafeErrorDiagnostics(error) },
+      {
+        error: projectSafeErrorDiagnostics(error),
+        reason: webhookSignatureFailureReason(error),
+      },
       'Webhook signature verification failed',
     );
 

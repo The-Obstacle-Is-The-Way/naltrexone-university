@@ -212,11 +212,8 @@ describe('withIdempotency outcome writes', () => {
         execute,
       }),
     ).resolves.toEqual({ ok: true });
-    expect(logger.errorCalls[0]).toMatchObject({
-      context: {
-        storeResultError: {},
-      },
-    });
+    // Exact: a thrown non-Error projects to nothing, never its text.
+    expect(logger.errorCalls[0]?.context?.storeResultError).toEqual({});
   });
 
   it('caches an indeterminate error instead of replaying non-replayable actions after storeResult fails', async () => {
@@ -376,12 +373,9 @@ describe('withIdempotency outcome writes', () => {
         'Idempotency outcome could not be recorded after committed success',
     });
 
-    expect(logger.errorCalls[0]).toMatchObject({
-      context: {
-        storeError: {},
-        storeResultError: {},
-      },
-    });
+    // Exact: a thrown non-Error projects to nothing, never its text.
+    expect(logger.errorCalls[0]?.context?.storeError).toEqual({});
+    expect(logger.errorCalls[0]?.context?.storeResultError).toEqual({});
   });
 
   it('preserves the indeterminate error when indeterminate outcome logging fails', async () => {

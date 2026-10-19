@@ -540,7 +540,7 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_SIGNATURE' });
 
     expect(logger.warnCalls).toContainEqual({
-      context: { error: { name: 'Error' } },
+      context: { error: { name: 'Error' }, reason: 'other' },
       msg: 'Webhook signature verification failed',
     });
     expect(logger.errorCalls).toEqual([]);
