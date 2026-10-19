@@ -195,69 +195,78 @@ describe('requeue-renewal-notice script', () => {
     });
   });
 
-  it('rejects a stale requeue after another operator retries and a new attempt is quarantined', async () => {
-    const id = await quarantinedDelivery('outcome_unknown');
-    const read = createDeferred<void>();
-    const resume = createDeferred<void>();
-    const originalRead =
-      DrizzleRenewalNoticeDeliveryRepository.prototype.findById;
-    vi.spyOn(
-      DrizzleRenewalNoticeDeliveryRepository.prototype,
-      'findById',
-    ).mockImplementationOnce(async function (
-      this: DrizzleRenewalNoticeDeliveryRepository,
-      deliveryId,
-    ) {
-      const snapshot = await originalRead.call(this, deliveryId);
-      read.resolve(undefined);
-      await resume.promise;
-      return snapshot;
-    });
-    const staleAttempt = runScript([
-      '--delivery-id',
-      id,
-      '--reason',
-      'First attempt was not sent',
-      '--confirmed-no-send',
-    ]);
-    // Attach rejection handling before allowing either operation to finish.
-    const result = staleAttempt.then(
-      () => ({ code: 'unexpected_success' }),
-      (error: unknown) => error,
-    );
-    await read.promise;
-    try {
-      await repository.requeue({
-        id,
-        reason: 'Other operator recovery',
-        requeuedBy: 'other@example.com',
-        requeuedAt: now,
-        confirmedNoSend: true,
+  it.each(['queued', 'outcome_unknown'] as const)(
+    'rejects a stale requeue after another operator leaves the notice %s',
+    async (newStatus) => {
+      const id = await quarantinedDelivery('outcome_unknown');
+      const read = createDeferred<void>();
+      const resume = createDeferred<void>();
+      const originalRead =
+        DrizzleRenewalNoticeDeliveryRepository.prototype.findById;
+      vi.spyOn(
+        DrizzleRenewalNoticeDeliveryRepository.prototype,
+        'findById',
+      ).mockImplementationOnce(async function (
+        this: DrizzleRenewalNoticeDeliveryRepository,
+        deliveryId,
+      ) {
+        const snapshot = await originalRead.call(this, deliveryId);
+        read.resolve(undefined);
+        await resume.promise;
+        return snapshot;
       });
-      await repository.claim({ id, attemptId: 'attempt-2', startedAt: now });
-      await repository.markOutcomeUnknown({
+      const staleAttempt = runScript([
+        '--delivery-id',
         id,
-        attemptId: 'attempt-2',
-        failureClass: 'provider_outcome_unknown',
-        failureCode: 'provider_timeout',
-        failedAt: now,
-      });
-    } finally {
-      resume.resolve(undefined);
-    }
-
-    await expect(result).resolves.toMatchObject({ code: 'CONFLICT' });
-    await expect(repository.findById(id)).resolves.toMatchObject({
-      status: 'outcome_unknown',
-      attemptCount: 2,
-      requeueAudit: [
-        expect.objectContaining({
+        '--reason',
+        'First attempt was not sent',
+        '--confirmed-no-send',
+      ]);
+      // Attach rejection handling before allowing either operation to finish.
+      const result = staleAttempt.then(
+        () => ({ code: 'unexpected_success' }),
+        (error: unknown) => error,
+      );
+      await read.promise;
+      try {
+        await repository.requeue({
+          id,
           reason: 'Other operator recovery',
           requeuedBy: 'other@example.com',
-        }),
-      ],
-    });
-  });
+          requeuedAt: now,
+          confirmedNoSend: true,
+        });
+        if (newStatus === 'outcome_unknown') {
+          await repository.claim({
+            id,
+            attemptId: 'attempt-2',
+            startedAt: now,
+          });
+          await repository.markOutcomeUnknown({
+            id,
+            attemptId: 'attempt-2',
+            failureClass: 'provider_outcome_unknown',
+            failureCode: 'provider_timeout',
+            failedAt: now,
+          });
+        }
+      } finally {
+        resume.resolve(undefined);
+      }
+
+      await expect(result).resolves.toMatchObject({ code: 'CONFLICT' });
+      await expect(repository.findById(id)).resolves.toMatchObject({
+        status: newStatus,
+        attemptCount: newStatus === 'outcome_unknown' ? 2 : 1,
+        requeueAudit: [
+          expect.objectContaining({
+            reason: 'Other operator recovery',
+            requeuedBy: 'other@example.com',
+          }),
+        ],
+      });
+    },
+  );
 
   it('leaves an unknown outcome quarantined without the no-send confirmation', async () => {
     const id = await quarantinedDelivery('outcome_unknown');
