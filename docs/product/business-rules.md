@@ -23,7 +23,7 @@ This register replaces the Gherkin acceptance-test harness this file once propos
   - end-to-end only for what nothing lower reaches.
 - **Renaming a test that proves a rule** means updating its line here.
 - **Format.** A proof line is ``- `path`: `exact test title` ``. Copy the title verbatim, including an `it.each` template such as `%s` or `$name`.
-- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, and R24 and R25 with BUG-343.
+- **Numbering.** Rules keep their numbers. R1–R17 are the backlog this file listed before the decision, and R18–R23 were added with DEBT-493 and DEBT-465 Part 3, R24 and R25 with BUG-343, and R28 with BUG-349.
 
 ## Practice sessions
 
@@ -191,6 +191,14 @@ A changed key that matches earlier history needs an explicit return name, reason
 - `src/adapters/controllers/stripe-webhook-controller-completion-sweep.test.ts`: `fails the delivery when the sweep fails, and sweeps again when Stripe sends the event again`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `keeps a Session created after the completion's event, which belongs to a later checkout`
 - `src/adapters/gateways/stripe/stripe-checkout-sessions-completion-sweep.test.ts`: `logs an error, and goes on, when another Session completed too`
+
+### R28. The first observed subscription termination starts the retention clock; a replay changes no consent record. Consent evidence is kept for at least three UTC calendar years after acceptance or one year after that termination, whichever is later. A longer stored floor is preserved. February 29 plus one year is March 1.
+
+- `tests/shared/renewal-consent-termination-contract.ts`: `keeps the first observation, retention and updatedAt on $name replay`
+- `tests/shared/renewal-consent-termination-contract.ts`: `keeps the consent floor when it outlasts the termination floor`
+- `tests/shared/renewal-consent-termination-contract.ts`: `retains a leap-day termination through March 1 of the next year`
+- `tests/shared/renewal-consent-termination-contract.ts`: `preserves an existing retention floor longer than either calendar floor`
+- `tests/shared/renewal-consent-termination-contract.ts`: `records exactly one of two concurrent first observations`
 
 ## Account
 

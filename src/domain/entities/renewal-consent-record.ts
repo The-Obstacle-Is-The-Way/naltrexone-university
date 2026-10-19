@@ -119,19 +119,18 @@ export function newRenewalConsentRecord(
 export function terminateRenewalConsentRecord<
   T extends NewRenewalConsentRecord,
 >(record: T, terminatedAt: Date): T {
-  const effectiveTerminatedAt =
-    record.subscriptionTerminatedAt &&
-    // Stryker disable next-line EqualityOperator: at equal instants either branch yields the same time
-    record.subscriptionTerminatedAt > terminatedAt
-      ? record.subscriptionTerminatedAt
-      : terminatedAt;
+  if (record.subscriptionTerminatedAt !== null) return record;
 
   return {
     ...record,
-    subscriptionTerminatedAt: new Date(effectiveTerminatedAt),
-    retainUntil: computeRenewalConsentRetainUntil(
-      record.acceptedAt,
-      effectiveTerminatedAt,
+    subscriptionTerminatedAt: new Date(terminatedAt),
+    retainUntil: new Date(
+      Math.max(
+        record.retainUntil.getTime(),
+        // The stored date already holds the consent floor; Postgres applies
+        // the same termination floor (BUG-349).
+        computeRenewalConsentRetainUntil(null, terminatedAt).getTime(),
+      ),
     ),
   };
 }
