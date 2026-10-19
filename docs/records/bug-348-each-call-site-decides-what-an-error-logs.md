@@ -1,6 +1,6 @@
 # BUG-348: Each Call Site Decides What an Error Logs, So a Billing Failure Goes Unlogged and Raw Error Text Reaches the Logs
 
-**Status:** Verifying — promotion to main; due 2026-10-20
+**Status:** Verifying — promotion to main; due 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-17
 
@@ -82,7 +82,7 @@ Option 1. The controller boundary logs operational failures before it converts t
 
 The shared diagnostic policy distinguishes operational failures from expected outcomes and preserves the four browser-reporting exclusions. The pure projector is shared by adapter and framework logs. It follows causes and retains only validated diagnostic fields, including the vendor allow-list in ADR-018. ADR-006 and ADR-018 are amended. The action-aware idempotency cache policies are unchanged.
 
-The idempotency wrapper uses the projector for prune, abort, error-write and result-write failures. Its seven real-pino cases retain the action, user ID, key, SQLSTATE and constraint without SQL parameters, cause text or stack. The remaining raw-message log fields and browser console error objects use the same projector. The source scan rejects message and stack fields, stringification, local formatter helpers and aliases at log calls.
+The idempotency wrapper uses the projector for prune, abort, error-write and result-write failures. Its seven real-pino cases retain the action, user ID, key, SQLSTATE and constraint without SQL parameters, cause text or stack. The remaining raw-message log fields and browser console error objects use the same projector. The `console.*` writers in `proxy.ts`, `lib/clerk-call-failures.ts` and `lib/clerk-backend-call-limit.ts` now project their errors, but still bypass pino's level and redaction; DEBT-528 moves them onto the shared logger with the other entry-point policies. The source scan rejects message and stack fields, stringification, local formatter helpers and aliases at log calls.
 
 The portal tests exercise the real gateway's missing-URL and open-circuit paths through the action boundary and redirect. Each produces one serialized diagnostic. Restoring the old suppression makes both fail. A separate preserved-cause case proves SQLSTATE and constraint survive without raw text.
 
@@ -92,7 +92,7 @@ The portal tests exercise the real gateway's missing-URL and open-circuit paths 
 - [x] A failed portal session (circuit open, missing URL) produces one log with projected diagnostics and any preserved cause.
 - [x] No log field carries an error's raw message; a scan enforces it.
 - [x] Diagnostic defaults and projection are shared, ADR-006 and ADR-018 are amended, and DEBT-529's action-aware replay policy is preserved.
-- [ ] Promote the fix to main.
+- [ ] Promote the fix to main; due 2026-10-23.
 
 ## Related
 
