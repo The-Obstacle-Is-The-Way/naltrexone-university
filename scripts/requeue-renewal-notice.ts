@@ -18,10 +18,11 @@ import { runHumanDatabaseCommand } from './database-command';
 const OPERATOR_ENV = 'RENEWAL_NOTICE_OPERATOR';
 const SQL_END_TIMEOUT_SECONDS = 5;
 
-const USAGE = `Usage: ${OPERATOR_ENV}=<you> DATABASE_URL=<url> pnpm notice:requeue --delivery-id <uuid> --reason "<why>" [--confirmed-no-send]`;
+const USAGE = `Usage: ${OPERATOR_ENV}=<you> DATABASE_URL=<url> pnpm notice:requeue --delivery-id <uuid> --expected-attempt-count <count> --reason "<why>" [--confirmed-no-send]`;
 
 export type RequeueRenewalNoticeOptions = {
   deliveryId: string;
+  expectedAttemptCount: number;
   reason: string;
   confirmedNoSend: boolean;
 };
@@ -51,7 +52,10 @@ const DEFAULT_DEPS: RequeueRenewalNoticeDeps = {
 export function parseRequeueRenewalNoticeArgs(
   argv: string[],
 ): RequeueRenewalNoticeOptions {
-  const values = new Map<'--delivery-id' | '--reason', string>();
+  const values = new Map<
+    '--delivery-id' | '--reason' | '--expected-attempt-count',
+    string
+  >();
   let confirmedNoSend = false;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -62,7 +66,11 @@ export function parseRequeueRenewalNoticeArgs(
       continue;
     }
 
-    if (flag === '--delivery-id' || flag === '--reason') {
+    if (
+      flag === '--delivery-id' ||
+      flag === '--reason' ||
+      flag === '--expected-attempt-count'
+    ) {
       const value = argv[index + 1];
       if (value === undefined || value.startsWith('--')) {
         throw usageError(`${flag} needs a value`);
@@ -90,7 +98,21 @@ export function parseRequeueRenewalNoticeArgs(
     throw usageError('--delivery-id must be a delivery UUID');
   }
 
-  return { deliveryId, reason, confirmedNoSend };
+  const count = values.get('--expected-attempt-count');
+  if (count === undefined) {
+    throw usageError('--expected-attempt-count is required');
+  }
+  const expectedAttemptCount = Number(count);
+  if (
+    !/^(0|[1-9]\d*)$/.test(count) ||
+    !Number.isSafeInteger(expectedAttemptCount)
+  ) {
+    throw usageError(
+      '--expected-attempt-count must be a non-negative safe integer',
+    );
+  }
+
+  return { deliveryId, expectedAttemptCount, reason, confirmedNoSend };
 }
 
 export async function runRequeueRenewalNotice({

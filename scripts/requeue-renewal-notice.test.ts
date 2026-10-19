@@ -23,16 +23,59 @@ const now = new Date('2026-10-18T12:00:00.000Z');
 describe('parseRequeueRenewalNoticeArgs', () => {
   const deliveryId = randomUUID();
 
-  it('reads the delivery ID and reason, with no-send unconfirmed by default', () => {
+  it('reads the attempt count inspected before the provider check', () => {
     expect(
       parseRequeueRenewalNoticeArgs([
         '--delivery-id',
         deliveryId,
         '--reason',
+        'Provider checked',
+        '--expected-attempt-count',
+        '2',
+      ]),
+    ).toMatchObject({ expectedAttemptCount: 2 });
+  });
+
+  it('requires the inspected attempt count', () => {
+    expect(() =>
+      parseRequeueRenewalNoticeArgs([
+        '--delivery-id',
+        deliveryId,
+        '--reason',
+        'Provider checked',
+      ]),
+    ).toThrow('--expected-attempt-count is required');
+  });
+
+  it.each(['', '-1', '1.5', 'NaN', 'Infinity', '9007199254740992'])(
+    'refuses an invalid inspected attempt count %s',
+    (count) => {
+      expect(() =>
+        parseRequeueRenewalNoticeArgs([
+          '--delivery-id',
+          deliveryId,
+          '--reason',
+          'Provider checked',
+          '--expected-attempt-count',
+          count,
+        ]),
+      ).toThrow('--expected-attempt-count must be a non-negative safe integer');
+    },
+  );
+
+  it('reads the delivery ID and reason, with no-send unconfirmed by default', () => {
+    expect(
+      parseRequeueRenewalNoticeArgs([
+        '--delivery-id',
+        deliveryId,
+        '--expected-attempt-count',
+        '1',
+        '--reason',
         'Resend shows no email for this notice',
       ]),
     ).toEqual({
       deliveryId,
+      expectedAttemptCount: 1,
       reason: 'Resend shows no email for this notice',
       confirmedNoSend: false,
     });
@@ -46,6 +89,8 @@ describe('parseRequeueRenewalNoticeArgs', () => {
         'Resend shows no email for this notice',
         '--delivery-id',
         deliveryId,
+        '--expected-attempt-count',
+        '1',
       ]).confirmedNoSend,
     ).toBe(true);
   });
@@ -55,7 +100,12 @@ describe('parseRequeueRenewalNoticeArgs', () => {
       parseRequeueRenewalNoticeArgs(['--reason', 'Retry approved']),
     ).toThrow(/--delivery-id is required/);
     expect(() =>
-      parseRequeueRenewalNoticeArgs(['--delivery-id', deliveryId]),
+      parseRequeueRenewalNoticeArgs([
+        '--delivery-id',
+        deliveryId,
+        '--expected-attempt-count',
+        '1',
+      ]),
     ).toThrow(/--reason is required/);
   });
 
@@ -64,6 +114,8 @@ describe('parseRequeueRenewalNoticeArgs', () => {
       parseRequeueRenewalNoticeArgs([
         '--delivery-id',
         'not-a-uuid',
+        '--expected-attempt-count',
+        '1',
         '--reason',
         'Retry approved',
       ]),
@@ -79,7 +131,13 @@ describe('parseRequeueRenewalNoticeArgs', () => {
       ]),
     ).toThrow(/--delivery-id needs a value/);
     expect(() =>
-      parseRequeueRenewalNoticeArgs(['--delivery-id', deliveryId, '--reason']),
+      parseRequeueRenewalNoticeArgs([
+        '--delivery-id',
+        deliveryId,
+        '--expected-attempt-count',
+        '1',
+        '--reason',
+      ]),
     ).toThrow(/--reason needs a value/);
   });
 
@@ -88,6 +146,8 @@ describe('parseRequeueRenewalNoticeArgs', () => {
       parseRequeueRenewalNoticeArgs([
         '--delivery-id',
         deliveryId,
+        '--expected-attempt-count',
+        '1',
         '--reason',
         'First reason',
         '--reason',
@@ -112,6 +172,8 @@ describe('runRequeueRenewalNotice', () => {
       argv: [
         '--delivery-id',
         deliveryId,
+        '--expected-attempt-count',
+        '1',
         '--reason',
         '  Resend shows no email for this notice  ',
         '--confirmed-no-send',
@@ -141,7 +203,7 @@ describe('runRequeueRenewalNotice', () => {
     expect(harness.output.text()).toBe(
       [
         `Requeued renewal notice ${deliveryId}; its status is now queued.`,
-        `Audit entry: {"reason":"Resend shows no email for this notice","requeuedAt":"${now.toISOString()}","requeuedBy":"${OPERATOR}","confirmedNoSend":true,"priorStatus":"outcome_unknown"}`,
+        `Audit entry: {"reason":"Resend shows no email for this notice","requeuedAt":"${now.toISOString()}","requeuedBy":"${OPERATOR}","confirmedNoSend":true,"priorStatus":"outcome_unknown","priorAttemptCount":1}`,
         'The next daily renewal-notice run, which starts between 09:00 and 10:00 UTC, rechecks it before sending it.',
         '',
       ].join('\n'),
@@ -155,7 +217,14 @@ describe('runRequeueRenewalNotice', () => {
 
     await expect(
       runRequeueRenewalNotice({
-        argv: ['--delivery-id', deliveryId, '--reason', 'Retry requested'],
+        argv: [
+          '--delivery-id',
+          deliveryId,
+          '--expected-attempt-count',
+          '1',
+          '--reason',
+          'Retry requested',
+        ],
         env: localEnv({ RENEWAL_NOTICE_OPERATOR: OPERATOR }),
         output: harness.output,
         errorOutput: harness.errorOutput,
@@ -175,6 +244,7 @@ describe('runRequeueRenewalNotice', () => {
     const { repository, deliveryId } = await quarantinedDelivery();
     await repository.requeue({
       id: deliveryId,
+      expectedAttemptCount: 1,
       reason: 'First requeue',
       requeuedBy: 'earlier@example.com',
       requeuedAt: new Date('2026-10-17T12:00:00.000Z'),
@@ -195,7 +265,14 @@ describe('runRequeueRenewalNotice', () => {
     const harness = createHarness(repository);
 
     await runRequeueRenewalNotice({
-      argv: ['--delivery-id', deliveryId, '--reason', 'Mailbox fixed'],
+      argv: [
+        '--delivery-id',
+        deliveryId,
+        '--expected-attempt-count',
+        '2',
+        '--reason',
+        'Mailbox fixed',
+      ],
       env: localEnv({ RENEWAL_NOTICE_OPERATOR: OPERATOR }),
       output: harness.output,
       errorOutput: harness.errorOutput,
@@ -204,7 +281,7 @@ describe('runRequeueRenewalNotice', () => {
     });
 
     expect(harness.output.text()).toContain(
-      `Audit entry: {"reason":"Mailbox fixed","requeuedAt":"${now.toISOString()}","requeuedBy":"${OPERATOR}","confirmedNoSend":false,"priorStatus":"terminal_failure"}`,
+      `Audit entry: {"reason":"Mailbox fixed","requeuedAt":"${now.toISOString()}","requeuedBy":"${OPERATOR}","confirmedNoSend":false,"priorStatus":"terminal_failure","priorAttemptCount":2}`,
     );
   });
 
@@ -218,6 +295,8 @@ describe('runRequeueRenewalNotice', () => {
         argv: [
           '--delivery-id',
           queued.id,
+          '--expected-attempt-count',
+          '0',
           '--reason',
           'Retry requested',
           '--confirmed-no-send',
@@ -242,6 +321,8 @@ describe('runRequeueRenewalNotice', () => {
       argv: [
         '--delivery-id',
         deliveryId,
+        '--expected-attempt-count',
+        '1',
         '--reason',
         'Resend shows no email for this notice',
         '--confirmed-no-send',
@@ -267,6 +348,8 @@ describe('runRequeueRenewalNotice', () => {
           argv: [
             '--delivery-id',
             deliveryId,
+            '--expected-attempt-count',
+            '1',
             '--reason',
             'Resend shows no email for this notice',
             '--confirmed-no-send',
@@ -288,7 +371,14 @@ describe('runRequeueRenewalNotice', () => {
 
     await expect(
       runRequeueRenewalNotice({
-        argv: ['--delivery-id', 'not-a-uuid', '--reason', 'Retry approved'],
+        argv: [
+          '--delivery-id',
+          'not-a-uuid',
+          '--expected-attempt-count',
+          '1',
+          '--reason',
+          'Retry approved',
+        ],
         env: localEnv({ RENEWAL_NOTICE_OPERATOR: OPERATOR }),
         output: harness.output,
         errorOutput: harness.errorOutput,
@@ -326,6 +416,8 @@ describe('runRequeueRenewalNotice', () => {
         argv: [
           '--delivery-id',
           deliveryId,
+          '--expected-attempt-count',
+          '1',
           '--reason',
           'Resend shows no email for this notice',
           '--confirmed-no-send',
@@ -348,6 +440,8 @@ describe('runRequeueRenewalNotice', () => {
         argv: [
           '--delivery-id',
           deliveryId,
+          '--expected-attempt-count',
+          '1',
           '--reason',
           'Resend shows no email for this notice',
           '--confirmed-no-send',
@@ -373,6 +467,8 @@ describe('runRequeueRenewalNotice', () => {
       argv: [
         '--delivery-id',
         deliveryId,
+        '--expected-attempt-count',
+        '1',
         '--reason',
         'Resend shows no email for this notice',
         '--confirmed-no-send',

@@ -28,7 +28,7 @@ ORDER BY CASE WHEN send_by > now() THEN 0 WHEN send_by IS NULL THEN 1 ELSE 2 END
 
 Open reminders come first, soonest cutoff first; then notices without a reminder cutoff; then expired reminders. Acknowledgments have no cutoff. `material_change` and `fee_change` also have no reminder cutoff, but nothing currently schedules them.
 
-For the selected ID, inspect its `payload_snapshot` and `provider_idempotency_key` as well. In [Resend's email details](https://resend.com/docs/dashboard/emails/manage-emails) and [API logs](https://resend.com/docs/dashboard/logs/introduction), match the recipient, subject and full stored content, using the exact key if the provider evidence exposes it. **Recipient and time alone are insufficient:** the annual job creates both an `annual_reminder` and a `renewal_notice` in the same run. One can succeed while the other is unknown. Inspect all matching requests and their linked emails, including earlier attempts and requeues. Do not use the dashboard's resend action; it bypasses the application's audit and revalidation.
+For the selected ID, record its `attempt_count` **before** checking the provider, and inspect its `payload_snapshot` and `provider_idempotency_key` as well. The command binds your evidence to that inspected attempt count. In [Resend's email details](https://resend.com/docs/dashboard/emails/manage-emails) and [API logs](https://resend.com/docs/dashboard/logs/introduction), match the recipient, subject and full stored content, using the exact key if the provider evidence exposes it. **Recipient and time alone are insufficient:** the annual job creates both an `annual_reminder` and a `renewal_notice` in the same run. One can succeed while the other is unknown. Inspect all matching requests and their linked emails, including earlier attempts and requeues. Do not use the dashboard's resend action; it bypasses the application's audit and revalidation.
 
 A quarantined row with a `provider_event_id` was accepted before a failure report. An `outcome_unknown` row normally has none; a missing ID is not evidence that Resend sent nothing.
 
@@ -48,12 +48,12 @@ Set `RENEWAL_NOTICE_OPERATOR` to your name or email. Use an explicit `DATABASE_U
 
 ```bash
 RENEWAL_NOTICE_OPERATOR="you@example.com" DATABASE_URL="<production url>" DB_TARGET_ACK='<from the first refusal>' \
-  pnpm --silent notice:requeue --delivery-id <id> --reason "<what you checked and why>" --confirmed-no-send
+  pnpm --silent notice:requeue --delivery-id <id> --expected-attempt-count <inspected-attempt-count> --reason "<what you checked and why>" --confirmed-no-send
 ```
 
 Omit `--confirmed-no-send` for a terminal failure unless you have confirmed no send; its audit then records `false`. Put arguments directly after the script name: pnpm 11 passes a `--` separator through, which this parser refuses. Keep personal information out of the reason where possible; the command prints the audit text you supply.
 
-The redacted database target goes to stderr. Stdout names the row, its `queued` status and the latest audit entry. A nonexistent ID or a row outside the two quarantine statuses is refused without a change. If another retry changed the attempt after the command read it, the command returns a conflict instead of applying stale confirmation or overwriting the audit. Recheck the new attempt before retrying the command. The command queues a retry; it does not itself send email.
+The redacted database target goes to stderr. Stdout names the row, its `queued` status and the latest audit entry. A nonexistent ID or a row outside the two quarantine statuses is refused without a change. If another retry changed the attempt after your inspection, even before the command started, the command returns a conflict instead of applying stale confirmation or overwriting the audit. Repeat the row and provider checks for the new attempt before retrying; never just copy a newer count into the old command. New audit entries include `priorAttemptCount`; older entries can lack it. The command queues a retry; it does not itself send email.
 
 ## 4. Run dispatch and confirm delivery
 

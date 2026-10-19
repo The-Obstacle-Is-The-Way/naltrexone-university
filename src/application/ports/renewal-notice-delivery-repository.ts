@@ -94,6 +94,8 @@ export interface RenewalNoticeDeliveryRepository {
   }): Promise<number>;
   requeue(input: {
     id: string;
+    /** The count inspected before checking provider evidence. */
+    expectedAttemptCount: number;
     reason: string;
     requeuedBy: string;
     requeuedAt: Date;

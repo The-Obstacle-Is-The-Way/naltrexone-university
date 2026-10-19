@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { PassThrough } from 'node:stream';
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { renewalNoticeDeliveries } from '@/db/schema';
 import { runRequeueRenewalNotice } from '@/scripts/requeue-renewal-notice';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { DrizzleRenewalNoticeDeliveryRepository } from '@/src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
+import type { RenewalNoticeDeliveryRepository } from '@/src/application/ports/repositories';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -13,10 +14,12 @@ import {
 import {
   FakeLogger,
   FakeOperationalAlerts,
+  FakeRenewalNoticeDeliveryRepository,
   FakeTransactionalEmailGateway,
 } from '@/src/application/test-helpers/fakes';
 import { createMatchingRenewalNoticeTargets } from '@/src/application/test-helpers/renewal-notice-targets';
 import { DispatchRenewalNoticeDeliveryUseCase } from '@/src/application/use-cases/dispatch-renewal-notice-delivery';
+import { RequeueRenewalNoticeDeliveryUseCase } from '@/src/application/use-cases/requeue-renewal-notice-delivery';
 import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { closeConnection, createIntegrationDb } from './helpers';
@@ -50,6 +53,7 @@ async function quarantinedDelivery(
     RenewalNoticeDeliveryStatus,
     'outcome_unknown' | 'terminal_failure'
   >,
+  targetRepository: RenewalNoticeDeliveryRepository = repository,
 ): Promise<string> {
   const id = randomUUID();
   deliveryIds.push(id);
@@ -64,7 +68,7 @@ async function quarantinedDelivery(
     },
     hasher,
   );
-  await repository.saveQueued({
+  await targetRepository.saveQueued({
     id,
     noticeKind: 'annual_reminder',
     consentRecordId: null,
@@ -76,20 +80,20 @@ async function quarantinedDelivery(
     payloadSnapshot: payload.snapshot,
     payloadHash: payload.hash,
   });
-  await repository.claim({ id, attemptId: 'attempt-1', startedAt: now });
+  await targetRepository.claim({ id, attemptId: 'attempt-1', startedAt: now });
   const failure = {
     id,
     attemptId: 'attempt-1',
     failedAt: now,
   };
   if (status === 'outcome_unknown') {
-    await repository.markOutcomeUnknown({
+    await targetRepository.markOutcomeUnknown({
       ...failure,
       failureClass: 'provider_outcome_unknown',
       failureCode: 'provider_timeout',
     });
   } else {
-    await repository.markTerminalFailure({
+    await targetRepository.markTerminalFailure({
       ...failure,
       failureClass: 'provider_terminal_failure',
       failureCode: 'validation_error',
@@ -110,12 +114,147 @@ function runScript(argv: string[]) {
 }
 
 describe('requeue-renewal-notice script', () => {
+  it('preserves an audit entry written before inspected attempt counts existed', async () => {
+    const id = await quarantinedDelivery('outcome_unknown');
+    const legacyEntry = {
+      reason: 'Provider checked before the command recorded attempt counts',
+      requeuedAt: now.toISOString(),
+      requeuedBy: 'earlier@example.com',
+      confirmedNoSend: true,
+      priorStatus: 'outcome_unknown' as const,
+    };
+    await repository.requeue({
+      id,
+      expectedAttemptCount: 1,
+      reason: legacyEntry.reason,
+      requeuedBy: legacyEntry.requeuedBy,
+      requeuedAt: now,
+      confirmedNoSend: true,
+    });
+    await repository.claim({ id, attemptId: 'attempt-2', startedAt: now });
+    await repository.markOutcomeUnknown({
+      id,
+      attemptId: 'attempt-2',
+      failedAt: now,
+      failureClass: 'provider_outcome_unknown',
+      failureCode: 'provider_timeout',
+    });
+    // This is the JSON shape persisted before inspected counts were recorded.
+    await db
+      .update(renewalNoticeDeliveries)
+      .set({ requeueAudit: [legacyEntry] })
+      .where(eq(renewalNoticeDeliveries.id, id));
+
+    await runScript([
+      '--delivery-id',
+      id,
+      '--expected-attempt-count',
+      '2',
+      '--reason',
+      'Provider checked the current attempt',
+      '--confirmed-no-send',
+    ]);
+
+    await expect(repository.findById(id)).resolves.toMatchObject({
+      status: 'queued',
+      requeueAudit: [
+        legacyEntry,
+        {
+          reason: 'Provider checked the current attempt',
+          priorAttemptCount: 2,
+          requeuedBy: OPERATOR,
+        },
+      ],
+    });
+  });
+
+  it.each([
+    ['outcome_unknown', 'Postgres'],
+    ['terminal_failure', 'Postgres'],
+    ['outcome_unknown', 'fake'],
+    ['terminal_failure', 'fake'],
+  ] as const)(
+    'refuses evidence inspected before a newer %s attempt existed (%s)',
+    async (status, backend) => {
+      const targetRepository =
+        backend === 'Postgres'
+          ? repository
+          : new FakeRenewalNoticeDeliveryRepository(() => now, hasher);
+      const id = await quarantinedDelivery('outcome_unknown', targetRepository);
+      const inspected = await targetRepository.findById(id);
+      if (!inspected) throw new Error('Expected the inspected notice');
+      const competingInput = {
+        id,
+        expectedAttemptCount: inspected.attemptCount,
+        reason: 'Another operator checked attempt 1',
+        requeuedBy: 'other@example.com',
+        requeuedAt: now,
+        confirmedNoSend: true,
+      };
+      await targetRepository.requeue(competingInput);
+      await targetRepository.claim({
+        id,
+        attemptId: 'attempt-2',
+        startedAt: now,
+      });
+      const failure = {
+        id,
+        attemptId: 'attempt-2',
+        failureClass:
+          status === 'outcome_unknown'
+            ? ('provider_outcome_unknown' as const)
+            : ('provider_terminal_failure' as const),
+        failureCode: 'provider_failure',
+        failedAt: now,
+      };
+      if (status === 'outcome_unknown')
+        await targetRepository.markOutcomeUnknown(failure);
+      else await targetRepository.markTerminalFailure(failure);
+      const before = await targetRepository.findById(id);
+      expect(before).toMatchObject({
+        attemptCount: 2,
+        requeueAudit: [
+          { priorAttemptCount: 1, requeuedBy: 'other@example.com' },
+        ],
+      });
+      const staleInput = {
+        deliveryId: id,
+        expectedAttemptCount: inspected.attemptCount,
+        reason: 'Only attempt 1 was checked',
+        operator: OPERATOR,
+        confirmedNoSend: true,
+      };
+
+      await expect(
+        new RequeueRenewalNoticeDeliveryUseCase(
+          targetRepository,
+          () => now,
+        ).execute(staleInput),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      if (backend === 'Postgres')
+        await expect(
+          runScript([
+            '--delivery-id',
+            id,
+            '--expected-attempt-count',
+            String(inspected.attemptCount),
+            '--reason',
+            'Only attempt 1 was checked',
+            '--confirmed-no-send',
+          ]),
+        ).rejects.toMatchObject({ code: 'CONFLICT' });
+      await expect(targetRepository.findById(id)).resolves.toEqual(before);
+    },
+  );
+
   it('requeues an unknown outcome with its audit, and the next run finds it due', async () => {
     const id = await quarantinedDelivery('outcome_unknown');
 
     await runScript([
       '--delivery-id',
       id,
+      '--expected-attempt-count',
+      '1',
       '--reason',
       'Resend shows no email for this notice',
       '--confirmed-no-send',
@@ -135,6 +274,7 @@ describe('requeue-renewal-notice script', () => {
           requeuedBy: OPERATOR,
           confirmedNoSend: true,
           priorStatus: 'outcome_unknown',
+          priorAttemptCount: 1,
         },
       ],
     });
@@ -149,6 +289,8 @@ describe('requeue-renewal-notice script', () => {
     await runScript([
       '--delivery-id',
       id,
+      '--expected-attempt-count',
+      '1',
       '--reason',
       'Provider confirmed no send',
       '--confirmed-no-send',
@@ -218,6 +360,8 @@ describe('requeue-renewal-notice script', () => {
       const staleAttempt = runScript([
         '--delivery-id',
         id,
+        '--expected-attempt-count',
+        '1',
         '--reason',
         'First attempt was not sent',
         '--confirmed-no-send',
@@ -231,6 +375,7 @@ describe('requeue-renewal-notice script', () => {
       try {
         await repository.requeue({
           id,
+          expectedAttemptCount: 1,
           reason: 'Other operator recovery',
           requeuedBy: 'other@example.com',
           requeuedAt: now,
@@ -272,7 +417,14 @@ describe('requeue-renewal-notice script', () => {
     const id = await quarantinedDelivery('outcome_unknown');
 
     await expect(
-      runScript(['--delivery-id', id, '--reason', 'Retry requested']),
+      runScript([
+        '--delivery-id',
+        id,
+        '--expected-attempt-count',
+        '1',
+        '--reason',
+        'Retry requested',
+      ]),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
     await expect(repository.findById(id)).resolves.toMatchObject({
@@ -289,6 +441,8 @@ describe('requeue-renewal-notice script', () => {
     await runScript([
       '--delivery-id',
       id,
+      '--expected-attempt-count',
+      '1',
       '--reason',
       'Subscriber fixed their mailbox; resend approved',
     ]);
