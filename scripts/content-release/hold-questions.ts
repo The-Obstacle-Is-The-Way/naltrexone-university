@@ -3,6 +3,7 @@ import { runHumanDatabaseCommand } from '../database-command';
 import { parseQidCommandArgs } from '../seed/qid-command-args';
 import {
   formatActivation,
+  formatChanges,
   previewOrApply,
   withCommandDatabase,
 } from './command-support';
@@ -20,9 +21,10 @@ export async function runHoldQuestions(
   argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
-  const { qids, apply, lift, record } = parseQidCommandArgs(argv, {
+  const { qids, apply, lift, record, revert } = parseQidCommandArgs(argv, {
     decision: 'hold or lift',
     allowLift: true,
+    allowRevert: true,
   });
   await runHumanDatabaseCommand({
     env,
@@ -30,13 +32,14 @@ export async function runHoldQuestions(
     execute: (databaseUrl) =>
       withCommandDatabase(databaseUrl, async (db) => {
         const summary = await previewOrApply(db, apply, (target) =>
-          changeHolds(target, { qids, record, lift }),
+          changeHolds(target, { qids, record, lift, revert }),
         );
         log(`Hold QIDs: ${qids.join(', ')}`);
         log(`Hold reason: ${record.reason} (authority: ${record.authority})`);
         log(
           `${lift ? 'Hold lift' : 'Hold'}${apply ? '' : ' (dry-run)'}: holds=${summary.holds} ${formatActivation(summary.activation)}`,
         );
+        for (const line of formatChanges(summary.activation.plan)) log(line);
       }),
   });
 }

@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import * as schema from '../../db/schema';
 import type { DecisionRecord } from '../seed/qid-command-args';
 import type { ActivationPlan, ActivationSummary } from './release-activation';
+import type { ReleaseChanges } from './release-changes';
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -78,12 +79,17 @@ export function assertPlanForApply(
 
 // The plan an activation applies: its id, then every change it names.
 export function formatPlan(plan: ActivationPlan): string[] {
+  return [`Plan: ${plan.id}`, ...formatChanges(plan)];
+}
+
+export function formatChanges(plan: ReleaseChanges): string[] {
   return [
-    `Plan: ${plan.id}`,
     formatNames('Archive', plan.archive),
     formatNames('Publish', plan.publish),
     formatNames('Update to a newer revision', plan.update),
     formatNames('Revert to an earlier revision', plan.revert),
+    formatNames('Answer-key changes', plan.answerKeyChange),
+    formatNames('Return to an earlier answer key', plan.answerKeyReturn),
     formatNames('Replaces a held revision', plan.replacesHeld),
     formatNames('Withdraw for good', plan.withdraw),
     formatNames('Left out, held', plan.excludedHeld),
@@ -93,6 +99,11 @@ export function formatPlan(plan: ActivationPlan): string[] {
 
 function formatNames(label: string, slugs: readonly string[]): string {
   return `${label} (${slugs.length})${slugs.length > 0 ? `: ${slugs.join(', ')}` : ''}`;
+}
+
+// The CLI validators accept content slugs, so these values need no quoting.
+export function formatRevertArgs(slugs: readonly string[]): string {
+  return slugs.map((slug) => ` --revert ${slug}`).join('');
 }
 
 // DEBT-490: the decision an activation records, as printed and as the

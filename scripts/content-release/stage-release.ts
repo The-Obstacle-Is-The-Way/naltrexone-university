@@ -5,7 +5,12 @@ import {
   type SeedSourceFile,
 } from '../seed/file-reader';
 import { readQidValue } from '../seed/qid-command-args';
-import { previewOrApply, withCommandDatabase } from './command-support';
+import {
+  formatChanges,
+  formatRevertArgs,
+  previewOrApply,
+  withCommandDatabase,
+} from './command-support';
 import { stageReleaseFromFiles } from './release-builder';
 
 type StageIo = {
@@ -78,10 +83,11 @@ export async function runStageRelease(
             `withdrawals=${staged.withdrawals}`,
           ].join(' '),
         );
+        for (const line of formatChanges(staged.changes)) log(line);
         if (apply) {
           log(
             // DEBT-492: activation requires the decision (DEBT-490).
-            `Preview, then activate: pnpm exec tsx scripts/content-release/activate-release.ts --release ${staged.releaseId} --expect-active ${staged.parentReleaseId} --reason "<why>" --authority "<who>"`,
+            `Preview, then activate: pnpm exec tsx scripts/content-release/activate-release.ts --release ${staged.releaseId} --expect-active ${staged.parentReleaseId}${formatRevertArgs(staged.changes.answerKeyReturn)} --reason "<why>" --authority "<who>"`,
           );
         }
       });
