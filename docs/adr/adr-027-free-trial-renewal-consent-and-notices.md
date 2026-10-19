@@ -1,7 +1,7 @@
 # ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
-**Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The earlier decisions below have shipped as engineering; #1557's requeue entry point and alert additions await merge and promotion. They are not legal sign-off, and this record claims no legal compliance.
-**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-17, and the requeue command implemented in #1557 (pending merge and promotion)
+**Status:** Proposed — until the licensed legal review in GitHub issue #902 (DEBT-414) ends. The decisions below are engineering, not legal sign-off, and this record claims no legal compliance.
+**Date:** 2026-10-12, recording decisions of 2026-06-06 to 2026-10-17
 **Decision Makers:** The owner, who confirmed the no-card trial on 2026-06-06 (DEBT-410), chose Resend on 2026-08-04, deferred price-change machinery on 2026-08-06, authorized the DEBT-414 remediation (F01–F07, F15) on 2026-09-27, delegated the consent-copy and card-only decisions on 2026-09-28 and 2026-10-03, and chose an operator script for requeueing a quarantined notice on 2026-10-17 (DEBT-414 F23). ADR-023 moved decisions out of records, so they are recorded here.
 **Depends On:** ADR-005 (Payment Boundary), ADR-014 (Stripe Eager Sync on Checkout Success), ADR-017 (Webhook Processing Lifecycle), ADR-026 (Error Monitoring with Sentry)
 
