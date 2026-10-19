@@ -137,6 +137,19 @@ export function runRenewalConsentTerminationContract(
       });
     });
 
+    it('extends the stored date by the termination floor without recomputing the consent floor', async () => {
+      const { record, repository } = await (await createHarness()).seed({
+        retainUntil: new Date('2027-01-01T00:00:00Z'),
+      });
+      await repository.markSubscriptionTerminated({
+        externalSubscriptionId: record.externalSubscriptionId,
+        terminatedAt: new Date('2027-06-01T00:00:00Z'),
+      });
+      expect(await repository.findById(record.id)).toMatchObject({
+        retainUntil: new Date('2028-06-01T00:00:00Z'),
+      });
+    });
+
     it('records exactly one of two concurrent first observations', async () => {
       const { record, repository, competingRepository } = await (
         await createHarness()

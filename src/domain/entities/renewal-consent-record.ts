@@ -127,10 +127,9 @@ export function terminateRenewalConsentRecord<
     retainUntil: new Date(
       Math.max(
         record.retainUntil.getTime(),
-        computeRenewalConsentRetainUntil(
-          record.acceptedAt,
-          terminatedAt,
-        ).getTime(),
+        // The stored date already holds the consent floor; Postgres applies
+        // the same termination floor (BUG-349).
+        computeRenewalConsentRetainUntil(null, terminatedAt).getTime(),
       ),
     ),
   };
