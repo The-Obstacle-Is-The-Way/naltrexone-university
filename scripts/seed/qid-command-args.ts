@@ -6,6 +6,7 @@ export type QidCommandArgs = {
   qids: string[];
   apply: boolean;
   lift: boolean;
+  revert: string[];
   record: DecisionRecord;
 };
 
@@ -65,9 +66,10 @@ export function requireDecision(
 // run unless --apply. Each flag may appear once.
 export function parseQidCommandArgs(
   argv: readonly string[],
-  options: { decision: string; allowLift?: boolean },
+  options: { decision: string; allowLift?: boolean; allowRevert?: boolean },
 ): QidCommandArgs {
   const qids: string[] = [];
+  const revert: string[] = [];
   const record: Partial<DecisionRecord> = {};
   let apply = false;
   let lift = false;
@@ -79,6 +81,9 @@ export function parseQidCommandArgs(
       lift = true;
     } else if (arg === '--qid') {
       qids.push(readQidValue(argv[index + 1], '--qid', qids));
+      index += 1;
+    } else if (arg === '--revert' && options.allowRevert) {
+      revert.push(readQidValue(argv[index + 1], '--revert', revert));
       index += 1;
     } else if (arg === '--reason' || arg === '--authority') {
       readDecisionFlag(record, arg, argv[index + 1]);
@@ -92,6 +97,7 @@ export function parseQidCommandArgs(
     qids,
     apply,
     lift,
+    revert,
     record: requireDecision(record, options.decision),
   };
 }
