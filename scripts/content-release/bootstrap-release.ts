@@ -74,6 +74,9 @@ export async function runBootstrapRelease(
         log(
           `Release bootstrap${apply ? '' : ' (dry-run)'}: ${formatActivation(summary)}`,
         );
+        log(
+          `Pre-bootstrap candidate revisions: ${summary.preBootstrapCandidates}`,
+        );
         log(formatDecision(record));
         for (const line of formatPlan(summary.plan)) log(line);
         if (!apply) {
