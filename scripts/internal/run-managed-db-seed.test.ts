@@ -3,6 +3,8 @@ import { recordSeeds } from '../seed/seed-test-helpers';
 import { runManagedDbSeed } from './run-managed-db-seed';
 
 const REMOTE_DATABASE_URL = 'postgresql://app@db.example/app';
+// Port 1 on loopback: the connection is refused at once.
+const UNREACHABLE_LOCAL_DATABASE_URL = 'postgresql://ci@127.0.0.1:1/ci';
 
 // The environment seeds (db:seed:prod, db:seed:all) run this command with a
 // copy of the operator's environment and no arguments (BUG-353).
@@ -71,5 +73,21 @@ describe('managed seed placeholder choice', () => {
     expect(seeds.map(({ options }) => options)).toEqual([
       { includePlaceholders: true },
     ]);
+  });
+
+  // The default seed imports the real seed module only when called. With the
+  // fixtures included it always reaches the database, so a loopback port that
+  // nothing listens on proves the real seed ran its first query.
+  it('runs the real seed when no seed is injected', async () => {
+    await expect(
+      runManagedDbSeed({
+        args: ['--include-placeholders'],
+        env: { DATABASE_URL: UNREACHABLE_LOCAL_DATABASE_URL },
+        log: () => {},
+      }),
+    ).rejects.toMatchObject({
+      message: expect.stringMatching(/^Failed query/),
+      cause: expect.objectContaining({ code: 'ECONNREFUSED' }),
+    });
   });
 });
