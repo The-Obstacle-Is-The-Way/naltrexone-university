@@ -71,6 +71,7 @@ The shared render test failed first on the dashboard and summary for one unanswe
 
 - [x] One test renders the same tutor session through History, the dashboard and the summary, and they agree.
 - [x] All four session screens call the shared score presenter; none keeps its own percentage formatter.
+  - Corrected 2026-10-19: this item first read "No screen computes the score label or percent format itself". The shared presenter owns the percentage-or-dash decision; the dashboard and History still write their own "X/Y correct" text around it.
 - [ ] Promote to `main`; due 2026-10-19.
 
 ## Related

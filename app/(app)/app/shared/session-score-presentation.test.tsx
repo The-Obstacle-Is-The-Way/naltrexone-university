@@ -6,7 +6,7 @@ import {
   createSessionHistoryRow,
   createUserStatsOutput,
 } from '@/src/application/test-helpers/view-rows';
-import { parseHtml } from '@/tests/shared/dom-helpers';
+import { findElementByText, parseHtml } from '@/tests/shared/dom-helpers';
 
 // Framework boundary only: these static render checks never navigate.
 vi.mock('next/navigation', () => ({
@@ -98,9 +98,7 @@ describe('session score presentation', () => {
       const completed = parseHtml(
         renderToStaticMarkup(<SessionSummaryView summary={summary} />),
       );
-      const accuracyHeading = [...completed.querySelectorAll('div')].find(
-        (element) => element.textContent === 'Accuracy',
-      );
+      const accuracyHeading = findElementByText(completed, 'div', 'Accuracy');
       expect
         .soft(dashboard.body.textContent)
         .toContain(`${correct}/${scored} correct (${label})`);
