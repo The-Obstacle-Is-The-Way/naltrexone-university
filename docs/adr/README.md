@@ -31,7 +31,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-015](./adr-015-idempotency-strategy.md) | Idempotency Strategy | Accepted (amended 2026-08-14, 2026-08-15, 2026-08-17 and 2026-10-13) | 2026-02-07 |
 | [ADR-016](./adr-016-rate-limiting.md) | Rate Limiting and Abuse Prevention | Accepted (amended 2026-10-13) | 2026-02-07 |
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted (amended 2026-10-13) | 2026-02-07 |
-| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
+| [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted (amended 2026-10-18) | 2026-02-07 |
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03 and 2026-10-12) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 | [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted | 2026-09-27 |
