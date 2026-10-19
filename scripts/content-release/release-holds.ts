@@ -49,7 +49,7 @@ export async function changeHolds(
     }
     let items: { questionId: string; questionRevisionId: string }[] = [];
     const namedHoldIds = change.holdIds?.length
-      ? [...change.holdIds]
+      ? change.holdIds.map((id) => id.toLowerCase())
       : undefined;
     if (namedHoldIds) {
       const holds = await tx

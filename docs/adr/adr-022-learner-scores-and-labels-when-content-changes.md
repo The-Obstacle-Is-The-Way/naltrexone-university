@@ -1,6 +1,6 @@
 # ADR-022: Learner Scores and Labels When Content Changes
 
-**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03)), 2026-10-05 (what a page shows for an item no score counts; see [Amendment](#amendment--2026-10-05)) and 2026-10-18 (key corrections judged on normalized text; see [Amendment](#amendment--2026-10-18)) and 2026-10-19 (revision holds and question-wide clinical caution)
+**Status:** Accepted, as amended 2026-10-03 (Decision 3's rule; see [Amendment](#amendment--2026-10-03)), 2026-10-05 (what a page shows for an item no score counts; see [Amendment](#amendment--2026-10-05)) and 2026-10-18 (key corrections judged on normalized text; see [Amendment](#amendment--2026-10-18-normalized-answer-key-text)) and 2026-10-19 (revision holds and question-wide clinical caution)
 **Date:** 2026-10-03
 **Implementation:** Implemented and in production since 2026-10-03, by DEBT-493, released through promotion #1355.
 **Decision Makers:** The owner, who on 2026-10-03 asked for every remaining decision that can be settled in code to be decided from first principles, "like the best software engineers in the world and the best physicians in the world who are designing this question bank", and executed. This record decides the three questions [ADR-021](./adr-021-question-revisions-and-content-releases.md) left to the owner: withdrawn-item scoring, answer-key regrade, and how an unavailable question is labeled (DEBT-484, BUG-317).
@@ -185,7 +185,7 @@ A review of a key-corrected attempt therefore says "This attempt isn't scored." 
 - DEBT-493: the implementation.
 - [Pattern Registry](../design-system/pattern-registry.md): F-11 (withdrawal notice) and F-12 (updated notice), revised by DEBT-493.
 
-## Amendment — 2026-10-18
+## Amendment — 2026-10-18: normalized answer-key text
 
 Decided under the owner's 2026-09-28 delegation, for DEBT-531: the seed and the release builder judged "same content" with the seed's Markdown normalization, while Decision 4 compared the correct choice's raw text.
 

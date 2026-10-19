@@ -6,6 +6,22 @@ const RECORD = ['--reason', ' Under review ', '--authority', 'Clinical lead'];
 describe('parseQidCommandArgs', () => {
   const holdId = '4afd2bbf-d161-49b3-ad3a-56a6bf37f580';
 
+  it('canonicalizes hold UUIDs before detecting equivalent duplicates', () => {
+    const options = { decision: 'hold', allowLift: true };
+    expect(
+      parseQidCommandArgs(
+        ['--hold', holdId.toUpperCase(), '--lift', ...RECORD],
+        options,
+      ).holdIds,
+    ).toEqual([holdId]);
+    expect(() =>
+      parseQidCommandArgs(
+        ['--hold', holdId, '--hold', holdId.toUpperCase(), '--lift', ...RECORD],
+        options,
+      ),
+    ).toThrow('Duplicate hold ID');
+  });
+
   it('accepts a named hold lift without a live question selector', () => {
     expect(
       parseQidCommandArgs(['--hold', holdId, '--lift', ...RECORD], {

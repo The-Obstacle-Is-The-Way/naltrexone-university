@@ -91,8 +91,9 @@ export function parseQidCommandArgs(
         throw new Error('Missing value for --hold');
       if (!z.guid().safeParse(value).success)
         throw new Error('Invalid hold ID');
-      if (holdIds.includes(value)) throw new Error('Duplicate hold ID');
-      holdIds.push(value);
+      const holdId = value.toLowerCase();
+      if (holdIds.includes(holdId)) throw new Error('Duplicate hold ID');
+      holdIds.push(holdId);
       index += 1;
     } else if (arg === '--revert' && options.allowRevert) {
       revert.push(readQidValue(argv[index + 1], '--revert', revert));

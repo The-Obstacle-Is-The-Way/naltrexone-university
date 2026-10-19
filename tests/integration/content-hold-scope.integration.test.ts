@@ -8,6 +8,7 @@ import {
   bootstrapRelease,
 } from '@/scripts/content-release/release-activation';
 import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder';
+import { changeHolds } from '@/scripts/content-release/release-holds';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
@@ -103,6 +104,36 @@ async function arrange(correctKey = false) {
 }
 
 describe('revision holds and question availability', () => {
+  it.each(['command', 'service'] as const)(
+    'lifts a case-insensitive hold UUID through the %s boundary',
+    async (boundary) => {
+      const state = await arrange();
+      const holdId = state.hold.id.toUpperCase();
+      if (boundary === 'command') {
+        await runHoldQuestions(
+          ['--hold', holdId, '--lift', ...decision, '--apply'],
+          io(),
+        );
+      } else {
+        await changeHolds(disposable.db, {
+          qids: [],
+          holdIds: [holdId],
+          lift: true,
+          record: RELEASE_DECISION,
+        });
+      }
+      const [hold] = await disposable.db
+        .select()
+        .from(schema.questionHolds)
+        .where(eq(schema.questionHolds.id, state.hold.id));
+      expect(hold?.liftedAt).toBeInstanceOf(Date);
+      expect(await state.read()).toMatchObject({
+        availability: 'available',
+        score: { scored: 1 },
+      });
+    },
+  );
+
   it('requires a named key return for a hold-ID lift and rolls back an unnamed lift', async () => {
     const state = await arrange(true);
     await activateRelease(disposable.db, {
