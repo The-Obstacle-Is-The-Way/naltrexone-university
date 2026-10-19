@@ -38,7 +38,7 @@ The source locations and census below are from `134b0578`, before the idempotenc
   - `src/adapters/shared/with-idempotency.ts:31` (used at `:258,269-270,284`)
   - `reconcile-all-stripe-subscription-pages.ts:39`
   - `drain-pending-stripe-customer-cleanups.ts:35`
-- `reconcile-stripe-subscriptions.ts:362-379` uses its formatter in returned failure data; its log already projects the error at :370. It is not a raw-message logging helper.
+- `reconcile-stripe-subscriptions.ts:362-379` uses its formatter in returned failure data; its log already projects the error at :370. It is not a raw-message logging helper. Corrected 2026-10-19: the census first counted it as a fourth raw-message logging helper.
 - Inline `error instanceof Error ? error.message : …` sites:
   - eight in `stripe-checkout-sessions.ts`;
   - five more in `with-idempotency.ts` (`:98,101,142,206,209`);
