@@ -53,7 +53,7 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 
 **The builder:**
 - `scripts/content-release/release-builder.ts:61-97`: `revisionForContent` now compares canonical fields, preferring the current revision, then the highest revision number. Before part 1, it used an unordered stored-hash match (`92e56929`, lines 57–78); nothing makes `(question, content_hash)` unique.
-- `revertedSlugs` (`:347-368`) calls a match a revert when its revision number is below the current one. Part 2b also compares changed keys with activated release items and the frozen bootstrap candidates (`scripts/content-release/release-changes.ts:87-115`).
+- `revertedSlugs` (`:347-368`) calls a match a revert when its revision number is below the current one. Part 2b also compares changed keys with activated release items and the frozen bootstrap candidates (`scripts/content-release/release-changes.ts:87-118`).
 - A file that matches no revision is appended as new content. Before part 2a, `scripts/content-release/command-support.ts:80-92` at `afba5aa4` printed it under "Update to a newer revision" with no answer-key line. Both previews now name key changes separately.
 
 **The scoring side:**

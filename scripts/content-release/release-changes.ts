@@ -87,6 +87,7 @@ export async function readReleaseChanges(
   // Activated membership and the bootstrap's frozen candidates are the
   // history boundary. A later stage alone supplies no publication evidence.
   // Receipts are read under the pointer lock; timestamps do not order them.
+  // The uncorrelated IN expands the candidate lists once, not per revision.
   const earlier = await tx
     .select({
       questionId: schema.questionRevisions.questionId,
@@ -104,11 +105,13 @@ export async function readReleaseChanges(
             SELECT 1 FROM content_release_items i
             JOIN content_release_activations a ON a.release_id = i.release_id
             WHERE i.question_revision_id = ${schema.questionRevisions.id}
-          ) OR EXISTS (
-            SELECT 1 FROM content_releases r
-            JOIN content_release_activations a ON a.release_id = r.id
-            WHERE (r.manifest -> 'preBootstrapCandidates')
-              @> jsonb_build_array(${schema.questionRevisions.id}::text)
+          ) OR ${schema.questionRevisions.id}::text IN (
+            SELECT jsonb_array_elements_text(r.manifest -> 'preBootstrapCandidates')
+            FROM content_releases r
+            WHERE EXISTS (
+              SELECT 1 FROM content_release_activations a
+              WHERE a.release_id = r.id
+            )
           )
         )`,
       ),
