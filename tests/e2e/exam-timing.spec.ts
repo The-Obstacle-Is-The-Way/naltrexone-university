@@ -41,11 +41,14 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     const id = request.headers()['next-action'] ?? 'no action';
     return manifest.node[id]?.exportedName ?? id;
   };
-  const isPagePost = (request: Request) =>
+  // Every server action carries a Next-Action header. The test matches on it,
+  // not on page.url(): a soft navigation updates page.url() after the new
+  // page's first requests have started.
+  const isServerAction = (request: Request) =>
     request.method() === 'POST' &&
-    new URL(request.url()).pathname === new URL(page.url()).pathname;
+    request.headers()['next-action'] !== undefined;
   const isTimingRequest = (request: Request) =>
-    isPagePost(request) && actionOf(request) === TIMING_ACTION;
+    isServerAction(request) && actionOf(request) === TIMING_ACTION;
   // The return is signalled only once the page is quiet. In CI, a new
   // session's server actions are aborted in bursts that last under a second
   // (BUG-337), and a return read caught in one fails for a reason this test
@@ -60,7 +63,7 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     return true;
   };
   page.on('request', (request) => {
-    if (isPagePost(request)) actionsInFlight.add(request);
+    if (isServerAction(request)) actionsInFlight.add(request);
   });
   page.on('requestfinished', (request) => {
     if (settle(request) && actionOf(request) === TIMING_ACTION)
@@ -68,7 +71,10 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   });
   page.on('requestfailed', (request) => {
     settle(request);
-    if (isPagePost(request))
+    if (
+      isServerAction(request) &&
+      new URL(request.url()).pathname.startsWith('/app/practice')
+    )
       console.warn(
         `BUG-337 evidence: ${actionOf(request)} failed on a practice page: ${request.failure()?.errorText}`,
       );
@@ -110,18 +116,21 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // body: Chrome can discard a server action's body before Playwright asks for
   // it ("No data found for resource"), and the controller's timing tests cover
   // the payload.
+  // On a timeout, the poll's last value names what kept the page busy.
+  const pageState = () => {
+    const inFlight = [...actionsInFlight].map(actionOf);
+    return timingReadsFinished > 0 &&
+      inFlight.length === 0 &&
+      Date.now() - lastActionSettledAt >= QUIET_MS
+      ? 'quiet'
+      : `timing reads finished: ${timingReadsFinished}; in flight: ${inFlight.join(', ') || 'none'}`;
+  };
   await expect
-    .poll(
-      () =>
-        timingReadsFinished > 0 &&
-        actionsInFlight.size === 0 &&
-        Date.now() - lastActionSettledAt >= QUIET_MS,
-      {
-        message:
-          'An activation timing read finishes, and no server action is in flight for QUIET_MS',
-      },
-    )
-    .toBe(true);
+    .poll(pageState, {
+      message:
+        'An activation timing read finishes, and no server action is in flight for QUIET_MS',
+    })
+    .toBe('quiet');
   const returnRefresh = new Promise<Request>((resolve, reject) => {
     let returnRequest = [...actionsInFlight].find(isTimingRequest);
     page.on('request', (request) => {
