@@ -355,7 +355,7 @@ The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotenc
 
 A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followed by the source PR numbers. CodeRabbit skips such titles, so a feature PR's title must never contain `Promote #`. A promotion needs no review of its own: it proves its sources' reviews instead (ADR-024).
 
-**Before opening one, run the QA gated runs it needs.** A promotion ships everything `dev` holds that `main` lacks, not only the PR that prompted it, so read `origin/main..origin/dev` against each procedure whose header says `Promotion gate: yes`. If the range changes that procedure's flows, it must pass against the dev preview first ([QA method](../qa/method.md#when-procedures-run), item 2). The promotion's description names each procedure and either links its run or says why its flows are unchanged.
+**Before opening one, run the gated QA procedures it needs.** A promotion ships everything `dev` holds that `main` lacks, not only the PR that prompted it, so read `origin/main..origin/dev` against each procedure whose header says `Promotion gate: yes`. If the range changes that procedure's flows, it must pass against the dev preview first ([QA method](../qa/method.md#when-procedures-run), item 2). The promotion's description names each procedure and either links its run or says why its flows are unchanged.
 
 1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
    - a same-repository `dev` → `main` PR, with up-to-date ancestry;

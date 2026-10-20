@@ -100,7 +100,7 @@ Read the matching rule before editing. Claude Code loads these by path, and Code
    pnpm exec tsx scripts/merge-reviewed-pr.ts <PR> --merge  # verify and merge
    ```
 
-7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every QA gated run whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
+7. Promote `dev` to `main` with a PR titled `Promote #<source PRs>`, which CodeRabbit skips, then `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge` after `git fetch`. A promotion ships all of `dev`, so first pass every gated QA procedure whose flows `dev` changes ([QA method](docs/guides/qa/method.md#when-procedures-run), item 2).
 
 Commit messages are imperative ("Add …", "Fix …"). PR descriptions give the problem, the fix and the verification, link ADR or record changes, and show screenshots of any changed UI, never of real questions: the repository is public, so capture the placeholder questions or describe the result ([QA method](docs/guides/qa/method.md), Evidence). How the guard decides, carried approvals, rate limits and Codecov outages: [Review and Merge](docs/guides/release/review-and-merge.md). Promotions and the production release gate: [the deployment procedure](./docs/guides/release/promote-to-production.md#8-promoting-dev-to-main). The decisions behind them: [ADR-024](docs/adr/adr-024-review-merge-and-promotion.md).
 
