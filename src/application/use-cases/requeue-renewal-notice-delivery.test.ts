@@ -28,7 +28,7 @@ async function createRepository(status: RenewalNoticeDeliveryStatus) {
     },
     hasher,
   );
-  const saved = await repository.saveQueued({
+  await repository.saveQueued({
     id: deliveryId,
     noticeKind: 'acknowledgment',
     consentRecordId: '22222222-2222-4222-8222-222222222222',
@@ -40,18 +40,96 @@ async function createRepository(status: RenewalNoticeDeliveryStatus) {
     payloadSnapshot: payload.snapshot,
     payloadHash: payload.hash,
   });
-  repository.records[0] = {
-    ...saved,
-    status,
+  await repository.claim({
+    id: deliveryId,
+    attemptId: 'attempt-1',
+    startedAt: now,
+  });
+  const failure = {
+    id: deliveryId,
+    attemptId: 'attempt-1',
     failureClass: 'provider_outcome_unknown',
     failureCode: 'ETIMEDOUT',
+    failedAt: now,
   };
+  if (status === 'outcome_unknown')
+    await repository.markOutcomeUnknown({
+      ...failure,
+      failureClass: 'provider_outcome_unknown',
+    });
+  else
+    await repository.markTerminalFailure({
+      ...failure,
+      failureClass: 'provider_terminal_failure',
+    });
   return repository;
 }
 
 describe('RequeueRenewalNoticeDeliveryUseCase', () => {
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each([
+    -1,
+    1.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+  ])(
+    'rejects an invalid inspected attempt count %s',
+    async (expectedAttemptCount) => {
+      const repository = await createRepository('outcome_unknown');
+      const input = {
+        deliveryId,
+        reason: 'Provider checked',
+        operator: 'operator@example.com',
+        confirmedNoSend: true,
+        expectedAttemptCount,
+      };
+      await expect(
+        new RequeueRenewalNoticeDeliveryUseCase(repository).execute(input),
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      expect(repository.records[0]?.status).toBe('outcome_unknown');
+      expect(repository.records[0]?.requeueAudit).toEqual([]);
+    },
+  );
+
+  it('refuses confirmation for an older attempt before the command starts', async () => {
+    const repository = await createRepository('outcome_unknown');
+    await repository.requeue({
+      id: deliveryId,
+      expectedAttemptCount: 1,
+      reason: 'Other operator recovery',
+      requeuedBy: 'other@example.com',
+      requeuedAt: now,
+      confirmedNoSend: true,
+    });
+    await repository.claim({
+      id: deliveryId,
+      attemptId: 'attempt-2',
+      startedAt: now,
+    });
+    await repository.markOutcomeUnknown({
+      id: deliveryId,
+      attemptId: 'attempt-2',
+      failureClass: 'provider_outcome_unknown',
+      failureCode: 'timeout',
+      failedAt: now,
+    });
+    const before = await repository.findById(deliveryId);
+    const input = {
+      deliveryId,
+      reason: 'Only attempt 1 was checked',
+      operator: 'operator@example.com',
+      confirmedNoSend: true,
+      expectedAttemptCount: 1,
+    };
+
+    await expect(
+      new RequeueRenewalNoticeDeliveryUseCase(repository).execute(input),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(repository.findById(deliveryId)).resolves.toEqual(before);
   });
 
   it('requeues an unknown outcome only with no-send confirmation and preserves an audit entry', async () => {
@@ -64,6 +142,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     await expect(
       useCase.execute({
         deliveryId,
+        expectedAttemptCount: 1,
         reason: 'Confirmed in Resend that no email exists',
         operator: 'operator@example.com',
         confirmedNoSend: true,
@@ -77,6 +156,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
           requeuedBy: 'operator@example.com',
           confirmedNoSend: true,
           priorStatus: 'outcome_unknown',
+          priorAttemptCount: 1,
         },
       ],
     });
@@ -92,6 +172,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     await expect(
       useCase.execute({
         deliveryId,
+        expectedAttemptCount: 1,
         reason: '  Retry approved after provider review  ',
         operator: '  operator@example.com  ',
         confirmedNoSend: false,
@@ -113,6 +194,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     await expect(
       useCase.execute({
         deliveryId,
+        expectedAttemptCount: 1,
         reason: 'Retry requested',
         operator: 'operator@example.com',
         confirmedNoSend: false,
@@ -122,13 +204,14 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     expect(repository.records[0]?.requeueAudit).toEqual([]);
   });
 
-  it('rejects missing operator evidence and delivered rows', async () => {
+  it('rejects missing operator evidence and accepted rows', async () => {
     const repository = await createRepository('terminal_failure');
     const useCase = new RequeueRenewalNoticeDeliveryUseCase(repository);
 
     await expect(
       useCase.execute({
         deliveryId,
+        expectedAttemptCount: 1,
         reason: '   ',
         operator: 'operator@example.com',
         confirmedNoSend: false,
@@ -142,6 +225,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     await expect(
       useCase.execute({
         deliveryId,
+        expectedAttemptCount: 1,
         reason: 'Operator requested a retry',
         operator: '   ',
         confirmedNoSend: false,
@@ -157,6 +241,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     await expect(
       useCase.execute({
         deliveryId,
+        expectedAttemptCount: 1,
         reason: 'Operator requested a retry',
         operator: 'operator@example.com',
         confirmedNoSend: false,
@@ -173,6 +258,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
       repository,
     ).execute({
       deliveryId,
+      expectedAttemptCount: 1,
       reason: 'Retry approved after provider review',
       operator: 'operator@example.com',
       confirmedNoSend: false,

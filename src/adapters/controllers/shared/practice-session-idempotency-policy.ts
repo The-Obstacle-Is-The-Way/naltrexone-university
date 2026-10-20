@@ -8,8 +8,9 @@ export function shouldCachePracticeSessionStateWriteError(
 ): boolean {
   return !(
     isApplicationError(error) &&
-    error.details?.reason ===
-      PracticeSessionConflictReasons.StateChangedConcurrently
+    (error.details?.reason ===
+      PracticeSessionConflictReasons.StateChangedConcurrently ||
+      error.details?.reason === PracticeSessionConflictReasons.ExamNotExpired)
   );
 }
 
