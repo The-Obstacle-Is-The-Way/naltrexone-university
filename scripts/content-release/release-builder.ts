@@ -31,6 +31,7 @@ import {
   buildReleaseManifest,
   type ReleaseManifestRemoval,
   releaseManifestHash,
+  SOURCE_MANIFEST_FORMAT,
 } from './release-manifest';
 
 type Db = PostgresJsDatabase<typeof schema>;
@@ -119,7 +120,11 @@ async function revisionForContent(
 export async function stageReleaseFromFiles(
   db: Db,
   files: readonly SeedSourceFile[],
-  options: { remove?: readonly string[]; revert?: readonly string[] } = {},
+  options: {
+    remove?: readonly string[];
+    revert?: readonly string[];
+    corpusCommit?: string | undefined;
+  } = {},
 ): Promise<StageSummary> {
   const prepared = prepareSeedQuestions(files);
   return db.transaction(async (tx) => {
@@ -279,6 +284,7 @@ export async function stageReleaseFromFiles(
       items,
       removals.map(({ slug, kind }) => ({ slug, kind })),
       active,
+      options.corpusCommit,
     );
     const releaseId =
       reused ??
@@ -289,6 +295,7 @@ export async function stageReleaseFromFiles(
           kind,
         })),
         parentReleaseId: active,
+        corpusCommit: options.corpusCommit,
       }));
     const unrecorded = await findUnrecordedWithdrawals(
       tx,
@@ -395,6 +402,7 @@ async function existingRelease(
   items: readonly ReleaseItem[],
   removals: readonly ReleaseManifestRemoval[],
   parentReleaseId: string,
+  corpusCommit?: string,
 ): Promise<string | null> {
   const entries = await tx
     .select({
@@ -413,7 +421,13 @@ async function existingRelease(
         items.map((item) => item.questionRevisionId),
       ),
     );
-  const manifest = buildReleaseManifest(entries, removals);
+  const manifest = buildReleaseManifest(
+    entries,
+    removals,
+    corpusCommit === undefined ? undefined : SOURCE_MANIFEST_FORMAT,
+    [],
+    corpusCommit,
+  );
   const [release] = await tx
     .select({ id: schema.contentReleases.id })
     .from(schema.contentReleases)
