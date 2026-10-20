@@ -45,7 +45,9 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 **The seed:**
 - `scripts/seed/question-syncer.ts:257-266` compares the file with the current revision only, and appends a revision when they differ. `scripts/seed/question-revision-writer.ts:77-85` makes it current at once.
 - The report is counts only (`scripts/seed/seed-summary.ts`).
-- `pnpm db:seed:prod -- --plan` prints only the target database (`scripts/seed-environment-targets.ts:100-103`). There is no content preview.
+- `pnpm db:seed:prod --plan` prints only the target database (`scripts/seed-environment-targets.ts:100-103`). There is no content preview.
+
+  *Corrected 2026-10-19: removed the extra pnpm separator, which the entry point rejects before showing the plan.*
 - The production seed imports `content/drafts/questions` with `--status published` (`scripts/prepare-seed-corpus.ts:24`, `scripts/import-draft-questions.ts:20`). That folder is untracked, and a manual copy refreshes it.
 - `pnpm db:seed` reads the configured MDX corpus under `content/questions/` without importing drafts; `imported/` is part of that corpus. Its remote-target acknowledgment is a separate protection from content freshness.
 - Each question is its own transaction, so a refusal partway through a run leaves the earlier questions written.

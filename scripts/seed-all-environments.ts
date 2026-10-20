@@ -8,7 +8,7 @@ import { runNonProductionSeed } from './seed-environment-targets';
 async function main(): Promise<void> {
   const planOnly = parseSeedPlanOnly(
     process.argv.slice(2),
-    'Usage: pnpm db:seed:all [-- --plan]',
+    'Usage: pnpm db:seed:all [--plan]',
   );
   const tempDirectory = await mkdtemp(
     path.join(tmpdir(), 'seed-all-environments-'),

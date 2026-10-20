@@ -72,7 +72,7 @@ was not independently reconstructed. This audit reran the current tests.
 ## Related
 
 - #1560: the scripts directory audit that found this. Its debt record proposes running the production seed in an owner-approved CI job.
-- BUG-351: the production seed's input freshness. Its evidence cites `pnpm db:seed:prod -- --plan`, which stopped with a usage error under pnpm 11 until the fixing pull request.
+- BUG-351: the production seed's input freshness. Its plan check, `pnpm db:seed:prod --plan`, parses under pnpm 11 since #1567; this pull request's shared parser also accepts a leading `--`.
 - BUG-315: placeholder archival by exact slug.
 - BUG-360: the separate deploy-target E2E reset and owner decision.
 - DEBT-483: the bootstrap; once a release is active, the seed refuses production.
