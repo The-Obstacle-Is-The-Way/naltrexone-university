@@ -26,8 +26,8 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   await ensureSubscribed(page);
   // A server action posts to the page that calls it, with a Next-Action ID
   // that Next.js salts per build; the build's manifest names it. Only the
-  // timing action's failure fails this test; every action that fails on the
-  // practice pages is logged by name as BUG-337 evidence.
+  // return's timing read failing fails this test; every action that fails on
+  // the practice pages is logged by name as BUG-337 evidence.
   const manifest = JSON.parse(
     readFileSync('.next/server/server-reference-manifest.json', 'utf8'),
   ) as { node: Record<string, { exportedName: string }> };
@@ -43,11 +43,18 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     new URL(request.url()).pathname === new URL(page.url()).pathname;
   const isTimingRequest = (request: Request) =>
     isPagePost(request) && actionOf(request) === TIMING_ACTION;
-  let timingAnswers = 0;
-  page.on('response', (response) => {
-    if (isTimingRequest(response.request())) timingAnswers += 1;
+  // The timer reuses a timing read that is still in flight, so the test keeps
+  // the timing reads in flight and counts those that finished.
+  const timingInFlight = new Set<Request>();
+  let timingReadsFinished = 0;
+  page.on('request', (request) => {
+    if (isTimingRequest(request)) timingInFlight.add(request);
+  });
+  page.on('requestfinished', (request) => {
+    if (timingInFlight.delete(request)) timingReadsFinished += 1;
   });
   page.on('requestfailed', (request) => {
+    timingInFlight.delete(request);
     if (isPagePost(request))
       console.warn(
         `BUG-337 evidence: ${actionOf(request)} failed on a practice page: ${request.failure()?.errorText}`,
@@ -78,21 +85,26 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // the return with visibilitychange, which the timer also handles, not a
   // window focus: on Clerk's development instance a focus also touches the
   // session, and its cookie rewrites can abort a concurrent request (BUG-333,
-  // BUG-337). Once the timer's activation refresh has answered, the return
-  // starts a request of its own. That request succeeds only when it finishes:
-  // a response can arrive before the request is aborted, so the wait follows
-  // the same request to requestfinished, or ends at once on its requestfailed
-  // and names the error. The manifest name identifies the request, so the
-  // test does not read its body: Chrome can discard a server action's body
-  // before Playwright asks for it ("No data found for resource"), and the
-  // controller's timing tests cover the payload.
+  // BUG-337). The return is signalled once an activation read has finished and
+  // none is in flight. A failed activation read doesn't fail the test: the
+  // timer keeps its last server sample, and CI has seen such reads aborted
+  // while the exam ran on. The return's request is the read still in flight,
+  // which the timer reuses, or else the next timing read. It succeeds only
+  // when it finishes: a response can arrive before the request is aborted, so
+  // the wait follows the same request to requestfinished, or ends at once on
+  // its requestfailed and names the error. The manifest name identifies the
+  // request, so the test does not read its body: Chrome can discard a server
+  // action's body before Playwright asks for it ("No data found for
+  // resource"), and the controller's timing tests cover the payload.
   await expect
-    .poll(() => timingAnswers, {
-      message: 'The timer refreshes its timing on activation',
+    .poll(() => timingReadsFinished > 0 && timingInFlight.size === 0, {
+      message: 'An activation timing read finishes, and none is in flight',
     })
-    .toBeGreaterThan(0);
+    .toBe(true);
   const returnRefresh = new Promise<Request>((resolve, reject) => {
-    let returnRequest: Request | undefined;
+    let returnRequest: Request | undefined = timingInFlight
+      .values()
+      .next().value;
     page.on('request', (request) => {
       if (!returnRequest && isTimingRequest(request)) returnRequest = request;
     });
@@ -108,9 +120,12 @@ test('a fast browser clock preserves the answer until server exam expiry', async
         );
     });
   });
-  await page.evaluate(() =>
-    document.dispatchEvent(new Event('visibilitychange')),
-  );
+  // The page first yields a task, so the finished activation read has
+  // released the timer before the return is signalled.
+  await page.evaluate(async () => {
+    await new Promise((resolve) => setTimeout(resolve));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
   const refreshed = await returnRefresh;
   expect((await refreshed.response())?.ok()).toBe(true);
   await expect(timer).toBeVisible();
