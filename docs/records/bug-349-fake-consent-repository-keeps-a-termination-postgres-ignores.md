@@ -68,7 +68,7 @@ Before the fix, a use-case test could pass with a termination time, `updatedAt` 
    *Recommended.*
 2. **Make the fake first-wins only.** That fixes today's divergence and leaves the duplicated retention arithmetic.
 
-## Resolution
+## Resolution (decided)
 
 Option 1. The domain and fake keep the first termination observation. The fake returns zero for equal, earlier and later replays without changing `updatedAt` or retention. Both implementations preserve a longer existing retention floor.
 
