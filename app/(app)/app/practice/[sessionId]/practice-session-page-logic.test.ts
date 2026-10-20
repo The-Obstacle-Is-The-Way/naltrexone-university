@@ -120,6 +120,8 @@ describe('practice-session-page-logic', () => {
 
               deadlineAt: null,
 
+              remainingMs: null,
+
               index: 1,
               total: 2,
             },
@@ -136,6 +138,8 @@ describe('practice-session-page-logic', () => {
               mode: 'tutor',
 
               deadlineAt: null,
+
+              remainingMs: null,
 
               index: 0,
               total: 2,
@@ -175,6 +179,8 @@ describe('practice-session-page-logic', () => {
                 mode: 'tutor',
 
                 deadlineAt: null,
+
+                remainingMs: null,
 
                 index: 0,
                 total: 2,

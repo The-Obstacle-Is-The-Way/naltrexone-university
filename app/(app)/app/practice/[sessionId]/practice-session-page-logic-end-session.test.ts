@@ -74,6 +74,46 @@ describe('practice-session-page-logic', () => {
       expect(resetQuestionState).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps the draft and page ready when the server refuses premature expiry', async () => {
+      const setLoadState = vi.fn();
+      const setSummary = vi.fn();
+      const resetQuestionState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const getPracticeSessionSummaryFn =
+        createUnusedGetPracticeSessionSummaryFn();
+      const finalizeSessionFn = vi.fn(async () =>
+        err('CONFLICT', 'Exam time has not expired', undefined, {
+          reason: ApplicationConflictReasons.ExamNotExpired,
+        }),
+      );
+      await expect(
+        endSession({
+          sessionId: fixtureSession1Id,
+          endSessionIdempotencyKey: 'expiry-key',
+          onlyIfExpired: true,
+          finalizeSessionFn,
+          getPracticeSessionSummaryFn,
+          setLoadState,
+          setSummary,
+          resetQuestionState,
+          rotateIdempotencyKey,
+        }),
+      ).resolves.toBe(false);
+      expect(finalizeSessionFn).toHaveBeenCalledWith({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: 'expiry-key',
+        onlyIfExpired: true,
+      });
+      expect(getPracticeSessionSummaryFn).not.toHaveBeenCalled();
+      expect(resetQuestionState).not.toHaveBeenCalled();
+      expect(setSummary).not.toHaveBeenCalled();
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+      expect(setLoadState).not.toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'error' }),
+      );
+      expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
+    });
+
     it('sets error state when controller fails', async () => {
       const setLoadState = vi.fn();
 

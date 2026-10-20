@@ -113,6 +113,46 @@ describe('FinalizeExamAnswersUseCase', () => {
       ).resolves.toMatchObject({ endedAt: earlyNow });
     });
 
+    it('refuses timer finalization before expiry even without a final draft', async () => {
+      const { attempts, sessions, useCase } = createTimedExamUseCase({
+        now: new Date(ONE_QUESTION_DEADLINE.getTime() - 1),
+      });
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          onlyIfExpired: true,
+        }),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        details: { reason: 'exam_not_expired' },
+      });
+      await expect(
+        sessions.findByIdAndUserId('session-1', 'user-1'),
+      ).resolves.toMatchObject({ endedAt: null });
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toEqual([]);
+    });
+
+    it('allows timer finalization at the server deadline without a final draft', async () => {
+      const { useCase } = createTimedExamUseCase({
+        now: ONE_QUESTION_DEADLINE,
+      });
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          onlyIfExpired: true,
+        }),
+      ).resolves.toMatchObject({
+        endedAt: ONE_QUESTION_DEADLINE.toISOString(),
+        totals: { answered: 1, correct: 1 },
+      });
+    });
+
     // After the deadline, the exam ends at its latest answer, whichever item
     // holds it.
     it('ends a late exam at its latest answer, whichever item holds it', async () => {

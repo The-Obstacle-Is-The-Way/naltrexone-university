@@ -2,6 +2,7 @@ import {
   ApplicationError,
   AttemptConflictMessages,
   isApplicationError,
+  PracticeSessionConflictReasons,
   practiceSessionAlreadyEndedError,
 } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
@@ -16,6 +17,7 @@ import {
   computeExamDeadline,
   EXAM_FINAL_DRAFT_FLUSH_GRACE_MS,
   gradeAnswer,
+  isExamExpired,
   MS_PER_SECOND,
 } from '@/src/domain/services';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
@@ -54,6 +56,7 @@ export type FinalizeExamAnswersInput = {
   userId: string;
   sessionId: string;
   finalDraftAnswer?: FinalizeExamFinalDraftAnswer;
+  onlyIfExpired?: boolean;
 };
 
 export type FinalizeExamAnswersOutput = PracticeSessionSummary;
@@ -141,6 +144,20 @@ export class FinalizeExamAnswersUseCase {
         throw new ApplicationError(
           'CONFLICT',
           'Cannot finalize a completed session',
+        );
+      }
+
+      if (
+        (input.onlyIfExpired || input.finalDraftAnswer) &&
+        !isExamExpired(loadedSession, finalizationNow)
+      ) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Exam time has not expired',
+          undefined,
+          {
+            details: { reason: PracticeSessionConflictReasons.ExamNotExpired },
+          },
         );
       }
 
@@ -326,17 +343,6 @@ export class FinalizeExamAnswersUseCase {
         'Dropped stale final exam draft flush after grace window',
       );
       return { session, applied: false };
-    }
-
-    // A flush past the grace window returned above.
-    const isWithinGraceWindow =
-      // Stryker disable next-line ConditionalExpression: only an exam reaches here, and an exam always has a deadline
-      deadline !== null && nowMs >= deadline.getTime();
-    if (!isWithinGraceWindow) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'Final exam answer flush is only allowed at exam expiry',
-      );
     }
 
     if (finalDraftAnswer.selectedChoiceId !== null) {

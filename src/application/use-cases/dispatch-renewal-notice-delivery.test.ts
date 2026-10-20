@@ -78,6 +78,7 @@ function createUseCase(input: {
 describe('DispatchRenewalNoticeDeliveryUseCase', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('leaves a queued row untouched when the gateway is unconfigured', async () => {
@@ -358,6 +359,48 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       { kind: 'renewal_notice_outcome_unknown', count: 1 },
     ]);
     expect(JSON.stringify(logger.errorCalls)).not.toContain(payload.to);
+  });
+
+  it('alerts on a provider terminal refusal before an acknowledgment can be forgotten', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    const gateway = new FakeTransactionalEmailGateway({
+      configured: true,
+      results: [{ status: 'terminal_failure', failureCode: 'invalid_api_key' }],
+    });
+    const logger = new FakeLogger();
+    const alerts = new FakeOperationalAlerts();
+
+    await createUseCase({ repository, gateway, logger, alerts }).execute({
+      deliveryId,
+    });
+
+    expect(repository.records[0]?.status).toBe('terminal_failure');
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_terminal_failure', count: 1 },
+    ]);
+    expect(JSON.stringify(logger.errorCalls)).not.toContain(payload.to);
+  });
+
+  it('alerts on corrupt payload evidence even when diagnostic logging fails', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    const saved = await repository.saveQueued(createDelivery());
+    repository.records[0] = { ...saved, payloadHash: '0'.repeat(64) };
+    const gateway = new FakeTransactionalEmailGateway({ configured: true });
+    const logger = new FakeLogger();
+    vi.spyOn(logger, 'error').mockImplementation(() => {
+      throw new Error('log unavailable');
+    });
+    const alerts = new FakeOperationalAlerts();
+
+    await createUseCase({ repository, gateway, logger, alerts }).execute({
+      deliveryId,
+    });
+
+    expect(alerts.raised).toEqual([
+      { kind: 'renewal_notice_terminal_failure', count: 1 },
+    ]);
+    expect(gateway.sendInputs).toEqual([]);
   });
 
   it('reads the system clock and makes its own attempt ids when none are injected', async () => {
