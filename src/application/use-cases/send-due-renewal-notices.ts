@@ -1,6 +1,7 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
   Logger,
+  OperationalAlerts,
   RenewalNoticeDeliveryRepository,
   Sha256Hasher,
   TransactionalEmailPayload,
@@ -181,6 +182,7 @@ export class SendDueRenewalNoticesUseCase {
       'execute'
     >,
     private readonly logger: Pick<Logger, 'error'>,
+    private readonly alerts: OperationalAlerts,
     private readonly appUrl: string,
     private readonly now: () => Date = () => new Date(),
     private readonly createId: () => string = () => crypto.randomUUID(),
@@ -202,6 +204,22 @@ export class SendDueRenewalNoticesUseCase {
       observedAt,
       limit,
     });
+
+    // Report the durable transition before any later read or dispatch can fail.
+    if (staleUnknown > 0) {
+      try {
+        this.logger.error(
+          { count: staleUnknown },
+          'Stalled renewal notice sends quarantined as unknown outcomes',
+        );
+      } catch {
+        // Logging must not suppress the quarantine alert.
+      }
+      await this.alerts.raise({
+        kind: 'renewal_notice_outcome_unknown',
+        count: staleUnknown,
+      });
+    }
 
     let queued = 0;
     let queueFailures = 0;

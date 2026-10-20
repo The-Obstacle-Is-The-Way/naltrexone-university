@@ -262,6 +262,7 @@ export function createUseCaseFactories(input: {
       new RecordRenewalNoticeProviderOutcomeUseCase(
         repositories.createRenewalNoticeDeliveryRepository(),
         primitives.logger,
+        gateways.createOperationalAlerts(),
       ),
     createRequeueRenewalNoticeDeliveryUseCase: () =>
       new RequeueRenewalNoticeDeliveryUseCase(
@@ -287,6 +288,7 @@ export function createUseCaseFactories(input: {
           primitives.now,
         ),
         primitives.logger,
+        gateways.createOperationalAlerts(),
         primitives.env.NEXT_PUBLIC_APP_URL,
         primitives.now,
       );
