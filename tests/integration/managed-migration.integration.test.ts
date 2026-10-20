@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -54,11 +54,21 @@ async function ledger(databaseUrl: string) {
 }
 const first = journal.entries[0];
 if (!first) throw new Error('Migration journal must not be empty');
-const last = journal.entries.at(-1);
-if (last?.tag !== '0052_bug345_role_timeouts')
-  throw new Error(
-    'Partial fixture must replay only the idempotent final migration',
-  );
+// A database migrated through every journal entry but the newest, so the
+// managed runner has one genuine pending migration, whichever is newest.
+async function partialDatabase() {
+  const folder = mkdtempSync(join(tmpdir(), 'nu-partial-migrations-'));
+  try {
+    cpSync('db/migrations', folder, { recursive: true });
+    writeFileSync(
+      join(folder, 'meta/_journal.json'),
+      JSON.stringify({ ...journal, entries: journal.entries.slice(0, -1) }),
+    );
+    return await database(folder);
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+}
 
 describe('managed migration ledger boundary against PostgreSQL', () => {
   it('accepts a fresh database with no ledger and applies the full journal', async () => {
@@ -85,13 +95,7 @@ describe('managed migration ledger boundary against PostgreSQL', () => {
   });
 
   it('accepts a valid partial ledger and applies its pending migration', async () => {
-    const fixture = await database();
-    const sql = postgres(fixture.url, { max: 1 });
-    try {
-      await sql`delete from drizzle.__drizzle_migrations where created_at = ${last.when}`;
-    } finally {
-      await sql.end();
-    }
+    const fixture = await partialDatabase();
     expect(await migrate(fixture.url)).toBe(0);
     expect(await ledger(fixture.url)).toHaveLength(journal.entries.length);
   });
@@ -104,13 +108,7 @@ describe('managed migration ledger boundary against PostgreSQL', () => {
   });
 
   it('refuses a successful migrator process that leaves pending entries unapplied', async () => {
-    const fixture = await database();
-    const sql = postgres(fixture.url, { max: 1 });
-    try {
-      await sql`delete from drizzle.__drizzle_migrations where created_at = ${last.when}`;
-    } finally {
-      await sql.end();
-    }
+    const fixture = await partialDatabase();
     await withRecordedCli('pnpm', '', async (calls) => {
       expect(await migrate(fixture.url)).toBe(1);
       expect(calls()).toEqual([['exec', 'drizzle-kit', 'migrate']]);
@@ -119,10 +117,9 @@ describe('managed migration ledger boundary against PostgreSQL', () => {
   });
 
   it('refuses changed hashes before applying a pending migration', async () => {
-    const fixture = await database();
+    const fixture = await partialDatabase();
     const sql = postgres(fixture.url, { max: 1 });
     try {
-      await sql`delete from drizzle.__drizzle_migrations where created_at = ${last.when}`;
       await sql`update drizzle.__drizzle_migrations set hash = ${'0'.repeat(64)} where created_at = ${first.when}`;
     } finally {
       await sql.end();
