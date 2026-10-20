@@ -12,7 +12,7 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 | Tool | Purpose | When to Use |
 | ---- | ------- | ----------- |
 | **Playwright** | Scripted E2E tests | Regression testing, CI validation |
-| **Agent-Browser** | AI-driven exploration | Autonomous bug discovery, exploratory testing |
+| **Agent-Browser** | Agent-driven browser exploration | Exploratory testing; an agent chooses the actions and the CLI runs them |
 | **Webapp-Testing Skill** | Python Playwright helpers | Complex automation scenarios |
 
 ---
@@ -132,7 +132,7 @@ Current approved `test.setTimeout` bands in `tests/e2e/**/*.spec.ts`:
 
 - `120_000`: standard authenticated flows with Clerk + seeded subscription setup.
 - `180_000`: multi-page audits or long navigation chains.
-- `150_000`: the hosted portal-cancellation journey (`stripe-hosted-portal-cancellation.spec.ts`), whose cases add first-timer resets, a paid-subscription restore, the Stripe-hosted portal and a signed webhook replay. Its spec has no rationale comment yet.
+- `150_000`: the hosted portal-cancellation journey, whose cases add first-timer resets, a paid-subscription restore, the Stripe-hosted portal and a signed webhook replay; the rationale sits above its call.
 
 Current repo posture:
 
@@ -418,7 +418,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
     E2E_STRIPE_OWNER: github-ci-${{ github.run_id }}-${{ github.run_attempt }}
 ```
 
-### Required Secrets
+### Required Secrets and Values
 
 | Secret | Purpose |
 | ------ | ------- |

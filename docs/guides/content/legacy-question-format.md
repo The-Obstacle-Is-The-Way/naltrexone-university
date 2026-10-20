@@ -378,8 +378,9 @@ the [active schema](../../../content/drafts/questions/SCHEMA.md) first, then use
 its fresh-output staging commands and the content pipeline's reviewed placement
 procedure. A dry run validates input without writing; a real import requires an
 empty output directory. Seeding needs an explicit `DATABASE_URL`, remote-target
-acknowledgment where applicable, and no active release. The test-only
-placeholder option is `pnpm db:seed --include-placeholders`.
+acknowledgment where applicable, and no active release. The placeholder option,
+`pnpm db:seed --include-placeholders`, is for a local database only; the managed
+seed refuses it for any other target.
 
 ---
 

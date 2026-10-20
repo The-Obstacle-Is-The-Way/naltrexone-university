@@ -491,8 +491,9 @@ not certify that prerequisite. Review and place the approved artifact using the
 [content pipeline](../../../docs/architecture/content-pipeline.md#import-drafts--mdx-generated)
 before seeding. `DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:seed` requires an
 explicit target and, for a remote target, its exact `DB_TARGET_ACK`. Direct
-seeding refuses an active content release. `--include-placeholders` is for test
-databases only.
+seeding refuses an active content release. `--include-placeholders` adds the
+placeholder fixtures, for a local database only: the managed seed refuses it for
+any other target, and production must never receive them.
 
 The separate content repository may have authoring helpers; no
 `validate_questions.py` exists in this app repository. The app importer's dry run
