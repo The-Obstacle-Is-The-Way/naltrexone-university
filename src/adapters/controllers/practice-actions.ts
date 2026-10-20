@@ -45,6 +45,10 @@ export async function getPracticeSessionSummary(input: unknown) {
   return controller.getPracticeSessionSummary(input);
 }
 
+export async function getPracticeSessionTiming(input: unknown) {
+  return controller.getPracticeSessionTiming(input);
+}
+
 export async function setPracticeSessionQuestionMark(input: unknown) {
   return controller.setPracticeSessionQuestionMark(input);
 }

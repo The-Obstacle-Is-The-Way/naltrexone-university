@@ -75,6 +75,23 @@ describe('SaveExamDraftAnswerInputSchema', () => {
 });
 
 describe('FinalizeExamAnswersInputSchema', () => {
+  it.each([true, false])(
+    'accepts an explicit expiry-only flag of %s',
+    (onlyIfExpired) => {
+      const input = { sessionId: crypto.randomUUID(), onlyIfExpired };
+      expect(FinalizeExamAnswersInputSchema.parse(input)).toEqual(input);
+    },
+  );
+
+  it('rejects a nonboolean expiry-only flag', () => {
+    expect(
+      FinalizeExamAnswersInputSchema.safeParse({
+        sessionId: crypto.randomUUID(),
+        onlyIfExpired: 'true',
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts finalize input without a finalDraftAnswer', () => {
     const input = {
       sessionId: crypto.randomUUID(),

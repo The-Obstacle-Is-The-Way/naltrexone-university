@@ -51,6 +51,8 @@ function ExamPracticeViewHarness(input: {
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -159,6 +161,8 @@ test('renders the exam bottom action bar without sticky shell markers', async ()
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
+
+        remainingMs: 72_000,
 
         index: 0,
         total: 2,
@@ -356,6 +360,8 @@ test('disables mutation controls while internal question loading is in progress'
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 10,
         isMarkedForReview: false,
@@ -409,6 +415,8 @@ test('disables choice selection after a submit in exam mode', async () => {
         mode: 'exam',
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
+
+        remainingMs: 72_000,
 
         index: 0,
         total: 10,
@@ -528,6 +536,8 @@ test('does not scroll feedback in exam mode', async () => {
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          remainingMs: 72_000,
 
           index: 0,
           total: 10,
@@ -661,6 +671,8 @@ test('calls onEndSession from the bottom-bar Review & Submit button on the last 
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 1,
         total: 2,
         isMarkedForReview: false,
@@ -722,6 +734,8 @@ test('calls onEndSession from the bottom-bar End session button on the last tuto
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 1,
         total: 2,
