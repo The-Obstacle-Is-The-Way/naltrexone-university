@@ -10,7 +10,7 @@
 
 A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. Before part 2, the release builder refused only part of the same case. Production will use it after the bootstrap (DEBT-483). Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse. Part 2 names changes and returns in both previews, freezes the earlier revision candidates at bootstrap, and requires named returns at activation. Part 3 now binds release commands to source commits and a watermark, and the first release after the bootstrap starts from the owner-verified baseline. The owner chose on 2026-10-19 to bootstrap before any further production seed, so direct pre-bootstrap seeding gets no separate guard. The bootstrap alone does not fix it.
 
-Corrected 2026-10-20: this summary and option 1 said rollout waited for the owner's bootstrap-order decision; the owner decided it on 2026-10-19.
+Corrected 2026-10-20: this summary, option 1 and the red-first list said rollout waited for the owner's bootstrap-order decision; the owner decided it on 2026-10-19.
 
 Before part 1, reproduced on 2026-10-17 on a disposable local database, with the public placeholder question; independently repeated with entirely synthetic content through the same seed, builder and activation functions:
 - **1–2. Seed and correct.** Seed key A, then the corrected key B: R1 (key A), then R2 (key B), live.
@@ -154,7 +154,6 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 - After the bootstrap, a draft-only seed or a never-activated staged revision does not count as published.
 - Staging or activating a commit off `main`'s first-parent history, or not descended from the watermark, is refused. A rollback does not lower the watermark.
 - A release with no commit activates only as a rollback.
-- If the owner requires the pre-bootstrap seed guard, an interrupted seed must finish by rerunning the same commit. This conditional path is not built.
 
 ## Resolution (decided)
 
