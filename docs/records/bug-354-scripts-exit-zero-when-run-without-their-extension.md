@@ -47,15 +47,17 @@ Corrected 2026-10-19: add the production content commands to the impact; all thr
 
 ## Resolution
 
-Implemented options 1 and 3. All 36 guarded entry points use the real-path helper in `scripts/lib/entry-point.mts`; caller-specific diagnostics remain separate. The bounded AST policy requires its top-level check and import, with explicit unconditional CLI exceptions. Runtime controls cover direct, extensionless, symlink and imported entries, including native `.mts`. Package commands cover the merge guard, promotion verifier, record allocator, content operators, ledger and documentation audits; the operator guides use them. One leading pnpm separator is removed before command-specific parsing.
+Implemented options 1 and 3. All 36 guarded entry points use the real-path helper in `scripts/lib/entry-point.mts`; caller-specific diagnostics remain separate. The bounded AST policy requires its top-level check and import, with explicit unconditional CLI exceptions. Runtime controls cover direct, extensionless, symlink and imported entries, including native `.mts`. Package commands cover the merge guard, promotion verifier, record allocator, content operators, ledger and documentation audits; the operator guides use them. The commands take arguments directly (`pnpm pr:merge-reviewed 1560`); a forwarded pnpm `--` is refused like any unknown argument, as #1567 decided for strict parsers.
 
 Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
+
+Corrected 2026-10-20: the commands no longer strip a leading `--`. #1567, merged first, rejected that option for strict parsers, and this record now follows it.
 
 ## Verification
 
 - [x] A test runs a script by an extensionless path and by a symlink, and fails while either exits 0 without running.
 - [x] Imports do not execute commands; direct, extensionless and symlink execution work for the supported runtimes. A source scan shows every guarded entry point uses the helper; intentional unconditional thin CLIs remain explicit exceptions.
-- [x] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them. Each accepts pnpm 11's leading `--` (`pnpm x -- 1560`), which all three refused at the audit baseline.
+- [x] Package scripts exist for the merge guard, the promotion verifier and the record ID, and `AGENTS.md` and the guides use them. They take arguments directly (`pnpm pr:merge-reviewed 1560`); like every strict parser since #1567, each refuses a forwarded `--`.
 
 The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 

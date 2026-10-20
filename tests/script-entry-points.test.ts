@@ -76,12 +76,6 @@ describe('script entry detection', () => {
       expect(result.stderr).toMatch(/argument|usage|required/i);
     },
   );
-
-  it('accepts pnpm 11 leading separators for the record allocator', () => {
-    const result = run('scripts/records/next-record-id.ts', ['--', 'debt']);
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout.trim()).toMatch(/^DEBT-\d+$/);
-  });
 });
 
 // These thin commands deliberately run unconditionally and must never be
@@ -174,43 +168,32 @@ describe('operator package commands', () => {
       expect(pkg.scripts[command]).toBe(`tsx scripts/${file}`);
     },
   );
-  it('accepts a leading separator for the existing local target command', () => {
-    const result = run('scripts/test-lanes/resolve-local-test-target.ts', [
-      '--',
-      'database-url',
-    ]);
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toMatch(/^postgresql:/);
-  });
+  // #1567: pnpm 11 forwards `--` literally, and strict parsers refuse it, so
+  // documentation passes arguments directly. Valid arguments follow the
+  // separator, so only the separator can cause the refusal.
   it.each([
-    'review/merge-reviewed-pr.ts',
-    'review/verify-promotion.ts',
-    'content-release/bootstrap-release.ts',
-    'content-release/stage-release.ts',
-    'content-release/activate-release.ts',
-    'content-release/hold-questions.ts',
-    'seed/withdraw-questions.ts',
-    'database/verify-migration-ledger.ts',
-  ])(
-    'preserves the real diagnostic after a leading separator for %s',
-    (file) => {
-      const plain = run(`scripts/${file}`, ['--invalid']);
-      const separated = run(`scripts/${file}`, ['--', '--invalid']);
-      expect(plain.status).toBe(1);
-      expect(separated.status).toBe(1);
-      // Stacks contain dynamic line positions; compare the actionable error line.
-      const diagnostic = (text: string) =>
-        text
-          .split('\n')
-          .find((line) =>
-            /^(Error:|Usage:|Unknown|Unexpected|Invalid)/.test(line),
-          );
-      expect(diagnostic(separated.stderr), separated.stderr).toBe(
-        diagnostic(plain.stderr),
-      );
-      expect(diagnostic(plain.stderr), plain.stderr).toBeTruthy();
-    },
-  );
+    ['review/merge-reviewed-pr.ts', ['1560']],
+    ['review/verify-promotion.ts', ['1573']],
+    ['records/next-record-id.ts', ['debt']],
+    ['test-lanes/resolve-local-test-target.ts', ['env']],
+    ['database/verify-migration-ledger.ts', ['pre']],
+    [
+      'content-release/bootstrap-release.ts',
+      ['--reason', 'r', '--authority', 'a'],
+    ],
+  ])('refuses a forwarded separator before %s runs', (file, args) => {
+    const plain = run(`scripts/${file}`, args);
+    const separated = run(`scripts/${file}`, ['--', ...args]);
+    const diagnostic = (text: string) =>
+      text
+        .split('\n')
+        .find((line) =>
+          /^(Error: )?(Usage|Unknown|Unexpected|Invalid)/.test(line),
+        );
+    expect(separated.status, separated.stderr).not.toBe(0);
+    expect(diagnostic(separated.stderr), separated.stderr).toBeTruthy();
+    expect(diagnostic(separated.stderr)).not.toBe(diagnostic(plain.stderr));
+  });
 });
 
 describe('native entry checks without installed packages', () => {

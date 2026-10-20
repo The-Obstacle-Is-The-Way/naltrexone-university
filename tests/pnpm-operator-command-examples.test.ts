@@ -6,11 +6,36 @@ import { parseQuestionFeedbackExportArgs } from '../scripts/feedback/export-ques
 // These parsers reject a literal separator. pnpm forwards it after a script
 // name; unlike npm, it is not needed to forward flags. Scope this guard to
 // those operator commands, not commands whose own CLI accepts a separator.
+const STRICT_OPERATOR_COMMANDS = [
+  'export:feedback',
+  'db:seed:all',
+  'db:seed:prod',
+  'content:import:drafts',
+  'content:release:bootstrap',
+  'content:release:stage',
+  'content:release:activate',
+  'content:hold',
+  'content:withdraw',
+  'content:keys:compare',
+  'content:census:key-returns',
+  'content:census:normalization',
+  'pr:merge-reviewed',
+  'pr:verify-promotion',
+  'record:next',
+  'local:test:target',
+  'notice:requeue',
+  'db:verify-ledger',
+  'docs:audit',
+  'secret:check-header',
+  'deps:verify-union',
+];
+const SEPARATOR_AFTER_STRICT_COMMAND = new RegExp(
+  `\\bpnpm[ \\t]+(?:(?:run|--silent)[ \\t]+)*(?:${STRICT_OPERATOR_COMMANDS.join('|')})[ \\t]+\\[?--(?=[ \\t\\r\\n\\]])`,
+  'g',
+);
 function invalidSeparators(source: string): string[] {
   return Array.from(
-    source.matchAll(
-      /\bpnpm[ \t]+(?:(?:run|--silent)[ \t]+)*(?:export:feedback|db:seed:all|db:seed:prod)[ \t]+\[?--(?=[ \t\r\n\]])/g,
-    ),
+    source.matchAll(SEPARATOR_AFTER_STRICT_COMMAND),
     (match) => match[0],
   );
 }
@@ -34,6 +59,8 @@ describe('pnpm operator command examples', () => {
     'pnpm --silent run export:feedback -- --include-user-id',
     'pnpm db:seed:all -- --plan',
     'Usage: pnpm db:seed:prod [-- --plan]',
+    'pnpm content:import:drafts -- --dry-run',
+    'pnpm pr:merge-reviewed -- 1560',
   ])('detects a separator forwarded to a strict parser: %s', (source) => {
     expect(invalidSeparators(source)).toHaveLength(1);
   });
@@ -44,7 +71,7 @@ describe('pnpm operator command examples', () => {
     'pnpm db:seed:prod --plan',
     'pnpm exec tool -- --flag',
     'pnpm test:e2e -- tests/e2e/smoke.spec.ts',
-    'pnpm content:import:drafts -- --dry-run',
+    'pnpm content:import:drafts --dry-run',
   ])('leaves direct flags and unrelated CLIs alone: %s', (source) => {
     expect(invalidSeparators(source)).toEqual([]);
   });

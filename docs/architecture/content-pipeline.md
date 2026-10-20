@@ -214,9 +214,9 @@ read a staging bundle while it is being generated or reviewed:
 ```bash
 CONTENT_STAGE_DIR="$(mktemp -d)"
 # Validate input and path boundaries without writing:
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --dry-run
 # Generate the complete staged bundle (default status: draft):
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR"
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR"
 ```
 
 The importer accepts an absent or empty output directory. A populated output
@@ -692,7 +692,7 @@ certify the empty-destination prerequisite for a later write:
 
 ```bash
 CONTENT_STAGE_DIR="$(mktemp -d)"
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --dry-run
 ```
 
 ### Status flag
@@ -702,9 +702,9 @@ Controls the `status` field in generated MDX frontmatter:
 ```bash
 # Choose one status per newly created staging directory:
 CONTENT_STAGE_DIR="$(mktemp -d)"
-pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --status draft
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --status draft
 # An approved published-status artifact also needs its own fresh destination:
-# pnpm content:import:drafts -- --out "$ANOTHER_EMPTY_STAGE_DIR" --status published
+# pnpm content:import:drafts --out "$ANOTHER_EMPTY_STAGE_DIR" --status published
 ```
 
 ---

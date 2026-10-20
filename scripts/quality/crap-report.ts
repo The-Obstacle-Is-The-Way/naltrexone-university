@@ -8,7 +8,6 @@ import {
   type FileCoverageData,
 } from 'istanbul-lib-coverage';
 import { globSync } from 'tinyglobby';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 export type CoverageLane = 'merged' | 'unit' | 'browser' | 'integration';
@@ -337,7 +336,7 @@ export function createCrapReport({
 }
 
 export function runCrapReportCli({
-  argv = stripPnpmSeparator(process.argv.slice(2)),
+  argv = process.argv.slice(2),
   cwd = process.cwd(),
   stdout = (line) => console.log(line),
   stderr = (line) => console.error(line),

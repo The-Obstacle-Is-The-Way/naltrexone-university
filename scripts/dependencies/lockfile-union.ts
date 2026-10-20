@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { isAlias, isScalar, parseDocument, visit } from 'yaml';
-import { stripPnpmSeparator } from '../lib/command-args';
 
 // Verifies that a repo-owned bundle lockfile changes exactly the union of the
 // changes its source Dependabot lockfiles make against their shared base
@@ -414,7 +413,7 @@ export function parseLockfileUnionArgs(input: string[]): {
   sources: string[];
   candidate: string;
 } {
-  const argv = stripPnpmSeparator(input);
+  const argv = input;
   const usage = (problem: string) =>
     new LockfileUnionInputError(`${problem}\n${USAGE}`);
   let base: string | undefined;

@@ -1,5 +1,4 @@
 import { runHumanDatabaseCommand } from '../database/database-command';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import { parseQidCommandArgs } from '../seed/qid-command-args';
 import {
@@ -19,7 +18,7 @@ type CommandIo = {
 // live revision, or lifts exactly the hold IDs named by --hold. It records
 // the decision and re-applies the active release. A dry run unless --apply.
 export async function runHoldQuestions(
-  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
+  argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { qids, holdIds, apply, lift, record, revert } = parseQidCommandArgs(

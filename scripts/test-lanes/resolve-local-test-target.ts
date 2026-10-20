@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import { basename, resolve } from 'node:path';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 export type LocalTestTargetEnv = Readonly<Record<string, string | undefined>>;
@@ -206,9 +205,7 @@ export function parseOutputFormat(
 /* v8 ignore start */
 if (isMain(import.meta.url)) {
   try {
-    const format = parseOutputFormat(
-      stripPnpmSeparator(process.argv.slice(2))[0],
-    );
+    const format = parseOutputFormat(process.argv.slice(2)[0]);
     console.log(formatLocalTestTargetOutput(resolveLocalTestTarget(), format));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

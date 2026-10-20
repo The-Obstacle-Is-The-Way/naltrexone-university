@@ -45,7 +45,7 @@ describe('ledger command diagnostics before connection', () => {
     [['bad-phase'], undefined, /Usage:/],
     [['pre', 'extra'], undefined, /Usage:/],
     [['pre'], undefined, /explicit DATABASE_URL is required/],
-    [['--', 'pre'], undefined, /explicit DATABASE_URL is required/],
+    [['--', 'pre'], undefined, /Usage:/],
     [
       ['post'],
       'https://synthetic-user:synthetic-password@invalid.example/db',
@@ -74,27 +74,6 @@ describe('ledger command diagnostics before connection', () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toMatch(expected);
       expect(result.stderr).not.toContain('synthetic-password');
-    },
-  );
-
-  it.each(['pre', 'post'] as const)(
-    'accepts one leading separator for %s and supplies the explicit target',
-    async (phase) => {
-      const output = outputBuffer();
-      const verified: string[] = [];
-      const target = 'postgres://test:test@localhost:1/ledger_test';
-      const code = await runMigrationLedgerCommand({
-        args: ['--', phase],
-        env: { DATABASE_URL: target },
-        output,
-        verify: async (receivedPhase, url) => {
-          verified.push(`${receivedPhase}:${url}`);
-        },
-      });
-      expect(code).toBe(0);
-      expect(verified).toEqual([`${phase}:${target}`]);
-      expect(output.errors).toEqual([]);
-      expect(output.lines.join(' ')).toContain(`[migration-ledger:${phase}]`);
     },
   );
 

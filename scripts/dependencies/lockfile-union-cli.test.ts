@@ -21,12 +21,10 @@ const source826 = fixture('source-826');
 const source827 = fixture('source-827');
 
 describe('parseLockfileUnionArgs', () => {
-  it('accepts exactly one leading pnpm separator', () => {
+  it('refuses a forwarded pnpm separator, as strict parsers do (#1567)', () => {
     const args = ['--base', 'b', '--source', 's', '--candidate', 'c'];
-    expect(parseLockfileUnionArgs(['--', ...args])).toEqual(
-      parseLockfileUnionArgs(args),
-    );
-    expect(() => parseLockfileUnionArgs(['--', '--', ...args])).toThrow();
+    expect(parseLockfileUnionArgs(args)).toBeTruthy();
+    expect(() => parseLockfileUnionArgs(['--', ...args])).toThrow();
   });
   it('reads one base, repeated sources and one candidate', () => {
     expect(

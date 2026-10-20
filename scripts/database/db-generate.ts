@@ -1,9 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
-// Drizzle generation is offline. Keep only pnpm's separator normalization;
-// the connected-command target guard belongs to migrate, studio and seed.
+// Drizzle generation is offline, so the connected-command target guard
+// belongs to migrate, studio and seed. Arguments pass to drizzle-kit as given.
 export function runDbGenerate(args: readonly string[] = []): number {
   const result = spawnSync(
     'pnpm',
@@ -12,7 +11,7 @@ export function runDbGenerate(args: readonly string[] = []): number {
       'drizzle-kit',
       'generate',
       '--config=drizzle.generate.config.ts',
-      ...stripPnpmSeparator(args),
+      ...args,
     ],
     { stdio: 'inherit' },
   );

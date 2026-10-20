@@ -1,5 +1,4 @@
 import { runHumanDatabaseCommand } from '../database/database-command';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import { readQidValue } from '../seed/qid-command-args';
 import {
@@ -90,7 +89,7 @@ export function parseStageArgs(argv: readonly string[]): {
 // nothing a learner reads, and names the activation that makes it live. A
 // dry run unless --apply.
 export async function runStageRelease(
-  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
+  argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: StageIo = {},
 ): Promise<void> {
   const {

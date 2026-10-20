@@ -4,7 +4,6 @@ import postgres from 'postgres';
 import * as schema from '../../db/schema';
 import { lockReleasePointer } from '../content-release/release-activation';
 import { runHumanDatabaseCommand } from '../database/database-command';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import { parseQidCommandArgs } from './qid-command-args';
 import {
@@ -18,7 +17,7 @@ type CommandIo = {
 };
 
 export async function runContentWithdrawal(
-  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
+  argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { qids, apply, record } = parseQidCommandArgs(argv, {

@@ -31,14 +31,16 @@ Corrected 2026-10-19: the default output is the seed's input tree, the environme
 
 ## Resolution
 
-Implemented option 1. The importer consumes every argument and rejects unknown, positional, duplicate and missing-value arguments before filesystem work. It accepts exactly one leading pnpm separator. Subprocess tests use synthetic temporary input and inspect the output tree for unintended writes.
+Implemented option 1. The importer consumes every argument and rejects unknown, positional, duplicate and missing-value arguments before filesystem work. A forwarded pnpm `--` is refused like any other unknown argument, as #1567 decided for strict parsers, and the environment seeds now pass their arguments directly. Subprocess tests use synthetic temporary input and inspect the output tree for unintended writes.
 
 Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
+
+Corrected 2026-10-20: option 1 preserved the leading separator; the importer now refuses it, following #1567's rule, and its one caller no longer sends it.
 
 ## Verification
 
 - [x] A typo and each unsupported argument exit nonzero and create no output, red first.
-- [x] The supported flags, default write behavior, explicit dry-run and leading pnpm separator remain covered, including the environment seeds' `pnpm content:import:drafts -- --status published --out <staging>` call.
+- [x] The supported flags, default write behavior and explicit dry-run remain covered, including the environment seeds' `pnpm content:import:drafts --status published --out <staging>` call; a forwarded `--` is refused before writing.
 
 The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 

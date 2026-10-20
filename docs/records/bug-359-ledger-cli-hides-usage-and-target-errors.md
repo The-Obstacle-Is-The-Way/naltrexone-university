@@ -32,7 +32,9 @@ An operator cannot distinguish invalid arguments or a missing explicit target fr
 
 ## Resolution
 
-Implemented option 1. A shared command runner validates argument count, phase and the explicit target before verification. Repository-owned input errors print actionable messages; typed ledger errors retain code and remedy, while arbitrary failures after the driver boundary print a fixed sanitized line. Both phases accept one leading pnpm separator.
+Implemented option 1. A shared command runner validates argument count, phase and the explicit target before verification. Repository-owned input errors print actionable messages; typed ledger errors retain code and remedy, while arbitrary failures after the driver boundary print a fixed sanitized line. Like every strict parser since #1567, the command refuses a forwarded pnpm `--` with its usage message.
+
+Corrected 2026-10-20: the phases no longer accept a leading separator, following #1567's merged rule.
 
 Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 

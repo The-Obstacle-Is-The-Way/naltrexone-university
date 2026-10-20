@@ -21,10 +21,8 @@ function parseArgs(argv: string[]): {
   let status: ImportStatus = 'draft';
   let dryRun = false;
   const seen = new Set<string>();
-  // pnpm 11 forwards its leading separator. No separator is valid midway.
-  const args = argv[0] === '--' ? argv.slice(1) : argv;
-  for (let index = 0; index < args.length; index += 1) {
-    const flag = args[index];
+  for (let index = 0; index < argv.length; index += 1) {
+    const flag = argv[index];
     if (
       flag !== '--in' &&
       flag !== '--out' &&
@@ -39,7 +37,7 @@ function parseArgs(argv: string[]): {
       dryRun = true;
       continue;
     }
-    const value = args[++index];
+    const value = argv[++index];
     if (!value || value.startsWith('--'))
       throw new Error(`Missing value for flag: ${flag}`);
     if (flag === '--in') inRoot = value;

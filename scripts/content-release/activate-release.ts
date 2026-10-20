@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { runHumanDatabaseCommand } from '../database/database-command';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import {
   type DecisionRecord,
@@ -109,7 +108,7 @@ export function parseActivateArgs(argv: readonly string[]): {
 // earlier one. The release you name as active must be active, or nothing
 // changes. A dry run unless --apply.
 export async function runActivateRelease(
-  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
+  argv: readonly string[] = process.argv.slice(2),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { apply, ...input } = parseActivateArgs(argv);

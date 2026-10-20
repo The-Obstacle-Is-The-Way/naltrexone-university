@@ -2,7 +2,6 @@ import {
   type HeaderSecretValidation,
   validateHeaderSecret,
 } from '@/src/adapters/shared/header-secret';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 export {
@@ -52,8 +51,6 @@ export function runValidateHeaderSafeSecret(
 
 /* v8 ignore start -- direct-invocation CLI entrypoint, exercised via runValidateHeaderSafeSecret in tests */
 if (isMain(import.meta.url)) {
-  process.exitCode = runValidateHeaderSafeSecret(
-    stripPnpmSeparator(process.argv.slice(2)),
-  );
+  process.exitCode = runValidateHeaderSafeSecret(process.argv.slice(2));
 }
 /* v8 ignore stop */

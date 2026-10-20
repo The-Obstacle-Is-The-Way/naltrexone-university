@@ -220,11 +220,11 @@ describe('local integration preparation', () => {
   });
 });
 
-it('normalizes pnpm leading separator before forwarding Vitest filters', async () => {
+it('forwards its arguments to Vitest unchanged, whose own CLI reads them', async () => {
   let observed: unknown;
   const env = { INTEGRATION_SKIP_PREPARE: 'true' };
   await runLocalIntegration({
-    argv: ['node', 'runner.ts', '--', '--coverage'],
+    argv: ['node', 'runner.ts', '--coverage'],
     cwd: '/repo/a',
     env,
     runPlan: async (plan) => {

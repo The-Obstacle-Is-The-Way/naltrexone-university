@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 export type RecordPrefix = 'bug' | 'debt';
@@ -69,7 +68,7 @@ export function runNextRecordIdCommand(
 
 if (isMain(import.meta.url)) {
   process.exitCode = runNextRecordIdCommand(
-    stripPnpmSeparator(process.argv.slice(2)),
+    process.argv.slice(2),
     process.cwd(),
     console,
   );

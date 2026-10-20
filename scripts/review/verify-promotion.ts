@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
 import { z } from 'zod';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import { createGhRunner, type Gh } from '../lib/github-cli.mts';
 import {
@@ -326,5 +325,5 @@ export function checkSourceProvenance(
 }
 
 if (isMain(import.meta.url)) {
-  runVerifyPromotion(stripPnpmSeparator(process.argv.slice(2)));
+  runVerifyPromotion(process.argv.slice(2));
 }

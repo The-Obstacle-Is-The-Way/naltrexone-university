@@ -52,7 +52,7 @@ export function createSeedEnvironmentRuntime(
           runImport: (args) =>
             runProcess(
               'pnpm',
-              ['content:import:drafts', '--', ...args],
+              ['content:import:drafts', ...args],
               process.env,
               false,
               spawnProcess,

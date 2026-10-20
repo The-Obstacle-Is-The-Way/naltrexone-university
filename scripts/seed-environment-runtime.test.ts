@@ -185,7 +185,6 @@ describe('seed environment runtime', () => {
         'pnpm',
         [
           'content:import:drafts',
-          '--',
           '--status',
           'published',
           '--out',

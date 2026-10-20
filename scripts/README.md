@@ -51,7 +51,6 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | `lib/command-plan.ts` | Runs sequential test-lane command plans; preserves scoped environments and POSIX process-group interruption/cleanup. | Imported by `test-lanes/run-local-e2e.ts`, `test-lanes/run-local-integration.ts` and `test-lanes/run-local-test-db.ts` |
 | `lib/entry-point.mts` | Compares real file paths for guarded entry points, including runtime-resolved extensionless paths and symlinks. Uses only Node built-ins. | Imported by guarded TypeScript commands, including the native scheduled jobs |
 | `lib/loopback-hostname.ts` | Classifies localhost and the exact IPv4/IPv6 loopback hosts, normalizing URL brackets. Callers retain URL validation and authorization policies; human database commands separately retain their 127/8 allowance. | Imported by database target classification, the E2E plan, integration setup and helpers |
-| `lib/command-args.ts` | Removes one leading pnpm separator while preserving all other arguments for command-specific validation. | Imported by command entry points |
 
 ### Database Commands
 
@@ -125,7 +124,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | File | What it does | Run by |
 | --- | --- | --- |
 | `draft-question-import.ts` | Splits draft files into question blocks and converts each into canonical question MDX. | Imported by `import-draft-questions.ts` |
-| `import-draft-questions.ts` | Converts `recall.md` and `vignettes.md` from the drafts tree to canonical MDX. Defaults to draft status; preflights the batch and requires an empty output directory for writes. `--in`, `--out`, `--status` and `--dry-run` configure it; unknown, duplicate, positional and missing-value arguments are rejected before input/output work. One leading pnpm `--` separator is accepted. | `pnpm content:import:drafts`; the environment seeds |
+| `import-draft-questions.ts` | Converts `recall.md` and `vignettes.md` from the drafts tree to canonical MDX. Defaults to draft status; preflights the batch and requires an empty output directory for writes. `--in`, `--out`, `--status` and `--dry-run` configure it; unknown, duplicate, positional and missing-value arguments are rejected before input/output work. A forwarded pnpm `--` is refused like any unknown argument. | `pnpm content:import:drafts`; the environment seeds |
 
 ### Question Content: Releases
 

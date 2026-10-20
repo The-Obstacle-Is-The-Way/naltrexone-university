@@ -7,7 +7,6 @@ import { zUuid } from '../../src/adapters/shared/zod-schemas';
 import type { RenewalNoticeDeliveryRepository } from '../../src/application/ports/repositories';
 import { RequeueRenewalNoticeDeliveryUseCase } from '../../src/application/use-cases/requeue-renewal-notice-delivery';
 import { runHumanDatabaseCommand } from '../database/database-command';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 // DEBT-414 F23: the supported way to send a quarantined renewal notice again.
@@ -117,7 +116,7 @@ export function parseRequeueRenewalNoticeArgs(
 }
 
 export async function runRequeueRenewalNotice({
-  argv = stripPnpmSeparator(process.argv.slice(2)),
+  argv = process.argv.slice(2),
   env = process.env,
   output = process.stdout,
   errorOutput = process.stderr,

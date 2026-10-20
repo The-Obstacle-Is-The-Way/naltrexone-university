@@ -1,4 +1,3 @@
-import { stripPnpmSeparator } from '../lib/command-args';
 import {
   type CommandEnv,
   type CommandStep,
@@ -101,7 +100,7 @@ export async function runLocalIntegration({
   cwd = process.cwd(),
   runPlan = runCommandPlan,
 }: RunLocalIntegrationInput = {}): Promise<void> {
-  const vitestArgs = stripPnpmSeparator(argv.slice(2));
+  const vitestArgs = argv.slice(2);
   const plan = createLocalIntegrationCommandPlan({ env, cwd, vitestArgs });
 
   await runPlan(plan, { env });

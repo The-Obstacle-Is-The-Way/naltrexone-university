@@ -11,7 +11,6 @@ import {
   type ClerkCredentialCounts,
   countClerkCredentials,
 } from '@/tests/shared/clerk-credential-shapes';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 const TEXT_TYPES = new Set(['.json', '.log', '.md', '.txt']);
@@ -103,6 +102,4 @@ export function runFromCommandLine(
 }
 
 if (isMain(import.meta.url))
-  process.exitCode = runFromCommandLine(
-    stripPnpmSeparator(process.argv.slice(2)),
-  );
+  process.exitCode = runFromCommandLine(process.argv.slice(2));

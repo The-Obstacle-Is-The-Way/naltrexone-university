@@ -373,13 +373,13 @@ content/questions/imported/<source-group>/<source>/<qid>.mdx
 
 ```bash
 # Validate drafts without writing files
-pnpm content:import:drafts -- --dry-run
+pnpm content:import:drafts --dry-run
 
 # Import drafts as draft status
 pnpm content:import:drafts
 
 # Import drafts as published status
-pnpm content:import:drafts -- --status published
+pnpm content:import:drafts --status published
 
 # Seed generated MDX into the database
 pnpm db:seed
@@ -424,7 +424,7 @@ authoring responsibility.
 - [ ] Wrong-answer bullets explain reasoning, not just correctness
 - [ ] `### Reference` appears after the wrong-answer subsection if you want it
       stored separately
-- [ ] `pnpm content:import:drafts -- --dry-run` passes
+- [ ] `pnpm content:import:drafts --dry-run` passes
 
 ---
 

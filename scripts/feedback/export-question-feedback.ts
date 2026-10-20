@@ -3,7 +3,6 @@ import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
 import { runHumanDatabaseCommand } from '../database/database-command';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 
 const REDACTED_USER_ID = '[redacted]';
@@ -181,7 +180,7 @@ export async function readQuestionFeedbackRows(
 }
 
 export async function runExportQuestionFeedback(
-  argv = stripPnpmSeparator(process.argv.slice(2)),
+  argv = process.argv.slice(2),
   output: NodeJS.WritableStream = process.stdout,
   errorOutput: NodeJS.WritableStream = process.stderr,
   deps: QuestionFeedbackExportDeps<

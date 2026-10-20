@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import { createGhRunner, type Gh } from '../lib/github-cli.mts';
 import {
@@ -263,5 +262,5 @@ export function createMergeCommands(run: Gh = gh) {
 export const { runMergeReviewedPr } = createMergeCommands();
 
 if (isMain(import.meta.url)) {
-  runMergeReviewedPr(stripPnpmSeparator(process.argv.slice(2)));
+  runMergeReviewedPr(process.argv.slice(2));
 }

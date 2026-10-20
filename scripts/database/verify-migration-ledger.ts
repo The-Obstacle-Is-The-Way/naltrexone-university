@@ -1,5 +1,4 @@
 import postgres from 'postgres';
-import { stripPnpmSeparator } from '../lib/command-args';
 import { isMain } from '../lib/entry-point.mts';
 import {
   DatabaseTargetInputError,
@@ -61,9 +60,8 @@ export async function runMigrationLedgerCommand({
   let phase: MigrationLedgerVerificationPhase;
   let databaseUrl: string;
   try {
-    const normalized = stripPnpmSeparator(args);
-    if (normalized.length !== 1) throw new LedgerUsageError(LEDGER_USAGE);
-    phase = parseMigrationLedgerVerificationPhase(normalized[0]);
+    if (args.length !== 1) throw new LedgerUsageError(LEDGER_USAGE);
+    phase = parseMigrationLedgerVerificationPhase(args[0]);
     databaseUrl = requireExplicitDatabaseUrl(env);
     authorizeManagedDatabaseTargets([databaseUrl]);
   } catch (error) {

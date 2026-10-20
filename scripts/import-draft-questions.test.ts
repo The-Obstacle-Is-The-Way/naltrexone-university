@@ -113,7 +113,7 @@ describe('draft import filesystem boundary', () => {
     expect(existsSync(output)).toBe(false);
   });
 
-  it('accepts the environment seed command and a leading pnpm separator', () => {
+  it('refuses a forwarded leading pnpm separator before writing (#1567)', () => {
     const result = spawnSync(
       process.execPath,
       [
@@ -121,6 +121,27 @@ describe('draft import filesystem boundary', () => {
         'tsx',
         'scripts/import-draft-questions.ts',
         '--',
+        '--in',
+        input,
+        '--status',
+        'published',
+        '--out',
+        output,
+      ],
+      { encoding: 'utf8' },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/argument/i);
+    expect(existsSync(output)).toBe(false);
+  });
+
+  it('accepts the environment seed command', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        'scripts/import-draft-questions.ts',
         '--in',
         input,
         '--status',
