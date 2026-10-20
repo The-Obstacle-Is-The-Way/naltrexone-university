@@ -240,6 +240,12 @@ export function PracticeSessionPageModelReviewProbe() {
             void output.onSubmit();
           },
         },
+        {
+          label: 'toggle-mark-for-review',
+          onClick: () => {
+            void output.onToggleMarkForReview?.();
+          },
+        },
       ])}
     </>
   );

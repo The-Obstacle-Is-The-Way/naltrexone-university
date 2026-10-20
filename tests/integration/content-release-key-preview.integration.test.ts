@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import * as schema from '@/db/schema';
 import {
   formatPlan,
@@ -11,18 +19,25 @@ import {
 } from '@/scripts/content-release/release-activation';
 import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder';
 import { changeHolds } from '@/scripts/content-release/release-holds';
-import { runStageRelease } from '@/scripts/content-release/stage-release';
 import {
   parseSeedQuestionFile,
   revisionFieldsFromSeed,
 } from '@/scripts/seed/question-parser';
 import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
+import {
+  createContentRepository,
+  runFixtureStage,
+} from '@/tests/shared/content-repository-test-helpers';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { type ContentEdits, source } from './seed-test-helpers';
 
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
+let repo: Awaited<ReturnType<typeof createContentRepository>>;
+afterEach(async () => {
+  await repo.dispose();
+});
 
 beforeAll(async () => {
   disposable = await createDisposableDatabase();
@@ -33,10 +48,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  repo = await createContentRepository();
   const { db } = disposable;
   await db
     .update(schema.contentReleasePointer)
-    .set({ activeReleaseId: null, activatedAt: null });
+    .set({ activeReleaseId: null, activatedAt: null, sourceCommit: null });
   await db.delete(schema.contentReleaseActivations);
   await db.delete(schema.contentReleases);
   await db.delete(schema.questions);
@@ -101,7 +117,7 @@ describe('BUG-351: stage and activation previews name answer-key changes', () =>
     const before = await disposable.db.select().from(schema.questions);
     const lines: string[] = [];
 
-    await runStageRelease([], {
+    await runFixtureStage(repo, [], {
       env: { DATABASE_URL: disposable.url },
       log: (line) => lines.push(line),
       readFiles: async () => [

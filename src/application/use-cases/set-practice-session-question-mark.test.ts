@@ -39,6 +39,75 @@ describe('SetPracticeSessionQuestionMarkUseCase', () => {
     });
   });
 
+  it.each([0, 1])(
+    'refuses a mark %i ms after expiry without finalizing the exam',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/application/use-cases/set-practice-session-question-mark.test.ts',
+          title:
+            'refuses a mark %i ms after expiry without finalizing the exam',
+        },
+      },
+    },
+    async (afterDeadlineMs) => {
+      const session = createPracticeSession({
+        id: 'exam',
+        userId: 'user',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-05-22T12:00:00.000Z'),
+      });
+      const sessions = new FakePracticeSessionRepository([session]);
+      const useCase = new SetPracticeSessionQuestionMarkUseCase(
+        sessions,
+        () =>
+          new Date(Date.parse('2026-05-22T12:01:12.000Z') + afterDeadlineMs),
+      );
+      await expect(
+        useCase.execute({
+          userId: 'user',
+          sessionId: 'exam',
+          questionId: 'q1',
+          markedForReview: true,
+        }),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        details: { reason: 'exam_time_expired' },
+      });
+      await expect(
+        sessions.findByIdAndUserId('exam', 'user'),
+      ).resolves.toMatchObject({
+        endedAt: null,
+        questionStates: [{ markedForReview: false }],
+      });
+    },
+  );
+
+  it('allows a mark one millisecond before expiry', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'exam',
+        userId: 'user',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-05-22T12:00:00.000Z'),
+      }),
+    ]);
+    const useCase = new SetPracticeSessionQuestionMarkUseCase(
+      sessions,
+      () => new Date('2026-05-22T12:01:11.999Z'),
+    );
+    await expect(
+      useCase.execute({
+        userId: 'user',
+        sessionId: 'exam',
+        questionId: 'q1',
+        markedForReview: true,
+      }),
+    ).resolves.toEqual({ questionId: 'q1', markedForReview: true });
+  });
+
   it('throws CONFLICT for tutor sessions', async () => {
     const useCase = new SetPracticeSessionQuestionMarkUseCase(
       new FakePracticeSessionRepository([

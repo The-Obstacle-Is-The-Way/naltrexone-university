@@ -7,7 +7,10 @@ import type { QuestionRepository } from '@/src/application/ports/repositories';
 // Drizzle adapter on real Postgres.
 
 /** How the current revision changed from the earlier one. */
-export type RevisionChange = 'correct choice' | 'stem only';
+export type RevisionChange =
+  | 'correct choice'
+  | 'stem only'
+  | 'key normalization';
 
 export type AnswerKeyChangeHarness = {
   /** A question with two revisions, the second current, changed as asked. */
@@ -40,6 +43,12 @@ const scenarios: readonly {
   {
     name: 'an earlier revision that differs only in its stem keeps the key',
     change: 'stem only',
+    read: 'earlier',
+    expected: false,
+  },
+  {
+    name: 'an earlier revision whose correct text only needs normalization keeps the key',
+    change: 'key normalization',
     read: 'earlier',
     expected: false,
   },

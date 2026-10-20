@@ -200,7 +200,12 @@ export async function setQuestionState(
   }
 }
 
-export type QuestionRevisionChange = 'key' | 'key text' | 'stem' | 'distractor';
+export type QuestionRevisionChange =
+  | 'key'
+  | 'key text'
+  | 'key normalization'
+  | 'stem'
+  | 'distractor';
 
 // Gives a question a new current revision (ADR-021). `createQuestion`'s first
 // revision keys B, "Choice B". A change of key (another correct choice, or the
@@ -230,7 +235,12 @@ export async function reviseQuestion(
       },
       {
         label: 'B',
-        textMd: change === 'key text' ? 'Choice B, reworded' : 'Choice B',
+        textMd:
+          change === 'key normalization'
+            ? ' \tChoice B \t\r\n'
+            : change === 'key text'
+              ? 'Choice B, reworded'
+              : 'Choice B',
         isCorrect: true,
         explanationMd: null,
         sortOrder: 2,

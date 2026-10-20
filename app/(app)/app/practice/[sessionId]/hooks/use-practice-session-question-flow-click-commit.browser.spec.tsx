@@ -29,6 +29,7 @@ function createSessionQuestion(
       sessionId: fixtureSession1Id,
       mode,
       deadlineAt: mode === 'exam' ? '2099-05-22T12:02:24.000Z' : null,
+      remainingMs: mode === 'exam' ? 72_000 : null,
       index: 0,
       total: 2,
       isMarkedForReview: false,

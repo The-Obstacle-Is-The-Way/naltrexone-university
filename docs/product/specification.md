@@ -586,6 +586,7 @@ export type NextQuestion = {
     index: number; // 0-based index within session
     total: number;
     deadlineAt: string | null; // ISO exam deadline; null in tutor mode
+    remainingMs: number | null; // server-measured time left; the countdown runs from it (BUG-347)
     isMarkedForReview?: boolean;
     latestSelectedChoiceId?: string | null;
     latestIsCorrect?: boolean | null; // null while an exam is active
@@ -608,6 +609,7 @@ export type UnavailableSessionQuestion = {
     index: number;
     total: number;
     deadlineAt: string | null;
+    remainingMs: number | null;
     isMarkedForReview: boolean;
   };
 };
@@ -1571,7 +1573,8 @@ These exported controller actions have no section of their own. Each is `server-
 | `countAvailableQuestions` | How many questions the starter's filters match, for "N questions available" | `practice-actions.ts` |
 | `discardPracticeSession` | Abandons an unfinished session from the starter | `practice-actions.ts` |
 | `saveExamDraftAnswer` | Saves an active exam's draft answer and its time at a navigation boundary, without grading | `practice-actions.ts` |
-| `finalizeExamAnswers` | "Submit exam": grades the drafts, records the attempts and ends the session in one transaction | `practice-actions.ts` |
+| `finalizeExamAnswers` | "Submit exam": grades the drafts, records the attempts and ends the session in one transaction. The timer's flush passes `onlyIfExpired`, so before the server's deadline it returns `CONFLICT` (`exam_not_expired`) and changes nothing | `practice-actions.ts` |
+| `getPracticeSessionTiming` | An active exam's deadline and server-measured time left, read without writing, for the countdown (BUG-347) | `practice-actions.ts` |
 | `getPracticeSessionSummary` | An ended session's summary | `practice-actions.ts` |
 | `getCompletedSessionQuestionsWithFeedback` | An ended session's questions with their feedback, for post-exam review | `practice-actions.ts` |
 | `rateQuestion` | Records the helpful or not-helpful rating on a question | `question-feedback-actions.ts` |

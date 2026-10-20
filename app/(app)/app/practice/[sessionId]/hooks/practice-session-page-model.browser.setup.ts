@@ -8,6 +8,9 @@ vi.mock('@/src/adapters/controllers/bookmark-actions', { spy: true });
 vi.mock('@/src/adapters/controllers/practice-actions', { spy: true });
 
 const practiceSessionPageModelBrowserMocks = {
+  getPracticeSessionTimingMock: vi.mocked(
+    practiceActions.getPracticeSessionTiming,
+  ),
   getNextQuestionMock: vi.mocked(questionActions.getNextQuestion),
   submitAnswerMock: vi.mocked(questionActions.submitAnswer),
   getBookmarkQuestionIdsMock: vi.mocked(bookmarkActions.getBookmarkQuestionIds),
