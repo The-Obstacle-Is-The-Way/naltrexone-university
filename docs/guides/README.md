@@ -25,6 +25,7 @@ How to do a task: procedures, and the references they rely on. The rules an agen
 ## Operations and Dependencies
 
 - [Database recovery](./operations/database-recovery.md): rolling back a migration.
+- [Requeue a renewal notice](./operations/requeue-renewal-notice.md): sending a quarantined renewal notice again.
 - [Updating dependencies](./dependencies/updating-dependencies.md): the dependency update protocol.
 
 ## Content and QA

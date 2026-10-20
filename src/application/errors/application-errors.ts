@@ -17,6 +17,7 @@ export type ApplicationErrorCode = (typeof ApplicationErrorCodes)[number];
 export const ApplicationConflictReasons = {
   AlreadyEnded: 'practice_session_already_ended',
   ExamTimeExpired: 'exam_time_expired',
+  ExamNotExpired: 'exam_not_expired',
   StateChangedConcurrently: 'practice_session_state_changed_concurrently',
   ConcurrentRequestInProgress: 'concurrent_request_in_progress',
   IncompleteSessionExists: 'incomplete_practice_session_exists',
@@ -30,6 +31,7 @@ export type ApplicationConflictReason =
 export const PracticeSessionConflictReasons = {
   AlreadyEnded: ApplicationConflictReasons.AlreadyEnded,
   ExamTimeExpired: ApplicationConflictReasons.ExamTimeExpired,
+  ExamNotExpired: ApplicationConflictReasons.ExamNotExpired,
   StateChangedConcurrently: ApplicationConflictReasons.StateChangedConcurrently,
 } as const;
 

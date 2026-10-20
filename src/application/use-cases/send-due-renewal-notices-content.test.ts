@@ -67,6 +67,7 @@ async function queuedPayloads(notices: readonly ScheduledRenewalNotice[]) {
     hasher,
     dispatch,
     new FakeLogger(),
+    new FakeOperationalAlerts(),
     'https://addictionboards.com',
     () => now,
     () => `11111111-1111-4111-8111-${String(++sequence).padStart(12, '0')}`,

@@ -143,6 +143,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
             deadlineAt: null,
 
+            remainingMs: null,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -370,6 +372,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
             session: {
               mode: 'tutor',
               deadlineAt: null,
+              remainingMs: null,
               index: 0,
               total: 1,
               isMarkedForReview: false,
@@ -437,6 +440,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
             deadlineAt: null,
 
+            remainingMs: null,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -496,6 +501,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
             mode: 'tutor',
 
             deadlineAt: null,
+
+            remainingMs: null,
 
             index: 0,
             total: 2,
@@ -565,6 +572,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
               mode: 'tutor',
 
               deadlineAt: null,
+
+              remainingMs: null,
 
               index: 0,
               total: 2,
