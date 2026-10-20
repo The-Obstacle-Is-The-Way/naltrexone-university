@@ -1,6 +1,6 @@
 # DEBT-532: The Scripts Folder Has Inconsistent Shared Helpers and No Layout
 
-**Status:** In Progress — fixes implemented; final sync, gate and promotion pending
+**Status:** Open — the content families' move waits for BUG-351 and DEBT-531
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -220,7 +220,7 @@ The owner delegated these choices for this application on 2026-10-19; the owner 
 2. **Keep production seeding as an operator command.** Principle: data correctness and explicit authority before automation. BUG-351 still owns source admission, DEBT-531 owns normalization/hold semantics, and DEBT-483 owns each database's irreversible bootstrap. A protected Actions job would add production credentials and content-repository access without supplying those missing invariants. Decline that job in this PR; retain target acknowledgment and the target-only `--plan`, without claiming a content preview or source-freshness guarantee. Reversal requires the source/plan contract, target bootstrap and an independently reviewed workflow plus owner settings; no Environment or secret is created here.
 3. **Keep the merge verdict as a documented pre-merge command.** Principle: enforce the decision at the action. ADR-024 requires the command to revalidate immediately before merging; a previously published status can become stale when reviews or threads change. The checked-in guard also requires exact-head `test`, main ancestry and resolved threads. A supplementary required status adds another event-driven state machine without replacing the command. Decline it here. Reversal requires event/freshness tests, a workflow, and the owner's ruleset change; protection stays intact.
 4. **Keep native zero-install `.mts` for the two scheduled jobs.** Principle: preserve availability and minimize the credential-bearing dependency surface. Both workflows currently set up only Node; a pure entry helper needs only built-ins. Enable explicit TypeScript-extension imports under the existing `noEmit` compiler option and test the native runtime. Other commands retain `tsx`. Reversal costs adding credential-free installation steps and changing the workflow/runtime contract tests.
-5. **Move one non-content family at a time; retain the content paths for their owners.** Principle: small behavior-preserving refactorings, inward dependencies and one reason to change. Package commands stabilize operator usage first; real shared primitives need at least two callers. Keep `seed/` and `content-release/` where BUG-351 and DEBT-531 cite them; those records own their eventual planner/store boundary. Decline a wholesale reorganization and an incidental rewrite of their evidence. Each moved family's imports, callers, guides and directory rows must pass together. Reversal is a mechanical family move with the same reference checks.
+5. **Move one non-content family at a time; retain the content paths for their owners.** Principle: small behavior-preserving refactorings, inward dependencies and one reason to change. Package commands stabilize operator usage first; real shared primitives need at least two callers. Keep `seed/` and `content-release/` where BUG-351 and DEBT-531 cite them until those records settle the planner and store boundary; this record's Verification keeps their move open. Decline a wholesale reorganization and an incidental rewrite of their evidence. Each moved family's imports, callers, guides and directory rows must pass together. Reversal is a mechanical family move with the same reference checks.
 6. **Classify BUG-358 as P4.** Principle: severity follows demonstrated impact. The default resolver uses IPv4; Node returns `[::1]`, but postgres.js 3.4.9 parses that URL's host as `[` without connecting. Correcting classification repairs the diagnosis, not a supported broken lane. Keep the full lane on its exact resolver URL; a driver-level named-host possibility does not satisfy that lane’s stricter target contract. Reversal costs a priority change supported by a working IPv6-literal driver path and demonstrated impact.
 
 Corrected 2026-10-19: fix the root census, bound the IPv6 claim and adopt the delegated decisions; retain content-owner prerequisites, the frozen-input audit exception and accepted ADRs.
@@ -247,6 +247,10 @@ Option B is implemented locally in #1560, with the retained boundaries below. Th
 - Keep human, managed and test-lane remote authorization distinct. A common host predicate does not authorize changing `DB_TARGET_ACK`, managed automation's URL contract or the explicit existing-target opt-ins. Keep `E2E_INSTANCE` and `E2E_APP_PORT`: source searches cannot establish whether an operator still sets them, and no deprecation/migration has been agreed.
 - Keep the seed tag validator, newline normalization and seed/release write-side structure with BUG-351 and DEBT-531. A deletion must prove schema/validator equivalence on admitted inputs; the eventual planner boundary must preserve source freshness, immutable revisions, normalization and hold scope. These are content-contract changes, not prerequisites for grouping the other families. After those records establish the contract, their implementation can place pure policy inward and persistence behind ports. Do not infer that moving files implements that contract.
 - Keep environment seeding and corpus preparation until a replacement supports every required target and BUG-351's source/plan contract, with DEBT-483's owner-approved per-target bootstrap. A protected dispatch job is declined here, not a substitute for those invariants. Keep the upstream-fix watcher while its Stryker watch / #1500 remains pending; DEBT-500's Waiting trigger owns removal once the patch is gone and no watch remains.
+- **Evidence retained deliberately:**
+  - `database/migration-ledger.ts` keeps its `E2E_PREFLIGHT:` error codes. They are a diagnostic contract that E2E output and runbooks search for; renaming them is its own change.
+  - `records/next-record-id.ts` keeps its own `docs/records/closed.md` path. That file's presence is the allocator's proof that it runs at the repository root, and importing `documentation-archive.ts` for one path would add a dependency.
+  - `ci/scan-playwright-output.ts` and `test-lanes/run-stripe-provider-contracts.ts` keep importing `tests/shared/`. Both are test-lane tools, and sharing the credential shapes and contract case titles keeps them from drifting.
 
 Corrected 2026-10-19: record the implemented boundaries, family moves and configuration proofs; attribute merge requirements to the checked-in guard, explicitly decline unsupported abstractions and preserve content/owner follow-ups.
 
@@ -261,8 +265,15 @@ Corrected 2026-10-19: record the implemented boundaries, family moves and config
 - [x] Configuration replacements are implemented locally or explicitly declined above; hosted behavior is not claimed from local tests.
 - [x] Merge policy and command runner split; further record/advisory splits are declined with their dependency reasons.
 - [x] The dispatched seed job is declined; no new CI production credential or external setting is required.
+- [ ] Move the content families (`seed/`, `content-release/` and the root content commands) once BUG-351's source admission and DEBT-531's planner settle their boundary. Neither record takes this move on.
 - [ ] Integrate #1559 and current `dev`, then pass the full gate, standalone audit and coordinated E2E on the final head.
 - [ ] Record independent final challenge, review/CI and promotion evidence before closure under the index rules.
+
+
+Corrected 2026-10-20: the criteria above were narrowed during implementation without a note. This one records how.
+- The bugs' remaining checks now live in their own Verifying statuses, not here.
+- "Declined by the owner" became "retained with a source-level reason" under the owner's 2026-10-19 delegation (Decisions). On 2026-10-20 the owner chose to land the work in one pull request, #1560, accepting Option C's concern that one review then covers many files.
+- "The layout complete" covered every family. The content families remain, and BUG-351 and DEBT-531 do not take them on, so their item above stays open here.
 
 ## Related
 

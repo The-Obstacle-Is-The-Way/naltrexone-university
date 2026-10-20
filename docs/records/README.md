@@ -3,7 +3,7 @@
 Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.md`. A closed record is deleted and leaves one line in [the ledger](./closed.md). [How records work](#how-records-work) is at the end.
 
 **Now** — 2026-10-18.
-- **Verifying, by due date.** BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333, BUG-347 and DEBT-531 10-21; BUG-331, BUG-332 and DEBT-510 10-22; DEBT-523 10-23; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
+- **Verifying, by due date.** BUG-319, BUG-323, BUG-339, BUG-340 and BUG-341 10-19; BUG-320, BUG-325, BUG-327 and BUG-342 10-20; BUG-333, BUG-347 and DEBT-531 10-21; BUG-331, BUG-332 and DEBT-510 10-22; BUG-354, BUG-355, BUG-356, BUG-357, BUG-358, BUG-359, BUG-361 and DEBT-523 10-23; BUG-336 and BUG-338 10-26; DEBT-505 11-05. Each record names its check.
 - **In progress.** DEBT-518, the documentation revamp: the records, the agent instructions, the layout and the archive's removal are done; the four splits and the pilot follow. DEBT-508's per-run Clerk-user evaluation and overlapping CI runs, due 10-22.
 - **Next.** DEBT-503 item 4, due 2026-10-21. DEBT-509: remove `next` 16.4.1's age-gate exceptions after 2026-10-21. Alert kinds for the silent conditions (DEBT-503 item 3, DEBT-501 items 1 and 2). BUG-321's provider-contract test. DEBT-519, then DEBT-520. DEBT-525 starts the performance baseline before selecting optimizations.
 - **Before the first live sale.** Vercel Pro (DEBT-512), the live purchase and refund (DEBT-501 item 7), the tax decision (DEBT-414 Q7), the legacy price-ID list (DEBT-501 item 2), the add-card recheck (DEBT-501 item 4, DEBT-414 F22), keeping or turning off Link on Checkout (DEBT-501 item 7), and the hidden second subscription's correction (BUG-343: the re-check, sweep and alerts ship; its option 4 needs the owner's refund decision, follow-up due 2026-10-21). Then counsel's Q1–Q6, and the IP question Q8 (DEBT-414). By 35 days before the first live renewal: the identity resolver (DEBT-502), DEBT-511 on it, and promotion of the requeue command (DEBT-414 F23).
@@ -41,13 +41,13 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[BUG-349](./bug-349-fake-consent-repository-keeps-a-termination-postgres-ignores.md)|The fake consent repository keeps a later termination that Postgres ignores|P3|Open — align the fake and domain with DEBT-414's first-wins rule, compute retention once, and add the fake↔real scenario that fails today|
 |[BUG-350](./bug-350-billing-page-states-a-cancellation-date-in-utc.md)|The billing page states a scheduled cancellation as a UTC date, a day late for a US evening|P3|Open — use DEBT-414 F06's cutoff formatter on the billing page, red first with a period ending at 03:00 UTC|
 |[BUG-351](./bug-351-production-seed-can-silently-restore-a-corrected-answer-key.md)|The production seed can silently restore a corrected answer key, and the release builder's guard misses part of the same case|P2|In Progress — parts 1 and 2 in production; part 3 built, its first release bound to the verified baseline; owner live-key check due 2026-10-24|
-|[BUG-354](./bug-354-scripts-exit-zero-when-run-without-their-extension.md)|Silent script no-ops|P3|In Progress — fix implemented; full gate and promotion pending|
-|[BUG-355](./bug-355-lockfile-union-check-refuses-a-single-source-bundle.md)|Lockfile CLI rejects correct unions|P3|In Progress — fix implemented; full gate and promotion pending|
-|[BUG-356](./bug-356-records-tests-skip-three-of-their-checks.md)|Incomplete live records checks|P3|In Progress — fix implemented; full gate and promotion pending|
-|[BUG-357](./bug-357-importer-ignores-unknown-flags.md)|Importer ignores unknown flags|P3|In Progress — fix implemented; full gate and promotion pending|
-|[BUG-358](./bug-358-integration-setup-rejects-ipv6-loopback.md)|Integration setup rejects IPv6 loopback|P4|In Progress — fix implemented; full gate and promotion pending|
-|[BUG-359](./bug-359-ledger-cli-hides-usage-and-target-errors.md)|Ledger CLI hides usage/target errors|P3|In Progress — fix implemented; full gate and promotion pending|
-|[BUG-361](./bug-361-rule-register-counts-unreachable-tests.md)|Rule register counts unreachable tests|P3|In Progress — fix implemented; full gate and promotion pending|
+|[BUG-354](./bug-354-scripts-exit-zero-when-run-without-their-extension.md)|Silent script no-ops|P3|Verifying — promotion to main; due 2026-10-23|
+|[BUG-355](./bug-355-lockfile-union-check-refuses-a-single-source-bundle.md)|Lockfile CLI rejects correct unions|P3|Verifying — promotion to main; due 2026-10-23|
+|[BUG-356](./bug-356-records-tests-skip-three-of-their-checks.md)|Incomplete live records checks|P3|Verifying — promotion to main; due 2026-10-23|
+|[BUG-357](./bug-357-importer-ignores-unknown-flags.md)|Importer ignores unknown flags|P3|Verifying — promotion to main; due 2026-10-23|
+|[BUG-358](./bug-358-integration-setup-rejects-ipv6-loopback.md)|Integration setup rejects IPv6 loopback|P4|Verifying — promotion to main; due 2026-10-23|
+|[BUG-359](./bug-359-ledger-cli-hides-usage-and-target-errors.md)|Ledger CLI hides usage/target errors|P3|Verifying — promotion to main; due 2026-10-23|
+|[BUG-361](./bug-361-rule-register-counts-unreachable-tests.md)|Rule register counts unreachable tests|P3|Verifying — promotion to main; due 2026-10-23|
 |[DEBT-414](./debt-414-public-legal-pages-privacy-terms.md)|Public legal pages, renewal consent, and security-program closure|P1|Open — F21 and F22 need engineering; F23 awaits promotion; owner, counsel and tax decisions remain (AUDIT-015)|
 |[DEBT-501](./debt-501-billing-operations-resilience.md)|Billing operations can leave payers without access as the service grows or changes|P2|Open — quick wins and item 1's stopped-early alert released; next, the pre-sale items|
 |[DEBT-502](./debt-502-account-identity-and-action-hardening.md)|Rare account states can lock a person out, and payment actions expose test seams|P3|Open — decided per item|
@@ -72,7 +72,7 @@ Open bug and debt records, one file each: `bug-NNN-slug.md` and `debt-NNN-slug.m
 |[DEBT-529](./debt-529-client-request-protocols-rely-on-an-unchecked-contract.md)|The per-screen request protocols rely on a contract nothing checks, and their safe defaults are opt-in|P3|Open — anchor the protocol contract by symbol and test that each exists; make the cache policy and stale-response guard required|
 |[DEBT-530](./debt-530-commercial-terms-are-restated-by-hand.md)|Commercial terms are restated by hand in each place that shows them|P3|Open — one source for the current offer, with tests tying live copy to it; historical consent stays frozen; blocking statuses follow DEBT-501's billing contract|
 |[DEBT-531](./debt-531-content-changes-have-no-single-planner.md)|Content changes have no single planner, so the two writers judge the same file differently|P3|Verifying — promotion to main; due 2026-10-21|
-|[DEBT-532](./debt-532-scripts-folder-grew-without-a-layout.md)|Inconsistent script helpers and layout|P3|In Progress — fixes implemented; final sync, gate and promotion pending|
+|[DEBT-532](./debt-532-scripts-folder-grew-without-a-layout.md)|Inconsistent script helpers and layout|P3|Open — the content families' move waits for BUG-351 and DEBT-531|
 
 ## Waiting
 

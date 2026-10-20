@@ -1,6 +1,6 @@
 # BUG-357: The Draft Importer Ignores Unknown Flags
 
-**Status:** In Progress — fix implemented; full gate and promotion pending
+**Status:** Verifying — promotion to main; due 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -41,8 +41,6 @@ Corrected 2026-10-20: option 1 preserved the leading separator; the importer now
 
 - [x] A typo and each unsupported argument exit nonzero and create no output, red first.
 - [x] The supported flags, default write behavior and explicit dry-run remain covered, including the environment seeds' `pnpm content:import:drafts --status published --out <staging>` call; a forwarded `--` is refused before writing.
-
-The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 

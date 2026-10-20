@@ -1,6 +1,6 @@
 # BUG-356: The Records Tests Skip Their Ledger-Line, Status and Queue-Review Checks
 
-**Status:** In Progress — fix implemented; full gate and promotion pending
+**Status:** Verifying — promotion to main; due 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -42,8 +42,6 @@ Corrected 2026-10-19: bind reproduction claims to the audited baseline and recor
 
 - [x] Live-tree tests fail on a malformed ledger line, an unrecognized status and an unreadable queue-review date (shown red with a temporary edit), and pass on the real tree.
 - [x] The command and the tests share one list of blocking findings.
-
-The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 

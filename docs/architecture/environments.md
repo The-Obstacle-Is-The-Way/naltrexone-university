@@ -145,7 +145,7 @@ Vercel stores environment variables per scope. Production, Preview, Development,
 - Do not use `echo`, which appends a newline.
 - Do not silently trim secrets in application code; reject or reset the bad value at the provider.
 - After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing/internal whitespace booleans, and header-unsafe booleans. Never print the value.
-- GitHub Actions does not need `CRON_SECRET`: its former validator checked only the unrelated Actions copy. The owner ruled deletion and rotation on 2026-09-19. `scripts/deploy/validate-header-safe-secret.ts` remains a value-free operator tool, using the same `src/adapters/shared/header-secret.ts` validator as both runtime handlers. Vercel Production/Preview/Development still need verification after changes; removing the CI consumer does not prove the provider values were rotated.
+- GitHub Actions does not need `CRON_SECRET`: its former validator checked only the unrelated Actions copy. The owner ruled deletion and rotation on 2026-09-19. `pnpm secret:check-header` (`scripts/deploy/validate-header-safe-secret.ts`) remains a value-free operator tool, using the same `src/adapters/shared/header-secret.ts` validator as both runtime handlers. Vercel Production/Preview/Development still need verification after changes; removing the CI consumer does not prove the provider values were rotated.
 
 **Safe Vercel reset procedure**
 

@@ -1,6 +1,6 @@
 # BUG-355: The Lockfile Union Check Refuses Correct Bundles Identical to a Source
 
-**Status:** In Progress — fix implemented; full gate and promotion pending
+**Status:** Verifying — promotion to main; due 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -61,8 +61,6 @@ Corrected 2026-10-19: bind reproduction claims to the audited baseline and recor
 - [x] A candidate that actually omits another source's changes still fails the structured comparison.
 - [x] Guide step 6 names a single source directly, and the guide's reference paragraph no longer says identical content is refused.
 - [x] `scripts/dependencies/lockfile-union-cli.test.ts`'s identical-content refusal test is replaced by the passing cases above.
-
-The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 

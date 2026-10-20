@@ -1,6 +1,6 @@
 # BUG-358: Integration Setup Rejects IPv6 Loopback
 
-**Status:** In Progress — fix implemented; full gate and promotion pending
+**Status:** Verifying — promotion to main; due 2026-10-23
 **Priority:** P4
 **Date:** 2026-10-18
 
@@ -43,8 +43,6 @@ Corrected 2026-10-20: setup no longer passes `[::1]` on to a driver that cannot 
 - [x] Red-first proof that setup no longer calls `[::1]` non-local, refuses it with the driver limit, and still rejects remote hosts unless overridden.
 - [x] The integration guide states the driver limitation and the full lane’s exact resolver-target requirement.
 - [x] Existing IPv4 resolver integration lane passes.
-
-The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 

@@ -1,6 +1,6 @@
 # BUG-359: The Ledger CLI Hides Usage and Target Errors
 
-**Status:** In Progress — fix implemented; full gate and promotion pending
+**Status:** Verifying — promotion to main; due 2026-10-23
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -42,8 +42,6 @@ Corrected 2026-10-19: bind reproduction claims to the audited baseline and recor
 
 - [x] Safe input failures exit nonzero with actionable messages, red first.
 - [x] Unknown/driver errors remain sanitized; typed ledger failures retain their code and remedy.
-
-The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 
