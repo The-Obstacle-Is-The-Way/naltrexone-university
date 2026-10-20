@@ -100,6 +100,8 @@ describe('PracticeView answer feedback', () => {
 
           deadlineAt: null,
 
+          remainingMs: null,
+
           index: 0,
           total: 3,
           isMarkedForReview: false,
@@ -150,6 +152,8 @@ describe('PracticeView answer feedback', () => {
 
           deadlineAt: null,
 
+          remainingMs: null,
+
           index: 1,
           total: 3,
           isMarkedForReview: false,
@@ -192,6 +196,8 @@ describe('PracticeView answer feedback', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 1,
           total: 3,
@@ -339,6 +345,8 @@ describe('PracticeView answer feedback', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 1,
           total: 2,

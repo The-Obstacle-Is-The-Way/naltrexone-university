@@ -90,6 +90,8 @@ describe('PracticeView bookmarks', () => {
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
 
+          remainingMs: 72_000,
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -122,6 +124,8 @@ describe('PracticeView bookmarks', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 10,
@@ -161,6 +165,8 @@ describe('PracticeView bookmarks', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 10,
@@ -206,6 +212,8 @@ describe('PracticeView bookmarks', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 10,
@@ -265,6 +273,8 @@ describe('PracticeView bookmarks', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 10,

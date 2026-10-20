@@ -27,6 +27,7 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import { GetPracticeSessionTimingUseCase } from '@/src/application/use-cases/get-practice-session-timing';
 import {
   SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
   SaveExamDraftAnswerUseCase,
@@ -68,6 +69,10 @@ function createPracticeControllerDepsForBug238(input: {
           currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         }),
       ]),
+      now,
+    ),
+    getPracticeSessionTimingUseCase: new GetPracticeSessionTimingUseCase(
+      sessions,
       now,
     ),
     getIncompletePracticeSessionUseCase:

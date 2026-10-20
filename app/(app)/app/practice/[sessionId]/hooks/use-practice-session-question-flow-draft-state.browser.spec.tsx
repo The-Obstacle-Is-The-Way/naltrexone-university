@@ -47,6 +47,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 0,
                 total: 2,
                 isMarkedForReview: false,
@@ -72,6 +74,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 1,
                 total: 2,
                 isMarkedForReview: false,
@@ -92,6 +96,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              remainingMs: 72_000,
 
               index: 0,
               total: 2,
@@ -223,6 +229,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 0,
                 total: 2,
                 isMarkedForReview: false,
@@ -248,6 +256,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 1,
                 total: 2,
                 isMarkedForReview: false,
@@ -268,6 +278,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              remainingMs: 72_000,
 
               index: 0,
               total: 2,
@@ -398,6 +410,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 0,
                 total: 2,
                 isMarkedForReview: false,
@@ -423,6 +437,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 1,
                 total: 2,
                 isMarkedForReview: false,
@@ -443,6 +459,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              remainingMs: 72_000,
 
               index: 0,
               total: 2,
