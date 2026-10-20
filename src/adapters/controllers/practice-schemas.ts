@@ -70,6 +70,7 @@ export const FinalizeExamAnswersInputSchema = z
     sessionId: zUuid,
     idempotencyKey: zUuid.optional(),
     finalDraftAnswer: FinalDraftAnswerSchema.optional(),
+    onlyIfExpired: z.boolean().optional(),
   })
   .strict();
 
@@ -97,6 +98,16 @@ export const GetCompletedSessionQuestionsWithFeedbackInputSchema = z
 export const GetPracticeSessionSummaryInputSchema = z
   .object({
     sessionId: zUuid,
+  })
+  .strict();
+
+export const GetPracticeSessionTimingInputSchema =
+  GetPracticeSessionSummaryInputSchema;
+
+export const PracticeSessionTimingOutputSchema = z
+  .object({
+    deadlineAt: z.string().datetime().nullable(),
+    remainingMs: z.number().int().min(0).nullable(),
   })
   .strict();
 
