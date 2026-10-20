@@ -40,6 +40,7 @@ function createActiveQuestion(
       sessionId,
       mode: deadlineAt ? 'exam' : 'tutor',
       deadlineAt,
+      remainingMs: deadlineAt ? 72_000 : null,
       index: 0,
       total: 2,
       isMarkedForReview: false,
@@ -95,6 +96,7 @@ describe('question-controller exam timer payloads', () => {
         session: {
           mode: 'exam',
           deadlineAt,
+          remainingMs: deadlineAt ? 72_000 : null,
         },
       },
     });
@@ -112,6 +114,7 @@ describe('question-controller exam timer payloads', () => {
         session: {
           mode: 'tutor',
           deadlineAt: null,
+          remainingMs: null,
         },
       },
     });

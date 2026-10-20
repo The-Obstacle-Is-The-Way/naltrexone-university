@@ -98,6 +98,11 @@ export {
   GetPracticeSessionSummaryUseCase,
 } from './get-practice-session-summary';
 export {
+  type GetPracticeSessionTimingInput,
+  type GetPracticeSessionTimingOutput,
+  GetPracticeSessionTimingUseCase,
+} from './get-practice-session-timing';
+export {
   type GetPreviousAttemptInput,
   type GetPreviousAttemptOutput,
   GetPreviousAttemptUseCase,

@@ -35,6 +35,7 @@ function withdrawnItem(questionId: string): UnavailableSessionQuestion {
       index: 0,
       total: 2,
       deadlineAt: null,
+      remainingMs: null,
       isMarkedForReview: false,
     },
   };
@@ -105,6 +106,7 @@ describe('usePracticeSessionQuestionFlow with an unavailable item (browser)', ()
               sessionId: fixtureSessionId,
               mode: 'tutor',
               deadlineAt: null,
+              remainingMs: null,
               index: 0,
               total: 2,
               isMarkedForReview: false,
@@ -146,6 +148,7 @@ describe('usePracticeSessionQuestionFlow with an unavailable item (browser)', ()
         sessionId: fixtureSessionId,
         mode: 'tutor',
         deadlineAt: null,
+        remainingMs: null,
         index: 0,
         total: 2,
         isMarkedForReview: false,
