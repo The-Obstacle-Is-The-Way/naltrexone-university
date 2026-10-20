@@ -189,7 +189,8 @@ describe('operator package commands', () => {
   );
   // #1567: pnpm 11 forwards `--` literally, and strict parsers refuse it, so
   // documentation passes arguments directly. Valid arguments follow the
-  // separator, so only the separator can cause the refusal.
+  // separator, so only the separator can cause the refusal. PATH holds only
+  // Node: a command that wrongly ran on could not reach gh, git or pnpm.
   it.each([
     ['review/merge-reviewed-pr.ts', ['1560']],
     ['review/verify-promotion.ts', ['1573']],
@@ -201,17 +202,23 @@ describe('operator package commands', () => {
       ['--reason', 'r', '--authority', 'a'],
     ],
   ])('refuses a forwarded separator before %s runs', (file, args) => {
-    const plain = run(`scripts/${file}`, args);
-    const separated = run(`scripts/${file}`, ['--', ...args]);
-    const diagnostic = (text: string) =>
-      text
+    const result = spawnSync(
+      process.execPath,
+      ['--import', 'tsx', `scripts/${file}`, '--', ...args],
+      {
+        encoding: 'utf8',
+        env: { PATH: path.dirname(process.execPath), NODE_ENV: 'test' },
+      },
+    );
+    expect(result.status, result.stderr).not.toBe(0);
+    expect(
+      result.stderr
         .split('\n')
-        .find((line) =>
+        .some((line) =>
           /^(Error: )?(Usage|Unknown|Unexpected|Invalid)/.test(line),
-        );
-    expect(separated.status, separated.stderr).not.toBe(0);
-    expect(diagnostic(separated.stderr), separated.stderr).toBeTruthy();
-    expect(diagnostic(separated.stderr)).not.toBe(diagnostic(plain.stderr));
+        ),
+      result.stderr,
+    ).toBe(true);
   });
 });
 
