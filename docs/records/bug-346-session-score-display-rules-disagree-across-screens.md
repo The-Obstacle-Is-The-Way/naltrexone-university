@@ -61,7 +61,7 @@ Until promotion, a learner sees two different scores for one session. No data is
 1. **One shared score presenter that every screen calls, and drop the `answered > 0` clause.** *Recommended:* it applies the rules already decided, and gives the next change one place to land.
 2. **The server returns `accuracy: number | null`.** Every consumer changes. DEBT-221 kept the domain's `computeAccuracy` numeric to preserve SPEC-003 and its tests; it did not consider a nullable response field. Option 1 fixes the split without an API change.
 
-## Resolution (built)
+## Resolution
 
 Option 1: `app/(app)/app/shared/score-percentage.ts` owns the percentage or dash. History, the dashboard, the summary and post-exam review call it. The dashboard's overall and seven-day accuracy use it too. The presenter reads `scored` and `accuracy`; it does not take the mode or answered count.
 
