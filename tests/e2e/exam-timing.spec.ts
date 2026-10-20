@@ -47,8 +47,15 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   const isTimingRequest = (request: Request) =>
     request.method() === 'POST' &&
     new URL(request.url()).pathname === new URL(page.url()).pathname;
+  // Other server actions post to the same page, such as the draft save that
+  // follows a selection; only the timing action's response carries
+  // remainingMs.
   const refreshed = Promise.race([
-    page.waitForResponse((response) => isTimingRequest(response.request())),
+    page.waitForResponse(
+      async (response) =>
+        isTimingRequest(response.request()) &&
+        (await response.text()).includes('remainingMs'),
+    ),
     page.waitForEvent('requestfailed', isTimingRequest).then((request) => {
       throw new Error(
         `The timing refresh failed: ${request.failure()?.errorText}`,
