@@ -11,6 +11,7 @@ import {
 } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
+  FakeOperationalAlerts,
   FakeRateLimiter,
   FakeRenewalNoticeDeliveryRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -95,7 +96,11 @@ async function setup({
             throw new Error('database unavailable');
           },
         }
-      : new RecordRenewalNoticeProviderOutcomeUseCase(deliveries, logger),
+      : new RecordRenewalNoticeProviderOutcomeUseCase(
+          deliveries,
+          logger,
+          new FakeOperationalAlerts(),
+        ),
   };
   return {
     POST: createResendWebhookHandler(() => container),

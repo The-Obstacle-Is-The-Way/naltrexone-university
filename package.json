@@ -32,6 +32,7 @@
     "db:seed": "tsx scripts/db-seed.ts",
     "db:studio": "tsx scripts/db-studio.ts",
     "export:feedback": "tsx scripts/export-question-feedback.ts",
+    "notice:requeue": "tsx scripts/requeue-renewal-notice.ts",
     "db:test:up": "tsx scripts/run-local-test-db.ts up",
     "db:test:down": "tsx scripts/run-local-test-db.ts down",
     "db:test:reset": "tsx scripts/run-local-test-db.ts reset",

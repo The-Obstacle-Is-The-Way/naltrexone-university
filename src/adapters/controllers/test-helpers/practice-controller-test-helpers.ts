@@ -12,6 +12,7 @@ import {
   FakeGetSessionHistoryUseCase,
   FakeIdempotencyKeyRepository,
   FakeLogger,
+  FakePracticeSessionRepository,
   FakeRateLimiter,
   FakeSaveExamDraftAnswerUseCase,
   FakeSetPracticeSessionQuestionMarkUseCase,
@@ -31,6 +32,7 @@ import type {
   StartPracticeSessionOutput,
 } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
+import { GetPracticeSessionTimingUseCase } from '@/src/application/use-cases/get-practice-session-timing';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import type { PracticeControllerDeps } from '../practice-controller';
@@ -278,6 +280,10 @@ export function createDeps(overrides?: {
     saveExamDraftAnswerUseCase,
     getPracticeSessionReviewUseCase,
     getPracticeSessionSummaryUseCase,
+    getPracticeSessionTimingUseCase: new GetPracticeSessionTimingUseCase(
+      new FakePracticeSessionRepository(),
+      now,
+    ),
     getSessionHistoryUseCase,
     setPracticeSessionQuestionMarkUseCase,
     now,

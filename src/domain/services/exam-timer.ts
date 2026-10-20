@@ -16,6 +16,27 @@ export function computeExamDeadline(session: PracticeSession): Date | null {
   );
 }
 
+export type PracticeSessionTiming = {
+  state: 'active' | 'expired' | 'ended';
+  deadline: Date | null;
+  remainingMs: number | null;
+};
+
+export function getPracticeSessionTiming(
+  session: PracticeSession,
+  now: Date,
+): PracticeSessionTiming {
+  const deadline = computeExamDeadline(session);
+  const remainingMs =
+    deadline === null ? null : Math.max(0, deadline.getTime() - now.getTime());
+
+  return {
+    state: session.endedAt ? 'ended' : remainingMs === 0 ? 'expired' : 'active',
+    deadline,
+    remainingMs: session.endedAt && remainingMs !== null ? 0 : remainingMs,
+  };
+}
+
 export function remainingExamSeconds(
   session: PracticeSession,
   now: Date,
@@ -29,6 +50,5 @@ export function remainingExamSeconds(
 }
 
 export function isExamExpired(session: PracticeSession, now: Date): boolean {
-  const deadline = computeExamDeadline(session);
-  return deadline !== null && now.getTime() >= deadline.getTime();
+  return getPracticeSessionTiming(session, now).state === 'expired';
 }
