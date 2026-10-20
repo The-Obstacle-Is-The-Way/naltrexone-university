@@ -140,7 +140,7 @@ describe('db:seed:all', () => {
   it('forwards unsupported arguments and the entry-point exit status', () => {
     const result = spawnSync(
       'pnpm',
-      ['db:seed:all', '--', '--unsupported-seed-option'],
+      ['db:seed:all', '--unsupported-seed-option'],
       {
         cwd: process.cwd(),
         encoding: 'utf8',

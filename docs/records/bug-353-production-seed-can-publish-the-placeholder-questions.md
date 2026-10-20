@@ -48,7 +48,7 @@ Corrected 2026-10-18: separate the E2E reset, qualify active-release and target 
 
 - **Option 2, with two refusals, implemented on this branch.**
   - `runSeed` takes `{ includePlaceholders }` and reads no environment.
-  - `scripts/seed/seed-options.ts` parses the command line for `db:seed` and the managed seed. Only `--include-placeholders` is accepted, after pnpm's `--` separator if one is given.
+  - `scripts/seed/seed-options.ts` parses the command line for `db:seed` and the managed seed. Only `--include-placeholders` is accepted, passed directly; a forwarded `--` separator is refused, as in the other strict operator parsers (#1567).
   - A set `SEED_INCLUDE_PLACEHOLDERS`, whatever its value, is refused before any database work. So a stale export now stops the production seed's child with a message, rather than being obeyed or silently ignored. That makes option 1 unnecessary.
   - The managed seed refuses `--include-placeholders` for any target that is not on the loopback interface. Every caller that passes the flag seeds a loopback database, and this path takes no acknowledgment. The human `db:seed` still accepts the flag for an acknowledged remote target.
   - The environment seeds spawn the managed seed with no arguments, and a test pins that.
@@ -72,7 +72,7 @@ was not independently reconstructed. This audit reran the current tests.
 ## Related
 
 - #1560: the scripts directory audit that found this. Its debt record proposes running the production seed in an owner-approved CI job.
-- BUG-351: the production seed's input freshness. Its plan check, `pnpm db:seed:prod --plan`, parses under pnpm 11 since #1567; this pull request's shared parser also accepts a leading `--`.
+- BUG-351: the production seed's input freshness. Its plan check, `pnpm db:seed:prod --plan`, parses under pnpm 11 since #1567.
 - BUG-315: placeholder archival by exact slug.
 - BUG-360: the separate deploy-target E2E reset and owner decision.
 - DEBT-483: the bootstrap; once a release is active, the seed refuses production.
