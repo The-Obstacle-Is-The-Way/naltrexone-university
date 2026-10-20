@@ -205,14 +205,14 @@ When code references a newly added column but the target database has not had `p
 
 **Fix (manual fallback — the Vercel Build Command now applies deploy migrations automatically)**
 
-Run migrations against the exact database backing the failing environment:
+Run migrations against the exact database backing the failing environment. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 
 ```bash
 # Preview / shared non-production DB
-DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
+DATABASE_URL="<preview-or-dev-connection-string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 
 # Production DB
-DATABASE_URL="<production-connection-string>" pnpm db:migrate
+DATABASE_URL="<production-connection-string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```
 
 For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
@@ -259,7 +259,7 @@ When changing environment configuration, verify all of the following:
 4. `NEXT_PUBLIC_APP_URL` matches the environment actually serving the app.
 5. Preview webhook targets are publicly reachable.
 6. Any schema change is applied by the Vercel Build Command migration on deploy; verify the build ran the migration for the target deployment before it serves (the build fails closed otherwise).
-7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database.
+7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database while no content release is active there; once one is, the change ships as a staged and activated release (see the content pipeline's [release procedure](./content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold)).
 8. Auth and payment flows have been smoke-tested on the target environment after changes.
 
 ---

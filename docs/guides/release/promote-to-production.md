@@ -296,7 +296,7 @@ DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm d
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
-Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup writes the shared test user's subscription rows, then the reset deletes and rebuilds that user's practice data and, if both placeholder fixture rows exist, republishes them (BUG-360).
+Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup writes the shared test user's subscription rows. The reset then checks that both placeholder fixture rows exist, and stops if either is missing; otherwise it republishes them and deletes and rebuilds that user's practice data (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and these guides give no way to add them to a remote database: BUG-360 holds the owner's decision on whether this check stays.
 
 Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 

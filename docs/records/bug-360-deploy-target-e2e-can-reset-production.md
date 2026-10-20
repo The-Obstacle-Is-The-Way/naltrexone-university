@@ -23,7 +23,7 @@ This is separate from BUG-353's ambient seed flag, and remains after that fix.
 
 ## Evidence
 
-- **The host check.** `scripts/e2e-local-orchestrator.ts:135-141` checks the URL's host only on the `pnpm test:e2e` path. `ALLOW_NON_LOCAL_DATABASE_URL=true` admits any host.
+- **The host check.** `scripts/e2e-local-orchestrator.ts:137-143` checks the URL's host only on the `pnpm test:e2e` path. `ALLOW_NON_LOCAL_DATABASE_URL=true` admits any host.
   - `playwright.config.ts:8` loads `.env.local` without overriding exported variables.
   - So a direct `pnpm exec playwright test` reaches setup with whatever `DATABASE_URL` is there, and no host check runs.
 - **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:550-557`). Test-mode keys work against any database, so passing it does not prove a non-production target.

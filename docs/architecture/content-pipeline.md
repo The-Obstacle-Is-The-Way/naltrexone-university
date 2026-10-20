@@ -16,7 +16,7 @@ This document serves two purposes:
 │ 1. AUTHORING                                                          │
 │    content/drafts/questions/**/*.md (draft format, optional)          │
 │         ↓ pnpm content:import:drafts                                  │
-│    content/questions/**/*.mdx (canonical question format)  │
+│    content/questions/**/*.mdx (canonical question format)             │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 2. SEEDING                                                            │
 │    pnpm db:seed                                                       │
@@ -28,7 +28,7 @@ This document serves two purposes:
 │    question_revisions (stemMd, explanationMd, referenceMd, difficulty)│
 │    choices (revision, label, textMd, isCorrect, explanationMd, order) │
 │    tags, question_tags                                                │
-│    Normalized markdown — no HTML compilation at rest            │
+│    Normalized markdown — no HTML compilation at rest                  │
 ├───────────────────────────────────────────────────────────────────────┤
 │ 4. QUERY LAYER                                                        │
 │    DrizzleQuestionRepository → domain Question entity                 │
@@ -43,7 +43,7 @@ This document serves two purposes:
 ├───────────────────────────────────────────────────────────────────────┤
 │ 7. FRONTEND RENDERING                                                 │
 │    react-markdown + remark-gfm + rehype-sanitize                      │
-│    React renders markdown → HTML                           │
+│    React renders markdown → HTML                                      │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,7 +80,7 @@ PostgreSQL (questions, choices, tags, question_tags)
 
 10 hand-written example MDXs committed to the repo so the app works out of the box. By default, `pnpm db:seed` **excludes them** and, while no content release is active, archives the ten fixtures' rows by exact QID. They're templates, not production content.
 
-To include them in a test database: `pnpm db:seed --include-placeholders`. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
+To include them in a local test database: `pnpm db:seed --include-placeholders`. The environment seeds (`db:seed:prod`, `db:seed:all`) never include them (BUG-353).
 
 ### Can I modify drafts freely?
 
