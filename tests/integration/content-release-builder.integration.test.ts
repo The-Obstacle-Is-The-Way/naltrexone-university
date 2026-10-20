@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 import * as schema from '@/db/schema';
 import { parseActivateArgs } from '@/scripts/content-release/activate-release';
 import { runHoldQuestions } from '@/scripts/content-release/hold-questions';
@@ -9,9 +17,12 @@ import {
   bootstrapRelease,
 } from '@/scripts/content-release/release-activation';
 import { stageReleaseFromFiles } from '@/scripts/content-release/release-builder';
-import { runStageRelease } from '@/scripts/content-release/stage-release';
 import type { SeedSourceFile } from '@/scripts/seed/file-reader';
 import { runContentWithdrawal } from '@/scripts/seed/withdraw-questions';
+import {
+  createContentRepository,
+  runFixtureStage,
+} from '@/tests/shared/content-repository-test-helpers';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { createCleanupState, createQuestion } from './helpers';
 import { RELEASE_DECISION } from './release-decision-test-helpers';
@@ -20,6 +31,10 @@ import { source } from './seed-test-helpers';
 // Staging commits drafts and revisions, and these cases activate what they
 // stage, so they run against a database of their own.
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
+let repo: Awaited<ReturnType<typeof createContentRepository>>;
+afterEach(async () => {
+  await repo.dispose();
+});
 
 beforeAll(async () => {
   disposable = await createDisposableDatabase();
@@ -30,10 +45,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  repo = await createContentRepository();
   const { db } = disposable;
   await db
     .update(schema.contentReleasePointer)
-    .set({ activeReleaseId: null, activatedAt: null });
+    .set({ activeReleaseId: null, activatedAt: null, sourceCommit: null });
   await db.delete(schema.contentReleaseActivations);
   await db.delete(schema.contentReleases);
   await db.delete(schema.questions);
@@ -339,7 +355,7 @@ describe('stage-release command', () => {
       readFiles: async () => files,
     };
 
-    await runStageRelease([], io);
+    await runFixtureStage(repo, [], io);
     expect(lines.join('\n')).toContain('Release staging (dry-run): ');
     expect(
       await disposable.db.select().from(schema.contentReleases),
@@ -347,7 +363,7 @@ describe('stage-release command', () => {
     expect(await revisionsOf(question.id)).toHaveLength(1);
 
     lines.length = 0;
-    await runStageRelease(['--apply'], io);
+    await runFixtureStage(repo, ['--apply'], io);
     const output = lines.join('\n');
     const [staged] = await disposable.db
       .select({ id: schema.contentReleases.id })
@@ -360,10 +376,10 @@ describe('stage-release command', () => {
     // requires, and its parser accepts it once the placeholders are filled.
     const command = output.match(/activate-release\.ts (.+)$/m)?.[1] ?? '';
     expect(command).toBe(
-      `--release ${staged?.id} --expect-active ${active} --reason "<why>" --authority "<who>"`,
+      `--repo '${repo.directory}' --release ${staged?.id} --expect-active ${active} --reason "<why>" --authority "<who>"`,
     );
-    const argv = (command.match(/"[^"]*"|\S+/g) ?? []).map((word) =>
-      word.replace(/^"(.*)"$/, '$1'),
+    const argv = (command.match(/'[^']*'|"[^"]*"|\S+/g) ?? []).map((word) =>
+      word.replace(/^['"](.*)['"]$/, '$1'),
     );
     expect(parseActivateArgs(argv)).toMatchObject({
       releaseId: staged?.id,
@@ -374,7 +390,7 @@ describe('stage-release command', () => {
 
   it('rejects an unknown argument', async () => {
     await expect(
-      runStageRelease(['--all'], {
+      runFixtureStage(repo, ['--all'], {
         env: { DATABASE_URL: disposable.url },
         log: () => {},
         readFiles: async () => [],
