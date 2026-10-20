@@ -53,10 +53,10 @@ export const SEND_RENEWAL_NOTICES_MONITOR: CronMonitor = {
   checkinMarginMinutes: 90,
   maxRuntimeMinutes: 6,
 };
-// DEBT-414 F01: renewals are first selected at 35 days and retried daily down
+// DEBT-414 F01: renewals are first selected at 39 days and retried daily down
 // to the shared 30-day minimum (RENEWAL_NOTICE_MINIMUM_DAYS); one inside that
 // minimum without a sent notice is alerted, and dispatch refuses it (F07).
-const ANNUAL_RENEWAL_NOTICE_TARGET_DAYS = 35;
+const ANNUAL_RENEWAL_NOTICE_TARGET_DAYS = 39;
 // DEBT-414 F02: every active monthly subscription is read in pages of this
 // size, because its yearly renewal is computed in code, not in SQL.
 const MONTHLY_SUBSCRIPTION_PAGE_SIZE = 500;
