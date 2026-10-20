@@ -73,7 +73,7 @@ The contract references had drifted. The reference guard now checks their target
    - Require `shouldCacheError` on every keyed action, and both sequencing hooks on the shared flow helpers. Each action keeps its own cache decisions. That enforces ADR-015's rule and the existing hook-pair invariant.
 2. **Reopen runtime consolidation only under DEBT-461's full criteria.** A new owner direction must explicitly reference the July 23 NO-GO. Show at least two live surfaces with identical complete transitions, no surface-mode flags or strategy callbacks, no weakened tests and net deletion of production branches, state and comments. BUG-304, the only later defect, does not meet them.
 
-## Resolution
+## Resolution (decided)
 
 Option 1. The reference check failed on the original contract and now passes with declaration and test-name links.
 
