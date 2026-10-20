@@ -32,13 +32,15 @@ Corrected 2026-10-19: the override is no workaround, because the driver cannot p
 
 ## Resolution
 
-Implemented the small shared predicate from option 2 in `scripts/lib/loopback-hostname.ts`. Eight consumers use exact loopback classification with bracket normalization. Human commands separately retain their existing 127/8 allowance; URL validation, managed authorization and test-lane opt-ins remain caller-owned. The integration guide requires the exact resolver URL for the full local lane; hostname substitution does not satisfy its session-proof suites. It separately explains that loopback classification does not repair postgres.js’s literal-IPv6 URL parsing.
+Implemented the small shared predicate from option 2 in `scripts/lib/loopback-hostname.ts`. Eight consumers use exact loopback classification with bracket normalization. Human commands separately retain their existing 127/8 allowance; URL validation, managed authorization and test-lane opt-ins remain caller-owned. The integration guide requires the exact resolver URL for the full local lane; hostname substitution does not satisfy its session-proof suites. It separately explains that loopback classification does not repair postgres.js’s literal-IPv6 URL parsing. Integration setup therefore refuses `[::1]` with that driver limit and asks for `127.0.0.1` or `localhost`, instead of calling it non-local.
 
 Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 
+Corrected 2026-10-20: setup no longer passes `[::1]` on to a driver that cannot connect to it, and its host decision is now a tested function (`tests/shared/integration-database-host.ts`), so the remote-host refusal has a behavioral test rather than a source scan.
+
 ## Verification
 
-- [x] Red-first proof that setup classifies `[::1]` as local and still rejects remote hosts.
+- [x] Red-first proof that setup no longer calls `[::1]` non-local, refuses it with the driver limit, and still rejects remote hosts unless overridden.
 - [x] The integration guide states the driver limitation and the full lane’s exact resolver-target requirement.
 - [x] Existing IPv4 resolver integration lane passes.
 

@@ -4,7 +4,7 @@ Integration tests run against a real PostgreSQL database to verify repository qu
 
 ---
 
-Use the exact resolver-provided URL for the full local lane; its host is `127.0.0.1`. Session-proof suites require that URL and reject even a `localhost` substitution. Although loopback classification recognizes `[::1]`, the installed postgres.js URL parser misreads a bracketed IPv6 literal. A hostname may resolve to IPv6 at the driver level, but that does not bypass the lane’s target restrictions.
+Use the exact resolver-provided URL for the full local lane; its host is `127.0.0.1`. Session-proof suites require that URL and reject even a `localhost` substitution. Loopback classification recognizes `[::1]`, but the installed postgres.js URL parser misreads a bracketed IPv6 literal, so setup refuses it with that reason and asks for `127.0.0.1` or `localhost`. A hostname may resolve to IPv6 at the driver level, but that does not bypass the lane’s target restrictions.
 
 ## Local Setup
 

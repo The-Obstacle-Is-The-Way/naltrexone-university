@@ -20,7 +20,7 @@ describe('loopback hostname classification', () => {
     expect(isLoopbackHostname(host)).toBe(false);
   });
   it.each([
-    'tests/integration/setup.ts',
+    'tests/shared/integration-database-host.ts',
     'tests/integration/helpers.ts',
     'tests/integration/actions.stripe.integration.test.ts',
     'tests/integration/tag-taxonomy-census.integration.test.ts',
