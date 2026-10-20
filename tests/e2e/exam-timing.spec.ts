@@ -14,6 +14,9 @@ test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 const EXAM_SECONDS = 72;
 const CLOCK_SKEW_MS = 20_000;
 const TIMING_ACTION = 'getPracticeSessionTiming';
+// Quiet time before the return: CI's bursts of aborted server actions on a new
+// session ended within 600 ms (BUG-337).
+const QUIET_MS = 1_000;
 
 test('a fast browser clock preserves the answer until server exam expiry', async ({
   page,
@@ -43,18 +46,28 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     new URL(request.url()).pathname === new URL(page.url()).pathname;
   const isTimingRequest = (request: Request) =>
     isPagePost(request) && actionOf(request) === TIMING_ACTION;
-  // The timer reuses a timing read that is still in flight, so the test keeps
-  // the timing reads in flight and counts those that finished.
-  const timingInFlight = new Set<Request>();
+  // The return is signalled only once the page is quiet. In CI, a new
+  // session's server actions are aborted in bursts that last under a second
+  // (BUG-337), and a return read caught in one fails for a reason this test
+  // isn't about. So the test keeps the page's server actions in flight, when
+  // the last one settled, and how many timing reads finished.
+  const actionsInFlight = new Set<Request>();
+  let lastActionSettledAt = Date.now();
   let timingReadsFinished = 0;
+  const settle = (request: Request) => {
+    if (!actionsInFlight.delete(request)) return false;
+    lastActionSettledAt = Date.now();
+    return true;
+  };
   page.on('request', (request) => {
-    if (isTimingRequest(request)) timingInFlight.add(request);
+    if (isPagePost(request)) actionsInFlight.add(request);
   });
   page.on('requestfinished', (request) => {
-    if (timingInFlight.delete(request)) timingReadsFinished += 1;
+    if (settle(request) && actionOf(request) === TIMING_ACTION)
+      timingReadsFinished += 1;
   });
   page.on('requestfailed', (request) => {
-    timingInFlight.delete(request);
+    settle(request);
     if (isPagePost(request))
       console.warn(
         `BUG-337 evidence: ${actionOf(request)} failed on a practice page: ${request.failure()?.errorText}`,
@@ -85,26 +98,32 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // the return with visibilitychange, which the timer also handles, not a
   // window focus: on Clerk's development instance a focus also touches the
   // session, and its cookie rewrites can abort a concurrent request (BUG-333,
-  // BUG-337). The return is signalled once an activation read has finished and
-  // none is in flight. A failed activation read doesn't fail the test: the
-  // timer keeps its last server sample, and CI has seen such reads aborted
-  // while the exam ran on. The return's request is the read still in flight,
-  // which the timer reuses, or else the next timing read. It succeeds only
-  // when it finishes: a response can arrive before the request is aborted, so
-  // the wait follows the same request to requestfinished, or ends at once on
-  // its requestfailed and names the error. The manifest name identifies the
-  // request, so the test does not read its body: Chrome can discard a server
-  // action's body before Playwright asks for it ("No data found for
-  // resource"), and the controller's timing tests cover the payload.
+  // BUG-337). The return is signalled once an activation read has finished
+  // and no server action has been in flight for QUIET_MS. A failed activation
+  // read doesn't fail the test: the timer keeps its last server sample, and CI
+  // has seen such reads aborted while the exam ran on. The return's request is
+  // a timing read still in flight, which the timer would reuse, or else the
+  // next timing read. It succeeds only when it finishes: a response can arrive
+  // before the request is aborted, so the wait follows the same request to
+  // requestfinished, or ends at once on its requestfailed and names the error.
+  // The manifest name identifies the request, so the test does not read its
+  // body: Chrome can discard a server action's body before Playwright asks for
+  // it ("No data found for resource"), and the controller's timing tests cover
+  // the payload.
   await expect
-    .poll(() => timingReadsFinished > 0 && timingInFlight.size === 0, {
-      message: 'An activation timing read finishes, and none is in flight',
-    })
+    .poll(
+      () =>
+        timingReadsFinished > 0 &&
+        actionsInFlight.size === 0 &&
+        Date.now() - lastActionSettledAt >= QUIET_MS,
+      {
+        message:
+          'An activation timing read finishes, and no server action is in flight for QUIET_MS',
+      },
+    )
     .toBe(true);
   const returnRefresh = new Promise<Request>((resolve, reject) => {
-    let returnRequest: Request | undefined = timingInFlight
-      .values()
-      .next().value;
+    let returnRequest = [...actionsInFlight].find(isTimingRequest);
     page.on('request', (request) => {
       if (!returnRequest && isTimingRequest(request)) returnRequest = request;
     });
@@ -120,12 +139,9 @@ test('a fast browser clock preserves the answer until server exam expiry', async
         );
     });
   });
-  // The page first yields a task, so the finished activation read has
-  // released the timer before the return is signalled.
-  await page.evaluate(async () => {
-    await new Promise((resolve) => setTimeout(resolve));
-    document.dispatchEvent(new Event('visibilitychange'));
-  });
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  );
   const refreshed = await returnRefresh;
   expect((await refreshed.response())?.ok()).toBe(true);
   await expect(timer).toBeVisible();
