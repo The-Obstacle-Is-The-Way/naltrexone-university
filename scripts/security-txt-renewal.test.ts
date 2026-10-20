@@ -258,6 +258,19 @@ describe('renewal workflow', () => {
       expect(commands[1]).toContain('repos/{owner}/{repo}/issues/42');
     });
 
+    // GitHub can return a null author; it is not GitHub Actions, so skip it.
+    it('skips an issue with a null author instead of aborting the check', async () => {
+      const { commands, issues } = adapter([
+        reminder(42, ACTIONS.login),
+        { ...reminder(43, 'stranger'), user: null },
+      ]);
+
+      expect(await checkSecurityTxtRenewal(document(10), now, issues)).toBe(
+        'updated',
+      );
+      expect(commands[1]).toContain('repos/{owner}/{repo}/issues/42');
+    });
+
     it("cannot take the reminder's place", async () => {
       const { commands, issues } = adapter([reminder(43, 'stranger')]);
 
@@ -276,7 +289,6 @@ describe('renewal workflow', () => {
     { state: 'unknown' },
     { body: 42 },
     { user: undefined },
-    { user: null },
     { user: { login: 7 } },
     { pull_request: true },
   ])('refuses malformed issue fields %j before writing', async (overrides) => {

@@ -125,8 +125,13 @@ export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
           (issue.body !== null && typeof issue.body !== 'string') ||
           !('state' in issue) ||
           (issue.state !== 'open' && issue.state !== 'closed') ||
-          !('user' in issue) ||
-          !issue.user ||
+          !('user' in issue)
+        ) {
+          throw new Error('Invalid GitHub issue response');
+        }
+        // GitHub can return a null author, which is not GitHub Actions.
+        if (issue.user === null) continue;
+        if (
           typeof issue.user !== 'object' ||
           !('login' in issue.user) ||
           typeof issue.user.login !== 'string'
