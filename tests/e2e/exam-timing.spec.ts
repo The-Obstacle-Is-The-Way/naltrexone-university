@@ -79,8 +79,10 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // window focus: on Clerk's development instance a focus also touches the
   // session, and its cookie rewrites can abort a concurrent request (BUG-333,
   // BUG-337). Once the timer's activation refresh has answered, the return
-  // starts a request of its own; if that request fails, the wait ends at once
-  // and names the error. The manifest name identifies the response, so the
+  // starts a request of its own. That request succeeds only when it finishes:
+  // a response can arrive before the request is aborted, so the wait follows
+  // the same request to requestfinished, or ends at once on its requestfailed
+  // and names the error. The manifest name identifies the request, so the
   // test does not read its body: Chrome can discard a server action's body
   // before Playwright asks for it ("No data found for resource"), and the
   // controller's timing tests cover the payload.
@@ -89,19 +91,28 @@ test('a fast browser clock preserves the answer until server exam expiry', async
       message: 'The timer refreshes its timing on activation',
     })
     .toBeGreaterThan(0);
-  const refreshed = Promise.race([
-    page.waitForResponse((response) => isTimingRequest(response.request())),
-    page.waitForEvent('requestfailed', isTimingRequest).then((request) => {
-      throw new Error(
-        `The timing refresh failed: ${request.failure()?.errorText}`,
-      );
-    }),
-  ]);
+  const returnRefresh = new Promise<Request>((resolve, reject) => {
+    let returnRequest: Request | undefined;
+    page.on('request', (request) => {
+      if (!returnRequest && isTimingRequest(request)) returnRequest = request;
+    });
+    page.on('requestfinished', (request) => {
+      if (request === returnRequest) resolve(request);
+    });
+    page.on('requestfailed', (request) => {
+      if (request === returnRequest)
+        reject(
+          new Error(
+            `The timing refresh failed: ${request.failure()?.errorText}`,
+          ),
+        );
+    });
+  });
   await page.evaluate(() =>
     document.dispatchEvent(new Event('visibilitychange')),
   );
-  const response = await refreshed;
-  expect(response.ok()).toBe(true);
+  const refreshed = await returnRefresh;
+  expect((await refreshed.response())?.ok()).toBe(true);
   await expect(timer).toBeVisible();
   expect(before - seconds(await remaining.textContent())).toBeLessThan(10);
   await expect(page.getByRole('radio').first()).toBeChecked();
