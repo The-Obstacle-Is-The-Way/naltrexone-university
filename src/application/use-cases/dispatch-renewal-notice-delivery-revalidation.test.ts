@@ -338,7 +338,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
     ])(
       'supersedes without a provider call when $label',
       async ({ subscription, failureCode }) => {
-        const { useCase, gateway } = await arrange({
+        const { useCase, gateway, alerts } = await arrange({
           delivery: anniversaryNotice(),
           subscription,
         });
@@ -351,6 +351,11 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
           },
         });
         expect(gateway.sendInputs).toEqual([]);
+        expect(alerts.raised).toEqual(
+          failureCode === 'anniversary_unknown'
+            ? [{ kind: 'renewal_notice_terminal_failure', count: 1 }]
+            : [],
+        );
       },
     );
 

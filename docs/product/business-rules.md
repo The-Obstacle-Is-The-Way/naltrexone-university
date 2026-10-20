@@ -54,18 +54,32 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `applies the flush within the deadline grace window`
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `drops a flush arriving after the grace window and still finalizes`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `sends a final draft after a backgrounded exam resumes beyond grace so the server decides its cutoff`
+
+The server owns expiry. The browser counts down from server remaining time, using monotonic elapsed time, and refreshes on return. A timer request before server expiry preserves the draft and retries; manual early submission remains allowed. An expired, unfinalized exam still appears as unfinished, and draft review hides correctness. Summary and completed feedback require committed finalization.
+
+- `src/application/use-cases/finalize-exam-answers-deadline.test.ts`: `refuses timer finalization before expiry even without a final draft`
+- `src/application/use-cases/finalize-exam-answers-deadline.test.ts`: `keeps early exam finalization endedAt at now`
+- `src/adapters/controllers/practice-controller-finalize-idempotency-conflicts.test.ts`: `retries an early expiry with the same key and grades its final draft at the server deadline`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `resynchronizes a premature expiry without losing the selection after a failed save`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `requires committed finalization before summary or completed feedback`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `lists the unfinished exam and its draft review without grading it`
 
 ### R8. Only an unfinished exam can be discarded. A tutor session, whose answers are graded attempts, can only be ended, so its attempts are never deleted. Discarding a session that is already gone is a silent success.
 
 - `src/application/use-cases/discard-practice-session.test.ts`: `rejects discarding a tutor session and leaves it intact`
 - `src/application/use-cases/discard-practice-session.test.ts`: `is idempotent when the session is missing or already discarded`
 - `src/application/use-cases/end-practice-session.test.ts`: `rejects generic end for an active exam session`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `discards an expired unfinalized exam without grading its saved draft`
 
-### R9. Marking a question for review exists only inside an active exam.
+### R9. Marking a question for review exists only inside an unfinished exam before its server deadline. Expiry refuses the mark, and the mark never finalizes the exam; the page answers the refusal with the expiry flush, carrying the on-screen answer.
 
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `persists marked-for-review state for exam sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT for tutor sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT when session is already ended`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `allows a mark one millisecond before expiry`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `refuses a mark %i ms after expiry without finalizing the exam`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `flushes the on-screen answer when the server refuses a mark after its deadline`
 
 ### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
 
@@ -214,3 +228,15 @@ A changed key that matches earlier history needs an explicit return name, reason
 - `src/application/use-cases/set-bookmark.test.ts`: `throws NOT_FOUND when adding an unpublished question`
 - `src/application/use-cases/set-bookmark.test.ts`: `returns bookmarked=false when removing an already absent bookmark`
 - `src/application/use-cases/get-bookmarks.test.ts`: `labels a bookmarked question that is %s`
+
+## Renewal recovery
+
+### R28. Retrying a quarantined renewal notice requires an operator, a reason and evidence for the current attempt; an unknown outcome also requires confirmation that nothing was sent.
+
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `requeues an unknown outcome only with no-send confirmation and preserves an audit entry`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects missing operator evidence and accepted rows`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `rejects an unknown outcome without no-send confirmation`
+- `src/application/use-cases/requeue-renewal-notice-delivery.test.ts`: `refuses confirmation for an older attempt before the command starts`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `refuses evidence inspected before a newer %s attempt existed (%s)`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `preserves an audit entry written before inspected attempt counts existed`
+- `tests/integration/requeue-renewal-notice.integration.test.ts`: `rejects a stale requeue after another operator leaves the notice %s`

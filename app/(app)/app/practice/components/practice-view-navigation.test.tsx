@@ -216,6 +216,8 @@ describe('PracticeView navigation', () => {
 
         deadlineAt: null,
 
+        remainingMs: null,
+
         index: 2,
         total: 3,
         isMarkedForReview: false,
@@ -268,6 +270,8 @@ describe('PracticeView navigation', () => {
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 2,
         total: 3,
@@ -327,6 +331,8 @@ describe('PracticeView navigation', () => {
 
         deadlineAt: null,
 
+        remainingMs: null,
+
         index: 0,
         total: 3,
         isMarkedForReview: false,
@@ -375,6 +381,8 @@ describe('PracticeView navigation', () => {
 
         deadlineAt: null,
 
+        remainingMs: null,
+
         index: 1,
         total: 3,
         isMarkedForReview: false,
@@ -420,6 +428,8 @@ describe('PracticeView navigation', () => {
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 1,
         total: 3,
@@ -474,6 +484,8 @@ describe('PracticeView navigation', () => {
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 0,
         total: 3,
@@ -534,6 +546,8 @@ describe('PracticeView navigation', () => {
 
         deadlineAt: null,
 
+        remainingMs: null,
+
         index: 2,
         total: 3,
         isMarkedForReview: false,
@@ -592,6 +606,8 @@ describe('PracticeView navigation', () => {
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          remainingMs: 72_000,
 
           index: 0,
           total: 2,

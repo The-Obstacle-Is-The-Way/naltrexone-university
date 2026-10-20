@@ -57,6 +57,8 @@ test('renders active question branch with navigator and navigation callback', as
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -113,6 +115,8 @@ test('does not render Review & Submit in the active exam-question header', async
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -162,6 +166,8 @@ test('keeps End session in the active tutor-question header', async () => {
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 0,
         total: 2,
@@ -247,6 +253,8 @@ test('wires navigator aria-controls to an existing question panel id', async () 
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -311,6 +319,8 @@ test('renders navigator error with retry action', async () => {
 
         deadlineAt: '2099-05-22T12:02:24.000Z',
 
+        remainingMs: 72_000,
+
         index: 0,
         total: 2,
         isMarkedForReview: false,
@@ -352,6 +362,8 @@ test('passes the tutor Submit affordance through to the question surface', async
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 0,
         total: 2,

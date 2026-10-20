@@ -79,6 +79,8 @@ function QuestionFlowCoreProbe() {
 
                 deadlineAt: null,
 
+                remainingMs: null,
+
                 index: 0,
                 total: 1,
                 latestSelectedChoiceId: fixtureChoice2Id,
@@ -128,6 +130,8 @@ function QuestionFlowCoreProbe() {
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
 
+                remainingMs: 72_000,
+
                 index: 0,
                 total: 1,
                 draftSelectedChoiceId: fixtureChoice2Id,
@@ -155,6 +159,8 @@ function QuestionFlowCoreProbe() {
                 mode: 'exam',
 
                 deadlineAt: '2099-05-22T12:02:24.000Z',
+
+                remainingMs: 72_000,
 
                 index: 0,
                 total: 1,

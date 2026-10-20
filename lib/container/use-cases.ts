@@ -36,6 +36,7 @@ import {
   GetNextQuestionUseCase,
   GetPracticeSessionReviewUseCase,
   GetPracticeSessionSummaryUseCase,
+  GetPracticeSessionTimingUseCase,
   GetPreviousAttemptUseCase,
   GetQuestionForViewUseCase,
   GetQuestionRatingUseCase,
@@ -262,6 +263,7 @@ export function createUseCaseFactories(input: {
       new RecordRenewalNoticeProviderOutcomeUseCase(
         repositories.createRenewalNoticeDeliveryRepository(),
         primitives.logger,
+        gateways.createOperationalAlerts(),
       ),
     createRequeueRenewalNoticeDeliveryUseCase: () =>
       new RequeueRenewalNoticeDeliveryUseCase(
@@ -287,6 +289,7 @@ export function createUseCaseFactories(input: {
           primitives.now,
         ),
         primitives.logger,
+        gateways.createOperationalAlerts(),
         primitives.env.NEXT_PUBLIC_APP_URL,
         primitives.now,
       );
@@ -390,6 +393,11 @@ export function createUseCaseFactories(input: {
         repositories.createQuestionRepository(),
         primitives.logger,
       ),
+    createGetPracticeSessionTimingUseCase: () =>
+      new GetPracticeSessionTimingUseCase(
+        repositories.createPracticeSessionRepository(),
+        primitives.now,
+      ),
     createGetPracticeSessionSummaryUseCase: () =>
       new GetPracticeSessionSummaryUseCase(
         repositories.createPracticeSessionRepository(),
@@ -409,6 +417,7 @@ export function createUseCaseFactories(input: {
     createSetPracticeSessionQuestionMarkUseCase: () =>
       new SetPracticeSessionQuestionMarkUseCase(
         repositories.createPracticeSessionRepository(),
+        primitives.now,
       ),
     createStartPracticeSessionUseCase: () =>
       new StartPracticeSessionUseCase(

@@ -46,6 +46,7 @@ function renderExamView(
         sessionId: fixtureSession1Id,
         mode: 'exam',
         deadlineAt: '2099-05-22T12:02:24.000Z',
+        remainingMs: 72_000,
         index: input.index ?? 0,
         total: input.total ?? 3,
         isMarkedForReview: input.isMarkedForReview ?? false,
@@ -86,6 +87,8 @@ function renderTutorView(
         mode: 'tutor',
 
         deadlineAt: null,
+
+        remainingMs: null,
 
         index: 1,
         total: 3,
