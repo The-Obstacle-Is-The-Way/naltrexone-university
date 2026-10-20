@@ -77,6 +77,7 @@ type UsePracticeSessionMarkForReviewInput = {
   setReview: Dispatch<SetStateAction<GetPracticeSessionReviewOutput | null>>;
   isMounted: () => boolean;
   setPracticeSessionQuestionMarkFn: SetPracticeSessionQuestionMarkFn;
+  recoverServerExpiredExam: () => Promise<void>;
 };
 
 export function usePracticeSessionMarkForReview(
@@ -159,6 +160,14 @@ export function usePracticeSessionMarkForReview(
         },
       );
       const reason = getActionResultPracticeSessionConflictReason(res);
+      // BUG-347: the server's deadline passed before the countdown reached
+      // zero. Flush the on-screen answer, as a refused draft save does.
+      if (reason === PracticeSessionConflictReasons.ExamTimeExpired) {
+        isMarkingRef.current = false;
+        setIsMarkingForReview(false);
+        await input.recoverServerExpiredExam();
+        return;
+      }
       if (reason === PracticeSessionConflictReasons.StateChangedConcurrently) {
         notify({
           message: STATE_CHANGED_CONCURRENTLY_NOTICE,
@@ -222,6 +231,7 @@ export function usePracticeSessionMarkForReview(
     input.setReview,
     input.applySessionInfo,
     input.setPracticeSessionQuestionMarkFn,
+    input.recoverServerExpiredExam,
     notify,
   ]);
 

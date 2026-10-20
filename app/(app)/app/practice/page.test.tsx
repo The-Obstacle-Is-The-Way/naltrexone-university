@@ -187,6 +187,8 @@ describe('app/(app)/app/practice', () => {
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
 
+          remainingMs: 72_000,
+
           index: 0,
           total: 10,
           isMarkedForReview: true,
@@ -264,6 +266,8 @@ describe('app/(app)/app/practice', () => {
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          remainingMs: 72_000,
 
           index: 0,
           total: 10,

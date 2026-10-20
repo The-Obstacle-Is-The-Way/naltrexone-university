@@ -41,6 +41,8 @@ function TutorCommitFocusHarness() {
 
           deadlineAt: null,
 
+          remainingMs: null,
+
           index: 0,
           total: 3,
           isMarkedForReview: false,

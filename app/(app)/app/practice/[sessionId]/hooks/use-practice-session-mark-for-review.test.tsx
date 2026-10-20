@@ -29,6 +29,7 @@ describe('usePracticeSessionMarkForReview', () => {
             questionId: crypto.randomUUID(),
             markedForReview: false,
           }),
+        recoverServerExpiredExam: () => Promise.resolve(),
       }),
     );
 

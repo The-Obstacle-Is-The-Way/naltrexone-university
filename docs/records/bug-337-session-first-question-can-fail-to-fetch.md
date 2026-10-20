@@ -12,6 +12,7 @@ In required E2E on CI, a practice session's page loaded, then its first question
 
 ## Evidence
 
+- **2026-10-20, #1575's CI (run 39370814142), twice.** `exam-timing.spec.ts` failed 2.3 s in: the timing request its window `focus` started was aborted (`net::ERR_ABORTED`), while 63 other tests passed and the same head passed locally. A local probe showed a window `focus` starts two requests at once, the app's server action and Clerk's `POST /v1/client/sessions/<id>/touch`; a `visibilitychange` starts only the app's. On the development instance the touch rewrites cookies, the race BUG-333 describes. The test now signals the tab return with `visibilitychange`. Whether the first-question failures below share this mechanism is not established.
 - **#1467's CI, 2026-10-11 22:25:49Z.** `review-mode-audit.spec.ts` › "session breakdown links open questions in review mode" failed in 3.1 s. `startSession` reported `Failed to fetch` | `Bookmarks unavailable.` The server output between 22:25:40Z and 22:25:52Z holds only normal request logs: no error and no E592 (BUG-334).
 - **#1467's earlier CI run, first attempt, 21:00:34Z.** The same spec, another test. A question page loaded without its answer choices, and the helper waited 30 s for radio D. This may be the same failure, but it is not shown.
 - **Not this PR's code.** #1467 changes no runtime file (`git diff origin/dev...HEAD` touches a test import and a comment), and its full local gate passed this spec three times.

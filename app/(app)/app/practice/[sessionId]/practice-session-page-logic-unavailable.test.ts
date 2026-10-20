@@ -46,6 +46,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
               index: 1,
               total: 2,
               deadlineAt: null,
+              remainingMs: null,
               isMarkedForReview: false,
             },
           }),
@@ -91,6 +92,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
               index: 1,
               total: 2,
               deadlineAt: null,
+              remainingMs: null,
               isMarkedForReview: false,
             },
           }),
@@ -152,6 +154,7 @@ describe('practice-session-page-logic, unavailable session items', () => {
       index: 0,
       total: 1,
       deadlineAt: null,
+      remainingMs: null,
       isMarkedForReview: false,
     },
   };

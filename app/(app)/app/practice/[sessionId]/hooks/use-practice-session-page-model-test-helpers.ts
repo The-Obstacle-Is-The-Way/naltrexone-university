@@ -34,6 +34,7 @@ export let PracticeSessionPageModelSubmitDuringReviewProbe: typeof import('./pra
 export let PracticeSessionPageModelViewProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelViewProbe;
 
 export const {
+  getPracticeSessionTimingMock,
   getNextQuestionMock,
   submitAnswerMock,
   getBookmarkQuestionIdsMock,
@@ -149,6 +150,7 @@ export function mockExamReviewNavigationSession() {
           session: {
             mode: 'exam',
             deadlineAt: '2099-05-22T12:02:24.000Z',
+            remainingMs: 72_000,
             index: questionIndex,
             total: 3,
             isMarkedForReview: false,
@@ -175,6 +177,8 @@ export function mockExamReviewNavigationSession() {
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          remainingMs: 72_000,
 
           index: 2,
           total: 3,
@@ -229,6 +233,9 @@ export function setupPracticeSessionPageModelBrowserSpec() {
   });
 
   beforeEach(() => {
+    getPracticeSessionTimingMock.mockResolvedValue(
+      errorResult('INTERNAL_ERROR', 'Timing unavailable'),
+    );
     getPracticeSessionSummaryMock.mockResolvedValue(
       errorResult('CONFLICT', 'Practice session has not ended'),
     );

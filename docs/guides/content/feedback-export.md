@@ -5,7 +5,7 @@ Question feedback is exported through a human-operated, read-only script:
 ```bash
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback > question-feedback.csv
-DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --format json > question-feedback.json
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback --format json > question-feedback.json
 ```
 
 The command does not load `.env.local` or `.env`: `DATABASE_URL` must be supplied explicitly.
@@ -19,8 +19,8 @@ bodies require explicit opt-in flags and should only be used for local editorial
 
 ```bash
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
-DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --include-user-id > question-feedback-raw-users.csv
-DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback --include-user-id > question-feedback-raw-users.csv
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback --include-comments > question-feedback-comments.csv
 ```
 
 Never run the export against a production database unless the output location and retention policy

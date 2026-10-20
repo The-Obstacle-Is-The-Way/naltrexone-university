@@ -68,6 +68,7 @@ function renderQuestionNavigationHarness() {
           sessionId: fixtureSession1Id,
           mode: 'exam',
           deadlineAt: '2099-05-22T12:02:24.000Z',
+          remainingMs: 72_000,
           index: questionIndex,
           total: 2,
           isMarkedForReview: false,
@@ -178,6 +179,8 @@ test('restores the question panel when next-question navigation enters loading b
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
 
+            remainingMs: 72_000,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -256,6 +259,8 @@ test('restores the question panel when navigation fails before the question id c
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
+
+            remainingMs: 72_000,
 
             index: 0,
             total: 2,
@@ -337,6 +342,8 @@ test('restores the question panel when retrying from an in-panel load error', as
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
+
+            remainingMs: 72_000,
 
             index: 0,
             total: 2,

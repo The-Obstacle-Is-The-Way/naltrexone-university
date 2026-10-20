@@ -87,6 +87,8 @@ describe('practice-session-page-logic effects', () => {
 
           deadlineAt: null,
 
+          remainingMs: null,
+
           index: 0,
           total: 2,
         },
@@ -117,6 +119,8 @@ describe('practice-session-page-logic effects', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 2,
@@ -155,6 +159,8 @@ describe('practice-session-page-logic effects', () => {
 
           deadlineAt: null,
 
+          remainingMs: null,
+
           index: 0,
           total: 2,
         },
@@ -189,6 +195,8 @@ describe('practice-session-page-logic effects', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 2,
