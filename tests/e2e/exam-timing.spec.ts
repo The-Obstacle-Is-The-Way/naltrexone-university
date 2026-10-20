@@ -86,6 +86,12 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // would restart performance.now.
   await page.clock.setSystemTime(Date.now() + CLOCK_SKEW_MS);
   await startSession(page, 'exam', 1);
+  // Server actions post to the page that calls them. Only the session page's
+  // own actions keep it busy: a starter-page action has been seen in flight
+  // more than 5 seconds after the session page loaded (BUG-337).
+  const sessionPath = new URL(page.url()).pathname;
+  const onSessionPage = (request: Request) =>
+    new URL(request.url()).pathname === sessionPath;
   await selectChoiceByLabel(page, 'A');
 
   const timer = page.getByRole('timer', { name: 'Exam time remaining' });
@@ -118,7 +124,7 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // the payload.
   // On a timeout, the poll's last value names what kept the page busy.
   const pageState = () => {
-    const inFlight = [...actionsInFlight].map(actionOf);
+    const inFlight = [...actionsInFlight].filter(onSessionPage).map(actionOf);
     return timingReadsFinished > 0 &&
       inFlight.length === 0 &&
       Date.now() - lastActionSettledAt >= QUIET_MS
