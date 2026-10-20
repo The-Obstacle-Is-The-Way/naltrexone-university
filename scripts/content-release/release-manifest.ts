@@ -14,8 +14,11 @@ import { z } from 'zod';
 // Format v3 also binds the selected revision: equal content can occur in
 // multiple immutable revisions, and reusing a release must not substitute one.
 // Format v4 freezes the bootstrap's historical candidates separately from
-// selectable items. Later releases carry an empty candidate list.
+// selectable items. Other v4 releases carry an empty candidate list.
+// Format v5 binds ordinary staged releases to their immutable source commit.
 export const RELEASE_MANIFEST_FORMAT = 'app-release-manifest-v4';
+export const SOURCE_MANIFEST_FORMAT = 'app-release-manifest-v5';
+export const CORPUS_COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 
 export const RELEASE_REMOVAL_KINDS = ['archived', 'draft', 'removed'] as const;
 export type ReleaseRemovalKind = (typeof RELEASE_REMOVAL_KINDS)[number];
@@ -25,6 +28,11 @@ export type ReleaseManifestEntry = ContentEntry & { revisionId: string };
 export type ReleaseManifestRemoval = { slug: string; kind: ReleaseRemovalKind };
 
 export type ReleaseManifest = (
+  | {
+      format: typeof SOURCE_MANIFEST_FORMAT;
+      items: ReleaseManifestEntry[];
+      corpusCommit: string;
+    }
   | {
       format: typeof RELEASE_MANIFEST_FORMAT;
       items: ReleaseManifestEntry[];
@@ -55,6 +63,7 @@ export function buildReleaseManifest(
   removals: readonly ReleaseManifestRemoval[] = [],
   format: ReleaseManifest['format'] = RELEASE_MANIFEST_FORMAT,
   preBootstrapCandidates: readonly string[] = [],
+  corpusCommit?: string,
 ): ReleaseManifest {
   if (format !== RELEASE_MANIFEST_FORMAT && preBootstrapCandidates.length > 0) {
     throw new Error('Legacy manifests cannot carry bootstrap candidates');
@@ -99,6 +108,13 @@ export function buildReleaseManifest(
     })),
     removals: sortedRemovals,
   };
+  if (format === SOURCE_MANIFEST_FORMAT) {
+    return {
+      format,
+      ...content,
+      corpusCommit: z.string().regex(CORPUS_COMMIT_PATTERN).parse(corpusCommit),
+    };
+  }
   return format === RELEASE_MANIFEST_FORMAT
     ? { format, ...content, preBootstrapCandidates: candidates }
     : { format, ...content };
@@ -111,6 +127,9 @@ export function canonicalReleaseManifestJson(
   manifest: ReleaseManifest,
 ): string {
   return JSON.stringify({
+    ...(manifest.format === SOURCE_MANIFEST_FORMAT
+      ? { corpusCommit: manifest.corpusCommit }
+      : {}),
     format: manifest.format,
     items:
       manifest.format === 'app-release-manifest-v2'
@@ -148,6 +167,14 @@ const removalsSchema = z.array(
     .strict(),
 );
 const storedManifestSchema = z.discriminatedUnion('format', [
+  z
+    .object({
+      format: z.literal(SOURCE_MANIFEST_FORMAT),
+      items: z.array(contentEntrySchema.extend({ revisionId: z.guid() })),
+      corpusCommit: z.string().regex(CORPUS_COMMIT_PATTERN),
+      removals: removalsSchema,
+    })
+    .strict(),
   z
     .object({
       format: z.literal('app-release-manifest-v2'),
