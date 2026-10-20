@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, type Request, test } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
@@ -12,6 +13,7 @@ test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 const EXAM_SECONDS = 72;
 const CLOCK_SKEW_MS = 20_000;
+const TIMING_ACTION = 'getPracticeSessionTiming';
 
 test('a fast browser clock preserves the answer until server exam expiry', async ({
   page,
@@ -22,6 +24,36 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   await runE2EUserStateReset();
   await signInWithClerkPassword(page);
   await ensureSubscribed(page);
+  // A server action posts to the page that calls it, with a Next-Action ID
+  // that Next.js salts per build; the build's manifest names it. Only the
+  // timing action's failure fails this test; every action that fails on the
+  // practice pages is logged by name as BUG-337 evidence.
+  const manifest = JSON.parse(
+    readFileSync('.next/server/server-reference-manifest.json', 'utf8'),
+  ) as { node: Record<string, { exportedName: string }> };
+  expect(
+    Object.values(manifest.node).map((entry) => entry.exportedName),
+  ).toContain(TIMING_ACTION);
+  const actionOf = (request: Request) => {
+    const id = request.headers()['next-action'] ?? 'no action';
+    return manifest.node[id]?.exportedName ?? id;
+  };
+  const isPagePost = (request: Request) =>
+    request.method() === 'POST' &&
+    new URL(request.url()).pathname === new URL(page.url()).pathname;
+  const isTimingRequest = (request: Request) =>
+    isPagePost(request) && actionOf(request) === TIMING_ACTION;
+  let timingAnswers = 0;
+  page.on('response', (response) => {
+    if (isTimingRequest(response.request())) timingAnswers += 1;
+  });
+  page.on('requestfailed', (request) => {
+    if (isPagePost(request))
+      console.warn(
+        `BUG-337 evidence: ${actionOf(request)} failed on a practice page: ${request.failure()?.errorText}`,
+      );
+  });
+
   // Playwright's clock replaces the page's Date and performance.now. Setting
   // it before the session page loads keeps both continuous on that page, 20
   // seconds fast, as on a machine whose clock runs ahead; a change mid-page
@@ -45,21 +77,17 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // must keep both the server countdown and the selection. The test signals
   // the return with visibilitychange, which the timer also handles, not a
   // window focus: on Clerk's development instance a focus also touches the
-  // session, and its cookie rewrite can abort the app's request (BUG-337). A
-  // failed request ends the wait at once and names its error, rather than
-  // waiting out the test.
-  const isTimingRequest = (request: Request) =>
-    request.method() === 'POST' &&
-    new URL(request.url()).pathname === new URL(page.url()).pathname;
-  // Other server actions post to the same page, such as the draft save that
-  // follows a selection; only the timing action's response carries
-  // remainingMs.
+  // session, and its cookie rewrites can abort a concurrent request (BUG-333,
+  // BUG-337). Once the timer's activation refresh has answered, the return
+  // starts a request of its own; if that request fails, the wait ends at once
+  // and names the error.
+  await expect
+    .poll(() => timingAnswers, {
+      message: 'The timer refreshes its timing on activation',
+    })
+    .toBeGreaterThan(0);
   const refreshed = Promise.race([
-    page.waitForResponse(
-      async (response) =>
-        isTimingRequest(response.request()) &&
-        (await response.text()).includes('remainingMs'),
-    ),
+    page.waitForResponse((response) => isTimingRequest(response.request())),
     page.waitForEvent('requestfailed', isTimingRequest).then((request) => {
       throw new Error(
         `The timing refresh failed: ${request.failure()?.errorText}`,
@@ -69,7 +97,9 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   await page.evaluate(() =>
     document.dispatchEvent(new Event('visibilitychange')),
   );
-  expect((await refreshed).ok()).toBe(true);
+  const response = await refreshed;
+  expect(response.ok()).toBe(true);
+  expect(await response.text()).toContain('remainingMs');
   await expect(timer).toBeVisible();
   expect(before - seconds(await remaining.textContent())).toBeLessThan(10);
   await expect(page.getByRole('radio').first()).toBeChecked();
