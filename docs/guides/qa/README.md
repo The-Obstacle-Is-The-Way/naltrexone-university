@@ -57,7 +57,7 @@ From the 2026-08-13 UI-coverage audit. Write a procedure when one is needed.
 
 ## Evidence
 
-Which steps get screenshots. Attach them to the pull request or the run's report, not the repository.
+Which steps get screenshots. Attach them to the pull request or the run's report, not the repository. A screen showing real question content stays out of public pull requests ([method](./method.md), Evidence).
 
 ## On failure
 
