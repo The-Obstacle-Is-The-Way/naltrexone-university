@@ -269,11 +269,11 @@ For authoring rules before a migration PR merges — pre-flight data proof, clea
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
 | **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
 
-Example for preview/production:
+Example for preview/production. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 
 ```bash
-DATABASE_URL="<non-production connection string>" pnpm db:migrate
-DATABASE_URL="<non-production connection string>" pnpm db:seed
+DATABASE_URL="<non-production connection string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
+DATABASE_URL="<non-production connection string>" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 ```
 
 If you are using Neon, fetch the connection string for the intended branch first and then pass it explicitly as `DATABASE_URL`.
@@ -289,7 +289,7 @@ Normal local authenticated E2E uses the resolver-scoped Docker database and runs
 ```bash
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
-DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
