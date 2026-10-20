@@ -18,6 +18,7 @@ import {
   parseReleaseManifest,
   type ReleaseRemovalKind,
   releaseManifestHash,
+  SOURCE_MANIFEST_FORMAT,
 } from './release-manifest';
 
 type Db = PostgresJsDatabase<typeof schema>;
@@ -140,6 +141,7 @@ type StageReleaseInput = {
   items: readonly ReleaseItem[];
   removals?: readonly ReleaseRemoval[];
   parentReleaseId: string | null;
+  corpusCommit?: string | undefined;
 };
 
 export async function stageRelease(
@@ -197,8 +199,9 @@ async function insertRelease(
       }
       return { slug, kind: removal.kind };
     }),
-    undefined,
+    input.corpusCommit === undefined ? undefined : SOURCE_MANIFEST_FORMAT,
     preBootstrapCandidates,
+    input.corpusCommit,
   );
   const release = onlyRow(
     await tx
@@ -334,6 +337,9 @@ export async function activateRelease(
         manifest.format === 'app-release-manifest-v4'
           ? manifest.preBootstrapCandidates
           : [],
+        manifest.format === SOURCE_MANIFEST_FORMAT
+          ? manifest.corpusCommit
+          : undefined,
       ),
     );
     // In id order, so the plan's withdrawals are, like its other sets.

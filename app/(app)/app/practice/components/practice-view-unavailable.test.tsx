@@ -34,6 +34,7 @@ function renderUnavailable(input: {
       sessionId: fixtureSession1Id,
       mode: input.mode,
       deadlineAt: null,
+      remainingMs: null,
       index: 1,
       total: 3,
       isMarkedForReview: false,
