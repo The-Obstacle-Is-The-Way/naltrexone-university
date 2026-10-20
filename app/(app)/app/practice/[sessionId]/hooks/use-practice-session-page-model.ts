@@ -37,6 +37,7 @@ import {
   getCompletedSessionQuestionsWithFeedback,
   getPracticeSessionReview,
   getPracticeSessionSummary,
+  getPracticeSessionTiming,
   saveExamDraftAnswer,
   setPracticeSessionQuestionMark,
 } from '@/src/adapters/controllers/practice-actions';
@@ -45,13 +46,8 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-actions';
-import { EXAM_FINAL_DRAFT_FLUSH_GRACE_MS } from '@/src/domain/services';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
-// Client-side optimization only: avoid sending a draft flush that is already
-// outside the shared server grace window. The server remains authoritative.
-const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
-  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
 type EndedSessionSummaryRecovery = {
   sessionId: string;
@@ -70,17 +66,6 @@ type PracticeSessionPageModelOutput = Omit<
   canSubmit: boolean;
   onSubmit: () => void;
 };
-
-function isFinalDraftFlushProvablyStale(input: {
-  deadlineAt: string | null | undefined;
-  nowMs: number;
-}): boolean {
-  if (typeof input.deadlineAt !== 'string') return false;
-  const deadlineMs = Date.parse(input.deadlineAt);
-  if (!Number.isFinite(deadlineMs)) return false;
-
-  return input.nowMs > deadlineMs + STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS;
-}
 
 export function usePracticeSessionPageModel(
   sessionId: string,
@@ -239,34 +224,16 @@ export function usePracticeSessionPageModel(
     expiryFinalizeInFlightRef.current = true;
 
     return (async () => {
-      // BUG-254: capture the on-screen draft BEFORE the save attempt. At the
-      // deadline the ordinary draft save is rejected as expired; rather than
-      // leaving that doomed save's only effect as an error state, we forward the
-      // captured selection to finalization so the server grades it.
-      const capturedFinalDraftAnswer = questionFlow.getCurrentExamDraft();
-      const finalDraftAnswer =
-        capturedFinalDraftAnswer &&
-        !isFinalDraftFlushProvablyStale({
-          deadlineAt: questionFlow.sessionInfo?.deadlineAt,
-          nowMs: Date.now(),
-        })
-          ? capturedFinalDraftAnswer
-          : undefined;
+      // BUG-254: forward the on-screen draft to finalization so the server
+      // grades it. BUG-347: the countdown reaches zero only after the server's
+      // deadline, so an ordinary draft save here is always refused; awaiting
+      // one could delay this flush past the server's grace window.
+      const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
       try {
-        await questionFlow.saveCurrentExamDraft();
-      } catch (error) {
-        if (isMounted()) {
-          reportClientError(error, {
-            component: 'UsePracticeSessionPageModel',
-            action: 'saveCurrentExamDraftOnTimerExpire',
-          });
-        }
-      }
-
-      if (!isMounted()) return false;
-      try {
-        const finalized =
-          await reviewStage.finalizeExamSession(finalDraftAnswer);
+        const finalized = await reviewStage.finalizeExamSession(
+          finalDraftAnswer,
+          { onlyIfExpired: true },
+        );
         if (!finalized && isMounted()) {
           expiryFinalizeInFlightRef.current = false;
         }
@@ -285,8 +252,6 @@ export function usePracticeSessionPageModel(
   }, [
     isMounted,
     questionFlow.getCurrentExamDraft,
-    questionFlow.saveCurrentExamDraft,
-    questionFlow.sessionInfo?.deadlineAt,
     reviewStage.finalizeExamSession,
   ]);
 
@@ -297,8 +262,17 @@ export function usePracticeSessionPageModel(
     !reviewStage.review &&
     !reviewStage.postExamSummary &&
     !reviewStage.postExamReview;
+  const readExamTiming = useCallback(async () => {
+    const result = await withTimeout(
+      getPracticeSessionTiming({ sessionId }),
+      STANDARD_READ_TIMEOUT_MS,
+    );
+    return result.ok ? result.data : null;
+  }, [sessionId]);
   const timerState = useExamTimer({
     deadlineAt: questionFlow.sessionInfo?.deadlineAt ?? null,
+    remainingMs: questionFlow.sessionInfo?.remainingMs ?? null,
+    readTiming: readExamTiming,
     isExamActive: isTimerActive,
     onExpire: finalizeExpiredExam,
   });
@@ -523,6 +497,7 @@ export function usePracticeSessionPageModel(
       setReview: reviewStage.setReview,
       isMounted,
       setPracticeSessionQuestionMarkFn: setPracticeSessionQuestionMark,
+      recoverServerExpiredExam: questionFlow.recoverServerExpiredExam,
     });
 
   return {

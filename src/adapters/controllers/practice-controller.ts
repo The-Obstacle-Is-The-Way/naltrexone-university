@@ -31,6 +31,8 @@ import type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryInput,
   GetPracticeSessionSummaryOutput,
+  GetPracticeSessionTimingInput,
+  GetPracticeSessionTimingOutput,
   GetSessionHistoryInput,
   GetSessionHistoryOutput,
   SaveExamDraftAnswerInput,
@@ -56,8 +58,10 @@ import {
   GetIncompletePracticeSessionOutputSchema,
   GetPracticeSessionReviewInputSchema,
   GetPracticeSessionSummaryInputSchema,
+  GetPracticeSessionTimingInputSchema,
   GetSessionHistoryInputSchema,
   PracticeSessionSummaryOutputSchema,
+  PracticeSessionTimingOutputSchema,
   SaveExamDraftAnswerInputSchema,
   SaveExamDraftAnswerOutputSchema,
   SetPracticeSessionQuestionMarkInputSchema,
@@ -148,6 +152,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: GetPracticeSessionSummaryInput,
     ) => Promise<GetPracticeSessionSummaryOutput>;
+  };
+  getPracticeSessionTimingUseCase: {
+    execute: (
+      input: GetPracticeSessionTimingInput,
+    ) => Promise<GetPracticeSessionTimingOutput>;
   };
   getSessionHistoryUseCase: {
     execute: (
@@ -370,7 +379,8 @@ export const finalizeExamAnswers = createAction({
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
 
-    const { sessionId, idempotencyKey, finalDraftAnswer } = input;
+    const { sessionId, idempotencyKey, finalDraftAnswer, onlyIfExpired } =
+      input;
 
     async function finalizeExam(): Promise<FinalizeExamAnswersOutput> {
       return FinalizeExamAnswersOutputSchema.parse(
@@ -378,6 +388,7 @@ export const finalizeExamAnswers = createAction({
           userId,
           sessionId,
           ...(finalDraftAnswer ? { finalDraftAnswer } : {}),
+          ...(onlyIfExpired !== undefined ? { onlyIfExpired } : {}),
         }),
       );
     }
@@ -446,6 +457,20 @@ export const getPracticeSessionSummary = createAction({
     const userId = await requireEntitledUserId(d, meta);
     return PracticeSessionSummaryOutputSchema.parse(
       await d.getPracticeSessionSummaryUseCase.execute({
+        userId,
+        sessionId: input.sessionId,
+      }),
+    );
+  },
+});
+
+export const getPracticeSessionTiming = createAction({
+  schema: GetPracticeSessionTimingInputSchema,
+  getDeps,
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
+    return PracticeSessionTimingOutputSchema.parse(
+      await d.getPracticeSessionTimingUseCase.execute({
         userId,
         sessionId: input.sessionId,
       }),

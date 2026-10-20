@@ -7,7 +7,9 @@ export {
 export {
   computeExamAllotmentSeconds,
   computeExamDeadline,
+  getPracticeSessionTiming,
   isExamExpired,
+  type PracticeSessionTiming,
   remainingExamSeconds,
 } from './exam-timer';
 export { type GradeResult, gradeAnswer } from './grading';

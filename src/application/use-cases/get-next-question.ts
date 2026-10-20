@@ -1,6 +1,5 @@
 import type { Question } from '@/src/domain/entities';
 import {
-  computeExamDeadline,
   countsIfEndedNow,
   createSeed,
   isExamExpired,
@@ -25,6 +24,7 @@ import {
   getEffectiveSelectedChoiceId,
   requirePracticeSessionQuestionState,
 } from '../shared/practice-session-state';
+import { getPracticeSessionTimingSnapshot } from '../shared/practice-session-timing';
 import {
   buildShuffledChoiceViews,
   type ChoiceExplanation,
@@ -68,6 +68,7 @@ export type NextQuestion = {
     index: number; // 0-based index within session
     total: number;
     deadlineAt: string | null;
+    remainingMs: number | null;
     isMarkedForReview?: boolean;
     latestSelectedChoiceId?: string | null;
     latestIsCorrect?: boolean | null;
@@ -114,6 +115,7 @@ export type UnavailableSessionQuestion = {
     index: number; // 0-based index within session
     total: number;
     deadlineAt: string | null;
+    remainingMs: number | null;
     isMarkedForReview: boolean;
   };
 };
@@ -278,7 +280,7 @@ export class GetNextQuestionUseCase {
           mode: session.mode,
           index: targetIndex,
           total: session.questionIds.length,
-          deadlineAt: computeExamDeadline(session)?.toISOString() ?? null,
+          ...getPracticeSessionTimingSnapshot(session, this.now()),
           isMarkedForReview: targetState.markedForReview,
         },
       };
@@ -308,7 +310,7 @@ export class GetNextQuestionUseCase {
         mode: session.mode,
         index: targetIndex,
         total: session.questionIds.length,
-        deadlineAt: computeExamDeadline(session)?.toISOString() ?? null,
+        ...getPracticeSessionTimingSnapshot(session, this.now()),
         isMarkedForReview: targetState.markedForReview,
         latestSelectedChoiceId: targetState.latestSelectedChoiceId,
         latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,

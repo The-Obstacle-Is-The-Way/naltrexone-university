@@ -27,6 +27,21 @@ describe('shouldCachePracticeSessionStateWriteError', () => {
     ).toBe(true);
   });
 
+  it('does not cache an exam expiry request that arrived early', () => {
+    expect(
+      shouldCachePracticeSessionStateWriteError(
+        new ApplicationError(
+          'CONFLICT',
+          'Exam time has not expired',
+          undefined,
+          {
+            details: { reason: 'exam_not_expired' },
+          },
+        ),
+      ),
+    ).toBe(false);
+  });
+
   it('caches generic and malformed errors', () => {
     expect(shouldCachePracticeSessionStateWriteError(new Error('boom'))).toBe(
       true,
