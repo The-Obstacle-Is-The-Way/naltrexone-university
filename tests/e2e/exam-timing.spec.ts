@@ -67,22 +67,40 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     if (onSessionPage(request)) lastActionSettledAt = Date.now();
     return true;
   };
-  page.on('request', (request) => {
-    if (isServerAction(request)) actionsInFlight.add(request);
-  });
-  page.on('requestfinished', (request) => {
-    if (settle(request) && actionOf(request) === TIMING_ACTION)
+  // An action is tracked by the first request of its redirect chain: a 307
+  // from Clerk's middleware finishes the first request and starts another,
+  // and the action settles only when the chain's last request does.
+  const rootOf = (request: Request) => {
+    let root = request;
+    for (let from = root.redirectedFrom(); from; from = from.redirectedFrom())
+      root = from;
+    return root;
+  };
+  const isRedirect = async (request: Request) => {
+    const status = (await request.response())?.status() ?? 0;
+    return status >= 300 && status < 400;
+  };
+  const settleAction = (request: Request) => {
+    const root = rootOf(request);
+    if (settle(root) && actionOf(root) === TIMING_ACTION)
       timingReadsSettled += 1;
+  };
+  page.on('request', (request) => {
+    const root = rootOf(request);
+    if (isServerAction(root)) actionsInFlight.add(root);
+  });
+  page.on('requestfinished', async (request) => {
+    if (!(await isRedirect(request))) settleAction(request);
   });
   page.on('requestfailed', (request) => {
-    if (settle(request) && actionOf(request) === TIMING_ACTION)
-      timingReadsSettled += 1;
+    settleAction(request);
+    const root = rootOf(request);
     if (
-      isServerAction(request) &&
-      new URL(request.url()).pathname.startsWith('/app/practice')
+      isServerAction(root) &&
+      new URL(root.url()).pathname.startsWith('/app/practice')
     )
       console.warn(
-        `BUG-337 evidence: ${actionOf(request)} failed on a practice page: ${request.failure()?.errorText}`,
+        `BUG-337 evidence: ${actionOf(root)} failed on a practice page: ${request.failure()?.errorText}`,
       );
   });
 
@@ -115,8 +133,9 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // BUG-337). The return is signalled once an activation read has settled
   // and no server action has been in flight for QUIET_MS. The return's read is
   // a timing read still in flight, which the timer would reuse, or else the
-  // next one, followed to requestfinished or requestfailed: a response can
-  // arrive before its request is aborted. A read that finishes must succeed.
+  // next one, followed through any redirect to its last request's
+  // requestfinished or requestfailed: a response can arrive before its
+  // request is aborted. A read that finishes must succeed.
   // A failed read doesn't fail the test, at activation or on the return. The
   // timer keeps its last server sample, and the checks below hold either way;
   // timing reads are aborted for a reason not yet known (BUG-337), in about
@@ -141,15 +160,18 @@ test('a fast browser clock preserves the answer until server exam expiry', async
     })
     .toBe('quiet');
   const returnRead = new Promise<Request>((resolve) => {
-    let returnRequest = [...actionsInFlight].find(isTimingRequest);
+    let returnRoot = [...actionsInFlight].find(isTimingRequest);
     page.on('request', (request) => {
-      if (!returnRequest && isTimingRequest(request)) returnRequest = request;
+      const root = rootOf(request);
+      if (!returnRoot && isTimingRequest(root)) returnRoot = root;
     });
-    const settleReturn = (request: Request) => {
-      if (request === returnRequest) resolve(request);
-    };
-    page.on('requestfinished', settleReturn);
-    page.on('requestfailed', settleReturn);
+    page.on('requestfinished', async (request) => {
+      if (rootOf(request) === returnRoot && !(await isRedirect(request)))
+        resolve(request);
+    });
+    page.on('requestfailed', (request) => {
+      if (rootOf(request) === returnRoot) resolve(request);
+    });
   });
   await page.evaluate(() =>
     document.dispatchEvent(new Event('visibilitychange')),
