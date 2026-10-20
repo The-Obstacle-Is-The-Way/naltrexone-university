@@ -54,18 +54,32 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `applies the flush within the deadline grace window`
 - `src/application/use-cases/finalize-exam-answers-final-draft.test.ts`: `drops a flush arriving after the grace window and still finalizes`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `sends a final draft after a backgrounded exam resumes beyond grace so the server decides its cutoff`
+
+The server owns expiry. The browser counts down from server remaining time, using monotonic elapsed time, and refreshes on return. A timer request before server expiry preserves the draft and retries; manual early submission remains allowed. An expired, unfinalized exam still appears as unfinished, and draft review hides correctness. Summary and completed feedback require committed finalization.
+
+- `src/application/use-cases/finalize-exam-answers-deadline.test.ts`: `refuses timer finalization before expiry even without a final draft`
+- `src/application/use-cases/finalize-exam-answers-deadline.test.ts`: `keeps early exam finalization endedAt at now`
+- `src/adapters/controllers/practice-controller-finalize-idempotency-conflicts.test.ts`: `retries an early expiry with the same key and grades its final draft at the server deadline`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `resynchronizes a premature expiry without losing the selection after a failed save`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `requires committed finalization before summary or completed feedback`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `lists the unfinished exam and its draft review without grading it`
 
 ### R8. Only an unfinished exam can be discarded. A tutor session, whose answers are graded attempts, can only be ended, so its attempts are never deleted. Discarding a session that is already gone is a silent success.
 
 - `src/application/use-cases/discard-practice-session.test.ts`: `rejects discarding a tutor session and leaves it intact`
 - `src/application/use-cases/discard-practice-session.test.ts`: `is idempotent when the session is missing or already discarded`
 - `src/application/use-cases/end-practice-session.test.ts`: `rejects generic end for an active exam session`
+- `src/application/use-cases/expired-exam-read-policy.test.ts`: `discards an expired unfinalized exam without grading its saved draft`
 
-### R9. Marking a question for review exists only inside an active exam.
+### R9. Marking a question for review exists only inside an unfinished exam before its server deadline. Expiry refuses the mark, and the mark never finalizes the exam; the page answers the refusal with the expiry flush, carrying the on-screen answer.
 
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `persists marked-for-review state for exam sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT for tutor sessions`
 - `src/application/use-cases/set-practice-session-question-mark.test.ts`: `throws CONFLICT when session is already ended`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `allows a mark one millisecond before expiry`
+- `src/application/use-cases/set-practice-session-question-mark.test.ts`: `refuses a mark %i ms after expiry without finalizing the exam`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx`: `flushes the on-screen answer when the server refuses a mark after its deadline`
 
 ### R16. A learner always sees a question's choices in the same order, seeded by both the learner and the question.
 
@@ -93,6 +107,13 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/shared/question-availability-contract.ts`: `$name, read through either revision`
 - `tests/shared/question-availability-contract.ts`: `$name, read by id`
 
+A hold blocks its exact revision from activation. A published replacement remains available without lifting the old hold. Once unpublished, any unresolved hold keeps the question Under review and unscored. A direct lift of the last hold leaves an omitted question Retired; it does not republish it.
+
+- `tests/integration/content-hold-scope.integration.test.ts`: `lifts a named old hold after retirement without republishing or rewriting history`
+- `tests/integration/content-hold-scope.integration.test.ts`: `keeps an old revision held on rollback until its named hold is lifted`
+- `tests/integration/content-hold-scope.integration.test.ts`: `lifts an old hold while its replacement stays live and never retargets a later hold`
+- `tests/integration/content-hold-scope.integration.test.ts`: `requires a named key return for a hold-ID lift and rolls back an unnamed lift`
+
 ### R19. A question no longer available shows its content only to a learner who answered it, never on an omitted or unanswered item, whether it was withdrawn, is under review or was retired.
 
 - `tests/integration/withdrawn-question-review.integration.test.ts`: `finalizes an exam with an unanswered item, then hides it from every review once withdrawn`
@@ -105,9 +126,10 @@ This register replaces the Gherkin acceptance-test harness this file once propos
 - `tests/integration/scores-when-content-changes.integration.test.ts`: `agrees across the summary, History and the Dashboard as content changes during and after an exam`
 - `src/application/use-cases/get-user-stats.test.ts`: `leaves a withdrawn question out of accuracy, not out of activity`
 
-### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed.
+### R21. An answer graded on an answer key corrected since is left out of every score, says so on review, and returns to the Incorrect practice filter. A stored grade is never changed. The seed's whitespace normalization alone does not correct an answer key.
 
 - `tests/shared/attempt-score-contract.ts`: `$name`
+- `tests/integration/answer-key-normalization.integration.test.ts`: `$name agrees between question reads and aggregate scores`
 - `tests/integration/question-repository-key-corrections.integration.test.ts`: `includes a latest answer whose key was corrected since, but not one whose stem was reworded`
 - `tests/integration/seed-revision-append.integration.test.ts`: `keeps a graded attempt on its revision and grade after a key correction`
 - `components/question/question-update-notice.test.tsx`: `says the attempt is not scored and links to the corrected question`

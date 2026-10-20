@@ -32,6 +32,7 @@ import type {
   GetPracticeSessionReviewOutput,
   GetPracticeSessionSummaryOutput,
 } from '@/src/adapters/controllers/practice-controller';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import type {
   GetNextQuestionOutput,
   NextQuestion,
@@ -53,6 +54,7 @@ type LoadNextQuestionOptions = {
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;
   finalDraftAnswer?: ExamDraftAnswer;
+  onlyIfExpired?: boolean;
 };
 type PracticeSessionFinalizationOutput =
   | EndPracticeSessionOutput
@@ -276,6 +278,7 @@ export async function endSession(input: {
   sessionId: string;
   endSessionIdempotencyKey: string;
   finalDraftAnswer?: ExamDraftAnswer | undefined;
+  onlyIfExpired?: boolean | undefined;
   finalizeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<PracticeSessionFinalizationOutput>>;
@@ -298,6 +301,7 @@ export async function endSession(input: {
       input.finalizeSessionFn({
         sessionId: input.sessionId,
         idempotencyKey: input.endSessionIdempotencyKey,
+        ...(input.onlyIfExpired ? { onlyIfExpired: true } : {}),
         ...(input.finalDraftAnswer
           ? { finalDraftAnswer: input.finalDraftAnswer }
           : {}),
@@ -322,6 +326,13 @@ export async function endSession(input: {
     let recoveryErrorMessage: string | null = null;
     const practiceSessionConflictReason =
       getActionResultPracticeSessionConflictReason(res);
+    if (
+      practiceSessionConflictReason ===
+      PracticeSessionConflictReasons.ExamNotExpired
+    ) {
+      input.setLoadState({ status: 'ready' });
+      return false;
+    }
     const isLegacyReasonlessConflict =
       res.error.code === 'CONFLICT' && res.error.details?.reason === undefined;
     const shouldAttemptSessionRecovery =

@@ -1,6 +1,6 @@
 # ADR-021: Immutable Question Revisions and Atomic Content Releases
 
-**Status:** Accepted, as amended 2026-10-03 (the contract step is not pursued; see [Amendment](#amendment--2026-10-03-the-contract-step-is-not-pursued)) and 2026-10-18 (release identity includes selected revisions, pre-bootstrap candidates are frozen, and answer-key returns are named; see the amendments on [release identity](#amendment--2026-10-18-release-identity-includes-selected-revisions), [candidates](#amendment--2026-10-18-freeze-pre-bootstrap-candidates) and [key returns](#amendment--2026-10-18-name-answer-key-returns)) and 2026-10-19 (commit-bound source admission; see the [source amendment](#amendment--2026-10-19-admit-content-main-commits))
+**Status:** Accepted, as amended 2026-10-03 (the contract step is not pursued; see [Amendment](#amendment--2026-10-03-the-contract-step-is-not-pursued)) and 2026-10-18 (release identity includes selected revisions, pre-bootstrap candidates are frozen, and answer-key returns are named; see the amendments on [release identity](#amendment--2026-10-18-release-identity-includes-selected-revisions), [candidates](#amendment--2026-10-18-freeze-pre-bootstrap-candidates) and [key returns](#amendment--2026-10-18-name-answer-key-returns)) and 2026-10-19 (hold scope and direct named lifts; commit-bound source admission; see the [hold-scope](#amendment--2026-10-19-hold-scope-and-direct-named-lifts) and [source](#amendment--2026-10-19-admit-content-main-commits) amendments)
 **Date:** 2026-09-27; release-zero hash form decided 2026-09-28
 **Implementation:** Decisions 1–3 and phases 1–3 are in production as of 2026-09-30 (DEBT-484, resolved). Phase 4 is in production as of 2026-10-02 (DEBT-483, resolved), built in steps from its design (DEBT-483). Its first, 4a (migrations `0045` and `0046`, 2026-10-01), records withdrawals. 4b (migration `0047`) adds releases, holds, the pointer and the activation engine. 4c-i (migration `0048`) adds the operator commands: bootstrap, activate with rollback, and holds. 4c-ii adds staging (`stage-release.ts`) as the release builder (decision 6); the seed itself refuses a database with an active release. 4d demonstrates DEBT-483's Verification on a disposable database. DEBT-489's fix makes every removal explicit and binds each apply to its reviewed plan, and migration `0049` (DEBT-490) records each activation's reason and authority. The contract step is not pursued (see the 2026-10-03 amendment). The first production bootstrap, the managed seed's switch to staging and release zero are Deferred. DEBT-492 closed the release-safety gaps, and DEBT-490 records each decision; both are released, so the bootstrap, the owner's call, waits on nothing in engineering.
 **Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
@@ -184,6 +184,14 @@ Clinical review remains in the content repository.
 - DEBT-483, DEBT-484
 - [Migration Authoring](../guides/database/migrations.md)
 - Content repository: SPEC-005, SPEC-007, ADR-001 (repository boundary)
+
+## Amendment — 2026-10-19: hold scope and direct named lifts
+
+A hold excludes exactly its revision from activation and rollback. Publishing a different revision does not lift the hold. An unpublished question with any unlifted hold remains under clinical review under ADR-022; replacing or retiring content does not declare that review complete.
+
+An operator may lift a hold by its stable hold ID even when the active release names another revision or omits the question. A lift by question still targets only the revision named by the active release. A named lift never targets a later hold on the same revision. The decision requires a reason and authority.
+
+The lift and re-application of the active release are one transaction under the release-pointer lock. A lift cannot publish an omitted question or defeat a withdrawal or another hold. The answer-key-return rule still applies; refusing an unnamed return also refuses the lift. No active release means no hold or lift. Bootstrap timing remains the owner's decision.
 
 ## Amendment — 2026-10-19: admit content main commits
 

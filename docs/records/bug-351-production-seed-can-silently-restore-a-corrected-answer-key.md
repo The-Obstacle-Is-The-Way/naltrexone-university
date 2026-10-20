@@ -45,7 +45,9 @@ Before part 1, reproduced on 2026-10-17 on a disposable local database, with the
 **The seed:**
 - `scripts/seed/question-syncer.ts:257-266` compares the file with the current revision only, and appends a revision when they differ. `scripts/seed/question-revision-writer.ts:77-85` makes it current at once.
 - The report is counts only (`scripts/seed/seed-summary.ts`).
-- `pnpm db:seed:prod -- --plan` prints only the target database (`scripts/seed-environment-targets.ts:100-103`). There is no content preview.
+- `pnpm db:seed:prod --plan` prints only the target database (`scripts/seed-environment-targets.ts:100-103`). There is no content preview.
+
+  *Corrected 2026-10-19: removed the extra pnpm separator, which the entry point rejects before showing the plan.*
 - The production seed imports `content/drafts/questions` with `--status published` (`scripts/prepare-seed-corpus.ts:24`, `scripts/import-draft-questions.ts:20`). That folder is untracked, and a manual copy refreshes it.
 - `pnpm db:seed` reads the configured MDX corpus under `content/questions/` without importing drafts; `imported/` is part of that corpus. Its remote-target acknowledgment is a separate protection from content freshness.
 - Each question is its own transaction, so a refusal partway through a run leaves the earlier questions written.
@@ -154,7 +156,7 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 
 ## Resolution
 
-**Owner, due 2026-10-24:** compare production's published current keys with one pinned commit on the content repository's `main`: with an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/compare-live-keys.ts --repo <content repository> --commit <full commit ID>`. It reads the commit as the first release after the bootstrap will, compares the release planner's normalized keys in one read-only transaction, and prints only counts (live questions, commit questions, live questions missing from the commit, commit questions not live, differing keys) and the commit ID. Engineering makes no remote database connection. This command ships with part 3, which must reach `dev` before the check. Run the diagnostic below once, as a second check. A mismatch needs investigation, not an automatic verdict.
+**Owner, due 2026-10-24:** compare production's published current keys with one pinned commit on the content repository's `main`: with an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/compare-live-keys.ts --repo <content repository> --commit <full commit ID>`. It reads the commit as the first release after the bootstrap will, compares the release planner's normalized keys in one read-only transaction, and prints only counts (live questions, commit questions, live questions missing from the commit, commit questions not live, differing keys) and the commit ID. Engineering makes no remote database connection. This command ships with part 3, which must reach `dev` before the check. Run the key-return census below once, as a second check. A mismatch needs investigation, not an automatic verdict.
 
 **Until the fix ships:** seed production only from a copy refreshed from that pinned commit, and review the changes against live content. Move each clone's March 31 backup out of `content/drafts/`; that is the owner's call.
 
@@ -172,47 +174,10 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 - [x] The owner's comparison command: `content-live-key-comparison.integration.test.ts` proves it on real Postgres with live content written by the seed: a matching commit, a changed key, a live question the commit lacks, one not live, stored key text that differs only in spacing, draft exclusion, counts-only output and no writes. A raw-text comparison failed the spacing case.
 - [x] Part 3: `content-source.test.ts` and `content-release-source.integration.test.ts` prove archived main input, first-parent ordering, watermark serialization, stale staging and activation refusal, rollback without a repository, hold reapplication, source-bound identity and plans, and unchanged bootstrap. The initial unit run failed one manifest assertion and the missing source module; all five initial command cases failed. Disposition tests failed before the publication flags were added. The verified-baseline cases (`starts the first release after the bootstrap only from the verified baseline or later`, and the unit cases under "the first release after the bootstrap") and the hook-variable case (`leaves the repository a hook's GIT_DIR names untouched`) failed before their fixes.
 - [x] `docs/architecture/content-pipeline.md` describes the implemented input, dispositions, source order and bootstrap boundary.
-- [ ] The owner runs this **candidate-recurrence diagnostic** once. It compares raw correct-label/text keys in revision-creation order, matching ADR-022's fields. It does not establish publication order, clinical error or an incident.
+- [ ] The owner runs the **key-return census** once, as a second check: with an explicit authorized `DATABASE_URL`, `pnpm exec tsx scripts/content-release/census-key-returns.ts`. In one read-only, repeatable-read transaction it counts revisions whose answer key changed from the one before and matches an earlier revision's. The key is ADR-022's, each correct choice's exact label and normalized text, as every score and release comparison reads it, so a difference only in spacing neither hides a return nor makes one. It prints only counts. It does not establish publication order, clinical error or an incident.
   - Staged revisions and repairs count. Re-activating an old revision creates no revision and can be missed. History predating append-only storage is incomplete. Published-current and answered-attempt counts narrow the candidates; an attempt proves use, not that its key was clinically wrong.
-  - The synthetic regression/repair/staged-copy case returns 3 candidates, 1 question, 1 published current candidate, 0 bound attempts, 0 answered attempts and 0 malformed keys. The third candidate was never activated.
-
-  ```sql
-  begin transaction isolation level repeatable read read only;
-  with keyed as (
-    select r.id, r.question_id, r.revision_number,
-      count(c.id) filter (where c.is_correct) as key_choices,
-      coalesce(jsonb_agg(jsonb_build_array(c.label, c.text_md)
-        order by c.label, c.text_md) filter (where c.is_correct), '[]'::jsonb) as answer_key
-    from question_revisions r
-    left join choices c on c.question_revision_id = r.id
-    group by r.id, r.question_id, r.revision_number
-  ), stepped as (
-    select *,
-      lag(answer_key) over (partition by question_id order by revision_number) as previous_key,
-      lag(key_choices) over (partition by question_id order by revision_number) as previous_key_choices
-    from keyed
-  ), candidates as (
-    select s.id, s.question_id from stepped s
-    where s.key_choices = 1 and s.previous_key_choices = 1
-      and s.previous_key <> s.answer_key
-      and exists (
-        select 1 from keyed k
-        where k.question_id = s.question_id
-          and k.revision_number < s.revision_number
-          and k.key_choices = 1 and k.answer_key = s.answer_key
-      )
-  )
-  select
-    (select count(*) from candidates) as candidate_revisions,
-    (select count(distinct question_id) from candidates) as questions,
-    (select count(*) from candidates c join questions q on q.current_revision_id = c.id
-      where q.status = 'published') as published_current_candidates,
-    (select count(*) from attempts a where a.question_revision_id in (select id from candidates)) as attempts_bound,
-    (select count(*) from attempts a where a.selected_choice_id is not null
-      and a.question_revision_id in (select id from candidates)) as answered_attempts_bound,
-    (select count(*) from keyed where key_choices <> 1) as malformed_key_revisions;
-  rollback;
-  ```
+  - `content-key-return-census.integration.test.ts` proves it on real Postgres: a corrected key that returns, one whose stored text differs only in spacing, a correct answer that moves back to its earlier label, a spacing-only change that is not a return, and malformed keys. A raw-text comparison failed both spacing cases.
+  - Corrected 2026-10-19: this item gave inline SQL that compared raw text, which can miss a return differing only in spacing; the tested census replaces it.
 
 ## Related
 
