@@ -228,7 +228,7 @@ Sentry is the error and alert channel, with a browser project on the public key 
 
 ### ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
-Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 35 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
+Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 39 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
 
 ---
 
