@@ -8,7 +8,9 @@
 
 ## Summary
 
-A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. Before part 2, the release builder refused only part of the same case. Production will use it after the bootstrap (DEBT-483). Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse. Part 2 names changes and returns in both previews, freezes the earlier revision candidates at bootstrap, and requires named returns at activation. Part 3 now binds release commands to source commits and a watermark. Direct pre-bootstrap seeding remains unchanged; rollout waits for the owner's bootstrap-order decision. The bootstrap alone does not fix it.
+A production seed run from an out-of-date copy of the questions puts a corrected answer key back live, with no warning. Before part 2, the release builder refused only part of the same case. Production will use it after the bootstrap (DEBT-483). Before part 1, it could also refuse the correct content after a repair. Part 1 fixes that match and release reuse. Part 2 names changes and returns in both previews, freezes the earlier revision candidates at bootstrap, and requires named returns at activation. Part 3 now binds release commands to source commits and a watermark, and the first release after the bootstrap starts from the owner-verified baseline. The owner chose on 2026-10-19 to bootstrap before any further production seed, so direct pre-bootstrap seeding gets no separate guard. The bootstrap alone does not fix it.
+
+Corrected 2026-10-20: this summary and option 1 said rollout waited for the owner's bootstrap-order decision; the owner decided it on 2026-10-19.
 
 Before part 1, reproduced on 2026-10-17 on a disposable local database, with the public placeholder question; independently repeated with entirely synthetic content through the same seed, builder and activation functions:
 - **1–2. Seed and correct.** Seed key A, then the corrected key B: R1 (key A), then R2 (key B), live.
@@ -86,8 +88,8 @@ P2: a reachable, operator-triggered content regression with a manual workaround:
 
 ## Options
 
-1. **Prefer the live revision, name every answer-key change, and admit only forward commits of the content repository's `main`.** *Recommended.* Three small parts, each red first. Parts 1 and 2 and the post-bootstrap part of 3 are built. A direct-seed guard depends on the owner's order decision below.
-2. **Bootstrap first, then the same steps in the builder only.** The seed then refuses production. Choose this if the owner schedules the bootstrap before part 3 ships.
+1. **Prefer the live revision, name every answer-key change, and admit only forward commits of the content repository's `main`.** *Recommended.* Three small parts, each red first. Parts 1, 2 and 3 are built. The owner's bootstrap-first order (2026-10-19, below) makes a direct-seed guard unnecessary.
+2. **Bootstrap first, then the same steps in the builder only.** The seed then refuses production. The owner chose this order on 2026-10-19.
 3. **Bootstrap alone (DEBT-483).** This does not establish source freshness. Before part 2, the builder accepted step 8. Before part 1 it also refused step 6.
 4. **Process only:**
    - refresh drafts from the content repository's `main` before every production seed;
@@ -154,7 +156,7 @@ The strict authoring schema has no publication status (`scripts/draft-question-i
 - A release with no commit activates only as a rollback.
 - If the owner requires the pre-bootstrap seed guard, an interrupted seed must finish by rerunning the same commit. This conditional path is not built.
 
-## Resolution
+## Resolution (decided)
 
 **Owner, due 2026-10-24:** compare production's published current keys with one pinned commit on the content repository's `main`: with an explicit authorized `DATABASE_URL`, run `pnpm exec tsx scripts/content-release/compare-live-keys.ts --repo <content repository> --commit <full commit ID>`. It reads the commit as the first release after the bootstrap will, compares the release planner's normalized keys in one read-only transaction, and prints only counts (live questions, commit questions, live questions missing from the commit, commit questions not live, differing keys) and the commit ID. Engineering makes no remote database connection. This command ships with part 3, which must reach `dev` before the check. Run the key-return census below once, as a second check. A mismatch needs investigation, not an automatic verdict.
 
