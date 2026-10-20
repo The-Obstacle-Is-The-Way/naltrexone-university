@@ -600,10 +600,10 @@ Seeding requires two things:
 
 Because real content is gitignored, you must ensure the environment running `pnpm db:seed` has the MDX files available (for example, by syncing from a private content repo, or running the seed from your local machine against the remote database).
 
-Before seeding, ensure the target database schema is up to date:
+Before seeding, ensure the target database schema is up to date. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 
 ```bash
-DATABASE_URL="<target-db-url>" pnpm db:migrate
+DATABASE_URL="<target-db-url>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```
 
 The seed refuses a database with an active content release (ADR-021 phase 4b). Once a release is active, content changes only through releases: see [Releases](#releases-bootstrap-stage-activate-roll-back-and-hold). This document does not record whether a release is active in any remote database. The migration 0049 notice is historical evidence, not a current census; bootstrapping production remains the owner's decision (DEBT-483).

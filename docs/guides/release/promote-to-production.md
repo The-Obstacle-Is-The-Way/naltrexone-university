@@ -238,14 +238,14 @@ seed of a commit before `0042` fails on the retired revision-sync function.
 
 ## 3. Data-Affecting Migration Pattern
 
-When a migration changes enums, renames columns, or otherwise affects data that the seed script populates (e.g., tag taxonomy changes), the migration SQL itself should include the necessary data cleanup. This keeps the procedure to two commands:
+When a migration changes enums, renames columns, or otherwise affects data that the seed script populates (e.g., tag taxonomy changes), the migration SQL itself should include the necessary data cleanup. This keeps the procedure to two commands. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass, as in the manual reseed above:
 
 ```bash
 # 1. Apply schema migration (includes any required data cleanup)
-DATABASE_URL="<target>" pnpm db:migrate
+DATABASE_URL="<target>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 
 # 2. Rebuild data from canonical source (MDX files)
-DATABASE_URL="<target>" pnpm db:seed
+DATABASE_URL="<target>" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 
 # 3. Verify (optional — recommended for production)
 #    SELECT kind, COUNT(*) FROM tags GROUP BY kind;
