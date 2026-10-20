@@ -52,13 +52,19 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // session's server actions are aborted in bursts that last under a second
   // (BUG-337), and a return read caught in one fails for a reason this test
   // isn't about. So the test keeps the page's server actions in flight, when
-  // the last one settled, and how many timing reads settled.
+  // the last session-page action settled, and how many timing reads settled.
+  // Server actions post to the page that calls them. Only the session page's
+  // own actions keep it busy: a starter-page action has been seen in flight
+  // more than 5 seconds after the session page loaded (BUG-337).
+  let sessionPath: string | undefined;
+  const onSessionPage = (request: Request) =>
+    new URL(request.url()).pathname === sessionPath;
   const actionsInFlight = new Set<Request>();
   let lastActionSettledAt = Date.now();
   let timingReadsSettled = 0;
   const settle = (request: Request) => {
     if (!actionsInFlight.delete(request)) return false;
-    lastActionSettledAt = Date.now();
+    if (onSessionPage(request)) lastActionSettledAt = Date.now();
     return true;
   };
   page.on('request', (request) => {
@@ -86,12 +92,8 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // would restart performance.now.
   await page.clock.setSystemTime(Date.now() + CLOCK_SKEW_MS);
   await startSession(page, 'exam', 1);
-  // Server actions post to the page that calls them. Only the session page's
-  // own actions keep it busy: a starter-page action has been seen in flight
-  // more than 5 seconds after the session page loaded (BUG-337).
-  const sessionPath = new URL(page.url()).pathname;
-  const onSessionPage = (request: Request) =>
-    new URL(request.url()).pathname === sessionPath;
+  sessionPath = new URL(page.url()).pathname;
+  lastActionSettledAt = Date.now();
   await selectChoiceByLabel(page, 'A');
 
   const timer = page.getByRole('timer', { name: 'Exam time remaining' });
