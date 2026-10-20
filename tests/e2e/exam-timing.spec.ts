@@ -80,7 +80,10 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // session, and its cookie rewrites can abort a concurrent request (BUG-333,
   // BUG-337). Once the timer's activation refresh has answered, the return
   // starts a request of its own; if that request fails, the wait ends at once
-  // and names the error.
+  // and names the error. The manifest name identifies the response, so the
+  // test does not read its body: Chrome can discard a server action's body
+  // before Playwright asks for it ("No data found for resource"), and the
+  // controller's timing tests cover the payload.
   await expect
     .poll(() => timingAnswers, {
       message: 'The timer refreshes its timing on activation',
@@ -99,7 +102,6 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   );
   const response = await refreshed;
   expect(response.ok()).toBe(true);
-  expect(await response.text()).toContain('remainingMs');
   await expect(timer).toBeVisible();
   expect(before - seconds(await remaining.textContent())).toBeLessThan(10);
   await expect(page.getByRole('radio').first()).toBeChecked();
