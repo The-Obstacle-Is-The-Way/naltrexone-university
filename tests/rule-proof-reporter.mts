@@ -28,6 +28,7 @@ declare module 'vitest' {
 
 export class RuleProofReporter implements Reporter {
   private root = process.cwd();
+  private ctx: Vitest | undefined;
   private focused = false;
   private configuredFilter = false;
   constructor(
@@ -36,6 +37,7 @@ export class RuleProofReporter implements Reporter {
   ) {}
 
   onInit(ctx: Vitest) {
+    this.ctx = ctx;
     this.root = ctx.config.root;
     // parseCLI mutates its input; never hand it process.argv itself.
     const { filter, options } = parseCLI(['vitest', ...process.argv.slice(2)]);
@@ -69,7 +71,7 @@ export class RuleProofReporter implements Reporter {
     ].some(hasFilter);
   }
 
-  onTestRunEnd(
+  async onTestRunEnd(
     modules: ReadonlyArray<TestModule>,
     errors: ReadonlyArray<unknown>,
     reason: TestRunEndReason,
@@ -84,6 +86,16 @@ export class RuleProofReporter implements Reporter {
       throw new Error(
         'Rule proof audit failed: configuration filters a required unfiltered run',
       );
+    // A run started through Vitest's API (an editor, Stryker) can filter files
+    // without process.argv; only a run of every lane file is a receipt.
+    const ran = new Set(modules.map((module) => module.moduleId));
+    const lane = (await this.ctx?.globTestSpecifications()) ?? [];
+    if (lane.some((specification) => !ran.has(specification.moduleId))) {
+      console.warn(
+        `Rule proofs: ${this.lane} SKIPPED (run covered part of the lane; not a full-lane receipt)`,
+      );
+      return;
+    }
     const { rules, problems } = parseRuleRegister(
       readFileSync(path.resolve(this.root, this.registerPath), 'utf8'),
     );
@@ -110,8 +122,13 @@ export class RuleProofReporter implements Reporter {
     for (const file of globSync('**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}', {
       cwd: this.root,
       dot: true,
+      // Tool-made copies (Stryker sandboxes, agent worktrees, installed
+      // packages) repeat real proofs but are not this repository's source.
       ignore: [
-        'node_modules/**',
+        '**/node_modules/**',
+        '.stryker-tmp/**',
+        '.claude/**',
+        '.codex/**',
         '.git/**',
         '.next/**',
         '.vercel/**',

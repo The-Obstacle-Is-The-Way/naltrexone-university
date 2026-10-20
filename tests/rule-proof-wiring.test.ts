@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import ts from '@typescript/typescript6';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { configDefaults } from 'vitest/config';
 import { parse } from 'yaml';
 import { auditExecutedRuleProofs } from './rule-proof-contract.mts';
+import { RuleProofReporter } from './rule-proof-reporter.mts';
 import {
   parseRuleRegister,
   RULE_REGISTER_PATH,
@@ -97,6 +99,36 @@ describe('required rule proof wiring', () => {
       ),
     ).toBe(false);
   });
+  describe('the mutation run', () => {
+    type Config = { test: Record<string, unknown> & { reporters: unknown[] } };
+    let unit: Config;
+    let mutation: Config;
+    beforeAll(async () => {
+      const { vitest } = JSON.parse(
+        readFileSync('stryker.config.json', 'utf8'),
+      );
+      unit = (await import('../vitest.config.mts')).default as Config;
+      mutation = (await import(`../${vitest.configFile}`)).default as Config;
+    });
+    it('runs Stryker on the unit settings without the full-lane receipt, because its runs are partial', () => {
+      const { reporters, ...settings } = mutation.test;
+      const { reporters: unitReporters, ...unitSettings } = unit.test;
+      expect(settings).toEqual(unitSettings);
+      expect(unitReporters.some((r) => r instanceof RuleProofReporter)).toBe(
+        true,
+      );
+      expect(reporters.some((r) => r instanceof RuleProofReporter)).toBe(false);
+    });
+  });
+  it.each(configurations)(
+    "keeps Vitest's default reporters, with CI's GitHub annotations, in the %s configuration",
+    async (_lane, file) => {
+      const { default: config } = await import(`../${file}`);
+      expect(config.test.reporters).toEqual(
+        expect.arrayContaining([...configDefaults.reporters]),
+      );
+    },
+  );
   it.each(configurations)(
     'makes the reporter mandatory in the %s configuration',
     (lane, file) => {

@@ -26,7 +26,10 @@ export const SHARED_PROOF_CONSUMERS: Readonly<
   ],
 };
 
-function laneFor(file: string): ProofLane {
+// Playwright runs end-to-end proofs outside every Vitest lane; the register
+// check still requires each one to exist.
+function laneFor(file: string): ProofLane | undefined {
+  if (/^tests\/e2e\/.*\.spec\.ts$/.test(file)) return undefined;
   if (/^tests\/integration\/.*\.test\.ts$/.test(file)) return 'integration';
   if (file.endsWith('.browser.spec.tsx')) return 'browser';
   if (/\.test\.tsx?$/.test(file)) return 'unit';

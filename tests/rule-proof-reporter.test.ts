@@ -1,5 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -16,12 +22,15 @@ function runProof(
   args: string[] = [],
   config = '',
   helpers: Record<string, string> = {},
+  entry?: string,
 ) {
   const root = mkdtempSync(path.join(tmpdir(), 'rule-proof-'));
   folders.push(root);
   symlinkSync(path.resolve('node_modules'), path.join(root, 'node_modules'));
-  for (const [file, contents] of Object.entries(helpers))
+  for (const [file, contents] of Object.entries(helpers)) {
+    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), contents);
+  }
   writeFileSync(
     path.join(root, 'proof.test.ts'),
     `import { it, describe, expect } from 'vitest';\n${source}\nit('unrelated', () => {});`,
@@ -39,7 +48,9 @@ export default defineConfig({ test: { allowOnly: false, includeTaskLocation: tru
   );
   return spawnSync(
     process.execPath,
-    [path.resolve('node_modules/vitest/vitest.mjs'), 'run', ...args],
+    entry
+      ? [entry, ...args]
+      : [path.resolve('node_modules/vitest/vitest.mjs'), 'run', ...args],
     {
       cwd: root,
       encoding: 'utf8',
@@ -206,6 +217,45 @@ describe('executed rule proofs through the real Vitest reporter', () => {
     );
     expect(result.status, result.stdout + result.stderr).toBe(1);
     expect(result.stdout + result.stderr).toContain('Rule proof audit failed');
+  });
+
+  it.each([
+    '.stryker-tmp/sandbox-1/proof.test.ts',
+    '.claude/worktrees/review/proof.test.ts',
+    'packages/tool/node_modules/dep/proof.test.ts',
+  ])('ignores a tool-made copy of a proof at %s', (copy) => {
+    const result = runProof(
+      `it.each([1])('proof %i', ${annotation}, () => {});`,
+      'proof %i',
+      [],
+      '',
+      {
+        [copy]: `import { it } from 'vitest'; it.each([1])('proof %i', ${annotation}, () => {});`,
+      },
+    );
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout + result.stderr).toContain('Rule proofs: unit passed');
+  });
+
+  it('marks an API-driven run of part of the lane as unaudited', () => {
+    // Editors and tools such as Stryker start Vitest through its API, so a
+    // file filter never reaches process.argv; what actually ran decides.
+    const result = runProof(
+      "it('proof', () => {});",
+      'proof',
+      [],
+      '',
+      {
+        'other.test.ts': "import { it } from 'vitest'; it('other', () => {});",
+        'run.mjs':
+          "import { startVitest } from 'vitest/node'; const ctx = await startVitest('test', ['other.test.ts'], { watch: false }); await ctx?.close();",
+      },
+      'run.mjs',
+    );
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout + result.stderr).toContain(
+      'Rule proofs: unit SKIPPED',
+    );
   });
 
   it('marks a focused run as an unaudited run, without a full-lane success receipt', () => {

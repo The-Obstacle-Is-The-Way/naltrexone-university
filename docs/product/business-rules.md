@@ -14,7 +14,7 @@ Each rule below states, in plain language, something the system guarantees a lea
 
 `tests/rule-proof-reporter.mts` also checks actual results at the end of each unfiltered unit, browser and integration run. Each lane independently requires its assigned proofs to have run and passed; the full gate requires all three lanes. Ordinary titles must be unique in their named source file and bind to that declaration's runtime location. Parameterized proofs carry literal `meta.ruleProof` file/title options; at least one generated result and every case must pass. The two shared factories explicitly require both their fake and Postgres consumers. Shared proofs also require that metadata. A repository JS/TS source scan validates annotation ownership, including imported helpers; dependency, build and vendored-skill outputs are excluded.
 
-An explicit focused, watch or sharded run prints `SKIPPED` for this audit and is not a full-lane receipt. Hidden configuration filters on an otherwise unfiltered command fail. The required configurations prohibit `.only`, register the reporter and collect declaration locations; the package and CI command checks keep their full runs unfiltered. No saved result is reused. This proves execution and passing results for the registered identities, not the quality of assertions inside a test.
+An explicit focused, watch or sharded run, or a run started through Vitest's API that covers only part of a lane, prints `SKIPPED` for this audit and is not a full-lane receipt; Stryker's partial mutation runs use `vitest.stryker.config.mts`, which leaves the reporter out. Hidden configuration filters on an otherwise unfiltered command fail. End-to-end proof lines run under Playwright, outside these lanes, so only the declaration check covers them. The required configurations prohibit `.only`, register the reporter and collect declaration locations; the package and CI command checks keep their full runs unfiltered. No saved result is reused. This proves execution and passing results for the registered identities, not the quality of assertions inside a test.
 
 This register replaces the Gherkin acceptance-test harness this file once proposed. That harness was considered and not adopted ([ADR-019's amendment](../adr/adr-019-test-quality-practices.md#amendment--2026-10-03), DEBT-465's decision). Its design is in this file's history up to commit `91a24f3e`.
 
@@ -212,7 +212,7 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `src/domain/services/entitlement.test.ts`: `keeps access until the period ends when cancellation is scheduled`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `selects only active, renewing annual subscriptions in the supplied window`
 - `tests/integration/send-renewal-notices-job.integration.test.ts`: `lists active, renewing monthly subscriptions in id order, after a cursor`
-Supplemental hosted-portal observation: `tests/e2e/stripe-hosted-portal-cancellation.spec.ts` exercises cancellation through Stripe’s hosted UI. It is outside the required unit/browser/integration proof gate; the entitlement and renewal-notice proofs above remain required.
+- `tests/e2e/stripe-hosted-portal-cancellation.spec.ts`: `a paid subscriber cancels without obstruction; renewal stops and access continues to the period end`
 
 ### R12. A repeated or out-of-order billing event never applies twice and never moves a subscription back to an older state.
 

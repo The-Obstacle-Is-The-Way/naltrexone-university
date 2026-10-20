@@ -1,12 +1,12 @@
 import path from 'node:path';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import { RuleProofReporter } from './tests/rule-proof-reporter.mts';
 
 (process.env as Record<string, string | undefined>).NODE_ENV = 'test';
 
 export default defineConfig({
   test: {
-    reporters: ['default', new RuleProofReporter('unit')],
+    reporters: [...configDefaults.reporters, new RuleProofReporter('unit')],
     allowOnly: false,
     includeTaskLocation: true,
     globals: true,

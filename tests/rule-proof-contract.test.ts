@@ -87,3 +87,20 @@ describe('shared proof consumer identity', () => {
     expect(audit('unit', [result, result])).not.toEqual([]);
   });
 });
+
+describe('end-to-end proofs', () => {
+  it.each(['unit', 'browser', 'integration'] as const)(
+    'leaves an end-to-end proof to the register check in the %s lane, since no Vitest lane runs it',
+    (lane) => {
+      const e2e = { file: 'tests/e2e/checkout.spec.ts', title: 'cancels' };
+      expect(
+        auditExecutedRuleProofs(
+          [{ id: 'R1', rule: 'A rule.', proofs: [e2e] }],
+          lane,
+          [],
+          () => "test('cancels', async () => {});",
+        ),
+      ).toEqual([]);
+    },
+  );
+});
