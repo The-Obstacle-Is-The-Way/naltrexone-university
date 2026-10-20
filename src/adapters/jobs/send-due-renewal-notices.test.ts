@@ -443,7 +443,7 @@ describe('sendDueRenewalNotices job', () => {
     });
 
     // #1169 review: renewals already queued on earlier runs stay in the
-    // five-day window; they must not take the slots of renewals entering it.
+    // notice window; they must not take the slots of renewals entering it.
     it('schedules renewals entering the window ahead of ones already queued', async () => {
       const { deps, execute, listActiveMonthly, listAnniversaryReminders } =
         createDeps();
