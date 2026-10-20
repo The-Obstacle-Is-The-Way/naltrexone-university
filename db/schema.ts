@@ -471,6 +471,7 @@ export const renewalNoticeDeliveries = pgTable(
           requeuedBy: string;
           confirmedNoSend: boolean;
           priorStatus: 'terminal_failure' | 'outcome_unknown';
+          priorAttemptCount?: number;
         }>
       >()
       .notNull()
