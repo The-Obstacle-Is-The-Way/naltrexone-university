@@ -65,7 +65,10 @@ doi:10.1111/j.1530-0277.2007.00403.x. https://pubmed.ncbi.nlm.nih.gov/17451397/
 
 ---
 
-## 2. YAML Frontmatter Fields
+## 2. YAML Frontmatter Fields (Historical)
+
+As of 2026-03-24. The active schema drops `answer` and adds YAML `choices`; its
+frontmatter table is current.
 
 ### Required Fields
 
@@ -197,12 +200,16 @@ import:
 
 ---
 
-## 5. Markdown Body Structure
+## 5. Markdown Body Structure (Historical)
+
+This section describes the importer as of 2026-03-24. The active schema
+(`content/drafts/questions/SCHEMA.md`) replaces it: choices live in YAML, and a
+terminal `### Reference` is required.
 
 ### `## Question` (or `## Stem`)
 
-Drafts may use `## Question` or `## Stem`. The importer accepts both and emits
-`## Stem` in generated MDX.
+Drafts could use `## Question` or `## Stem`. The importer accepted both and
+emitted `## Stem` in generated MDX.
 
 Rules:
 
@@ -212,25 +219,25 @@ Rules:
 
 ### `## Choices`
 
-Choices are parsed from bullets under `## Choices`.
+Choices were parsed from bullets under `## Choices`.
 
 Rules:
 
-- 2-5 choices are allowed by the pipeline; the current authoring standard is 4.
-- Labels must be `A-E`.
-- Accepted delimiters are `)`, `.`, or `:`.
-- The correct answer is identified only by the YAML `answer` field.
-- Label order is recommended but not code-enforced.
+- 2-5 choices were allowed by the pipeline; the authoring standard was 4.
+- Labels had to be `A-E`.
+- Accepted delimiters were `)`, `.`, or `:`.
+- The correct answer was identified only by the YAML `answer` field.
+- Label order was recommended but not code-enforced.
 
 ### `## Explanation`
 
-The explanation block can contain three logical parts:
+The explanation block could contain three logical parts:
 
 1. General explanation
 2. `Why other answers are wrong` per-choice bullets
 3. `### Reference`
 
-Current parser behavior:
+Parser behavior then:
 
 - The wrong-answer heading is matched case-insensitively, with optional
   bold/underline markers and an optional trailing `:`.
@@ -248,7 +255,7 @@ Authoring guidance:
 - Use the general explanation for the correct-answer teaching point.
 - Use the per-choice bullets to teach why each incorrect option is wrong.
 
-Runtime/UI behavior:
+Runtime and UI behavior then:
 
 - If some incorrect choices have explanations and others do not, the UI omits
   only the missing ones and still renders the wrong-answer section for the
@@ -256,42 +263,46 @@ Runtime/UI behavior:
 
 ### `### Reference`
 
-`### Reference` is supported today, but with one important parser constraint:
-it is extracted into `reference_md` only when it appears inside `## Explanation`
-after the `Why other answers are wrong` subsection. If the wrong-answer heading
-is missing entirely, the whole explanation body is treated as general
-explanation and `reference_md` remains `null`.
+`### Reference` was supported, with one parser constraint: it was extracted
+into `reference_md` only when it appeared inside `## Explanation` after the
+`Why other answers are wrong` subsection. If the wrong-answer heading was
+missing, the whole explanation body was treated as general explanation and
+`reference_md` stayed `null`.
 
-Current authoring convention:
+Authoring convention then:
 
 - Put `### Reference` at the end of `## Explanation`.
 - Use AMA-style citation text.
-- Treat it as parser-supported but not schema-required.
+- It was parser-supported but not schema-required; the active schema requires it.
 
 ---
 
-## 6. Answer Field and Choice Shuffling
+## 6. Answer Field and Choice Shuffling (Historical Answer Field)
 
-The `answer` field marks which authored choice is correct:
+In the historical format, the `answer` field marked which authored choice was
+correct. The active schema marks it in YAML `choices` instead:
 
 ```yaml
 answer: B
 ```
 
-Pipeline behavior:
+Pipeline behavior then:
 
-1. Draft choices are plain text bullets, not `correct: true/false` objects.
-2. The importer converts `answer: B` into MDX `choices[].correct`.
-3. Seed enforces exactly one correct choice before insert/update.
+1. Draft choices were plain text bullets, not `correct: true/false` objects.
+2. The importer converted `answer: B` into MDX `choices[].correct`.
+3. Seed enforced exactly one correct choice before insert or update, as it still does.
 4. Runtime presentation shuffles choices deterministically per user and
    question, so authored letters are not guaranteed to match displayed letters.
+   This is still true.
 
-Authoring implication: write the best answer at the letter you specify in
-`answer`; do not try to pre-randomize choices.
+The authoring implication still holds: do not try to pre-randomize choices.
 
 ---
 
-## 7. How Tags and References Flow Through the System
+## 7. How Tags and References Flowed Through the System (Historical)
+
+As of 2026-03-24. The active schema carries wrong-answer explanations in YAML
+`choices` instead of a `Why other answers are wrong` section.
 
 ```text
 Draft YAML                         Import                    MDX / Seed / UI
@@ -309,7 +320,10 @@ diagnoses: [aud]                                            -> hide diagnosis
 
 ---
 
-## 8. What the System Validates (Rejection Points)
+## 8. What the System Validated (Historical Rejection Points)
+
+As of 2026-03-24, including the retired `answer` field and heading rules. The
+active schema lists today's validations.
 
 | Validation | Where |
 |-----------|-------|
@@ -378,8 +392,11 @@ the [active schema](../../../content/drafts/questions/SCHEMA.md) first, then use
 its fresh-output staging commands and the content pipeline's reviewed placement
 procedure. A dry run validates input without writing; a real import requires an
 empty output directory. Seeding needs an explicit `DATABASE_URL`, remote-target
-acknowledgment where applicable, and no active release. The test-only
-placeholder option is `pnpm db:seed --include-placeholders`.
+acknowledgment where applicable, and no active release. The placeholder option,
+`pnpm db:seed --include-placeholders`, is meant for a local test database. The
+managed seed refuses it for any non-local target; the direct `pnpm db:seed`
+accepts it for an acknowledged remote target, so never pass it with a remote
+`DATABASE_URL`.
 
 ---
 
@@ -387,7 +404,7 @@ placeholder option is `pnpm db:seed --include-placeholders`.
 
 ### Structured Citation Frontmatter
 
-`### Reference` in the markdown body is supported today. Structured YAML fields
+A terminal `### Reference` in the markdown body is required today. Structured YAML fields
 such as `citation:` or `doi:` are not. Do not add them until the draft schema
 allows them.
 

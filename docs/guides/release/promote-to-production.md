@@ -269,18 +269,18 @@ For authoring rules before a migration PR merges — pre-flight data proof, clea
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
 | **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
 
-Example for preview/production:
+Example for preview/production. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass:
 
 ```bash
-DATABASE_URL="<non-production connection string>" pnpm db:migrate
-DATABASE_URL="<non-production connection string>" pnpm db:seed
+DATABASE_URL="<non-production connection string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
+DATABASE_URL="<non-production connection string>" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 ```
 
 If you are using Neon, fetch the connection string for the intended branch first and then pass it explicitly as `DATABASE_URL`.
 
 **Caution:** Always double-check which database/branch you're targeting. Running migrations or seeds against the wrong environment can corrupt data. Production operations should be done deliberately and verified immediately.
 
-**Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the non-production seed targets without writing data. Production is an exclusion fence, never a seed target for this command. `pnpm db:seed:all` then imports drafts as published and seeds local, Development and Preview once per unique host/port/database identity. Remote acknowledgments are required even for `--plan`. It does **not** run migrations; deploy-time schema changes are handled by the Vercel Build Command migration. Use `pnpm db:migrate` manually only for an out-of-band or fallback migration against an explicit `DATABASE_URL`.
+**Optional helper:** `pnpm db:seed:all --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique non-production seed targets after the exact `DB_TARGET_ACK` check, without writing data. Production is an exclusion fence: the command refuses a non-production target that matches it and never seeds it. `pnpm db:seed:all` then imports drafts as published and seeds local, Development and Preview once per unique host, port and database. It does **not** run migrations; deploy-time schema changes are handled by the Vercel Build Command migration. Use `pnpm db:migrate` manually only for an out-of-band or fallback migration against an explicit `DATABASE_URL`.
 
 **The Vercel CLI version.** `pnpm db:seed:all` and `pnpm db:seed:prod`, `--plan` included, run the `vercel` on your `PATH`. They refuse, before pulling anything, unless the trimmed `vercel --version` output equals `REQUIRED_VERCEL_CLI_VERSION`, defined in `scripts/seed-environment-runtime.ts`. The pin is deliberate, by the owner's 2026-09-20 ruling: the CLI is not a repository dependency, and is never fetched with `npx` or `pnpm dlx`. Install that exact version before seeding, or change the pin in a reviewed pull request. A newer CLI is refused too.
 
@@ -289,7 +289,7 @@ Normal local authenticated E2E uses the resolver-scoped Docker database and runs
 ```bash
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
-DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 

@@ -128,6 +128,7 @@ function mockActiveTutorQuestionThenEndedConflict() {
           session: {
             mode: 'tutor',
             deadlineAt: null,
+            remainingMs: null,
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -337,6 +338,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
             session: {
               mode: 'tutor',
               deadlineAt: null,
+              remainingMs: null,
               index: 0,
               total: 2,
               isMarkedForReview: false,
@@ -351,6 +353,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
             session: {
               mode: 'tutor',
               deadlineAt: null,
+              remainingMs: null,
               index: 1,
               total: 2,
               isMarkedForReview: false,
@@ -405,6 +408,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
           session: {
             mode: 'tutor',
             deadlineAt: null,
+            remainingMs: null,
             index: 0,
             total: 2,
             isMarkedForReview: false,

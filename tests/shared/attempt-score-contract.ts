@@ -31,7 +31,12 @@ export type ScoredAttemptSeed = {
    * After the attempts, the question gained a current revision: with another
    * correct choice (its key corrected), or with only its stem reworded.
    */
-  revisedAfter?: 'key' | 'key text' | 'stem' | 'distractor';
+  revisedAfter?:
+    | 'key'
+    | 'key text'
+    | 'key normalization'
+    | 'stem'
+    | 'distractor';
 };
 
 /**
@@ -60,6 +65,34 @@ type Scenario = {
 };
 
 const scenarios: readonly Scenario[] = [
+  {
+    name: 'keeps answers scored when only the correct choice normalization changes',
+    attempts: [
+      {
+        question: 'n',
+        now: 'available',
+        outcome: 'correct',
+        daysAgo: 1,
+        revisedAfter: 'key normalization',
+      },
+      {
+        question: 'n',
+        now: 'available',
+        outcome: 'incorrect',
+        daysAgo: 2,
+        revisedAfter: 'key normalization',
+      },
+      {
+        question: 'o',
+        now: 'retired',
+        outcome: 'omitted',
+        daysAgo: 1,
+        revisedAfter: 'key normalization',
+      },
+    ],
+    sinceDaysAgo: null,
+    expected: { scored: 3, correct: 1, unscoredQuestions: 0 },
+  },
   {
     name: 'scores every attempt when every question is available',
     attempts: [

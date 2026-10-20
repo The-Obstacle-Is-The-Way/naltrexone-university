@@ -1,5 +1,9 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
+import { getPracticeSessionTiming } from '@/src/domain/services';
 
 export type SetPracticeSessionQuestionMarkInput = {
   userId: string;
@@ -14,7 +18,10 @@ export type SetPracticeSessionQuestionMarkOutput = {
 };
 
 export class SetPracticeSessionQuestionMarkUseCase {
-  constructor(private readonly sessions: PracticeSessionRepository) {}
+  constructor(
+    private readonly sessions: PracticeSessionRepository,
+    private readonly now: () => Date = () => new Date(),
+  ) {}
 
   async execute(
     input: SetPracticeSessionQuestionMarkInput,
@@ -34,10 +41,22 @@ export class SetPracticeSessionQuestionMarkUseCase {
       );
     }
 
-    if (session.endedAt) {
+    const timing = getPracticeSessionTiming(session, this.now());
+    if (timing.state === 'ended') {
       throw new ApplicationError(
         'CONFLICT',
         'Cannot modify a completed session',
+      );
+    }
+
+    if (timing.state === 'expired') {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Exam time has expired',
+        undefined,
+        {
+          details: { reason: PracticeSessionConflictReasons.ExamTimeExpired },
+        },
       );
     }
 

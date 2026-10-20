@@ -79,6 +79,7 @@ The owner decides whether deploy-target E2E remains, and which identity mechanis
 - [ ] Red-first proof that the chosen fence refuses production before global setup's first write, on both `pnpm test:e2e` and a direct `pnpm exec playwright test`, including when both fixture rows exist.
 - [ ] Local E2E still passes. Any remote mode that is kept has explicit non-production identity tests.
 - [ ] The owner checks whether production has the fixture rows, and records the result through BUG-353's census.
+- [ ] The owner runs a read-only check in production for a `users` row with the shared E2E email, and for any `stripe_customers` or `stripe_subscriptions` rows linked to it, and records the result here.
 
 ## Related
 
