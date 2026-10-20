@@ -260,3 +260,9 @@ The first sourced stage names that verified baseline and initializes the waterma
 - `tests/integration/requeue-renewal-notice.integration.test.ts`: `refuses evidence inspected before a newer %s attempt existed (%s)`
 - `tests/integration/requeue-renewal-notice.integration.test.ts`: `preserves an audit entry written before inspected attempt counts existed`
 - `tests/integration/requeue-renewal-notice.integration.test.ts`: `rejects a stale requeue after another operator leaves the notice %s`
+
+## Renewal scheduling
+
+### R29. Annual and monthly anniversary reminders are first eligible 39 days before renewal and are not scheduled inside the 30-day minimum or outside the 39-day maximum; a repeat run preserves an already accepted reminder instead of creating and sending another.
+
+- `tests/integration/cron-routes.integration.test.ts`: `selects %s reminders from 30 through 39 days and does not resend them`
