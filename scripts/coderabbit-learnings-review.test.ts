@@ -462,6 +462,37 @@ describe('where each weekly run starts (DEBT-515)', () => {
     expect(await coverageStart(issues, NOW)).toEqual(SINCE);
   });
 
+  // The report builder cannot write one, but a collaborator can edit a body.
+  it('reads the cursor on the last line, not an own-line marker earlier in the body', async () => {
+    const issues = new MemoryIssues();
+    issues.issues.push({
+      number: 9,
+      title: LEARNINGS_REVIEW_ISSUE_TITLE,
+      body:
+        'Edited report.\n<!-- coderabbit-learnings-through: 2099-01-01T00:00:00Z -->\n' +
+        'A later line.\n<!-- coderabbit-learnings-through: 2026-10-02T09:00:00Z -->\n',
+      state: 'CLOSED',
+    });
+
+    expect(await coverageStart(issues, NOW)).toEqual(
+      new Date('2026-10-02T09:00:00Z'),
+    );
+  });
+
+  it('reads the cursor from a body saved with CRLF line endings', async () => {
+    const issues = new MemoryIssues();
+    issues.issues.push({
+      number: 9,
+      title: LEARNINGS_REVIEW_ISSUE_TITLE,
+      body: 'Earlier report.\r\n<!-- coderabbit-learnings-through: 2026-10-02T09:00:00Z -->\r\n',
+      state: 'CLOSED',
+    });
+
+    expect(await coverageStart(issues, NOW)).toEqual(
+      new Date('2026-10-02T09:00:00Z'),
+    );
+  });
+
   it('records the newest learning it listed, for the next run to start after', async () => {
     const issues = new MemoryIssues();
     await reportLearnings(
