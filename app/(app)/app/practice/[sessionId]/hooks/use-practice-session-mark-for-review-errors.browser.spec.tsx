@@ -4,6 +4,7 @@ import { renderHook } from 'vitest-browser-react';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
@@ -26,6 +27,7 @@ const initialSessionInfo: NonNullable<NextQuestion['session']> = {
   sessionId,
   mode: 'exam',
   deadlineAt: '2099-05-22T12:02:24.000Z',
+  remainingMs: 72_000,
   index: 0,
   total: 1,
   isMarkedForReview: false,
@@ -58,7 +60,10 @@ const reportContext = {
     action: 'toggleMarkForReview',
   },
 };
-function renderMarkHook(request: SetPracticeSessionQuestionMarkFn) {
+function renderMarkHook(
+  request: SetPracticeSessionQuestionMarkFn,
+  recoverServerExpiredExam: () => Promise<void> = () => Promise.resolve(),
+) {
   return renderHook(() => {
     const isMounted = useIsMounted();
     const [loadState, setLoadState] = useState<LoadState>({ status: 'ready' });
@@ -77,6 +82,7 @@ function renderMarkHook(request: SetPracticeSessionQuestionMarkFn) {
       setReview,
       isMounted,
       setPracticeSessionQuestionMarkFn: request,
+      recoverServerExpiredExam,
     });
     return { ...mark, loadState, sessionInfo, review };
   });
@@ -199,6 +205,25 @@ describe('mark-for-review state and reporter boundary (browser)', () => {
     expect(firstKey).toEqual(expect.any(String));
     expect(secondKey).toEqual(expect.any(String));
     expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('sends a mark refused after the server deadline through the exam expiry flush', async () => {
+    const request: SetPracticeSessionQuestionMarkFn = async () =>
+      err('CONFLICT', 'Exam time has expired', undefined, {
+        reason: PracticeSessionConflictReasons.ExamTimeExpired,
+      });
+    const recoverServerExpiredExam = vi.fn(() => Promise.resolve());
+    const harness = await renderMarkHook(request, recoverServerExpiredExam);
+
+    await harness.result.current.onToggleMarkForReview();
+
+    await expect
+      .poll(() => harness.result.current.isMarkingForReview)
+      .toBe(false);
+    expect(recoverServerExpiredExam).toHaveBeenCalledOnce();
+    expect(harness.result.current.loadState).toEqual({ status: 'ready' });
+    expect(harness.result.current.sessionInfo).toEqual(initialSessionInfo);
+    expect(captureExceptionMock).not.toHaveBeenCalled();
   });
 
   it('shows RATE_LIMITED without reporting an expected business outcome', async () => {

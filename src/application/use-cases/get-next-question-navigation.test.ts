@@ -49,6 +49,7 @@ describe('GetNextQuestionUseCase', () => {
       mode: 'tutor',
 
       deadlineAt: null,
+      remainingMs: null,
 
       index: 1,
       total: 2,
@@ -87,6 +88,7 @@ describe('GetNextQuestionUseCase', () => {
       mode: 'tutor',
 
       deadlineAt: null,
+      remainingMs: null,
 
       index: 1,
       total: 2,
@@ -220,6 +222,7 @@ describe('GetNextQuestionUseCase', () => {
       mode: 'tutor',
 
       deadlineAt: null,
+      remainingMs: null,
 
       index: 1,
       total: 3,
@@ -301,6 +304,7 @@ describe('GetNextQuestionUseCase', () => {
       mode: 'tutor',
 
       deadlineAt: null,
+      remainingMs: null,
 
       index: 0,
       total: 3,
@@ -337,6 +341,38 @@ describe('GetNextQuestionUseCase', () => {
     expect(result?.session).toMatchObject({
       mode: 'exam',
       deadlineAt: '2026-05-22T12:02:24.000Z',
+      remainingMs: 114_000,
+    });
+  });
+
+  it('includes server remaining milliseconds when the exam item is unavailable', async () => {
+    const question = createSingleChoiceQuestion('q1', 'c1');
+    const { getNextQuestion } = createTestDeps({
+      questions: [
+        createQuestion({
+          ...question,
+          status: 'archived',
+          availability: 'retired',
+        }),
+      ],
+      sessions: [
+        createPracticeSession({
+          mode: 'exam',
+          questionIds: ['q1'],
+          questionStates: [createQuestionState('q1')],
+          startedAt: new Date('2026-05-22T12:00:00.000Z'),
+        }),
+      ],
+      now: () => new Date('2026-05-22T12:01:11.999Z'),
+    });
+    await expect(
+      getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+    ).resolves.toMatchObject({
+      unavailable: true,
+      session: {
+        deadlineAt: '2026-05-22T12:01:12.000Z',
+        remainingMs: 1,
+      },
     });
   });
 
@@ -446,6 +482,7 @@ describe('GetNextQuestionUseCase', () => {
         index: 1,
         total: 2,
         deadlineAt: null,
+        remainingMs: null,
         isMarkedForReview: true,
       },
     });

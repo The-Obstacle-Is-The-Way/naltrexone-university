@@ -37,6 +37,7 @@ function renderItem(input: {
       sessionId: fixtureSession1Id,
       mode: input.mode,
       deadlineAt: null,
+      remainingMs: null,
       index: 0,
       total: 2,
       isMarkedForReview: false,

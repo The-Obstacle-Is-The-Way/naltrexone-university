@@ -44,6 +44,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
 
+              remainingMs: 72_000,
+
               index: 0,
               total: 2,
               isMarkedForReview: false,
@@ -60,6 +62,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              remainingMs: 72_000,
 
               index: 1,
               total: 2,
@@ -124,6 +128,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
           mode: 'tutor',
 
           deadlineAt: null,
+
+          remainingMs: null,
 
           index: 0,
           total: 10,
@@ -195,6 +201,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
           deadlineAt: null,
 
+          remainingMs: null,
+
           index: 0,
           total: 10,
           isMarkedForReview: false,
@@ -260,6 +268,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
 
+            remainingMs: 72_000,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -280,6 +290,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
+
+            remainingMs: 72_000,
 
             index: 1,
             total: 2,
@@ -342,6 +354,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
 
+            remainingMs: 72_000,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -359,6 +373,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
               mode: 'exam',
 
               deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              remainingMs: 72_000,
 
               index: 1,
               total: 2,
@@ -381,6 +397,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
             mode: 'exam',
 
             deadlineAt: '2099-05-22T12:02:24.000Z',
+
+            remainingMs: 72_000,
 
             index: 0,
             total: 2,
@@ -454,6 +472,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
             deadlineAt: null,
 
+            remainingMs: null,
+
             index: 0,
             total: 2,
             isMarkedForReview: false,
@@ -477,6 +497,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
 
             deadlineAt: null,
 
+            remainingMs: null,
+
             index: 1,
             total: 2,
             isMarkedForReview: false,
@@ -499,6 +521,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
             mode: 'tutor',
 
             deadlineAt: null,
+
+            remainingMs: null,
 
             index: 0,
             total: 2,
@@ -633,6 +657,8 @@ describe('usePracticeSessionPageModel (browser)', () => {
           mode: 'exam',
 
           deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          remainingMs: 72_000,
 
           index: 0,
           total: 2,
