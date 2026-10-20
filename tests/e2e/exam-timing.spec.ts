@@ -41,9 +41,13 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   const before = seconds(await remaining.textContent());
   expect(before).toBeGreaterThan(EXAM_SECONDS - CLOCK_SKEW_MS / 1_000);
 
-  // A focus refresh goes through the real timing server action and must keep
-  // both the server countdown and the selection. A failed request ends the
-  // wait at once and names its error, rather than waiting out the test.
+  // A return to the tab refreshes timing through the real server action and
+  // must keep both the server countdown and the selection. The test signals
+  // the return with visibilitychange, which the timer also handles, not a
+  // window focus: on Clerk's development instance a focus also touches the
+  // session, and its cookie rewrite can abort the app's request (BUG-337). A
+  // failed request ends the wait at once and names its error, rather than
+  // waiting out the test.
   const isTimingRequest = (request: Request) =>
     request.method() === 'POST' &&
     new URL(request.url()).pathname === new URL(page.url()).pathname;
@@ -62,7 +66,9 @@ test('a fast browser clock preserves the answer until server exam expiry', async
       );
     }),
   ]);
-  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  );
   expect((await refreshed).ok()).toBe(true);
   await expect(timer).toBeVisible();
   expect(before - seconds(await remaining.textContent())).toBeLessThan(10);
