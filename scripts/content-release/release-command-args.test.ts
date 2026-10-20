@@ -106,6 +106,18 @@ describe('parseActivateArgs', () => {
     });
   });
 
+  it('refuses --repo without a repository path', () => {
+    expect(() =>
+      parseActivateArgs([
+        '--release',
+        RELEASE,
+        '--expect-active',
+        ACTIVE,
+        ...DECISION,
+        '--repo',
+      ]),
+    ).toThrow(/--repo needs a repository path/);
+  });
   it('reads --expect-active none as no active release', () => {
     expect(
       parseActivateArgs([
@@ -184,6 +196,19 @@ describe('parseStageArgs', () => {
     expect(() =>
       parseStageArgs(['--repo', '/fixture', '--commit', 'main']),
     ).toThrow(/full/);
+  });
+  it('refuses a missing repository path and a short baseline', () => {
+    expect(() => parseStageArgs(['--repo'])).toThrow(
+      /--repo needs a repository path/,
+    );
+    expect(() => parseStageArgs([...sourceArgs, '--baseline', 'main'])).toThrow(
+      /--baseline needs a full lowercase commit ID/,
+    );
+  });
+  it('reads the verified baseline for the first release after the bootstrap', () => {
+    expect(
+      parseStageArgs([...sourceArgs, '--baseline', 'b'.repeat(40)]),
+    ).toMatchObject({ baseline: 'b'.repeat(40) });
   });
   it('names draft and permanent archive dispositions for commit-derived questions', () => {
     expect(

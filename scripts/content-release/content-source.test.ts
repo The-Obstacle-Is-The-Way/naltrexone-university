@@ -210,6 +210,33 @@ describe('immutable content source', () => {
       'kept-source',
     ]);
   });
+  it('refuses a commit with no question files under questions/', async () => {
+    const commit = await repo.commit([source('stray-source')], {
+      path: 'artifacts/recall.md',
+    });
+
+    await expect(
+      readContentCommit({ repository: repo.directory, commit }),
+    ).rejects.toThrow(/no recall\.md or vignettes\.md files under questions\//);
+  });
+  it('refuses one question named for two dispositions', async () => {
+    const commit = await repo.commit([source('named-source')]);
+
+    await expect(
+      readContentCommit(
+        { repository: repo.directory, commit },
+        { draft: ['named-source'], archive: ['named-source'] },
+      ),
+    ).rejects.toThrow(/only one disposition/);
+  });
+  it('refuses a source that is not a full commit ID', async () => {
+    await repo.commit([source('named-source')]);
+    const chain = await readMainFirstParents(repo.directory);
+
+    expect(() => assertAdmissibleCommit(chain, 'main', null)).toThrow(
+      /full lowercase commit ID/,
+    );
+  });
   it('refuses a question ID that appears in two source files', async () => {
     await repo.commit([source('twice-source')]);
     const commit = await repo.commit([source('twice-source')], {
