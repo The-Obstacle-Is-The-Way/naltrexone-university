@@ -18,19 +18,27 @@ import {
   buildReleaseManifest,
   releaseManifestHash,
 } from '@/scripts/content-release/release-manifest';
-import { runStageRelease } from '@/scripts/content-release/stage-release';
 import {
   parseSeedQuestionFile,
   revisionFieldsFromSeed,
 } from '@/scripts/seed/question-parser';
 import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
+import {
+  createContentRepository,
+  runFixtureStage,
+} from '@/tests/shared/content-repository-test-helpers';
 import { createDisposableDatabase } from './disposable-database-test-helpers';
 import { RELEASE_DECISION } from './release-decision-test-helpers';
 import { source } from './seed-test-helpers';
 
 let disposable: Awaited<ReturnType<typeof createDisposableDatabase>>;
+let repo: Awaited<ReturnType<typeof createContentRepository>>;
+afterEach(async () => {
+  await repo.dispose();
+});
 beforeEach(async () => {
+  repo = await createContentRepository();
   disposable = await createDisposableDatabase();
 });
 afterEach(async () => {
@@ -373,7 +381,7 @@ describe('BUG-351: an earlier answer key returns only by a named decision', () =
       env: { DATABASE_URL: disposable.url },
       log: (line: string) => lines.push(line),
     };
-    await runStageRelease(['--apply', '--revert', slug], {
+    await runFixtureStage(repo, ['--apply', '--revert', slug], {
       ...io,
       readFiles: async () => [source(slug, { difficulty: 'hard' })],
     });
@@ -381,11 +389,17 @@ describe('BUG-351: an earlier answer key returns only by a named decision', () =
       line.startsWith('Preview, then activate:'),
     );
     expect(previewCommand).toContain(`--revert ${slug}`);
-    const stage = await stageReturn(slug);
+    const releaseId = lines
+      .join('\n')
+      .match(/Release staging: release=([0-9a-f-]+)/)?.[1];
+    if (!releaseId) throw new Error('Expected staged release');
+    const stage = { releaseId };
     const active = await pointer();
     if (!active) throw new Error('Expected bootstrap');
     await runActivateRelease(
       [
+        '--repo',
+        repo.directory,
         '--release',
         stage.releaseId,
         '--expect-active',
@@ -410,6 +424,8 @@ describe('BUG-351: an earlier answer key returns only by a named decision', () =
     );
     await runActivateRelease(
       [
+        '--repo',
+        repo.directory,
         '--release',
         stage.releaseId,
         '--expect-active',
@@ -441,7 +457,7 @@ describe('BUG-351: an earlier answer key returns only by a named decision', () =
       record: RELEASE_DECISION,
     });
     const lines: string[] = [];
-    await runStageRelease(['--apply', '--revert', slug], {
+    await runFixtureStage(repo, ['--apply', '--revert', slug], {
       env: { DATABASE_URL: disposable.url },
       log: (line) => lines.push(line),
       readFiles: async () => [source(slug)],
