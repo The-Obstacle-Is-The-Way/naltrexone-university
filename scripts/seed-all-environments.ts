@@ -7,7 +7,7 @@ import { runNonProductionSeed } from './seed-environment-targets';
 function parsePlanOnly(args: readonly string[]): boolean {
   if (args.length === 0) return false;
   if (args.length === 1 && args[0] === '--plan') return true;
-  throw new Error('Usage: pnpm db:seed:all [-- --plan]');
+  throw new Error('Usage: pnpm db:seed:all [--plan]');
 }
 
 async function main(): Promise<void> {
