@@ -97,10 +97,52 @@ describe('the scripts directory check', () => {
     ).toThrow(/must end with a pipe/);
   });
 
+  it.each([
+    ['an enclosing fence', '```text\n', '\n```', ''],
+    ['indented code', '', '', '    '],
+    ['an HTML pre block', '<pre>\n', '\n</pre>', ''],
+  ])('rejects a table hidden by %s', (_label, prefix, suffix, indent) => {
+    const table = [
+      '| File | What it does | Run by |',
+      '| --- | --- | --- |',
+      '| `a.ts` | A. | Imported |',
+    ]
+      .map((line) => indent + line)
+      .join('\n');
+    expect(() =>
+      parseScriptsDirectory(
+        `${prefix}<!-- scripts-directory:start -->\n${table}\n<!-- scripts-directory:end -->${suffix}`,
+      ),
+    ).toThrow(/table/);
+  });
+
+  it.each([
+    '/bin/echo scripts/check.ts',
+    '/usr/bin/printf %s scripts/check.ts',
+    '"/bin/echo" scripts/check.ts',
+    "'printf' %s scripts/check.ts",
+  ])(
+    'does not count a literal print command with a path or quotes: %s',
+    (command) => {
+      expect(
+        collectRunByIssues(
+          [{ file: 'check.ts', purpose: 'Check', runBy: '`pnpm check`' }],
+          {
+            packageScripts: { check: command },
+            readWorkflow: () => null,
+            vercelConfig: '{}',
+          },
+        ),
+      ).toHaveLength(1);
+    },
+  );
+
   it('keeps an escaped pipe inside a cell', () => {
     expect(
       parseScriptsDirectory(`
 <!-- scripts-directory:start -->
+| File | What it does | Run by |
+| --- | --- | --- |
 | \`a.ts\` | Reads a \\| b. | CI |
 <!-- scripts-directory:end -->
 `),
@@ -169,6 +211,44 @@ describe('the scripts directory check', () => {
   it('requires a row for code placed in the fixtures folder', () => {
     expect(isListedScript('fixtures/run-me.ts')).toBe(true);
   });
+
+  it.each(['tsx', 'jsx', 'py', 'rb'])(
+    'inventories fixture code with a %s extension',
+    (extension) => {
+      expect(isListedScript(`fixtures/component.${extension}`)).toBe(true);
+    },
+  );
+
+  it('rejects rows that have no table header and delimiter', () => {
+    expect(() =>
+      parseScriptsDirectory(
+        [
+          '<!-- scripts-directory:start -->',
+          '| `a.ts` | A | Imported |',
+          '<!-- scripts-directory:end -->',
+        ].join('\n'),
+      ),
+    ).toThrow(/table header/);
+  });
+
+  it.each([
+    'echo "hello; scripts/check.ts"',
+    'printf "%s" "hello | scripts/check.ts"',
+  ])(
+    'does not treat printed command separators as references: %s',
+    (command) => {
+      expect(
+        collectRunByIssues(
+          [{ file: 'check.ts', purpose: 'Check', runBy: '`pnpm check`' }],
+          {
+            packageScripts: { check: command },
+            readWorkflow: () => null,
+            vercelConfig: '{}',
+          },
+        ),
+      ).toHaveLength(1);
+    },
+  );
 
   it('leaves tests, their helpers and fixtures to the naming conventions', () => {
     expect(
@@ -563,4 +643,13 @@ describe('the callers a row names', () => {
       'missing.ts names `pnpm check`, whose command does not reference it.',
     ]);
   });
+});
+
+it('omits data fixtures beside a nested family, but still lists executable fixture code', () => {
+  expect(isListedScript('dependencies/fixtures/lockfile-union/base.yaml')).toBe(
+    false,
+  );
+  expect(isListedScript('test-lanes/fixtures/report.json')).toBe(false);
+  expect(isListedScript('dependencies/fixtures/run.ts')).toBe(true);
+  expect(isListedScript('dependencies/fixtures.ts')).toBe(true);
 });

@@ -11,10 +11,10 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 | Environment | URL shape | Branch / deploy source | Auth + billing mode | Database target | Notes |
 |-------------|-----------|------------------------|---------------------|-----------------|-------|
 | Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
-| Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
-| Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
-| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database requires both existing-target and non-local opt-ins |
-| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
+| Preview | `https://*.vercel.app` on non-`main` branches | Non-`main` branches except `dependabot/**` | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
+| Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Effective `DATABASE_URL`; an inherited shell value takes precedence over `.env.local` | Should mirror Preview semantics, not Production |
+| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/test-lanes/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; An existing target requires an explicit `DATABASE_URL` and the existing-target opt-in; non-loopback targets also require the non-local opt-in |
+| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/test-lanes/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
 
 ### Core isolation rule
 
@@ -44,9 +44,9 @@ Owner ruling 2026-09-19, recorded 2026-09-20:
 
 - Keep secrets on their consuming steps, never at workflow/job scope. Required and hosted-checkout Build steps use real compiled public values (or documented credential-free fallbacks) and shape-valid server-only placeholders. Real TEST-mode provider/E2E credentials belong only on E2E; the scheduled provider-contract runner receives only its required Stripe inputs. Codecov gets only its upload token.
 - Typecheck, lint, unit, database migrate/seed, integration and browser steps receive no provider credential. Public values are not authentication secrets. Step scoping does not isolate a secret from dependency code executing within the authorized step.
-- SHA-pin every action, and pin every container image by digest; `tests/ci-service-images.test.ts` checks the images in every workflow, and that every workflow's Postgres digest matches `docker-compose.yml` (BUG-327, DEBT-516). `tests/ci-workflow.test.ts` verifies action pins in every workflow, and enumerates permitted secret consumers in CI, both Stripe workflows and the operational-alert watcher; `scripts/security-txt-renewal.test.ts` separately verifies the renewal workflow's pins and least-privilege permissions, `scripts/upstream-fix-watch.test.ts` the upstream-fix watch's permissions, and `scripts/production-release-watch.test.ts` the production release watch's. Every added workflow needs the corresponding contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
+- SHA-pin every action, and pin every container image by digest; `tests/ci-service-images.test.ts` checks the images in every workflow, and that every workflow's Postgres digest matches `docker-compose.yml` (BUG-327, DEBT-516). `tests/ci-workflow.test.ts` verifies action pins in every workflow, and enumerates permitted secret consumers in CI, both Stripe workflows and the operational-alert watcher; `scripts/watchers/security-txt-renewal.test.ts` separately verifies the renewal workflow's pins and least-privilege permissions, `scripts/watchers/upstream-fix-watch.test.ts` the upstream-fix watch's permissions, and `scripts/watchers/production-release-watch.test.ts` the production release watch's. Every added workflow needs the corresponding contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
 - Keep the Dependabot secret store empty and retain its E2E actor guard. Vercel does not build `dependabot/**` branches (`vercel.json`, BUG-327), so Preview secrets never reach unreviewed dependency code either. Do not run bot heads locally with shared credentials. Re-author a reviewed owner PR when PR-time E2E is needed. Revisit only after separate Stripe Sandbox and Clerk-instance isolation at the paying-customer/second-engineer trigger; see [Dependency Update Protocol](../guides/dependencies/updating-dependencies.md#dependabot-prs-and-secrets).
-- GitHub Actions has no consumer for `CRON_SECRET`. Its unused copy was deleted on 2026-09-20; API readback found zero matching secrets. This does not attest to Vercel rotation. Cron authentication validates the value actually consumed at request time, without making application startup depend on it.
+- GitHub Actions has no consumer for `CRON_SECRET`. Its unused copy was deleted on 2026-09-20; API readback found zero matching secrets. This does not attest to Vercel rotation. Startup permits an absent `CRON_SECRET` but rejects an explicitly empty string. Cron authentication checks header safety and the supplied token at request time.
 
 ### Deploy Migration Contract
 
@@ -63,10 +63,10 @@ These rules are enforced by the repo today:
 - Clerk keys are required unless `NEXT_PUBLIC_SKIP_CLERK=true`.
 - `NEXT_PUBLIC_SKIP_CLERK=true` is allowed for local/CI non-production flows, but it is rejected when `VERCEL_ENV=production`.
 - `CLERK_WEBHOOK_SIGNING_SECRET` is required at Vercel production runtime when Clerk is enabled.
-- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is required on Vercel production and preview builds, and must be a base64 AES key of 16, 24 or 32 bytes. Without it, Next.js salts server-action IDs with a key it generates and caches for 14 days, so a deploy after that cache expires (or misses the build cache) leaves a page loaded earlier unable to call its actions (BUG-319). Changing the key changes every action ID once. A page open at the time fails its next action; it recovers on a full page load, which the error page starts by itself for the payment forms, "Try again" starts, and the next in-app navigation starts because the build changed. Production and Preview each have their own key.
+- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` is required on Vercel production and preview builds, and must be a base64 AES key of 16, 24 or 32 bytes. Without it, Next.js salts server-action IDs with a key it generates and caches for 14 days, so a deploy after that cache expires (or misses the build cache) leaves a page loaded earlier unable to call its actions (BUG-319). Changing the key changes every action ID once. A page open at the time can fail its next action and needs a full page load. The payment error page reloads automatically only with working session storage and no reload in the preceding 60 seconds. "Try again" retries; a manual full-page reload is the fallback. Next.js also falls back to full navigation when a server response reveals a build-ID mismatch. Production and Preview each have their own key.
 - `CONSENT_STATE_SECRET` is required on Vercel production and preview builds, and must be at least 32 characters. "Add a card" signs the trial's consent state with it, and the setup webhook checks that signature, so without it the card form always fails (DEBT-502 item 6). Off Vercel it stays optional, and the flow then fails closed.
 - `STRIPE_WEBHOOK_SECRET_NEXT` is optional and must start with `whsec_`. It is set only while a Stripe major-release migration overlaps two live webhook endpoints, and the route then verifies a delivery against either secret ([Stripe: major-release migration](./integrations/stripe.md#major-release-migration)).
-- `CRON_SECRET` is intentionally not startup-validated. The cron route validates it at request time and returns `401` when it is missing or invalid.
+- `CRON_SECRET` may be absent at startup, but an explicitly empty string fails environment validation. Both cron routes validate header safety and authorization at request time and return `401` for a missing or invalid configured value.
 - Sentry DSNs are optional. `instrumentation.ts` logs `[SENTRY_DISABLED] ...` on Vercel production when `SENTRY_DSN` is unset; the browser's key no longer stands in for it.
 - `playwright.config.ts` loads `.env.local` first, then `.env`, and uses `NEXT_PUBLIC_APP_URL` for `baseURL`.
 - `NEXT_PUBLIC_*` values are build-time values. Changing them requires a fresh build.
@@ -107,7 +107,7 @@ A new price for new customers waits for item 2's list of recognized legacy IDs. 
 
 ### Clerk key pairing rule
 
-`CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must come from the same Clerk instance and the same environment type (`test` vs `live`). `lib/env.ts` validates both conditions.
+`CLERK_SECRET_KEY` and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` must come from the same Clerk instance and the same environment type (`test` vs `live`). Verify that pairing in the Clerk Dashboard; `lib/env.ts` does not establish real instance equality (DEBT-526).
 
 ### Clerk JWT key (Production)
 
@@ -116,7 +116,7 @@ A new price for new customers waits for item 2's list of recognized legacy IDs. 
 - **Value.** The production instance's public key in PEM form, from the Clerk Dashboard's API keys page, or built from the key the Frontend API publishes at `/.well-known/jwks.json`. It is public, not a secret. Escaped `\n` newlines are restored.
 - **Where.** Vercel Production only. Preview and development use the development instance, and keep fetching.
 - **Checked twice.**
-  - **On every deploy.** `scripts/check-clerk-jwt-key.ts`, the first step of `vercel.json`'s `buildCommand`, runs before the migrations. It stops the deploy when the keys Clerk publishes for the publishable key's instance do not include it, so a wrong key never deploys.
+  - **On every deploy.** `scripts/deploy/check-clerk-jwt-key.ts`, the first step of `vercel.json`'s `buildCommand`, runs before the migrations. It stops the deploy when the keys Clerk publishes for the publishable key's instance do not include it, so a confirmed mismatch blocks deployment. An unreadable key set follows the unchecked path below.
   - **When Clerk cannot be read.** The deploy goes on, and its log says the key is unchecked. A failed read says nothing about the key, and refusing would let a Clerk outage block every fix. Nothing more is needed unless the key was edited since the last checked deploy. If it was, redeploy once Clerk answers.
   - **At runtime,** more than three rejected signatures in a minute raise `clerk_session_tokens_rejected`.
 - **If Clerk changes its signing key,** every visitor is signed out until this is updated. The fastest way back is Vercel's Instant Rollback to a production deployment built without the key; then remove the variable, or set the new key, and redeploy.
@@ -135,7 +135,7 @@ See BUG-080.
 
 ### Header-Safe `CRON_SECRET` Across Vercel Scopes
 
-`CRON_SECRET` is used as an HTTP `Authorization: Bearer ...` value for both Vercel cron routes. Vercel's [troubleshooting guide](https://vercel.com/kb/guide/troubleshooting-vercel-cron-jobs) tells operators to check for invalid header characters; it does not establish the previously claimed guarantee that every malformed value is rejected during deployment. **Corrected 2026-09-19:** validate at the request boundary, not at application startup. After parsing the authorization header, both routes reject a configured value containing whitespace, control characters, or characters that cannot be encoded in a Fetch header. They return the same generic `401` as other authorization failures and log only `CRON_SECRET is not header-safe` plus the route. No rate limiter, reconciliation, cleanup, or notice delivery runs on that path. Do not silently repair the value with `.trim()`.
+`CRON_SECRET` is used as an HTTP `Authorization: Bearer ...` value for both Vercel cron routes. Vercel's [troubleshooting guide](https://vercel.com/kb/guide/troubleshooting-vercel-cron-jobs) tells operators to check for invalid header characters; it does not establish the previously claimed guarantee that every malformed value is rejected during deployment. **Corrected 2026-10-19:** startup permits a missing value and rejects an empty string; header safety and authorization are checked at the request boundary. After parsing the authorization header, both routes reject a configured value containing whitespace, control characters, or characters that cannot be encoded in a Fetch header. They return the same generic `401` as other authorization failures and log only `CRON_SECRET is not header-safe` plus the route. No rate limiter, reconciliation, cleanup, or notice delivery runs on that path. Do not silently repair the value with `.trim()`.
 
 Vercel stores environment variables per scope. Production, Preview, Development, and git-branch-specific Preview overrides can each carry different bytes for the same name. Keep `CRON_SECRET` non-empty, identical, and header-safe in every scope where cron or manual cron calls are expected.
 
@@ -145,7 +145,7 @@ Vercel stores environment variables per scope. Production, Preview, Development,
 - Do not use `echo`, which appends a newline.
 - Do not silently trim secrets in application code; reject or reset the bad value at the provider.
 - After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing/internal whitespace booleans, and header-unsafe booleans. Never print the value.
-- GitHub Actions does not need `CRON_SECRET`: its former validator checked only the unrelated Actions copy. The owner ruled deletion and rotation on 2026-09-19. `scripts/validate-header-safe-secret.ts` remains a value-free operator tool, using the same `src/adapters/shared/header-secret.ts` validator as both runtime handlers. Vercel Production/Preview/Development still need verification after changes; removing the CI consumer does not prove the provider values were rotated.
+- GitHub Actions does not need `CRON_SECRET`: its former validator checked only the unrelated Actions copy. The owner ruled deletion and rotation on 2026-09-19. `scripts/deploy/validate-header-safe-secret.ts` remains a value-free operator tool, using the same `src/adapters/shared/header-secret.ts` validator as both runtime handlers. Vercel Production/Preview/Development still need verification after changes; removing the CI consumer does not prove the provider values were rotated.
 
 **Safe Vercel reset procedure**
 
@@ -175,7 +175,7 @@ Verify only value-free metadata after the update (present, length, header-safe).
 
 Since DEBT-503 item 1, a signed-in page serves the stored `users` row and does not ask Clerk. So a `user.updated` event that never arrives leaves the stored email stale until the user starts a checkout or trial card setup, or until another user's sign-up finds the address held and BUG-284's stale-owner check moves it. A `user.deleted` that never arrives leaves the row and the Stripe customer in place, and the subscription keeps renewing.
 
-- **Delivery.** Clerk sends webhooks through Svix, which retries a failed delivery for about 27 hours and disables an endpoint that keeps failing for 5 days. Deliveries are not guaranteed.
+- **Delivery.** Clerk sends webhooks through Svix, whose default retry schedule spans about 27 hours. Unless automatic disabling is turned off, an endpoint is disabled after five days in which all attempts fail. That clock starts only after multiple failures within 24 hours, at least 12 hours apart. See [Svix retries](https://docs.svix.com/retries). Deliveries are not guaranteed.
 - **Detect.** In the Clerk Dashboard, open Webhooks and the production endpoint, and look for failed messages or a disabled endpoint.
 - **Recover.** Fix the cause, re-enable the endpoint if it was disabled, then replay the failed messages from the same page, which can recover every failure since a chosen time. The webhook controller records each event by ID: a replay of an event it already processed is skipped, and one that failed is processed again.
 - **Replay promptly.** Until DEBT-511 ships, legal notices go to the stored email, so a missed `user.updated` can misdirect one; after it ships, a send under its last-run rule still can.
@@ -205,7 +205,7 @@ When code references a newly added column but the target database has not had `p
 
 **Fix (manual fallback — the Vercel Build Command now applies deploy migrations automatically)**
 
-Run migrations against the exact database backing the failing environment:
+Run migrations against the exact database backing the failing environment. These remote commands refuse to connect until the exact `DB_TARGET_ACK` reported by the target guard is explicitly supplied; follow the [migration target procedure](../guides/database/migrations.md#deployment-contract).
 
 ```bash
 # Preview / shared non-production DB
@@ -215,16 +215,17 @@ DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
 DATABASE_URL="<production-connection-string>" pnpm db:migrate
 ```
 
-For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
+For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/test-lanes/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
 
 Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with both explicit opt-ins. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
 
 ```bash
 # Prints only the host, not the password.
-LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
+LOCAL_E2E_DATABASE_URL="$(node -e "const parsed = require('dotenv').parse(require('node:fs').readFileSync('.env.local')); const url = parsed.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
 
-# Migrate only the deploy target you just verified.
+# Migrate only the deploy target you just verified, after explicitly supplying
+# the exact DB_TARGET_ACK required for that remote target.
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 
 # Then opt into using that existing database for E2E.
@@ -237,9 +238,9 @@ Do not run migrations by relying on implicit `.env.local` resolution. Every data
 
 The Vercel Build Command applies the checked-in migrations before `pnpm build` for git-triggered Preview and Production builds ([the exact command](../guides/database/migrations.md)), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
 
-Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
+Historical example: PR #167 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
-Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; deploy-target E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
+Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migration `0017`, followed by the omitted-attempt backfill in `0018`; deploy-target E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
 
 ### Clerk Development Mode Can Re-Authenticate After Stripe Checkout
 
@@ -259,7 +260,7 @@ When changing environment configuration, verify all of the following:
 4. `NEXT_PUBLIC_APP_URL` matches the environment actually serving the app.
 5. Preview webhook targets are publicly reachable.
 6. Any schema change is applied by the Vercel Build Command migration on deploy; verify the build ran the migration for the target deployment before it serves (the build fails closed otherwise).
-7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database.
+7. Publish reviewed content through the [content procedure](./content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold): direct seed only before an active release; stage, preview and activate afterward. Every human command needs the explicit target and any required acknowledgment.
 8. Auth and payment flows have been smoke-tested on the target environment after changes.
 
 ---

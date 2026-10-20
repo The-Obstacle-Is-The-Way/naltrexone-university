@@ -1,5 +1,6 @@
-import { pathToFileURL } from 'node:url';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { stripPnpmSeparator } from '../lib/command-args';
+import { isMain } from '../lib/entry-point.mts';
 import { parseQidCommandArgs } from '../seed/qid-command-args';
 import {
   formatActivation,
@@ -18,7 +19,7 @@ type CommandIo = {
 // live revision, recording the reason and authority, and re-applies the
 // active release at once. A dry run unless --apply.
 export async function runHoldQuestions(
-  argv: readonly string[] = process.argv.slice(2),
+  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { qids, apply, lift, record, revert } = parseQidCommandArgs(argv, {
@@ -44,10 +45,8 @@ export async function runHoldQuestions(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runHoldQuestions().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

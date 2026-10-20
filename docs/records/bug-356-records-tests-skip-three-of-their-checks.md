@@ -1,10 +1,12 @@
 # BUG-356: The Records Tests Skip Their Ledger-Line, Status and Queue-Review Checks
 
-**Status:** Open — assert all blocking findings on the live tree, red first
+**Status:** In Progress — fix implemented; full gate and promotion pending
 **Priority:** P3
 **Date:** 2026-10-18
 
 ---
+
+The Summary, Evidence and Impact describe audit baseline `0680cb2d`, before this fix; Resolution describes the implementation in this PR.
 
 ## Summary
 
@@ -30,14 +32,18 @@ Corrected 2026-10-18: distinguish synthetic tests from live assertions, automate
 1. **Assert the three fields in the live-tree tests**, one line each.
 2. **Export one list of blocking findings** that both the command and a single live-tree test use. Keep explicit negative controls for the required findings: equality between two consumers alone can preserve a shared omission. Retaining or deleting the manual CLI is a separate decision after gate parity (DEBT-532).
 
-## Resolution (proposed)
+## Resolution
 
-Option 2, with option 1 as its first step.
+Implemented option 2. The command and live lifecycle test share all 18 blocking fields. An independent assertion requires every audit field except counts and the two scheduled-date reports; three sole-finding fixtures protect the original omissions. Link checks remain per document: a consolidated test took 8.2 seconds under coverage against its 10-second limit, so that slower design was rejected. The restored coverage run passed with its slowest case at 603 ms.
+
+Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 
 ## Verification
 
-- [ ] Live-tree tests fail on a malformed ledger line, an unrecognized status and an unreadable queue-review date (shown red with a temporary edit), and pass on the real tree.
-- [ ] The command and the tests share one list of blocking findings.
+- [x] Live-tree tests fail on a malformed ledger line, an unrecognized status and an unreadable queue-review date (shown red with a temporary edit), and pass on the real tree.
+- [x] The command and the tests share one list of blocking findings.
+
+The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 

@@ -1,3 +1,4 @@
+import { isLoopbackHostname } from '../../scripts/lib/loopback-hostname';
 /**
  * Integration test setup
  * Loads .env.test and verifies database connectivity before tests run.
@@ -12,12 +13,6 @@ import { loadDotenvFileOrThrow } from '../shared/load-dotenv-file';
 loadDotenvFileOrThrow(resolve(__dirname, '../../.env.test'));
 
 vi.mock('server-only', () => ({}));
-
-function isLocalDatabaseHost(hostname: string): boolean {
-  return (
-    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
-  );
-}
 
 function getDatabaseName(url: URL): string | null {
   const raw = url.pathname.replace(/^\//, '');
@@ -63,7 +58,7 @@ try {
   );
 }
 
-if (!allowNonLocal && !isLocalDatabaseHost(url.hostname)) {
+if (!allowNonLocal && !isLoopbackHostname(url.hostname)) {
   throw new Error(
     `Refusing to run integration tests against non-local DATABASE_URL host "${url.hostname}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
   );

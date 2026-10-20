@@ -1,10 +1,12 @@
 # BUG-359: The Ledger CLI Hides Usage and Target Errors
 
-**Status:** Open — preserve safe ledger usage/target diagnostics, red first
+**Status:** In Progress — fix implemented; full gate and promotion pending
 **Priority:** P3
 **Date:** 2026-10-18
 
 ---
+
+The Summary, Evidence and Impact describe audit baseline `0680cb2d`, before this fix; Resolution describes the implementation in this PR.
 
 ## Summary
 
@@ -28,14 +30,18 @@ An operator cannot distinguish invalid arguments or a missing explicit target fr
 1. Separate and report safe input-validation failures before the driver boundary, retaining sanitized unknown/driver errors and the existing typed ledger diagnostics.
 2. Print every error message. Rejected: provider errors can contain sensitive connection details.
 
-## Resolution (proposed)
+## Resolution
 
-Option 1, with subprocess negative controls for missing/invalid arguments and absent/invalid URLs. Do not force all scripts onto one error-printing policy to fix entry detection.
+Implemented option 1. A shared command runner validates argument count, phase and the explicit target before verification. Repository-owned input errors print actionable messages; typed ledger errors retain code and remedy, while arbitrary failures after the driver boundary print a fixed sanitized line. Both phases accept one leading pnpm separator.
+
+Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 
 ## Verification
 
-- [ ] Safe input failures exit nonzero with actionable messages, red first.
-- [ ] Unknown/driver errors remain sanitized; typed ledger failures retain their code and remedy.
+- [x] Safe input failures exit nonzero with actionable messages, red first.
+- [x] Unknown/driver errors remain sanitized; typed ledger failures retain their code and remedy.
+
+The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 

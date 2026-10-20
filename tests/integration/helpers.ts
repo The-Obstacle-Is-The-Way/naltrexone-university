@@ -9,6 +9,7 @@ import {
   addCurrentRevision,
   insertQuestion,
 } from '@/tests/shared/question-fixtures';
+import { isLoopbackHostname } from '../../scripts/lib/loopback-hostname';
 
 export { addCurrentRevision };
 
@@ -22,12 +23,7 @@ const integrationDatabaseUrl = databaseUrl;
 
 const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
 const host = new URL(integrationDatabaseUrl).hostname;
-const normalizedHost =
-  host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
-const isLocalhost =
-  normalizedHost === 'localhost' ||
-  normalizedHost === '127.0.0.1' ||
-  normalizedHost === '::1';
+const isLocalhost = isLoopbackHostname(host);
 if (!allowNonLocal && !isLocalhost) {
   throw new Error(
     `Refusing to run integration tests against non-local DATABASE_URL host "${host}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,

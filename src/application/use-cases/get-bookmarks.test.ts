@@ -91,6 +91,14 @@ describe('GetBookmarksUseCase', () => {
     ['retired', {}],
   ] as const)(
     'labels a bookmarked question that is %s',
+    {
+      meta: {
+        ruleProof: {
+          file: 'src/application/use-cases/get-bookmarks.test.ts',
+          title: 'labels a bookmarked question that is %s',
+        },
+      },
+    },
     async (availability, overlay) => {
       const userId = 'user-1';
       const bookmarks = new FakeBookmarkRepository([

@@ -1,6 +1,6 @@
 # DEBT-532: The Scripts Folder Has Inconsistent Shared Helpers and No Layout
 
-**Status:** Open — owner reviews the structural proposals
+**Status:** In Progress — fixes implemented; final sync, gate and promotion pending
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -8,9 +8,9 @@
 
 ## Summary
 
-`scripts/` holds 155 tracked files: 78 scripts and modules, 67 tests and test helpers, 9 fixtures, and its README. Forty-nine of the 78 sit in the root, beside five subfolders (`ci/`, `content-release/`, `fixtures/`, `internal/`, `seed/`). Its README has thirteen functional families plus a manual operator-tool section. Existing shared modules include `database-target.ts`, `database-process.ts`, `github-alert-issues.ts`, `seed/qid-command-args.ts` and `content-release/command-support.ts`; reuse is inconsistent, not absent. `scripts/README.md` holds the inventory, and `tests/scripts-directory.test.ts` checks file coverage and static caller references.
+At audit baseline `0680cb2d`, `scripts/` held 155 tracked files: 78 scripts and modules, 67 tests and test helpers, 9 fixtures, and its README. Forty-nine of the 78 sit in the root, beside five subfolders (`ci/`, `content-release/`, `fixtures/`, `internal/`, `seed/`). Its README has thirteen functional families plus a manual operator-tool section. Existing shared modules include `database-target.ts`, `database-process.ts`, `github-alert-issues.ts`, `seed/qid-command-args.ts` and `content-release/command-support.ts`; reuse is inconsistent, not absent. `scripts/README.md` holds the inventory, and `tests/scripts-directory.test.ts` checks file coverage and static caller references.
 
-The scripts encode repository-specific behavior. Replacing one requires proof that its behavior survives; this audit does not establish that no platform could replace it. The debt is in how they are built:
+The scripts encode repository-specific behavior. Replacing one requires proof that its behavior survives; this audit does not establish that no platform could replace it. At that baseline, the debt was in how they were built:
 
 - **Shared building blocks are unevenly reused:** GitHub CLI calls, issue handling, the direct-run guard, child processes, database-target rules and argument parsing still have independent implementations.
 - **Some files do several jobs.**
@@ -24,6 +24,8 @@ Corrected 2026-10-19: recount files and references after dev integration, separa
 Corrected 2026-10-19: a second challenge widened the error-reporting, loopback and test-name evidence, corrected citations and BUG-352's and DEBT-500's references, and ordered the steps by their dependencies.
 
 ## Evidence
+
+Counts, line references and descriptions in this evidence section describe audit baseline `0680cb2d`, before the fixes below. The directory describes the current working tree.
 
 ### Missing Shared Building Blocks
 
@@ -57,7 +59,7 @@ Corrected 2026-10-19: a second challenge widened the error-reporting, loopback a
   The last two manage process groups and have diverged.
 - **Database targets.**
   - At least seven database loopback checks disagree: `database-target.ts`, `e2e-local-orchestrator.ts`, `tests/shared/resolve-integration-database-url.ts`, `tests/integration/setup.ts`, `tests/integration/helpers.ts`, and the E2E evidence helpers `tests/e2e/helpers/checkout-consent.ts` and `portal-cancellation.ts`, which accept only `localhost` and `127.0.0.1`.
-    - BUG-358 owns the setup's IPv6 loopback rejection; the database driver cannot reach a bracketed IPv6 host in any case.
+    - BUG-358 owns the setup's IPv6 loopback rejection; the installed postgres.js URL parser produces `[` for a bracketed IPv6 literal. That does not rule out a named host resolving to IPv6.
   - Two rules decide whether a command may touch a remote database:
     - `DB_TARGET_ACK` names the exact remote host, port and database identities;
     - the boolean `ALLOW_NON_LOCAL_DATABASE_URL` admits any host, for the E2E passthrough and the integration helpers.
@@ -162,14 +164,14 @@ BUG-351 and DEBT-531 already own the content planner, input freshness, normaliza
 - **The integration lane.**
   - `run-local-integration.ts` neither starts, migrates nor seeds its database, though the E2E command does. So `AGENTS.md` carries a five-command recipe.
   - Prepare the database as E2E does, with an opt-out for quick reruns.
-- **The production seed (owner ruling needed).**
+- **The production seed (alternative evaluated below).**
   - `db:seed:prod` is an operator command that pulls only Production's `DATABASE_URL` through the pinned preinstalled Vercel CLI; `db:seed:all` seeds `.env.local`'s database and Vercel Development and Preview, and pulls Production only to refuse a matching target. Both import the operator's drafts (BUG-351).
   - Proposed target: a manually dispatched GitHub Actions job in a protected Environment, with the owner as required reviewer. Pin content and app commits, stage and preview the release, then bind the approved activation to its release ID, expected active release, preview plan ID, reason and authority. Each database first needs DEBT-483's separate, owner-approved bootstrap, which adopts existing live content.
   - Costs:
     - It would make a production database URL a new CI secret consumer under the CI Secret Standard (`docs/architecture/environments.md`). `tests/ci-workflow.test.ts` checks only the workflows it names, so the new workflow needs its own consumer list there.
     - It needs read access to the content repository.
   - This could deliver BUG-351 Part 3's staging after the bootstrap prerequisite. An Actions job still inherits environment inputs; relocating it alone does not create an environment allowlist. Keep required operator paths until the replacement has evidence.
-- **The merge guard (owner decision).**
+- **The merge guard (alternative evaluated below).**
   - Live `main-and-dev-protection` rules require the `test` check, an up-to-date branch and resolved threads, so the merge button is constrained. The custom guard's CodeRabbit and carry predicates are not themselves a required status (read-only ruleset check during this audit).
   - A workflow could run the same check on pull-request, review and CI events, and post a commit status that the ruleset requires.
   - Cost: Actions time on every review event, and a broken guard blocks every merge.
@@ -193,83 +195,74 @@ Retain these responsibilities until a replacement proves equivalent behavior. Th
 
 ## Impact
 
+These costs describe the audit baseline; the implementation and retained boundaries are recorded in Resolution.
+
 - **Cost of change.**
   - Eight GitHub wrappers and three issue adapters to keep in step.
   - Eight test files still mock `node:child_process`; some modules already inject runners, so each remaining default-transport test needs a deliberate replacement.
-  - Forty-eight script/module files at the root (102 tracked root files including tests and README).
+  - Forty-nine script/module files at the root (104 tracked root files including tests and README), at the start of implementation.
   - At the merge base, 12 Markdown files mentioned `resolve-local-test-target.ts` 31 times. Moving that script changes those references unless stable commands replace them first.
 - **Risk.** The building blocks each script rebuilt have drifted. The defects listed above, and BUG-353 through BUG-361, are the drift that has shown so far.
 
 ## Options
 
 - **A. Fix the separately recorded defects only.** Smaller scope, but duplicated policies remain and can diverge again.
-- **B. In order: the defects, package scripts, shared building blocks, the configuration replacements that remove scripts, deletions, the layout one family at a time, then the splits.** Each step is a small pull request, and the directory test keeps the file list true across every move. Recommended.
+- **B. In order: the defects, package scripts, shared building blocks, the configuration replacements that remove scripts, deletions, the layout one family at a time, then the splits.** Keep each step independently verifiable and the directory test green across every move. The owner has requested the safe steps together in this PR; content-owner prerequisites remain separate. Selected, with the decisions and limits below.
 - **C. One reorganization.** Rejected:
   - it would invalidate the file and line evidence that BUG-351 and DEBT-531 cite in `seed/` and `content-release/`;
-  - it would touch the affected guides, configuration and path contracts in one review.
+  - it would change every family and content boundary at once, preventing the family-by-family reference and behavior checks used by option B.
 
-## Resolution (proposed)
+## Decisions
 
-Pending the owner's review. Recommended: option B, in this order.
+The owner delegated these choices for this application on 2026-10-19; the owner can overrule them. These decisions change no accepted ADR text.
 
-1. **The separately recorded defects,** each fixed red first, except BUG-354's shared entry detector, which waits for step 3's runtime choice; its package scripts need not wait. Owner-dependent production and E2E decisions remain with the owner.
-2. **Package scripts for every hand-run command,** with documents switched to them. A move still updates `package.json`, `vercel.json`, the workflows, the local E2E plan and the suites that pin paths.
-3. **Shared building blocks in `scripts/lib/`:**
-   - reusable `gh` and issue transport, preserving distinct issue lifecycles, assignment and redaction policies;
-   - BUG-354's entry detector, with caller-owned error reporting;
-   - process primitives that preserve each caller's environment, timeout and process-group lifecycle;
-   - one loopback predicate; separately review human, managed and test-lane remote authorization before changing those policies.
+1. **Keep the header-secret operator preflight.** Principle: delete redundancy, not an independent safety check. `environments.md` uses it before deployment; `validateHeaderSecret` also detects copy/paste whitespace that hex generation alone cannot prevent. Keep the value-free CLI and move the validator's unit tests beside its source. Reversal costs deleting that CLI and updating the guide after choosing another value-free preflight.
+2. **Keep production seeding as an operator command.** Principle: data correctness and explicit authority before automation. BUG-351 still owns source admission, DEBT-531 owns normalization/hold semantics, and DEBT-483 owns each database's irreversible bootstrap. A protected Actions job would add production credentials and content-repository access without supplying those missing invariants. Decline that job in this PR; retain target acknowledgment and the target-only `--plan`, without claiming a content preview or source-freshness guarantee. Reversal requires the source/plan contract, target bootstrap and an independently reviewed workflow plus owner settings; no Environment or secret is created here.
+3. **Keep the merge verdict as a documented pre-merge command.** Principle: enforce the decision at the action. ADR-024 requires the command to revalidate immediately before merging; a previously published status can become stale when reviews or threads change. The checked-in guard also requires exact-head `test`, main ancestry and resolved threads. A supplementary required status adds another event-driven state machine without replacing the command. Decline it here. Reversal requires event/freshness tests, a workflow, and the owner's ruleset change; protection stays intact.
+4. **Keep native zero-install `.mts` for the two scheduled jobs.** Principle: preserve availability and minimize the credential-bearing dependency surface. Both workflows currently set up only Node; a pure entry helper needs only built-ins. Enable explicit TypeScript-extension imports under the existing `noEmit` compiler option and test the native runtime. Other commands retain `tsx`. Reversal costs adding credential-free installation steps and changing the workflow/runtime contract tests.
+5. **Move one non-content family at a time; retain the content paths for their owners.** Principle: small behavior-preserving refactorings, inward dependencies and one reason to change. Package commands stabilize operator usage first; real shared primitives need at least two callers. Keep `seed/` and `content-release/` where BUG-351 and DEBT-531 cite them; those records own their eventual planner/store boundary. Decline a wholesale reorganization and an incidental rewrite of their evidence. Each moved family's imports, callers, guides and directory rows must pass together. Reversal is a mechanical family move with the same reference checks.
+6. **Classify BUG-358 as P4.** Principle: severity follows demonstrated impact. The default resolver uses IPv4; Node returns `[::1]`, but postgres.js 3.4.9 parses that URL's host as `[` without connecting. Correcting classification repairs the diagnosis, not a supported broken lane. Keep the full lane on its exact resolver URL; a driver-level named-host possibility does not satisfy that lane’s stricter target contract. Reversal costs a priority change supported by a working IPv6-literal driver path and demonstrated impact.
 
-   First choose one runtime for the scheduled jobs:
-   - **zero-install `.mts`,** with `allowImportingTsExtensions` and helpers that use nothing from `node_modules`;
-   - **or `tsx` after `pnpm install`.** Keep credentials step-scoped under the CI Secret Standard and evaluate dependency-install execution and scheduled-job availability before changing the zero-install jobs.
-4. **The configuration replacements that remove or merge scripts:**
-   - one managed migrate with ledger checks;
-   - prove credential-free generation while preserving connected-command guards, then consider deleting `db-generate.ts`;
-   - Compose for CI's database, preserving BUG-352's registry failover;
-   - the Stripe reporter only if it preserves the wrapper's local and CI safeguards.
-5. **The deletions above,** once each precondition holds. The environment seeds' deletion follows step 8.
-6. **The layout, one family per pull request, with its README rows:**
+Corrected 2026-10-19: fix the root census, bound the IPv6 claim and adopt the delegated decisions; retain content-owner prerequisites, the frozen-input audit exception and accepted ADRs.
 
-   ```text
-   scripts/
-     lib/           shared building blocks (step 3)
-     database/      target, command, generate, migrate, seed, studio, migration ledger; managed/ for automation
-     deploy/        the Clerk key and server-action manifest checks, and the header-secret check if kept
-     test-lanes/    target, test database, integration, E2E, command plan, Stripe provider lane
-     ci/            image pull, Chromium install, output scan
-     content/       source/, drafts/, store/, seed/ (with environments/), release/
-     feedback/      the feedback export
-     review/        merge guard, promotion verifier, diff hunks, CodeRabbit learnings and their review
-     dependencies/  lockfile union and its fixtures
-     records/       record ID, records lifecycle, due checks
-     watchers/      alert issues, operational, release, advisory, upstream fix, security.txt
-     quality/       CRAP report, mutation integrity
-   ```
+## Resolution
 
-   - `database/` avoids echoing the top-level `db/`.
-   - `test-lanes/` holds lanes that CI also runs.
-   - `review/` avoids a third meaning of "release" beside content releases and deploys.
-   - In `content/`, `seed/` and `release/` depend on `store/` and never on each other.
-   - Content moves wait for BUG-351 and DEBT-531.
-7. **The splits:**
-   - the merge guard, in its own pull request with its tests unchanged;
-   - `documentation-archive.ts`: the records lifecycle to `scripts/records/`; move links to a `tests/` source scan only if the operator CLI no longer needs them;
-   - the advisory watch.
-8. **The dispatched seed job,** with BUG-351 Part 3, after each target database's bootstrap (DEBT-483) and the owner's ruling on its secrets.
-9. **Later, after BUG-351 and the bootstrap.** The content write side moves behind ports into `src/application` and `src/adapters`, with the planner in `src/domain`, leaving thin commands here.
+Option B is implemented locally in #1560, with the retained boundaries below. This is not a merge, hosted-CI or production receipt. Each behavior change has red-first proof; each family move passed the directory check and its focused suites before the next family moved. Full-gate results belong in the PR description.
+
+- **Defects:** BUG-354 through BUG-359 and BUG-361 have their fixes in this PR. #1559 owns BUG-353 and must merge first; its explicit placeholder flag must be incorporated before final validation. BUG-360 stays with its independently owned reset fix. No record is closed before its remaining checks permit it.
+- **Operator interfaces:** package commands cover the hand-run guarded tools and normalize one leading pnpm separator. Guides use those commands. The frozen-input lockfile procedure retains `node --import tsx`, because invoking pnpm may install before the audit. Internal automation paths changed with their callers.
+- **Shared helpers:** `scripts/lib/` owns the real-path entry detector, leading-separator normalization, exact loopback predicate, native GitHub CLI transport, paginated issue-list transport and sequential test-lane command runner. The GitHub runner preserves each caller's timeout, output limit and error policy. The two list users retain independent lifecycle and entry-validation rules; the title-search alert adapter remains distinct. A universal issue client and common `MemoryIssues` fake were declined: renewal never closes, advisory issues require reviewed evidence, and search-backed alerts have a different contract. Equal names or method shapes do not make these the same policy.
+- **Process boundaries:** all eight `node:child_process` module mocks were removed. Command tests use injected runners or actual temporary executables; the bounded AST guard in `tests/script-transport-policy.test.ts` prevents literal Vitest module-mock forms from returning. Merge/promotion tests use endpoint fixtures plus stateful bodies, comments and head-bound merge requests. `scripts/lib/command-plan.ts` serves three real lanes and retains interruption/process-group tests. The Stripe supervisor keeps its separate local deadline, environment filtering and report lifecycle. The short database and seed spawners remain distinct; generalizing their different exit/environment contracts would add an API without removing a shared policy.
+- **Configuration:** CI now pulls the same pinned images through registry failover and starts the Compose services with bounded readiness and `--pull never`. Local Postgres publishes only on loopback. Managed migrations verify the ledger before and after Drizzle for Vercel, CI and local E2E; real-Postgres tests cover fresh, partial, current, drifted and unexpectedly unapplied ledgers. Offline generation uses `drizzle.generate.config.ts` without dotenv or credentials. The thin generation wrapper remains because Drizzle rejects pnpm's forwarded `--`; subprocess tests prove both argument forms. Integration runs prepare the resolver-owned local target by default, with `INTEGRATION_SKIP_PREPARE=true` for reruns; explicit existing-target mode never prepares it.
+- **Deleted or relocated:** removed `ci/start-postgres.sh`, the unused `documentationLinks` and `resolveLocalE2EDatabaseUrl` APIs, the unused formatter export, and the two hand-maintained passed/mixed Stripe report fixtures. The real skipped-report shape remains, with generated positive and negative report controls. Test-only rule/asset scans live in `tests/`; header validation tests sit beside the validator; ledger unit tests sit beside the ledger. `choiceIdByLabel` and its tests moved into `tests/shared/`, leaving the revision writer's cited production lines intact. The CodeRabbit hold period is checked against `.coderabbit.yaml` by a policy test.
+- **Layout:** `database/` (including `managed/`), `deploy/`, `test-lanes/`, `ci/`, `feedback/`, `operations/`, `review/`, `dependencies/`, `records/`, `watchers/`, `quality/` and `lib/` group non-content responsibilities. Dependency and Stripe data fixtures sit beside their families. `operations/` holds renewal-notice requeueing, which is unrelated to question-feedback export. Content root files, `seed/` and `content-release/` retain their paths for BUG-351 and DEBT-531. `scripts/README.md` is the checked current inventory; the evidence census above remains historical.
+- **Splits:** `review/merge-policy.ts` holds the schemas and decision functions shared by the feature guard and promotion verifier; the command owns GitHub reads and mutations. The shared command runner no longer lives in the E2E planner. The record audit moved into `records/`, but its Markdown/link engine remains with the operator CLI: moving it into test support would invert that dependency or duplicate the audit. The advisory watch now shares transport; its remaining functions and four focused suites already separate dependency reading, range evaluation, issue policy and orchestration. A further file-count split is declined absent another consumer or an independently changing boundary.
+
+### Retained Work and Explicitly Declined Changes
+
+- Keep the header preflight, production operator seed, documented pre-merge check and native scheduled jobs for decisions 1–4. No new Environment, ruleset requirement, production secret consumer or Vercel setting is needed by those choices.
+- Keep the standalone documentation audit. It gives operators all blocking findings together, also reports advisory due dates, and now has `pnpm docs:audit`; the test gate preserves every blocking category (BUG-356).
+- Keep the Stripe provider wrapper. Replacing it with a reporter still needs an outer supervisor for the local five-minute process-tree deadline, environment gate, database-variable removal and sanitized failure summary. That leaves two layers for the same single caller, with no smaller equivalent design demonstrated.
+- Keep script-specific workflow/package wiring assertions beside their script tests; they prove those commands' deployment contracts. Whole-repository scans live in `tests/`. Keep the content suite groupings that intentionally test several commands; a filename without one matching source is not by itself a defect.
+- Keep human, managed and test-lane remote authorization distinct. A common host predicate does not authorize changing `DB_TARGET_ACK`, managed automation's URL contract or the explicit existing-target opt-ins. Keep `E2E_INSTANCE` and `E2E_APP_PORT`: source searches cannot establish whether an operator still sets them, and no deprecation/migration has been agreed.
+- Keep the seed tag validator, newline normalization and seed/release write-side structure with BUG-351 and DEBT-531. A deletion must prove schema/validator equivalence on admitted inputs; the eventual planner boundary must preserve source freshness, immutable revisions, normalization and hold scope. These are content-contract changes, not prerequisites for grouping the other families. After those records establish the contract, their implementation can place pure policy inward and persistence behind ports. Do not infer that moving files implements that contract.
+- Keep environment seeding and corpus preparation until a replacement supports every required target and BUG-351's source/plan contract, with DEBT-483's owner-approved per-target bootstrap. A protected dispatch job is declined here, not a substitute for those invariants. Keep the upstream-fix watcher while its Stryker watch / #1500 remains pending; DEBT-500's Waiting trigger owns removal once the patch is gone and no watch remains.
+
+Corrected 2026-10-19: record the implemented boundaries, family moves and configuration proofs; attribute merge requirements to the checked-in guard, explicitly decline unsupported abstractions and preserve content/owner follow-ups.
 
 ## Verification
 
-- [ ] Separately recorded defects fixed and their remaining owner checks resolved.
-- [ ] Every hand-run command has a package script, and no guide names a script's path where one exists.
-- [ ] One `gh` runner and one issue transport; no suite mocks `node:child_process`, and a scan keeps it so.
-- [ ] The scheduled jobs' runtime chosen; the entry detector, process primitives and loopback predicate shared.
-- [ ] The deletions done, or declined by the owner with the reason recorded here.
-- [ ] The layout complete, with `tests/scripts-directory.test.ts` green after each move.
-- [ ] Each configuration replacement merged, or declined with its reason.
-- [ ] The three splits merged, or declined with the reason recorded here.
-- [ ] The dispatched seed job merged with BUG-351 Part 3, or declined by the owner with the reason recorded here.
+- [x] BUG-354 through BUG-359 and BUG-361 have red-first implementations and focused proofs; their records retain outstanding gate, merge and promotion checks.
+- [x] Hand-run commands have package scripts and guides use them, except the documented frozen-input lockfile audit.
+- [x] One native `gh` runner serves eight callers; two list adapters share page transport without merging lifecycle policies. No test mocks `node:child_process`; the source guard has rejection controls.
+- [x] Both scheduled jobs retain native zero-install execution; entry detection, the test-lane runner and loopback classification are shared with their real callers.
+- [x] Every deletion candidate above is removed, retained with a source-level reason, or left with its named existing owner/prerequisite.
+- [x] Non-content families moved one at a time with passing directory and family tests; content paths remain with BUG-351 and DEBT-531.
+- [x] Configuration replacements are implemented locally or explicitly declined above; hosted behavior is not claimed from local tests.
+- [x] Merge policy and command runner split; further record/advisory splits are declined with their dependency reasons.
+- [x] The dispatched seed job is declined; no new CI production credential or external setting is required.
+- [ ] Integrate #1559 and current `dev`, then pass the full gate, standalone audit and coordinated E2E on the final head.
+- [ ] Record independent final challenge, review/CI and promotion evidence before closure under the index rules.
 
 ## Related
 

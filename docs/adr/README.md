@@ -196,7 +196,7 @@ Generic `retry()` with exponential backoff for transient external errors. Only r
 
 ### ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
-Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and a register of scripted UI QA procedures (in `docs/guides/qa/` since 2026-10-12), run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/guides/testing/` and `docs/guides/qa/`.
+Practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/quality/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, and a register of scripted UI QA procedures (in `docs/guides/qa/` since 2026-10-12), run before the production bootstrap and before releases that change their flows. The 2026-10-03 amendment does not adopt the proposed Gherkin acceptance harness: its rules are already proven by mutation-tested unit tests and real-Postgres and E2E tests, so a plain-language rule-to-test register replaces it. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/guides/testing/` and `docs/guides/qa/`.
 
 ### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
 
@@ -216,7 +216,7 @@ One kind of document per folder under `docs/`, chosen by a first-match placement
 
 ### ADR-024: Review, Merge and Promotion
 
-Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge. Agents never ask it to record a learning, and, as amended 2026-10-16, keep commenting through the owner's account. Production waits for `main`'s CI through Vercel Deployment Checks.
+Feature PRs merge only with CodeRabbit's approval of the exact head, through `scripts/review/merge-reviewed-pr.ts`; an approval carries across a sync that leaves the reviewable diff unchanged. GitHub's ruleset enforces what it can. Promotions from `dev` to `main` prove their sources instead of being reviewed again. CodeRabbit reviews only what can merge. Agents never ask it to record a learning, and, as amended 2026-10-16, keep commenting through the owner's account. Production waits for `main`'s CI through Vercel Deployment Checks.
 
 ### ADR-025: Test Doubles by Shape or Behaviour
 

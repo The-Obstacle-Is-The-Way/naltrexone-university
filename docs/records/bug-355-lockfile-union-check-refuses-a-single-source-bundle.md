@@ -1,10 +1,12 @@
 # BUG-355: The Lockfile Union Check Refuses Correct Bundles Identical to a Source
 
-**Status:** Open — judge lockfile unions structurally, including one source, red first
+**Status:** In Progress — fix implemented; full gate and promotion pending
 **Priority:** P3
 **Date:** 2026-10-18
 
 ---
+
+The Summary, Evidence and Impact describe audit baseline `0680cb2d`, before this fix; Resolution describes the implementation in this PR.
 
 ## Summary
 
@@ -32,32 +34,38 @@ The same refusal is wrong for multiple sources when one contains the others' cha
 
   It exits 2 with that message.
 - **Multiple-source counterexample.** Using `source-826.yaml` and `candidate-union.yaml` as two distinct sources with the same `base.yaml`, and a copy of `candidate-union.yaml` as candidate, also exits 2. Calling `compareLockfileUnion` on those contents returns empty `extra`, `missing`, `unmatched` and `conflicts` arrays; `lockfileUnionExitCode` returns 0. The second source contains the first's changes.
-- **How often it bites is not known.** The guide re-authors Dependabot updates as repository-owned bundles, so single-source bundles occur: the guide bundles every Dependabot pull request CodeRabbit will not review, which on the current plan is all of them. A plain single-source re-author is the case most likely to regenerate the source's lockfile exactly. The refusal fires only when the regenerated lockfile matches the source byte for byte, and how often that happens has not been measured.
+- **How often it bites is not known.** The guide re-authors Dependabot updates as repository-owned bundles, so single-source bundles occur: the guide bundles every Dependabot pull request CodeRabbit will not review, which on the current plan is all of them. A plain single-source re-author can regenerate the source's lockfile exactly. The refusal fires only when the regenerated lockfile matches the source byte for byte, and how often that happens has not been measured.
 
 ## Impact
 
 A correct single-source or overlapping multi-source bundle can fail its required verification. The operator must stop; skipping a required verification is not an acceptable workaround.
 
 Corrected 2026-10-18: prove the multi-source counterexample and remove the proposed byte-identity heuristic from both options and verification.
-Corrected 2026-10-19: the refusal does catch one omission, which removing it gives up; the guide's reference paragraph and the CLI test also encode it.
+Corrected 2026-10-19: the refusal does catch one omission, which removing it gives up; the guide's reference paragraph and the CLI test also encode it; remove an unmeasured likelihood ranking.
 
 ## Options
 
 1. **Accept one `--source` and remove the identical-content refusal.** Use the existing structured union checks to reject actual extra, missing, unmatched or conflicting changes, regardless of byte identity. Drop the guide's base-as-second-source instruction. This accepts that a source left off the command line goes unseen when the candidate equals another source.
 2. **Keep the two-source workaround but remove the identical-content refusal.** This fixes the content rejection but preserves an unnecessary command-line restriction.
 
-## Resolution (proposed)
+## Resolution
 
-Option 1.
+Implemented option 1. The CLI accepts one or more sources and uses the structured comparison even when candidate bytes equal a source. Duplicate source arguments and a candidate argument equal to a source remain invalid. The dependency guide now names a single source directly and preserves direct Node execution for a frozen-input audit.
+
+Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 
 ## Verification
 
-- [ ] A test with one source and an identical candidate fails first, then passes.
-- [ ] A valid subset/superset union identical to one of two distinct sources passes, red first.
-- [ ] A candidate that actually omits another source's changes still fails the structured comparison.
-- [ ] Guide step 6 names a single source directly, and the guide's reference paragraph no longer says identical content is refused.
-- [ ] `scripts/lockfile-union-cli.test.ts`'s identical-content refusal test is replaced by the passing cases above.
+- [x] A test with one source and an identical candidate fails first, then passes.
+- [x] A valid subset/superset union identical to one of two distinct sources passes, red first.
+- [x] A candidate that actually omits another source's changes still fails the structured comparison.
+- [x] Guide step 6 names a single source directly, and the guide's reference paragraph no longer says identical content is refused.
+- [x] `scripts/dependencies/lockfile-union-cli.test.ts`'s identical-content refusal test is replaced by the passing cases above.
+
+The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 
 - DEBT-532: the scripts audit that found this.
+
+Corrected 2026-10-19: point the completed verification item at its relocated test; baseline reproduction paths remain historical.

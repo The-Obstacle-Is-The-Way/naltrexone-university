@@ -1,5 +1,6 @@
-import { pathToFileURL } from 'node:url';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { stripPnpmSeparator } from '../lib/command-args';
+import { isMain } from '../lib/entry-point.mts';
 import {
   type DecisionRecord,
   readDecisionFlag,
@@ -59,7 +60,7 @@ export function parseBootstrapArgs(argv: readonly string[]): {
 // changes only through releases. A dry run unless --apply, which adopts
 // nothing if what is live has changed since the preview.
 export async function runBootstrapRelease(
-  argv: readonly string[] = process.argv.slice(2),
+  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { apply, expectedPlanId, record } = parseBootstrapArgs(argv);
@@ -88,10 +89,8 @@ export async function runBootstrapRelease(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runBootstrapRelease().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

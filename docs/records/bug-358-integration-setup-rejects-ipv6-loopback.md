@@ -1,10 +1,12 @@
 # BUG-358: Integration Setup Rejects IPv6 Loopback
 
-**Status:** Open — normalize integration loopback hostnames, red first
-**Priority:** P3
+**Status:** In Progress — fix implemented; full gate and promotion pending
+**Priority:** P4
 **Date:** 2026-10-18
 
 ---
+
+The Summary, Evidence and Impact describe audit baseline `0680cb2d`, before this fix; Resolution describes the implementation in this PR.
 
 ## Summary
 
@@ -19,7 +21,7 @@ Integration setup rejects a valid IPv6 loopback URL as remote. Its local-host pr
 
 ## Impact
 
-No IPv6 integration target works today, with or without the remote-database override. postgres.js 3.4.9 reads the host of `postgresql://…@[::1]:5432/…` as `[` (`postgres(url).options.host` is `["["]`, with no connection opened), and setup, `lib/db.ts` and the suites pass the URL string to it. So the refusal names the wrong cause for a target the driver cannot reach. The default resolver uses IPv4 and is unaffected. `e2e-local-orchestrator.ts:135` accepts `[::1]` but meets the same driver limit.
+An integration URL with an IPv6 literal host cannot work through these URL-string call sites today, with or without the remote-database override. Named hosts may resolve to IPv6; this evidence does not rule that out. postgres.js 3.4.9 reads the host of `postgresql://…@[::1]:5432/…` as `[` (`postgres(url).options.host` is `["["]`, with no connection opened), and setup, `lib/db.ts` and the suites pass the URL string to it. So the refusal names the wrong cause for a target the driver cannot reach. The default resolver uses IPv4 and is unaffected. `e2e-local-orchestrator.ts:135` accepts `[::1]` but meets the same driver limit.
 
 Corrected 2026-10-19: the override is no workaround, because the driver cannot parse a bracketed IPv6 host.
 
@@ -28,16 +30,24 @@ Corrected 2026-10-19: the override is no workaround, because the driver cannot p
 1. Add `[::1]` locally with a focused regression test.
 2. Share a pure loopback predicate while preserving each command's separate authorization policy and URL validation.
 
-## Resolution (proposed)
+## Resolution
 
-Option 2 if the extraction remains small; otherwise option 1 first. Do not merge the human acknowledgment and test-lane opt-in policies incidentally.
+Implemented the small shared predicate from option 2 in `scripts/lib/loopback-hostname.ts`. Eight consumers use exact loopback classification with bracket normalization. Human commands separately retain their existing 127/8 allowance; URL validation, managed authorization and test-lane opt-ins remain caller-owned. The integration guide requires the exact resolver URL for the full local lane; hostname substitution does not satisfy its session-proof suites. It separately explains that loopback classification does not repair postgres.js’s literal-IPv6 URL parsing.
+
+Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 
 ## Verification
 
-- [ ] Red-first proof that setup classifies `[::1]` as local and still rejects remote hosts.
-- [ ] Either an IPv6 connection through the supported driver is proven, or the integration guide says targets use an IPv4 or named host.
-- [ ] Existing IPv4 resolver integration lane passes.
+- [x] Red-first proof that setup classifies `[::1]` as local and still rejects remote hosts.
+- [x] The integration guide states the driver limitation and the full lane’s exact resolver-target requirement.
+- [x] Existing IPv4 resolver integration lane passes.
+
+The local six-lane gate passed. Final validation after #1559/dev integration, coordinated E2E, review, CI and promotion remain pending. These shipped-code defects remain live until the records lifecycle permits closure.
 
 ## Related
 
 - DEBT-532: inconsistent target checks.
+
+Corrected 2026-10-19: narrow the driver claim to literal IPv6 URLs and use P4 for the misleading classification; no supported resolver lane is lost.
+
+Corrected 2026-10-19: distinguish the driver’s named-host possibility from the full lane’s stricter resolver-URL contract; local IPv4 integration passed.

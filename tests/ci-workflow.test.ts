@@ -693,7 +693,7 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     const workflow = readStripeHostedWorkflow();
 
     expect(
-      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Start Postgres').env
+      findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Pull Postgres').env
         ?.POSTGRES_IMAGE_DIGEST,
     ).toBe(PINNED_POSTGRES_16_DIGEST);
     expect(workflow).toContain(`uses: ${PINNED_SETUP_NODE}`);

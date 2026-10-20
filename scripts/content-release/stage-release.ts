@@ -1,5 +1,6 @@
-import { pathToFileURL } from 'node:url';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { stripPnpmSeparator } from '../lib/command-args';
+import { isMain } from '../lib/entry-point.mts';
 import {
   readSeedQuestionFiles,
   type SeedSourceFile,
@@ -53,7 +54,7 @@ export function parseStageArgs(argv: readonly string[]): {
 // nothing a learner reads, and names the activation that makes it live. A
 // dry run unless --apply.
 export async function runStageRelease(
-  argv: readonly string[] = process.argv.slice(2),
+  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
   {
     env = process.env,
     log = console.info,
@@ -95,10 +96,8 @@ export async function runStageRelease(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runStageRelease().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

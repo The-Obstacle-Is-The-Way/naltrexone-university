@@ -78,7 +78,7 @@ Options 2, 3 and 4:
   - A first step fails the run unless the input is a full SHA, the run is on `main` at that SHA, and `main`'s head, read again when the step runs, is still that SHA. The run's SHA is fixed at dispatch, and the run can wait behind a push run.
   - A manual run waits for an in-progress push run in its concurrency group instead of canceling it. Any later push-event run, a re-run included, cancels the manual run. Usually `main` has then moved on, and the newer head's push run is the release check; otherwise the manual run is dispatched again.
 - **The tests.** `tests/ci-manual-run.test.ts` pins the triggers, the input and the concurrency setting, and runs the refusal step's script against a stand-in `git`. `tests/ci-workflow.test.ts` pins E2E's condition.
-- **The watch.** `.github/workflows/production-release-watch.yml` runs `scripts/production-release-watch.ts` hourly. It keeps one issue, assigned to the owner, open while `main`'s head has no passing CI run on `main` or no successful GitHub deployment to `Production`.
+- **The watch.** `.github/workflows/production-release-watch.yml` runs `scripts/watchers/production-release-watch.ts` hourly. It keeps one issue, assigned to the owner, open while `main`'s head has no passing CI run on `main` or no successful GitHub deployment to `Production`.
   - CI is checked first, so a head that production already serves still raises the issue if CI never passed on it.
   - It leaves an open issue alone while the head is new or CI is still running.
   - It reads the head from the commit list, because a single commit's response carries every file's patch.
@@ -117,3 +117,5 @@ Options 2, 3 and 4:
 
 - BUG-259 (#509) and #1367: no production deployment for a promotion, with CI present.
 - #1531, the release check that let #1523's merge commit be released by hand.
+
+Corrected 2026-10-19: update script paths after the non-content family moves in DEBT-532; behavior and remaining checks are unchanged.

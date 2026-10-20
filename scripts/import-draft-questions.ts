@@ -16,39 +16,38 @@ function parseArgs(argv: string[]): {
   status: ImportStatus;
   dryRun: boolean;
 } {
-  const defaults = {
-    inRoot: 'content/drafts/questions',
-    outRoot: 'content/questions/imported',
-    status: 'draft' as const,
-    dryRun: false,
-  };
-
-  const args = [...argv];
-  const nextValue = (flag: string): string => {
-    const index = args.indexOf(flag);
-    if (index === -1) {
-      throw new Error(`Missing required flag: ${flag}`);
+  let inRoot = 'content/drafts/questions';
+  let outRoot = 'content/questions/imported';
+  let status: ImportStatus = 'draft';
+  let dryRun = false;
+  const seen = new Set<string>();
+  // pnpm 11 forwards its leading separator. No separator is valid midway.
+  const args = argv[0] === '--' ? argv.slice(1) : argv;
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    if (
+      flag !== '--in' &&
+      flag !== '--out' &&
+      flag !== '--status' &&
+      flag !== '--dry-run'
+    ) {
+      throw new Error(`Unknown argument: ${flag}`);
     }
-    const value = args[index + 1];
-    if (!value) {
+    if (seen.has(flag)) throw new Error(`Duplicate argument: ${flag}`);
+    seen.add(flag);
+    if (flag === '--dry-run') {
+      dryRun = true;
+      continue;
+    }
+    const value = args[++index];
+    if (!value || value.startsWith('--'))
       throw new Error(`Missing value for flag: ${flag}`);
-    }
-    return value;
-  };
-
-  const inRoot = args.includes('--in') ? nextValue('--in') : defaults.inRoot;
-  const outRoot = args.includes('--out')
-    ? nextValue('--out')
-    : defaults.outRoot;
-  const status = (
-    args.includes('--status') ? nextValue('--status') : defaults.status
-  ) as ImportStatus;
-  const dryRun = args.includes('--dry-run') ? true : defaults.dryRun;
-
-  if (!['draft', 'published', 'archived'].includes(status)) {
-    throw new Error(`Invalid --status: ${status}`);
+    if (flag === '--in') inRoot = value;
+    else if (flag === '--out') outRoot = value;
+    else if (value === 'draft' || value === 'published' || value === 'archived')
+      status = value;
+    else throw new Error(`Invalid --status: ${value}`);
   }
-
   return { inRoot, outRoot, status, dryRun };
 }
 

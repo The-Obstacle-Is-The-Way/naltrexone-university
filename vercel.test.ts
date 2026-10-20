@@ -8,7 +8,7 @@ describe('vercel cron configuration', () => {
     );
 
     expect(config.buildCommand).toBe(
-      'pnpm exec tsx scripts/check-clerk-jwt-key.ts && pnpm exec tsx scripts/verify-migration-ledger.ts pre && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts && pnpm exec tsx scripts/verify-migration-ledger.ts post && pnpm build',
+      'pnpm exec tsx scripts/deploy/check-clerk-jwt-key.ts && pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts && pnpm build',
     );
   });
 

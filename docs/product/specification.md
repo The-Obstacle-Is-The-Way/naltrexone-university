@@ -1625,7 +1625,7 @@ No “exact” schema is duplicated here.
 ### 5.5 Seed synchronization and identity
 
 The entry point is [scripts/seed.ts](../../scripts/seed.ts), invoked with
-`pnpm db:seed` (through [scripts/db-seed.ts](../../scripts/db-seed.ts), which
+`pnpm db:seed` (through [scripts/database/db-seed.ts](../../scripts/database/db-seed.ts), which
 enforces the target guard) under the [database-target safety procedure](../architecture/environments.md).
 Target selection and acknowledgement are mandatory; a content update does not
 authorize a different database.
@@ -2220,7 +2220,7 @@ it('records attempt when answer submitted', async () => {
 
 **Test DB:**
 
-* GitHub Actions starts a Postgres container in its `Start Postgres` step and points `DATABASE_URL` at it.
+* GitHub Actions starts a Postgres container in its `Start test database` step and points `DATABASE_URL` at it.
 
 ### 8.3 E2E Tests (Playwright)
 

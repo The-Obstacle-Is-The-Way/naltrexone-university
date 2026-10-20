@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { globSync } from 'tinyglobby';
 import { parse } from 'yaml';
 
@@ -8,7 +10,7 @@ const SCRIPTS_DIRECTORY_PATH = 'scripts/README.md';
 const DIRECTORY_START = '<!-- scripts-directory:start -->';
 const DIRECTORY_END = '<!-- scripts-directory:end -->';
 const DIRECTORY_HEADER = ['File', 'What it does', 'Run by'] as const;
-const CODE_EXTENSION = /\.(?:[cm]?[jt]s|sh)$/;
+const DATA_FIXTURE_EXTENSION = /\.(?:json|ya?ml)$/;
 
 export type ScriptsDirectoryEntry = {
   file: string;
@@ -24,8 +26,38 @@ export function isListedScript(file: string): boolean {
     file === 'README.md' ||
     file.endsWith('.test.ts') ||
     file.endsWith('-test-helpers.ts') ||
-    (file.startsWith('fixtures/') && !CODE_EXTENSION.test(file))
+    (file.split('/').includes('fixtures') && DATA_FIXTURE_EXTENSION.test(file))
   );
+}
+
+type MarkdownNode = {
+  type: string;
+  children?: MarkdownNode[];
+  position?: { start: { line: number } };
+};
+
+// Parse the whole document: fences and HTML blocks can start before a marker.
+// Use the same installed Markdown/GFM seam as the documentation link audit.
+function renderedTableRows(markdown: string): Set<number> {
+  const lines = new Set<number>();
+  Markdown({
+    children: markdown,
+    remarkPlugins: [
+      remarkGfm,
+      () => (tree: MarkdownNode) => {
+        const visit = (node: MarkdownNode) => {
+          if (node.type === 'table') {
+            for (const row of node.children ?? []) {
+              if (row.position) lines.add(row.position.start.line);
+            }
+          }
+          for (const child of node.children ?? []) visit(child);
+        };
+        visit(tree);
+      },
+    ],
+  });
+  return lines;
 }
 
 export function parseScriptsDirectory(
@@ -56,9 +88,19 @@ export function parseScriptsDirectory(
   }
 
   const entries: ScriptsDirectoryEntry[] = [];
+  const renderedRows = renderedTableRows(markdown);
+  let lineNumber =
+    markdown.slice(0, start + DIRECTORY_START.length).split('\n').length - 1;
+  let table: 'none' | 'header' | 'rows' = 'none';
   for (const rawLine of body.split('\n')) {
+    lineNumber += 1;
     const line = rawLine.trim();
-    if (line.startsWith('#') || !/(?<!\\)\|/.test(line)) continue;
+    if (line.startsWith('#') || !/(?<!\\)\|/.test(line)) {
+      if (table === 'header')
+        throw new Error('A table header must be followed by its delimiter.');
+      table = 'none';
+      continue;
+    }
     // GitHub renders a row without either outer pipe, so skipping one would
     // let a stale row pass unseen.
     if (!line.startsWith('|')) {
@@ -76,7 +118,17 @@ export function parseScriptsDirectory(
     const isHeader =
       cells.length === DIRECTORY_HEADER.length &&
       DIRECTORY_HEADER.every((heading, index) => cells[index] === heading);
-    if (isHeader || cells.every((cell) => /^:?-+:?$/.test(cell))) {
+    if (isHeader) {
+      table = 'header';
+      continue;
+    }
+    if (
+      cells.length === DIRECTORY_HEADER.length &&
+      cells.every((cell) => /^:?-+:?$/.test(cell))
+    ) {
+      if (table !== 'header')
+        throw new Error('A table delimiter needs its table header.');
+      table = 'rows';
       continue;
     }
     if (cells.length !== DIRECTORY_HEADER.length) {
@@ -85,6 +137,15 @@ export function parseScriptsDirectory(
       );
     }
 
+    if (table !== 'rows')
+      throw new Error(
+        'A scripts directory row needs a table header and delimiter.',
+      );
+    if (!renderedRows.has(lineNumber)) {
+      throw new Error(
+        'A scripts directory row must render as a Markdown table row.',
+      );
+    }
     const [rawFile = '', purpose = '', runBy = ''] = cells;
     entries.push({ file: rawFile.replaceAll('`', '').trim(), purpose, runBy });
   }
@@ -157,12 +218,42 @@ type WorkflowDocument = {
 // Drops comments, then splits on command separators and drops `echo` and
 // `printf` commands, so a path they only print does not count.
 function commandLines(commands: string): string {
-  return commands
-    .split('\n')
-    .map((line) => line.replace(/(?:^|\s)#.*$/, ''))
-    .flatMap((line) => line.split(/&&|\|\||[;|]/))
-    .filter((command) => !/^\s*(?:echo|printf)\b/.test(command))
-    .join('\n');
+  const parts: string[] = [];
+  let command = '';
+  let quote: string | null = null;
+  const finish = () => {
+    const firstWord =
+      command.trimStart().match(/^("[^"]*"|'[^']*'|\S+)/)?.[0] ?? '';
+    const executable = path.posix.basename(
+      firstWord.replace(/^(['"])(.*)\1$/, '$2'),
+    );
+    if (executable !== 'echo' && executable !== 'printf') parts.push(command);
+    command = '';
+  };
+  for (let index = 0; index < commands.length; index += 1) {
+    const char = commands[index];
+    if (char === '\\' && quote !== "'") {
+      command += char + (commands[++index] ?? '');
+    } else if (quote !== null) {
+      command += char;
+      if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+      command += char;
+    } else if (
+      char === '#' &&
+      (index === 0 || /\s/.test(commands[index - 1] ?? ''))
+    ) {
+      while (index < commands.length && commands[index] !== '\n') index += 1;
+      finish();
+    } else if (char !== undefined && /[;&|\n]/.test(char)) {
+      finish();
+    } else {
+      command += char;
+    }
+  }
+  finish();
+  return parts.join('\n');
 }
 
 // This is a static reference check, not a shell interpreter. It excludes

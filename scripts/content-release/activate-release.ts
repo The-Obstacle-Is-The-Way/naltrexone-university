@@ -1,6 +1,7 @@
-import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
-import { runHumanDatabaseCommand } from '../database-command';
+import { runHumanDatabaseCommand } from '../database/database-command';
+import { stripPnpmSeparator } from '../lib/command-args';
+import { isMain } from '../lib/entry-point.mts';
 import {
   type DecisionRecord,
   readDecisionFlag,
@@ -100,7 +101,7 @@ export function parseActivateArgs(argv: readonly string[]): {
 // earlier one. The release you name as active must be active, or nothing
 // changes. A dry run unless --apply.
 export async function runActivateRelease(
-  argv: readonly string[] = process.argv.slice(2),
+  argv: readonly string[] = stripPnpmSeparator(process.argv.slice(2)),
   { env = process.env, log = console.info }: CommandIo = {},
 ): Promise<void> {
   const { apply, ...input } = parseActivateArgs(argv);
@@ -126,10 +127,8 @@ export async function runActivateRelease(
   });
 }
 
-const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-
 /* v8 ignore start */
-if (import.meta.url === executedPath) {
+if (isMain(import.meta.url)) {
   runActivateRelease().catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

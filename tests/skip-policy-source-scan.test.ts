@@ -34,14 +34,14 @@ function documentedAllowanceSources(
       `,
     ),
     source(
-      'scripts/run-stripe-provider-contracts.test.ts',
+      'scripts/test-lanes/run-stripe-provider-contracts.test.ts',
       `
         import { it } from 'vitest';
         it.skipIf(${runnerGuard})('x', () => {});
       `,
     ),
     source(
-      'scripts/run-stripe-provider-contracts-process.test.ts',
+      'scripts/test-lanes/run-stripe-provider-contracts-process.test.ts',
       `
         import { it } from 'vitest';
         it.skipIf(process.platform === 'win32')('x', () => {});
@@ -242,11 +242,11 @@ describe('skip-policy source scan', () => {
         "import { describe } from 'vitest'; const selected = providerGate.mode === 'skip' ? describe.skip : describe;",
       ),
       source(
-        'scripts/run-stripe-provider-contracts.test.ts',
+        'scripts/test-lanes/run-stripe-provider-contracts.test.ts',
         "import { it } from 'vitest'; it.skipIf(process.platform === 'win32')('x', () => {});",
       ),
       source(
-        'scripts/run-stripe-provider-contracts-process.test.ts',
+        'scripts/test-lanes/run-stripe-provider-contracts-process.test.ts',
         "import { it } from 'vitest'; it.skipIf(process.platform === 'win32')('x', () => {});",
       ),
     ]);

@@ -1,9 +1,10 @@
-import { ChildProcess, execFileSync } from 'node:child_process';
+import { ChildProcess } from 'node:child_process';
 import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import packageJson from '../package.json';
+import { withRecordedCli } from '../tests/shared/recorded-cli';
 import {
   createSeedEnvironmentRuntime,
   pullVercelDatabaseUrl,
@@ -13,11 +14,6 @@ import {
   SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS,
   type SeedProcessSpawner,
 } from './seed-environment-runtime';
-
-vi.mock('node:child_process', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('node:child_process')>()),
-  execFileSync: vi.fn(),
-}));
 
 afterEach(() => vi.resetAllMocks());
 
@@ -108,29 +104,25 @@ describe('seed environment runtime', () => {
     },
   );
 
-  it('bounds the preinstalled CLI and captures its output without shell execution', () => {
-    vi.mocked(execFileSync).mockReturnValue('59.16.0\n');
-
-    expect(runVercelCommand(['--version'])).toBe('59.16.0\n');
-    expect(execFileSync).toHaveBeenCalledExactlyOnceWith(
-      'vercel',
-      ['--version'],
-      {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS,
-        killSignal: 'SIGTERM',
-      },
-    );
+  it('runs the preinstalled CLI without shell interpretation', async () => {
+    await withRecordedCli('vercel', '59.16.0\n', async (calls) => {
+      expect(runVercelCommand(['--version'])).toBe('59.16.0\n');
+      expect(calls()).toEqual([['--version']]);
+    });
   });
 
-  it('reports CLI failure without echoing captured provider output', () => {
-    vi.mocked(execFileSync).mockImplementation(() => {
-      throw new Error('untrusted command output');
-    });
-
-    expect(() => runVercelCommand(['env', 'pull', 'production.env'])).toThrow(
-      'Preinstalled Vercel CLI failed; verify the reviewed version and authentication before seeding.',
+  it('reports CLI failure without echoing captured provider output', async () => {
+    await withRecordedCli(
+      'vercel',
+      '',
+      async () => {
+        expect(() =>
+          runVercelCommand(['env', 'pull', 'production.env']),
+        ).toThrow(
+          'Preinstalled Vercel CLI failed; verify the reviewed version and authentication before seeding.',
+        );
+      },
+      { stderr: 'untrusted command output', status: 1 },
     );
   });
 

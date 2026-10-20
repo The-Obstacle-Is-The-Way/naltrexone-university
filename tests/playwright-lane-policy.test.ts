@@ -221,10 +221,10 @@ describe('Playwright E2E lane policy', () => {
 
   it('routes required and hosted commands to mutually exclusive projects', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
-      'tsx scripts/run-local-e2e.ts --project=chromium --project=mobile-smoke',
+      'tsx scripts/test-lanes/run-local-e2e.ts --project=chromium --project=mobile-smoke',
     );
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
-      'tsx scripts/run-local-e2e.ts --project=stripe-hosted',
+      'tsx scripts/test-lanes/run-local-e2e.ts --project=stripe-hosted',
     );
   });
 

@@ -84,7 +84,7 @@ webServer: {
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
 - Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
-- Local `pnpm test:e2e` runs through `scripts/run-local-e2e.ts`, which mirrors CI by preparing a local Docker Postgres first and then invoking Playwright with the Docker `DATABASE_URL`
+- Local `pnpm test:e2e` runs through `scripts/test-lanes/run-local-e2e.ts`, which mirrors CI by preparing a local Docker Postgres first and then invoking Playwright with the Docker `DATABASE_URL`
 
 ### Playwright Retry Policy
 
@@ -213,7 +213,7 @@ To check which of them `.env.local` sets without printing any value, list the na
 rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local | cut -d= -f1
 ```
 
-Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start Postgres` step runs.
+Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/test-lanes/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/test-lanes/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own `DATABASE_URL` through `.github/workflows/ci.yml`, for the database its `Start test database` step runs.
 
 Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. Checkout Sessions created by the required redirect-boundary tests and by explicit hosted-smoke runs can remain deterministic recovery-chain rungs while Stripe retains their idempotency keys. DEBT-466 and DEBT-470 retain provider-faithful blocking contract coverage for that traversal; do not rotate the user or drop the database volume to mask a traversal failure.
 
@@ -443,7 +443,7 @@ For feature-level acceptance criteria and planned routes (e.g., Quick Practice a
 
 ```bash
 # Inspect this clone's resolved local target
-pnpm exec tsx scripts/resolve-local-test-target.ts env
+pnpm local:test:target env
 
 # Clear Next.js cache
 rm -rf .next
@@ -501,7 +501,7 @@ See DEBT-293 for the full analysis and the resolved reset strategy.
 2. **Local app port conflict:** A previous dev server is still running but in a bad state, or `PORT` was overridden to collide with another process.
 
    ```bash
-   pnpm exec tsx scripts/resolve-local-test-target.ts env
+   pnpm local:test:target env
    ```
 
    Stop only the process you own. Do not use blanket `kill -9` on a shared port.

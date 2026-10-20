@@ -226,6 +226,14 @@ describe('BUG-351: an earlier answer key returns only by a named decision', () =
 
   it.each(['draft', 'published'] as const)(
     'does not treat a later %s-only stage as earlier publication',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/content-release-key-returns.integration.test.ts',
+          title: 'does not treat a later %s-only stage as earlier publication',
+        },
+      },
+    },
     async (status) => {
       const slug = `it-key-return-${randomUUID()}`;
       const anchor = `it-key-return-anchor-${randomUUID()}`;

@@ -67,8 +67,8 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 1. Promotion PR (dev → main): CI (GitHub Actions)
    └─ pnpm typecheck
    └─ pnpm lint:ci
-   └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
-   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm exec tsx scripts/internal/run-managed-db-seed.ts
+   └─ pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts # CI database only
+   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts
    └─ pnpm test:coverage
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required
@@ -262,10 +262,10 @@ For authoring rules before a migration PR merges — pre-flight data proof, clea
 | Environment | How to Connect | DATABASE_URL Source |
 |-------------|---------------|---------------------|
 | **Local app runtime** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
-| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; an external `.env.local` target requires both explicit opt-ins |
+| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/test-lanes/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; an external `.env.local` target requires both explicit opt-ins |
 | **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Vercel Preview/Development env vars, currently the Neon `dev` branch |
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
-| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
+| **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/test-lanes/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
 
 Example for preview/production:
 
@@ -355,7 +355,7 @@ The seed script is fully idempotent. See [Content Pipeline §16: Seed Idempotenc
 
 A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followed by the source PR numbers. CodeRabbit skips such titles, so a feature PR's title must never contain `Promote #`. A promotion needs no review of its own: it proves its sources' reviews instead (ADR-024).
 
-1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm exec tsx scripts/verify-promotion.ts <PR>`. It verifies:
+1. **Wait for the promotion's CI `test` to pass.** Then, after `git fetch`, run the read-only proof: `pnpm pr:verify-promotion <PR>`. It verifies:
    - a same-repository `dev` → `main` PR, with up-to-date ancestry;
    - every first-parent merge's source PR, and the actual second-parent head;
    - each source's formal approval predating its merge: exact-head, or carried as the [merge guard](./review-and-merge.md#the-merge-guard) allows, with each source diff taken against the merge's first parent;
@@ -365,7 +365,7 @@ A promotion is a PR from `dev` to `main` whose title begins `Promote #`, followe
    Direct commits, ambiguous PR associations, missing approvals and incomplete evidence fail closed.
 2. **Source-thread counts are current observations.** GitHub cannot reconstruct their historical count, so keep the source merge receipts; the thread-resolution ruleset covers the merge-time requirement.
 3. **Adjudicate any finding CodeRabbit posts on the promotion anyway.** Resolve threads with receipts. A stale requested-changes review on an older promotion head may be dismissed with a comment citing this procedure and the current source proof; never dismiss an unaddressed finding. Do not request a promotion review.
-4. **Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR> --merge`.** It:
+4. **Merge with `pnpm pr:verify-promotion <PR> --merge`.** It:
    - fetches `origin` and re-runs the proof;
    - writes the output into a marked section of the PR body, and confirms the body shows it;
    - re-reads the PR and refuses if its base or head moved;

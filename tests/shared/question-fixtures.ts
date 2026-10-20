@@ -2,11 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { and, sql as drizzleSql, eq, isNull } from 'drizzle-orm';
 import * as schema from '@/db/schema';
 import { onlyRow } from '@/scripts/seed/only-row';
-import {
-  appendQuestionRevision,
-  choiceIdByLabel,
-} from '@/scripts/seed/question-revision-writer';
+import { appendQuestionRevision } from '@/scripts/seed/question-revision-writer';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import { choiceIdByLabel } from './question-revision-fixtures';
 
 // Question fixtures written as the seed and the content commands write them,
 // shared by the integration and end-to-end lanes (DEBT-496).

@@ -23,7 +23,7 @@ The live defect this split causes is BUG-351: a stale seed restores a corrected 
 - Builder: `scripts/content-release/release-builder.ts:61-97` matches a file against every revision of its question. `:307-321` refuses a move to an earlier revision without `--revert`.
 - Seed: `scripts/seed/question-syncer.ts:256-267` compares the canonical file with the current revision only, and appends a revision when they differ. BUG-281's graded-history refusal went when revisions became append-only (`3ac01fc8`, 2026-09-30).
 - The production path:
-  - `db:seed:prod` (`scripts/seed-production.ts`) prepares the corpus from `content/drafts/questions` (`scripts/import-draft-questions.ts:20`) with `--status published` (`scripts/prepare-seed-corpus.ts:24`), then seeds production (`scripts/seed-environment-targets.ts:105-106`).
+  - `db:seed:prod` (`scripts/seed-production.ts`) prepares the corpus from `content/drafts/questions` (`scripts/import-draft-questions.ts:19`) with `--status published` (`scripts/prepare-seed-corpus.ts:24`), then seeds production (`scripts/seed-environment-targets.ts:105-106`).
   - The drafts' question folders are untracked (`.gitignore:63-66`).
 - `release-activation.ts:103-111`: the seed may write whenever no release is active.
 
@@ -96,3 +96,5 @@ Feedback without attempt/session context cannot identify the reported revision, 
 - DEBT-446 (closed): the parked freshness check, whose Part 3b scope BUG-351 takes.
 - DEBT-524 (closed): Finding 1's view of the content transition, whose operational owner remains DEBT-483.
 - DEBT-492, BUG-281, BUG-314 (closed).
+
+Corrected 2026-10-19: refresh the importer input citation after argument validation changed; the content planner, normalization and hold decisions remain here.

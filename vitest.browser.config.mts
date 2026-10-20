@@ -3,6 +3,7 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
+import { RuleProofReporter } from './tests/rule-proof-reporter.mts';
 
 // Vitest Browser opens Chromium against a localhost Vite server. Prefer IPv4 so
 // environments with a broken ::1 loopback do not hang before tests import.
@@ -31,6 +32,9 @@ export default defineConfig({
     ],
   },
   test: {
+    reporters: ['default', new RuleProofReporter('browser')],
+    allowOnly: false,
+    includeTaskLocation: true,
     testTimeout: 15_000,
     hookTimeout: 30_000,
     env: {

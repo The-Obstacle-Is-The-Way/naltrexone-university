@@ -8,7 +8,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import migrationJournal from '@/db/migrations/meta/_journal.json';
 import { POSTGRES_CONNECTION_PARAMETERS } from '@/lib/db-connection-options';
-import { resolveLocalTestTarget } from '@/scripts/resolve-local-test-target';
+import { resolveLocalTestTarget } from '@/scripts/test-lanes/resolve-local-test-target';
 import { resolveIntegrationDatabaseUrl } from '@/tests/shared/resolve-integration-database-url';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
@@ -31,18 +31,19 @@ function connectionUrl(pooled: boolean, user = role): string {
   return url.toString();
 }
 
-async function migrateThroughManagedRunner(
+async function runMigrationClient(
   databaseUrl = connectionUrl(true),
+  args = [
+    '--import',
+    'tsx',
+    'scripts/database/managed/run-managed-db-migrate.ts',
+  ],
 ): Promise<void> {
   try {
-    await execFileAsync(
-      process.execPath,
-      ['--import', 'tsx', 'scripts/internal/run-managed-db-migrate.ts'],
-      {
-        env: { ...process.env, DATABASE_URL: databaseUrl },
-        timeout: 8_000,
-      },
-    );
+    await execFileAsync(process.execPath, args, {
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      timeout: 8_000,
+    });
   } catch (error) {
     // Child diagnostics must not expose a connection URL, even on failure.
     const diagnostics =
@@ -52,7 +53,9 @@ async function migrateThroughManagedRunner(
             '[database URL]',
           )
         : 'No child diagnostics';
-    throw new Error(`Managed migration failed: ${diagnostics}`);
+    throw new Error(
+      `Migration process failed (exit code ${error && typeof error === 'object' && 'code' in error ? error.code : 'unknown'}): ${diagnostics}`,
+    );
   }
 }
 
@@ -144,7 +147,7 @@ describe('application bounds through a transaction pooler', () => {
     try {
       await oldBackend.begin(async (tx) => {
         await tx`select 1`;
-        await migrateThroughManagedRunner();
+        await runMigrationClient();
         staleBounds = await readBounds(tx);
       });
     } finally {
@@ -338,7 +341,7 @@ describe('application bounds through a transaction pooler', () => {
       if (!entry) throw new Error('Timeout migration must be in the journal');
       // Rerun only the idempotent role-default migration in this disposable DB.
       await sql`delete from drizzle.__drizzle_migrations where created_at = ${entry.when}`;
-      await migrateThroughManagedRunner();
+      await runMigrationClient();
       expect(await sql`select * from migration_bounds_receipt`).toEqual([
         {
           role_name: role,
@@ -352,47 +355,66 @@ describe('application bounds through a transaction pooler', () => {
     }
   });
 
-  it('fails the managed migration at its five-second lock bound', async () => {
-    const holder = postgres(connectionUrl(false), { max: 1 });
-    // Drizzle Kit's CLI can discard the server error from its terminal output.
-    // A transparent local TCP relay records the actual server SQLSTATE while
-    // running the unchanged managed entry point and installed migration client.
-    let protocolBytes = Buffer.alloc(0);
-    const sockets: Socket[] = [];
-    const relay = createServer((client) => {
-      const server = createConnection({
-        host: '127.0.0.1',
-        port: Number(poolerPort),
+  it.each([
+    {
+      name: 'installed Drizzle migrator',
+      args: ['node_modules/drizzle-kit/bin.cjs', 'migrate'],
+      message: 'exit code 1',
+    },
+    {
+      name: 'managed ledger precheck',
+      args: [
+        '--import',
+        'tsx',
+        'scripts/database/managed/run-managed-db-migrate.ts',
+      ],
+      message: 'Managed migration stopped at ledger precheck.',
+    },
+  ])(
+    'fails the $name at its five-second lock bound',
+    async ({ args, message }) => {
+      const holder = postgres(connectionUrl(false), { max: 1 });
+      // Drizzle Kit's CLI can discard the server error from its terminal output.
+      // A transparent local TCP relay records the actual server SQLSTATE while
+      // running the installed migration client directly. A managed precheck would
+      // wait on this lock first and would no longer prove Drizzle's own bound.
+      let protocolBytes = Buffer.alloc(0);
+      const sockets: Socket[] = [];
+      const relay = createServer((client) => {
+        const server = createConnection({
+          host: '127.0.0.1',
+          port: Number(poolerPort),
+        });
+        sockets.push(client, server);
+        server.on('data', (chunk: Buffer) => {
+          protocolBytes = Buffer.concat([protocolBytes, chunk]);
+        });
+        client.on('error', () => server.destroy());
+        server.on('error', () => client.destroy());
+        client.pipe(server).pipe(client);
       });
-      sockets.push(client, server);
-      server.on('data', (chunk: Buffer) => {
-        protocolBytes = Buffer.concat([protocolBytes, chunk]);
-      });
-      client.on('error', () => server.destroy());
-      server.on('error', () => client.destroy());
-      client.pipe(server).pipe(client);
-    });
-    relay.listen(0, '127.0.0.1');
-    await once(relay, 'listening');
-    const address = relay.address();
-    if (!address || typeof address === 'string')
-      throw new Error('Missing relay port');
-    const url = new URL(connectionUrl(true));
-    url.port = String(address.port);
-    try {
-      await holder.begin(async (tx) => {
-        await tx`lock table drizzle.__drizzle_migrations in access exclusive mode`;
-        await expect(
-          migrateThroughManagedRunner(url.toString()),
-        ).rejects.toThrow('exit code 1');
-        expect(protocolBytes.includes(Buffer.from('C55P03\0'))).toBe(true);
-      });
-    } finally {
-      await holder.end();
-      for (const socket of sockets) socket.destroy();
-      await new Promise<void>((resolve, reject) =>
-        relay.close((error) => (error ? reject(error) : resolve())),
-      );
-    }
-  });
+      relay.listen(0, '127.0.0.1');
+      await once(relay, 'listening');
+      const address = relay.address();
+      if (!address || typeof address === 'string')
+        throw new Error('Missing relay port');
+      const url = new URL(connectionUrl(true));
+      url.port = String(address.port);
+      try {
+        await holder.begin(async (tx) => {
+          await tx`lock table drizzle.__drizzle_migrations in access exclusive mode`;
+          await expect(
+            runMigrationClient(url.toString(), args),
+          ).rejects.toThrow(message);
+          expect(protocolBytes.includes(Buffer.from('C55P03\0'))).toBe(true);
+        });
+      } finally {
+        await holder.end();
+        for (const socket of sockets) socket.destroy();
+        await new Promise<void>((resolve, reject) =>
+          relay.close((error) => (error ? reject(error) : resolve())),
+        );
+      }
+    },
+  );
 });

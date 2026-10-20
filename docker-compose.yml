@@ -1,20 +1,19 @@
 # Local development database for integration tests
 # Usage: pnpm db:test:up, which resolves this clone's project name and ports;
 # a bare `docker compose up` fails without DB_TEST_POOLER_PORT.
-# Matches CI's database: the same image digest, credentials and health check
-# as scripts/ci/start-postgres.sh (DEBT-516).
+# CI and local tests use this same service definition and pinned images.
 
 services:
   db:
     # postgres:16 (PostgreSQL 16.15), pinned to the digest CI pulls; the two
     # change together (docs/guides/dependencies/updating-dependencies.md).
-    image: postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5
+    image: ${POSTGRES_IMAGE_REPOSITORY:-postgres}@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: addiction_boards_test
     ports:
-      - '${DB_TEST_PORT:-5434}:5432'
+      - '127.0.0.1:${DB_TEST_PORT:-5434}:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d addiction_boards_test']
       interval: 5s

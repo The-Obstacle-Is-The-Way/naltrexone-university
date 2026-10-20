@@ -49,6 +49,14 @@ describe('BUG-351: stage and activation previews name answer-key changes', () =>
     ['unrelated content', { stem: 'Revised synthetic task.' }, false],
   ] satisfies [string, ContentEdits, boolean][])(
     'compares %s in both previews',
+    {
+      meta: {
+        ruleProof: {
+          file: 'tests/integration/content-release-key-preview.integration.test.ts',
+          title: 'compares %s in both previews',
+        },
+      },
+    },
     async (_kind, edits, changed) => {
       const slug = `it-key-preview-${randomUUID()}`;
       await syncQuestionsFromFiles(disposable.db, [source(slug)]);
