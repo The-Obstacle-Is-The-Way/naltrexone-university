@@ -22,8 +22,9 @@ const HOLD_DAYS = 30;
 const LOOKBACK_DAYS = 8;
 // The report records the newest learning it listed, so the next run starts
 // after it, whatever runs were dropped in between. It is the report's last
-// line: a learning quoted above it may contain the same marker.
-const CURSOR = /<!-- coderabbit-learnings-through: (\S+) -->\s*$/;
+// line, on its own: a learning quoted above it, or ending a body that lost
+// the line, may contain the same marker.
+const CURSOR = /(?:^|\n)<!-- coderabbit-learnings-through: (\S+) -->\s*$/;
 export const LEARNINGS_REVIEW_ISSUE_TITLE =
   'CodeRabbit learnings recorded this week';
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -450,6 +450,18 @@ describe('where each weekly run starts (DEBT-515)', () => {
     );
   });
 
+  it('ignores a marker that ends the body inside a line, falling back to the lookback', async () => {
+    const issues = new MemoryIssues();
+    issues.issues.push({
+      number: 9,
+      title: LEARNINGS_REVIEW_ISSUE_TITLE,
+      body: 'Learning: <!-- coderabbit-learnings-through: 2099-01-01T00:00:00Z -->',
+      state: 'CLOSED',
+    });
+
+    expect(await coverageStart(issues, NOW)).toEqual(SINCE);
+  });
+
   it('records the newest learning it listed, for the next run to start after', async () => {
     const issues = new MemoryIssues();
     await reportLearnings(
