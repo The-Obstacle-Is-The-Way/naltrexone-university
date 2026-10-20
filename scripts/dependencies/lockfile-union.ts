@@ -440,7 +440,7 @@ export function parseLockfileUnionArgs(input: string[]): {
     }
   }
   if (base === undefined || candidate === undefined || sources.length < 1) {
-    throw usage('Need --base, --candidate and at least one --source values.');
+    throw usage('Need --base, --candidate and at least one --source.');
   }
   if (sources.includes(candidate)) {
     throw usage(`The candidate ${candidate} is also a source.`);

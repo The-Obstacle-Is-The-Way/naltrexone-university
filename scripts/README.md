@@ -48,7 +48,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | --- | --- | --- |
 | `lib/github-issues.mts` | Reads and validates paginated repository issue pages; callers validate entries and own issue policy. | Imported by `watchers/security-txt-renewal.mts` and `watchers/upstream-advisory-watch.mts` |
 | `lib/github-cli.mts` | Native Node GitHub CLI transport with caller-owned limits, captured output and optional stdin. | Imported by the merge and promotion commands, alert issues, renewal, advisory, release, learnings and upstream-fix watchers |
-| `lib/command-plan.ts` | Runs sequential test-lane command plans; preserves scoped environments and POSIX process-group interruption/cleanup. | Imported by `test-lanes/run-local-e2e.ts`, `test-lanes/run-local-integration.ts` and `test-lanes/run-local-test-db.ts` |
+| `lib/command-plan.ts` | Runs sequential test-lane command plans; preserves scoped environments and POSIX process-group interruption/cleanup. | Imported by `test-lanes/e2e-local-orchestrator.ts`, `test-lanes/run-local-e2e.ts`, `test-lanes/run-local-integration.ts` and `test-lanes/run-local-test-db.ts` |
 | `lib/entry-point.mts` | Compares real file paths for guarded entry points, including runtime-resolved extensionless paths and symlinks. Uses only Node built-ins. | Imported by guarded TypeScript commands, including the native scheduled jobs |
 | `lib/loopback-hostname.ts` | Classifies localhost and the exact IPv4/IPv6 loopback hosts, normalizing URL brackets. Callers retain URL validation and authorization policies; human database commands separately retain their 127/8 allowance. | Imported by database target classification, the E2E plan, integration setup and helpers |
 
@@ -102,9 +102,9 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | --- | --- | --- |
 | `seed.ts` | Syncs question MDX under `content/questions/`, excluding placeholder files unless `SEED_INCLUDE_PLACEHOLDERS=true`; otherwise archives the ten fixture slugs. Refuses an active content release. #1559 replaces the environment switch with an explicit flag (BUG-353). | Imported by `database/db-seed.ts` and `database/managed/run-managed-db-seed.ts` |
 | `seed/file-reader.ts` | Finds and reads the question MDX files; fails if none remain after filtering. | Imported by `seed.ts` and `content-release/stage-release.ts`; its source-file type is used by the seed writer and release builder |
-| `seed/question-parser.ts` | Parses and validates one question file into the seed's representation. | Imported by the seed writer, the release builder and `draft-question-import.ts` |
+| `seed/question-parser.ts` | Parses and validates one question file into the seed's representation. | Imported by the seed writer and `seed/tag-manager.ts`, the release builder, `content-release/compare-live-keys.ts` and `draft-question-import.ts` |
 | `seed/question-syncer.ts` | The seed's writer: inserts or updates each question in its own transaction. | Imported by `seed.ts`; the release builder imports its preparation and tag helpers |
-| `seed/question-revision-writer.ts` | Appends a question revision and its choices. | Imported by the seed writer, the release builder and `tests/shared/question-fixtures.ts` |
+| `seed/question-revision-writer.ts` | Appends a question revision and its choices. | Imported by the seed writer, the release builder, `tests/shared/question-fixtures.ts` and `tests/shared/question-revision-fixtures.ts` |
 | `seed/question-withdrawal-writer.ts` | Records and reads per-revision withdrawals. | Imported by the seed writer, the release builder, release activation and `seed/withdraw-questions.ts` |
 | `seed/tag-manager.ts` | Validates a question's tags and upserts tag rows. | Imported by `seed/question-syncer.ts` |
 | `seed/placeholder-archiver.ts` | Archives the ten committed fixture slugs, including updating timestamps and counting rows already archived; refuses an active release. | Imported by `seed.ts` |
@@ -162,7 +162,6 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | `review/diff-hunks.ts` | Decides whether a pull request's diff moved only because its base changed. | Imported by `review/merge-policy.ts` |
 | `review/coderabbit-learnings.ts` | The marker and parser for a CodeRabbit reply that recorded a learning. | Imported by `review/merge-policy.ts` and `review/coderabbit-learnings-review.ts` |
 | `review/coderabbit-learnings-review.ts` | Keeps one owner-assigned issue listing CodeRabbit learnings since the last report, capped at 30 days (eight days on the first run). | `coderabbit-learnings-review.yml` |
-| `watchers/production-release-watch.ts` | After a 45-minute grace period, reports absent/failed main CI or no successful GitHub Production deployment record; leaves the issue unchanged while CI is pending. | `production-release-watch.yml` |
 
 ### Dependencies
 
@@ -176,13 +175,14 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | File | What it does | Run by |
 | --- | --- | --- |
 | `records/next-record-id.ts` | Prints the next free BUG or DEBT ID. | `pnpm record:next`; By hand, per `AGENTS.md` |
-| `records/documentation-archive.ts` | Audits records and documentation links. Its CLI exits 1 for blocking findings, but overdue/far-future actions are reported separately; the live policy suites assert all blocking categories (BUG-356). | `pnpm docs:audit`; Imported by the documentation tests and `records/documentation-due-checks.ts`; run manually with `pnpm docs:audit` |
+| `records/documentation-archive.ts` | Audits records and documentation links. Its CLI exits 1 for blocking findings, but overdue/far-future actions are reported separately; the live policy suites assert all blocking categories (BUG-356). | `pnpm docs:audit`; Imported by the documentation tests and `records/documentation-due-checks.ts` |
 | `records/documentation-due-checks.ts` | Keeps one issue for due or excessively far-future record actions and queue-review dates. An unreadable queue date instead fails the command before updating the issue. | `documentation-due-checks.yml` |
 
 ### Scheduled Watchers
 
 | File | What it does | Run by |
 | --- | --- | --- |
+| `watchers/production-release-watch.ts` | After a 45-minute grace period, reports absent/failed main CI or no successful GitHub Production deployment record; leaves the issue unchanged while CI is pending. | `production-release-watch.yml` |
 | `watchers/github-alert-issues.ts` | Keeps one GitHub issue per alert condition: creates or reopens it, edits its body and comments when changed, and closes it when the condition clears. | Imported by `watchers/operational-alert-watcher.ts`, `watchers/upstream-fix-watch.ts`, `watchers/production-release-watch.ts`, `review/coderabbit-learnings-review.ts` and `records/documentation-due-checks.ts` |
 | `watchers/operational-alert-watcher.ts` | Checks that Sentry's alert path still works, and keeps an issue open while it does not. | `operational-alert-watcher.yml` |
 | `watchers/upstream-advisory-watch.mts` | Scans upstream repository advisories from its configured start date; ignores medium/low advisories from indirect-only repositories, raises other eligible issues unless reviewed ranges prove locked versions unaffected, and closes existing issues on that evidence. | `upstream-advisory-watch.yml`, with plain `node` |
