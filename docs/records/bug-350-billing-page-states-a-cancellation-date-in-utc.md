@@ -32,7 +32,7 @@ Until promotion, a US learner who cancels can read that they keep access for an 
 1. **Use F06's formatter on the billing page.** *Recommended:* one formatter for this cancellation notice and the existing email cutoff. If it moves, keep it in a pure inward module both callers may import; do not make application email code depend on outer `app` or `lib` presentation code.
 2. **Show the UTC time beside the date.** This is accurate, but harder to read than F06's form.
 
-## Resolution
+## Resolution (decided)
 
 Option 1: the billing page calls F06's existing formatter directly. Six page cases failed first on the date-only output and now pass: 03:00 UTC on the prior US evening, both fall-back hours, both sides of spring-forward, and the prior US year. The email formatter's existing tests still pass. No entitlement or cancellation instant changes.
 
