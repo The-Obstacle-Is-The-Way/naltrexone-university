@@ -29,6 +29,8 @@ describe('script entry detection', () => {
   it.each([
     'scripts/records/next-record-id.ts',
     'scripts/records/next-record-id',
+    // TypeScript's ESM convention: tsx loads the .ts file for a .js path.
+    'scripts/records/next-record-id.js',
   ])('executes the record allocator via %s', (file) => {
     const result = run(file, ['debt']);
     expect(result.status, result.stderr).toBe(0);
@@ -99,6 +101,23 @@ describe('entry point policy', () => {
       );
     });
     expect(failures).toEqual([]);
+  });
+
+  it('keeps package-script entry points outside scripts/ on the same check', () => {
+    const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+    const entries = Object.values<string>(scripts).flatMap((command) =>
+      Array.from(
+        command.matchAll(/\btsx\s+((?!scripts\/)[\w./-]+\.[cm]?ts)\b/g),
+        (match) => match[1] ?? '',
+      ),
+    );
+    expect(entries).toContain('tests/test-double-fidelity-live-scan.ts');
+    expect(
+      entries.filter(
+        (file) =>
+          entryPointPolicyIssues(readFileSync(file, 'utf8'), file).length > 0,
+      ),
+    ).toEqual([]);
   });
 });
 

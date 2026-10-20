@@ -2,8 +2,9 @@ import { realpathSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Node resolves symlinks, and tsx can resolve an omitted extension. Compare
-// the same real files; importing a command never makes it the entry point.
+// Node resolves symlinks, and tsx can resolve an omitted extension or a .js
+// spelling of a .ts file. Compare the same real files; importing a command
+// never makes it the entry point.
 export function isMain(
   moduleUrl: string,
   entryPath = process.argv[1],
@@ -11,7 +12,12 @@ export function isMain(
   if (!entryPath) return false;
   const modulePath = fileURLToPath(moduleUrl);
   const moduleRealPath = realpathSync(modulePath);
-  for (const candidate of [entryPath, `${entryPath}${extname(modulePath)}`]) {
+  const extension = extname(modulePath);
+  for (const candidate of [
+    entryPath,
+    `${entryPath}${extension}`,
+    entryPath.replace(/\.[cm]?jsx?$/, extension),
+  ]) {
     try {
       return realpathSync(resolve(candidate)) === moduleRealPath;
     } catch (error) {

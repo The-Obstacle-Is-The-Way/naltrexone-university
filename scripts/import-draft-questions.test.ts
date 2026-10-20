@@ -83,17 +83,20 @@ describe('draft import filesystem boundary', () => {
   }
 
   it.each([
-    ['--dry-rnu'],
-    ['--unknown', 'value'],
-    ['stray'],
-    ['--dry-run', '--dry-run'],
-    ['--in', 'duplicate'],
-    ['--out', 'duplicate'],
-    ['--status'],
-    ['--status', '--dry-run'],
-    ['--status', 'draft', '--status', 'published'],
-    ['--', '--dry-run'],
-  ])('rejects unsupported arguments %j before writing', (...extra) => {
+    [['--dry-rnu'], /Unknown argument: --dry-rnu/],
+    [['--unknown', 'value'], /Unknown argument: --unknown/],
+    [['stray'], /Unknown argument: stray/],
+    [['--dry-run', '--dry-run'], /Duplicate argument: --dry-run/],
+    [['--in', 'duplicate'], /Duplicate argument: --in/],
+    [['--out', 'duplicate'], /Duplicate argument: --out/],
+    [['--status'], /Missing value for flag: --status/],
+    [['--status', '--dry-run'], /Missing value for flag: --status/],
+    [
+      ['--status', 'draft', '--status', 'published'],
+      /Duplicate argument: --status/,
+    ],
+    [['--', '--dry-run'], /Unknown argument: --$/m],
+  ])('rejects unsupported arguments %j before writing', (extra, expected) => {
     const result = spawnSync(
       process.execPath,
       [
@@ -109,7 +112,7 @@ describe('draft import filesystem boundary', () => {
       { encoding: 'utf8' },
     );
     expect(result.status, result.stdout).toBe(1);
-    expect(result.stderr).toMatch(/argument|duplicate|value/i);
+    expect(result.stderr).toMatch(expected);
     expect(existsSync(output)).toBe(false);
   });
 
