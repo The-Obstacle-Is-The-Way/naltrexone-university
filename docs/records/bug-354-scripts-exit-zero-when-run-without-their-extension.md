@@ -41,13 +41,13 @@ Corrected 2026-10-19: add the production content commands to the impact; all thr
 
 ## Options
 
-1. **One shared helper** that decides whether its module is the executed file. It compares real paths, trying the module's extension and resolving symlinks. All 36 entry points use it. Preserve each caller's error handling: watcher diagnostics deliberately suppress provider output, and typed ledger diagnostics preserve safe remedies. Prove both native `.mts` and `tsx` `.ts` execution/import behavior before migration.
+1. **One shared helper** that decides whether its module is the executed file. It compares real paths, trying the module's extension and resolving symlinks. All guarded entry points use it. Preserve each caller's error handling: watcher diagnostics deliberately suppress provider output, and typed ledger diagnostics preserve safe remedies. Prove both native `.mts` and `tsx` `.ts` execution/import behavior before migration.
 2. **Split each command into a module and a thin file that always runs**, as `verify-lockfile-union.ts` does. This adds a separate library file per command.
 3. **Package scripts for the hand-run commands:** the merge guard, the promotion verifier and the record ID. This prevents most typos but leaves the guard as it is.
 
 ## Resolution
 
-Implemented options 1 and 3. All 36 guarded entry points use the real-path helper in `scripts/lib/entry-point.mts`; caller-specific diagnostics remain separate. The bounded AST policy requires its top-level check and import, with explicit unconditional CLI exceptions. Runtime controls cover direct, extensionless, symlink and imported entries, including native `.mts`. Package commands cover the merge guard, promotion verifier, record allocator, content operators, ledger and documentation audits; the operator guides use them. The commands take arguments directly (`pnpm pr:merge-reviewed 1560`); a forwarded pnpm `--` is refused like any unknown argument, as #1567 decided for strict parsers.
+Implemented options 1 and 3. All 39 guarded entries under `scripts/`, plus the package-command entry in `tests/test-double-fidelity-live-scan.ts`, use the real-path helper in `scripts/lib/entry-point.mts`; caller-specific diagnostics remain separate. The bounded AST policy requires its top-level check and import, with explicit unconditional CLI exceptions. Runtime controls cover direct, extensionless, `.js`, symlink and imported entries, including native `.mts`. Package commands cover the merge guard, promotion verifier, record allocator, content operators, ledger and documentation audits; the operator guides use them. The commands take arguments directly (`pnpm pr:merge-reviewed 1560`); a forwarded pnpm `--` is refused like any unknown argument, as #1567 decided for strict parsers.
 
 Corrected 2026-10-19: bind reproduction claims to the audited baseline and record the red-first implementation, passing local gate and remaining final-sync verification.
 
@@ -63,3 +63,5 @@ Corrected 2026-10-20: the commands no longer strip a leading `--`. #1567, merged
 
 - DEBT-532: the scripts audit, and the shared building blocks.
 - ADR-024: the merge guard's role.
+
+Corrected 2026-10-20: recount the current guarded entries after dev added three content commands and the doubles-scan entry joined the shared check; keep the 36-entry census as baseline evidence.

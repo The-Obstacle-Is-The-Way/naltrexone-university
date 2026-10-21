@@ -26,7 +26,7 @@ Corrected 2026-10-19: the default output is the seed's input tree, the environme
 
 ## Options
 
-1. Consume every argument with explicit supported flags and reject unknown, duplicate or missing-value arguments before filesystem work. Preserve the leading pnpm `--` separator, which the guide documents and the environment seeds send (`seed-environment-runtime.ts:55`).
+1. Consume every argument with explicit supported flags and reject unknown, duplicate or missing-value arguments before filesystem work. Refuse a forwarded pnpm `--` like other unknown arguments; the environment seeds pass flags directly under #1567.
 2. Keep permissive parsing and warn in the guide. This leaves unintended writes possible in an empty output tree.
 
 ## Resolution
@@ -45,3 +45,5 @@ Corrected 2026-10-20: option 1 preserved the leading separator; the importer now
 ## Related
 
 - DEBT-532: the scripts audit previously embedded this defect without its own record.
+
+Corrected 2026-10-20: align option 1 with the implemented separator refusal and direct-argument caller; the baseline reproduction remains historical.

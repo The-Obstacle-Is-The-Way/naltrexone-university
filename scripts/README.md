@@ -9,7 +9,7 @@ The [directory](#directory) below gives every script one row: what it does and w
   - The check follows package commands, workflow steps' `run` text, and only `vercel.json`'s `buildCommand`, looking for the complete path or a `pnpm` package command that references it. Comments and commands whose first word names `echo` or `printf` (including executable paths) are excluded.
   - It does not interpret shell control flow, command wrappers, variables, heredocs, continued lines or imports, prove that a command executes, or find omitted callers. Those claims and the purpose column need source review; changes to callers update the row.
 
-The non-content families are grouped below. Remaining content-boundary work stays with BUG-351 and DEBT-531; DEBT-532 records the layout decisions and validation.
+The non-content families are grouped below. Remaining content-boundary work stays with BUG-351 and DEBT-531; DEBT-532 owns the remaining content-family move as well as the layout decisions and validation.
 
 ## Conventions
 
@@ -19,7 +19,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
   - `ci/*.sh` runs with `bash`.
 
   Some callers still use a path where a package script exists. `ci.yml` calls `test-lanes/resolve-local-test-target.ts` by path, and the local E2E plan spawns `test-lanes/run-local-test-db.ts` by path (DEBT-532).
-- **Most TypeScript entry points export their work as a function.** Some inject their dependencies; others call real infrastructure. Guarded entry points use `isMain` from `lib/entry-point.mts`, which compares real paths and tries the module extension for an extensionless entry argument. The shared check resolves symlinks; imports do not enter the guarded command body. `tests/script-entry-points.test.ts` exercises both runtimes and requires a top-level shared check in modules with executable entry signals; its bounded AST scan ignores comments and nested lookalikes. The package commands added by this change and `local:test:target` accept one leading `--` from pnpm 11. #1559 owns that change for the two environment seeds.
+- **Most TypeScript entry points export their work as a function.** Some inject their dependencies; others call real infrastructure. Guarded entry points use `isMain` from `lib/entry-point.mts`, which compares real paths and resolves extensionless or `.js` entry spellings supported by the runtime. The shared check resolves symlinks; imports do not enter the guarded command body. `tests/script-entry-points.test.ts` exercises both runtimes and requires a top-level shared check in modules with executable entry signals; its bounded AST scan ignores comments and nested lookalikes and checks package-script entry points outside `scripts/` too. Pass arguments directly to package commands; strict parsers refuse the literal `--` separator that pnpm 11 forwards (#1567).
   - Error reporting varies: message, stack, or a sanitized diagnostic; most guards set `process.exitCode = 1` on failure. Many carry `/* v8 ignore */` comments.
   - Not every entry point follows this yet. `import-draft-questions.ts`, `seed-production.ts` and `seed-all-environments.ts` run unconditionally, and some guards neither catch nor carry the comments.
   - `dependencies/verify-lockfile-union.ts` is also an unconditional thin CLI; reusable logic lives in `dependencies/lockfile-union.ts`.
@@ -28,7 +28,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
   - Native TypeScript imports include their extension; `tsconfig.json` permits this under `noEmit`. Shared native helpers use only Node built-ins.
 - **Shell scripts live in `ci/`** and drive Docker and the runner's packages for CI steps.
 - **Human connected database entry points use `database/database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` naming the exact remote host, port and database set. The environment seeds apply the same rule through `database/database-target.ts` directly. Imported writer modules rely on their entry point's authorization.
-  - `pnpm db:generate` is offline: it reads schema and snapshots with `drizzle.generate.config.ts`, without dotenv or credentials. Its thin wrapper only normalizes pnpm arguments and propagates failure.
+  - `pnpm db:generate` is offline: it reads schema and snapshots with `drizzle.generate.config.ts`, without dotenv or credentials. Its thin wrapper selects the offline config, passes arguments unchanged and propagates failure.
   - The managed path in `database/managed/` takes no acknowledgment.
   - It is used by checked-in automation (CI, the Vercel build and the local test harness), and by the environment seeds after their own `DB_TARGET_ACK` check. The migration-ledger CLI uses the managed target authorizer directly.
   - A second rule still exists. The E2E passthrough and integration setup accept a remote host with `ALLOW_NON_LOCAL_DATABASE_URL=true`, without `DB_TARGET_ACK`; their outer runners also require the corresponding `*_USE_EXISTING_DATABASE=true` switch. The integration session-proof suites still reject remote targets (DEBT-532).
@@ -59,7 +59,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | `database/database-target.ts` | Classifies a database URL as local or remote, and enforces the explicit-URL and `DB_TARGET_ACK` rules. | Imported by `database/database-command.ts`, the managed path, `database/verify-migration-ledger.ts` and the environment seeds |
 | `database/database-command.ts` | Runs a person's database command: explicit URL, acknowledgment for a remote target, then logs the target without credentials. | Imported by `database/db-migrate.ts`, `database/db-seed.ts`, `database/db-studio.ts`, the content-release commands, `feedback/export-question-feedback.ts`, `operations/requeue-renewal-notice.ts` and `seed/withdraw-questions.ts` |
 | `database/database-process.ts` | Runs `pnpm` with a given `DATABASE_URL` and the parent's output, and rejects on a non-zero exit. | Imported by `database/db-migrate.ts`, `database/db-studio.ts` and `database/managed/run-managed-db-migrate.ts` |
-| `database/db-generate.ts` | Offline Drizzle migration generation with pnpm separator normalization; no database credentials or dotenv. | `pnpm db:generate` |
+| `database/db-generate.ts` | Offline Drizzle migration generation with arguments passed unchanged to drizzle-kit; no database credentials or dotenv. | `pnpm db:generate` |
 | `database/db-migrate.ts` | `drizzle-kit migrate` behind the human database guard. | `pnpm db:migrate` |
 | `database/db-seed.ts` | The question seed (`seed.ts`) behind the human database guard. | `pnpm db:seed` |
 | `database/db-studio.ts` | `drizzle-kit studio` behind the human database guard. | `pnpm db:studio` |
