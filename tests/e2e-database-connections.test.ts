@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import ts from '@typescript/typescript6';
 import { describe, expect, it } from 'vitest';
 
 // BUG-360: E2E setup, resets and evidence helpers write to the shared test
@@ -24,26 +25,49 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
-// The module's name, not the name a file imports it as, so an aliased,
-// namespace, dynamic or required import is found too. A type-only import
-// loads nothing at run time; it must start a line and have an import
-// clause, so a comment that mentions one does not hide the import below it.
-const POSTGRES_MODULE = /(['"`])postgres\1/g;
-const TYPE_ONLY_IMPORT =
-  /^[ \t]*import\s+type\s+(?:[\w$]+\s+|\*\s*as\s+[\w$]+\s+|\{[^}]*\}\s*)from\s*(['"`])postgres\1/gm;
-
+// Every string that names the module, not the name a file imports it as, so
+// an aliased, namespace, dynamic or required import is found too, and a
+// comment can hide none of them.
 function postgresLoads(files: Record<string, string>): string[] {
   return Object.entries(files).flatMap(([file, source]) => {
     if (file === CONNECTION_MODULE) return [];
-    // Blanked rather than removed, so the line numbers stay true.
-    const loads = source.replace(TYPE_ONLY_IMPORT, (statement) =>
-      statement.replace(/[^\n]/g, ' '),
+    const parsed = ts.createSourceFile(
+      file,
+      source,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS,
     );
-    return [...loads.matchAll(POSTGRES_MODULE)].map(
-      (match) =>
-        `${file}:${loads.slice(0, match.index).split('\n').length} loads the postgres module; open connections with connectE2EDatabase.`,
+    const lines: number[] = [];
+    function visit(node: ts.Node): void {
+      if (
+        (ts.isStringLiteral(node) ||
+          ts.isNoSubstitutionTemplateLiteral(node)) &&
+        node.text === 'postgres' &&
+        !namesTypesOnly(node)
+      ) {
+        lines.push(
+          parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line + 1,
+        );
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(parsed);
+    return lines.map(
+      (line) =>
+        `${file}:${line} loads the postgres module; open connections with connectE2EDatabase.`,
     );
   });
+}
+
+// A type-only import or export, or a type query, loads nothing at run time.
+function namesTypesOnly(specifier: ts.Node): boolean {
+  const parent = specifier.parent;
+  if (ts.isImportDeclaration(parent)) {
+    return parent.importClause?.isTypeOnly === true;
+  }
+  if (ts.isExportDeclaration(parent)) return parent.isTypeOnly;
+  return ts.isLiteralTypeNode(parent) && ts.isImportTypeNode(parent.parent);
 }
 
 describe('E2E database connections', () => {
@@ -63,6 +87,9 @@ describe('E2E database connections', () => {
         'f.ts': "// Prefer import type for Sql\nimport pg from 'postgres';",
         'g.ts':
           "/*\nimport type checks are cheap\n*/\nimport pg from 'postgres';",
+        'h.ts':
+          "/*\nimport type {\n*/\nimport { default as pg } from 'postgres';",
+        'i.ts': "type Sql = import('postgres').Sql;",
       }),
     ).toEqual([
       'a.ts:1 loads the postgres module; open connections with connectE2EDatabase.',
@@ -71,6 +98,7 @@ describe('E2E database connections', () => {
       'e.ts:1 loads the postgres module; open connections with connectE2EDatabase.',
       'f.ts:2 loads the postgres module; open connections with connectE2EDatabase.',
       'g.ts:4 loads the postgres module; open connections with connectE2EDatabase.',
+      'h.ts:4 loads the postgres module; open connections with connectE2EDatabase.',
     ]);
   });
 
