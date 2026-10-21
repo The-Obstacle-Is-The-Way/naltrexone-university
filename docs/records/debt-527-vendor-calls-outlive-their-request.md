@@ -1,6 +1,6 @@
 # DEBT-527: Vendor Calls on Request Paths Have No Time Budget, So a Hung Call Outlives Its Request
 
-**Status:** Verifying — promotion to main; due 2026-10-21
+**Status:** Verifying — promotion to main; due 2026-10-24
 **Priority:** P3
 **Date:** 2026-10-17
 

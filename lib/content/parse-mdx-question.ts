@@ -1,19 +1,14 @@
 import { createHash } from 'node:crypto';
+import {
+  canonicalizeMarkdown,
+  trimTrailingWhitespacePerLine,
+} from '@/src/domain/value-objects/markdown-normalization';
 
-export function normalizeNewlines(input: string): string {
-  return input.replace(/\r\n?/g, '\n');
-}
-
-export function trimTrailingWhitespacePerLine(input: string): string {
-  return normalizeNewlines(input)
-    .split('\n')
-    .map((line) => line.replace(/[ \t]+$/g, ''))
-    .join('\n');
-}
-
-export function canonicalizeMarkdown(input: string): string {
-  return trimTrailingWhitespacePerLine(input).trim();
-}
+export {
+  canonicalizeMarkdown,
+  normalizeNewlines,
+  trimTrailingWhitespacePerLine,
+} from '@/src/domain/value-objects/markdown-normalization';
 
 export function extractBetween(
   content: string,

@@ -133,9 +133,7 @@ jobs:
         run: pnpm exec tsx scripts/internal/run-managed-db-migrate.ts
 
       - name: Seed DB (placeholder content)
-        run: pnpm exec tsx scripts/internal/run-managed-db-seed.ts
-        env:
-          SEED_INCLUDE_PLACEHOLDERS: 'true'
+        run: pnpm exec tsx scripts/internal/run-managed-db-seed.ts --include-placeholders
 
       - name: Unit tests with coverage
         id: unit_tests
