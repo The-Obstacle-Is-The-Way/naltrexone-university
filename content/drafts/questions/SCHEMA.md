@@ -3,7 +3,8 @@
 **Purpose:** Single source of truth for active question authoring in this repo's `questions/` tree, mirrored to `content/drafts/questions/` in the app repo.
 
 **Version:** 2.0
-**Last Updated:** March 28, 2026
+**Source version date:** March 28, 2026
+**App-repository audit:** 2026-10-18; reconcile these corrections into the content-repository copy.
 **Status:** Active consolidated spec
 
 **Read This With:**
@@ -96,30 +97,30 @@ This is a correction-note source folder. It intentionally has no generated quest
 
 ```markdown
 ---
-qid: white-2020-001
+qid: bradley-2007-001
 type: recall
 difficulty: medium
 substances: [alcohol]
 topics: [screening-diagnosis]
-treatments: [naltrexone]
+treatments: []
 diagnoses: [alcohol-use-disorder]
-source: white-2020
+source: bradley-2007
 choices:
   - label: A
     text: "2 or more points"
     correct: false
-    explanation: "A score of >=2 is too sensitive, leading to excessive false positives in clinical practice and unnecessary follow-up."
+    explanation: "A threshold of 2 is below the threshold of 3 supported for women in the cited primary-care validation study."
   - label: B
     text: "3 or more points"
     correct: true
   - label: C
     text: "4 or more points"
     correct: false
-    explanation: "A score of >=4 is the male cutoff. Using it for women misses at-risk female drinkers who metabolize alcohol differently."
+    explanation: "A threshold of 4 was supported for men; the cited study supported 3 for women."
   - label: D
     text: "5 or more points"
     correct: false
-    explanation: "A score of >=5 would miss the majority of at-risk drinkers regardless of sex."
+    explanation: "A threshold of 5 exceeds the threshold supported for women and does not give the sensitivity-specificity balance identified in the cited study."
 ---
 
 ## Question
@@ -132,18 +133,17 @@ alcohol use in women?
 
 ## Explanation
 
-The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
-Women achieve higher blood alcohol concentrations than men at equivalent
-doses due to lower body water content and reduced gastric ADH activity.
+In the cited primary-care validation, thresholds of >=3 for women and >=4
+for men gave the best combined sensitivity and specificity for alcohol misuse.
 
-**Clinical pearl:** The AUDIT-C is the most validated brief screening tool
-in primary care, taking under 1 minute to administer.
+**Clinical pearl:** AUDIT-C is a screening tool; a positive screen warrants
+further assessment rather than establishing a diagnosis by itself.
 
 ### Reference
 
-White AM, Castle IP, Hingson RW, Powell PA. Using death certificates to
-explore changes in alcohol-related mortality in the United States, 1999 to
-2017. Alcohol Clin Exp Res. 2020;44(1):178-187.
+Bradley KA, DeBenedetti AF, Volk RJ, et al. AUDIT-C as a brief screen for
+alcohol misuse in primary care. Alcohol Clin Exp Res. 2007;31(7):1208-1217.
+doi:10.1111/j.1530-0277.2007.00403.x. https://pubmed.ncbi.nlm.nih.gov/17451397/
 ```
 
 ### YAML Frontmatter Fields
@@ -157,7 +157,7 @@ explore changes in alcohol-related mortality in the United States, 1999 to
 | `difficulty` | enum | `easy`, `medium`, or `hard` | `medium` |
 | `substances` | string[] | At least one canonical substance slug | `[alcohol]` |
 | `topics` | string[] | At least one canonical topic slug | `[screening-diagnosis]` |
-| `source` | string | Non-empty source identifier | `white-2020` |
+| `source` | string | Non-empty kebab-case source identifier | `bradley-2007` |
 | `choices` | object[] | 2-5 choice objects (see below) | see example |
 
 #### Choice Object Fields
@@ -198,13 +198,13 @@ source:
 choices:
 ```
 
-`qid` must always be the first key. The splitter depends on `---\nqid:` as the block delimiter.
+`qid` must always be the first key. The line-based splitter requires `qid:` immediately after the opening `---`.
 
 #### Strict Frontmatter Rules
 
 - The importer uses `DraftFrontmatterSchema.strict()`. Unknown YAML keys are rejected.
 - `treatments` and `diagnoses` default to `[]` when omitted.
-- `qid` and `source` must be non-empty strings.
+- `qid` must be non-empty; `source` must match the lowercase kebab-case identifier pattern.
 - During draft to MDX conversion, `qid` is re-validated against the output `slug` regex, so non-kebab-case QIDs fail.
 - Exactly one choice must have `correct: true`.
 - A correct choice must NOT have an `explanation` field.
@@ -242,7 +242,7 @@ There is no `## Choices` section. Choice data (text, correctness, and per-choice
 
 Each draft `.md` file can contain multiple question blocks separated by `---`.
 
-**Critical splitter rule:** every question block must start with `---`, and `qid:` must be the first frontmatter key on the next line. The splitter looks for `^---\nqid:`.
+**Critical splitter rule:** every question block must start with `---`, and `qid:` must be the first frontmatter key on the next line. The splitter scans delimiter lines and rejects any block whose next line does not start with `qid:`. A title/quoted-source preamble and its optional separator are supported.
 
 #### `## Question`
 
@@ -259,7 +259,7 @@ Rules:
 This section has two or three parts:
 
 1. General explanation of why the correct answer is right
-2. `**Clinical pearl:**` (recommended but optional; 100 existing questions lack one)
+2. `**Clinical pearl:**` (recommended but optional)
 3. `### Reference`
 
 Per-choice wrong-answer explanations are in the YAML `choices[].explanation` fields, not in the markdown body.
@@ -478,25 +478,27 @@ content/questions/imported/
 
 ```bash
 # Validate drafts without writing files
-pnpm content:import:drafts -- --dry-run
+pnpm content:import:drafts --dry-run
 
-# Import drafts to MDX (draft status)
-pnpm content:import:drafts
-
-# Import drafts to MDX (published status)
-pnpm content:import:drafts -- --status published
-
-# Seed MDX to database
-pnpm db:seed
-
-# Include placeholders while seeding
-SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
-
-# Full pipeline
-pnpm content:import:drafts -- --status published && pnpm db:seed
+# Write to a fresh staging directory outside the live MDX tree.
+CONTENT_STAGE_DIR="$(mktemp -d)"
+pnpm content:import:drafts --out "$CONTENT_STAGE_DIR" --status draft
+# Use a separate empty directory for a published-status artifact.
 ```
 
-This repo does include local helper scripts (for example `validate_questions.py` in the separate content repo), but `pnpm content:import:drafts -- --dry-run` in the app repo remains the canonical structural validation path.
+Actual writes require an absent or empty output directory; dry-run success does
+not certify that prerequisite. Review and place the approved artifact using the
+[content pipeline](../../../docs/architecture/content-pipeline.md#import-drafts--mdx-generated)
+before seeding. `DATABASE_URL="$TARGET_DATABASE_URL" pnpm db:seed` requires an
+explicit target and, for a remote target, its exact `DB_TARGET_ACK`. Direct
+seeding refuses an active content release. `--include-placeholders` adds the
+placeholder fixtures and is meant for a local test database. The managed seed
+refuses it for any non-local target; the direct `pnpm db:seed` accepts it for an
+acknowledged remote target, so never pass it with a remote `DATABASE_URL`.
+
+The separate content repository may have authoring helpers; no
+`validate_questions.py` exists in this app repository. The app importer's dry run
+checks its structural contract, not clinical accuracy or question quality.
 
 ### Tag / Answer Flow Summary
 
@@ -509,30 +511,30 @@ This repo does include local helper scripts (for example `validate_questions.py`
 
 Your draft will be rejected if any of these fail:
 
-| Validation | Where | Typical Error |
+| Validation | Where | Failure category (exact Zod wording can change) |
 |-----------|-------|---------------|
-| Unknown draft frontmatter key | Import script (`.strict()`) | `Unrecognized key(s) in object` |
-| `topics` contains non-canonical slug | Import schema | `Invalid enum value` |
-| `substances` contains non-canonical slug | Import schema | `Invalid enum value` |
-| `treatments` contains non-canonical slug | Import schema | `Invalid enum value` |
-| Missing `topics` or empty array | Import schema | `Array must contain at least 1 element` |
-| Missing `substances` or empty array | Import schema | `Array must contain at least 1 element` |
-| `qid` missing or empty | Import schema | `String must contain at least 1 character` |
+| Unknown draft frontmatter key | Import script (`.strict()`) | Unknown-key rejection |
+| `topics` contains non-canonical slug | Import schema | Invalid enum option |
+| `substances` contains non-canonical slug | Import schema | Invalid enum option |
+| `treatments` contains non-canonical slug | Import schema | Invalid enum option |
+| Missing `topics` or empty array | Import schema | Required array or below minimum length |
+| Missing `substances` or empty array | Import schema | Required array or below minimum length |
+| `qid` missing or empty | Import schema | Required string or below minimum length |
 | `qid` not kebab-case | Output MDX schema | Regex failure on `slug` |
-| `source` missing or empty | Import schema | `String must contain at least 1 character` |
-| `type` not `recall` / `vignette` | Import schema | `Invalid enum value` |
-| `difficulty` not `easy` / `medium` / `hard` | Import schema | `Invalid enum value` |
+| `source` missing, empty or not kebab-case | Import schema | Required string / `source must be a kebab-case identifier` |
+| `type` not `recall` / `vignette` | Import schema | Invalid enum option |
+| `difficulty` not `easy` / `medium` / `hard` | Import schema | Invalid enum option |
 | `diagnoses` contains non-kebab-case slug | Import schema | `tag slugs must be kebab-case` |
-| Missing `choices` or fewer than 2 choices | Import schema | `Array must contain at least 2 element(s)` |
+| Missing `choices` or fewer than 2 choices | Import schema | Required array or below minimum length |
 | No choice with `correct: true` | Import schema | `choices must contain exactly 1 correct=true` |
-| Correct choice has `explanation` | Import schema | `correct choice must not have explanation` |
-| Wrong choice missing `explanation` | Import schema | `wrong choice must have explanation` |
-| Duplicate choice labels | Output MDX schema | `choice labels must be unique` |
-| More than 5 choices | Output MDX schema | `Array must contain at most 5 element(s)` |
+| Correct choice has `explanation` | Import schema | `correct choices must not include explanation` |
+| Wrong choice missing `explanation` | Import schema | `wrong choices must include explanation` |
+| Duplicate choice labels | Import schema | `choice labels must be unique` |
+| More than 5 choices | Import schema | Array above maximum length |
 | Missing required headings / bad heading order | Import parser | `Missing required heading` / `Invalid heading order` |
 | Duplicate tag slugs in one question | Output MDX schema | `tag slugs must be unique` |
 | Missing topic or substance tags in MDX | Output MDX schema / seed validation | `at least one topic tag is required` / `at least one substance tag is required` |
-| `domain` tag kind present in MDX | Seed script | `... has domain tag ... which is not allowed` |
+| `domain` tag kind present in MDX | Output MDX schema | Invalid tag-kind enum option |
 ### Historical Seed Debt (Resolved)
 
 DEBT-338 found 24 corrupted imported files caused by regex parsing of wrong-answer sections. These were fixed in DEBT-01 and the regex parsing was eliminated by DEBT-02 (Phase 2 migration). The full historical file list lives in `NOTES.md`.
@@ -675,7 +677,7 @@ Use this checklist before saving or transplanting question files:
 **General:**
 - [ ] Question tests clinical concepts, not study trivia/statistics
 - [ ] Prescriber's Guide questions have an explicit addiction-psychiatry hook
-- [ ] `pnpm content:import:drafts -- --dry-run` passes in the app repo
+- [ ] `pnpm content:import:drafts --dry-run` passes in the app repo
 
 ---
 

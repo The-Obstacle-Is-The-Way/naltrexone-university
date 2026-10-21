@@ -26,6 +26,7 @@ The non-content families are grouped below. Remaining content-boundary work stay
 - **Workflow entry points run with plain `node` only when they use `.mts`,** with no `pnpm install`. `tests/workflow-node-scripts.test.ts` requires that extension because this package declares no module type. The shared native entry helper also uses `.mts`.
   - Such a script cannot use `node_modules`.
   - Native TypeScript imports include their extension; `tsconfig.json` permits this under `noEmit`. Shared native helpers use only Node built-ins.
+- **Run issue-writing scheduled commands through their checked-in workflows.** Alert and renewal lookup recognize only GitHub Actions-authored issues; a local write uses the human author and leaves an issue later runs cannot rediscover. Only the records due check and learnings review expose `--dry-run` for local inspection; the renewal job has no dry-run flag.
 - **Shell scripts live in `ci/`** and drive Docker and the runner's packages for CI steps.
 - **Human connected database entry points use `database/database-command.ts`,** which requires an explicit `DATABASE_URL`, plus `DB_TARGET_ACK` naming the exact remote host, port and database set. The environment seeds apply the same rule through `database/database-target.ts` directly. Imported writer modules rely on their entry point's authorization.
   - `pnpm db:generate` is offline: it reads schema and snapshots with `drizzle.generate.config.ts`, without dotenv or credentials. Its thin wrapper selects the offline config, passes arguments unchanged and propagates failure.
@@ -100,7 +101,8 @@ The non-content families are grouped below. Remaining content-boundary work stay
 
 | File | What it does | Run by |
 | --- | --- | --- |
-| `seed.ts` | Syncs question MDX under `content/questions/`, excluding placeholder files unless `SEED_INCLUDE_PLACEHOLDERS=true`; otherwise archives the ten fixture slugs. Refuses an active content release. #1559 replaces the environment switch with an explicit flag (BUG-353). | Imported by `database/db-seed.ts` and `database/managed/run-managed-db-seed.ts` |
+| `seed.ts` | Syncs question MDX under `content/questions/`, excluding placeholder files unless its explicit `includePlaceholders` option is true; otherwise archives the ten fixture slugs. Refuses an active content release. The seed commands accept `--include-placeholders` and refuse the retired environment variable (BUG-353). | Imported by `database/db-seed.ts` and `database/managed/run-managed-db-seed.ts` |
+| `seed/seed-options.ts` | Parses the explicit placeholder flag, refuses the retired environment variable and unknown arguments, and shares strict plan-only parsing for environment seeds. | Imported by `database/db-seed.ts`, `database/managed/run-managed-db-seed.ts`, `seed-all-environments.ts` and `seed-production.ts`; `seed.ts` imports its option type |
 | `seed/file-reader.ts` | Finds and reads the question MDX files; fails if none remain after filtering. | Imported by `seed.ts` and `content-release/stage-release.ts`; its source-file type is used by the seed writer and release builder |
 | `seed/question-parser.ts` | Parses and validates one question file into the seed's representation. | Imported by the seed writer and `seed/tag-manager.ts`, the release builder, `content-release/compare-live-keys.ts` and `draft-question-import.ts` |
 | `seed/question-syncer.ts` | The seed's writer: inserts or updates each question in its own transaction. | Imported by `seed.ts`; the release builder imports its preparation and tag helpers |
@@ -183,11 +185,11 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | File | What it does | Run by |
 | --- | --- | --- |
 | `watchers/production-release-watch.ts` | After a 45-minute grace period, reports absent/failed main CI or no successful GitHub Production deployment record; leaves the issue unchanged while CI is pending. | `production-release-watch.yml` |
-| `watchers/github-alert-issues.ts` | Keeps one GitHub issue per alert condition: creates or reopens it, edits its body and comments when changed, and closes it when the condition clears. | Imported by `watchers/operational-alert-watcher.ts`, `watchers/upstream-fix-watch.ts`, `watchers/production-release-watch.ts`, `review/coderabbit-learnings-review.ts` and `records/documentation-due-checks.ts` |
+| `watchers/github-alert-issues.ts` | Keeps one GitHub Actions-authored issue per alert condition: creates or reopens it, edits its body and comments when changed, and closes it when the condition clears. | Imported by `watchers/operational-alert-watcher.ts`, `watchers/upstream-fix-watch.ts`, `watchers/production-release-watch.ts`, `review/coderabbit-learnings-review.ts` and `records/documentation-due-checks.ts` |
 | `watchers/operational-alert-watcher.ts` | Checks that Sentry's alert path still works, and keeps an issue open while it does not. | `operational-alert-watcher.yml` |
 | `watchers/upstream-advisory-watch.mts` | Scans upstream repository advisories from its configured start date; ignores medium/low advisories from indirect-only repositories, raises other eligible issues unless reviewed ranges prove locked versions unaffected, and closes existing issues on that evidence. | `upstream-advisory-watch.yml`, with plain `node` |
 | `watchers/upstream-fix-watch.ts` | Raises an issue when a non-prerelease npm release follows a tracked fix's landing; the owner still verifies that the release contains the fix. | `upstream-fix-watch.yml` |
-| `watchers/security-txt-renewal.mts` | Opens or updates one issue when `security.txt`'s `Expires` date is less than 90 days away, and fails on a missing, invalid or duplicate `Expires`; it never closes the issue. | `security-txt-renewal.yml`, with plain `node` |
+| `watchers/security-txt-renewal.mts` | Opens or updates one GitHub Actions-authored issue when `security.txt`'s `Expires` date is less than 90 days away, and fails on a missing, invalid or duplicate `Expires`; it never closes the issue. | `security-txt-renewal.yml`, with plain `node` |
 
 ### Quality Reports
 

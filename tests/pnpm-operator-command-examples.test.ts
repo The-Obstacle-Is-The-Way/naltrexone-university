@@ -8,6 +8,7 @@ import { parseQuestionFeedbackExportArgs } from '../scripts/feedback/export-ques
 // those operator commands, not commands whose own CLI accepts a separator.
 const STRICT_OPERATOR_COMMANDS = [
   'export:feedback',
+  'db:seed',
   'db:seed:all',
   'db:seed:prod',
   'content:import:drafts',
@@ -58,6 +59,7 @@ describe('pnpm operator command examples', () => {
     'pnpm run --silent export:feedback -- --include-comments',
     'pnpm --silent run export:feedback -- --include-user-id',
     'pnpm db:seed:all -- --plan',
+    'pnpm db:seed -- --include-placeholders',
     'Usage: pnpm db:seed:prod [-- --plan]',
     'pnpm content:import:drafts -- --dry-run',
     'pnpm pr:merge-reviewed -- 1560',
@@ -68,6 +70,7 @@ describe('pnpm operator command examples', () => {
   it.each([
     'pnpm --silent export:feedback --format json',
     'pnpm db:seed:all [--plan]',
+    'pnpm db:seed --include-placeholders',
     'pnpm db:seed:prod --plan',
     'pnpm exec tool -- --flag',
     'pnpm test:e2e -- tests/e2e/smoke.spec.ts',
@@ -81,6 +84,10 @@ describe('pnpm operator command examples', () => {
       ...operatorSourceFiles('docs'),
       ...operatorSourceFiles('scripts'),
       'package.json',
+      'content/questions/README.md',
+      'content/drafts/questions/SCHEMA.md',
+      'content/drafts/questions/AGENTS.md',
+      'content/drafts/questions/CLAUDE.md',
     ];
     const violations = files.flatMap((file) =>
       invalidSeparators(readFileSync(file, 'utf8')).map(

@@ -1,10 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { withRecordedCli } from '../../tests/shared/recorded-cli';
-import { createGithubAlertIssues, syncAlertIssue } from './github-alert-issues';
+import {
+  type AlertIssue,
+  createGithubAlertIssues,
+  syncAlertIssue,
+} from './github-alert-issues';
 import { MemoryIssues } from './github-alert-issues-test-helpers';
 
 const TITLE = 'Operational alert check';
 const messages = { resolved: 'Cleared.', changed: 'Changed.' };
+
+// Answers `gh issue list` as GitHub's search does: an `author:` qualifier
+// keeps only that author's issues, and without one every author's match.
+function githubSearch(entries: { author: string; issue: AlertIssue }[]) {
+  return (args: string[]) => {
+    const query = args[args.indexOf('--search') + 1] ?? '';
+    const author = /(?:^| )author:(\S+)/.exec(query)?.[1];
+    return JSON.stringify(
+      entries
+        .filter((entry) => author === undefined || entry.author === author)
+        .map((entry) => entry.issue),
+    );
+  };
+}
 
 describe('one alert issue per title', () => {
   it('does nothing when the condition is clear and no issue is open', async () => {
@@ -108,12 +126,67 @@ describe('GitHub alert issues', () => {
       '--state',
       'all',
       '--search',
-      `in:title "${TITLE}"`,
+      `in:title "${TITLE}" author:app/github-actions`,
       '--json',
       'number,title,body,state',
       '--limit',
       '100',
     ]);
+  });
+
+  // Anyone can open an issue in this public repository, with any title.
+  describe("a stranger's issue with the alert's title", () => {
+    const actions = (issue: AlertIssue) => ({
+      author: 'app/github-actions',
+      issue,
+    });
+    const stranger = (issue: AlertIssue) => ({ author: 'stranger', issue });
+
+    it('cannot stop the job by making the alert ambiguous', async () => {
+      const issues = createGithubAlertIssues(
+        githubSearch([
+          actions({ number: 7, title: TITLE, body: 'Body', state: 'OPEN' }),
+          stranger({ number: 8, title: TITLE, body: 'Body', state: 'OPEN' }),
+        ]),
+      );
+
+      expect(await syncAlertIssue(issues, TITLE, 'Body', messages)).toBe(
+        'unchanged',
+      );
+    });
+
+    it("cannot take the alert's place", async () => {
+      const calls: string[][] = [];
+      const search = githubSearch([
+        stranger({ number: 8, title: TITLE, body: 'Body', state: 'OPEN' }),
+      ]);
+      const issues = createGithubAlertIssues((args) => {
+        calls.push(args);
+        return args[1] === 'list' ? search(args) : '';
+      });
+
+      expect(await syncAlertIssue(issues, TITLE, 'Body', messages)).toBe(
+        'created',
+      );
+      expect(calls.at(-1)?.slice(0, 2)).toEqual(['issue', 'create']);
+    });
+
+    it('cannot fill the search up to its limit', async () => {
+      const issues = createGithubAlertIssues(
+        githubSearch(
+          Array.from({ length: 100 }, (_, index) =>
+            stranger({
+              number: index + 1,
+              title: TITLE,
+              body: '',
+              state: 'CLOSED',
+            }),
+          ),
+        ),
+      );
+
+      expect(await issues.find(TITLE)).toEqual([]);
+    });
   });
 
   // A search capped at its limit may have dropped the existing alert, and
@@ -145,7 +218,7 @@ describe('GitHub alert issues', () => {
           '--state',
           'all',
           '--search',
-          `in:title "${TITLE}"`,
+          `in:title "${TITLE}" author:app/github-actions`,
           '--json',
           'number,title,body,state',
           '--limit',

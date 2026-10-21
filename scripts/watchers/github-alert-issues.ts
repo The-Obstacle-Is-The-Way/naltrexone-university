@@ -1,9 +1,9 @@
 import { createGhRunner } from '../lib/github-cli.mts';
 
 // A scheduled job that finds something the owner must act on raises it as one
-// GitHub issue, which notifies them. The issue's title identifies the alert:
-// the job opens it, keeps its description current, and closes it once the
-// condition clears.
+// GitHub issue, which notifies them. The issue's title, among GitHub Actions'
+// issues, identifies the alert: the job opens it, keeps its description
+// current, and closes it once the condition clears.
 export type AlertIssue = {
   number: number;
   title: string;
@@ -72,6 +72,14 @@ const gh = createGhRunner({ timeout: 30000, maxBuffer: 4 * 1024 * 1024 });
 // opening a duplicate.
 const SEARCH_LIMIT = 100;
 
+// GitHub Actions, the author of every alert issue, as search names it.
+// Anyone can open an issue in this public repository, so only its issues are
+// searched: a stranger's issue with an alert's title can neither stop the job
+// nor take the alert's place. A local run that writes opens issues as its
+// user, which no run finds again: each such run opens another, and none is
+// ever closed. Run a job locally only as a dry run.
+const ALERT_AUTHOR = 'app/github-actions';
+
 function parseIssues(json: string): AlertIssue[] {
   const entries: unknown = JSON.parse(json);
   if (!Array.isArray(entries)) throw new Error('Invalid GitHub issue response');
@@ -116,7 +124,7 @@ export function createGithubAlertIssues(
           '--state',
           'all',
           '--search',
-          `in:title "${title}"`,
+          `in:title "${title}" author:${ALERT_AUTHOR}`,
           '--json',
           'number,title,body,state',
           '--limit',

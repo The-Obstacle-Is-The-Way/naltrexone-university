@@ -18,7 +18,7 @@ The following commands expose each preparation step for diagnosis.
 pnpm db:test:up
 ```
 
-This resolves the current clone's local test target, then starts Postgres and PgBouncer with that target's project name, `DB_TEST_PORT` and `DB_TEST_POOLER_PORT`. Different clones get different Compose projects and host ports by default.
+This resolves the current clone's local test target, then starts Postgres and PgBouncer with that target's project name, `DB_TEST_PORT` and `DB_TEST_POOLER_PORT`. The clone-path mapping normally separates projects and ports; hash/name collisions or explicit overrides can still collide, so check ownership.
 
 PgBouncer runs in transaction mode. It ignores the three timeout startup parameters to reproduce BUG-345's observed Neon behavior; this is not a claim to reproduce Neon's undisclosed configuration in full. `db-pooler-timeouts.integration.test.ts` creates its own disposable database and ordinary role, runs the managed migration entry point through the pooler, and proves server defaults and SQLSTATEs. Only its local fixture pool is recycled. The rest of the integration suite continues to use direct Postgres.
 
@@ -39,23 +39,16 @@ TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 ```
 
-This applies migration files from `db/migrations/` in order, including extensions like `pgcrypto`. **Do not use `drizzle-kit push`** — it creates tables from the schema but skips migration files, so extensions and constraints defined in migrations will be missing (e.g., `pgcrypto` for `gen_random_uuid`).
+This applies migration files from `db/migrations/` in order, including extensions like `pgcrypto`. **Do not use `drizzle-kit push`** — it creates tables from the schema but skips migration files, so extensions and constraints defined in migrations will be missing (including the migration's `pgcrypto` extension). On Postgres 16, `gen_random_uuid()` is a core function; it does not depend on that extension ([Postgres documentation](https://www.postgresql.org/docs/16/pgcrypto.html#PGCRYPTO-RANDOM-DATA-FUNCS)).
 
 ### 3. Seed Test Data
 
 ```bash
-TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
-DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/test-lanes/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders
 ```
 
-Seeds question content and tags from `content/questions/`. Required for `tag-taxonomy-census.integration.test.ts` which validates that all tags have canonical kinds. Without seeding, that test file fails with `INTEGRATION_SEED_MISSING`.
-
-CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`. Local integration tests pass with plain `pnpm db:seed`, but you can add the flag for exact CI seed parity:
-
-```bash
-TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
-SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
-```
+Seeds question content and tags from `content/questions/`, plus the ten committed placeholder fixtures. The seed is required for `tag-taxonomy-census.integration.test.ts`, which validates that all tags have canonical kinds; without it, that test file fails with `INTEGRATION_SEED_MISSING`. The flag is required too, as in CI: `content-release-seed-guard.integration.test.ts` expects all ten placeholder rows, and a seed without it never inserts them.
 
 ### 4. Run Tests
 
@@ -121,7 +114,7 @@ GitHub Actions (`.github/workflows/ci.yml`) starts its own PostgreSQL 16 contain
 
 1. Pull Postgres and PgBouncer through the bounded registry helper before package installation. After installation, resolve the Compose project and pooler port, then start both services together with `docker compose up -d --wait --wait-timeout 60 --pull never db pgbouncer`. The dependency update guide owns image refresh (BUG-352).
 2. `pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts` — verifies the ledger, applies migrations to the CI database, then verifies it again.
-3. `SEED_INCLUDE_PLACEHOLDERS=true pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts` — seeds test data, including placeholder content used by CI parity checks.
+3. `pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders` — seeds test data, including the placeholder fixtures.
 4. `pnpm test:integration:coverage` — runs all integration tests with coverage, including the pooled timeout and managed-migration proofs
 
 Integration tests are part of every PR and every push to `main`.
@@ -166,17 +159,17 @@ INTEGRATION_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABAS
 
 `tests/integration/setup.ts` refuses to run against a non-local host by default. If `DATABASE_URL` points at Neon or any other remote host, the suite aborts before running tests. This is intentional protection against hitting shared environments by mistake.
 
-Only combine `INTEGRATION_USE_EXISTING_DATABASE=true` and `ALLOW_NON_LOCAL_DATABASE_URL=true` when you explicitly intend to run against a non-local database and understand the risk.
+Those opt-ins permit the outer runner and general setup to use a remote target; they do not make the full lane remote-compatible. The session-proof suites use `tests/shared/resolve-integration-database-url.ts`, which always rejects remote hosts. Use the per-clone local database for the full integration gate.
 
 **`drizzle-kit push` was used instead of `pnpm db:migrate`**
 
-Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` fails), `gen_random_uuid()` errors, or missing constraints. `drizzle-kit push` infers schema from TypeScript but does not run migration SQL files. Fix: reset and re-run migrations.
+Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` checks the migration's extension), or missing migration-defined constraints. `drizzle-kit push` infers schema from TypeScript but does not run migration SQL files. Fix: reset and re-run migrations.
 
 ```bash
 pnpm db:test:reset
 TEST_DATABASE_URL="$(pnpm local:test:target database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders
 ```
 
 **`tag-taxonomy-census` fails / `INTEGRATION_SEED_MISSING`**

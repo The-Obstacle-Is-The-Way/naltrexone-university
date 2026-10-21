@@ -458,6 +458,90 @@ describe('reconcile Stripe subscriptions cron route drain wiring', () => {
 });
 
 describe('send renewal notices cron route', () => {
+  it.each(['annual', 'monthly'] as const)(
+    'selects %s reminders from 30 through 39 days and does not resend them',
+    async (plan) => {
+      const idsByDays = new Map<number, string>();
+      for (const days of [29, 30, 39, 40]) {
+        const user = await createUser(db, cleanup);
+        const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+        idsByDays.set(days, externalSubscriptionId);
+        renewalSubscriptionIds.push(externalSubscriptionId);
+        const applicableAt = new Date(NOW.getTime() + days * DAY_MS);
+        const anchor = new Date(applicableAt);
+        anchor.setUTCFullYear(anchor.getUTCFullYear() - 1);
+        const currentPeriodEnd = new Date(applicableAt);
+        if (plan === 'monthly') {
+          currentPeriodEnd.setUTCMonth(currentPeriodEnd.getUTCMonth() - 1);
+          if (currentPeriodEnd <= NOW)
+            currentPeriodEnd.setTime(applicableAt.getTime());
+        }
+        await db.insert(schema.stripeSubscriptions).values({
+          userId: user.id,
+          stripeSubscriptionId: externalSubscriptionId,
+          status: 'active',
+          priceId: plan === 'annual' ? ANNUAL_PRICE_ID : MONTHLY_PRICE_ID,
+          currentPeriodEnd,
+          cancelAtPeriodEnd: false,
+          startedAt: anchor,
+          billingCycleAnchor: anchor,
+        });
+      }
+      const email = new FakeTransactionalEmailGateway({ configured: true });
+      cleanup.rateLimitKeys.push(
+        'cron:send-renewal-notices',
+        'operational-alert:operational_alert_drill',
+      );
+      const handler = createSendRenewalNoticesCronHandler(() =>
+        createContainer({
+          primitives: { db, env: createTestEnv(), now: () => NOW },
+          gateways: {
+            createTransactionalEmailGateway: () => email,
+            createScheduledWorkflows: () => runningScheduledWorkflows,
+          },
+        }),
+      );
+      const response = await handler(
+        authorizedRequest('http://localhost/api/cron/send-renewal-notices'),
+      );
+      expect(response.status).toBe(200);
+      const noticesPerRenewal = plan === 'annual' ? 2 : 1;
+      await expect(response.json()).resolves.toMatchObject({
+        queued: 2 * noticesPerRenewal,
+        dispatchFailures: 0,
+      });
+      const deliveries = await db
+        .select()
+        .from(schema.renewalNoticeDeliveries)
+        .where(
+          inArray(schema.renewalNoticeDeliveries.stripeSubscriptionId, [
+            ...idsByDays.values(),
+          ]),
+        );
+      for (const [days, id] of idsByDays) {
+        const selected = deliveries.filter(
+          (row) => row.stripeSubscriptionId === id,
+        );
+        expect(selected).toHaveLength(
+          days === 30 || days === 39 ? noticesPerRenewal : 0,
+        );
+        for (const row of selected) {
+          expect(row).toMatchObject({
+            status: 'accepted',
+            applicableAt: new Date(NOW.getTime() + days * DAY_MS),
+          });
+        }
+      }
+      expect(email.sendInputs).toHaveLength(2 * noticesPerRenewal);
+      const repeated = await handler(
+        authorizedRequest('http://localhost/api/cron/send-renewal-notices'),
+      );
+      expect(repeated.status).toBe(200);
+      await expect(repeated.json()).resolves.toMatchObject({ queued: 0 });
+      expect(email.sendInputs).toHaveLength(2 * noticesPerRenewal);
+    },
+  );
+
   it('runs the production URL through container wiring and persists deliveries', async () => {
     const user = await createUser(db, cleanup);
     const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;

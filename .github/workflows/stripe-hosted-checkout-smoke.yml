@@ -72,9 +72,7 @@ jobs:
         run: pnpm exec tsx scripts/database/managed/run-managed-db-migrate.ts
 
       - name: Seed DB (placeholder content)
-        run: pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts
-        env:
-          SEED_INCLUDE_PLACEHOLDERS: 'true'
+        run: pnpm exec tsx scripts/database/managed/run-managed-db-seed.ts --include-placeholders
 
       - name: Build
         run: pnpm build

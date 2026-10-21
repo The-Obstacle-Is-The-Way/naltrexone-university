@@ -9,18 +9,21 @@
 
 ---
 
-## 1. Draft Question Format (Complete Example)
+## 1. Draft Question Format (Historical Syntax)
+
+The clinical explanation and reference were corrected on 2026-10-18; the
+legacy syntax below remains intentionally invalid for the current importer.
 
 ```markdown
 ---
-qid: white-2020-001
+qid: bradley-2007-001
 type: recall
 difficulty: medium
 substances: [alcohol]
 topics: [screening-diagnosis]
-treatments: [naltrexone]
+treatments: []
 diagnoses: [alcohol-use-disorder]
-source: white-2020
+source: bradley-2007
 answer: B
 ---
 
@@ -41,29 +44,31 @@ alcohol use in women?
 
 ## Explanation
 
-The AUDIT-C uses sex-specific cutoffs: >=3 for women and >=4 for men.
-Women achieve higher blood alcohol concentrations than men at equivalent
-doses due to lower body water content and reduced gastric ADH activity.
+In the cited primary-care validation, thresholds of >=3 for women and >=4
+for men gave the best combined sensitivity and specificity for alcohol misuse.
 
-**Clinical pearl:** The AUDIT-C is a fast, well-validated screening tool for
-unhealthy alcohol use in primary care.
+**Clinical pearl:** A positive screening result warrants further assessment;
+it does not establish a diagnosis by itself.
 
 **Why other answers are wrong:**
-- A) This is too sensitive for the standard female cutoff and would overcall
-  unhealthy use.
-- C) This is the standard male cutoff, not the standard female cutoff.
-- D) This threshold is too high and would miss many at-risk patients.
+- A) A threshold of 2 is below the supported threshold for women.
+- C) A threshold of 4 was supported for men, not women, in this validation.
+- D) A threshold of 5 exceeds the supported threshold for women.
 
 ### Reference
 
-White AM, Castle IP, Hingson RW, Powell PA. Using death certificates to
-explore changes in alcohol-related mortality in the United States, 1999 to
-2017. Alcohol Clin Exp Res. 2020;44(1):178-187.
+Bradley KA, DeBenedetti AF, Volk RJ, et al. AUDIT-C as a brief screen for
+alcohol misuse in primary care. Alcohol Clin Exp Res. 2007;31(7):1208-1217.
+doi:10.1111/j.1530-0277.2007.00403.x. https://pubmed.ncbi.nlm.nih.gov/17451397/
+
 ```
 
 ---
 
-## 2. YAML Frontmatter Fields
+## 2. YAML Frontmatter Fields (Historical)
+
+As of 2026-03-24. The active schema drops `answer` and adds YAML `choices`; its
+frontmatter table is current.
 
 ### Required Fields
 
@@ -195,12 +200,16 @@ import:
 
 ---
 
-## 5. Markdown Body Structure
+## 5. Markdown Body Structure (Historical)
+
+This section describes the importer as of 2026-03-24. The active schema
+(`content/drafts/questions/SCHEMA.md`) replaces it: choices live in YAML, and a
+terminal `### Reference` is required.
 
 ### `## Question` (or `## Stem`)
 
-Drafts may use `## Question` or `## Stem`. The importer accepts both and emits
-`## Stem` in generated MDX.
+Drafts could use `## Question` or `## Stem`. The importer accepted both and
+emitted `## Stem` in generated MDX.
 
 Rules:
 
@@ -210,25 +219,25 @@ Rules:
 
 ### `## Choices`
 
-Choices are parsed from bullets under `## Choices`.
+Choices were parsed from bullets under `## Choices`.
 
 Rules:
 
-- 2-5 choices are allowed by the pipeline; the current authoring standard is 4.
-- Labels must be `A-E`.
-- Accepted delimiters are `)`, `.`, or `:`.
-- The correct answer is identified only by the YAML `answer` field.
-- Label order is recommended but not code-enforced.
+- 2-5 choices were allowed by the pipeline; the authoring standard was 4.
+- Labels had to be `A-E`.
+- Accepted delimiters were `)`, `.`, or `:`.
+- The correct answer was identified only by the YAML `answer` field.
+- Label order was recommended but not code-enforced.
 
 ### `## Explanation`
 
-The explanation block can contain three logical parts:
+The explanation block could contain three logical parts:
 
 1. General explanation
 2. `Why other answers are wrong` per-choice bullets
 3. `### Reference`
 
-Current parser behavior:
+Parser behavior then:
 
 - The wrong-answer heading is matched case-insensitively, with optional
   bold/underline markers and an optional trailing `:`.
@@ -246,7 +255,7 @@ Authoring guidance:
 - Use the general explanation for the correct-answer teaching point.
 - Use the per-choice bullets to teach why each incorrect option is wrong.
 
-Runtime/UI behavior:
+Runtime and UI behavior then:
 
 - If some incorrect choices have explanations and others do not, the UI omits
   only the missing ones and still renders the wrong-answer section for the
@@ -254,42 +263,46 @@ Runtime/UI behavior:
 
 ### `### Reference`
 
-`### Reference` is supported today, but with one important parser constraint:
-it is extracted into `reference_md` only when it appears inside `## Explanation`
-after the `Why other answers are wrong` subsection. If the wrong-answer heading
-is missing entirely, the whole explanation body is treated as general
-explanation and `reference_md` remains `null`.
+`### Reference` was supported, with one parser constraint: it was extracted
+into `reference_md` only when it appeared inside `## Explanation` after the
+`Why other answers are wrong` subsection. If the wrong-answer heading was
+missing, the whole explanation body was treated as general explanation and
+`reference_md` stayed `null`.
 
-Current authoring convention:
+Authoring convention then:
 
 - Put `### Reference` at the end of `## Explanation`.
 - Use AMA-style citation text.
-- Treat it as parser-supported but not schema-required.
+- It was parser-supported but not schema-required; the active schema requires it.
 
 ---
 
-## 6. Answer Field and Choice Shuffling
+## 6. Answer Field and Choice Shuffling (Historical Answer Field)
 
-The `answer` field marks which authored choice is correct:
+In the historical format, the `answer` field marked which authored choice was
+correct. The active schema marks it in YAML `choices` instead:
 
 ```yaml
 answer: B
 ```
 
-Pipeline behavior:
+Pipeline behavior then:
 
-1. Draft choices are plain text bullets, not `correct: true/false` objects.
-2. The importer converts `answer: B` into MDX `choices[].correct`.
-3. Seed enforces exactly one correct choice before insert/update.
+1. Draft choices were plain text bullets, not `correct: true/false` objects.
+2. The importer converted `answer: B` into MDX `choices[].correct`.
+3. Seed enforced exactly one correct choice before insert or update, as it still does.
 4. Runtime presentation shuffles choices deterministically per user and
    question, so authored letters are not guaranteed to match displayed letters.
+   This is still true.
 
-Authoring implication: write the best answer at the letter you specify in
-`answer`; do not try to pre-randomize choices.
+The authoring implication still holds: do not try to pre-randomize choices.
 
 ---
 
-## 7. How Tags and References Flow Through the System
+## 7. How Tags and References Flowed Through the System (Historical)
+
+As of 2026-03-24. The active schema carries wrong-answer explanations in YAML
+`choices` instead of a `Why other answers are wrong` section.
 
 ```text
 Draft YAML                         Import                    MDX / Seed / UI
@@ -307,7 +320,10 @@ diagnoses: [aud]                                            -> hide diagnosis
 
 ---
 
-## 8. What the System Validates (Rejection Points)
+## 8. What the System Validated (Historical Rejection Points)
+
+As of 2026-03-24, including the retired `answer` field and heading rules. The
+active schema lists today's validations.
 
 | Validation | Where |
 |-----------|-------|
@@ -369,24 +385,18 @@ content/questions/imported/<source-group>/<source>/<qid>.mdx
 
 ---
 
-## 10. Commands
+## 10. Current Commands
 
-```bash
-# Validate drafts without writing files
-pnpm content:import:drafts --dry-run
-
-# Import drafts as draft status
-pnpm content:import:drafts
-
-# Import drafts as published status
-pnpm content:import:drafts --status published
-
-# Seed generated MDX into the database
-pnpm db:seed
-
-# Include placeholders during seed
-SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
-```
+The historical examples above are not current importer input. Convert them to
+the [active schema](../../../content/drafts/questions/SCHEMA.md) first, then use
+its fresh-output staging commands and the content pipeline's reviewed placement
+procedure. A dry run validates input without writing; a real import requires an
+empty output directory. Seeding needs an explicit `DATABASE_URL`, remote-target
+acknowledgment where applicable, and no active release. The placeholder option,
+`pnpm db:seed --include-placeholders`, is meant for a local test database. The
+managed seed refuses it for any non-local target; the direct `pnpm db:seed`
+accepts it for an acknowledged remote target, so never pass it with a remote
+`DATABASE_URL`.
 
 ---
 
@@ -394,7 +404,7 @@ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
 
 ### Structured Citation Frontmatter
 
-`### Reference` in the markdown body is supported today. Structured YAML fields
+A terminal `### Reference` in the markdown body is required today. Structured YAML fields
 such as `citation:` or `doi:` are not. Do not add them until the draft schema
 allows them.
 
@@ -405,26 +415,20 @@ filters intentionally hide them.
 
 ### Global Uniqueness
 
-The code validates non-empty and kebab-case `qid` values, but it does not
-centrally enforce global uniqueness across the entire corpus. That remains an
-authoring responsibility.
+The importer rejects duplicate QIDs within its input batch, and the database
+has a unique slug constraint. Neither proves uniqueness across separate private
+source repositories; avoiding reuse across them remains an authoring duty.
 
 ---
 
-## 12. Quick Checklist for Draft Authors
+## 12. Current Authoring Checklist
 
-- [ ] Every `qid` is globally unique
-- [ ] Each block starts with `---` followed immediately by `qid:`
-- [ ] `answer` is in YAML, not marked in the choices
-- [ ] `topics`, `substances`, and `treatments` use canonical slugs
-- [ ] Diagnoses are kebab-case slugs
-- [ ] File names are `recall.md` or `vignettes.md`
-- [ ] `## Question` / `## Choices` / `## Explanation` are present
-- [ ] Choices are plausible, homogeneous, and avoid cueing
-- [ ] Wrong-answer bullets explain reasoning, not just correctness
-- [ ] `### Reference` appears after the wrong-answer subsection if you want it
-      stored separately
-- [ ] `pnpm content:import:drafts --dry-run` passes
+- [ ] Use the active schema's YAML `choices` with one correct answer and an explanation for each wrong answer; omit legacy `answer` and `## Choices`.
+- [ ] Each question begins with `---` followed immediately by `qid:`.
+- [ ] Use canonical topic/substance/treatment slugs and kebab-case source/diagnosis identifiers.
+- [ ] Include `## Question`, `## Explanation` and its required terminal `### Reference`.
+- [ ] Keep QIDs unique, write `recall.md` or `vignettes.md`, and pass the importer dry run.
+- [ ] Review clinical accuracy and question quality separately from structural acceptance.
 
 ---
 

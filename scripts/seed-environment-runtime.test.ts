@@ -160,6 +160,31 @@ describe('seed environment runtime', () => {
     });
   });
 
+  // BUG-353: an environment seed never asks for the placeholder fixtures, and
+  // the managed seed refuses an inherited SEED_INCLUDE_PLACEHOLDERS.
+  it('seeds an environment through the managed seed without the placeholder flag', async () => {
+    const child = new ChildProcess();
+    const databaseUrl = 'postgresql://app@db.invalid/app';
+    const spawnProcess = vi.fn<SeedProcessSpawner>(
+      (_command, _args, _options) => {
+        queueMicrotask(() => child.emit('exit', 0, null));
+        return child;
+      },
+    );
+
+    await createSeedEnvironmentRuntime('unused', {
+      spawnProcess,
+    }).dependencies.seedDatabase(databaseUrl);
+
+    expect(spawnProcess).toHaveBeenCalledWith(
+      'pnpm',
+      ['exec', 'tsx', 'scripts/database/managed/run-managed-db-seed.ts'],
+      expect.objectContaining({
+        env: expect.objectContaining({ DATABASE_URL: databaseUrl }),
+      }),
+    );
+  });
+
   it('prepares the corpus by importing published drafts into fresh staging', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'seed-runtime-corpus-'));
     const contentRoot = path.join(root, 'content');

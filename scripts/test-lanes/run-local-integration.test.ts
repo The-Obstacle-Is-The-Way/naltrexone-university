@@ -191,8 +191,8 @@ describe('local integration preparation', () => {
       expect.arrayContaining(['up', '-d', '--wait', 'db', 'pgbouncer']),
     );
     expect(migrate?.args).toEqual(['db:migrate']);
-    expect(seed?.args).toEqual(['db:seed']);
-    expect(seed?.env?.SEED_INCLUDE_PLACEHOLDERS).toBe('true');
+    expect(seed?.args).toEqual(['db:seed', '--include-placeholders']);
+    expect(seed?.env).not.toHaveProperty('SEED_INCLUDE_PLACEHOLDERS');
     expect(test?.args.at(-1)).toBe('--coverage');
     for (const step of plan) {
       expect(step.env?.DATABASE_URL).toBe(test?.env?.DATABASE_URL);

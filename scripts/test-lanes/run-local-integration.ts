@@ -80,8 +80,8 @@ export function createLocalIntegrationCommandPlan({
         {
           label: 'Seed isolated integration database',
           command: 'pnpm',
-          args: ['db:seed'],
-          env: { ...targetEnv, SEED_INCLUDE_PLACEHOLDERS: 'true' },
+          args: ['db:seed', '--include-placeholders'],
+          env: targetEnv,
         },
       ];
   return [

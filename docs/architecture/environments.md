@@ -209,10 +209,10 @@ Run migrations against the exact database backing the failing environment. These
 
 ```bash
 # Preview / shared non-production DB
-DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
+DATABASE_URL="<preview-or-dev-connection-string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 
 # Production DB
-DATABASE_URL="<production-connection-string>" pnpm db:migrate
+DATABASE_URL="<production-connection-string>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 ```
 
 For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/test-lanes/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.

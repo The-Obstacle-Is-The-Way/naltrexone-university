@@ -70,6 +70,13 @@ export async function checkSecurityTxtRenewal(
 
 const gh = createGhRunner({ timeout: 30000, maxBuffer: 32 * 1024 * 1024 });
 
+// GitHub Actions, the reminder's author. Anyone can open an issue in this
+// public repository, so only its issues are counted: a stranger's issue with
+// the reminder's title can neither stop the check nor take the reminder's
+// place. A local run opens the reminder as its user, which no run finds
+// again, so leave the check to the monthly workflow.
+const REMINDER_AUTHOR = 'github-actions[bot]';
+
 export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
   return {
     async list() {
@@ -100,10 +107,21 @@ export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
           !('body' in issue) ||
           (issue.body !== null && typeof issue.body !== 'string') ||
           !('state' in issue) ||
-          (issue.state !== 'open' && issue.state !== 'closed')
+          (issue.state !== 'open' && issue.state !== 'closed') ||
+          !('user' in issue)
         ) {
           throw new Error('Invalid GitHub issue response');
         }
+        // GitHub can return a null author, which is not GitHub Actions.
+        if (issue.user === null) continue;
+        if (
+          typeof issue.user !== 'object' ||
+          !('login' in issue.user) ||
+          typeof issue.user.login !== 'string'
+        ) {
+          throw new Error('Invalid GitHub issue response');
+        }
+        if (issue.user.login !== REMINDER_AUTHOR) continue;
         issues.push({
           number: issue.number,
           title: issue.title,
