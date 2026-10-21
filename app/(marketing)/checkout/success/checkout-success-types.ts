@@ -1,4 +1,5 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
+import type { StripeCallBudget } from '@/src/adapters/gateways/stripe/stripe-call-budget';
 import type {
   AuthGateway,
   RateLimiter,
@@ -72,6 +73,7 @@ export type CheckoutSuccessDeps = {
   // BUG-325: limits each signed-in user before the Clerk and Stripe calls.
   rateLimiter: Pick<RateLimiter, 'limit'>;
   stripe: StripeClientLike;
+  stripeBudget?: StripeCallBudget | undefined;
   priceIds: StripePriceIds;
   appUrl: string;
   transaction: <T>(
@@ -101,6 +103,8 @@ export type CheckoutSuccessSearchParams = {
 };
 
 export type CheckoutSuccessContainerLike = {
+  stripe: StripeClientLike;
+  stripeBudget?: StripeCallBudget | undefined;
   createAuthGateway: () => AuthGateway;
   createRateLimiter: () => RateLimiter;
   logger: CheckoutSuccessLogger;
@@ -117,7 +121,6 @@ export type CheckoutSuccessContainerLike = {
 };
 
 export type CheckoutSuccessModuleLoaders = {
-  loadContainer: () => Promise<{ createContainer: () => unknown }>;
-  loadStripe: () => Promise<{ getStripe: () => StripeClientLike }>;
+  loadContainer: () => Promise<{ createRequestContainer: () => unknown }>;
   loadClerkServer: () => Promise<{ auth: () => Promise<ClerkAuthLike> }>;
 };

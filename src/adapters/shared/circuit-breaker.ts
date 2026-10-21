@@ -16,6 +16,16 @@ export type CircuitBreakerOptions = {
   isFailure?: (error: unknown) => boolean;
 };
 
+/**
+ * Per call: errors that say nothing about the service, such as a timeout the
+ * caller's own deadline caused. They count neither as failures nor as
+ * successes, and a half-open probe that ends in one leaves the next call to
+ * probe.
+ */
+export type CircuitBreakerCallOptions = {
+  isIgnored?: (error: unknown) => boolean;
+};
+
 type CircuitBreakerState = 'closed' | 'open' | 'half-open';
 
 const DEFAULT_OPEN_CIRCUIT_MESSAGE = 'Service temporarily unavailable';
@@ -49,7 +59,10 @@ export class CircuitBreaker {
     }
   }
 
-  async execute<T>(fn: () => Promise<T>): Promise<T> {
+  async execute<T>(
+    fn: () => Promise<T>,
+    call: CircuitBreakerCallOptions = {},
+  ): Promise<T> {
     if (this.state === 'open') {
       if (!this.isResetTimeoutElapsed()) {
         this.throwCircuitOpenError();
@@ -59,18 +72,22 @@ export class CircuitBreaker {
     }
 
     if (this.state === 'half-open') {
-      return this.executeHalfOpen(fn);
+      return this.executeHalfOpen(fn, call);
     }
 
-    return this.executeClosed(fn);
+    return this.executeClosed(fn, call);
   }
 
-  private async executeClosed<T>(fn: () => Promise<T>): Promise<T> {
+  private async executeClosed<T>(
+    fn: () => Promise<T>,
+    call: CircuitBreakerCallOptions,
+  ): Promise<T> {
     try {
       const result = await fn();
       this.close();
       return result;
     } catch (error) {
+      if (call.isIgnored?.(error)) throw error;
       if (!this.countsAsFailure(error)) {
         this.close();
         throw error;
@@ -85,7 +102,10 @@ export class CircuitBreaker {
     }
   }
 
-  private async executeHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
+  private async executeHalfOpen<T>(
+    fn: () => Promise<T>,
+    call: CircuitBreakerCallOptions,
+  ): Promise<T> {
     if (this.isProbeInFlight) {
       this.throwCircuitOpenError();
     }
@@ -97,7 +117,8 @@ export class CircuitBreaker {
       this.close();
       return result;
     } catch (error) {
-      if (this.countsAsFailure(error)) this.open();
+      if (call.isIgnored?.(error)) this.isProbeInFlight = false;
+      else if (this.countsAsFailure(error)) this.open();
       else this.close();
       throw error;
     }
