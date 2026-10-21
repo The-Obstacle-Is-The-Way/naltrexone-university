@@ -5,13 +5,16 @@ import * as schema from '../db/schema';
 import { readSeedQuestionFiles } from './seed/file-reader';
 import { archivePlaceholderQuestions } from './seed/placeholder-archiver';
 import { syncQuestionsFromFiles } from './seed/question-syncer';
+import type { SeedOptions } from './seed/seed-options';
 import {
   summarizePlaceholderArchival,
   summarizeSeedSync,
 } from './seed/seed-summary';
 
-export async function runSeed(databaseUrl: string): Promise<void> {
-  const includePlaceholders = process.env.SEED_INCLUDE_PLACEHOLDERS === 'true';
+export async function runSeed(
+  databaseUrl: string,
+  { includePlaceholders }: SeedOptions,
+): Promise<void> {
   const sql = postgres(databaseUrl, { max: 1 });
   const db = drizzle(sql, { schema });
 
