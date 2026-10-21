@@ -9,6 +9,7 @@ import {
   questions,
   questionWithdrawals,
 } from '@/db/schema';
+import { canonicalMarkdownSql } from './canonical-markdown-sql';
 
 type QuestionColumns = { id: AnyColumn; status: AnyColumn };
 
@@ -85,7 +86,7 @@ const keyCorrectedRevisions = sql.identifier('key_corrected_revisions');
 /**
  * ADR-022 Decision 4: of the revisions that `gradedRevisions` selects, those
  * no longer current whose answer key the current revision corrects. The key
- * is each correct choice's label and text. A query joins the set once, on
+ * is each correct choice's exact label and normalized text. A query joins the set once, on
  * the revision each row was graded against (`keyCorrectedRevisionsOn`), so
  * the keys are compared once per superseded revision. Compared per row, they
  * were charged to every row by the planner, which tipped a learner's
@@ -93,6 +94,7 @@ const keyCorrectedRevisions = sql.identifier('key_corrected_revisions');
  * the join adds no rows.
  */
 export function keyCorrectedRevisionsSql(gradedRevisions: SQL): SQL {
+  const text = canonicalMarkdownSql(sql`choice.text_md`);
   return sql`(
     with superseded as (
       select revision.id, question.current_revision_id
@@ -103,8 +105,8 @@ export function keyCorrectedRevisionsSql(gradedRevisions: SQL): SQL {
     ), answer_keys as (
       select choice.question_revision_id as id,
         string_agg(
-          choice.label || chr(31) || choice.text_md,
-          chr(30) order by choice.label, choice.text_md
+          choice.label || chr(31) || ${text},
+          chr(30) order by choice.label, ${text}
         ) as answer_key
       from ${choices} choice
       where choice.is_correct

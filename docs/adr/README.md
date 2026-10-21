@@ -34,8 +34,8 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Accepted (amended 2026-10-03 and 2026-10-12) | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
-| [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted (amended 2026-10-03 and 2026-10-18) | 2026-09-27 |
-| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03 and 2026-10-05) | 2026-10-03 |
+| [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted (amended 2026-10-03, 2026-10-18 and 2026-10-19) | 2026-09-27 |
+| [ADR-022](./adr-022-learner-scores-and-labels-when-content-changes.md) | Learner Scores and Labels When Content Changes | Accepted (amended 2026-10-03, 2026-10-05, 2026-10-18 and 2026-10-19) | 2026-10-03 |
 | [ADR-023](./adr-023-documentation-organisation.md) | Documentation Organisation | Accepted (amended 2026-10-11) | 2026-10-11 |
 | [ADR-024](./adr-024-review-merge-and-promotion.md) | Review, Merge and Promotion | Accepted (amended 2026-10-16) | 2026-10-11 |
 | [ADR-025](./adr-025-test-doubles-by-shape-or-behaviour.md) | Test Doubles by Shape or Behaviour | Accepted | 2026-10-11 |
@@ -228,7 +228,7 @@ Sentry is the error and alert channel, with a browser project on the public key 
 
 ### ADR-027: Free Trial, Renewal Consent and Renewal Notices
 
-Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 35 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
+Proposed until counsel's review. A first checkout gets a 7-day trial that needs no card and ends without charge if none is added; a trial's first card comes only through a consented add-card flow. Every path to a paid subscription takes a separate, unchecked renewal opt-in to versioned text, kept as evidence for three years or one year after termination, and acknowledged by email. Renewal notices go out 39 to 30 days before renewal for both plans, through a durable Resend delivery that is never repeated while its outcome is unknown and is revalidated before sending. A scheduled cancellation keeps access to period end and stops notices.
 
 ---
 

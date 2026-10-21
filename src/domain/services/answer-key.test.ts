@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import {
+  markdownNormalizationCases,
+  significantMarkdownCases,
+} from '../test-helpers/markdown-normalization-cases';
 import { answerKeyChanged } from './answer-key';
 
 type KeyChoice = { label: string; textMd: string; isCorrect: boolean };
@@ -18,6 +22,30 @@ const choice = (
 // choice of the revision it was graded against. Conservative: reordering or
 // rewording the correct option counts too.
 describe('answerKeyChanged', () => {
+  it.each(markdownNormalizationCases)(
+    'keeps the key when only $name changes',
+    ({ raw, canonical }) => {
+      expect(
+        answerKeyChanged(
+          [choice('B', raw, true)],
+          [choice('B', canonical, true)],
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it.each(significantMarkdownCases)(
+    'changes the key when $name differs',
+    ({ raw, canonical }) => {
+      expect(
+        answerKeyChanged(
+          [choice('B', raw, true)],
+          [choice('B', canonical, true)],
+        ),
+      ).toBe(true);
+    },
+  );
+
   const graded = [
     choice('A', 'Naltrexone'),
     choice('B', 'Buprenorphine', true),

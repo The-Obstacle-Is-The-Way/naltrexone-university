@@ -99,7 +99,7 @@ describe('readSeedQuestionFiles', () => {
     writeQuestion('content/questions/placeholder/a.mdx');
 
     await expect(readSeedQuestionFiles(false)).rejects.toThrow(
-      'No question files found after excluding placeholders',
+      'No question files found after excluding placeholders. Generate imported content under content/questions/imported/. For a local test database only, --include-placeholders adds the placeholder fixtures.',
     );
   });
 });
