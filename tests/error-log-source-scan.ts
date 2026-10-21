@@ -29,6 +29,19 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
         ? checker.getShorthandAssignmentValueSymbol(node.parent)
         : checker.getSymbolAtLocation(node)
       )?.declarations ?? [];
+    // Only the shared projector, imported from its module, is exempt: a
+    // local function with the same name could return raw text.
+    const isSharedProjector = (identifier: ts.Identifier) =>
+      declarations(identifier).some((declaration) => {
+        if (!ts.isImportSpecifier(declaration)) return false;
+        const imported = (declaration.propertyName ?? declaration.name).text;
+        const module = declaration.parent.parent.parent.moduleSpecifier;
+        return (
+          imported === 'projectSafeErrorDiagnostics' &&
+          ts.isStringLiteral(module) &&
+          /(^|\/)safe-error-diagnostics$/.test(module.text)
+        );
+      });
     function isLog(node: ts.Node, seen = new Set<ts.Node>()): boolean {
       if (seen.has(node)) return false;
       seen.add(node);
@@ -94,7 +107,7 @@ export function collectRawErrorLogIssues(sources: readonly Source[]): string[] {
       if (ts.isCallExpression(node)) {
         if (
           ts.isIdentifier(node.expression) &&
-          node.expression.text === 'projectSafeErrorDiagnostics'
+          isSharedProjector(node.expression)
         )
           return false;
         if (

@@ -21,6 +21,7 @@ describe('raw error log source scan', () => {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: source text for the scanner
     'logger.error(`failed: ${error.message}`)',
     'function warnStopped(logger, context): void { logger.warn(context); } warnStopped(logger, { error: error.message })',
+    'function projectSafeErrorDiagnostics(error) { return error.message; } logger.error({ detail: projectSafeErrorDiagnostics(error) })',
   ])('rejects demonstrated raw text flow: %s', (contents) => {
     expect(
       collectRawErrorLogIssues([{ filePath: 'sample.ts', contents }]),
@@ -32,6 +33,7 @@ describe('raw error log source scan', () => {
         {
           filePath: 'sample.ts',
           contents: `
+      import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
       const text = error.message;
       returnToClient(text);
       logger.error({ err: projectSafeErrorDiagnostics(error) }, 'Failure');
