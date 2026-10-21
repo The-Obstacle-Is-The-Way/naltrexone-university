@@ -1,6 +1,6 @@
 # BUG-353: The Production Seed Can Publish the Placeholder Questions
 
-**Status:** Blocked — owner checks production fixtures, due 2026-10-25; promotion and scheduled smoke remain
+**Status:** Verifying — after promotion, the scheduled Checkout smoke's seed step and the owner's read-only production census of the placeholders; due 2026-10-25
 **Priority:** P3
 **Date:** 2026-10-18
 
@@ -48,7 +48,7 @@ Corrected 2026-10-18: separate the E2E reset, qualify active-release and target 
 
 - **Option 2, with two refusals, implemented on this branch.**
   - `runSeed` takes `{ includePlaceholders }` and reads no environment.
-  - `scripts/seed/seed-options.ts` parses the command line for `db:seed` and the managed seed. Only `--include-placeholders` is accepted, after pnpm's `--` separator if one is given.
+  - `scripts/seed/seed-options.ts` parses the command line for `db:seed` and the managed seed. Only `--include-placeholders` is accepted, passed directly; a forwarded `--` separator is refused, as in the other strict operator parsers (#1567).
   - A set `SEED_INCLUDE_PLACEHOLDERS`, whatever its value, is refused before any database work. So a stale export now stops the production seed's child with a message, rather than being obeyed or silently ignored. That makes option 1 unnecessary.
   - The managed seed refuses `--include-placeholders` for any target that is not on the loopback interface. Every caller that passes the flag seeds a loopback database, and this path takes no acknowledgment. The human `db:seed` still accepts the flag for an acknowledged remote target.
   - The environment seeds spawn the managed seed with no arguments, and a test pins that.
@@ -65,14 +65,15 @@ was not independently reconstructed. This audit reran the current tests.
 - [x] Current-branch tests in `scripts/internal/run-managed-db-seed.test.ts` and `scripts/db-seed.test.ts` pass: an inherited `SEED_INCLUDE_PLACEHOLDERS=true` is refused before seeding, the managed entry point refuses placeholders for a remote target, and they are included only with `--include-placeholders`.
 - [x] Current-branch `scripts/seed-environment-runtime.test.ts` passes: an environment seed spawns the managed seed without `--include-placeholders`.
 - [x] Current-branch `tests/ci-workflow.test.ts` passes: both seed steps pass the flag, and no workflow sets the old variable.
-- [ ] The fixing pull request's CI and local E2E runs pass with the flag.
+- [x] The fixing pull request's CI and local E2E runs pass with the flag.
 - [ ] The hosted Checkout smoke's first scheduled run after promotion passes its seed step. The schedule runs from `main`.
 - [ ] A read-only query shows which of the ten placeholder slugs exist in production, and that none is published. This needs the owner, or a session with read access.
+- [ ] The owner copies this fix's corrections to `content/drafts/questions/SCHEMA.md` into the content repository's copy, where that file is edited, so the next copy does not undo them.
 
 ## Related
 
-- #1560: the scripts directory audit that found this. Its debt record proposes running the production seed in an owner-approved CI job.
-- BUG-351: the production seed's input freshness. Its plan check, `pnpm db:seed:prod --plan`, parses under pnpm 11 since #1567; this pull request's shared parser also accepts a leading `--`.
+- #1560: the scripts directory audit that found this. Its debt record proposes replacing the production seed with a manually dispatched, owner-approved GitHub Actions job that stages and activates a content release.
+- BUG-351: the production seed's input freshness. Its plan check, `pnpm db:seed:prod --plan`, parses under pnpm 11 since #1567.
 - BUG-315: placeholder archival by exact slug.
 - BUG-360: the separate deploy-target E2E reset and owner decision.
 - DEBT-483: the bootstrap; once a release is active, the seed refuses production.

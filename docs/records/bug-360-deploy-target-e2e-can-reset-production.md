@@ -26,7 +26,7 @@ Corrected 2026-10-19: every E2E database connection now refuses a non-local host
 ## Evidence
 
 - **The host check.**
-  - `scripts/e2e-local-orchestrator.ts:135-141` checks the URL's host on the `pnpm test:e2e` path.
+  - `scripts/e2e-local-orchestrator.ts:137-143` checks the URL's host on the `pnpm test:e2e` path.
   - `playwright.config.ts:8` loads `.env.local` without overriding exported variables, so before the partial fix a direct `pnpm exec playwright test` reached setup with whatever `DATABASE_URL` was there, unchecked.
   - Both paths now refuse a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true`, which admits any host.
 - **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:550-557`). Test-mode keys work against any database, so passing it does not prove a non-production target.

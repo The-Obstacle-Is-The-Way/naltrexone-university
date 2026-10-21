@@ -25,10 +25,12 @@ describe('parseSeedOptions', () => {
     },
   );
 
-  it('accepts the flag after the -- that pnpm passes through', () => {
-    expect(parseSeedOptions(['--', '--include-placeholders'], {})).toEqual({
-      includePlaceholders: true,
-    });
+  // As the other strict operator parsers do (#1567): pnpm 11 forwards a
+  // separator, so the documented command passes the flag directly.
+  it('refuses a forwarded -- separator', () => {
+    expect(() =>
+      parseSeedOptions(['--', '--include-placeholders'], {}),
+    ).toThrow('Unknown seed argument: --.');
   });
 
   it('refuses an argument it does not know', () => {
@@ -39,18 +41,18 @@ describe('parseSeedOptions', () => {
 });
 
 describe('parseSeedPlanOnly', () => {
-  const usage = 'Usage: pnpm db:seed:prod [-- --plan]';
+  const usage = 'Usage: pnpm db:seed:prod [--plan]';
 
   it.each([
     [[], false],
-    [['--'], false],
     [['--plan'], true],
-    [['--', '--plan'], true],
   ])('reads %j as plan-only: %s', (args, planOnly) => {
     expect(parseSeedPlanOnly(args, usage)).toBe(planOnly);
   });
 
   it.each([
+    [['--']],
+    [['--', '--plan']],
     [['--', '--unsupported']],
     [['--plan', '--plan']],
     [['--plan', '--']],

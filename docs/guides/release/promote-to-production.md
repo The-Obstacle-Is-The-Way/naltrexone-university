@@ -85,7 +85,8 @@ A floor can also come from outside the code. Instant Rollback serves a deploymen
 
 3. Operator
    └─ Verify the Vercel build ran the migration before serving; manual migrate only as fallback
-   └─ Obtain the exact DB_TARGET_ACK for DATABASE_URL, then run the manual seed # if content changed
+   └─ Obtain the exact DB_TARGET_ACK for DATABASE_URL, then run the manual seed # if content changed and no content release is active
+   └─ Stage and activate a content release instead # if one is already active there
 ```
 
 **Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration and ledger verification run via the Vercel Build Command; reseeding remains a manual operator step.
@@ -206,7 +207,9 @@ Without the owner, the next promotion's merge commit releases the same code once
 
 **Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. DEBT-445 Part 3 already established the [deployed-code compatibility contract](../database/migrations.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
 
-For a manual Preview or Production reseed, export the verified target, run the
+A manual Preview or Production reseed works only while no content release is
+active on that database; once one is, use the [release procedure](../../architecture/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold)
+instead. For the reseed, export the verified target, run the
 guard once without an acknowledgement, and confirm it refuses before opening
 Postgres while printing the required credential-free JSON token. Copy that
 token byte-for-byte into `DB_TARGET_ACK`, then repeat the seed:
@@ -227,7 +230,7 @@ question has been updated since (Pattern Registry F-12). The seed therefore has
 no graded-history refusal, no key-change override and no wait for sessions in
 progress. It reports `updated=N (new revisions=M)`.
 
-Once a content release is active, direct seeding refuses the database. Use the reviewed stage/activation procedure in the content pipeline guide instead.
+Once a content release is active, direct seeding refuses the database. Use the reviewed [stage/activation procedure](../../architecture/content-pipeline.md#releases-bootstrap-stage-activate-roll-back-and-hold) in the content pipeline guide instead.
 
 Seed from the commit that is deployed to the target. The seed refuses to run
 until the target has applied migration `0042`
@@ -238,14 +241,14 @@ seed of a commit before `0042` fails on the retired revision-sync function.
 
 ## 3. Data-Affecting Migration Pattern
 
-When a migration changes enums, renames columns, or otherwise affects data that the seed script populates (e.g., tag taxonomy changes), the migration SQL itself should include the necessary data cleanup. This keeps the procedure to two commands:
+When a migration changes enums, renames columns, or otherwise affects data that the seed script populates (e.g., tag taxonomy changes), the migration SQL itself should include the necessary data cleanup. This keeps the procedure to two commands. A remote target is refused first, and the refusal names the exact `DB_TARGET_ACK` value to pass, as in the manual reseed above:
 
 ```bash
 # 1. Apply schema migration (includes any required data cleanup)
-DATABASE_URL="<target>" pnpm db:migrate
+DATABASE_URL="<target>" DB_TARGET_ACK='<from the refusal>' pnpm db:migrate
 
-# 2. Rebuild data from canonical source (MDX files)
-DATABASE_URL="<target>" pnpm db:seed
+# 2. Rebuild data from canonical source (MDX files); refused once a content release is active
+DATABASE_URL="<target>" DB_TARGET_ACK='<from the refusal>' pnpm db:seed
 
 # 3. Verify (optional — recommended for production)
 #    SELECT kind, COUNT(*) FROM tags GROUP BY kind;
@@ -293,7 +296,7 @@ DATABASE_URL="$LOCAL_E2E_DATABASE_URL" DB_TARGET_ACK='<from the refusal>' pnpm d
 E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
-Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup writes the shared test user's subscription rows, then the reset deletes and rebuilds that user's practice data and, if both placeholder fixture rows exist, republishes them (BUG-360).
+Never use that E2E command against Production. Its opt-ins do not identify Production or prevent mutation: once preflight succeeds, setup writes the shared test user's subscription rows. The reset then checks that both placeholder fixture rows exist, and stops if either is missing; otherwise it republishes them and deletes and rebuilds that user's practice data (BUG-360). The target must therefore already hold both fixtures. This path does not seed, and these guides give no way to add them to a remote database: BUG-360 holds the owner's decision on whether this check stays.
 
 Do not rely on implicit `.env.local` resolution for migration commands. Verify the host, then prefix `pnpm db:migrate` with the exact `DATABASE_URL` you intend to mutate.
 
@@ -317,7 +320,7 @@ Before merging to `main` (production deploy):
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
 - [ ] If schema changed: confirm the Vercel build ran the Build Command's migration step before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](../../architecture/environments.md#missing-database-migration-causes-silent-write-failures))
-- [ ] If content changed: seed tested on local + preview DB first
+- [ ] If content changed: seed tested on local + preview DB first, or, once a content release is active, the release staged and its activation previewed
 
 ---
 
