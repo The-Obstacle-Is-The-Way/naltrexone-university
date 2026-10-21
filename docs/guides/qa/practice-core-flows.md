@@ -62,7 +62,7 @@ This procedure absorbed the stabilization checklist's core flows, including revi
 
 - [ ] Entire flow renders forced-dark; no light-mode leakage anywhere (DEBT-421 invariant)
 - [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/design-system/pattern-registry.md` I-3
-- [ ] Action bar stays reachable on long questions (sticky bottom bar; whole-page scroll) — `docs/design-system/layout.md`
+- [ ] Action bar stays reachable on long questions (in document flow below the question; whole-page scroll) — `docs/architecture/question-rendering.md` §3.4
 - [ ] Focus rings on all interactive controls are the canonical ring — `docs/design-system/standards.md` §3
 - [ ] Question stem and choices render at the Primary content tier (`text-base`, 16px); the post-submit explanation is promoted to Primary per the Feedback Context Override — `docs/design-system/typography.md` § Content Tier System
 - [ ] Bookmark presence matches the per-surface registry on every surface touched — `docs/design-system/bookmark-surfaces.md`
@@ -70,7 +70,7 @@ This procedure absorbed the stabilization checklist's core flows, including revi
 
 ## Evidence
 
-Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feedback), step 16 (post-exam review), one 390×844 capture of the active question. Attach representative screenshots to the pull request or the run's report.
+Screenshots: step 9 (summary), step 12 (exam question showing draft-with-no-feedback), step 16 (post-exam review), one 390×844 capture of the active question. Each shows question content, so attach them to a pull request only when they were taken against the placeholder questions. Otherwise keep them in `audit-screenshots/` and give the pull request or promotion a written result for each step ([method](./method.md), Evidence).
 
 ## On failure
 
