@@ -7,23 +7,30 @@ import { readFileSync } from 'node:fs';
 const SERVER_ACTION_MANIFEST_PATH =
   '.next/server/server-reference-manifest.json';
 
-type ServerActionManifest = {
-  node?: Record<string, { exportedName?: string }>;
-};
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
+/**
+ * Diagnostics only, and read before startSession's own error handling: a
+ * missing or malformed manifest yields no names, so a failure names the raw
+ * action ID instead of breaking the session start.
+ */
 export function readServerActionNames(
   manifestPath = SERVER_ACTION_MANIFEST_PATH,
 ): ReadonlyMap<string, string> {
-  let text: string;
-  try {
-    text = readFileSync(manifestPath, 'utf8');
-  } catch {
-    // Diagnostics only: without a build, a failure names the raw action ID.
-    return new Map();
-  }
-  const manifest = JSON.parse(text) as ServerActionManifest;
   const names = new Map<string, string>();
-  for (const [id, entry] of Object.entries(manifest.node ?? {}))
-    if (entry.exportedName) names.set(id, entry.exportedName);
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch {
+    // No build, or an unreadable manifest: name nothing.
+    return names;
+  }
+  const node = isRecord(manifest) ? manifest.node : undefined;
+  if (!isRecord(node)) return names;
+  for (const [id, entry] of Object.entries(node)) {
+    const name = isRecord(entry) ? entry.exportedName : undefined;
+    if (typeof name === 'string' && name.length > 0) names.set(id, name);
+  }
   return names;
 }

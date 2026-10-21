@@ -35,6 +35,33 @@ describe('readServerActionNames', () => {
     expect(names.has('unnamed-action-id')).toBe(false);
   });
 
+  it.each([
+    ['truncated JSON', '{"node": {'],
+    ['a null manifest', 'null'],
+    ['a node that is not an object', '{"node": 3}'],
+  ])('returns no names, without throwing, for %s', (_label, contents) => {
+    expect(readServerActionNames(manifestPath(contents)).size).toBe(0);
+  });
+
+  it('keeps only entries whose export name is a non-empty string', () => {
+    const names = readServerActionNames(
+      manifestPath(
+        JSON.stringify({
+          node: {
+            'null-entry-id': null,
+            'numeric-name-id': { exportedName: 7 },
+            'empty-name-id': { exportedName: '' },
+            'timing-action-id': { exportedName: 'getPracticeSessionTiming' },
+          },
+        }),
+      ),
+    );
+
+    expect([...names.entries()]).toEqual([
+      ['timing-action-id', 'getPracticeSessionTiming'],
+    ]);
+  });
+
   it('returns no names without a build', () => {
     expect(
       readServerActionNames(path.join(tmpdir(), 'no-such-build.json')).size,
