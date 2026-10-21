@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import * as schema from '@/db/schema';
 import {
   insertQuestion,
   reviseQuestion,
   setQuestionState,
 } from '@/tests/shared/question-fixtures';
+import { connectE2EDatabase } from './e2e-database-target';
 
 // DEBT-496: content changes arranged for the E2E user on dedicated questions,
 // never the shared seeded bank, and removed afterwards. Deleting a question
@@ -39,7 +39,7 @@ function requireEnv(name: string): string {
 }
 
 export async function openContentChanges(): Promise<ContentChanges> {
-  const sql = postgres(requireEnv('DATABASE_URL'), { max: 1 });
+  const sql = connectE2EDatabase(requireEnv('DATABASE_URL'));
   const db = drizzle(sql, { schema });
   const questionIds: string[] = [];
   try {
