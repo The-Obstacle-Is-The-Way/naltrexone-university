@@ -6,6 +6,7 @@ import {
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { redactSensitiveE2EText } from './e2e-log-redaction';
 import { parseQuestionProgressCount } from './question-progress';
+import { readServerActionNames } from './server-actions';
 
 export type PracticeMode = 'tutor' | 'exam';
 
@@ -23,8 +24,24 @@ export type StartSessionLocator = {
   waitFor(options: { state: 'visible'; timeout?: number }): Promise<void>;
 };
 
+export type StartSessionResponse = {
+  headers(): Record<string, string>;
+  status(): number;
+};
+
+export type StartSessionRequest = {
+  failure(): { errorText: string } | null;
+  headers(): Record<string, string>;
+  redirectedFrom(): StartSessionRequest | null;
+  response(): Promise<StartSessionResponse | null>;
+};
+
+type StartSessionFailureListener = (request: StartSessionRequest) => void;
+
 export type StartSessionPage = {
   goto(url: string): Promise<unknown>;
+  off(event: 'requestfailed', listener: StartSessionFailureListener): unknown;
+  on(event: 'requestfailed', listener: StartSessionFailureListener): unknown;
   getByLabel(label: string): StartSessionLocator;
   getByRole(
     role: 'alert' | 'button' | 'group' | 'heading',
@@ -201,6 +218,69 @@ async function waitForSessionStartOutcome(input: {
   throw new Error('startSession outcome polling ended without an outcome');
 }
 
+function describeRedirectTarget(location: string | undefined): string {
+  if (!location) return 'no location';
+  try {
+    const url = new URL(location, 'http://app.invalid');
+    // The query can carry Clerk handshake tokens; the path names the target.
+    return url.host === 'app.invalid'
+      ? url.pathname
+      : `${url.host}${url.pathname}`;
+  } catch {
+    return 'an unreadable location';
+  }
+}
+
+async function describeRedirect(request: StartSessionRequest): Promise<string> {
+  const response = await request.response();
+  if (!response) return '';
+  const headers = response.headers();
+  const reason = headers['x-clerk-auth-reason'];
+  return ` after ${response.status()} to ${describeRedirectTarget(headers.location)}${reason ? ` (Clerk: ${reason})` : ''}`;
+}
+
+/**
+ * Records every server action that fails while a session starts, by name and
+ * with any redirect it followed, so a CI failure says which request broke
+ * (BUG-337).
+ */
+function recordServerActionFailures(page: StartSessionPage) {
+  const names = readServerActionNames();
+  const failures: Promise<string | null>[] = [];
+  const describeFailure = async (request: StartSessionRequest) => {
+    const redirects: string[] = [];
+    let original = request;
+    for (
+      let previous = request.redirectedFrom();
+      previous;
+      previous = previous.redirectedFrom()
+    ) {
+      redirects.unshift(await describeRedirect(previous));
+      original = previous;
+    }
+    const id = original.headers()['next-action'];
+    if (id === undefined) return null;
+    return `${names.get(id) ?? id} ${request.failure()?.errorText ?? 'failed'}${redirects.join('')}`;
+  };
+  const onRequestFailed = (request: StartSessionRequest) => {
+    failures.push(describeFailure(request).catch(() => null));
+  };
+  page.on('requestfailed', onRequestFailed);
+  return {
+    describe: async () => {
+      const named = (await Promise.all(failures)).filter(
+        (failure) => failure !== null,
+      );
+      return named.length === 0
+        ? ''
+        : `; failed server actions: ${named.join(', ')}`;
+    },
+    stop: () => {
+      page.off('requestfailed', onRequestFailed);
+    },
+  };
+}
+
 async function verifyRequestedSessionCount(
   page: StartSessionPage,
   requestedCount: number,
@@ -232,6 +312,25 @@ export async function startSession(
     );
   }
 
+  const actionFailures = recordServerActionFailures(page);
+  try {
+    await runStartSession(page, mode, count);
+  } catch (error) {
+    const failed = await actionFailures.describe();
+    if (failed === '' || !(error instanceof Error)) throw error;
+    throw new Error(`${error.message}${redactDiagnosticText(failed)}`, {
+      cause: error,
+    });
+  } finally {
+    actionFailures.stop();
+  }
+}
+
+async function runStartSession(
+  page: StartSessionPage,
+  mode: PracticeMode,
+  count: number,
+): Promise<void> {
   await page.goto('/app/practice');
   await page
     .getByRole('heading', { name: 'Practice' })

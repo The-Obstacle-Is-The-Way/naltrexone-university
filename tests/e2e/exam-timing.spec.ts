@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { expect, type Request, test } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
@@ -6,6 +5,7 @@ import {
 } from './helpers/clerk-auth';
 import { selectChoiceByLabel } from './helpers/question';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
+import { readServerActionNames } from './helpers/server-actions';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
 
@@ -30,15 +30,11 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   // A server action posts to the page that calls it, with a Next-Action ID
   // that Next.js salts per build; the build's manifest names it. Every action
   // that fails on the practice pages is logged by name as BUG-337 evidence.
-  const manifest = JSON.parse(
-    readFileSync('.next/server/server-reference-manifest.json', 'utf8'),
-  ) as { node: Record<string, { exportedName: string }> };
-  expect(
-    Object.values(manifest.node).map((entry) => entry.exportedName),
-  ).toContain(TIMING_ACTION);
+  const actionNames = readServerActionNames();
+  expect([...actionNames.values()]).toContain(TIMING_ACTION);
   const actionOf = (request: Request) => {
     const id = request.headers()['next-action'] ?? 'no action';
-    return manifest.node[id]?.exportedName ?? id;
+    return actionNames.get(id) ?? id;
   };
   // Every server action carries a Next-Action header. The test matches on it,
   // not on page.url(): a soft navigation updates page.url() after the new
