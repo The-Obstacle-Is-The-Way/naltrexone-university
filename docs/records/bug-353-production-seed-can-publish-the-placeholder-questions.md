@@ -50,7 +50,8 @@ Corrected 2026-10-18: separate the E2E reset, qualify active-release and target 
   - `runSeed` takes `{ includePlaceholders }` and reads no environment.
   - `scripts/seed/seed-options.ts` parses the command line for `db:seed` and the managed seed. Only `--include-placeholders` is accepted, passed directly; a forwarded `--` separator is refused, as in the other strict operator parsers (#1567).
   - A set `SEED_INCLUDE_PLACEHOLDERS`, whatever its value, is refused before any database work. So a stale export now stops the production seed's child with a message, rather than being obeyed or silently ignored. That makes option 1 unnecessary.
-  - The managed seed refuses `--include-placeholders` for any target that is not on the loopback interface. Every caller that passes the flag seeds a loopback database, and this path takes no acknowledgment. The human `db:seed` still accepts the flag for an acknowledged remote target.
+  - The managed seed refuses `--include-placeholders` for any target that is not on the loopback interface. Every caller that passes the flag seeds a loopback database, and this path takes no acknowledgment.
+  - The human `db:seed` refuses it for a remote target too, with or without `DB_TARGET_ACK`, and before it asks for one: an acknowledgment proves which host was meant, not that it is not production. #1584, BUG-360's guard, added this; before it, the human seed accepted the flag for an acknowledged remote target.
   - The environment seeds spawn the managed seed with no arguments, and a test pins that.
   - CI, the hosted Checkout smoke and the local E2E plan pass the flag, and a workflow test keeps the old variable out of every workflow.
   - The two remedy messages that suggested the flag now limit it to local test databases.
@@ -63,6 +64,7 @@ The implementation reported red-first runs; their historical execution order
 was not independently reconstructed. This audit reran the current tests.
 
 - [x] Current-branch tests in `scripts/internal/run-managed-db-seed.test.ts` and `scripts/db-seed.test.ts` pass: an inherited `SEED_INCLUDE_PLACEHOLDERS=true` is refused before seeding, the managed entry point refuses placeholders for a remote target, and they are included only with `--include-placeholders`.
+- [x] `scripts/db-seed.test.ts` passes with #1584: the human seed refuses `--include-placeholders` for a remote target, with or without `DB_TARGET_ACK`, before any acknowledgment check, and still seeds an acknowledged remote target without the fixtures.
 - [x] Current-branch `scripts/seed-environment-runtime.test.ts` passes: an environment seed spawns the managed seed without `--include-placeholders`.
 - [x] Current-branch `tests/ci-workflow.test.ts` passes: both seed steps pass the flag, and no workflow sets the old variable.
 - [x] The fixing pull request's CI and local E2E runs pass with the flag.

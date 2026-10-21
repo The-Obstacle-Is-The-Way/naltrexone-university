@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { syncCheckoutSuccess } from '@/app/(marketing)/checkout/success/checkout-success-sync';
 import * as schema from '@/db/schema';
 import { resolveCheckoutDisclosure } from '@/lib/checkout-disclosures';
@@ -34,6 +33,7 @@ import {
   requireProviderEnv,
   sessionHasExpectedRenewalTerms,
 } from './checkout-success-provider-resources';
+import { connectE2EDatabase } from './e2e-database-target';
 import { triggerStripeCompletedCheckout } from './stripe-cli-checkout';
 import { createStripeTestClient } from './stripe-test-client';
 
@@ -103,7 +103,7 @@ export async function runCheckoutSuccessProviderContract(
   const priceId = shape === 'annual' ? priceIds.annual : priceIds.monthly;
   const appUrl = requireProviderEnv('NEXT_PUBLIC_APP_URL');
   const stripe = createStripeTestClient(stripeSecretKey);
-  const sql = postgres(databaseUrl, { max: 1 });
+  const sql = connectE2EDatabase(databaseUrl);
   const db = drizzle(sql, { schema });
   const resources: ContractResources = {
     userId: null,
