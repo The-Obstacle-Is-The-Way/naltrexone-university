@@ -66,7 +66,7 @@ Read two or three nearby tests and sources first, and check `src/adapters/shared
 - **Integration database:**
 
   ```bash
-  TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
+  TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed --include-placeholders && pnpm test:integration
   ```
 
 - **E2E:** product projects have zero retries; never add retries for a green run. One E2E run at a time shares the Clerk test user. Conventions, timeouts and the hosted Stripe lane: [the E2E guide](./docs/guides/testing/e2e-tests.md).
