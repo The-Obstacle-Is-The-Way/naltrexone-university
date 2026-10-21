@@ -1,6 +1,6 @@
 # BUG-337: A Session's First Question Can Fail to Load With "Failed to Fetch"
 
-**Status:** Open — on Playwright 1.64.1, trace the next CI failure and fix its cause; without one, require the clean-run count; due 2026-11-04
+**Status:** Open — on Playwright 1.64.1, trace the next CI failure and fix its cause; without one, require the clean-run count; due 2026-11-05
 **Priority:** P3
 **Date:** 2026-10-11
 
@@ -148,7 +148,7 @@ For the recurrences after option 9, all three remain unverified:
 
 ## Resolution (decided)
 
-Trace the recurrence before choosing another fix. After this diagnostics PR merges, keep BUG-337 Open, not Verifying: no new fix has landed. The separate dependency commit upgrades to Playwright 1.64.1 after its release-age gate opened. That restores visibility and is not a BUG-337 fix. The status deadline is provisionally 2026-11-04 for a 2026-10-21 merge; update it to the actual merge date plus 14 days before merging. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
+Trace the recurrence before choosing another fix. After this diagnostics PR merges, keep BUG-337 Open, not Verifying: no new fix has landed. The separate dependency commit upgrades to Playwright 1.64.1 after its release-age gate opened. That restores visibility and is not a BUG-337 fix. The status deadline is provisionally 2026-11-05 for a 2026-10-22 UTC merge; update it to the actual merge date plus 14 days before merging. The existing Clerk trace now records failed requests, action/RSC redirects and event times. Sign-in and "Failed to fetch" alerts each report once, so an alert cannot suppress a later sign-in. A failed test reports before teardown only if neither already reported. The buffer holds 100 entries, preserving the leading Clerk answer and action failure through a 60-answer burst. Diagnostic reads share BUG-330's five-second limit and report when it expires.
 
 Keep method, safe path, resource type, action-header presence, status/reason, redirect host and cookie names/lengths. Strict allowlists retain Clerk reason names, numeric `__client_uat` and redirect counts, and the session JWT's numeric `iat`/`exp`. Arbitrary values are reduced to lengths. Credential values, action IDs, other query values and bodies never enter the output. CI's Playwright trace remains off. `tests/clerk-auth-fixture-policy.test.ts` rejects signed-in specs that use Playwright's base test instead of `./helpers/clerk-auth-test`. It recognizes either the password helper or shared auth-state marker. The merged exam-timing spec uses that fixture; its clock correction, named action matching and visibilitychange signal are unchanged.
 
