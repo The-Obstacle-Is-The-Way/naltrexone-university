@@ -77,8 +77,11 @@ test('a fast browser clock preserves the answer until server exam expiry', async
       root = from;
     return root;
   };
+  // The listeners below run unawaited; a lookup that rejects because the
+  // context has closed must not surface as an unhandled rejection.
+  const responseOf = (request: Request) => request.response().catch(() => null);
   const isRedirect = async (request: Request) => {
-    const status = (await request.response())?.status() ?? 0;
+    const status = (await responseOf(request))?.status() ?? 0;
     return status >= 300 && status < 400;
   };
   /** True when the request settled a timing read. */
@@ -94,7 +97,7 @@ test('a fast browser clock preserves the answer until server exam expiry', async
   });
   page.on('requestfinished', async (request) => {
     if (await isRedirect(request)) return;
-    if (settleAction(request) && (await request.response())?.ok())
+    if (settleAction(request) && (await responseOf(request))?.ok())
       timingReadsSucceeded += 1;
   });
   page.on('requestfailed', (request) => {
