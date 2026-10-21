@@ -62,12 +62,12 @@ The non-content families are grouped below. Remaining content-boundary work stay
 | `database/database-process.ts` | Runs `pnpm` with a given `DATABASE_URL` and the parent's output, and rejects on a non-zero exit. | Imported by `database/db-migrate.ts`, `database/db-studio.ts` and `database/managed/run-managed-db-migrate.ts` |
 | `database/db-generate.ts` | Offline Drizzle migration generation with arguments passed unchanged to drizzle-kit; no database credentials or dotenv. | `pnpm db:generate` |
 | `database/db-migrate.ts` | `drizzle-kit migrate` behind the human database guard. | `pnpm db:migrate` |
-| `database/db-seed.ts` | The question seed (`seed.ts`) behind the human database guard. | `pnpm db:seed` |
+| `database/db-seed.ts` | The question seed (`seed.ts`) behind the human database guard; parses the explicit placeholder flag before authorizing the target. | `pnpm db:seed` |
 | `database/db-studio.ts` | `drizzle-kit studio` behind the human database guard. | `pnpm db:studio` |
 | `database/managed/database-target-managed.ts` | The managed authorizer: validates the URL and asks for no acknowledgment. | Imported by `database/managed/database-command-managed.ts` and `database/verify-migration-ledger.ts` |
 | `database/managed/database-command-managed.ts` | The managed counterpart of `database/database-command.ts`. | Imported by `database/managed/run-managed-db-migrate.ts` and `database/managed/run-managed-db-seed.ts` |
 | `database/managed/run-managed-db-migrate.ts` | Ledger precheck, `drizzle-kit migrate`, then ledger postcheck for checked-in automation. | The `vercel.json` build command; `ci.yml` and `stripe-hosted-checkout-smoke.yml`; the local E2E plan; `tests/integration/db-pooler-timeouts.integration.test.ts` and `tests/integration/managed-migration.integration.test.ts` |
-| `database/managed/run-managed-db-seed.ts` | The question seed for checked-in automation. | `ci.yml` and `stripe-hosted-checkout-smoke.yml`; the local E2E plan; the environment seeds |
+| `database/managed/run-managed-db-seed.ts` | The question seed for checked-in automation; refuses `--include-placeholders` for a non-loopback target before seeding. | `ci.yml` and `stripe-hosted-checkout-smoke.yml`; the local E2E plan; the environment seeds |
 | `database/migration-ledger.ts` | Compares a database's migration ledger with the migration journal and each migration file's hash. | Imported by `database/verify-migration-ledger.ts` and the E2E credential preflight |
 | `database/verify-migration-ledger.ts` | Checks the ledger before migrating (pending migrations allowed) or after (all journal entries required); both phases accept the explicit legacy hash exceptions. | `pnpm db:verify-ledger`; imported by `database/managed/run-managed-db-migrate.ts` |
 
