@@ -300,6 +300,9 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     );
 
     expect(error.message).toContain('[E2E_RESET:PLACEHOLDER_FIXTURES_MISSING]');
+    // BUG-353: the remedy must not send a deploy-target run's operator to
+    // seed the fixtures into production.
+    expect(error.message).toContain('Never add them to production.');
     expect(error.message).not.toContain(
       '[E2E_RESET:PLACEHOLDER_FIXTURE_SYNC_FAILED]',
     );
