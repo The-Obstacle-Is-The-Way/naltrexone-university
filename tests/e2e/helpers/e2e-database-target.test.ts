@@ -1,10 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import {
+  connectE2EDatabase,
   e2eDatabaseTargetRefusal,
   guardE2EDatabaseUrl,
 } from './e2e-database-target';
 
 const REMOTE_URL = 'postgresql://app:hunter2@ep-example.neon.tech/app';
+const LOCAL_URL = 'postgresql://postgres:postgres@127.0.0.1:55432/test';
+
+// postgres.js connects on the first query, so these clients never connect.
+describe('connectE2EDatabase (BUG-360)', () => {
+  it('refuses a remote database the given environment does not opt into', () => {
+    expect(() => connectE2EDatabase(REMOTE_URL, {})).toThrow(
+      /non-local host "ep-example\.neon\.tech"/,
+    );
+  });
+
+  it('opens one connection to the local database it was given', async () => {
+    const sql = connectE2EDatabase(LOCAL_URL, {});
+
+    expect(sql.options).toMatchObject({
+      host: ['127.0.0.1'],
+      port: [55432],
+      max: 1,
+    });
+    await sql.end();
+  });
+
+  it('opens a remote database the given environment opts into', async () => {
+    const sql = connectE2EDatabase(REMOTE_URL, {
+      ALLOW_NON_LOCAL_DATABASE_URL: 'true',
+    });
+
+    expect(sql.options.host).toEqual(['ep-example.neon.tech']);
+    await sql.end();
+  });
+});
 
 describe('the E2E database target (BUG-360)', () => {
   it.each([

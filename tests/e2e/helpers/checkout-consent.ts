@@ -1,7 +1,6 @@
 import { expect, type Page } from '@playwright/test';
-import postgres from 'postgres';
 import { TERMS_CONTENT_SHA256, TERMS_VERSION } from '@/lib/pricing-data';
-import { guardE2EDatabaseUrl } from './e2e-database-target';
+import { connectE2EDatabase } from './e2e-database-target';
 import {
   findLatestStripeEvent,
   replayStripeEventToLocalApp,
@@ -52,7 +51,7 @@ export async function expectE2ECheckoutConsent(
       'Consent evidence requires the isolated local E2E database.',
     );
   }
-  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
+  const sql = connectE2EDatabase(databaseUrl);
   let checkoutSessionId: string | undefined;
   try {
     const [subscription] = await sql`
@@ -212,7 +211,7 @@ export async function expectE2ETrialPaymentConsent(
   // signed HTTP route, which attaches the card and records the consent.
   await replayStripeEventToLocalApp(page, event);
 
-  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
+  const sql = connectE2EDatabase(databaseUrl);
   try {
     await expect
       .poll(

@@ -1,5 +1,5 @@
-import postgres from 'postgres';
-import { guardE2EDatabaseUrl } from './e2e-database-target';
+import type postgres from 'postgres';
+import { connectE2EDatabase } from './e2e-database-target';
 import {
   appendNonSecretCause,
   createSharedE2EResetSupport,
@@ -641,7 +641,7 @@ export async function runE2EUserStateReset(
 
   const { databaseUrl, clerkEmail } =
     sharedResetSupport.requireResolvedEnvOrThrow(resolvedEnv);
-  const sql = postgres(guardE2EDatabaseUrl(databaseUrl, env), { max: 1 });
+  const sql = connectE2EDatabase(databaseUrl, env);
 
   try {
     await services.ensurePlaceholderQuestionsPublished({ databaseUrl, sql });

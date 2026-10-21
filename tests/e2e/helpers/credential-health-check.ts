@@ -1,4 +1,4 @@
-import postgres from 'postgres';
+import type postgres from 'postgres';
 import Stripe from 'stripe';
 import {
   createPostgresMigrationLedgerQuery,
@@ -9,8 +9,8 @@ import { delay } from '@/src/adapters/shared/delay';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import {
+  connectE2EDatabase,
   e2eDatabaseTargetRefusal,
-  guardE2EDatabaseUrl,
 } from './e2e-database-target';
 import { createStripeTestClient } from './stripe-test-client';
 
@@ -607,9 +607,7 @@ function buildValidators(
     validators.push({
       id: 'database',
       run: async () => {
-        const sql = postgres(guardE2EDatabaseUrl(databaseUrl, targetEnv), {
-          max: 1,
-        });
+        const sql = connectE2EDatabase(databaseUrl, targetEnv);
         try {
           await services.checkDatabaseConnectivity(sql);
           await services.verifyMigrationLedger(sql);

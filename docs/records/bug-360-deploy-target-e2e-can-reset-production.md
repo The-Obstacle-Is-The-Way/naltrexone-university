@@ -46,9 +46,9 @@ Corrected 2026-10-19: every connection the E2E code opens now refuses a non-loca
 
 Before this fix, only `pnpm test:e2e` checked the host. A direct `pnpm exec playwright test`, or a `--no-deps` run whose specs reset the test user, reached the database that `.env.local` names. On 2026-10-19 that was the Vercel Development database in every clone; it was compared against Vercel's Production and Development variables without printing either.
 
-- **The guard.** `guardE2EDatabaseUrl` in `tests/e2e/helpers/e2e-database-target.ts` wraps every `postgres(...)` the E2E code opens. It refuses a non-local host without the opt-in, naming the host but no credentials.
+- **The guard.** `connectE2EDatabase` in `tests/e2e/helpers/e2e-database-target.ts` opens every connection the E2E code makes, through `guardE2EDatabaseUrl`. It refuses a non-local host without the opt-in, naming the host but no credentials.
 - **The preflight.** It refuses one with `E2E_PREFLIGHT:DATABASE_URL_NOT_LOCAL` before any validator connects.
-- **The scan.** `tests/e2e-database-connections.test.ts` fails on any unguarded connection.
+- **The scan.** `tests/e2e-database-connections.test.ts` fails on any other E2E file that loads the `postgres` module, under any name. A type-only import passes.
 - **The remedy text.** The preflight and reset no longer tell anyone to put `DATABASE_URL` in `.env.local`.
 - **The fixtures.** No seed command adds the placeholder fixtures to a remote database: `pnpm db:seed --include-placeholders` now refuses one, acknowledged or not, as the managed seed already did (BUG-353). If the owner keeps a deploy-target mode, its fence must cover that seed before the refusal is relaxed.
 

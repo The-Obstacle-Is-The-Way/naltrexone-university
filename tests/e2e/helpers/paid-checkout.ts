@@ -1,6 +1,5 @@
-import postgres from 'postgres';
 import { PRICING_DATA } from '@/lib/pricing-data';
-import { guardE2EDatabaseUrl } from './e2e-database-target';
+import { connectE2EDatabase } from './e2e-database-target';
 import { createStripeTestClient } from './stripe-test-client';
 import {
   type E2EEntitlementSnapshot,
@@ -110,7 +109,7 @@ async function loadPaidAnnualCheckoutEvidence(): Promise<PaidAnnualCheckoutEvide
   const databaseUrl = requireE2EEnv('DATABASE_URL');
   const email = requireE2EEnv('E2E_CLERK_USER_USERNAME');
   const annualPriceId = requireE2EEnv('NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL');
-  const sql = postgres(guardE2EDatabaseUrl(databaseUrl), { max: 1 });
+  const sql = connectE2EDatabase(databaseUrl);
 
   try {
     const rows = await sql<PaidCheckoutDbRow[]>`

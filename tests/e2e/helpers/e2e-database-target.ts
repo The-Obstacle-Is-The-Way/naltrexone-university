@@ -1,3 +1,5 @@
+import postgres from 'postgres';
+
 // BUG-360: E2E setup, resets and evidence helpers write to the shared test
 // user's rows. `pnpm test:e2e` checks the database before Playwright starts,
 // but Playwright can start without it and read DATABASE_URL from .env.local,
@@ -42,4 +44,13 @@ export function guardE2EDatabaseUrl(
   const refusal = e2eDatabaseTargetRefusal(databaseUrl, env);
   if (refusal) throw new Error(`${refusal.message} ${refusal.fix}`);
   return databaseUrl;
+}
+
+// The only E2E code that loads the postgres client, which
+// tests/e2e-database-connections.test.ts enforces.
+export function connectE2EDatabase(
+  databaseUrl: string,
+  env: TargetEnv = process.env,
+): postgres.Sql {
+  return postgres(guardE2EDatabaseUrl(databaseUrl, env), { max: 1 });
 }
