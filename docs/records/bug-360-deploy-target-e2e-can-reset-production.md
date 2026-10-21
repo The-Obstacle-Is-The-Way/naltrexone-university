@@ -29,16 +29,16 @@ Corrected 2026-10-19: every connection the E2E code opens now refuses a non-loca
   - `scripts/e2e-local-orchestrator.ts:137-143` checks the URL's host on the `pnpm test:e2e` path.
   - `playwright.config.ts:8` loads `.env.local` without overriding exported variables, so before the partial fix a direct `pnpm exec playwright test` reached setup with whatever `DATABASE_URL` was there, unchecked.
   - On both paths, the E2E code's connections now refuse a non-local host unless `ALLOW_NON_LOCAL_DATABASE_URL=true`, which admits any host. The app server's do not; see "Fixed in part".
-- **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:550-557`). Test-mode keys work against any database, so passing it does not prove a non-production target.
+- **The preflight.** It refuses a non-test Stripe key (`tests/e2e/helpers/credential-health-check.ts:569-576`). Test-mode keys work against any database, so passing it does not prove a non-production target.
 - **Setup's first writes.** `tests/e2e/global.setup.ts:16-17` runs `seedTestSubscription` before `runE2EUserStateReset`. That step:
-  - upserts `users` by email (`tests/e2e/helpers/seed-test-user.ts:214-216`, `ON CONFLICT (email) DO UPDATE SET clerk_user_id`);
-  - then writes `stripe_customers` (`:280`) and `stripe_subscriptions` (`:389-397`).
+  - upserts `users` by email (`tests/e2e/helpers/seed-test-user.ts:215-217`, `ON CONFLICT (email) DO UPDATE SET clerk_user_id`);
+  - then writes `stripe_customers` (`:281`) and `stripe_subscriptions` (`:390-398`).
 
   A production row holding the E2E email would be rebound to the test Clerk user.
 - **The reset** (`tests/e2e/helpers/reset-e2e-user-state.ts`):
-  - **Fixture check and republish.** `ensurePlaceholderQuestionsPublished` (`:186-218`) counts the two slugs in `REQUIRED_QUESTION_SLUGS`, and throws `E2E_RESET:PLACEHOLDER_FIXTURES_MISSING` if either is absent. That is after setup's subscription writes. Otherwise it sets any non-published status to `published`. It does not check an active release or a recorded withdrawal; the seed refuses to reactivate a withdrawn question (`scripts/seed/question-syncer.ts:226-231`).
-  - **Deletes.** `clearUserState` (`:233-253`) deletes the user's idempotency keys, attempts, bookmarks and practice sessions.
-  - **Inserts.** `seedDeterministicBaseline` (`:354-507`) inserts a session, its question states, two attempts and a bookmark.
+  - **Fixture check and republish.** `ensurePlaceholderQuestionsPublished` (`:186-230`) counts the two slugs in `REQUIRED_QUESTION_SLUGS`, and throws `E2E_RESET:PLACEHOLDER_FIXTURES_MISSING` if either is absent. That is after setup's subscription writes. Otherwise it sets any non-published status to `published`. It does not check an active release or a recorded withdrawal; the seed refuses to reactivate a withdrawn question (`scripts/seed/question-syncer.ts:226-231`).
+  - **Deletes.** `clearUserState` (`:234-254`) deletes the user's idempotency keys, attempts, bookmarks and practice sessions.
+  - **Inserts.** `seedDeterministicBaseline` (`:355-508`) inserts a session, its question states, two attempts and a bookmark.
 - **The guides.** The deploy-target examples in the E2E and promotion guides read a URL from `.env.local`, and that file does not prove a non-production identity.
 - **How this was checked.** From the source and the existing reset tests only. No production connection or production reproduction was attempted. Whether production holds the E2E email or the two fixture rows is unknown; the fixtures belong to BUG-353's owner census.
 
